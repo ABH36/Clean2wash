@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Outfit", system-ui, -apple-system, sans-serif;
+
+  --color-brand: #FF6B00;
+  --color-brand-light: #FF8533;
+  --color-brand-dark: #cc5600;
+
+  --color-accent-green: #22C55E;
+  --color-accent-yellow: #FACC15;
+
+  --color-surface: #FFFFFF;
+  --color-background: #F2F4F7;
+
+  --color-content: #0F172A;
+  --color-content-muted: #475569;
+  --color-content-subtle: #94A3B8;
+
+  --radius-card: 2.5rem;
+  --radius-button: 1.25rem;
+
+  --shadow-premium: 0 20px 50px -12px rgba(255, 107, 0, 0.15);
+  --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.04);
+  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+}
+
+@layer base {
+  body {
+    @apply bg-background text-content antialiased;
+    font-feature-settings: "cv11", "ss01";
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer components {
+  .mobile-container {
+    @apply max-w-md mx-auto min-h-screen relative flex flex-col;
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

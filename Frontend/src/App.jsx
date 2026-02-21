@@ -20,11 +20,27 @@ import ReferEarn from './modules/consumer/pages/ReferEarn';
 import OrderDetails from './modules/consumer/pages/OrderDetails';
 import AddressManager from './modules/consumer/pages/AddressManager';
 import OffersPage from './modules/consumer/pages/OffersPage';
+import StudioDiscovery from './modules/consumer/pages/StudioDiscovery';
 
 // ── Captain Module ──
 import CaptainHome from './modules/captain/pages/CaptainHome';
 import CaptainJobDetail from './modules/captain/pages/CaptainJobDetail';
 import CaptainEarnings from './modules/captain/pages/CaptainEarnings';
+import CaptainProfile from './modules/captain/pages/CaptainProfile';
+import CaptainLogin from './modules/captain/pages/CaptainLogin';
+import CaptainSignup from './modules/captain/pages/CaptainSignup';
+
+// ── Vendor Module ──
+import VendorHome from './modules/vendor/pages/VendorHome';
+import VendorOrders from './modules/vendor/pages/VendorOrders';
+import VendorFleet from './modules/vendor/pages/VendorFleet';
+import VendorEarnings from './modules/vendor/pages/VendorEarnings';
+import VendorSettings from './modules/vendor/pages/VendorSettings';
+import VendorCustomers from './modules/vendor/pages/VendorCustomers';
+import VendorOrderDetail from './modules/vendor/pages/VendorOrderDetail';
+import VendorInventory from './modules/vendor/pages/VendorInventory';
+import VendorServices from './modules/vendor/pages/VendorServices';
+import VendorReports from './modules/vendor/pages/VendorReports';
 
 // ── Scroll to top on route change ──
 const ScrollToTop = () => {
@@ -59,6 +75,7 @@ function App() {
           {/* ── Consumer: Core Flow ── */}
           <Route path="/" element={<Home />} />
           <Route path="/services" element={<ServiceSelection />} />
+          <Route path="/studios" element={<StudioDiscovery />} />
           <Route path="/map" element={<MapScreen />} />
           <Route path="/booking-type" element={<BookingType />} />
           <Route path="/booking-status" element={<BookingStatus />} />
@@ -81,21 +98,33 @@ function App() {
           <Route path="/notifications" element={<Notifications />} />
 
           {/* ── Captain Module ── */}
+          <Route path="/captain/login" element={<CaptainLogin />} />
+          <Route path="/captain/signup" element={<CaptainSignup />} />
           <Route path="/captain" element={<CaptainHome />} />
           <Route path="/captain/job" element={<CaptainJobDetail />} />
           <Route path="/captain/earnings" element={<CaptainEarnings />} />
-          <Route path="/captain/profile" element={<PlaceholderPanel name="Captain Profile" emoji="🧹" />} />
+          <Route path="/captain/profile" element={<CaptainProfile />} />
+
+          {/* ── Vendor Module ── */}
+          <Route path="/vendor" element={<VendorHome />} />
+          <Route path="/vendor/orders" element={<VendorOrders />} />
+          <Route path="/vendor/fleet" element={<VendorFleet />} />
+          <Route path="/vendor/earnings" element={<VendorEarnings />} />
+          <Route path="/vendor/settings" element={<VendorSettings />} />
+          <Route path="/vendor/customers" element={<VendorCustomers />} />
+          <Route path="/vendor/order/:id" element={<VendorOrderDetail />} />
+          <Route path="/vendor/inventory" element={<VendorInventory />} />
+          <Route path="/vendor/services" element={<VendorServices />} />
+          <Route path="/vendor/reports" element={<VendorReports />} />
 
           {/* ── Other Placeholders ── */}
           <Route path="/admin" element={<PlaceholderPanel name="Admin Dashboard" emoji="🏢" />} />
-          <Route path="/vendor" element={<PlaceholderPanel name="Vendor Panel" emoji="🏪" />} />
 
           {/* ── Fallback ── */}
           <Route path="*" element={<Home />} />
         </Routes>
       </Router>
     </ErrorBoundary>
-
   );
 }
 

@@ -7,43 +7,32 @@ import MobileLayout from '../components/layout/MobileLayout';
 const SERVICES = [
     {
         id: 'eco',
-        tag: 'Most Popular',
-        title: 'Eco Doorstep Wash',
-        subtitle: 'Instant foam clean at your door',
+        tag: 'Instant Choice',
+        title: 'Doorstep Eco Wash',
+        subtitle: 'Captain washes at your location',
         image: 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=600&q=80',
         price: '₹299',
         original: '₹599',
-        duration: '~30 min',
-        features: ['Foam wash + rinse', 'Microfibre wipe', 'Tyre dressing', 'Window clean'],
+        duration: '~45 min',
+        features: ['Captain arrives in 20m', 'At-home service only', 'No pickup required', 'Eco-friendly waterless'],
         isDark: false,
         badge: '100% Cashback',
+        provider: 'captain'
     },
     {
-        id: 'deep',
-        tag: 'Best Value',
-        title: 'Full Deep Clean',
-        subtitle: 'Inside-out clinical treatment',
+        id: 'full-wash',
+        tag: 'Clinical Treatment',
+        title: 'Full Studio Clean',
+        subtitle: 'Vendor pick-up & drop service',
         image: 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=600&q=80',
-        price: '₹999',
-        original: '₹1,899',
-        duration: '~75 min',
-        features: ['Everything in Eco', 'Interior vacuuming', 'Dashboard polish', 'Air purifier spray'],
+        price: '₹1,299',
+        original: '₹2,499',
+        duration: '~3-4 hrs',
+        features: ['Vendor pick-up from home', 'Professional studio wash', 'Sanitized delivery', 'Damage Insurance'],
         isDark: true,
-        badge: '47% Off',
-    },
-    {
-        id: 'tire',
-        tag: 'Add-on',
-        title: 'Tire & Rim Shine',
-        subtitle: 'Precision rim detailing',
-        image: 'https://images.unsplash.com/photo-1611455600759-99abfc83e9c4?w=600&q=80',
-        price: '₹199',
-        original: '₹349',
-        duration: '~20 min',
-        features: ['Rim degreaser', 'Tyre blackening', 'Pressure cleaning', 'Shine coat'],
-        isDark: false,
-        badge: 'New',
-    },
+        badge: 'Premium',
+        provider: 'vendor'
+    }
 ];
 
 const STEPS = [
@@ -56,6 +45,7 @@ const ServiceSelection = () => {
     const navigate = useNavigate();
     const [active, setActive] = useState('eco');
     const [mode, setMode] = useState('instant'); // 'instant' or 'scheduled'
+    const [serviceType, setServiceType] = useState('captain'); // 'captain' or 'vendor'
     const [selectedSlot, setSelectedSlot] = useState(null);
 
     const SLOTS = [
@@ -65,6 +55,8 @@ const ServiceSelection = () => {
         { id: 4, time: '03:00 PM', status: 'Available' },
         { id: 5, time: '05:00 PM', status: 'Available' },
     ];
+
+    const filteredServices = SERVICES.filter(s => s.provider === serviceType);
 
     return (
         <MobileLayout>
@@ -108,6 +100,31 @@ const ServiceSelection = () => {
                     )}
                 </AnimatePresence>
 
+                {/* Service Type Selection (2 Buttons) */}
+                <div className="flex gap-3 mb-4">
+                    <button
+                        onClick={() => { setServiceType('captain'); setActive('eco'); }}
+                        className={`flex-1 p-4 rounded-2xl border-2 transition-all text-left ${serviceType === 'captain' ? 'border-brand bg-brand/5' : 'border-gray-100 bg-white opacity-60'}`}
+                    >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${serviceType === 'captain' ? 'bg-brand text-white' : 'bg-gray-100 text-content-muted'}`}>
+                            <Zap size={16} fill={serviceType === 'captain' ? 'currentColor' : 'none'} />
+                        </div>
+                        <h3 className={`font-black text-xs uppercase tracking-tight ${serviceType === 'captain' ? 'text-brand' : 'text-content'}`}>Car Wash</h3>
+                        <p className="text-[8px] font-bold text-content-subtle uppercase mt-0.5">At Home</p>
+                    </button>
+
+                    <button
+                        onClick={() => { setServiceType('vendor'); setActive('full-wash'); }}
+                        className={`flex-1 p-4 rounded-2xl border-2 transition-all text-left ${serviceType === 'vendor' ? 'border-brand bg-brand/5' : 'border-gray-100 bg-white opacity-60'}`}
+                    >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${serviceType === 'vendor' ? 'bg-brand text-white' : 'bg-gray-100 text-content-muted'}`}>
+                            <Shield size={16} />
+                        </div>
+                        <h3 className={`font-black text-xs uppercase tracking-tight ${serviceType === 'vendor' ? 'text-brand' : 'text-content'}`}>Full Car Wash</h3>
+                        <p className="text-[8px] font-bold text-content-subtle uppercase mt-0.5">Studio + Pickup</p>
+                    </button>
+                </div>
+
                 {/* Category chips */}
                 <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                     {['All', 'Exterior', 'Interior', 'Add-ons'].map((c, i) => (
@@ -140,7 +157,7 @@ const ServiceSelection = () => {
                 </AnimatePresence>
 
                 {/* ── Service Cards ── */}
-                {SERVICES.map((s) => (
+                {filteredServices.map((s) => (
                     <motion.div key={s.id} whileTap={{ scale: 0.99 }} onClick={() => setActive(s.id)}
                         className={`rounded-2xl overflow-hidden border-2 transition-all shadow-soft cursor-pointer ${active === s.id
                             ? s.isDark ? 'border-content bg-content' : 'border-brand/30 bg-white'
@@ -179,7 +196,7 @@ const ServiceSelection = () => {
                                     <p className={`text-[9px] font-bold uppercase tracking-widest mt-0.5 ${s.isDark ? 'text-white/40' : 'text-content-subtle'}`}>{s.duration}</p>
                                 </div>
                                 <motion.button whileTap={{ scale: 0.95 }}
-                                    onClick={(e) => { e.stopPropagation(); navigate(`/map?type=${s.id}`); }}
+                                    onClick={() => navigate(s.provider === 'vendor' ? '/studios' : `/map?type=instant&service=${s.id}`)}
                                     className="flex items-center gap-1.5 bg-brand text-white px-4 py-2.5 rounded-xl font-black text-xs shadow-md shadow-brand/30">
                                     Book <ChevronRight size={12} strokeWidth={3} />
                                 </motion.button>

@@ -113,7 +113,7 @@ const Home = () => {
 
                     {/* Hero service card */}
                     <motion.div
-                        whileTap={{ scale: 0.98 }} onClick={() => navigate('/map?type=instant')}
+                        whileTap={{ scale: 0.98 }} onClick={() => navigate('/map?type=instant&service=eco')}
                         className="rounded-2xl overflow-hidden relative shadow-soft border border-gray-100 mb-3 cursor-pointer"
                         style={{ height: 160 }}
                     >

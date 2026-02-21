@@ -80,8 +80,8 @@ const Profile = () => {
                 {/* ── Menu Sections ── */}
                 <MenuSection title="Vehicle Ecosystem">
                     <MenuItem icon={<Zap />} label="My Bookings" sub="Active & Past Washes" count="3" onClick={() => navigate('/bookings')} />
-                    <MenuItem icon={<Smartphone />} label="My Vehicles" sub="Manage your garage" onClick={() => navigate('/vehicles')} />
-                    <MenuItem icon={<MapPin />} label="Saved Addresses" sub="Home, Office, Other" onClick={() => navigate('/map')} />
+                    <MenuItem icon={<Car />} label="My Vehicles" sub="Manage your garage" onClick={() => navigate('/vehicles')} />
+                    <MenuItem icon={<MapPin />} label="Saved Addresses" sub="Home, Office, Other" onClick={() => navigate('/addresses')} />
                 </MenuSection>
 
                 <MenuSection title="Payments & Trust">
@@ -98,7 +98,13 @@ const Profile = () => {
                 {/* ── Footer ── */}
                 <div className="text-center space-y-3 pt-2">
                     <p className="text-[9px] font-bold text-content-subtle uppercase tracking-widest">Hoora v4.2.0</p>
-                    <button className="flex items-center gap-2 bg-red-50 text-red-500 border border-red-100 px-6 py-3 rounded-xl mx-auto font-black text-xs uppercase tracking-widest active:scale-95 transition-all">
+                    <button
+                        onClick={() => {
+                            if (window.confirm('Do you want to logout?')) {
+                                navigate('/login');
+                            }
+                        }}
+                        className="flex items-center gap-2 bg-red-50 text-red-500 border border-red-100 px-6 py-3 rounded-xl mx-auto font-black text-xs uppercase tracking-widest active:scale-95 transition-all">
                         <LogOut size={14} /> Logout
                     </button>
                 </div>

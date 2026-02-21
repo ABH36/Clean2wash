@@ -5,18 +5,28 @@ import {
     CheckCircle2, Navigation, Star, Clock, Zap, Info,
     AlertTriangle, Droplets
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import MobileLayout from '../components/layout/MobileLayout';
 
-const STEPS = [
+const CAPTAIN_STEPS = [
     { id: 0, label: 'Matching Captain', desc: 'Scanning nearby experts…', Icon: Zap, activeColor: 'text-violet-500', activeBg: 'bg-violet-50', activeBorder: 'border-violet-200' },
     { id: 1, label: 'Captain En Route', desc: 'Rahul is heading your way', Icon: Navigation, activeColor: 'text-blue-500', activeBg: 'bg-blue-50', activeBorder: 'border-blue-200' },
     { id: 2, label: 'Wash in Progress', desc: 'Vehicle is being serviced', Icon: Droplets, activeColor: 'text-brand', activeBg: 'bg-brand/10', activeBorder: 'border-brand/20' },
     { id: 3, label: 'Completed', desc: 'Your car is spotless. Enjoy!', Icon: CheckCircle2, activeColor: 'text-green-500', activeBg: 'bg-green-50', activeBorder: 'border-green-200' },
 ];
 
+const VENDOR_STEPS = [
+    { id: 0, label: 'Requesting Studio', desc: 'Studio confirming your slot…', Icon: Zap, activeColor: 'text-violet-500', activeBg: 'bg-violet-50', activeBorder: 'border-violet-200' },
+    { id: 1, label: 'Pickup En Route', desc: 'Driver assigned for pickup', Icon: Navigation, activeColor: 'text-blue-500', activeBg: 'bg-blue-50', activeBorder: 'border-blue-200' },
+    { id: 2, label: 'At Studio', desc: 'Expert cleaning in progress', Icon: Droplets, activeColor: 'text-brand', activeBg: 'bg-brand/10', activeBorder: 'border-brand/20' },
+    { id: 3, label: 'Completed', desc: 'Vehicle ready for drop-off!', Icon: CheckCircle2, activeColor: 'text-green-500', activeBg: 'bg-green-50', activeBorder: 'border-green-200' },
+];
+
 const BookingStatus = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const type = searchParams.get('type') || 'captain';
+    const STEPS = type === 'vendor' ? VENDOR_STEPS : CAPTAIN_STEPS;
     const [step, setStep] = useState(0);
 
     useEffect(() => {
@@ -137,8 +147,8 @@ const BookingStatus = () => {
 
                                     {/* Icon */}
                                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border transition-all duration-500 ${isDone ? 'bg-brand border-brand shadow-md' :
-                                            isActive ? `${s.activeBg} ${s.activeBorder} shadow-sm` :
-                                                'bg-gray-50 border-gray-100'
+                                        isActive ? `${s.activeBg} ${s.activeBorder} shadow-sm` :
+                                            'bg-gray-50 border-gray-100'
                                         }`}>
                                         {isDone
                                             ? <CheckCircle2 size={15} className="text-white" strokeWidth={2.5} />

@@ -22,6 +22,7 @@ const BookingType = () => {
     const initialMode = searchParams.get('mode') || 'instant';
     const initialDate = searchParams.get('date') || 'Today';
     const initialSlotTime = searchParams.get('slot_time') || (initialMode === 'instant' ? '20-30 min' : '09:00 AM');
+    const serviceType = searchParams.get('type') || 'captain';
 
     const [mode, setMode] = useState(initialMode);
     const [payMethod, setPayMethod] = useState('upi');
@@ -178,7 +179,7 @@ const BookingType = () => {
 
             {/* ── Sticky Pay Button ── */}
             <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 px-4 pt-4 pb-8 z-50">
-                <motion.button whileTap={{ scale: 0.98 }} onClick={() => navigate('/booking-status')}
+                <motion.button whileTap={{ scale: 0.98 }} onClick={() => navigate(`/booking-status?type=${serviceType}`)}
                     className="group w-full h-14 bg-brand text-white rounded-2xl font-black text-base shadow-xl shadow-brand/30 flex items-center justify-between px-6 relative overflow-hidden">
                     <div className="text-left">
                         <span className="block text-[8px] font-black uppercase tracking-[0.2em] text-white/60 leading-none mb-1">Confirm Wash</span>

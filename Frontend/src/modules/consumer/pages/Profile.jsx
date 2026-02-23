@@ -7,9 +7,17 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import MobileLayout from '../components/layout/MobileLayout';
+import { useAuth } from '../../../context/AuthContext';
 
 const Profile = () => {
     const navigate = useNavigate();
+    const { getUser, logout } = useAuth();
+    const user = getUser('consumer') || { name: 'User' };
+
+    const handleLogout = () => {
+        logout('consumer');
+        navigate('/login');
+    };
 
     return (
         <MobileLayout>
@@ -40,7 +48,7 @@ const Profile = () => {
                         </div>
                     </div>
                     <div>
-                        <h2 className="text-lg font-black tracking-tight text-content leading-none mb-0.5">Aman Verma</h2>
+                        <h2 className="text-lg font-black tracking-tight text-content leading-none mb-0.5">{user.name}</h2>
                         <p className="text-[9px] font-black text-brand uppercase tracking-widest mb-2">Hoora Elite Member</p>
                         <div className="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100">
                             <Star size={10} className="text-yellow-500" fill="currentColor" />
@@ -85,8 +93,8 @@ const Profile = () => {
                 </MenuSection>
 
                 <MenuSection title="Payments & Trust">
-                    <MenuItem icon={<CreditCard />} label="Payment Methods" sub="Cards, UPI, Netbanking" />
-                    <MenuItem icon={<ShieldCheck />} label="Insurance Center" sub="Manage Vehicle Policies" />
+                    <MenuItem icon={<CreditCard />} label="Payment Methods" sub="Cards, UPI, Netbanking" onClick={() => navigate('/payments')} />
+                    <MenuItem icon={<ShieldCheck />} label="Insurance Center" sub="Manage Vehicle Policies" onClick={() => navigate('/insurance')} />
                     <MenuItem icon={<History />} label="Transactions" sub="History & Statements" onClick={() => navigate('/wallet')} />
                 </MenuSection>
 
@@ -101,7 +109,7 @@ const Profile = () => {
                     <button
                         onClick={() => {
                             if (window.confirm('Do you want to logout?')) {
-                                navigate('/login');
+                                handleLogout();
                             }
                         }}
                         className="flex items-center gap-2 bg-red-50 text-red-500 border border-red-100 px-6 py-3 rounded-xl mx-auto font-black text-xs uppercase tracking-widest active:scale-95 transition-all">

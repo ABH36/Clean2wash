@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard, Package, Truck, Users,
-    Wallet, Settings, Bell, Plus, Search, Box, LayoutGrid, BarChart3
+    Wallet, Settings, Bell, Plus, Search, Box, LayoutGrid, BarChart3, LogOut
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -64,6 +64,16 @@ const VendorLayout = ({ children, title, subtitle }) => {
                     </div>
                     <button className="w-full py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all">
                         Contact Manager
+                    </button>
+                </div>
+
+                <div className="pt-4 border-t border-white/5">
+                    <button
+                        onClick={() => navigate('/vendor/login')}
+                        className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-white/40 hover:bg-red-500/10 hover:text-red-500 transition-all duration-300"
+                    >
+                        <LogOut size={20} />
+                        <span className="font-black text-sm tracking-tight">Logout session</span>
                     </button>
                 </div>
             </aside>

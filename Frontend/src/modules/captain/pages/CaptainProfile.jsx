@@ -7,6 +7,7 @@ import {
     Camera, MapPin, CheckCircle2
 } from 'lucide-react';
 import CaptainLayout from '../components/CaptainLayout';
+import { useAuth } from '../../../context/AuthContext';
 
 const STATS = [
     { label: 'Rating', val: '4.9', icon: Star, color: 'text-yellow-400' },
@@ -16,13 +17,21 @@ const STATS = [
 
 const CaptainProfile = () => {
     const navigate = useNavigate();
+    const { getUser, logout } = useAuth();
+    const user = getUser('captain') || { name: 'Captain', id: 'CPT-000' };
     const [isOnline, setIsOnline] = useState(true);
+
+    const handleLogout = () => {
+        logout('captain');
+        navigate('/captain/login');
+    };
 
     const menuItems = [
         {
             group: 'Manage', items: [
                 { icon: Wallet, label: 'Earnings & Payouts', sub: '₹14,200 this week', route: '/captain/earnings' },
                 { icon: History, label: 'Work History', sub: 'View past washes', route: '/captain/history' },
+                { icon: Award, label: 'Rewards & Recognition', sub: 'Tier level: Elite', route: '/captain/rewards' },
                 { icon: Shield, label: 'Safety & Insurance', sub: 'You are currently covered', route: '/captain/safety' },
             ]
         },
@@ -30,7 +39,7 @@ const CaptainProfile = () => {
             group: 'Account', items: [
                 { icon: Settings, label: 'Settings', sub: 'Preferences & Security', route: '/captain/settings' },
                 { icon: MessageCircle, label: 'Help & Support', sub: 'Chat with us 24/7', route: '/captain/support' },
-                { icon: LogOut, label: 'Logout', sub: 'End session', route: '/login', danger: true },
+                { icon: LogOut, label: 'Logout', sub: 'End session', onClick: handleLogout, danger: true },
             ]
         }
     ];
@@ -49,10 +58,10 @@ const CaptainProfile = () => {
                                 <Camera size={16} strokeWidth={2.5} />
                             </button>
                         </div>
-                        <h2 className="text-white text-2xl font-black tracking-tight">Rahul Sharma</h2>
+                        <h2 className="text-white text-2xl font-black tracking-tight">{user.name}</h2>
                         <div className="flex items-center gap-2 mt-1 opacity-60">
                             <MapPin size={12} className="text-brand" />
-                            <span className="text-white text-[10px] font-black uppercase tracking-[0.2em]">Koramangala, Bengaluru</span>
+                            <span className="text-white text-[10px] font-black uppercase tracking-[0.2em]">{user.city || 'Bengaluru'} | ID: {user.id}</span>
                         </div>
 
                         <div className="mt-6 flex gap-3 w-full max-w-xs">

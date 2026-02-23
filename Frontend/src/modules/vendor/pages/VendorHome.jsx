@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Package, MapPin, Phone, MessageSquare, Plus, Users, ChevronRight } from 'lucide-react';
 import VendorLayout from '../components/VendorLayout';
+import { useAuth } from '../../../context/AuthContext';
 
 const VendorHome = () => {
+    const { getUser } = useAuth();
+    const user = getUser('vendor') || { studioName: 'Hoora Studio', city: 'Bengaluru' };
     const [activeTab, setActiveTab] = useState('Today');
 
     const STATS = [
@@ -26,8 +29,8 @@ const VendorHome = () => {
 
     return (
         <VendorLayout
-            title="Studio Dashboard"
-            subtitle="Perfect Shine Car Spa · Bengaluru"
+            title={user.studioName || "Studio Dashboard"}
+            subtitle={`${user.city || 'Bengaluru'} · Connected`}
         >
             <div className="space-y-8">
                 {/* Stats Grid */}

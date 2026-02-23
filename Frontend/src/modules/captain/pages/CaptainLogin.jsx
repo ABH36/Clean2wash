@@ -2,10 +2,12 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ShieldCheck, Phone, Zap, Star, ArrowRight, Camera, CheckCircle2 } from 'lucide-react';
+import { useAuth } from '../../../context/AuthContext';
 
 const CaptainLogin = () => {
     const navigate = useNavigate();
-    const [phase, setPhase] = useState('phone'); // 'phone' | 'otp' | 'onboarding'
+    const { login } = useAuth();
+    const [phase, setPhase] = useState('phone');
     const [phone, setPhone] = useState('');
     const [otp, setOtp] = useState(['', '', '', '']);
     const [loading, setLoading] = useState(false);
@@ -14,7 +16,6 @@ const CaptainLogin = () => {
     const handleSendOtp = () => {
         if (phone.length < 10) return;
         setLoading(true);
-        // Simulate API call
         setTimeout(() => {
             setLoading(false);
             setPhase('otp');
@@ -31,11 +32,21 @@ const CaptainLogin = () => {
     const handleVerify = () => {
         if (otp.join('').length < 4) return;
         setLoading(true);
-        // Simulate verification
+
+        // Captain usually enters phone first. 
+        // For simplicity in mock, any 4 digit works, but we check if phone exists.
+        const user = validateCredentials('captain', { phone, password: '' }); // Only phone check for now or mockup
+
         setTimeout(() => {
             setLoading(false);
-            // If new user, go to onboarding, else home
-            navigate('/captain');
+            if (user) {
+                login('captain', user);
+                navigate('/captain');
+            } else {
+                // If not found, we could redirect to signup or show error
+                alert("Phone number not registered. Please signup first.");
+                navigate('/captain/signup');
+            }
         }, 1500);
     };
 

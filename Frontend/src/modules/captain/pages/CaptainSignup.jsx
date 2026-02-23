@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Camera, Car, Shield, Briefcase, ChevronRight, Zap } from 'lucide-react';
+import { ChevronLeft, Camera, Car, Shield, Briefcase, ChevronRight, Zap, Lock, Phone } from 'lucide-react';
+import { useAuth } from '../../../context/AuthContext';
 
 const STEPS = [
     { id: 0, label: 'Personal', icon: Briefcase },
@@ -12,9 +13,10 @@ const STEPS = [
 
 const CaptainSignup = () => {
     const navigate = useNavigate();
+    const { register, login } = useAuth();
     const [step, setStep] = useState(0);
     const [formData, setFormData] = useState({
-        name: '', city: '', experience: 'Fresher',
+        name: '', phone: '', password: '', city: '', experience: 'Fresher',
         vehicleType: 'Two Wheeler', plate: '',
         kit: 'Mini-Pro Kit',
         idType: 'Aadhar Card'
@@ -22,7 +24,12 @@ const CaptainSignup = () => {
 
     const handleNext = () => {
         if (step < STEPS.length - 1) setStep(step + 1);
-        else navigate('/captain');
+        else {
+            const userData = { ...formData, role: 'captain', id: 'CPT-' + Math.random().toString(36).substr(2, 6).toUpperCase() };
+            register('captain', userData);
+            login('captain', userData);
+            navigate('/captain');
+        }
     };
 
     const renderStep = () => {
@@ -43,6 +50,8 @@ const CaptainSignup = () => {
                         </div>
                         <div className="space-y-4">
                             <InputField label="Full Name" placeholder="As per govt ID" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                            <InputField label="Phone Number" placeholder="10 Digit Mobile" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })} />
+                            <InputField label="Create PIN / Passcode" placeholder="4-8 digits recommended" type="password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
                             <InputField label="City" placeholder="Preferred City" value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} />
                             <div>
                                 <p className="text-white/40 text-[9px] font-black uppercase tracking-widest mb-3 ml-1">Work Experience</p>

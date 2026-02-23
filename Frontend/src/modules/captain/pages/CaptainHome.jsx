@@ -7,6 +7,7 @@ import {
     Navigation, Shield
 } from 'lucide-react';
 import CaptainLayout from '../components/CaptainLayout';
+import { useAuth } from '../../../context/AuthContext';
 
 const INCOMING_JOB = {
     id: 'HOORA-8821',
@@ -23,6 +24,8 @@ const INCOMING_JOB = {
 
 const CaptainHome = () => {
     const navigate = useNavigate();
+    const { getUser } = useAuth();
+    const user = getUser('captain') || { name: 'Captain' };
     const [online, setOnline] = useState(true);
     const [jobPing, setJobPing] = useState(true);
     const [accepted, setAccepted] = useState(false);
@@ -37,7 +40,7 @@ const CaptainHome = () => {
                 <div className="flex items-center justify-between mb-5">
                     <div>
                         <p className="text-white/40 text-[9px] font-black uppercase tracking-widest">Captain App</p>
-                        <h1 className="text-white text-xl font-black tracking-tight mt-0.5">Good afternoon, Rahul 👋</h1>
+                        <h1 className="text-white text-xl font-black tracking-tight mt-0.5">Good afternoon, {user.name.split(' ')[0]} 👋</h1>
                     </div>
                     <div className="flex items-center gap-2">
                         <button className="w-9 h-9 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center">

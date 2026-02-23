@@ -3,20 +3,60 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, CheckCircle2, Navigation, Zap, Gift, Tag, ShieldCheck, Bell, ChevronRight } from 'lucide-react';
 import MobileLayout from '../components/layout/MobileLayout';
+import { useAuth } from '../../../context/AuthContext';
 
-const NOTIFICATIONS = [
-    { id: 1, type: 'booking', icon: <Navigation size={17} className="text-blue-600" />, iconBg: 'bg-blue-50', title: 'Captain En Route', desc: 'Rahul is 12 mins away. Please be ready near your vehicle.', time: '2 mins ago', isNew: true },
-    { id: 2, type: 'cashback', icon: <Zap size={17} className="text-brand" fill="currentColor" />, iconBg: 'bg-brand/10', title: '100% Cashback Credited!', desc: 'Your first wash cashback of ₹299 has been added to Hoora Wallet.', time: 'Yesterday', isNew: true },
-    { id: 3, type: 'offer', icon: <Gift size={17} className="text-pink-600" />, iconBg: 'bg-pink-50', title: 'Weekend Special Offer', desc: 'Get 30% off on Full Deep Clean every Sat & Sun. Use WEEKEND30.', time: '2 days ago', isNew: false },
-    { id: 4, type: 'completed', icon: <CheckCircle2 size={17} className="text-green-600" />, iconBg: 'bg-green-50', title: 'Wash Completed!', desc: 'Your Eco Doorstep Wash is done. Rate your experience with Vikram.', time: 'Feb 18', isNew: false },
-    { id: 5, type: 'security', icon: <ShieldCheck size={17} className="text-violet-600" />, iconBg: 'bg-violet-50', title: 'New Login Detected', desc: 'A new login was detected from Android in Bengaluru.', time: 'Feb 17', isNew: false },
-    { id: 6, type: 'promo', icon: <Tag size={17} className="text-amber-600" />, iconBg: 'bg-amber-50', title: 'Hoora FASTag Available', desc: 'Now manage FASTag recharges directly from the Hoora app.', time: 'Feb 15', isNew: false },
+const MOCK_PROMOS = [
+    { id: 'p2', type: 'offer', icon: <Gift size={17} className="text-pink-600" />, iconBg: 'bg-pink-50', title: 'Weekend Special Offer', desc: 'Get 30% off on Full Deep Clean every Sat & Sun. Use WEEKEND30.', time: '2 days ago', isNew: false },
+    { id: 'p3', type: 'security', icon: <ShieldCheck size={17} className="text-violet-600" />, iconBg: 'bg-violet-50', title: 'New Login Detected', desc: 'A new login was detected from Android in Bengaluru.', time: 'Feb 17', isNew: false },
 ];
 
 const Notifications = () => {
     const navigate = useNavigate();
-    const newN = NOTIFICATIONS.filter(n => n.isNew);
-    const oldN = NOTIFICATIONS.filter(n => !n.isNew);
+    const { bookings, user } = useAuth();
+
+    // Map real bookings to notification format
+    const bookingNotifs = bookings.filter(b => b.userId === user?.id || b.userId === 'GUEST').map(b => {
+        let title = 'Booking Update';
+        let desc = `Your booking for ${b.serviceName} is moving forward.`;
+        let icon = <Navigation size={17} className="text-blue-600" />;
+        let bg = 'bg-blue-50';
+
+        if (b.status === 'pending') {
+            title = 'Finding Captain';
+            desc = `We are matching you with the best captain for your ${b.serviceName}.`;
+            icon = <Zap size={17} className="text-violet-600" />;
+            bg = 'bg-violet-50';
+        } else if (b.status === 'confirmed') {
+            title = 'Captain Assigned!';
+            desc = `Captain has accepted your request for ${b.serviceName}.`;
+        } else if (b.status === 'in-progress') {
+            title = 'Service Started';
+            desc = `Your ${b.serviceName} is currently in progress.`;
+            icon = <CheckCircle2 size={17} className="text-brand" />;
+            bg = 'bg-brand/10';
+        } else if (b.status === 'completed') {
+            title = 'Wash Completed! ✨';
+            desc = `Your car is now sparkling clean. Order #${b.id} is finished.`;
+            icon = <CheckCircle2 size={17} className="text-green-600" />;
+            bg = 'bg-green-50';
+        }
+
+        return {
+            id: b.id,
+            type: 'booking',
+            icon,
+            iconBg: bg,
+            title,
+            desc,
+            time: 'Just now',
+            isNew: true,
+            bookingId: b.id
+        };
+    });
+
+    const allNotifs = [...bookingNotifs, ...MOCK_PROMOS];
+    const newN = allNotifs.filter(n => n.isNew);
+    const oldN = allNotifs.filter(n => !n.isNew);
 
     return (
         <MobileLayout>

@@ -4,15 +4,24 @@ import {
     Plus, Truck, Star, Phone, MessageSquare, MoreVertical
 } from 'lucide-react';
 import VendorLayout from '../components/VendorLayout';
+import { useAuth } from '../../../context/AuthContext';
 
 const VendorFleet = () => {
+    const { registeredUsers, getUser } = useAuth();
+    const vendor = getUser('vendor');
     const [activeTab, setActiveTab] = useState('Drivers');
 
-    const DRIVERS = [
-        { id: 'DRV-001', name: 'Rahul Khanna', status: 'Active', rating: '4.8', trips: '124', image: 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=200&q=80', phone: '+91 91234 56789' },
-        { id: 'DRV-002', name: 'Arjun Mehra', status: 'On Delivery', rating: '4.9', trips: '342', image: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&q=80', phone: '+91 92234 56789' },
-        { id: 'DRV-003', name: 'Vikram Singh', status: 'Offline', rating: '4.7', trips: '89', image: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=200&q=80', phone: '+91 93234 56789' },
-    ];
+    const staffList = (registeredUsers.staff || []).filter(s => s.vendorId === vendor?.id);
+
+    const DRIVERS = staffList.map(s => ({
+        id: s.id,
+        name: s.name,
+        status: 'Active',
+        rating: '4.8',
+        trips: '12',
+        image: 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=200&q=80',
+        phone: s.phone || '+91 91234 56789'
+    }));
 
     const VEHICLES = [
         { id: 'VH-9921', model: 'Hero Electric Nyx', plate: 'KA 01 MR 4421', status: 'Available', Type: 'Two Wheeler' },

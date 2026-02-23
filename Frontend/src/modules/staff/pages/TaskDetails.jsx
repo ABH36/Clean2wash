@@ -14,23 +14,47 @@ import {
     Camera,
     AlertCircle
 } from 'lucide-react';
+import { useAuth } from '../../../context/AuthContext';
 
 const TaskDetails = () => {
     const navigate = useNavigate();
     const { id } = useParams();
-    const [status, setStatus] = useState('accepted'); // 'accepted' | 'arrived' | 'picked' | 'delivered'
+    const { bookings, updateBookingStatus } = useAuth();
 
-    // Mock data
-    const task = {
+    // Find the real booking
+    const liveBooking = bookings.find(b => b.id === id);
+
+    // Fallback if booking is not found (for demo safety)
+    const task = liveBooking || {
         id: id || 'TASK-001',
-        customer: 'Aryan Pathak',
+        userName: 'Aryan Pathak',
         phone: '+91 98765 43210',
+        price: '₹1,299',
         address: 'Sec-15, Faridabad, Near Crown Plaza',
         vehicle: 'Fortuner (HR 51 BZ 1234)',
-        service: 'Full Studio Clean + Studio Pickup',
-        price: '₹1,299',
-        instructions: 'Please be careful with the side mirrors.'
+        serviceName: 'Full Studio Clean + Studio Pickup',
+        status: 'pending'
     };
+
+    // Initialize status based on global state
+    const getStaffStatus = () => {
+        if (task.status === 'completed') return 'completed';
+        if (task.status === 'delivery-assigned') return 'delivering';
+        if (task.status === 'at-studio') return 'at-studio';
+        if (task.status === 'in-progress') return 'in-progress';
+        if (task.status === 'confirmed') return 'pickup-assigned';
+        return 'unknown';
+    };
+
+    const [staffStep, setStaffStep] = useState(0); // 0: Navigating, 1: Arrived, 2: Inspected/Picked
+    const [photos, setPhotos] = useState([]);
+
+    const handleUpdateStatus = (globalStatus) => {
+        updateBookingStatus(task.id, globalStatus);
+    };
+
+    const isDelivery = task.status === 'delivery-assigned' || task.status === 'completed';
+    const currentPhase = isDelivery ? 'Delivery' : 'Pickup';
 
     return (
         <div className="min-h-screen bg-gray-50 pb-32">
@@ -74,11 +98,11 @@ const TaskDetails = () => {
                     <div className="flex justify-between items-start mb-6">
                         <div className="flex gap-4">
                             <div className="w-14 h-14 rounded-3xl bg-gray-50 flex items-center justify-center border border-gray-100 uppercase font-black text-lg text-brand italic">
-                                {task.customer[0]}
+                                {task.userName?.charAt(0) || 'U'}
                             </div>
                             <div>
-                                <h2 className="text-xl font-black text-content italic">{task.customer}</h2>
-                                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest">{task.phone}</p>
+                                <h2 className="text-xl font-black text-content italic">{task.userName || 'Customer'}</h2>
+                                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest">{task.phone || '+91 99999 00000'}</p>
                             </div>
                         </div>
                         <div className="flex gap-2">
@@ -106,10 +130,10 @@ const TaskDetails = () => {
                 <div className="bg-content text-white rounded-[2.5rem] p-6 shadow-xl shadow-content/20">
                     <div className="flex items-center gap-3 mb-4">
                         <Truck size={20} className="text-brand" />
-                        <h3 className="font-black text-xs uppercase tracking-[0.2em]">{task.service}</h3>
+                        <h3 className="font-black text-xs uppercase tracking-[0.2em]">{currentPhase}: {task.serviceName || task.service}</h3>
                     </div>
                     <div>
-                        <p className="text-white/40 text-[9px] font-black uppercase tracking-widest mb-1">Pick up arrival</p>
+                        <p className="text-white/40 text-[9px] font-black uppercase tracking-widest mb-1">Expected Arrival</p>
                         <div className="flex items-center gap-2">
                             <Clock size={16} className="text-white/60" />
                             <span className="text-lg font-black italic">15 mins</span>
@@ -119,12 +143,12 @@ const TaskDetails = () => {
 
                 {/* Photos Section */}
                 <div>
-                    <h4 className="text-[10px] font-black text-content-subtle uppercase tracking-widest mb-3 px-2">Departure Inspection</h4>
+                    <h4 className="text-[10px] font-black text-content-subtle uppercase tracking-widest mb-3 px-2">Vehicle Inspection (Required)</h4>
                     <div className="grid grid-cols-4 gap-2">
                         {[1, 2, 3, 4].map((i) => (
-                            <button key={i} className="aspect-square bg-white rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-1 opacity-60">
-                                <Camera size={16} className="text-content-subtle" />
-                                <span className="text-[7px] font-black uppercase">Click</span>
+                            <button key={i} onClick={() => setPhotos(prev => [...prev, i])} className={`aspect-square rounded-2xl border-2 flex flex-col items-center justify-center gap-1 transition-all ${photos.includes(i) ? 'bg-brand/10 border-brand text-brand opacity-100' : 'bg-white border-dashed border-gray-200 opacity-60'}`}>
+                                <Camera size={16} />
+                                <span className="text-[7px] font-black uppercase">{photos.includes(i) ? 'Snap' : 'Click'}</span>
                             </button>
                         ))}
                     </div>
@@ -133,31 +157,45 @@ const TaskDetails = () => {
 
             {/* Bottom Action Bar */}
             <div className="fixed bottom-0 left-0 right-0 p-5 bg-white/80 backdrop-blur-xl border-t border-gray-100">
-                {status === 'accepted' && (
+                {staffStep === 0 && (
                     <motion.button
                         whileTap={{ scale: 0.98 }}
-                        onClick={() => setStatus('arrived')}
+                        onClick={() => setStaffStep(1)}
                         className="w-full bg-brand text-white py-4 rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-xl shadow-brand/20 flex items-center justify-center gap-2"
                     >
-                        Reached Customer <CheckCircle2 size={20} strokeWidth={3} />
+                        Reached {isDelivery ? 'Customer' : 'Pick Location'} <CheckCircle2 size={20} strokeWidth={3} />
                     </motion.button>
                 )}
-                {status === 'arrived' && (
-                    <motion.button
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => setStatus('picked')}
-                        className="w-full bg-content text-white py-4 rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-xl shadow-content/20 flex items-center justify-center gap-2"
-                    >
-                        Pick Vehicle <Truck size={20} strokeWidth={3} />
-                    </motion.button>
+                {staffStep === 1 && (
+                    <div className="space-y-3">
+                        <p className="text-center text-[10px] font-black uppercase tracking-widest text-content-subtle italic">Take 4 photos to proceed</p>
+                        <motion.button
+                            whileTap={{ scale: 0.98 }}
+                            disabled={photos.length < 4}
+                            onClick={() => {
+                                setStaffStep(2);
+                                if (!isDelivery) handleUpdateStatus('in-progress');
+                            }}
+                            className={`w-full py-4 rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 ${photos.length >= 4 ? 'bg-content text-white shadow-content/20' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                        >
+                            Verify & {isDelivery ? 'Deliver' : 'Pick'} Vehicle <Truck size={20} strokeWidth={3} />
+                        </motion.button>
+                    </div>
                 )}
-                {status === 'picked' && (
+                {staffStep === 2 && (
                     <motion.button
                         whileTap={{ scale: 0.98 }}
-                        onClick={() => setStatus('delivered')}
-                        className="w-full bg-accent-green text-white py-4 rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-xl shadow-green-500/20 flex items-center justify-center gap-2"
+                        onClick={() => {
+                            if (isDelivery) {
+                                handleUpdateStatus('completed');
+                            } else {
+                                handleUpdateStatus('at-studio');
+                            }
+                            navigate('/staff');
+                        }}
+                        className="w-full bg-green-500 text-white py-4 rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-xl shadow-green-500/20 flex items-center justify-center gap-2"
                     >
-                        Delivered to Hub <CheckCircle2 size={20} strokeWidth={3} />
+                        {isDelivery ? 'Delivered to Customer' : 'Handed to Studio'} <CheckCircle2 size={20} strokeWidth={3} />
                     </motion.button>
                 )}
             </div>

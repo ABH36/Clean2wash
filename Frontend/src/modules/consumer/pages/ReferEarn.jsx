@@ -51,7 +51,7 @@ const ReferEarn = () => {
                             Earn <span className="text-brand">₹100</span><br />per referral
                         </h2>
                         <p className="text-white/50 text-sm font-medium leading-relaxed mb-6">
-                            Your friend books their first wash → you both get ₹100 in Hoora Wallet instantly.
+                            Your friend books their first wash → you both get ₹100 discount coupon instantly.
                         </p>
 
                         {/* Referral Code */}
@@ -84,7 +84,7 @@ const ReferEarn = () => {
                         {[
                             { icon: <Share2 size={16} className="text-blue-500" />, title: 'Share your code', desc: 'Send your unique referral link or code to any friend.' },
                             { icon: <Users size={16} className="text-violet-500" />, title: 'Friend signs up', desc: 'They register on Hoora using your referral code.' },
-                            { icon: <Zap size={16} className="text-brand" fill="currentColor" />, title: 'Both earn ₹100', desc: 'After their first completed wash, you both get rewarded.' },
+                            { icon: <Zap size={16} className="text-brand" fill="currentColor" />, title: 'Both get ₹100 OFF', desc: 'After their first completed wash, you both get rewarded.' },
                         ].map((step, i) => (
                             <div key={step.title} className="flex items-start gap-3">
                                 <div className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-gray-100">{step.icon}</div>

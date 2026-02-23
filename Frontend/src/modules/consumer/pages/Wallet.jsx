@@ -3,11 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Zap, Plus, ArrowDownLeft, ArrowUpRight, Gift, Clock, ChevronRight } from 'lucide-react';
 import MobileLayout from '../components/layout/MobileLayout';
+import { useAuth } from '../../../context/AuthContext';
 
-const TRANSACTIONS = [
-    { id: 'TXN001', type: 'credit', title: 'Cashback — HOORAFIRST', sub: 'Wash #HOORA-7761', amount: '+₹299', date: 'Today, 2:45 PM', status: 'success' },
-    { id: 'TXN002', type: 'debit', title: 'Instant Eco Wash', sub: 'Paid via GPay', amount: '-₹473', date: 'Today, 2:30 PM', status: 'success' },
-    { id: 'TXN003', type: 'credit', title: 'Referral Reward', sub: 'Invited Saurabh Jain', amount: '+₹100', date: 'Feb 19, 11:00 AM', status: 'success' },
+const MOCK_TRANSACTIONS = [
+    { id: 'TXN001', type: 'credit', title: 'Hoora — Wallet Refill', sub: 'Added to wallet', amount: '+₹1,000', date: 'Yesterday, 10:15 AM', status: 'success' },
+    { id: 'TXN002', type: 'credit', title: 'Cashback — HOORAFIRST', sub: 'Wash #HOORA-7761', amount: '+₹299', date: 'Feb 18, 2:45 PM', status: 'success' },
     { id: 'TXN004', type: 'debit', title: 'Full Deep Clean', sub: 'Paid via HDFC Card', amount: '-₹1,199', date: 'Feb 18, 10:15 AM', status: 'success' },
     { id: 'TXN005', type: 'credit', title: 'Refund Processed', sub: 'Cancelled #6490', amount: '+₹199', date: 'Feb 15, 3:00 PM', status: 'success' },
     { id: 'TXN006', type: 'debit', title: 'Add Money', sub: 'Via PhonePe', amount: '-₹500', date: 'Feb 14, 7:30 PM', status: 'pending' },
@@ -17,8 +17,30 @@ const QUICK_AMOUNTS = [100, 250, 500, 1000];
 
 const Wallet = () => {
     const navigate = useNavigate();
+    const { walletBalance, updateBalance, bookings } = useAuth();
     const [addMode, setAddMode] = useState(false);
     const [selectedAmt, setSelectedAmt] = useState(null);
+
+    const realTransactions = bookings
+        .filter(b => b.paymentMethod === 'wallet')
+        .map(b => ({
+            id: `TXN-${b.id}`,
+            type: 'debit',
+            title: b.serviceName,
+            sub: `Wash #${b.id}`,
+            amount: `-${b.price}`,
+            date: new Date(b.timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }),
+            status: 'success'
+        }));
+
+    const allTransactions = [...realTransactions, ...MOCK_TRANSACTIONS];
+
+    const handleAddMoney = () => {
+        if (!selectedAmt) return;
+        updateBalance(Number(selectedAmt));
+        setSelectedAmt(null);
+        setAddMode(false);
+    };
 
     return (
         <MobileLayout>
@@ -39,7 +61,7 @@ const Wallet = () => {
                 <div className="bg-content rounded-2xl p-6 relative overflow-hidden border border-white/5">
                     <div className="relative z-10">
                         <p className="text-white/40 text-[9px] font-black uppercase tracking-widest mb-1">Total Balance</p>
-                        <h2 className="text-4xl font-black text-white tracking-tighter leading-none mb-1">₹1,240</h2>
+                        <h2 className="text-4xl font-black text-white tracking-tighter leading-none mb-1">₹{walletBalance.toLocaleString()}</h2>
                         <p className="text-white/30 text-[9px] font-bold mb-5">Updated just now</p>
                         <div className="flex gap-3">
                             <button onClick={() => setAddMode(true)}
@@ -85,8 +107,8 @@ const Wallet = () => {
                                         onChange={(e) => setSelectedAmt(Number(e.target.value))}
                                         className="flex-1 bg-transparent font-black text-content outline-none placeholder:text-content-subtle placeholder:font-bold placeholder:text-sm" />
                                 </div>
-                                <button className="w-full h-12 bg-brand rounded-xl text-white font-black flex items-center justify-between px-5 shadow-md">
-                                    <span>Proceed to Pay</span>
+                                <button onClick={handleAddMoney} className="w-full h-12 bg-brand rounded-xl text-white font-black flex items-center justify-between px-5 shadow-md">
+                                    <span>Confirm & Add Money</span>
                                     <span className="font-black">₹{selectedAmt || '—'}</span>
                                 </button>
                             </div>
@@ -115,20 +137,20 @@ const Wallet = () => {
                         <span className="text-brand text-[9px] font-black uppercase tracking-widest">All Activity</span>
                     </div>
                     <div className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden">
-                        {TRANSACTIONS.map((t, i) => (
-                            <div key={t.id} className={`flex items-center gap-3 px-4 py-3 ${i !== TRANSACTIONS.length - 1 ? 'border-b border-gray-50' : ''}`}>
-                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${t.type === 'credit' ? 'bg-green-50' : 'bg-red-50'}`}>
-                                    {t.type === 'credit'
+                        {allTransactions.map((txn, i) => (
+                            <div key={txn.id} className={`flex items-center gap-4 px-4 py-4 ${i < allTransactions.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${txn.type === 'credit' ? 'bg-green-50' : 'bg-red-50'}`}>
+                                    {txn.type === 'credit'
                                         ? <ArrowDownLeft size={16} className="text-green-600" strokeWidth={2.5} />
                                         : <ArrowUpRight size={16} className="text-red-500" strokeWidth={2.5} />}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="font-black text-sm text-content tracking-tight truncate">{t.title}</p>
-                                    <p className="text-[9px] text-content-subtle font-bold">{t.sub} · {t.date}</p>
+                                    <p className="font-black text-sm text-content tracking-tight truncate">{txn.title}</p>
+                                    <p className="text-[9px] text-content-subtle font-bold">{txn.sub} · {txn.date}</p>
                                 </div>
                                 <div className="text-right flex-shrink-0">
-                                    <p className={`font-black text-sm ${t.type === 'credit' ? 'text-green-600' : 'text-red-500'}`}>{t.amount}</p>
-                                    {t.status === 'pending' && (
+                                    <p className={`font-black text-sm ${txn.type === 'credit' ? 'text-green-600' : 'text-red-500'}`}>{txn.amount}</p>
+                                    {txn.status === 'pending' && (
                                         <p className="text-[8px] text-amber-500 font-black flex items-center gap-0.5 justify-end"><Clock size={8} /> Pending</p>
                                     )}
                                 </div>

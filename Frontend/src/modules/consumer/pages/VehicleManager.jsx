@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Plus, Car, Trash2, Check, Edit3, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useAuth } from '../../../context/AuthContext';
 
 const BRANDS = ['Honda', 'Maruti', 'Hyundai', 'Toyota', 'Tata', 'Mahindra', 'Kia', 'BMW'];
 const COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#ffffff', '#1a1a1a', '#95a5a6', '#e67e22'];
@@ -39,7 +40,7 @@ const Toast = ({ msg, type = 'success', onDone }) => (
 /* ── Main Component ─────────────────────── */
 const VehicleManager = () => {
     const navigate = useNavigate();
-    const [vehicles, setVehicles] = useState(INITIAL_VEHICLES);
+    const { vehicles, addVehicle, removeVehicle, setPrimaryVehicle, user } = useAuth();
     const [showSheet, setShowSheet] = useState(false);
     const [editId, setEditId] = useState(null);   // null = add mode, number = edit mode
     const [form, setForm] = useState(BLANK_FORM);
@@ -83,24 +84,30 @@ const VehicleManager = () => {
         const img = TYPE_IMG[form.type] || TYPE_IMG['Sedan'];
 
         if (editId) {
-            setVehicles(vs => vs.map(v =>
-                v.id === editId ? { ...v, ...form, img } : v
-            ));
+            // Since we don't have a direct updateVehicle in context yet, 
+            // we'll remove and add or handle as simple addition for now 
+            // OR I can easily add updateVehicle to context if needed.
+            // For now, let's just use addVehicle for simplicity or keep local edits if complex.
+            // Actually, I'll just use addVehicle with a new ID if it's new.
+            // For editing, let's just make it a local-ish update if possible.
+            // Better: I'll just handle it as a replacement.
+            removeVehicle(editId);
+            addVehicle({ ...form, id: editId, isPrimary: false, img, userId: user?.id || 'GUEST' });
             showToast('Vehicle updated successfully!');
         } else {
-            setVehicles(vs => [...vs, { ...form, id: Date.now(), isPrimary: false, img }]);
+            addVehicle({ ...form, id: Date.now(), isPrimary: false, img, userId: user?.id || 'GUEST' });
             showToast('Vehicle added to your garage!');
         }
         closeSheet();
     };
 
     const handleDelete = (id) => {
-        setVehicles(vs => vs.filter(v => v.id !== id));
+        removeVehicle(id);
         showToast('Vehicle removed', 'error');
     };
 
     const handleSetPrimary = (id) => {
-        setVehicles(vs => vs.map(v => ({ ...v, isPrimary: v.id === id })));
+        setPrimaryVehicle(id);
         showToast('Primary vehicle updated!');
     };
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
     User, Settings, LogOut, ChevronRight, CreditCard, MapPin,
-    Bell, ShieldCheck, Smartphone, Zap, Wallet, History,
+    Bell, ShieldCheck, Smartphone, Zap, History,
     HelpCircle, Share2, Award, Star, Car
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -60,30 +60,7 @@ const Profile = () => {
 
             <div className="px-4 py-4 space-y-4 pb-24">
 
-                {/* ── Wallet Banner ── */}
-                <div className="bg-brand rounded-2xl p-5 relative overflow-hidden">
-                    <div className="relative z-10">
-                        <div className="flex justify-between items-start mb-5">
-                            <div>
-                                <p className="text-[8px] font-black uppercase tracking-[0.2em] text-white/60 mb-1">Hoora Wallet</p>
-                                <h3 className="text-3xl font-black tracking-tight leading-none text-white">₹1,240</h3>
-                            </div>
-                            <button onClick={() => navigate('/wallet')} className="bg-white/20 backdrop-blur-md p-2.5 rounded-xl border border-white/10">
-                                <Wallet size={20} className="text-white" />
-                            </button>
-                        </div>
-                        <div className="flex justify-between items-center">
-                            <div className="flex -space-x-2">
-                                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center border-2 border-white/20"><Zap size={12} className="text-yellow-300" fill="currentColor" /></div>
-                                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center border-2 border-white/20 text-white text-[9px] font-black">+7</div>
-                            </div>
-                            <button onClick={() => navigate('/wallet')} className="bg-white text-brand px-4 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-md active:scale-95 transition-all">
-                                Manage
-                            </button>
-                        </div>
-                    </div>
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10" />
-                </div>
+
 
                 {/* ── Menu Sections ── */}
                 <MenuSection title="Vehicle Ecosystem">
@@ -95,7 +72,6 @@ const Profile = () => {
                 <MenuSection title="Payments & Trust">
                     <MenuItem icon={<CreditCard />} label="Payment Methods" sub="Cards, UPI, Netbanking" onClick={() => navigate('/payments')} />
                     <MenuItem icon={<ShieldCheck />} label="Insurance Center" sub="Manage Vehicle Policies" onClick={() => navigate('/insurance')} />
-                    <MenuItem icon={<History />} label="Transactions" sub="History & Statements" onClick={() => navigate('/wallet')} />
                 </MenuSection>
 
                 <MenuSection title="Support & Community">

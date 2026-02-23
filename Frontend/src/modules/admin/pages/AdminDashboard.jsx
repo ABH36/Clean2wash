@@ -13,21 +13,38 @@ import {
     AlertCircle,
     CheckCircle2
 } from 'lucide-react';
+import { useAuth } from '../../../context/AuthContext';
 
 const AdminDashboard = () => {
+    const { bookings, registeredUsers } = useAuth();
+
+    // Calculate real stats
+    const totalRevenue = bookings
+        .filter(b => b.status === 'completed')
+        .reduce((acc, b) => acc + parseInt(b.price.replace(/[^0-9]/g, '') || 0), 0);
+
+    const activeJobs = bookings.filter(b => ['pending', 'confirmed', 'in-progress'].includes(b.status)).length;
+
+    const totalUsers = (registeredUsers.consumer?.length || 0) +
+        (registeredUsers.captain?.length || 0) +
+        (registeredUsers.vendor?.length || 0) +
+        (registeredUsers.staff?.length || 0);
+
     const STATS = [
-        { label: 'Total Revenue', val: '₹48,25,400', trend: '+12.5%', isUp: true, icon: <Wallet size={20} />, color: 'text-brand', bg: 'bg-brand/10' },
-        { label: 'Active Jobs', val: '243', trend: '+4.2%', isUp: true, icon: <Zap size={20} />, color: 'text-blue-600', bg: 'bg-blue-50' },
-        { label: 'Platform Users', val: '12,940', trend: '+18.1%', isUp: true, icon: <Users size={20} />, color: 'text-violet-600', bg: 'bg-violet-50' },
-        { label: 'Cancellation', val: '1.2%', trend: '-0.8%', isUp: false, icon: <AlertCircle size={20} />, color: 'text-red-600', bg: 'bg-red-50' },
+        { label: 'Total Revenue', val: `₹${totalRevenue.toLocaleString()}`, trend: '+12.5%', isUp: true, icon: <Wallet size={20} />, color: 'text-brand', bg: 'bg-brand/10' },
+        { label: 'Active Jobs', val: activeJobs.toString(), trend: '+4.2%', isUp: true, icon: <Zap size={20} />, color: 'text-blue-600', bg: 'bg-blue-50' },
+        { label: 'Platform Users', val: totalUsers.toString(), trend: '+18.1%', isUp: true, icon: <Users size={20} />, color: 'text-violet-600', bg: 'bg-violet-50' },
+        { label: 'Network Load', val: '92%', trend: '-0.8%', isUp: false, icon: <AlertCircle size={20} />, color: 'text-red-600', bg: 'bg-red-50' },
     ];
 
-    const RECENT_ORDERS = [
-        { id: 'ORD-9921', customer: 'Aryan Pathak', service: 'Full Deep Clean', status: 'Completed', amount: '₹1,299', time: '12 mins ago' },
-        { id: 'ORD-9920', customer: 'Rahul Sharma', service: 'Eco Wash', status: 'In Progress', amount: '₹499', time: '15 mins ago' },
-        { id: 'ORD-9919', customer: 'Sneha Gupta', service: 'Ceramic Coating', status: 'Pending', amount: '₹4,999', time: '22 mins ago' },
-        { id: 'ORD-9918', customer: 'Amit Singh', service: 'Full Deep Clean', status: 'Completed', amount: '₹1,299', time: '1 hour ago' },
-    ];
+    const RECENT_ORDERS = bookings.slice(0, 5).map(b => ({
+        id: b.id,
+        customer: b.userName || 'Guest User',
+        service: b.serviceName,
+        status: b.status.charAt(0).toUpperCase() + b.status.slice(1).replace('-', ' '),
+        amount: b.price,
+        time: new Date(b.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }));
 
     return (
         <AdminLayout title="Overview">

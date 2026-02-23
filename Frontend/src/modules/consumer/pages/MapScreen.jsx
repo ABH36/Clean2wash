@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     MapPin, ChevronLeft, Search, Navigation, Home, Briefcase,
     Plus, ChevronRight, Check, Zap, Calendar, Clock,
@@ -38,6 +38,11 @@ const SLOTS = [
 
 const MapScreen = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const type = searchParams.get('type') || 'captain';
+    const studioId = searchParams.get('studio');
+    const price = searchParams.get('price');
+
     const [selected, setSelected] = useState(SAVED[0]);
     const [search, setSearch] = useState('');
     const [mode, setMode] = useState('instant'); // 'instant' or 'scheduled'
@@ -218,7 +223,7 @@ const MapScreen = () => {
                     </div>
 
                     <motion.button whileTap={{ scale: 0.96 }}
-                        onClick={() => navigate(`/booking-type?mode=${mode}&date=${selectedDate}&slot=${selectedSlot}`)}
+                        onClick={() => navigate(`/booking-type?mode=${mode}&date=${selectedDate}&slot=${selectedSlot}&type=${type}${studioId ? `&studio=${studioId}` : ''}${price ? `&price=${price}` : ''}`)}
                         className="bg-brand text-white px-7 h-12 rounded-2xl font-black text-xs uppercase tracking-[0.1em] shadow-lg shadow-brand/25 flex items-center gap-2 group">
                         Next
                         <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" strokeWidth={3} />

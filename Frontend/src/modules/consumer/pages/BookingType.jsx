@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../../../context/AuthContext';
 import {
     ChevronLeft, ChevronRight, Zap, Calendar, Clock, CheckCircle2,
     CreditCard, ShieldCheck, Tag, ArrowRight, Info, MapPin, Car, Droplets
@@ -10,7 +11,6 @@ import MobileLayout from '../components/layout/MobileLayout';
 const PAYMENT_METHODS = [
     { id: 'upi', label: 'UPI', sub: 'GPay, PhonePe, Paytm', icon: '⚡' },
     { id: 'card', label: 'Debit / Credit', sub: 'Visa, Mastercard, RuPay', icon: '💳' },
-    { id: 'wallet', label: 'Hoora Wallet', sub: '₹1,240 available', icon: '🧡' },
     { id: 'cod', label: 'Pay at Doorstep', sub: 'Cash on service', icon: '🏠' },
 ];
 
@@ -19,19 +19,48 @@ const BookingType = () => {
     const [searchParams] = useSearchParams();
 
     // Get initial values from URL params
+    const { addBooking, user, vehicles, addresses } = useAuth();
+
+    const primaryVehicle = vehicles.find(v => v.isPrimary) || vehicles[0] || { brand: 'Honda', model: 'City', plate: 'KA 05 MR 7821' };
+    const primaryAddress = addresses.find(a => a.isPrimary) || addresses[0] || { label: 'Home', address: 'HSR Layout, Sector 2, Bengaluru' };
+
     const initialMode = searchParams.get('mode') || 'instant';
     const initialDate = searchParams.get('date') || 'Today';
     const initialSlotTime = searchParams.get('slot_time') || (initialMode === 'instant' ? '20-30 min' : '09:00 AM');
     const serviceType = searchParams.get('type') || 'captain';
+    const studioId = searchParams.get('studio');
+    const priceParam = searchParams.get('price');
+    const parsedPrice = priceParam ? parseInt(priceParam.replace(/[^0-9]/g, '')) : (serviceType === 'vendor' ? 1299 : 299);
 
     const [mode, setMode] = useState(initialMode);
     const [payMethod, setPayMethod] = useState('upi');
     const [couponApplied, setCouponApplied] = useState(false);
 
-    const basePrice = 299;
+    const basePrice = parsedPrice;
     const ecosystemFee = 29;
     const discount = couponApplied ? 60 : 0;
     const total = basePrice + ecosystemFee - discount;
+
+    const handleConfirmBooking = () => {
+        const bookingData = {
+            userId: user?.id || 'GUEST',
+            userName: user?.name || 'Guest User',
+            serviceName: serviceType === 'vendor' ? 'Full Studio Clean' : 'Eco Doorstep Wash',
+            type: serviceType, // 'captain' or 'vendor'
+            vendorId: serviceType === 'vendor' ? studioId : null,
+            price: `₹${total}`,
+            mode,
+            date: initialDate,
+            slot: initialSlotTime,
+            vehicle: `${primaryVehicle.brand} ${primaryVehicle.model} · ${primaryVehicle.plate}`,
+            address: primaryAddress.address,
+            paymentMethod: payMethod,
+            timestamp: new Date().toISOString()
+        };
+
+        const newBooking = addBooking(bookingData);
+        navigate(`/booking-status?type=${serviceType}&id=${newBooking.id}`);
+    };
 
     return (
         <MobileLayout hideNav>
@@ -58,7 +87,7 @@ const BookingType = () => {
                                 <p className="text-white/40 text-[8px] font-black uppercase tracking-widest mb-1">Service</p>
                                 <div className="flex items-center gap-2">
                                     <DropletIcon size={14} className="text-brand" fill="currentColor" />
-                                    <h3 className="text-white font-black text-sm tracking-tight">Eco Doorstep Wash</h3>
+                                    <h3 className="text-white font-black text-sm tracking-tight">{serviceType === 'vendor' ? 'Full Studio Clean' : 'Eco Doorstep Wash'}</h3>
                                 </div>
                             </div>
                             <div className="flex gap-6">
@@ -73,9 +102,9 @@ const BookingType = () => {
                                 </div>
                                 <div>
                                     <p className="text-white/40 text-[8px] font-black uppercase tracking-widest mb-1">Vehicle</p>
-                                    <div className="flex items-center gap-1.5">
+                                    <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => navigate('/vehicles')}>
                                         <Car size={12} className="text-blue-400" />
-                                        <p className="text-white font-black text-xs leading-none">Honda City</p>
+                                        <p className="text-white font-black text-xs leading-none">{primaryVehicle.brand} {primaryVehicle.model}</p>
                                     </div>
                                 </div>
                             </div>
@@ -179,7 +208,7 @@ const BookingType = () => {
 
             {/* ── Sticky Pay Button ── */}
             <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 px-4 pt-4 pb-8 z-50">
-                <motion.button whileTap={{ scale: 0.98 }} onClick={() => navigate(`/booking-status?type=${serviceType}`)}
+                <motion.button whileTap={{ scale: 0.98 }} onClick={handleConfirmBooking}
                     className="group w-full h-14 bg-brand text-white rounded-2xl font-black text-base shadow-xl shadow-brand/30 flex items-center justify-between px-6 relative overflow-hidden">
                     <div className="text-left">
                         <span className="block text-[8px] font-black uppercase tracking-[0.2em] text-white/60 leading-none mb-1">Confirm Wash</span>

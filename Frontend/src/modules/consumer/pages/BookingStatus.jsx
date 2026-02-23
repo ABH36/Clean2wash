@@ -3,37 +3,86 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronLeft, Phone, MessageSquare, ShieldCheck, MapPin,
     CheckCircle2, Navigation, Star, Clock, Zap, Info,
-    AlertTriangle, Droplets
+    AlertTriangle, Droplets, Trash2, Truck
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import MobileLayout from '../components/layout/MobileLayout';
+import { useAuth } from '../../../context/AuthContext';
 
 const CAPTAIN_STEPS = [
     { id: 0, label: 'Matching Captain', desc: 'Scanning nearby experts…', Icon: Zap, activeColor: 'text-violet-500', activeBg: 'bg-violet-50', activeBorder: 'border-violet-200' },
-    { id: 1, label: 'Captain En Route', desc: 'Rahul is heading your way', Icon: Navigation, activeColor: 'text-blue-500', activeBg: 'bg-blue-50', activeBorder: 'border-blue-200' },
+    { id: 1, label: 'Captain En Route', desc: 'Captain is heading your way', Icon: Navigation, activeColor: 'text-blue-500', activeBg: 'bg-blue-50', activeBorder: 'border-blue-200' },
     { id: 2, label: 'Wash in Progress', desc: 'Vehicle is being serviced', Icon: Droplets, activeColor: 'text-brand', activeBg: 'bg-brand/10', activeBorder: 'border-brand/20' },
     { id: 3, label: 'Completed', desc: 'Your car is spotless. Enjoy!', Icon: CheckCircle2, activeColor: 'text-green-500', activeBg: 'bg-green-50', activeBorder: 'border-green-200' },
 ];
 
 const VENDOR_STEPS = [
-    { id: 0, label: 'Requesting Studio', desc: 'Studio confirming your slot…', Icon: Zap, activeColor: 'text-violet-500', activeBg: 'bg-violet-50', activeBorder: 'border-violet-200' },
+    { id: 0, label: 'Matching Studio', desc: 'Finding the best nearby studio…', Icon: Zap, activeColor: 'text-violet-500', activeBg: 'bg-violet-50', activeBorder: 'border-violet-200' },
     { id: 1, label: 'Pickup En Route', desc: 'Driver assigned for pickup', Icon: Navigation, activeColor: 'text-blue-500', activeBg: 'bg-blue-50', activeBorder: 'border-blue-200' },
     { id: 2, label: 'At Studio', desc: 'Expert cleaning in progress', Icon: Droplets, activeColor: 'text-brand', activeBg: 'bg-brand/10', activeBorder: 'border-brand/20' },
-    { id: 3, label: 'Completed', desc: 'Vehicle ready for drop-off!', Icon: CheckCircle2, activeColor: 'text-green-500', activeBg: 'bg-green-50', activeBorder: 'border-green-200' },
+    { id: 3, label: 'Ready for Drop', desc: 'Service finished, out for drop-off', Icon: Truck, activeColor: 'text-amber-500', activeBg: 'bg-amber-50', activeBorder: 'border-amber-200' },
+    { id: 4, label: 'Completed', desc: 'Your car is sparkling clean!', Icon: CheckCircle2, activeColor: 'text-green-500', activeBg: 'bg-green-50', activeBorder: 'border-green-200' },
 ];
 
 const BookingStatus = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const { bookings, updateBookingStatus } = useAuth();
+
     const type = searchParams.get('type') || 'captain';
+    const bookingId = searchParams.get('id');
     const STEPS = type === 'vendor' ? VENDOR_STEPS : CAPTAIN_STEPS;
+
+    // Find live booking
+    const liveBooking = bookings.find(b => b.id === bookingId) || { id: 'HOORA-8821', serviceName: 'Eco Doorstep Wash', price: '₹473', status: 'pending' };
+
     const [step, setStep] = useState(0);
 
+    // Sync step with booking status
     useEffect(() => {
-        const t1 = setTimeout(() => setStep(1), 4000);
-        const t2 = setTimeout(() => setStep(2), 10000);
-        return () => { clearTimeout(t1); clearTimeout(t2); };
-    }, []);
+        if (type === 'vendor') {
+            if (liveBooking.status === 'completed') setStep(4);
+            else if (liveBooking.status === 'delivery-assigned') setStep(3);
+            else if (liveBooking.status === 'at-studio') setStep(2);
+            else if (['accepted', 'confirmed', 'in-progress'].includes(liveBooking.status)) setStep(1);
+            else setStep(0);
+        } else {
+            if (liveBooking.status === 'completed') setStep(3);
+            else if (liveBooking.status === 'in-progress') setStep(2);
+            else if (['confirmed'].includes(liveBooking.status)) setStep(1);
+            else setStep(0);
+        }
+    }, [liveBooking.status, type]);
+
+    // Find performer details (Captain or Staff)
+    const { registeredUsers } = useAuth();
+    const performer = liveBooking.performerId
+        ? [...(registeredUsers.captain || []), ...(registeredUsers.staff || [])].find(u => u.id === liveBooking.performerId)
+        : null;
+
+    const performerName = performer?.name || (type === 'vendor' ? 'Service Hub' : 'Matching…');
+
+    const handleCancel = () => {
+        if (window.confirm('Are you sure you want to cancel this booking?')) {
+            updateBookingStatus(bookingId, 'cancelled');
+            navigate('/');
+        }
+    };
+
+    if (liveBooking.status === 'cancelled') {
+        return (
+            <MobileLayout hideNav>
+                <div className="flex flex-col items-center justify-center min-h-screen px-6 text-center">
+                    <div className="w-20 h-20 bg-red-50 rounded-3xl flex items-center justify-center mb-4">
+                        <AlertTriangle size={40} className="text-red-500" />
+                    </div>
+                    <h2 className="text-2xl font-black text-content tracking-tight">Booking Cancelled</h2>
+                    <p className="text-content-subtle font-bold mt-2">This booking has been cancelled as per your request.</p>
+                    <button onClick={() => navigate('/')} className="mt-8 w-full h-14 bg-content text-white rounded-[2rem] font-black">Back to Home</button>
+                </div>
+            </MobileLayout>
+        );
+    }
 
     return (
         <MobileLayout hideNav>
@@ -44,7 +93,7 @@ const BookingStatus = () => {
                     <ChevronLeft size={18} strokeWidth={2.5} className="text-content" />
                 </button>
                 <div className="text-center">
-                    <p className="text-[9px] font-bold text-content-subtle tracking-widest uppercase">#HOORA-8821</p>
+                    <p className="text-[9px] font-bold text-content-subtle tracking-widest uppercase">{liveBooking.id}</p>
                     <h1 className="text-base font-black tracking-tight text-content leading-none">Live Tracking</h1>
                 </div>
                 <div className="flex items-center gap-1.5 bg-green-50 border border-green-100 px-2.5 py-1.5 rounded-xl">
@@ -204,8 +253,8 @@ const BookingStatus = () => {
                                         <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-400 rounded-full border-2 border-content" />
                                     </div>
                                     <div>
-                                        <p className="text-[8px] font-black text-white/40 uppercase tracking-widest mb-0.5">Your Captain</p>
-                                        <h3 className="text-base font-black text-white tracking-tight leading-none">Rahul Sharma</h3>
+                                        <p className="text-[8px] font-black text-white/40 uppercase tracking-widest mb-0.5">Your {type === 'vendor' ? 'Hub Contact' : 'Captain'}</p>
+                                        <h3 className="text-base font-black text-white tracking-tight leading-none">{performerName}</h3>
                                         <div className="flex items-center gap-2 mt-1.5">
                                             <div className="flex items-center gap-1 bg-accent-yellow px-2 py-0.5 rounded-lg">
                                                 <Star size={9} fill="currentColor" className="text-black" />
@@ -253,12 +302,11 @@ const BookingStatus = () => {
                     )}
                 </AnimatePresence>
 
-                {/* ── Details Grid ─────────────────────────────── */}
                 <div className="grid grid-cols-2 gap-3">
                     {[
-                        { label: 'Service', value: 'Eco Doorstep Wash' },
-                        { label: 'Paid', value: '₹473' },
-                        { label: 'Vehicle', value: 'Honda City · Silver' },
+                        { label: 'Service', value: liveBooking.serviceName },
+                        { label: 'Paid', value: liveBooking.price },
+                        { label: 'Vehicle', value: liveBooking.vehicle || 'Honda City · Silver' },
                         { label: 'Duration', value: '~45 minutes' },
                     ].map((d) => (
                         <div key={d.label} className="bg-white rounded-xl border border-gray-100 shadow-soft px-4 py-3">
@@ -278,15 +326,47 @@ const BookingStatus = () => {
 
             </div>
 
-            {/* ── Sticky Footer ──────────────────────────────── */}
-            <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/90 backdrop-blur-md border-t border-gray-100 px-5 py-3.5 flex items-center justify-between z-50">
-                <div className="flex items-center gap-2">
-                    <ShieldCheck size={16} className="text-brand" />
-                    <p className="text-[9px] font-black text-content uppercase tracking-widest">Hoora Guarantee Active</p>
-                </div>
-                <button onClick={() => navigate('/')} className="bg-gray-50 border border-gray-100 text-content-subtle px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest">
-                    Cancel
-                </button>
+            {/* ── CTA Footer ── */}
+            <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/90 backdrop-blur-md border-t border-gray-100 px-6 py-6 pb-10 z-50">
+                {liveBooking.status === 'completed' ? (
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3 bg-green-50 p-3 rounded-2xl border border-green-100">
+                            <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-green-200">
+                                <CheckCircle2 size={20} strokeWidth={3} />
+                            </div>
+                            <div>
+                                <p className="text-sm font-black text-content italic leading-none">Wash Completed!</p>
+                                <p className="text-[10px] font-bold text-green-600/70 uppercase tracking-widest mt-1">Car is sparkling clean</p>
+                            </div>
+                        </div>
+                        <motion.button
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() => navigate(`/rate?id=${bookingId}`)}
+                            className="w-full h-14 bg-content text-white rounded-[2rem] font-black text-sm shadow-xl shadow-content/20 flex items-center justify-center gap-2"
+                        >
+                            View Summary & Rate <ChevronRight size={18} strokeWidth={3} />
+                        </motion.button>
+                    </div>
+                ) : (
+                    <div className="flex gap-3">
+                        <motion.button
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() => navigate('/help')}
+                            className="flex-1 h-14 bg-white border-2 border-gray-100 text-content rounded-2xl font-black text-sm flex items-center justify-center gap-2"
+                        >
+                            <MessageSquare size={18} className="text-brand" fill="currentColor" /> Need Help?
+                        </motion.button>
+                        {(liveBooking.status === 'pending' || liveBooking.status === 'confirmed') && (
+                            <motion.button
+                                whileTap={{ scale: 0.97 }}
+                                onClick={handleCancel}
+                                className="w-14 h-14 bg-red-50 border-2 border-red-100 text-red-500 rounded-2xl font-black text-sm flex items-center justify-center"
+                            >
+                                <Trash2 size={20} />
+                            </motion.button>
+                        )}
+                    </div>
+                )}
             </div>
 
         </MobileLayout>

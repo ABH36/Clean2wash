@@ -15,7 +15,6 @@ import Login from './modules/consumer/pages/Login';
 import Signup from './modules/consumer/pages/Signup';
 import MyBookings from './modules/consumer/pages/MyBookings';
 import Notifications from './modules/consumer/pages/Notifications';
-import Wallet from './modules/consumer/pages/Wallet';
 import RateExperience from './modules/consumer/pages/RateExperience';
 import VehicleManager from './modules/consumer/pages/VehicleManager';
 import HelpSupport from './modules/consumer/pages/HelpSupport';
@@ -130,7 +129,7 @@ function App() {
             <Route path="/profile" element={P('consumer', <Profile />)} />
             <Route path="/vehicles" element={P('consumer', <VehicleManager />)} />
             <Route path="/addresses" element={P('consumer', <AddressManager />)} />
-            <Route path="/wallet" element={P('consumer', <Wallet />)} />
+
             <Route path="/refer" element={P('consumer', <ReferEarn />)} />
             <Route path="/help" element={P('consumer', <HelpSupport />)} />
             <Route path="/offers" element={P('consumer', <OffersPage />)} />

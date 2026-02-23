@@ -9,29 +9,26 @@ import {
 import CaptainLayout from '../components/CaptainLayout';
 import { useAuth } from '../../../context/AuthContext';
 
-const INCOMING_JOB = {
-    id: 'HOORA-8821',
-    customer: 'Aman Verma',
-    service: 'Instant Eco Wash',
-    vehicle: 'Honda City · KA 05 MR 7821',
-    address: 'HSR Layout, Sector 2, Bengaluru 560102',
-    distance: '1.4 km away',
-    amount: '₹473',
-    tip: '+₹50 tip',
-    eta: '8 min',
-    expiresIn: 28,
-};
-
 const CaptainHome = () => {
     const navigate = useNavigate();
-    const { getUser } = useAuth();
-    const user = getUser('captain') || { name: 'Captain' };
+    const { getUser, bookings, updateBookingStatus } = useAuth();
+    const user = getUser('captain') || { name: 'Captain', id: 'CPT-DEFAULT' };
     const [online, setOnline] = useState(true);
-    const [jobPing, setJobPing] = useState(true);
-    const [accepted, setAccepted] = useState(false);
 
-    const handleAccept = () => { setAccepted(true); setTimeout(() => navigate('/captain/job'), 800); };
-    const handleDecline = () => setJobPing(false);
+    // Find the first pending job for captains
+    const liveJob = bookings.find(b => b.status === 'pending' && b.type === 'captain');
+
+    const [acceptedJobId, setAcceptedJobId] = useState(null);
+
+    const handleAccept = (jobId) => {
+        setAcceptedJobId(jobId);
+        updateBookingStatus(jobId, 'confirmed', user.id);
+        setTimeout(() => navigate(`/captain/job?id=${jobId}`), 800);
+    };
+    const handleDecline = (jobId) => {
+        // For mock, we'll just ignore it or mark as rejected
+        updateBookingStatus(jobId, 'rejected', user.id);
+    };
 
     return (
         <CaptainLayout>
@@ -40,7 +37,7 @@ const CaptainHome = () => {
                 <div className="flex items-center justify-between mb-5">
                     <div>
                         <p className="text-white/40 text-[9px] font-black uppercase tracking-widest">Captain App</p>
-                        <h1 className="text-white text-xl font-black tracking-tight mt-0.5">Good afternoon, {user.name.split(' ')[0]} 👋</h1>
+                        <h1 className="text-white text-xl font-black tracking-tight mt-0.5">Good afternoon, {(user?.name || 'Captain').split(' ')[0]} 👋</h1>
                     </div>
                     <div className="flex items-center gap-2">
                         <button className="w-9 h-9 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center">
@@ -74,7 +71,7 @@ const CaptainHome = () => {
 
                 {/* ── Incoming Job Ping ── */}
                 <AnimatePresence>
-                    {jobPing && !accepted && (
+                    {online && liveJob && (
                         <motion.div initial={{ scale: 0.9, opacity: 0, y: -20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0 }} transition={{ type: 'spring', stiffness: 300 }}
                             className="bg-white rounded-2xl border-2 border-brand shadow-xl shadow-brand/15 overflow-hidden">
@@ -86,7 +83,7 @@ const CaptainHome = () => {
                                 </div>
                                 <div className="flex items-center gap-1.5 bg-brand text-white px-2.5 py-1 rounded-lg">
                                     <Clock size={11} strokeWidth={3} />
-                                    <span className="font-black text-xs">{INCOMING_JOB.expiresIn}s</span>
+                                    <span className="font-black text-xs">28s</span>
                                 </div>
                             </div>
 
@@ -94,36 +91,36 @@ const CaptainHome = () => {
                             <div className="px-4 py-4 space-y-3">
                                 <div className="flex items-start justify-between">
                                     <div>
-                                        <h3 className="font-black text-lg text-content tracking-tight leading-none">{INCOMING_JOB.service}</h3>
-                                        <p className="text-content-subtle text-[10px] font-bold mt-0.5">{INCOMING_JOB.vehicle}</p>
+                                        <h3 className="font-black text-lg text-content tracking-tight leading-none">{liveJob.serviceName}</h3>
+                                        <p className="text-content-subtle text-[10px] font-bold mt-0.5">{liveJob.vehicle}</p>
                                     </div>
                                     <div className="text-right">
-                                        <p className="font-black text-xl text-content">{INCOMING_JOB.amount}</p>
-                                        <p className="text-green-600 text-[9px] font-black">{INCOMING_JOB.tip}</p>
+                                        <p className="font-black text-xl text-content">{liveJob.price}</p>
+                                        <p className="text-green-600 text-[9px] font-black">+₹50 Tip</p>
                                     </div>
                                 </div>
 
                                 <div className="flex items-start gap-2.5 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2.5">
                                     <MapPin size={14} className="text-brand flex-shrink-0 mt-0.5" fill="currentColor" strokeWidth={1.5} />
                                     <div>
-                                        <p className="font-black text-sm text-content leading-snug">{INCOMING_JOB.address}</p>
-                                        <p className="text-[9px] font-black text-brand mt-0.5">{INCOMING_JOB.distance} · ETA {INCOMING_JOB.eta}</p>
+                                        <p className="font-black text-sm text-content leading-snug">{liveJob.address}</p>
+                                        <p className="text-[9px] font-black text-brand mt-0.5">1.2 km away · ETA 8 min</p>
                                     </div>
                                 </div>
 
                                 <div className="flex items-center gap-2 bg-green-50 border border-green-100 rounded-xl px-3 py-2.5">
                                     <Shield size={13} className="text-green-600" />
-                                    <p className="text-[9px] font-black text-green-700">Verified customer · 8 past washes · No incidents</p>
+                                    <p className="text-[9px] font-black text-green-700">Verified customer · {liveJob.userName}</p>
                                 </div>
 
                                 <div className="flex gap-3 pt-1">
-                                    <button onClick={handleDecline}
+                                    <button onClick={() => handleDecline(liveJob.id)}
                                         className="flex-1 h-12 bg-gray-50 border border-gray-200 rounded-xl font-black text-sm text-content-muted">
                                         Decline
                                     </button>
-                                    <motion.button whileTap={{ scale: 0.97 }} onClick={handleAccept}
-                                        className={`flex-1 h-12 rounded-xl font-black text-sm text-white shadow-md transition-all ${accepted ? 'bg-green-500' : 'bg-brand shadow-brand/25'}`}>
-                                        {accepted ? '✓ Accepted!' : 'Accept Job'}
+                                    <motion.button whileTap={{ scale: 0.97 }} onClick={() => handleAccept(liveJob.id)}
+                                        className={`flex-1 h-12 rounded-xl font-black text-sm text-white shadow-md transition-all ${acceptedJobId === liveJob.id ? 'bg-green-500' : 'bg-brand shadow-brand/25'}`}>
+                                        {acceptedJobId === liveJob.id ? '✓ Accepted!' : 'Accept Job'}
                                     </motion.button>
                                 </div>
                             </div>

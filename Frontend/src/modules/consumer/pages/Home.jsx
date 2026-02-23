@@ -147,7 +147,7 @@ const Home = () => {
                             <span className="text-white/60 text-[9px] font-black uppercase tracking-widest">New User Offer</span>
                         </div>
                         <h3 className="text-white text-2xl font-black tracking-tight leading-tight mb-1">
-                            100% <span className="text-brand">Cashback</span> on First Wash
+                            Flat <span className="text-brand">₹60 OFF</span> on First Wash
                         </h3>
                         <p className="text-white/40 text-[10px] font-bold mb-4">
                             Code: <span className="text-accent-yellow font-black">HOORAFIRST</span>

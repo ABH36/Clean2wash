@@ -103,7 +103,7 @@ const StudioDiscovery = () => {
                         <h3 className="text-white font-black text-sm tracking-tight mb-1">View on Map</h3>
                         <p className="text-white/40 text-[9px] font-bold uppercase tracking-widest">See studios around you</p>
                     </div>
-                    <button onClick={() => navigate('/map')} className="relative z-10 w-10 h-10 bg-brand rounded-xl flex items-center justify-center text-white shadow-lg">
+                    <button onClick={() => navigate('/map?type=vendor')} className="relative z-10 w-10 h-10 bg-brand rounded-xl flex items-center justify-center text-white shadow-lg">
                         <Navigation size={18} fill="white" />
                     </button>
                     <div className="absolute top-0 right-0 w-32 h-32 bg-brand/10 blur-3xl rounded-full" />
@@ -118,7 +118,7 @@ const StudioDiscovery = () => {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.1 }}
                             whileTap={{ scale: 0.98 }}
-                            onClick={() => navigate(`/map?studio=${studio.id}&type=vendor`)}
+                            onClick={() => navigate(`/map?studio=${studio.id}&type=vendor&price=${studio.price}`)}
                             className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden group cursor-pointer"
                         >
                             {/* Image Header */}

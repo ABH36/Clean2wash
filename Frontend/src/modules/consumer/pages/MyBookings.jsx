@@ -6,6 +6,7 @@ import {
     Navigation, RotateCcw, Filter, Zap, ArrowRight, ChevronLeft
 } from 'lucide-react';
 import MobileLayout from '../components/layout/MobileLayout';
+import { useAuth } from '../../../context/AuthContext';
 
 const TABS = ['Active', 'Past', 'Cancelled'];
 
@@ -24,8 +25,54 @@ const BOOKINGS = {
 
 const MyBookings = () => {
     const navigate = useNavigate();
+    const { bookings, user, registeredUsers } = useAuth();
     const [activeTab, setActiveTab] = useState('Active');
-    const list = BOOKINGS[activeTab];
+
+    // Filter and Map Bookings
+    const userBookings = bookings.filter(b => b.userId === user?.id || b.userId === 'GUEST');
+
+    const mappedBookings = {
+        Active: userBookings.filter(b => ['pending', 'confirmed', 'in-progress'].includes(b.status)).map(b => {
+            const performer = b.performerId ? [...(registeredUsers.captain || []), ...(registeredUsers.staff || [])].find(u => u.id === b.performerId) : null;
+            return {
+                id: b.id,
+                service: b.serviceName,
+                captain: performer?.name || 'Searching…',
+                captainImg: null,
+                carImg: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80',
+                status: b.status === 'pending' ? 'Matching' : b.status === 'confirmed' ? 'En Route' : 'In Progress',
+                statusColor: b.status === 'pending' ? 'text-violet-600 bg-violet-50' : 'text-blue-600 bg-blue-50',
+                eta: b.status === 'confirmed' ? '12 min' : (b.status === 'in-progress' ? 'Washing' : '—'),
+                amount: b.price,
+                date: new Date(b.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                type: b.type
+            };
+        }),
+        Past: userBookings.filter(b => b.status === 'completed').map(b => ({
+            id: b.id,
+            service: b.serviceName,
+            captain: 'Rahul Sharma', // Fallback or fetch performer
+            captainImg: null,
+            carImg: 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=400&q=80',
+            status: 'Completed',
+            statusColor: 'text-green-600 bg-green-50',
+            rating: 4.9,
+            rated: true,
+            amount: b.price,
+            date: new Date(b.timestamp).toLocaleDateString()
+        })),
+        Cancelled: userBookings.filter(b => ['cancelled', 'rejected'].includes(b.status)).map(b => ({
+            id: b.id,
+            service: b.serviceName,
+            status: 'Cancelled',
+            statusColor: 'text-red-600 bg-red-50',
+            amount: b.price,
+            date: new Date(b.timestamp).toLocaleDateString(),
+            carImg: 'https://images.unsplash.com/photo-1611455600759-99abfc83e9c4?w=400&q=80'
+        }))
+    };
+
+    const list = mappedBookings[activeTab];
 
     return (
         <MobileLayout>
@@ -53,7 +100,7 @@ const MyBookings = () => {
                         <button key={tab} onClick={() => setActiveTab(tab)}
                             className={`flex-1 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-brand text-white shadow-md' : 'bg-white border border-gray-100 text-content-subtle'
                                 }`}>
-                            {tab} <span className={`ml-1 px-1 py-0.5 rounded text-[8px] ${activeTab === tab ? 'bg-white/20' : 'bg-gray-100'}`}>{BOOKINGS[tab].length}</span>
+                            {tab} <span className={`ml-1 px-1 py-0.5 rounded text-[8px] ${activeTab === tab ? 'bg-white/20' : 'bg-gray-100'}`}>{mappedBookings[tab].length}</span>
                         </button>
                     ))}
                 </div>
@@ -93,8 +140,8 @@ const MyBookings = () => {
 const BookingCard = ({ booking: b, onNavigate }) => (
     <motion.div whileTap={{ scale: 0.99 }}
         onClick={() => {
-            if (b.status === 'Captain En Route') onNavigate('/booking-status');
-            else if (b.status === 'Completed' || b.status === 'Cancelled') onNavigate(`/order/${b.id}`);
+            if (['Matching', 'En Route', 'In Progress'].includes(b.status)) onNavigate(`/booking-status?type=${b.type}&id=${b.id}`);
+            else onNavigate(`/order/${b.id}`);
         }}
         className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden cursor-pointer">
         <div className="relative h-28 overflow-hidden">
@@ -103,7 +150,7 @@ const BookingCard = ({ booking: b, onNavigate }) => (
             <div className={`absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-xl ${b.statusColor}`}>
                 {b.status === 'Completed' && <CheckCircle2 size={10} strokeWidth={3} />}
                 {b.status === 'Cancelled' && <XCircle size={10} strokeWidth={3} />}
-                {b.status === 'Captain En Route' && <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />}
+                {['Matching', 'En Route', 'In Progress'].includes(b.status) && <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />}
                 <span className="text-[8px] font-black uppercase tracking-widest">{b.status}</span>
             </div>
             <div className="absolute bottom-3 left-3">
@@ -130,7 +177,7 @@ const BookingCard = ({ booking: b, onNavigate }) => (
                 </div>
             </div>
             <div>
-                {b.status === 'Captain En Route' && (
+                {['En Route', 'In Progress'].includes(b.status) && (
                     <div className="flex items-center gap-1.5 bg-blue-50 text-blue-600 px-3 py-2 rounded-xl">
                         <Clock size={12} strokeWidth={3} /><span className="font-black text-xs">{b.eta}</span>
                     </div>

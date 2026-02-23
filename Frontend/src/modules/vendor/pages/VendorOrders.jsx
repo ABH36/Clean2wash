@@ -4,17 +4,37 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import VendorLayout from '../components/VendorLayout';
+import { useAuth } from '../../../context/AuthContext';
 
 const VendorOrders = () => {
     const navigate = useNavigate();
+    const { bookings, getUser } = useAuth();
+    const user = getUser('vendor');
     const [activeTab, setActiveTab] = useState('Active');
 
-    const ORDERS = [
-        { id: 'ORD-9921', customer: 'Suresh Raina', car: 'BMW X5', type: 'Full Studio Clean', status: 'In Progress', date: '21 Feb, 10:30 AM', amount: '₹1,299', location: 'Indiranagar' },
-        { id: 'ORD-8812', customer: 'Anjali Gupta', car: 'Honda City', type: 'Interior Polish', status: 'Completed', date: '21 Feb, 09:15 AM', amount: '₹899', location: 'Koramangala' },
-        { id: 'ORD-7734', customer: 'Aman Verma', car: 'Hyundai Creta', type: 'Full Wash + Wax', status: 'Scheduled', date: '22 Feb, 02:00 PM', amount: '₹1,499', location: 'HSR Layout' },
-        { id: 'ORD-6651', customer: 'Rohit Sharma', car: 'Mercedes GLC', type: 'Ceramic Coat', status: 'Cancelled', date: '20 Feb, 04:00 PM', amount: '₹4,999', location: 'Whitefield' },
-    ];
+    const vendorBookings = bookings.filter(b => b.vendorId === user?.id || (b.type === 'vendor' && !b.vendorId && activeTab === 'Market'));
+
+    const mappedOrders = vendorBookings.map(b => ({
+        id: b.id,
+        customer: b.userName || 'Guest',
+        car: b.vehicle || 'Unknown',
+        type: b.serviceName,
+        status: b.status.toUpperCase(),
+        date: new Date(b.timestamp).toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
+        amount: b.price,
+        location: b.address || 'Bengaluru'
+    }));
+
+    // Local filtering based on tab
+    const filteredOrders = mappedOrders.filter(o => {
+        if (activeTab === 'Active') return ['ACCEPTED', 'CONFIRMED', 'IN-PROGRESS', 'AT-STUDIO', 'DELIVERY-ASSIGNED'].includes(o.status);
+        if (activeTab === 'Completed') return o.status === 'COMPLETED';
+        if (activeTab === 'Cancelled') return o.status === 'CANCELLED';
+        if (activeTab === 'Market') return o.status === 'PENDING';
+        return true;
+    });
+
+    const ORDERS = filteredOrders;
 
     return (
         <VendorLayout
@@ -23,8 +43,8 @@ const VendorOrders = () => {
         >
             <div className="space-y-6">
                 {/* Tabs */}
-                <div className="flex gap-2 bg-gray-100 p-1 rounded-2xl w-fit">
-                    {['Active', 'Upcoming', 'Completed', 'Cancelled'].map(t => (
+                <div className="flex gap-2 bg-gray-100 p-1 rounded-2xl w-fit overflow-x-auto max-w-full">
+                    {['Market', 'Active', 'Completed', 'Cancelled'].map(t => (
                         <button key={t} onClick={() => setActiveTab(t)}
                             className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === t ? 'bg-white text-brand shadow-sm' : 'text-content-muted hover:text-content'
                                 }`}>

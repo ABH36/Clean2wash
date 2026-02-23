@@ -1,25 +1,44 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Package, MapPin, Phone, MessageSquare, Plus, Users, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import VendorLayout from '../components/VendorLayout';
 import { useAuth } from '../../../context/AuthContext';
 
 const VendorHome = () => {
-    const { getUser } = useAuth();
+    const navigate = useNavigate();
+    const { bookings, getUser } = useAuth();
     const user = getUser('vendor') || { studioName: 'Hoora Studio', city: 'Bengaluru' };
     const [activeTab, setActiveTab] = useState('Today');
 
+    // Filter vendor bookings
+    const incomingRequests = bookings.filter(b => b.type === 'vendor' && b.status === 'pending' && !b.vendorId);
+    const myActiveJobs = bookings.filter(b => b.vendorId === user.id && b.status !== 'completed');
+    const myCompletedJobs = bookings.filter(b => b.vendorId === user.id && b.status === 'completed');
+
+    const activeVendorJobs = myActiveJobs.filter(b => ['accepted', 'confirmed', 'at-studio', 'delivery-assigned'].includes(b.status));
+    const todayRevenue = myCompletedJobs
+        .reduce((acc, b) => acc + parseInt(b.price.replace(/[^0-9]/g, '') || 0), 0);
+
     const STATS = [
-        { label: 'Active Jobs', val: '08', trend: '+2', color: 'text-blue-500', bg: 'bg-blue-50' },
-        { label: 'Today Revenue', val: '₹12,420', trend: '15%', color: 'text-green-500', bg: 'bg-green-50' },
-        { label: 'Pending Pickups', val: '03', trend: '-1', color: 'text-amber-500', bg: 'bg-amber-50' },
+        { label: 'Active Jobs', val: activeVendorJobs.length.toString().padStart(2, '0'), trend: '+2', color: 'text-blue-500', bg: 'bg-blue-50' },
+        { label: 'Today Revenue', val: `₹${todayRevenue.toLocaleString()}`, trend: '15%', color: 'text-green-500', bg: 'bg-green-50' },
+        { label: 'New Requests', val: incomingRequests.length.toString().padStart(2, '0'), trend: 'Live', color: 'text-brand', bg: 'bg-brand/10' },
     ];
 
     const JOBS = [
-        { id: 'HOORA-V992', customer: 'Suresh Raina', car: 'BMW X5', service: 'Studio Deep Clean', status: 'In Service', time: '10:30 AM', address: 'Indiranagar', type: 'Pickup' },
-        { id: 'HOORA-V881', customer: 'Anjali Gupta', car: 'Honda City', service: 'Full Wash + Wax', status: 'Washing', time: '11:15 AM', address: 'Koramangala', type: 'Drop' },
-        { id: 'HOORA-V772', customer: 'Aman Verma', car: 'Hyundai Creta', service: 'Interior Detailing', status: 'Delivering', time: '01:45 PM', address: 'HSR Layout', type: 'Self' },
-    ];
+        ...incomingRequests.map(b => ({ ...b, category: 'Request' })),
+        ...myActiveJobs.map(b => ({ ...b, category: 'Active' }))
+    ].map(b => ({
+        id: b.id,
+        customer: b.userName || 'Guest User',
+        car: b.vehicle || 'Unknown Car',
+        service: b.serviceName,
+        status: b.category === 'Request' ? 'Incoming' : b.status.toUpperCase(),
+        time: new Date(b.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        address: b.address || 'Bengaluru',
+        type: b.category === 'Request' ? 'Market' : 'Pickup'
+    }));
 
     const QUICK_ACTIONS = [
         { label: 'New Booking', icon: Plus, color: 'bg-brand' },
@@ -61,62 +80,46 @@ const VendorHome = () => {
                     <div className="lg:col-span-2 space-y-4">
                         <div className="flex items-center justify-between px-2">
                             <h3 className="text-[10px] font-black text-content uppercase tracking-[0.2em] italic">Live Tracking</h3>
-                            <div className="flex gap-2">
-                                {['Today', 'Week'].map(t => (
-                                    <button
-                                        key={t}
-                                        onClick={() => setActiveTab(t)}
-                                        className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-lg transition-all ${activeTab === t ? 'bg-content text-white' : 'text-content-muted hover:bg-gray-100'
-                                            }`}
-                                    >
-                                        {t}
-                                    </button>
-                                ))}
-                            </div>
+                            <h3 className="text-[10px] font-black text-content uppercase tracking-[0.2em] italic">Active Tracking & Requests</h3>
+                            <button onClick={() => navigate('/vendor/orders')} className="text-[10px] font-black text-brand uppercase tracking-widest border-b border-brand/20">View All Bookings</button>
                         </div>
 
-                        <div className="space-y-4">
-                            {JOBS.map((job, i) => (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {JOBS.map(job => (
                                 <motion.div
                                     key={job.id}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: i * 0.1 }}
+                                    layoutId={job.id}
                                     onClick={() => navigate(`/vendor/order/${job.id}`)}
-                                    className="bg-white p-5 rounded-[2rem] border border-gray-100 shadow-soft flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:border-brand/20 transition-all cursor-pointer"
+                                    className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-soft group hover:scale-[1.02] transition-all cursor-pointer relative overflow-hidden"
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center border border-gray-100 group-hover:bg-brand/5 group-hover:border-brand/10 transition-all text-brand font-black italic">
-                                            {job.car.split(' ')[0][0]}{job.car.split(' ')[1][0]}
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <h4 className="font-black text-content tracking-tight">{job.customer}</h4>
-                                                <span className="text-[8px] font-black bg-brand/10 text-brand px-2 py-0.5 rounded uppercase tracking-tighter italic">{job.type}</span>
+                                    <div className="relative z-10 space-y-4">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-brand">
+                                                    <Package size={20} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-black text-brand uppercase tracking-widest italic mb-0.5">{job.id}</p>
+                                                    <p className="text-[11px] font-bold text-content-subtle uppercase tracking-tighter">Scheduled · Now</p>
+                                                </div>
                                             </div>
-                                            <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest italic">{job.car} · {job.id}</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex flex-wrap items-center gap-6">
-                                        <div className="hidden sm:block">
-                                            <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-1 italic">Service</p>
-                                            <p className="text-[11px] font-black text-content">{job.service}</p>
-                                        </div>
-                                        <div className="hidden sm:block">
-                                            <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-1 italic">Location</p>
-                                            <div className="flex items-center gap-1">
-                                                <MapPin size={10} className="text-brand" />
-                                                <p className="text-[11px] font-black text-content">{job.address}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col items-end">
-                                            <span className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest ${job.status === 'Washing' ? 'bg-blue-50 text-blue-600' :
-                                                job.status === 'Delivering' ? 'bg-purple-50 text-purple-600' : 'bg-green-50 text-green-600'
+                                            <div className={`px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${job.status === 'INCOMING' ? 'bg-brand text-white shadow-lg shadow-brand/20' :
+                                                job.status === 'COMPLETED' ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-blue-600'
                                                 }`}>
                                                 {job.status}
-                                            </span>
-                                            <p className="text-[9px] font-bold text-content-subtle mt-1 italic">{job.time}</p>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <h4 className="text-base font-black text-content tracking-tight">{job.customer}</h4>
+                                            <p className="text-[11px] font-black text-brand uppercase italic tracking-tighter">{job.car} · {job.service}</p>
+                                        </div>
+
+                                        <div className="flex items-center gap-4 pt-2 border-t border-gray-50">
+                                            <div className="flex items-center gap-2">
+                                                <MapPin size={12} className="text-content-subtle" />
+                                                <span className="text-[10px] font-black text-content-subtle italic">{job.address}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </motion.div>
@@ -132,6 +135,7 @@ const VendorHome = () => {
                                 {QUICK_ACTIONS.map(action => (
                                     <button
                                         key={action.label}
+                                        onClick={() => navigate(action.path)}
                                         className="w-full bg-white p-4 rounded-2xl border border-gray-100 shadow-soft flex items-center justify-between group hover:border-brand/20 transition-all"
                                     >
                                         <div className="flex items-center gap-4">

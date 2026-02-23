@@ -5,6 +5,7 @@ import {
     ChevronLeft, Plus, Home, Briefcase, MapPin,
     Edit3, Trash2, Check, Star, Navigation
 } from 'lucide-react';
+import { useAuth } from '../../../context/AuthContext';
 
 const INITIAL_ADDRESSES = [
     { id: 1, label: 'Home', icon: 'home', full: 'HSR Layout, Sector 2, Bengaluru 560102', landmark: 'Near Agara Lake', isPrimary: true },
@@ -16,22 +17,24 @@ const ICONS = { home: Home, office: Briefcase, other: MapPin };
 
 const AddressManager = () => {
     const navigate = useNavigate();
-    const [addresses, setAddresses] = useState(INITIAL_ADDRESSES);
+    const { addresses, addAddress, removeAddress, setPrimaryAddress } = useAuth();
     const [showSheet, setShowSheet] = useState(false);
     const [editing, setEditing] = useState(null);
     const [form, setForm] = useState({ label: 'Home', icon: 'home', full: '', landmark: '' });
 
     const openAdd = () => { setEditing(null); setForm({ label: '', icon: 'home', full: '', landmark: '' }); setShowSheet(true); };
-    const openEdit = (addr) => { setEditing(addr.id); setForm({ label: addr.label, icon: addr.icon, full: addr.full, landmark: addr.landmark }); setShowSheet(true); };
-    const handleDelete = (id) => setAddresses(a => a.filter(x => x.id !== id));
-    const handleSetPrimary = (id) => setAddresses(a => a.map(x => ({ ...x, isPrimary: x.id === id })));
+    const openEdit = (addr) => { setEditing(addr.id || addr.label); setForm({ label: addr.label, icon: addr.icon || 'other', full: addr.address || addr.full, landmark: addr.landmark || '' }); setShowSheet(true); };
+    const handleDelete = (id) => removeAddress(id);
+    const handleSetPrimary = (id) => setPrimaryAddress(id);
 
     const handleSave = () => {
         if (!form.full) return;
         if (editing) {
-            setAddresses(a => a.map(x => x.id === editing ? { ...x, ...form } : x));
+            removeAddress(editing);
+            const newAddr = { ...form, id: editing, address: form.full, isPrimary: false };
+            addAddress(newAddr);
         } else {
-            setAddresses(a => [...a, { ...form, id: Date.now(), isPrimary: false }]);
+            addAddress({ ...form, id: Date.now(), address: form.full, isPrimary: false });
         }
         setShowSheet(false);
     };

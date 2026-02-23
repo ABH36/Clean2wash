@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 
 // Each panel stores its session under a separate key
 const SESSION_KEYS = {
@@ -31,6 +31,40 @@ export const AuthProvider = ({ children }) => {
         }
     });
 
+    // Track vehicles from localStorage
+    const [vehicles, setVehicles] = useState(() => {
+        try {
+            const saved = localStorage.getItem('hoora_vehicles');
+            const initial = [
+                { id: 1, brand: 'Honda', model: 'City', type: 'Sedan', color: '#3498db', plate: 'KA 05 MR 7821', img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80', isPrimary: true, userId: 'GUEST' }
+            ];
+            return saved ? JSON.parse(saved) : initial;
+        } catch { return []; }
+    });
+
+    // Track addresses from localStorage
+    const [addresses, setAddresses] = useState(() => {
+        try {
+            const saved = localStorage.getItem('hoora_addresses');
+            const initial = [
+                { id: 1, label: 'Home', address: 'HSR Layout, Sector 2, Bengaluru', isPrimary: true, userId: 'GUEST' }
+            ];
+            return saved ? JSON.parse(saved) : initial;
+        } catch { return []; }
+    });
+
+
+
+    // Track bookings from localStorage
+    const [bookings, setBookings] = useState(() => {
+        try {
+            const saved = localStorage.getItem('hoora_bookings');
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
+        }
+    });
+
     // Initialize state from localStorage
     const [sessions, setSessions] = useState(() => {
         const result = {};
@@ -44,6 +78,46 @@ export const AuthProvider = ({ children }) => {
         }
         return result;
     });
+
+    // Persist data to localStorage
+    useEffect(() => {
+        localStorage.setItem('hoora_registered_users', JSON.stringify(registeredUsers));
+    }, [registeredUsers]);
+
+    useEffect(() => {
+        localStorage.setItem('hoora_bookings', JSON.stringify(bookings));
+    }, [bookings]);
+
+    useEffect(() => {
+        localStorage.setItem('hoora_vehicles', JSON.stringify(vehicles));
+    }, [vehicles]);
+
+    useEffect(() => {
+        localStorage.setItem('hoora_addresses', JSON.stringify(addresses));
+    }, [addresses]);
+
+
+
+    // Cross-tab synchronization
+    useEffect(() => {
+        const handleStorageChange = (e) => {
+            if (e.key === 'hoora_bookings' && e.newValue) {
+                setBookings(JSON.parse(e.newValue));
+            }
+            if (SESSION_KEYS[e.key] || Object.values(SESSION_KEYS).includes(e.key)) {
+                // Refresh sessions if auth changes in another tab
+                const newSessions = {};
+                for (const [role, key] of Object.entries(SESSION_KEYS)) {
+                    const raw = localStorage.getItem(key);
+                    newSessions[role] = raw ? JSON.parse(raw) : null;
+                }
+                setSessions(newSessions);
+            }
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+    }, []);
 
     const isLoggedIn = useCallback((role) => !!sessions[role], [sessions]);
 
@@ -93,19 +167,80 @@ export const AuthProvider = ({ children }) => {
     }, [registeredUsers]);
 
     const register = useCallback((role, userData) => {
-        setRegisteredUsers(prev => {
-            const updated = {
-                ...prev,
-                [role]: [...(prev[role] || []), userData]
-            };
-            localStorage.setItem('hoora_registered_users', JSON.stringify(updated));
-            return updated;
-        });
+        setRegisteredUsers(prev => ({
+            ...prev,
+            [role]: [...(prev[role] || []), userData]
+        }));
         return true;
     }, []);
 
+    const addBooking = useCallback((bookingData) => {
+        const newBooking = {
+            ...bookingData,
+            id: 'HOORA-' + Math.floor(1000 + Math.random() * 9000),
+            status: 'pending',
+            createdAt: new Date().toISOString()
+        };
+        setBookings(prev => [newBooking, ...prev]);
+        return newBooking;
+    }, []);
+
+    const updateBookingStatus = useCallback((bookingId, status, extraData = {}) => {
+        setBookings(prev => prev.map(b =>
+            b.id === bookingId ? {
+                ...b,
+                status,
+                ...extraData
+            } : b
+        ));
+    }, []);
+
+    const assignStaffToBooking = useCallback((bookingId, staffId, role = 'pickup', vendorId = null) => {
+        setBookings(prev => prev.map(b =>
+            b.id === bookingId ? {
+                ...b,
+                staffId: staffId,
+                [`${role}StaffId`]: staffId,
+                status: role === 'pickup' ? 'confirmed' : 'delivery',
+                vendorId: vendorId || b.vendorId
+            } : b
+        ));
+    }, []);
+
+    // Vehicle Helpers
+    const addVehicle = useCallback((v) => setVehicles(prev => [...prev, v]), []);
+    const removeVehicle = useCallback((id) => setVehicles(prev => prev.filter(v => v.id !== id)), []);
+    const setPrimaryVehicle = useCallback((id) => setVehicles(prev => prev.map(v => ({ ...v, isPrimary: v.id === id }))), []);
+
+    // Address Helpers
+    const addAddress = useCallback((a) => setAddresses(prev => [...prev, a]), []);
+    const removeAddress = useCallback((id) => setAddresses(prev => prev.filter(a => a.id !== id)), []);
+    const setPrimaryAddress = useCallback((id) => setAddresses(prev => prev.map(a => ({ ...a, isPrimary: a.id === id }))), []);
+
+
+
     return (
-        <AuthContext.Provider value={{ isLoggedIn, login, logout, getUser, validateCredentials, register }}>
+        <AuthContext.Provider value={{
+            isLoggedIn,
+            login,
+            logout,
+            getUser,
+            validateCredentials,
+            register,
+            bookings,
+            addBooking,
+            updateBookingStatus,
+            assignStaffToBooking,
+            vehicles,
+            addVehicle,
+            removeVehicle,
+            setPrimaryVehicle,
+            addresses,
+            addAddress,
+            removeAddress,
+            setPrimaryAddress,
+            registeredUsers
+        }}>
             {children}
         </AuthContext.Provider>
     );

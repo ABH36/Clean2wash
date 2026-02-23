@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 import {
     MapPin, Phone, MessageSquare, ChevronLeft, CheckCircle2,
     Shield, Car, Clock, Navigation, Camera, ChevronRight
 } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import CaptainLayout from '../components/CaptainLayout';
+import { useAuth } from '../../../context/AuthContext';
 
-const JOB = {
+const MOCK_JOB = {
     id: 'HOORA-8821',
     customer: { name: 'Aman Verma', phone: '+91 98765 43210', avatar: 'AV', rating: 4.8, washes: 12 },
     service: 'Instant Eco Wash',
@@ -24,13 +25,45 @@ const STEPS_ORDER = ['En Route', 'Arrived', 'Washing', 'Done'];
 
 const CaptainJobDetail = () => {
     const navigate = useNavigate();
-    const [stepIdx, setStepIdx] = useState(0);
+    const [searchParams] = useSearchParams();
+    const { bookings, updateBookingStatus } = useAuth();
+
+    const bookingId = searchParams.get('id');
+    const liveBooking = bookings.find(b => b.id === bookingId) || MOCK_JOB;
+
+    // Map global status back to local step index
+    const getInitialStep = () => {
+        if (liveBooking.status === 'completed') return 3;
+        if (liveBooking.status === 'in-progress') return 2;
+        if (liveBooking.status === 'confirmed') return 0; // Starts at En Route
+        return 0;
+    };
+
+    const [stepIdx, setStepIdx] = useState(getInitialStep());
     const [showPin, setShowPin] = useState(false);
     const step = STEPS_ORDER[stepIdx];
 
+    // Sync local step if global status changes externally
+    useEffect(() => {
+        setStepIdx(getInitialStep());
+    }, [liveBooking.status]);
+
     const handleNext = () => {
-        if (stepIdx < STEPS_ORDER.length - 1) setStepIdx(stepIdx + 1);
-        else navigate('/captain');
+        const nextIdx = stepIdx + 1;
+
+        // Update global status based on next step
+        if (nextIdx === 1) { // Arrived
+            // Status remains 'confirmed' or can be 'arrived' if we add it
+            setStepIdx(nextIdx);
+        } else if (nextIdx === 2) { // Washing
+            updateBookingStatus(bookingId, 'in-progress');
+            setStepIdx(nextIdx);
+        } else if (nextIdx === 3) { // Done
+            updateBookingStatus(bookingId, 'completed');
+            setStepIdx(nextIdx);
+        } else {
+            navigate('/captain');
+        }
     };
 
     const stepConfig = {
@@ -51,7 +84,7 @@ const CaptainJobDetail = () => {
                     </button>
                     <div className="flex-1">
                         <p className="text-white/40 text-[9px] font-black uppercase tracking-widest">Active Job</p>
-                        <h1 className="text-white text-lg font-black tracking-tight leading-none">{JOB.id}</h1>
+                        <h1 className="text-white text-lg font-black tracking-tight leading-none">{liveBooking.id}</h1>
                     </div>
                     <span className={`text-white text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl ${cfg.bg}`}>{step}</span>
                 </div>
@@ -64,8 +97,8 @@ const CaptainJobDetail = () => {
                     {STEPS_ORDER.map((s, i) => (
                         <React.Fragment key={s}>
                             <div className={`flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center border-2 transition-all ${i < stepIdx ? 'bg-green-500 border-green-500' :
-                                    i === stepIdx ? `${cfg.bg} border-transparent` :
-                                        'bg-white border-gray-100'}`}>
+                                i === stepIdx ? `${cfg.bg} border-transparent` :
+                                    'bg-white border-gray-100'}`}>
                                 {i < stepIdx
                                     ? <CheckCircle2 size={14} className="text-white" strokeWidth={3} />
                                     : <span className={`text-[9px] font-black ${i === stepIdx ? 'text-white' : 'text-gray-300'}`}>{i + 1}</span>
@@ -96,8 +129,8 @@ const CaptainJobDetail = () => {
                         <MapPin size={16} className="text-brand" fill="currentColor" strokeWidth={1.5} />
                     </div>
                     <div>
-                        <p className="font-black text-sm text-content tracking-tight">{JOB.address}</p>
-                        <p className="text-[9px] font-bold text-content-subtle mt-0.5">📍 {JOB.landmark}</p>
+                        <p className="font-black text-sm text-content tracking-tight">{liveBooking.address || MOCK_JOB.address}</p>
+                        <p className="text-[9px] font-bold text-content-subtle mt-0.5">📍 {MOCK_JOB.landmark}</p>
                     </div>
                 </div>
 
@@ -106,18 +139,18 @@ const CaptainJobDetail = () => {
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
                             <div className="w-11 h-11 bg-brand/10 rounded-xl flex items-center justify-center">
-                                <span className="font-black text-sm text-brand">{JOB.customer.avatar}</span>
+                                <span className="font-black text-sm text-brand">{liveBooking.userName?.charAt(0) || 'U'}</span>
                             </div>
                             <div>
-                                <p className="font-black text-sm text-content">{JOB.customer.name}</p>
+                                <p className="font-black text-sm text-content">{liveBooking.userName || 'User'}</p>
                                 <div className="flex items-center gap-2 mt-0.5">
-                                    <span className="text-[9px] font-bold text-content-subtle">★ {JOB.customer.rating}</span>
-                                    <span className="text-[9px] font-bold text-content-subtle">· {JOB.customer.washes} washes</span>
+                                    <span className="text-[9px] font-bold text-content-subtle">★ {MOCK_JOB.customer.rating}</span>
+                                    <span className="text-[9px] font-bold text-content-subtle">· {MOCK_JOB.customer.washes} washes</span>
                                 </div>
                             </div>
                         </div>
                         <div className="flex gap-2">
-                            <a href={`tel:${JOB.customer.phone}`} className="w-9 h-9 bg-green-50 border border-green-100 rounded-xl flex items-center justify-center">
+                            <a href={`tel:${MOCK_JOB.customer.phone}`} className="w-9 h-9 bg-green-50 border border-green-100 rounded-xl flex items-center justify-center">
                                 <Phone size={15} className="text-green-600" strokeWidth={2.5} />
                             </a>
                             <button className="w-9 h-9 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-center">
@@ -133,7 +166,7 @@ const CaptainJobDetail = () => {
                             <span className="font-black text-xs text-content uppercase tracking-widest">Security PIN</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className={`font-black text-lg tracking-[0.3em] text-content transition-all ${showPin ? '' : 'blur-sm'}`}>{JOB.pin}</span>
+                            <span className={`font-black text-lg tracking-[0.3em] text-content transition-all ${showPin ? '' : 'blur-sm'}`}>{MOCK_JOB.pin}</span>
                             <ChevronRight size={13} strokeWidth={2.5} className={`text-gray-300 transition-transform ${showPin ? 'rotate-90' : ''}`} />
                         </div>
                     </button>
@@ -145,11 +178,11 @@ const CaptainJobDetail = () => {
                         <Car size={20} className="text-blue-600" strokeWidth={2} />
                     </div>
                     <div className="flex-1">
-                        <p className="font-black text-sm text-content">{JOB.vehicle} · <span className="text-content-subtle font-bold">{JOB.color}</span></p>
-                        <p className="text-[9px] font-bold text-content-subtle mt-0.5">{JOB.service}</p>
+                        <p className="font-black text-sm text-content">{liveBooking.vehicle || MOCK_JOB.vehicle} · <span className="text-content-subtle font-bold">{MOCK_JOB.color}</span></p>
+                        <p className="text-[9px] font-bold text-content-subtle mt-0.5">{liveBooking.serviceName || MOCK_JOB.service}</p>
                     </div>
                     <div className="bg-gray-50 border border-gray-100 px-3 py-1.5 rounded-lg">
-                        <p className="font-black text-sm tracking-widest text-content">{JOB.plate}</p>
+                        <p className="font-black text-sm tracking-widest text-content">{MOCK_JOB.plate}</p>
                     </div>
                 </div>
 
@@ -188,7 +221,7 @@ const CaptainJobDetail = () => {
                     <div className="flex items-center gap-2">
                         <Clock size={13} className="text-content-subtle" />
                         <span className="text-[10px] font-bold text-content-subtle">Earnings:</span>
-                        <span className="font-black text-sm text-green-600">{JOB.amount}</span>
+                        <span className="font-black text-sm text-green-600">{liveBooking.price || MOCK_JOB.amount}</span>
                     </div>
                     <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${cfg.bg} text-white`}>{cfg.label}</span>
                 </div>

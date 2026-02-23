@@ -17,53 +17,40 @@ import {
 } from 'lucide-react';
 import MobileLayout from '../components/layout/MobileLayout';
 import StaffNewJobOverlay from '../components/StaffNewJobOverlay';
+import { useAuth } from '../../../context/AuthContext';
 
 const StaffDashboard = () => {
     const navigate = useNavigate();
+    const { bookings, updateBookingStatus, getUser } = useAuth();
+    const user = getUser('staff') || { name: 'Staff Member', id: 'STF-DEFAULT' };
     const [activeTab, setActiveTab] = useState('assigned'); // 'assigned' | 'ongoing' | 'completed'
     const [showNewJob, setShowNewJob] = useState(false);
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setShowNewJob(true);
-        }, 3000);
-        return () => clearTimeout(timer);
-    }, []);
+    // Filter vendor bookings for the dashboard (where this staff is assigned)
+    const staffBookings = bookings.filter(b =>
+        b.type === 'vendor' &&
+        (b.pickupStaffId === user.id || b.deliveryStaffId === user.id)
+    );
 
-    const TASKS = [
-        {
-            id: 'TASK-001',
-            type: 'Pickup',
-            customer: 'Aryan Pathak',
-            address: 'Sec-15, Faridabad',
-            time: '10:30 AM',
-            vehicle: 'Fortuner (HR 51 BZ 1234)',
-            status: 'assigned',
-            urgent: true
-        },
-        {
-            id: 'TASK-002',
-            type: 'Drop',
-            customer: 'Rahul Verma',
-            address: 'Sec-21, Faridabad',
-            time: '02:00 PM',
-            vehicle: 'Creta (HR 26 DQ 5678)',
-            status: 'ongoing',
-            urgent: false
-        },
-        {
-            id: 'TASK-003',
-            type: 'Pickup',
-            customer: 'Sneha Gupta',
-            address: 'Omaxe Heights, Sec-86',
-            time: 'Yesterday',
-            vehicle: 'i20 (HR 29 AS 9876)',
-            status: 'completed',
-            urgent: false
-        }
-    ];
+    // Map local structure to context bookings
+    const mappedTasks = staffBookings.map(b => {
+        const isPickup = b.pickupStaffId === user.id;
+        const isDelivery = b.deliveryStaffId === user.id;
 
-    const filteredTasks = TASKS.filter(t => t.status === activeTab);
+        return {
+            id: b.id,
+            type: isPickup ? 'Pickup' : 'Delivery',
+            customer: b.userName,
+            address: b.address,
+            time: b.slot || 'ASAP',
+            vehicle: b.vehicle,
+            status: (b.status === 'confirmed' || b.status === 'delivery-assigned') ? 'assigned' :
+                (['in-progress', 'at-studio'].includes(b.status)) ? 'ongoing' : 'completed',
+            urgent: false
+        };
+    });
+
+    const filteredTasks = mappedTasks.filter(t => t.status === activeTab);
 
     return (
         <div className="min-h-screen bg-gray-50 pb-24">
@@ -162,7 +149,10 @@ const StaffDashboard = () => {
                                         View Details <ChevronRight size={14} strokeWidth={3} />
                                     </button>
                                     {activeTab === 'assigned' && (
-                                        <button className="bg-brand text-white px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand/20">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleAccept(task.id); }}
+                                            className="bg-brand text-white px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand/20"
+                                        >
                                             Accept
                                         </button>
                                     )}
@@ -200,7 +190,7 @@ const StaffDashboard = () => {
 
             <StaffNewJobOverlay
                 isVisible={showNewJob}
-                onAccept={() => navigate('/staff/task/TASK-VIP')}
+                onAccept={() => handleAccept(incomingJob?.id)}
                 onReject={() => setShowNewJob(false)}
             />
         </div>

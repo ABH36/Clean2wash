@@ -1,12 +1,21 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Star, ThumbsUp, Camera, Award } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../../../context/AuthContext';
 
 const TAGS = ['On Time', 'Very Clean', 'Friendly', 'Professional', 'Careful', 'Quick & Efficient'];
 
 const RateExperience = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const { bookings, registeredUsers } = useAuth();
+
+    const bookingId = searchParams.get('id');
+    const liveBooking = bookings.find(b => b.id === bookingId) || { id: 'HOORA-8821', serviceName: 'Eco Doorstep Wash', price: '₹473', performerId: null };
+
+    const performer = liveBooking.performerId
+        ? [...(registeredUsers.captain || []), ...(registeredUsers.staff || [])].find(u => u.id === liveBooking.performerId)
+        : { name: 'Rahul Sharma' }; // Fallback
+
     const [rating, setRating] = useState(0);
     const [hovered, setHovered] = useState(0);
     const [selectedTags, setSelectedTags] = useState([]);
@@ -18,6 +27,7 @@ const RateExperience = () => {
 
     const handleSubmit = () => {
         setSubmitted(true);
+        // In a real app, we'd call updateBookingStatus here to add the rating
         setTimeout(() => navigate('/'), 2000);
     };
 
@@ -45,7 +55,7 @@ const RateExperience = () => {
                 </button>
                 <div>
                     <h1 className="text-lg font-black tracking-tight text-content leading-none">Rate Experience</h1>
-                    <p className="text-[9px] text-brand font-black uppercase tracking-widest mt-0.5">Order #HOORA-7761</p>
+                    <p className="text-[9px] text-brand font-black uppercase tracking-widest mt-0.5">Order #{liveBooking.id}</p>
                 </div>
             </header>
 
@@ -54,19 +64,20 @@ const RateExperience = () => {
                 {/* ── Captain Card ── */}
                 <div className="flex items-center gap-4 bg-gray-50 border border-gray-100 rounded-2xl px-4 py-4">
                     <div className="relative">
-                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80"
-                            alt="Rahul" className="w-14 h-14 rounded-xl object-cover border border-gray-200" />
+                        <div className="w-14 h-14 rounded-xl bg-brand/10 flex items-center justify-center border border-brand/20">
+                            <span className="font-black text-xl text-brand">{performer?.name?.charAt(0) || 'C'}</span>
+                        </div>
                         <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-brand rounded-lg flex items-center justify-center border-2 border-white">
                             <Award size={10} className="text-white" fill="white" strokeWidth={1} />
                         </div>
                     </div>
                     <div>
-                        <p className="text-[9px] font-black uppercase tracking-widest text-content-subtle mb-0.5">Captain</p>
-                        <h3 className="font-black text-base text-content tracking-tight">Rahul Sharma</h3>
-                        <p className="text-[10px] text-content-subtle font-bold">Full Deep Clean · Feb 19</p>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-content-subtle mb-0.5">{liveBooking.type === 'vendor' ? 'Service Hub' : 'Captain'}</p>
+                        <h3 className="font-black text-base text-content tracking-tight">{performer?.name || 'Rahul Sharma'}</h3>
+                        <p className="text-[10px] text-content-subtle font-bold">{liveBooking.serviceName} · {new Date(liveBooking.createdAt || Date.now()).toLocaleDateString()}</p>
                     </div>
                     <div className="ml-auto text-right">
-                        <p className="font-black text-xl text-content">₹1,199</p>
+                        <p className="font-black text-xl text-content">{liveBooking.price}</p>
                         <p className="text-[9px] text-green-600 font-black uppercase tracking-wider">Paid</p>
                     </div>
                 </div>
@@ -99,8 +110,8 @@ const RateExperience = () => {
                             {TAGS.map(tag => (
                                 <button key={tag} onClick={() => toggleTag(tag)}
                                     className={`px-3 py-2 rounded-xl font-black text-xs border transition-all ${selectedTags.includes(tag)
-                                            ? 'bg-brand text-white border-brand shadow-md'
-                                            : 'bg-white border-gray-100 text-content-muted hover:border-brand/20'
+                                        ? 'bg-brand text-white border-brand shadow-md'
+                                        : 'bg-white border-gray-100 text-content-muted hover:border-brand/20'
                                         }`}>
                                     {tag}
                                 </button>

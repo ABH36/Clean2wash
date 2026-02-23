@@ -9,7 +9,7 @@ import CaptainLayout from '../components/CaptainLayout';
 import { useAuth } from '../../../context/AuthContext';
 
 const MOCK_JOB = {
-    id: 'HOORA-8821',
+    id: 'CarWash-8821',
     customer: { name: 'Aman Verma', phone: '+91 98765 43210', avatar: 'AV', rating: 4.8, washes: 12 },
     service: 'Instant Eco Wash',
     vehicle: 'Honda City',

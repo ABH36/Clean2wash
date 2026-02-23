@@ -54,7 +54,7 @@ const AdminSettings = () => {
                         </div>
                         <div>
                             <h3 className="text-xl font-black text-content italic uppercase tracking-tight leading-none">Global Control Center</h3>
-                            <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest mt-1 italic">Hoora Platform Config</p>
+                            <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest mt-1 italic">CarWash Platform Config</p>
                         </div>
                     </div>
                     <div className="relative w-full md:w-80">
@@ -111,9 +111,9 @@ const AdminSettings = () => {
                 <div className="flex items-center justify-between text-content-subtle border-t border-gray-100 pt-8 italic">
                     <p className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
                         <Github size={12} />
-                        Repo Connected: hoora-base-core
+                        Repo Connected: CarWash-base-core
                     </p>
-                    <p className="text-[10px] font-bold uppercase tracking-widest">© 2026 Hoora Auto Technologies</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest">© 2026 CarWash Auto Technologies</p>
                 </div>
             </div>
         </AdminLayout>

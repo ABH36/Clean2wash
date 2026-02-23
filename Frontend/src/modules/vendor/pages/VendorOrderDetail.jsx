@@ -92,11 +92,13 @@ const VendorOrderDetail = () => {
                         <ArrowLeft size={16} /> Back to Dashboard
                     </button>
                     <div className="flex gap-2">
-                        {liveBooking.status === 'pending' && !liveBooking.vendorId && (
-                            <button onClick={handleAcceptRequest} className="h-10 px-6 bg-brand text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand/20 hover:scale-105 transition-all">
-                                Accept Request
-                            </button>
-                        )}
+                        {liveBooking.status === 'pending' && (
+                            !liveBooking.vendorId || liveBooking.vendorId !== vendor?.id
+                        ) && (
+                                <button onClick={handleAcceptRequest} className="h-10 px-6 bg-brand text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand/20 hover:scale-105 transition-all">
+                                    Accept Request
+                                </button>
+                            )}
                         <button className="h-10 px-4 border border-gray-100 bg-white rounded-xl text-content-muted font-black text-[10px] uppercase tracking-widest hover:bg-gray-50 transition-all">
                             Print Invoice
                         </button>

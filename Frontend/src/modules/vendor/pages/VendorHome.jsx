@@ -8,11 +8,11 @@ import { useAuth } from '../../../context/AuthContext';
 const VendorHome = () => {
     const navigate = useNavigate();
     const { bookings, getUser } = useAuth();
-    const user = getUser('vendor') || { studioName: 'Hoora Studio', city: 'Bengaluru' };
+    const user = getUser('vendor') || { studioName: 'CarWash Studio', city: 'Bengaluru' };
     const [activeTab, setActiveTab] = useState('Today');
 
     // Filter vendor bookings
-    const incomingRequests = bookings.filter(b => b.type === 'vendor' && b.status === 'pending' && !b.vendorId);
+    const incomingRequests = bookings.filter(b => b.type === 'vendor' && b.status === 'pending');
     const myActiveJobs = bookings.filter(b => b.vendorId === user.id && b.status !== 'completed');
     const myCompletedJobs = bookings.filter(b => b.vendorId === user.id && b.status === 'completed');
 

@@ -54,7 +54,7 @@ const FALLBACK_IMAGES = [
 const STEPS = [
     { n: '01', title: 'Book Instantly', desc: 'Pick a service & time slot' },
     { n: '02', title: 'AI Matches', desc: 'Expert captain assigned in 60s' },
-    { n: '03', title: 'Spotless Results', desc: 'Hoora-guaranteed clean car' },
+    { n: '03', title: 'Spotless Results', desc: 'CarWash-guaranteed clean car' },
 ];
 
 const ServiceSelection = () => {
@@ -88,7 +88,7 @@ const ServiceSelection = () => {
                     price: s.price,
                     original: null,
                     duration: s.time,
-                    features: [`${s.type} Technology`, `${s.category} Service`, s.status === 'Featured' ? 'Featured Pick' : 'Available Now', 'Hoora Certified'],
+                    features: [`${s.type} Technology`, `${s.category} Service`, s.status === 'Featured' ? 'Featured Pick' : 'Available Now', 'CarWash Certified'],
                     badge: s.status,
                     provider: CATEGORY_PROVIDER[s.category] || 'captain',
                     isHardcoded: false,
@@ -126,8 +126,8 @@ const ServiceSelection = () => {
                         {['now', 'later'].map((m) => (
                             <button key={m} onClick={() => setMode(m === 'now' ? 'instant' : 'scheduled')}
                                 className={`px-3.5 py-1.5 rounded-[9px] text-[9px] font-black uppercase tracking-widest transition-all duration-300 ${(m === 'now' && mode === 'instant') || (m === 'later' && mode === 'scheduled')
-                                        ? 'bg-white text-brand shadow-sm'
-                                        : 'text-content-muted'
+                                    ? 'bg-white text-brand shadow-sm'
+                                    : 'text-content-muted'
                                     }`}>
                                 {m}
                             </button>
@@ -160,8 +160,8 @@ const ServiceSelection = () => {
                             key={type.id}
                             onClick={() => { setServiceType(type.id); setActive(type.id === 'captain' ? 'eco' : 'full-wash'); }}
                             className={`flex-1 p-3 rounded-2xl border-2 transition-all duration-300 text-left relative overflow-hidden ${serviceType === type.id
-                                    ? 'border-brand bg-brand/[0.03] shadow-sm'
-                                    : 'border-gray-50 bg-gray-50/50 opacity-60 hover:opacity-100'
+                                ? 'border-brand bg-brand/[0.03] shadow-sm'
+                                : 'border-gray-50 bg-gray-50/50 opacity-60 hover:opacity-100'
                                 }`}
                         >
                             <div className={`w-7 h-7 rounded-lg flex items-center justify-center mb-2 transition-colors ${serviceType === type.id ? 'bg-brand text-white shadow-md shadow-brand/20' : 'bg-white text-content-subtle'
@@ -221,8 +221,8 @@ const ServiceSelection = () => {
                         whileTap={{ scale: 0.98 }}
                         onClick={() => setActive(s.id)}
                         className={`group rounded-3xl overflow-hidden border-2 transition-all relative ${active === s.id
-                                ? 'border-brand bg-white shadow-lg'
-                                : 'border-white bg-white shadow-soft hover:border-gray-100'
+                            ? 'border-brand bg-white shadow-lg'
+                            : 'border-white bg-white shadow-soft hover:border-gray-100'
                             }`}
                     >
                         {/* Badges */}
@@ -293,7 +293,7 @@ const ServiceSelection = () => {
 
                 {/* ── How it Works ── */}
                 <div className="bg-gray-50/50 rounded-3xl p-6 mt-4">
-                    <h2 className="text-sm font-black tracking-tight text-content mb-5 uppercase tracking-widest opacity-60">The Hoora Way</h2>
+                    <h2 className="text-sm font-black tracking-tight text-content mb-5 uppercase tracking-widest opacity-60">The CarWash Way</h2>
                     <div className="space-y-5">
                         {STEPS.map((step) => (
                             <div key={step.n} className="flex items-start gap-4">

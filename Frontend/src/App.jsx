@@ -86,7 +86,7 @@ const ScrollToTop = () => {
 const ErrorBoundary = ({ children }) => {
   useEffect(() => {
     const handle = (e) => {
-      console.log('%c Hoora Dev Error: ', 'background:#FF6B00;color:#fff;font-weight:bold;padding:2px 5px;');
+      console.log('%c CarWash Dev Error: ', 'background:#FF6B00;color:#fff;font-weight:bold;padding:2px 5px;');
       console.error(e);
     };
     window.addEventListener('error', handle);

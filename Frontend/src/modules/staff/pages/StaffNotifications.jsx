@@ -12,6 +12,8 @@ import {
     Settings
 } from 'lucide-react';
 
+import StaffLayout from '../components/StaffLayout';
+
 const StaffNotifications = () => {
     const navigate = useNavigate();
 
@@ -19,8 +21,8 @@ const StaffNotifications = () => {
         {
             type: 'job',
             icon: <MessageSquare size={18} />,
-            title: 'New Assignment',
-            desc: 'Job #TASK-002 assigned from Hub Manager.',
+            title: 'Critical Assignment',
+            desc: 'New task #CW-TSK-402 pushed to your terminal. Report within 15 mins.',
             time: '2 mins ago',
             read: false,
             color: 'bg-blue-50 text-blue-600'
@@ -28,8 +30,8 @@ const StaffNotifications = () => {
         {
             type: 'success',
             icon: <CheckCircle2 size={18} />,
-            title: 'Payment Confirmed',
-            desc: 'System has processed payment for JOB-9921.',
+            title: 'Protocol Verified',
+            desc: 'Job #CW-JOB-9921 verification photos approved by Quality Control.',
             time: '1 hour ago',
             read: true,
             color: 'bg-green-50 text-green-600'
@@ -37,8 +39,8 @@ const StaffNotifications = () => {
         {
             type: 'alert',
             icon: <AlertCircle size={18} />,
-            title: 'Shift Reminder',
-            desc: 'Your afternoon shift starts at 02:00 PM today.',
+            title: 'Maintenance Alert',
+            desc: 'System maintenance scheduled for 02:00 AM IST. Sync all logs.',
             time: '3 hours ago',
             read: true,
             color: 'bg-amber-50 text-amber-600'
@@ -46,58 +48,53 @@ const StaffNotifications = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-24">
-            <header className="bg-white px-5 pt-12 pb-6 border-b border-gray-100 flex items-center justify-between sticky top-0 z-50">
-                <button onClick={() => navigate(-1)} className="w-10 h-10 bg-gray-50 rounded-2xl flex items-center justify-center border border-gray-100">
-                    <ChevronLeft size={20} className="text-content" />
-                </button>
-                <h1 className="text-lg font-black text-content italic uppercase">Alerts</h1>
-                <button className="w-10 h-10 bg-gray-50 rounded-2xl flex items-center justify-center border border-gray-100">
-                    <Settings size={18} className="text-content-subtle" />
-                </button>
-            </header>
-
-            <div className="px-5 pt-8 space-y-4">
-                <div className="flex items-center justify-between mb-4 px-2">
-                    <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Recent Activities</p>
-                    <button className="text-[10px] font-black text-brand uppercase tracking-widest italic border-b border-brand/20">Mark all read</button>
+        <StaffLayout title="Alert Stream" subtitle="Communication Node">
+            <div className="space-y-6">
+                <div className="flex items-center justify-between px-2">
+                    <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] italic">Operational Feed</p>
+                    <button className="text-[9px] font-black text-brand uppercase tracking-widest border-b border-brand/20 transition-all hover:border-brand">Mark read</button>
                 </div>
 
-                {NOTIFICATIONS.map((notif, i) => (
-                    <motion.div
-                        key={i}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.1 }}
-                        className={`p-5 rounded-[2rem] border shadow-soft flex items-start gap-4 transition-all ${notif.read ? 'bg-white border-gray-50' : 'bg-brand/5 border-brand/10'
-                            }`}
-                    >
-                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${notif.color}`}>
-                            {notif.icon}
-                        </div>
-                        <div className="flex-1">
-                            <div className="flex items-center justify-between mb-1">
-                                <h3 className="text-sm font-black text-content italic leading-none">{notif.title}</h3>
-                                {!notif.read && <div className="w-2 h-2 bg-brand rounded-full shadow-lg shadow-brand/40" />}
+                <div className="space-y-4">
+                    {NOTIFICATIONS.map((notif, i) => (
+                        <motion.div
+                            key={i}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.1 }}
+                            className={`p-6 rounded-[2.5rem] border shadow-soft flex items-start gap-5 transition-all group ${notif.read ? 'bg-white border-gray-100 hover:border-brand/20' : 'bg-brand/5 border-brand/10'
+                                }`}
+                        >
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 ${notif.color}`}>
+                                {notif.icon}
                             </div>
-                            <p className="text-[10px] font-bold text-content-subtle leading-normal mb-2 uppercase tracking-tight">
-                                {notif.desc}
-                            </p>
-                            <div className="flex items-center gap-1.5 text-[9px] font-black text-content-subtle uppercase italic">
-                                <Clock size={10} /> {notif.time}
+                            <div className="flex-1">
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <h3 className="text-sm font-black text-content italic leading-none uppercase tracking-tight">{notif.title}</h3>
+                                    {!notif.read && <div className="w-2.5 h-2.5 bg-brand rounded-full shadow-lg shadow-brand/40 animate-pulse" />}
+                                </div>
+                                <p className="text-[10px] font-bold text-content-subtle leading-relaxed mb-3 uppercase tracking-widest">
+                                    {notif.desc}
+                                </p>
+                                <div className="flex items-center gap-2 text-[9px] font-black text-content-subtle uppercase italic opacity-60">
+                                    <Clock size={10} /> {notif.time}
+                                </div>
                             </div>
-                        </div>
-                    </motion.div>
-                ))}
-            </div>
+                        </motion.div>
+                    ))}
+                </div>
 
-            <div className="text-center mt-12 px-10">
-                <Bell size={40} className="text-gray-200 mx-auto mb-4" />
-                <p className="text-sm font-black text-content-subtle italic leading-tight">
-                    Stay tuned! We'll notify you about new tasks and updates here.
-                </p>
+                <div className="text-center py-12 px-10">
+                    <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-dashed border-gray-200">
+                        <Bell size={32} className="text-gray-200" />
+                    </div>
+                    <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] leading-relaxed">
+                        End of Alert Stream. <br />
+                        Listening for new protocol packets...
+                    </p>
+                </div>
             </div>
-        </div>
+        </StaffLayout>
     );
 };
 

@@ -24,7 +24,7 @@ const AdminLayout = ({ children, title }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { logout, getUser } = useAuth();
-    const user = getUser('admin') || { email: 'admin@hoora.in', name: 'Admin' };
+    const user = getUser('admin') || { email: 'admin@CarWash.in', name: 'Admin' };
     const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 1024);
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
@@ -184,7 +184,7 @@ const SidebarContent = ({ isSidebarOpen, NAV_ITEMS, location, navigate, onLogout
                     animate={{ opacity: 1 }}
                     className="text-xl font-black italic tracking-tighter"
                 >
-                    HOORA <span className="text-brand">BASE</span>
+                    CARWASH <span className="text-brand">BASE</span>
                 </motion.span>
             )}
         </div>
@@ -222,7 +222,7 @@ const SidebarContent = ({ isSidebarOpen, NAV_ITEMS, location, navigate, onLogout
                         <User size={20} className="text-brand" />
                     </div>
                     <div className="overflow-hidden">
-                        <p className="text-xs font-black truncate">{user.name || 'Hoora Admin'}</p>
+                        <p className="text-xs font-black truncate">{user.name || 'CarWash Admin'}</p>
                         <p className="text-[10px] text-white/40 truncate">{user.email}</p>
                     </div>
                 </div>

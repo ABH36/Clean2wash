@@ -28,7 +28,7 @@ const OrderDetails = () => {
                         </button>
                         <div>
                             <h1 className="text-lg font-black tracking-tight text-content leading-none">Order Details</h1>
-                            <p className="text-[9px] text-brand font-black uppercase tracking-widest mt-0.5">#HOORA-7761</p>
+                            <p className="text-[9px] text-brand font-black uppercase tracking-widest mt-0.5">#CarWash-7761</p>
                         </div>
                     </div>
                     <button className="flex items-center gap-1.5 bg-gray-50 border border-gray-100 px-3 py-2 rounded-xl text-content-muted text-[9px] font-black uppercase tracking-widest">
@@ -149,7 +149,7 @@ const OrderDetails = () => {
                     {[
                         { label: 'Full Deep Clean', val: '₹999', muted: false },
                         { label: 'Ecosystem Fee', val: '₹89', muted: true },
-                        { label: 'HOORAFIRST Discount', val: '-₹0', muted: true },
+                        { label: 'CarWashFIRST Discount', val: '-₹0', muted: true },
                     ].map(row => (
                         <div key={row.label} className="flex justify-between">
                             <span className={`text-sm ${row.muted ? 'font-bold text-content-subtle' : 'font-black text-content'}`}>{row.label}</span>

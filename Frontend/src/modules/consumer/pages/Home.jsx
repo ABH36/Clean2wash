@@ -150,7 +150,7 @@ const Home = () => {
                             Flat <span className="text-brand">₹60 OFF</span> on First Wash
                         </h3>
                         <p className="text-white/40 text-[10px] font-bold mb-4">
-                            Code: <span className="text-accent-yellow font-black">HOORAFIRST</span>
+                            Code: <span className="text-accent-yellow font-black">CARWASHFIRST</span>
                         </p>
                         <button onClick={() => navigate('/services')} className="flex items-center gap-2 bg-brand text-white px-4 py-2.5 rounded-xl font-black text-xs shadow-lg">
                             Claim Now <ArrowRight size={13} strokeWidth={3} />
@@ -173,12 +173,12 @@ const Home = () => {
 
                 {/* ── Trust ── */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-soft p-5">
-                    <h2 className="text-base font-black tracking-tight text-content mb-4">Why <span className="text-brand">Hoora?</span></h2>
+                    <h2 className="text-base font-black tracking-tight text-content mb-4">Why <span className="text-brand">CarWash?</span></h2>
                     <div className="space-y-4">
                         {[
-                            { icon: <ShieldCheck size={18} className="text-green-500" />, title: 'Insured Washes', desc: "Covered under Hoora's ₹5L vehicle protection policy." },
+                            { icon: <ShieldCheck size={18} className="text-green-500" />, title: 'Insured Washes', desc: "Covered under CarWash's ₹5L vehicle protection policy." },
                             { icon: <Droplets size={18} className="text-blue-500" />, title: 'Eco-Tech Formula', desc: 'Waterless, OECD-certified, 100% biodegradable products.' },
-                            { icon: <Zap size={18} className="text-brand" fill="currentColor" />, title: 'Instant Dispatch', desc: 'AI matching gets a captain at your door in 30 mins.' },
+                            { icon: <Zap size={18} className="text-brand" fill="currentColor" />, title: 'Instant Dispatch', desc: 'AI matching gets a carwash professional at your door in 30 mins.' },
                         ].map((item) => (
                             <div key={item.title} className="flex items-start gap-3">
                                 <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center flex-shrink-0 border border-gray-100">{item.icon}</div>

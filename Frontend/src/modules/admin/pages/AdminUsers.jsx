@@ -29,7 +29,7 @@ const AdminUsers = () => {
 
     // Fetch users from localStorage/AuthContext
     const getStoredUsers = () => {
-        const saved = localStorage.getItem('hoora_registered_users');
+        const saved = localStorage.getItem('CarWash_registered_users');
         const parsed = saved ? JSON.parse(saved) : { consumer: [], captain: [], vendor: [], staff: [] };
         return parsed;
     };
@@ -42,7 +42,7 @@ const AdminUsers = () => {
             ...(allUsers.consumer || []).map(u => ({ ...u, status: 'Active', joined: 'New' }))
         ],
         Captains: [
-            { id: 'CPT-001', name: 'Amit Singh', email: 'amit@hoora.in', hub: 'HSR Layout', status: 'Active', rating: '4.9' },
+            { id: 'CPT-001', name: 'Amit Singh', email: 'amit@CarWash.in', hub: 'HSR Layout', status: 'Active', rating: '4.9' },
             ...(allUsers.captain || []).map(u => ({ ...u, status: 'Active', joined: 'New' }))
         ],
         Staff: [

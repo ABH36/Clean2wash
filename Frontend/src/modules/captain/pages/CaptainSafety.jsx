@@ -18,7 +18,7 @@ const CaptainSafety = () => {
     const navigate = useNavigate();
 
     const SAFETY_GUIDELINES = [
-        'Always wear your Hoora reflective vest and uniform.',
+        'Always wear your CarWash reflective vest and uniform.',
         'Carry your Digital ID at all times during missions.',
         'Report any vehicle damage BEFORE starting the wash.',
         'In case of emergency, use the SOS button on dashboard.',
@@ -73,7 +73,7 @@ const CaptainSafety = () => {
                         </div>
                         <div>
                             <h4 className="text-red-500 font-black italic uppercase tracking-tight text-base">Emergency SOS</h4>
-                            <p className="text-red-500/60 text-[10px] font-bold leading-tight mt-1 truncate">Direct line to Hoora Safety Ops & Hub Manager.</p>
+                            <p className="text-red-500/60 text-[10px] font-bold leading-tight mt-1 truncate">Direct line to CarWash Safety Ops & Hub Manager.</p>
                         </div>
                         <button className="ml-auto w-10 h-10 bg-red-500/20 rounded-xl flex items-center justify-center text-red-500">
                             <Activity size={18} />

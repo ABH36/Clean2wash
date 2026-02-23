@@ -262,7 +262,7 @@ const Login = () => {
 
                 <div className="mt-auto pt-8 flex items-center justify-center gap-2 opacity-40">
                     <ShieldCheck size={14} className="text-content" />
-                    <p className="text-[9px] font-bold text-content uppercase tracking-[0.1em]">Encryption active • Hoora Secure</p>
+                    <p className="text-[9px] font-bold text-content uppercase tracking-[0.1em]">Encryption active • CarWash Secure</p>
                 </div>
             </div>
         </div>

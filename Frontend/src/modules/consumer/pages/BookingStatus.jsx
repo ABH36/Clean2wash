@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronLeft, Phone, MessageSquare, ShieldCheck, MapPin,
     CheckCircle2, Navigation, Star, Clock, Zap, Info,
-    AlertTriangle, Droplets, Trash2, Truck
+    AlertTriangle, Droplets, Trash2, Truck, ChevronRight
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import MobileLayout from '../components/layout/MobileLayout';
@@ -34,7 +34,7 @@ const BookingStatus = () => {
     const STEPS = type === 'vendor' ? VENDOR_STEPS : CAPTAIN_STEPS;
 
     // Find live booking
-    const liveBooking = bookings.find(b => b.id === bookingId) || { id: 'HOORA-8821', serviceName: 'Eco Doorstep Wash', price: '₹473', status: 'pending' };
+    const liveBooking = bookings.find(b => b.id === bookingId) || { id: 'CarWash-8821', serviceName: 'Eco Doorstep Wash', price: '₹473', status: 'pending' };
 
     const [step, setStep] = useState(0);
 

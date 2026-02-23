@@ -83,7 +83,7 @@ const ReferEarn = () => {
                     <div className="space-y-4">
                         {[
                             { icon: <Share2 size={16} className="text-blue-500" />, title: 'Share your code', desc: 'Send your unique referral link or code to any friend.' },
-                            { icon: <Users size={16} className="text-violet-500" />, title: 'Friend signs up', desc: 'They register on Hoora using your referral code.' },
+                            { icon: <Users size={16} className="text-violet-500" />, title: 'Friend signs up', desc: 'They register on CarWash using your referral code.' },
                             { icon: <Zap size={16} className="text-brand" fill="currentColor" />, title: 'Both get ₹100 OFF', desc: 'After their first completed wash, you both get rewarded.' },
                         ].map((step, i) => (
                             <div key={step.title} className="flex items-start gap-3">

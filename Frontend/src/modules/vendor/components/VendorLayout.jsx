@@ -30,7 +30,7 @@ const VendorLayout = ({ children, title, subtitle }) => {
                     <div className="w-10 h-10 bg-brand rounded-xl flex items-center justify-center shadow-lg shadow-brand/20">
                         <Package size={20} className="text-white" />
                     </div>
-                    <span className="text-white font-black text-xl italic tracking-tighter">Hoora <span className="text-brand">Vendor</span></span>
+                    <span className="text-white font-black text-xl italic tracking-tighter">CarWash <span className="text-brand">Vendor</span></span>
                 </div>
 
                 <nav className="space-y-1.5 flex-1 overflow-y-auto pr-2 custom-scrollbar">

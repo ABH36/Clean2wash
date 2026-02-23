@@ -1,3 +1,5 @@
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { ChevronLeft, Star, ThumbsUp, Camera, Award } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
@@ -10,7 +12,7 @@ const RateExperience = () => {
     const { bookings, registeredUsers } = useAuth();
 
     const bookingId = searchParams.get('id');
-    const liveBooking = bookings.find(b => b.id === bookingId) || { id: 'HOORA-8821', serviceName: 'Eco Doorstep Wash', price: '₹473', performerId: null };
+    const liveBooking = bookings.find(b => b.id === bookingId) || { id: 'CarWash-8821', serviceName: 'Eco Doorstep Wash', price: '₹473', performerId: null };
 
     const performer = liveBooking.performerId
         ? [...(registeredUsers.captain || []), ...(registeredUsers.staff || [])].find(u => u.id === liveBooking.performerId)
@@ -40,7 +42,7 @@ const RateExperience = () => {
                     </div>
                 </motion.div>
                 <h2 className="text-2xl font-black tracking-tight text-content mb-2">Thank you!</h2>
-                <p className="text-sm font-bold text-content-subtle">Your feedback makes Hoora better for everyone.</p>
+                <p className="text-sm font-bold text-content-subtle">Your feedback makes CarWash better for everyone.</p>
                 <div className="mt-6 w-8 h-1 bg-brand rounded-full animate-pulse mx-auto" />
             </div>
         );

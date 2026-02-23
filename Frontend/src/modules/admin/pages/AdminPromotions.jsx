@@ -26,11 +26,11 @@ const AdminPromotions = () => {
 
     // Initial state / Persistence
     const getInitialPromos = () => {
-        const saved = localStorage.getItem('hoora_promotions');
+        const saved = localStorage.getItem('CarWash_promotions');
         if (saved) return JSON.parse(saved);
         return {
             Coupons: [
-                { id: 1, code: 'HOORA50', type: 'Percentage', val: '50%', expiry: '2026-03-01', usage: '1.2k', status: 'Active' },
+                { id: 1, code: 'CarWash50', type: 'Percentage', val: '50%', expiry: '2026-03-01', usage: '1.2k', status: 'Active' },
                 { id: 2, code: 'FIRSTWASH', type: 'Flat', val: '₹100', expiry: '2026-12-31', usage: '4.5k', status: 'Active' },
             ],
             Referrals: [
@@ -45,7 +45,7 @@ const AdminPromotions = () => {
 
     const savePromos = (updated) => {
         setPromos(updated);
-        localStorage.setItem('hoora_promotions', JSON.stringify(updated));
+        localStorage.setItem('CarWash_promotions', JSON.stringify(updated));
     };
 
     const handleAddPromotion = (e) => {
@@ -308,7 +308,7 @@ const AdminModal = ({ isOpen, onClose, title, children }) => {
                 <div className="px-10 py-8 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
                     <div>
                         <h2 className="text-xl font-black text-content italic leading-none">{title}</h2>
-                        <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-2 ml-1 italic">Hoora Growth Protocol</p>
+                        <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-2 ml-1 italic">CarWash Growth Protocol</p>
                     </div>
                     <button onClick={onClose} className="p-3 hover:bg-white rounded-2xl border border-gray-100 text-content-subtle transition-all">
                         <X size={20} />

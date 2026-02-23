@@ -6,8 +6,8 @@ import MobileLayout from '../components/layout/MobileLayout';
 import { useAuth } from '../../../context/AuthContext';
 
 const MOCK_TRANSACTIONS = [
-    { id: 'TXN001', type: 'credit', title: 'Hoora — Wallet Refill', sub: 'Added to wallet', amount: '+₹1,000', date: 'Yesterday, 10:15 AM', status: 'success' },
-    { id: 'TXN002', type: 'credit', title: 'Cashback — HOORAFIRST', sub: 'Wash #HOORA-7761', amount: '+₹299', date: 'Feb 18, 2:45 PM', status: 'success' },
+    { id: 'TXN001', type: 'credit', title: 'CarWash — Wallet Refill', sub: 'Added to wallet', amount: '+₹1,000', date: 'Yesterday, 10:15 AM', status: 'success' },
+    { id: 'TXN002', type: 'credit', title: 'Cashback — CarWashFIRST', sub: 'Wash #CarWash-7761', amount: '+₹299', date: 'Feb 18, 2:45 PM', status: 'success' },
     { id: 'TXN004', type: 'debit', title: 'Full Deep Clean', sub: 'Paid via HDFC Card', amount: '-₹1,199', date: 'Feb 18, 10:15 AM', status: 'success' },
     { id: 'TXN005', type: 'credit', title: 'Refund Processed', sub: 'Cancelled #6490', amount: '+₹199', date: 'Feb 15, 3:00 PM', status: 'success' },
     { id: 'TXN006', type: 'debit', title: 'Add Money', sub: 'Via PhonePe', amount: '-₹500', date: 'Feb 14, 7:30 PM', status: 'pending' },
@@ -50,7 +50,7 @@ const Wallet = () => {
                     <ChevronLeft size={18} strokeWidth={2.5} className="text-content" />
                 </button>
                 <div>
-                    <h1 className="text-lg font-black tracking-tight text-content leading-none">Hoora Wallet</h1>
+                    <h1 className="text-lg font-black tracking-tight text-content leading-none">CarWash Wallet</h1>
                     <p className="text-[9px] text-brand font-black uppercase tracking-widest mt-0.5">Balance & History</p>
                 </div>
             </header>

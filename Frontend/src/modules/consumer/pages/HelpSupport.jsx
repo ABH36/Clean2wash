@@ -13,15 +13,15 @@ const FAQS = [
     {
         category: 'Booking',
         items: [
-            { q: 'How quickly does a captain arrive?', a: 'Our AI matches a captain within 60 seconds. Typical arrival time is 20–30 minutes for Instant Wash, depending on your city zone.' },
+            { q: 'How quickly does a carwash professional arrive?', a: 'Our AI matches a carwash professional within 60 seconds. Typical arrival time is 20–30 minutes for Instant Wash, depending on your city zone.' },
             { q: 'Can I reschedule my booking?', a: 'Yes! You can reschedule up to 2 hours before your scheduled slot without any cancellation fee via My Bookings.' },
-            { q: 'What if no captain is available?', a: 'You\'ll receive a full refund instantly to your Hoora Wallet if we can\'t find a match. This happens in less than 0.1% of cases.' },
+            { q: 'What if no carwash professional is available?', a: 'You\'ll receive a full refund instantly to your CarWash Wallet if we can\'t find a match. This happens in less than 0.1% of cases.' },
         ],
     },
     {
         category: 'Payment & Cashback',
         items: [
-            { q: 'When is my 100% cashback credited?', a: 'HOORAFIRST cashback is credited within 30 minutes of wash completion, directly to your Hoora Wallet.' },
+            { q: 'When is my 100% cashback credited?', a: 'CARWASHFIRST cashback is credited within 30 minutes of wash completion, directly to your CarWash Wallet.' },
             { q: 'Can I pay with multiple methods?', a: 'Currently, each booking requires one payment method. You can use Wallet + UPI in a future update.' },
             { q: 'How do I withdraw my wallet balance?', a: 'Go to Wallet → Withdraw. Minimum withdrawal is ₹100. Amount reaches your bank in 2–3 business days.' },
         ],
@@ -29,8 +29,8 @@ const FAQS = [
     {
         category: 'Safety & Quality',
         items: [
-            { q: 'Are all captains background verified?', a: 'Yes. Every Hoora Captain undergoes a 3-step verification: govt. ID check, criminal record check, and Hoora skill certification.' },
-            { q: 'What if my car gets damaged?', a: 'All washes are covered by Hoora\'s ₹5 Lakh Ecosystem Guarantee. File a claim within 24 hours via the app.' },
+            { q: 'Are all carwash professionals background verified?', a: 'Yes. Every CarWash professional undergoes a 3-step verification: govt. ID check, criminal record check, and CarWash skill certification.' },
+            { q: 'What if my car gets damaged?', a: 'All washes are covered by CarWash\'s ₹5 Lakh Ecosystem Guarantee. File a claim within 24 hours via the app.' },
             { q: 'Is the cleaning solution safe for my paint?', a: 'Absolutely. We use OECD-certified, pH-neutral, waterless foam that is proven safe on all automotive paint finishes.' },
         ],
     },
@@ -40,15 +40,15 @@ const FAQS = [
 //  BOT RESPONSE LOGIC
 // ─────────────────────────────────────────────
 const BOT_RESPONSES = [
-    { trigger: ['captain', 'arrive', 'eta', 'time'], reply: 'Our AI matches a captain within 60 seconds! Typical ETA is 20–30 minutes. You can track your captain live on the map. 🗺️' },
+    { trigger: ['captain', 'arrive', 'eta', 'time'], reply: 'Our AI matches a carwash professional within 60 seconds! Typical ETA is 20–30 minutes. You can track your carwash professional live on the map. 🗺️' },
     { trigger: ['reschedule', 'cancel', 'change'], reply: 'You can reschedule or cancel up to 2 hours before your slot with zero fee. Go to **My Bookings** → tap on the booking → Reschedule. ✅' },
-    { trigger: ['cashback', 'refund', 'wallet', 'money'], reply: 'HOORAFIRST cashback is credited to your Hoora Wallet within 30 minutes of wash completion. Wallet withdrawals take 2–3 business days. 💸' },
+    { trigger: ['cashback', 'refund', 'wallet', 'money'], reply: 'CARWASHFIRST cashback is credited to your CarWash Wallet within 30 minutes of wash completion. Wallet withdrawals take 2–3 business days. 💸' },
     { trigger: ['damage', 'scratch', 'dent', 'safe', 'safety'], reply: 'Every wash is covered by our ₹5 Lakh Ecosystem Guarantee. If you notice any issue, go to Help → Raise a Claim within 24 hours. 🛡️' },
-    { trigger: ['payment', 'pay', 'upi', 'card'], reply: 'We accept UPI, Credit/Debit cards, and Hoora Wallet. Each booking currently supports one payment method per transaction. 💳' },
-    { trigger: ['hi', 'hello', 'hey', 'namaste'], reply: 'Hello! 👋 I\'m Hoora\'s AI support assistant. I can help you with bookings, payments, safety, and more. What\'s on your mind?' },
-    { trigger: ['thank', 'thanks', 'great', 'ok'], reply: 'Happy to help! 😊 Is there anything else you\'d like to know about Hoora?' },
+    { trigger: ['payment', 'pay', 'upi', 'card'], reply: 'We accept UPI, Credit/Debit cards, and CarWash Wallet. Each booking currently supports one payment method per transaction. 💳' },
+    { trigger: ['hi', 'hello', 'hey', 'namaste'], reply: 'Hello! 👋 I\'m CarWash\'s AI support assistant. I can help you with bookings, payments, safety, and more. What\'s on your mind?' },
+    { trigger: ['thank', 'thanks', 'great', 'ok'], reply: 'Happy to help! 😊 Is there anything else you\'d like to know about CarWash?' },
     { trigger: ['human', 'agent', 'person', 'support', 'call'], reply: 'To connect with a live human agent, tap **Call Us** on the Help page. We\'re available Mon–Sun, 6 AM – 11 PM IST. ☎️' },
-    { trigger: ['captain', 'verify', 'background', 'trust'], reply: 'All Hoora Captains are 3-step verified: govt. ID check, criminal record check, and Hoora\'s own skill certification. 👮' },
+    { trigger: ['captain', 'verify', 'background', 'trust'], reply: 'All CarWash professionals are 3-step verified: govt. ID check, criminal record check, and CarWash\'s own skill certification. 👮' },
 ];
 
 const getBotReply = (message) => {
@@ -66,7 +66,7 @@ const QUICK_CHIPS = ['Track my order', 'Cancel booking', 'Cashback status', 'Tal
 // ─────────────────────────────────────────────
 const ChatSheet = ({ onClose }) => {
     const [messages, setMessages] = useState([
-        { id: 1, from: 'bot', text: 'Hey there! 👋 I\'m **Hoora AI**, your 24/7 support assistant. How can I help you today?', time: 'just now' },
+        { id: 1, from: 'bot', text: 'Hey there! 👋 I\'m **CarWash AI**, your 24/7 support assistant. How can I help you today?', time: 'just now' },
     ]);
     const [input, setInput] = useState('');
     const [typing, setTyping] = useState(false);
@@ -117,7 +117,7 @@ const ChatSheet = ({ onClose }) => {
                     <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
                 </div>
                 <div className="flex-1">
-                    <p className="font-black text-sm text-content tracking-tight">Hoora AI Support</p>
+                    <p className="font-black text-sm text-content tracking-tight">CarWash AI Support</p>
                     <div className="flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
                         <p className="text-[9px] font-black text-green-600 uppercase tracking-widest">Online · Replies in &lt;2 min</p>
@@ -141,8 +141,8 @@ const ChatSheet = ({ onClose }) => {
                         </div>
                         {/* Bubble */}
                         <div className={`max-w-[72%] px-4 py-2.5 rounded-2xl text-sm font-medium leading-relaxed ${msg.from === 'bot'
-                                ? 'bg-gray-50 border border-gray-100 text-content rounded-tl-md'
-                                : 'bg-brand text-white rounded-tr-md'
+                            ? 'bg-gray-50 border border-gray-100 text-content rounded-tl-md'
+                            : 'bg-brand text-white rounded-tr-md'
                             }`}>
                             {renderText(msg.text)}
                         </div>
@@ -221,7 +221,7 @@ const HelpSupport = () => {
     const handleQuickAction = (label) => {
         if (label === 'Call Us') { window.location.href = 'tel:+918069100000'; return; }
         if (label === 'Live Chat') { setShowChat(true); return; }
-        if (label === 'Email') { window.location.href = 'mailto:support@hoora.in'; return; }
+        if (label === 'Email') { window.location.href = 'mailto:support@carwash.in'; return; }
     };
 
     return (
@@ -293,7 +293,7 @@ const HelpSupport = () => {
                         <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-content" />
                     </div>
                     <div className="flex-1">
-                        <p className="text-white font-black text-sm tracking-tight">Hoora AI Support Bot</p>
+                        <p className="text-white font-black text-sm tracking-tight">CarWash AI Support Bot</p>
                         <p className="text-white/50 text-[9px] font-bold">Instant answers, anytime · Click to chat</p>
                     </div>
                     <div className="bg-brand text-white font-black text-xs px-3 py-2 rounded-xl flex items-center gap-1.5">
@@ -346,7 +346,7 @@ const HelpSupport = () => {
 
                 {/* ── Footer ── */}
                 <div className="text-center space-y-1 pt-2 pb-4">
-                    <p className="text-[9px] font-bold text-content-subtle">Hoora Ecosystem Support · v4.2.0</p>
+                    <p className="text-[9px] font-bold text-content-subtle">CarWash Ecosystem Support · v4.2.0</p>
                     <p className="text-[9px] font-bold text-content-subtle">Mon–Sun · 6 AM – 11 PM IST</p>
                 </div>
             </div>

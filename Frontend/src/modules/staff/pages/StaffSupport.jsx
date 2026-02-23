@@ -12,6 +12,8 @@ import {
     HeadphonesIcon
 } from 'lucide-react';
 
+import StaffLayout from '../components/StaffLayout';
+
 const StaffSupport = () => {
     const navigate = useNavigate();
 
@@ -19,86 +21,80 @@ const StaffSupport = () => {
         {
             icon: <Phone size={20} />,
             label: 'Emergency Line',
-            sub: 'Available 24/7 for accidents/theft',
-            action: 'Call +91 80 6910 0000',
-            color: 'text-red-600',
+            sub: 'Operational accidents/theft protocol',
+            action: 'Push to Call',
+            color: 'text-red-500',
             bg: 'bg-red-50'
         },
         {
             icon: <MessageSquare size={20} />,
-            label: 'Hub Manager Chat',
-            sub: 'For route or task issues',
-            action: 'Start WhatsApp Chat',
-            color: 'text-green-600',
-            bg: 'bg-green-50'
+            label: 'Manager Direct',
+            sub: 'Sync route or task discrepancies',
+            action: 'Open Message Hub',
+            color: 'text-brand',
+            bg: 'bg-brand/5'
         },
         {
             icon: <MapPin size={20} />,
-            label: 'Hub Location',
-            sub: 'Sector 15, Studio Road',
-            action: 'Get Directions',
-            color: 'text-blue-600',
+            label: 'Central Hub',
+            sub: 'Sector 15, Enterprise Road',
+            action: 'Route to GPS',
+            color: 'text-blue-500',
             bg: 'bg-blue-50'
         }
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-24">
-            <header className="bg-white px-5 pt-12 pb-6 border-b border-gray-100 flex items-center justify-between sticky top-0 z-50">
-                <button onClick={() => navigate(-1)} className="w-10 h-10 bg-gray-50 rounded-2xl flex items-center justify-center border border-gray-100">
-                    <ChevronLeft size={20} className="text-content" />
-                </button>
-                <h1 className="text-lg font-black text-content italic uppercase">Support</h1>
-                <div className="w-10" />
-            </header>
-
-            <div className="px-5 pt-8">
-                <div className="bg-content rounded-[3rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-content/20 mb-8">
+        <StaffLayout title="Assistance" subtitle="Resource Node">
+            <div className="space-y-8">
+                <div className="bg-content rounded-[3rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-content/30 group">
                     <div className="relative z-10">
-                        <p className="text-[10px] font-black text-brand uppercase tracking-[0.2em] mb-2">Hoora Partners</p>
-                        <h2 className="text-3xl font-black italic tracking-tighter leading-none mb-4">Dedicated <br /> Staff Node</h2>
-                        <p className="text-white/50 text-[11px] font-bold leading-relaxed mb-6">
-                            You are connected to the Secure Staff Node. Our support team is here to assist you with any operational challenges.
+                        <p className="text-[10px] font-black text-brand uppercase tracking-[0.3em] mb-2 italic">CarWash Partners</p>
+                        <h2 className="text-3xl font-black italic tracking-tighter leading-none mb-6 uppercase">Secure <br /> Support Terminal</h2>
+                        <p className="text-white/40 text-[10px] font-bold leading-relaxed mb-8 uppercase tracking-widest">
+                            Authorized personnel only. All communications via this node are encrypted and logged for quality protocol.
                         </p>
-                        <button className="flex items-center gap-2 bg-brand px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest">
-                            <HeadphonesIcon size={14} /> Help Center
+                        <button className="flex items-center gap-3 bg-brand px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-brand/20 hover:scale-105 transition-all">
+                            <HeadphonesIcon size={16} /> Contact Command
                         </button>
                     </div>
-                    <HelpCircle size={120} className="absolute -bottom-10 -right-10 text-white/5 rotate-12" />
+                    <HelpCircle size={160} className="absolute -bottom-10 -right-10 text-white/5 rotate-12 transition-transform duration-700 group-hover:rotate-45" />
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand/10 rounded-full blur-3xl" />
                 </div>
 
                 <div className="space-y-4">
+                    <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] px-4 italic">Available Channels</p>
                     {SUPPORT_CHANNELS.map((channel, i) => (
                         <motion.button
                             key={i}
                             whileTap={{ scale: 0.98 }}
-                            className="w-full bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-soft flex items-center gap-5 text-left group"
+                            className="w-full bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-soft flex items-center gap-6 text-left group hover:border-brand/20 transition-all duration-500"
                         >
-                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${channel.bg} ${channel.color}`}>
+                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 group-hover:bg-brand group-hover:text-white ${channel.bg} ${channel.color}`}>
                                 {channel.icon}
                             </div>
                             <div className="flex-1">
-                                <h3 className="text-sm font-black text-content italic uppercase leading-none mb-1">{channel.label}</h3>
-                                <p className="text-[10px] font-bold text-content-subtle uppercase mb-2 tracking-tight">{channel.sub}</p>
-                                <div className="flex items-center gap-1.5 text-brand">
-                                    <span className="text-[9px] font-black uppercase tracking-[0.1em]">{channel.action}</span>
-                                    <ArrowUpRight size={12} strokeWidth={3} />
+                                <h3 className="text-sm font-black text-content italic uppercase leading-none mb-1.5 tracking-tight">{channel.label}</h3>
+                                <p className="text-[10px] font-bold text-content-subtle uppercase mb-3 tracking-widest leading-none">{channel.sub}</p>
+                                <div className="flex items-center gap-2 text-brand">
+                                    <span className="text-[9px] font-black uppercase tracking-[0.15em]">{channel.action}</span>
+                                    <ArrowUpRight size={14} strokeWidth={3} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                                 </div>
                             </div>
                         </motion.button>
                     ))}
                 </div>
 
-                <div className="mt-10 p-6 bg-white rounded-[2rem] border border-gray-100 border-dashed text-center">
-                    <ShieldCheck size={24} className="text-content-subtle mx-auto mb-3" />
-                    <p className="text-[9px] font-bold text-content-subtle uppercase tracking-widest leading-loose">
-                        Version 2.4.0-STF <br />
-                        Connection: Secure Node-092 <br />
-                        Server Time: {new Date().toLocaleTimeString()}
+                <div className="p-8 bg-gray-50/50 rounded-[2.5rem] border border-gray-100 border-dashed text-center opacity-40 group hover:opacity-100 transition-opacity">
+                    <ShieldCheck size={28} className="text-content-subtle mx-auto mb-4" />
+                    <p className="text-[9px] font-black text-content-subtle uppercase tracking-[0.3em] leading-[2]">
+                        Operational Ver: 2.4.0-STF <br />
+                        Connection: Node-092 (Encrypted) <br />
+                        System Time: {new Date().toLocaleTimeString()}
                     </p>
                 </div>
             </div>
-        </div>
+        </StaffLayout>
     );
 };
 

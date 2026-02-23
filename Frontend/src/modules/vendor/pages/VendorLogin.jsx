@@ -25,7 +25,7 @@ const VendorLogin = () => {
         setError('');
         const user = validateCredentials('vendor', { email, password });
         if (!user) {
-            setError('Invalid credentials. Try: vendor@hoora.in / vendor123');
+            setError('Invalid credentials. Try: vendor@CarWash.in / vendor123');
             return;
         }
         setLoading(true);
@@ -65,7 +65,7 @@ const VendorLogin = () => {
                                 </label>
                                 <input
                                     type="email"
-                                    placeholder="vendor@hoora.in"
+                                    placeholder="vendor@CarWash.in"
                                     required
                                     value={email}
                                     onChange={e => setEmail(e.target.value)}

@@ -141,10 +141,10 @@ const BookingType = () => {
                         </div>
                         <div>
                             <p className="font-black text-sm text-content">
-                                {couponApplied ? 'HOORAFIRST Applied' : 'Apply Coupon'}
+                                {couponApplied ? 'CarWashFIRST Applied' : 'Apply Coupon'}
                             </p>
                             <p className={`text-[9px] font-bold ${couponApplied ? 'text-green-700' : 'text-content-subtle'}`}>
-                                {couponApplied ? '₹60 discount applied!' : 'HOORAFIRST — 100% cashback'}
+                                {couponApplied ? '₹60 discount applied!' : 'CarWashFIRST — 100% cashback'}
                             </p>
                         </div>
                     </div>
@@ -201,7 +201,7 @@ const BookingType = () => {
                     <div className="w-4 h-4 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
                         <CheckCircle2 size={10} className="text-green-600" />
                     </div>
-                    <p className="text-[9px] font-bold text-content-subtle leading-normal">Your car is covered by Hoora's ₹5 Lakh Damage Protection Guarantee. <span className="text-brand">Learn More</span></p>
+                    <p className="text-[9px] font-bold text-content-subtle leading-normal">Your car is covered by CarWash's ₹5 Lakh Damage Protection Guarantee. <span className="text-brand">Learn More</span></p>
                 </div>
 
             </div>

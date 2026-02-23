@@ -1,4 +1,4 @@
-// Reusable UI components for the Hoora consumer module
+// Reusable UI components for the CarWash consumer module
 
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';

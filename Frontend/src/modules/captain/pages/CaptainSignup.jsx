@@ -90,7 +90,7 @@ const CaptainSignup = () => {
                     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
                         <p className="text-white/60 font-medium text-sm">Do you have your own cleaning equipment?</p>
                         <div className="space-y-3">
-                            {['Mini-Pro Kit', 'Full Tech Setup', 'I need a kit from Hoora'].map(k => (
+                            {['Mini-Pro Kit', 'Full Tech Setup', 'I need a kit from CarWash'].map(k => (
                                 <button key={k} onClick={() => setFormData({ ...formData, kit: k })}
                                     className={`w-full p-5 rounded-2xl border flex items-center justify-between transition-all ${formData.kit === k ? 'bg-brand/10 border-brand' : 'bg-white/5 border-white/5'
                                         }`}>

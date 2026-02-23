@@ -103,7 +103,7 @@ const VendorSignup = () => {
                                 label="Studio Name"
                                 icon={<Building2 size={14} />}
                                 type="text"
-                                placeholder="Hoora Studio X"
+                                placeholder="CarWash Studio X"
                                 value={formData.studioName}
                                 onChange={e => setFormData({ ...formData, studioName: e.target.value })}
                             />

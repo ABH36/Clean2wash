@@ -67,7 +67,7 @@ const VendorSettings = () => {
                                 placeholder="Indiranagar, Sector 4, MG Road, Bengaluru - 560038"
                             />
                         </div>
-                        <InputGroup label="Registration ID" placeholder="HOORA-V-IND-04" />
+                        <InputGroup label="Registration ID" placeholder="CarWash-V-IND-04" />
                         <InputGroup label="Support Email" placeholder="hello@perfectshine.com" />
                     </div>
 

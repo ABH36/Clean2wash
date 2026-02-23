@@ -10,6 +10,8 @@ import {
     ArrowRight
 } from 'lucide-react';
 
+import StaffLayout from '../components/StaffLayout';
+
 const StaffSecurity = () => {
     const navigate = useNavigate();
     const [pinData, setPinData] = useState({
@@ -25,87 +27,88 @@ const StaffSecurity = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <header className="bg-white px-5 pt-12 pb-6 border-b border-gray-100 flex items-center justify-between sticky top-0 z-50">
-                <button onClick={() => navigate(-1)} className="w-10 h-10 bg-gray-50 rounded-2xl flex items-center justify-center border border-gray-100">
-                    <ChevronLeft size={20} className="text-content" />
-                </button>
-                <h1 className="text-lg font-black text-content italic uppercase">Authentication</h1>
-                <div className="w-10" />
-            </header>
-
-            <div className="px-5 pt-8">
-                <div className="w-20 h-20 bg-brand/10 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6">
-                    <ShieldCheck size={40} className="text-brand" />
-                </div>
-                <div className="text-center mb-10">
-                    <h2 className="text-2xl font-black text-content italic leading-none mb-2">Staff Access Pin</h2>
-                    <p className="text-xs font-bold text-content-subtle uppercase tracking-widest">Secure your account access</p>
+        <StaffLayout title="Authentication" subtitle="Security Node">
+            <div className="space-y-8">
+                <div className="flex flex-col items-center">
+                    <div className="w-24 h-24 bg-brand/10 rounded-[3rem] flex items-center justify-center mb-6 relative group overflow-hidden">
+                        <ShieldCheck size={48} className="text-brand relative z-10 group-hover:scale-110 transition-transform" />
+                        <div className="absolute inset-0 bg-brand/5 blur-xl group-hover:scale-150 transition-transform" />
+                    </div>
+                    <div className="text-center mb-4">
+                        <h2 className="text-2xl font-black text-content italic leading-none mb-3 uppercase tracking-tighter">Access Protocol</h2>
+                        <p className="text-[10px] font-bold text-content-subtle uppercase tracking-[0.2em]">Maintain secure terminal entry</p>
+                    </div>
                 </div>
 
-                <form onSubmit={handleUpdate} className="space-y-4">
-                    <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-soft">
-                        <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-2 italic">Current 4-Digit Pin</p>
-                        <div className="flex items-center gap-3">
-                            <Lock size={18} className="text-content-subtle" />
+                <form onSubmit={handleUpdate} className="space-y-5">
+                    <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-soft focus-within:border-brand/40 transition-all group">
+                        <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-3 italic group-focus-within:text-brand transition-colors">Current 4-Digit Pin</p>
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-content-subtle group-focus-within:bg-brand group-focus-within:text-white transition-all">
+                                <Lock size={18} />
+                            </div>
                             <input
                                 type="password"
                                 maxLength={4}
                                 placeholder="● ● ● ●"
                                 value={pinData.current}
                                 onChange={(e) => setPinData({ ...pinData, current: e.target.value })}
-                                className="w-full text-lg font-black text-content tracking-[0.5em] outline-none placeholder:tracking-normal placeholder:text-gray-200"
+                                className="w-full text-xl font-black text-content tracking-[0.8em] outline-none placeholder:tracking-normal placeholder:text-gray-200 bg-transparent"
                             />
                         </div>
                     </div>
 
-                    <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-soft">
-                        <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-2 italic">New 4-Digit Pin</p>
-                        <div className="flex items-center gap-3">
-                            <KeyRound size={18} className="text-brand" />
+                    <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-soft focus-within:border-brand/40 transition-all group">
+                        <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-3 italic group-focus-within:text-brand transition-colors">New 4-Digit Pin</p>
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-content-subtle group-focus-within:bg-brand group-focus-within:text-white transition-all">
+                                <KeyRound size={18} />
+                            </div>
                             <input
                                 type="password"
                                 maxLength={4}
                                 placeholder="● ● ● ●"
                                 value={pinData.new}
                                 onChange={(e) => setPinData({ ...pinData, new: e.target.value })}
-                                className="w-full text-lg font-black text-content tracking-[0.5em] outline-none placeholder:tracking-normal placeholder:text-gray-200"
+                                className="w-full text-xl font-black text-content tracking-[0.8em] outline-none placeholder:tracking-normal placeholder:text-gray-200 bg-transparent"
                             />
                         </div>
                     </div>
 
-                    <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-soft">
-                        <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-2 italic">Confirm New Pin</p>
-                        <div className="flex items-center gap-3">
-                            <KeyRound size={18} className="text-brand" />
+                    <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-soft focus-within:border-brand/40 transition-all group">
+                        <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-3 italic group-focus-within:text-brand transition-colors">Verify Protocol</p>
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-content-subtle group-focus-within:bg-brand group-focus-within:text-white transition-all">
+                                <KeyRound size={18} />
+                            </div>
                             <input
                                 type="password"
                                 maxLength={4}
                                 placeholder="● ● ● ●"
                                 value={pinData.confirm}
                                 onChange={(e) => setPinData({ ...pinData, confirm: e.target.value })}
-                                className="w-full text-lg font-black text-content tracking-[0.5em] outline-none placeholder:tracking-normal placeholder:text-gray-200"
+                                className="w-full text-xl font-black text-content tracking-[0.8em] outline-none placeholder:tracking-normal placeholder:text-gray-200 bg-transparent"
                             />
                         </div>
                     </div>
 
-                    <div className="bg-amber-50 p-4 rounded-2xl flex items-start gap-3 mt-4 border border-amber-100/50">
-                        <AlertCircle size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
-                        <p className="text-[8px] font-bold text-amber-700 uppercase leading-relaxed">
-                            Never share your Hoora Access Pin with anyone. Hub managers will never ask for your pin via call or SMS.
+                    <div className="bg-amber-50/50 p-6 rounded-[2rem] flex items-start gap-4 mt-6 border border-amber-100/30">
+                        <AlertCircle size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-[9px] font-bold text-amber-700 uppercase leading-[1.8] tracking-wider italic">
+                            Never share your CarWash Access Pin. Hub managers will never request authentication keys via insecure channels.
                         </p>
                     </div>
 
                     <motion.button
                         whileTap={{ scale: 0.98 }}
                         type="submit"
-                        className="w-full bg-content text-white py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-content/20 flex items-center justify-center gap-3 mt-8"
+                        className="w-full h-16 bg-content text-white rounded-[2rem] font-black text-[10px] uppercase tracking-[0.25em] shadow-xl shadow-content/30 flex items-center justify-center gap-3 mt-10 hover:bg-brand transition-all"
                     >
-                        Update Access Pin <ArrowRight size={18} />
+                        Sign Update <ArrowRight size={20} />
                     </motion.button>
                 </form>
             </div>
-        </div>
+        </StaffLayout>
     );
 };
 

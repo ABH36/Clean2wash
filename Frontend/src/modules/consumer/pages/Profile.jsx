@@ -49,7 +49,7 @@ const Profile = () => {
                     </div>
                     <div>
                         <h2 className="text-lg font-black tracking-tight text-content leading-none mb-0.5">{user.name}</h2>
-                        <p className="text-[9px] font-black text-brand uppercase tracking-widest mb-2">Hoora Elite Member</p>
+                        <p className="text-[9px] font-black text-brand uppercase tracking-widest mb-2">CarWash Elite Member</p>
                         <div className="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100">
                             <Star size={10} className="text-yellow-500" fill="currentColor" />
                             <span className="text-[9px] font-black uppercase tracking-wider text-content-muted">4.8 Rating</span>
@@ -81,7 +81,7 @@ const Profile = () => {
 
                 {/* ── Footer ── */}
                 <div className="text-center space-y-3 pt-2">
-                    <p className="text-[9px] font-bold text-content-subtle uppercase tracking-widest">Hoora v4.2.0</p>
+                    <p className="text-[9px] font-bold text-content-subtle uppercase tracking-widest">CarWash v4.2.0</p>
                     <button
                         onClick={() => {
                             if (window.confirm('Do you want to logout?')) {

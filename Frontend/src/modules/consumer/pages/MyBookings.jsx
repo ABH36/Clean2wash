@@ -12,14 +12,14 @@ const TABS = ['Active', 'Past', 'Cancelled'];
 
 const BOOKINGS = {
     Active: [
-        { id: 'HOORA-8821', service: 'Instant Eco Wash', captain: 'Rahul Sharma', captainImg: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80', carImg: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80', status: 'Captain En Route', statusColor: 'text-blue-600 bg-blue-50', eta: '12 min', amount: '₹473', date: 'Today, 2:30 PM' },
+        { id: 'CarWash-8821', service: 'Instant Eco Wash', captain: 'Rahul Sharma', captainImg: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80', carImg: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80', status: 'Captain En Route', statusColor: 'text-blue-600 bg-blue-50', eta: '12 min', amount: '₹473', date: 'Today, 2:30 PM' },
     ],
     Past: [
-        { id: 'HOORA-7761', service: 'Full Deep Clean', captain: 'Amit Singh', captainImg: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&q=80', carImg: 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=400&q=80', status: 'Completed', statusColor: 'text-green-600 bg-green-50', rating: 4.9, rated: true, amount: '₹1,199', date: 'Yesterday, 10:15 AM' },
-        { id: 'HOORA-7102', service: 'Instant Eco Wash', captain: 'Vikram Das', captainImg: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80', carImg: 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=400&q=80', status: 'Completed', statusColor: 'text-green-600 bg-green-50', rating: 4.7, rated: false, amount: '₹299', date: 'Feb 18, 3:00 PM' },
+        { id: 'CarWash-7761', service: 'Full Deep Clean', captain: 'Amit Singh', captainImg: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&q=80', carImg: 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=400&q=80', status: 'Completed', statusColor: 'text-green-600 bg-green-50', rating: 4.9, rated: true, amount: '₹1,199', date: 'Yesterday, 10:15 AM' },
+        { id: 'CarWash-7102', service: 'Instant Eco Wash', captain: 'Vikram Das', captainImg: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80', carImg: 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=400&q=80', status: 'Completed', statusColor: 'text-green-600 bg-green-50', rating: 4.7, rated: false, amount: '₹299', date: 'Feb 18, 3:00 PM' },
     ],
     Cancelled: [
-        { id: 'HOORA-6490', service: 'Tire & Rim Shine', captain: null, captainImg: null, carImg: 'https://images.unsplash.com/photo-1611455600759-99abfc83e9c4?w=400&q=80', status: 'Cancelled', statusColor: 'text-red-600 bg-red-50', amount: '₹199', date: 'Feb 15, 12:00 PM' },
+        { id: 'CarWash-6490', service: 'Tire & Rim Shine', captain: null, captainImg: null, carImg: 'https://images.unsplash.com/photo-1611455600759-99abfc83e9c4?w=400&q=80', status: 'Cancelled', statusColor: 'text-red-600 bg-red-50', amount: '₹199', date: 'Feb 15, 12:00 PM' },
     ],
 };
 

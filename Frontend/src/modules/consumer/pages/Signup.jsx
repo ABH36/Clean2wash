@@ -279,7 +279,7 @@ const Signup = () => {
                 <div className="mt-8 flex items-start gap-3 bg-gray-50 p-4 rounded-2xl border border-gray-100">
                     <ShieldCheck size={16} className="text-brand flex-shrink-0 mt-0.5" />
                     <p className="text-[10px] font-bold text-content-muted leading-relaxed uppercase tracking-wider">
-                        Protected by <span className="text-content font-black">Hoora Secure Identity</span>.
+                        Protected by <span className="text-content font-black">CarWash Secure Identity</span>.
                         Your data is encrypted end-to-end.
                     </p>
                 </div>

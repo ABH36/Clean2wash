@@ -195,7 +195,7 @@ const CaptainLogin = () => {
             {/* Footer Note */}
             <div className="px-8 pb-10 text-center">
                 <p className="text-white/20 text-[9px] font-bold leading-relaxed">
-                    By continuing, you agree to become a Hoora Partner and accept our
+                    By continuing, you agree to become a CarWash Partner and accept our
                     <span className="text-white/40"> Partner Terms</span> & <span className="text-white/40">Payout Policies</span>.
                 </p>
             </div>

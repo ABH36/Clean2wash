@@ -115,7 +115,7 @@ const CaptainSettings = () => {
                         >
                             <LogOut size={16} /> Sign Out Session
                         </button>
-                        <p className="text-center text-[9px] font-black text-white/20 uppercase tracking-[0.2em] italic">Hoora Captain v2.4.1 Build 2201</p>
+                        <p className="text-center text-[9px] font-black text-white/20 uppercase tracking-[0.2em] italic">CarWash Captain v2.4.1 Build 2201</p>
                     </div>
                 </div>
             </div>

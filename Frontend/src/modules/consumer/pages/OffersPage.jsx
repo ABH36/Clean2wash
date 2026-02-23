@@ -5,9 +5,9 @@ import { ChevronLeft, Tag, Copy, Check, Clock, Zap, Gift, ChevronRight } from 'l
 
 const OFFERS = [
     {
-        id: 1, code: 'HOORAFIRST', type: 'cashback',
+        id: 1, code: 'CarWashFIRST', type: 'cashback',
         title: '100% Cashback',
-        desc: 'Get your entire first wash free as Hoora Wallet balance.',
+        desc: 'Get your entire first wash free as CarWash Wallet balance.',
         expiry: 'Valid till Mar 31, 2026',
         minOrder: 'Min. ₹199',
         bg: 'from-orange-500 to-brand',
@@ -29,7 +29,7 @@ const OFFERS = [
     {
         id: 3, code: 'REFER100', type: 'referral',
         title: 'Referral Bonus',
-        desc: 'Invite a friend and both of you get ₹100 in Hoora Wallet.',
+        desc: 'Invite a friend and both of you get ₹100 in CarWash Wallet.',
         expiry: 'No expiry',
         minOrder: 'Per referral',
         bg: 'from-green-500 to-teal-500',
@@ -79,7 +79,7 @@ const OffersPage = () => {
                 {/* Banner */}
                 <div className="bg-content rounded-2xl p-5 flex items-center gap-4 relative overflow-hidden">
                     <div className="relative z-10">
-                        <p className="text-white/50 text-[9px] font-black uppercase tracking-widest mb-1">Hoora Rewards</p>
+                        <p className="text-white/50 text-[9px] font-black uppercase tracking-widest mb-1">CarWash Rewards</p>
                         <h2 className="text-white text-2xl font-black tracking-tight leading-none">Save up to<br /><span className="text-brand">₹2,000</span> today</h2>
                     </div>
                     <div className="absolute -right-6 -top-6 w-32 h-32 bg-brand/20 rounded-full blur-2xl" />
@@ -129,7 +129,7 @@ const OffersPage = () => {
                 ))}
 
                 <p className="text-center text-[9px] font-bold text-content-subtle px-4 leading-relaxed">
-                    Coupons cannot be combined. One offer per booking. Hoora reserves the right to modify any offer.
+                    Coupons cannot be combined. One offer per booking. CarWash reserves the right to modify any offer.
                 </p>
             </div>
         </div>

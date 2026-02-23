@@ -23,7 +23,7 @@ const SLIDES = [
         image: 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=800&q=80',
         tag: '₹5L Protection',
         title: 'Every Wash\nFully\nInsured.',
-        desc: 'Hoora Ecosystem Guarantee covers your vehicle through every single service.',
+        desc: 'CarWash Ecosystem Guarantee covers your vehicle through every single service.',
     },
 ];
 
@@ -62,7 +62,7 @@ const Onboarding = () => {
                 <div className="flex justify-between items-center pt-8">
                     <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full">
                         <Shield size={12} className="text-brand" />
-                        <span className="text-white/80 text-[9px] font-black uppercase tracking-widest">Hoora</span>
+                        <span className="text-white/80 text-[9px] font-black uppercase tracking-widest">CarWash</span>
                     </div>
                     <button onClick={() => navigate('/login')} className="text-white/50 text-[10px] font-black uppercase tracking-widest">
                         Skip

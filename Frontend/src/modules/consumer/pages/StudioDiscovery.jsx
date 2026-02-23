@@ -23,7 +23,7 @@ const STUDIOS = [
     },
     {
         id: 'studio-2',
-        name: 'Hoora Signature Hub',
+        name: 'CarWash Signature Hub',
         location: 'HSR Layout · 0.8 km',
         rating: 4.8,
         reviews: 1200,
@@ -173,7 +173,7 @@ const StudioDiscovery = () => {
                     </div>
                     <div className="flex-1">
                         <h4 className="font-black text-xs text-content uppercase tracking-widest">Become a Partner</h4>
-                        <p className="text-[10px] font-bold text-content-subtle mt-1">List your studio on Hoora and reach 10x customers.</p>
+                        <p className="text-[10px] font-bold text-content-subtle mt-1">List your studio on CarWash and reach 10x customers.</p>
                     </div>
                     <button onClick={() => navigate('/vendor/signup')} className="text-brand text-[8px] font-black uppercase tracking-widest border-b border-brand/30">Join Us</button>
                 </div>

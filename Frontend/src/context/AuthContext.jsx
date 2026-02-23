@@ -11,10 +11,10 @@ const SESSION_KEYS = {
 
 // Mock credentials (replace with real API later)
 const MOCK_CREDENTIALS = {
-    admin: { email: 'admin@hoora.in', password: 'admin123' },
-    captain: { phone: '9999999999', password: 'captain123' },
-    vendor: { email: 'vendor@hoora.in', password: 'vendor123' },
-    staff: { phone: '8888888888', password: 'staff123' },
+    admin: { id: 'ADM001', email: 'admin@carwash.in', password: 'admin123' },
+    captain: { id: 'CPT001', phone: '9999999999', password: 'captain123' },
+    vendor: { id: 'VND001', email: 'vendor@carwash.in', password: 'vendor123' },
+    staff: { id: 'STF001', phone: '8888888888', password: 'staff123', vendorId: 'VND001' },
     // consumer uses OTP — no password needed
 };
 
@@ -24,7 +24,7 @@ export const AuthProvider = ({ children }) => {
     // Track registered users from localStorage
     const [registeredUsers, setRegisteredUsers] = useState(() => {
         try {
-            const saved = localStorage.getItem('hoora_registered_users');
+            const saved = localStorage.getItem('carwash_registered_users');
             return saved ? JSON.parse(saved) : { consumer: [], captain: [], vendor: [], staff: [] };
         } catch {
             return { consumer: [], captain: [], vendor: [], staff: [] };
@@ -34,7 +34,7 @@ export const AuthProvider = ({ children }) => {
     // Track vehicles from localStorage
     const [vehicles, setVehicles] = useState(() => {
         try {
-            const saved = localStorage.getItem('hoora_vehicles');
+            const saved = localStorage.getItem('CarWash_vehicles');
             const initial = [
                 { id: 1, brand: 'Honda', model: 'City', type: 'Sedan', color: '#3498db', plate: 'KA 05 MR 7821', img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80', isPrimary: true, userId: 'GUEST' }
             ];
@@ -45,7 +45,7 @@ export const AuthProvider = ({ children }) => {
     // Track addresses from localStorage
     const [addresses, setAddresses] = useState(() => {
         try {
-            const saved = localStorage.getItem('hoora_addresses');
+            const saved = localStorage.getItem('carwash_addresses');
             const initial = [
                 { id: 1, label: 'Home', address: 'HSR Layout, Sector 2, Bengaluru', isPrimary: true, userId: 'GUEST' }
             ];
@@ -58,7 +58,7 @@ export const AuthProvider = ({ children }) => {
     // Track bookings from localStorage
     const [bookings, setBookings] = useState(() => {
         try {
-            const saved = localStorage.getItem('hoora_bookings');
+            const saved = localStorage.getItem('carwash_bookings');
             return saved ? JSON.parse(saved) : [];
         } catch {
             return [];
@@ -81,19 +81,19 @@ export const AuthProvider = ({ children }) => {
 
     // Persist data to localStorage
     useEffect(() => {
-        localStorage.setItem('hoora_registered_users', JSON.stringify(registeredUsers));
+        localStorage.setItem('carwash_registered_users', JSON.stringify(registeredUsers));
     }, [registeredUsers]);
 
     useEffect(() => {
-        localStorage.setItem('hoora_bookings', JSON.stringify(bookings));
+        localStorage.setItem('carwash_bookings', JSON.stringify(bookings));
     }, [bookings]);
 
     useEffect(() => {
-        localStorage.setItem('hoora_vehicles', JSON.stringify(vehicles));
+        localStorage.setItem('carwash_vehicles', JSON.stringify(vehicles));
     }, [vehicles]);
 
     useEffect(() => {
-        localStorage.setItem('hoora_addresses', JSON.stringify(addresses));
+        localStorage.setItem('carwash_addresses', JSON.stringify(addresses));
     }, [addresses]);
 
 
@@ -101,7 +101,7 @@ export const AuthProvider = ({ children }) => {
     // Cross-tab synchronization
     useEffect(() => {
         const handleStorageChange = (e) => {
-            if (e.key === 'hoora_bookings' && e.newValue) {
+            if (e.key === 'carwash_bookings' && e.newValue) {
                 setBookings(JSON.parse(e.newValue));
             }
             if (SESSION_KEYS[e.key] || Object.values(SESSION_KEYS).includes(e.key)) {
@@ -177,7 +177,7 @@ export const AuthProvider = ({ children }) => {
     const addBooking = useCallback((bookingData) => {
         const newBooking = {
             ...bookingData,
-            id: 'HOORA-' + Math.floor(1000 + Math.random() * 9000),
+            id: 'CARWASH-' + Math.floor(1000 + Math.random() * 9000),
             status: 'pending',
             createdAt: new Date().toISOString()
         };

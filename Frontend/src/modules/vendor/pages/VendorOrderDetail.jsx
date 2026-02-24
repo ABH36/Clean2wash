@@ -355,7 +355,7 @@ const VendorOrderDetail = () => {
                                 ) : (
                                     <div className="p-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-100">
                                         <p className="text-sm font-bold text-content-subtle">No staff members found.</p>
-                                        <button onClick={() => navigate('/vendor/staff')} className="text-[10px] font-black text-brand uppercase tracking-widest mt-2 border-b border-brand/20">Add Staff</button>
+                                        <button onClick={() => navigate('/vendor/fleet')} className="text-[10px] font-black text-brand uppercase tracking-widest mt-2 border-b border-brand/20">Add Staff</button>
                                     </div>
                                 )}
                             </div>

@@ -11,7 +11,9 @@ import {
     MapPin,
     ArrowRight,
     ChevronLeft,
-    ShieldCheck
+    ShieldCheck,
+    Camera,
+    FileText
 } from 'lucide-react';
 
 const VendorSignup = () => {
@@ -24,7 +26,8 @@ const VendorSignup = () => {
         phone: '',
         password: '',
         studioName: '',
-        city: ''
+        city: '',
+        idProof: null
     });
 
     const handleSignup = (e) => {
@@ -35,7 +38,10 @@ const VendorSignup = () => {
             const userData = {
                 ...formData,
                 role: 'vendor',
-                id: 'VND-' + Math.random().toString(36).substr(2, 6).toUpperCase()
+                id: 'VND-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+                verificationStatus: 'pending',
+                registeredAt: new Date().toISOString(),
+                idProof: formData.idProof || 'https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?w=400&q=80' // Placeholder if no file
             };
             register('vendor', userData);
             setLoading(false);
@@ -45,7 +51,7 @@ const VendorSignup = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
+        <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6 lg:py-12 relative overflow-hidden font-sans">
             {/* Background Decorative */}
             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2" />
 
@@ -115,6 +121,41 @@ const VendorSignup = () => {
                                 value={formData.city}
                                 onChange={e => setFormData({ ...formData, city: e.target.value })}
                             />
+                        </div>
+
+                        {/* ID Verification Section */}
+                        <div className="space-y-3 pt-2">
+                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic flex items-center gap-2 px-1">
+                                <FileText size={14} /> Identity Verification (Aadhar/PAN/GST)
+                            </label>
+                            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-200 rounded-[2rem] hover:border-brand/50 hover:bg-brand/5 cursor-pointer bg-gray-50/50 transition-all group">
+                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                    <Camera size={24} className="text-content-subtle group-hover:text-brand mb-2" />
+                                    <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest group-hover:text-brand">Upload ID Document</p>
+                                    <p className="text-[8px] font-bold text-content-subtle/50 mt-1 uppercase tracking-tighter italic">PNG, JPG or PDF (Max. 5MB)</p>
+                                </div>
+                                <input
+                                    type="file"
+                                    className="hidden"
+                                    accept="image/*,.pdf"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            const reader = new FileReader();
+                                            reader.onloadend = () => {
+                                                setFormData({ ...formData, idProof: reader.result });
+                                            };
+                                            reader.readAsDataURL(file);
+                                        }
+                                    }}
+                                />
+                            </label>
+                            {formData.idProof && (
+                                <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-xl border border-green-100">
+                                    <ShieldCheck size={14} className="text-green-600" />
+                                    <span className="text-[9px] font-black text-green-700 uppercase italic">Document Attached Successfully</span>
+                                </div>
+                            )}
                         </div>
 
                         <button

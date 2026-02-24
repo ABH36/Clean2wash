@@ -1,146 +1,372 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-    Package, AlertTriangle, TrendingUp, Search,
-    Filter, Plus, RefreshCw, ChevronRight, BarChart3
+    Package, AlertTriangle, RefreshCw, Search,
+    Plus, X, Check, BarChart3, ChevronRight,
+    TrendingUp, Droplets, ShieldCheck, Zap,
+    Edit2, Trash2, ArrowUpRight
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import VendorLayout from '../components/VendorLayout';
 
-const VendorInventory = () => {
-    const [activeTab, setActiveTab] = useState('All Items');
+// ─── Initial Seed Data ────────────────────────────────────────────────────────
+const INITIAL_INVENTORY = [
+    { id: 'INV-001', name: 'Premium Eco Soap', category: 'Cleaning', stock: 12, unit: 'Liters', status: 'Healthy', threshold: 5 },
+    { id: 'INV-002', name: 'Carnauba Wax', category: 'Detailing', stock: 2, unit: 'Tubs', status: 'Low Stock', threshold: 10 },
+    { id: 'INV-003', name: 'Microfiber Towels', category: 'Tools', stock: 45, unit: 'Units', status: 'Healthy', threshold: 20 },
+    { id: 'INV-004', name: 'Tire Shine Spray', category: 'Cleaning', stock: 0, unit: 'Bottles', status: 'Out of Stock', threshold: 15 },
+    { id: 'INV-005', name: 'Interior Leather Care', category: 'Detailing', stock: 8, unit: 'Bottles', status: 'Healthy', threshold: 10 },
+];
 
-    const INVENTORY = [
-        { id: 'SKU-001', name: 'Premium Eco Soap', category: 'Cleaning', stock: 12, unit: 'Liters', status: 'Healthy', color: 'bg-green-500' },
-        { id: 'SKU-002', name: 'Carnauba Wax', category: 'Polishing', stock: 2, unit: 'Tubs', status: 'Low Stock', color: 'bg-amber-500' },
-        { id: 'SKU-003', name: 'Microfiber Towels', category: 'Tools', stock: 45, unit: 'Units', status: 'Healthy', color: 'bg-green-500' },
-        { id: 'SKU-004', name: 'Tire Shine Spray', category: 'Detailing', stock: 0, unit: 'Bottles', status: 'Out of Stock', color: 'bg-red-500' },
-        { id: 'SKU-005', name: 'Interior Leather Care', category: 'Detailing', stock: 8, unit: 'Bottles', status: 'Healthy', color: 'bg-green-500' },
-    ];
+const CATEGORIES = ['Cleaning', 'Detailing', 'Tools', 'Maintenance'];
+const UNITS = ['Liters', 'Tubs', 'Units', 'Bottles', 'Kgs', 'Packs'];
 
-    const STATS = [
-        { label: 'Total Value', val: '₹14,200', icon: BarChart3, color: 'text-blue-500' },
-        { label: 'Low Stock', val: '02 Items', icon: AlertTriangle, color: 'text-amber-500' },
-        { label: 'Refills (Month)', val: '12', icon: RefreshCw, color: 'text-purple-500' },
-    ];
+// ─── Toast Component ──────────────────────────────────────────────────────────
+const Toast = ({ msg, type }) => (
+    <motion.div
+        initial={{ opacity: 0, y: 60 }} animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 60 }}
+        className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[300] flex items-center gap-3 px-6 py-3.5 rounded-2xl shadow-2xl text-white text-[11px] font-black uppercase tracking-widest
+            ${type === 'error' ? 'bg-red-500' : 'bg-green-600'}`}
+    >
+        {type === 'error' ? <AlertTriangle size={14} /> : <Check size={14} strokeWidth={3} />}
+        {msg}
+    </motion.div>
+);
+
+// ─── Supply Form Drawer ────────────────────────────────────────────────────────
+const SupplyDrawer = ({ open, onClose, initial, onSave }) => {
+    const [form, setForm] = useState(initial || { name: '', category: 'Cleaning', stock: '', unit: 'Liters', threshold: '' });
+    const [errors, setErrors] = useState({});
+
+    useEffect(() => {
+        if (open) {
+            setForm(initial || { name: '', category: 'Cleaning', stock: '', unit: 'Liters', threshold: '' });
+            setErrors({});
+        }
+    }, [open, initial]);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        const errs = {};
+        if (!form.name.trim()) errs.name = 'Name is required';
+        if (form.stock === '' || isNaN(form.stock)) errs.stock = 'Invalid stock';
+        if (form.threshold === '' || isNaN(form.threshold)) errs.threshold = 'Invalid threshold';
+
+        if (Object.keys(errs).length > 0) {
+            setErrors(errs);
+            return;
+        }
+
+        onSave({
+            ...form,
+            stock: Number(form.stock),
+            threshold: Number(form.threshold),
+            id: initial?.id || `INV-${Math.floor(Math.random() * 900) + 100}`,
+            status: Number(form.stock) === 0 ? 'Out of Stock' : Number(form.stock) < Number(form.threshold) ? 'Low Stock' : 'Healthy'
+        });
+    };
 
     return (
-        <VendorLayout
-            title="Supplies & Inventory"
-            subtitle="Track Studio Resources"
-        >
-            <div className="space-y-8">
-                {/* Inventory Overview */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {STATS.map(s => (
-                        <div key={s.label} className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-soft flex items-center justify-between group">
+        <AnimatePresence>
+            {open && (
+                <>
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        onClick={onClose}
+                        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200]"
+                    />
+                    <motion.div
+                        initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+                        className="fixed right-0 top-0 h-full bg-white z-[210] shadow-2xl flex flex-col"
+                        style={{ width: 400 }}
+                    >
+                        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
                             <div>
-                                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest mb-1 italic">{s.label}</p>
-                                <h2 className={`text-2xl font-black ${s.color} tracking-tight italic`}>{s.val}</h2>
+                                <h2 className="text-base font-black text-content tracking-tight uppercase">
+                                    {initial ? 'Edit Supply' : 'Add New Supply'}
+                                </h2>
+                                <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-1 italic">Resource Logging</p>
                             </div>
-                            <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-content-muted group-hover:bg-brand/5 group-hover:text-brand transition-all">
-                                <s.icon size={22} />
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Search & Tabs */}
-                <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                    <div className="flex gap-2 bg-gray-100 p-1 rounded-2xl w-fit">
-                        {['All Items', 'Cleaning', 'Tools', 'Detailing'].map(t => (
-                            <button key={t} onClick={() => setActiveTab(t)}
-                                className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === t ? 'bg-white text-brand shadow-sm' : 'text-content-muted hover:text-content'
-                                    }`}>
-                                {t}
+                            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-all">
+                                <X size={18} className="text-content-muted" />
                             </button>
-                        ))}
-                    </div>
-                    <div className="flex gap-2 w-full md:w-auto">
-                        <div className="relative flex-1 md:w-64">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-content-subtle" size={16} />
-                            <input type="text" placeholder="Search stock..." className="w-full h-12 bg-white border border-gray-100 rounded-xl pl-12 pr-4 text-[11px] font-bold text-content outline-none focus:border-brand shadow-soft" />
                         </div>
-                        <button className="h-12 px-6 bg-brand text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand/20 flex items-center gap-2">
-                            <Plus size={16} /> Add Supply
-                        </button>
-                    </div>
-                </div>
 
-                {/* Inventory Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {INVENTORY.map((item, i) => (
-                        <motion.div
-                            key={item.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.1 }}
-                            className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-soft space-y-6 relative overflow-hidden group"
-                        >
-                            <div className="flex justify-between items-start relative z-10">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-black text-brand uppercase tracking-widest italic">{item.category}</span>
-                                        <span className="text-[8px] font-bold text-content-subtle lowercase">{item.id}</span>
-                                    </div>
-                                    <h3 className="text-lg font-black text-content tracking-tight">{item.name}</h3>
-                                </div>
-                                <div className={`w-3 h-3 rounded-full ${item.color} shadow-[0_0_15px_rgba(0,0,0,0.1)] group-hover:scale-150 transition-transform`} />
+                        <form onSubmit={handleSubmit} className="flex-1 p-6 space-y-5 overflow-y-auto">
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Supply Name</label>
+                                <input
+                                    type="text" placeholder="e.g. Ultra Foam Shampoo"
+                                    value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+                                    className={`w-full h-11 bg-gray-50 border ${errors.name ? 'border-red-400' : 'border-gray-100'} rounded-xl px-4 text-[12px] font-bold outline-none focus:bg-white focus:border-brand transition-all`}
+                                />
                             </div>
 
-                            <div className="flex items-end justify-between relative z-10">
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic">In Stock</p>
-                                    <p className="text-3xl font-black italic tracking-tighter text-content">
-                                        {item.stock} <span className="text-xs text-content-subtle uppercase tracking-widest font-black leading-none">{item.unit}</span>
-                                    </p>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Category</label>
+                                    <select
+                                        value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}
+                                        className="w-full h-11 bg-gray-50 border border-gray-100 rounded-xl px-4 text-[12px] font-bold outline-none cursor-pointer"
+                                    >
+                                        {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                                    </select>
                                 </div>
-                                <div className="space-y-2">
-                                    <button className="w-full h-10 px-4 bg-gray-50 border border-gray-100 rounded-xl text-[9px] font-black uppercase tracking-widest text-content-muted hover:bg-white hover:border-brand/30 hover:text-brand transition-all flex items-center justify-center gap-2">
-                                        <RefreshCw size={12} /> Refill
-                                    </button>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Unit Type</label>
+                                    <select
+                                        value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })}
+                                        className="w-full h-11 bg-gray-50 border border-gray-100 rounded-xl px-4 text-[12px] font-bold outline-none cursor-pointer"
+                                    >
+                                        {UNITS.map(u => <option key={u}>{u}</option>)}
+                                    </select>
                                 </div>
                             </div>
 
-                            {/* Status Bar */}
-                            <div className="relative z-10 space-y-2">
-                                <div className="flex justify-between text-[8px] font-black uppercase tracking-widest">
-                                    <span className="text-content-subtle">Health</span>
-                                    <span className={item.color.replace('bg-', 'text-')}>{item.status}</span>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest focus:text-brand">Initial Stock</label>
+                                    <input
+                                        type="number" placeholder="0"
+                                        value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })}
+                                        className={`w-full h-11 bg-gray-50 border ${errors.stock ? 'border-red-400' : 'border-gray-100'} rounded-xl px-4 text-[12px] font-bold outline-none`}
+                                    />
                                 </div>
-                                <div className="h-1.5 w-full bg-gray-50 rounded-full overflow-hidden">
-                                    <motion.div
-                                        initial={{ width: 0 }}
-                                        animate={{ width: item.stock === 0 ? '0%' : item.stock < 5 ? '30%' : '100%' }}
-                                        className={`h-full ${item.color}`}
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Warning Point</label>
+                                    <input
+                                        type="number" placeholder="5"
+                                        value={form.threshold} onChange={e => setForm({ ...form, threshold: e.target.value })}
+                                        className={`w-full h-11 bg-gray-50 border ${errors.threshold ? 'border-red-400' : 'border-gray-100'} rounded-xl px-4 text-[12px] font-bold outline-none`}
                                     />
                                 </div>
                             </div>
 
-                            {/* Decorative Background */}
-                            <div className={`absolute -right-4 -bottom-4 w-24 h-24 ${item.color} opacity-5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700`} />
+                            <div className="pt-4">
+                                <p className="text-[9px] font-bold text-content-subtle leading-relaxed italic">
+                                    * Warning point will trigger a "Low Stock" alert when inventory falls below this number.
+                                </p>
+                            </div>
+                        </form>
+
+                        <div className="p-6 border-t border-gray-100 flex gap-3">
+                            <button onClick={onClose} className="flex-1 h-11 border border-gray-100 rounded-xl text-[10px] font-black uppercase text-content-muted">Cancel</button>
+                            <button onClick={handleSubmit} className="flex-[2] h-11 bg-brand text-white rounded-xl text-[10px] font-black uppercase shadow-lg shadow-brand/20">
+                                {initial ? 'Update Supply' : 'Add Supply Item'}
+                            </button>
+                        </div>
+                    </motion.div>
+                </>
+            )}
+        </AnimatePresence>
+    );
+};
+
+// ─── Main Inventory Component ───────────────────────────────────────────────────
+const VendorInventory = () => {
+    const [inventory, setInventory] = useState(INITIAL_INVENTORY);
+    const [activeTab, setActiveTab] = useState('All Items');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [editTarget, setEditTarget] = useState(null);
+    const [toast, setToast] = useState(null);
+
+    const showToast = (msg, type = 'success') => {
+        setToast({ msg, type });
+        setTimeout(() => setToast(null), 3000);
+    };
+
+    // ── CRUD Handlers ──
+    const handleSave = (item) => {
+        if (editTarget) {
+            setInventory(ps => ps.map(p => p.id === item.id ? item : p));
+            showToast('Supply updated successfully');
+        } else {
+            setInventory(ps => [item, ...ps]);
+            showToast('New supply logged');
+        }
+        setDrawerOpen(false);
+        setEditTarget(null);
+    };
+
+    const handleRefill = (id) => {
+        setInventory(ps => ps.map(p => p.id === id ? {
+            ...p,
+            stock: p.stock + 10,
+            status: 'Healthy'
+        } : p));
+        showToast('Inventory Refilled +10');
+    };
+
+    const handleDelete = (id) => {
+        setInventory(ps => ps.filter(p => p.id !== id));
+        showToast('Supply removed from inventory', 'error');
+    };
+
+    const filtered = inventory.filter(p =>
+        (activeTab === 'All Items' || p.category === activeTab) &&
+        p.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const stats = [
+        { label: 'Inventory Items', val: inventory.length, icon: Package, color: 'text-blue-500' },
+        { label: 'Low Alert', val: inventory.filter(i => i.stock > 0 && i.stock < i.threshold).length, icon: AlertTriangle, color: 'text-amber-500' },
+        { label: 'Stock Value', val: `₹${(inventory.length * 1500).toLocaleString()}`, icon: BarChart3, color: 'text-green-500' },
+    ];
+
+    return (
+        <VendorLayout title="Supplies & Inventory" subtitle="Track Studio Resources">
+
+            <AnimatePresence>{toast && <Toast msg={toast.msg} type={toast.type} />}</AnimatePresence>
+
+            <SupplyDrawer
+                open={drawerOpen}
+                onClose={() => { setDrawerOpen(false); setEditTarget(null); }}
+                initial={editTarget}
+                onSave={handleSave}
+            />
+
+            <div className="space-y-8">
+                {/* Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {stats.map(s => (
+                        <div key={s.label} className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-soft flex items-center justify-between group overflow-hidden relative">
+                            <div className="relative z-10">
+                                <p className="text-[9px] font-black text-content-subtle uppercase tracking-[0.2em] mb-1.5 italic">{s.label}</p>
+                                <h2 className={`text-2xl font-black ${s.color} tracking-tighter italic`}>{s.val}</h2>
+                            </div>
+                            <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-content-muted group-hover:bg-brand/5 group-hover:text-brand transition-all relative z-10">
+                                <s.icon size={22} />
+                            </div>
+                            <div className={`absolute -right-2 -bottom-2 w-16 h-16 ${s.color.replace('text-', 'bg-')} opacity-5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700`} />
+                        </div>
+                    ))}
+                </div>
+
+                {/* Filters */}
+                <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-3xl border border-gray-100 shadow-soft">
+                    <div className="flex gap-1.5 bg-gray-100 p-1.5 rounded-2xl w-full md:w-auto">
+                        {['All Items', 'Cleaning', 'Tools', 'Detailing'].map(t => (
+                            <button key={t} onClick={() => setActiveTab(t)}
+                                className={`flex-1 md:flex-none px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === t ? 'bg-white text-brand shadow-sm' : 'text-content-muted hover:text-content'}`}>
+                                {t}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="flex items-center gap-2.5 w-full md:w-auto">
+                        <div className="relative flex-1 md:w-56">
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-subtle" size={14} />
+                            <input
+                                type="text" placeholder="Search stock..."
+                                value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                                className="w-full h-11 bg-gray-100 border-none rounded-2xl pl-10 pr-4 text-[11px] font-bold text-content outline-none focus:ring-2 ring-brand/20 transition-all"
+                            />
+                        </div>
+                        <motion.button
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() => { setEditTarget(null); setDrawerOpen(true); }}
+                            className="h-11 px-6 bg-brand text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand/20 flex items-center gap-2 hover:-translate-y-0.5 transition-all"
+                        >
+                            <Plus size={16} strokeWidth={3} /> Add
+                        </motion.button>
+                    </div>
+                </div>
+
+                {/* Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filtered.map((item, i) => (
+                        <motion.div
+                            key={item.id}
+                            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                            className="bg-white p-7 rounded-[3rem] border border-gray-100 shadow-soft space-y-6 relative overflow-hidden group hover:border-brand/20 transition-all"
+                        >
+                            <div className="flex justify-between items-start">
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-black text-brand uppercase tracking-[0.2em] italic">{item.category}</span>
+                                        <span className="text-[8px] font-bold text-content-subtle tracking-widest uppercase opacity-40">{item.id}</span>
+                                    </div>
+                                    <h3 className="text-lg font-black text-content tracking-tight">{item.name}</h3>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={() => { setEditTarget(item); setDrawerOpen(true); }} className="p-2.5 rounded-xl bg-gray-50 text-content-muted hover:bg-brand/10 hover:text-brand transition-all"><Edit2 size={13} /></button>
+                                    <button onClick={() => handleDelete(item.id)} className="p-2.5 rounded-xl bg-gray-50 text-content-muted hover:bg-red-50 hover:text-red-500 transition-all"><Trash2 size={13} /></button>
+                                </div>
+                            </div>
+
+                            <div className="flex items-end justify-between">
+                                <div className="space-y-1">
+                                    <p className="text-[9px] font-black text-content-subtle uppercase tracking-[0.25em] italic opacity-50">Usage Tracking</p>
+                                    <p className="text-3xl font-black italic tracking-tighter text-content">
+                                        {item.stock} <span className="text-[10px] text-content-subtle uppercase tracking-widest font-black leading-none italic">{item.unit}</span>
+                                    </p>
+                                </div>
+                                <motion.button
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => handleRefill(item.id)}
+                                    className="h-11 px-5 bg-content text-white rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-content/20"
+                                >
+                                    <RefreshCw size={12} className="group-hover:rotate-180 transition-transform duration-500" /> Refill
+                                </motion.button>
+                            </div>
+
+                            <div className="space-y-3">
+                                <div className="flex justify-between text-[9px] font-black uppercase tracking-widest italic">
+                                    <span className="text-content-subtle opacity-60">Inventory Health</span>
+                                    <span className={item.stock === 0 ? 'text-red-500' : item.stock < item.threshold ? 'text-amber-500' : 'text-green-500'}>
+                                        {item.status}
+                                    </span>
+                                </div>
+                                <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden p-[1px]">
+                                    <motion.div
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${Math.min((item.stock / 50) * 100, 100)}%` }}
+                                        className={`h-full rounded-full ${item.stock === 0 ? 'bg-red-500' : item.stock < item.threshold ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)]' : 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)]'}`}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className={`absolute -right-4 -bottom-4 w-28 h-28 bg-brand opacity-[0.03] rounded-full blur-3xl group-hover:opacity-[0.08] transition-opacity duration-700 pointer-events-none`} />
                         </motion.div>
                     ))}
                 </div>
 
-                {/* Consumption Chart Placeholder */}
-                <div className="bg-content rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-content/30">
-                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
-                        <div className="space-y-2">
-                            <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] italic">Supply Utilization</p>
-                            <h2 className="text-3xl font-black italic tracking-tighter">Consumption Trends</h2>
-                            <p className="text-[11px] font-bold text-white/40 leading-relaxed max-w-sm">Soap consumption is up by 12% this week due to high volume of 'Eco Wash' bookings. Schedule refill by Tuesday.</p>
+                {/* Consumer Insights */}
+                <div className="bg-[#0f1117] rounded-[3.5rem] p-10 text-white relative overflow-hidden shadow-2xl">
+                    <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-10">
+                        <div className="space-y-4 max-w-md">
+                            <div className="w-12 h-12 bg-brand/20 border border-brand/30 rounded-2xl flex items-center justify-center">
+                                <TrendingUp className="text-brand" size={24} />
+                            </div>
+                            <h2 className="text-4xl font-black italic tracking-tighter leading-none">Smart Supply<br />Analytics</h2>
+                            <p className="text-[13px] font-bold text-white/40 leading-relaxed italic">Soap consumption is up by 12% this week. We recommend scheduling a bulk refill by Monday to avoid peak hour shortages.</p>
+                            <button className="flex items-center gap-2 text-brand text-[11px] font-black uppercase tracking-widest border-b-2 border-brand/30 pb-1 mt-2">
+                                Export Full Report <ArrowUpRight size={14} />
+                            </button>
                         </div>
-                        <div className="flex-1 flex items-end justify-center md:justify-end gap-2 h-24">
+                        <div className="flex-1 w-full lg:w-auto grid grid-cols-7 items-end gap-3 h-48 px-4">
                             {[40, 70, 45, 90, 65, 80, 50].map((h, i) => (
-                                <motion.div
-                                    key={i}
-                                    initial={{ height: 0 }}
-                                    animate={{ height: `${h}%` }}
-                                    className="w-3 bg-brand/40 rounded-t-sm hover:bg-brand transition-colors cursor-pointer"
-                                />
+                                <div key={i} className="group relative flex-1">
+                                    <motion.div
+                                        initial={{ height: 0 }} animate={{ height: `${h}%` }}
+                                        transition={{ delay: i * 0.1, duration: 1 }}
+                                        className="bg-brand/20 hover:bg-brand rounded-t-xl transition-all relative overflow-hidden group cursor-pointer"
+                                    >
+                                        <motion.div
+                                            initial={{ y: '100%' }} animate={{ y: '0%' }}
+                                            transition={{ delay: i * 0.15, duration: 1 }}
+                                            className="absolute inset-0 bg-brand/30"
+                                        />
+                                    </motion.div>
+                                    <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[8px] font-black text-white/20 uppercase tracking-widest">
+                                        Day {i + 1}
+                                    </div>
+                                </div>
                             ))}
                         </div>
                     </div>
+                    {/* Background decoration */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-brand/5 rounded-full blur-[120px] pointer-events-none" />
                 </div>
             </div>
         </VendorLayout>

@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     MapPin, ChevronDown, Bell, ChevronRight, Star, Clock,
-    ShieldCheck, Droplets, Zap, ArrowRight, Phone, Car, Percent
+    ShieldCheck, Droplets, Zap, ArrowRight, Phone, Car, Percent,
+    ShoppingCart, Check
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import MobileLayout from '../components/layout/MobileLayout';
+import { useCart, SHOP_PRODUCTS } from '../../../context/CartContext';
 
 const IMAGES = {
     heroCar: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80',
@@ -19,6 +21,16 @@ const IMAGES = {
 
 const Home = () => {
     const navigate = useNavigate();
+    const { addToCart, isInCart, cartCount } = useCart();
+    const [toast, setToast] = useState(null);
+
+    const featuredProducts = SHOP_PRODUCTS.slice(0, 6);
+
+    const handleAddToCart = (product) => {
+        addToCart(product);
+        setToast(product.name);
+        setTimeout(() => setToast(null), 2000);
+    };
 
     return (
         <MobileLayout>
@@ -37,6 +49,14 @@ const Home = () => {
                         </div>
                     </button>
                     <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => navigate('/cart')}
+                            className="relative w-9 h-9 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center">
+                            <ShoppingCart size={16} className="text-content-muted" />
+                            {cartCount > 0 && (
+                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-brand text-white text-[8px] font-black rounded-full flex items-center justify-center">{cartCount}</span>
+                            )}
+                        </button>
                         <button
                             onClick={() => navigate('/notifications')}
                             className="relative w-9 h-9 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center">
@@ -113,7 +133,7 @@ const Home = () => {
 
                     {/* Hero service card */}
                     <motion.div
-                        whileTap={{ scale: 0.98 }} onClick={() => navigate('/map?type=instant&service=eco')}
+                        whileTap={{ scale: 0.98 }} onClick={() => navigate('/map?type=captain&service=eco')}
                         className="rounded-2xl overflow-hidden relative shadow-soft border border-gray-100 mb-3 cursor-pointer"
                         style={{ height: 160 }}
                     >
@@ -136,6 +156,136 @@ const Home = () => {
                     <div className="grid grid-cols-2 gap-3">
                         <MiniCard image={IMAGES.interiorClean} label="Interior Deep Clean" price="₹699" badge="Popular" onClick={() => navigate('/services')} />
                         <MiniCard image={IMAGES.tireshine} label="Tire & Rim Shine" price="₹199" badge="New" onClick={() => navigate('/services')} />
+                    </div>
+                </div>
+
+                {/* ── Auto-Care Shop ── */}
+                <div>
+                    {/* Section Header */}
+                    <div className="flex justify-between items-center mb-3">
+                        <div>
+                            <h2 className="text-lg font-black tracking-tight text-content leading-tight">Auto-Care Shop</h2>
+                            <p className="text-[9px] font-bold text-content-subtle uppercase tracking-widest mt-0.5">Products & Accessories</p>
+                        </div>
+                        <motion.button
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() => navigate('/shop')}
+                            className="flex items-center gap-1.5 border border-gray-200 text-content-muted px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest"
+                        >
+                            Visit Store <ArrowRight size={11} strokeWidth={3} />
+                        </motion.button>
+                    </div>
+
+                    {/* Category Chips — refined monochrome */}
+                    <div className="flex gap-2 mb-4 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+                        {[
+                            { label: 'Electronics', icon: Zap },
+                            { label: 'Accessories', icon: ShieldCheck },
+                            { label: 'Cleaning', icon: Droplets },
+                        ].map(({ label, icon: Icon }) => (
+                            <motion.button
+                                key={label}
+                                whileTap={{ scale: 0.97 }}
+                                onClick={() => navigate('/shop')}
+                                className="flex-shrink-0 flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 hover:border-brand/30 hover:bg-brand/5 transition-colors group"
+                            >
+                                <div className="w-6 h-6 bg-white border border-gray-200 rounded-lg flex items-center justify-center group-hover:border-brand/20 transition-colors">
+                                    <Icon size={12} className="text-content-muted group-hover:text-brand transition-colors" />
+                                </div>
+                                <span className="text-[10px] font-black text-content-muted uppercase tracking-widest group-hover:text-content transition-colors">{label}</span>
+                            </motion.button>
+                        ))}
+                    </div>
+
+                    {/* Products Horizontal Scroll */}
+                    <div className="flex gap-3 overflow-x-auto pb-3 -mx-4 px-4" style={{ scrollbarWidth: 'none' }}>
+                        {featuredProducts.map((product) => {
+                            const inCart = isInCart(product.id);
+                            const discount = Math.round(((product.price - product.salePrice) / product.price) * 100);
+                            return (
+                                <motion.div
+                                    key={product.id}
+                                    whileTap={{ scale: 0.97 }}
+                                    className="flex-shrink-0 w-44 bg-white rounded-2xl border border-gray-100 overflow-hidden"
+                                    style={{ boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }}
+                                >
+                                    <div className="relative h-36 overflow-hidden bg-gray-50">
+                                        <img
+                                            src={product.image}
+                                            alt={product.name}
+                                            className="w-full h-full object-cover"
+                                        />
+                                        {/* Minimal badge — top left */}
+                                        {product.badge && (
+                                            <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-md border border-gray-200">
+                                                <span className="text-[8px] font-black text-content uppercase tracking-wider">{product.badge}</span>
+                                            </div>
+                                        )}
+                                        {/* Discount pill — top right */}
+                                        <div className="absolute top-2 right-2 bg-content/80 backdrop-blur-sm px-1.5 py-0.5 rounded-md">
+                                            <span className="text-[8px] font-black text-white">{discount}% off</span>
+                                        </div>
+                                        {/* Out of stock */}
+                                        {!product.inStock && (
+                                            <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center">
+                                                <span className="text-[9px] font-black text-content-muted bg-white border border-gray-200 px-3 py-1 rounded-lg uppercase tracking-widest">Sold Out</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="p-3">
+                                        <p className="text-[8px] font-bold text-content-subtle uppercase tracking-widest mb-0.5">{product.category}</p>
+                                        <h3 className="text-[11px] font-black text-content leading-tight mb-2 line-clamp-2 min-h-[28px]">{product.name}</h3>
+                                        <div className="flex items-baseline gap-1.5 mb-2.5">
+                                            <span className="text-sm font-black text-content">₹{product.salePrice.toLocaleString()}</span>
+                                            <span className="text-[9px] text-content-subtle line-through opacity-60">₹{product.price.toLocaleString()}</span>
+                                        </div>
+                                        {inCart ? (
+                                            <button
+                                                onClick={() => navigate('/cart')}
+                                                className="w-full py-2 bg-gray-50 border border-gray-200 text-content-muted rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1"
+                                            >
+                                                <Check size={10} strokeWidth={3} className="text-brand" /> In Cart
+                                            </button>
+                                        ) : (
+                                            <motion.button
+                                                whileTap={{ scale: 0.95 }}
+                                                onClick={() => handleAddToCart(product)}
+                                                disabled={!product.inStock}
+                                                className="w-full py-2 bg-content text-white rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1 disabled:opacity-40"
+                                            >
+                                                <ShoppingCart size={10} /> Add to Cart
+                                            </motion.button>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
+                        {/* See All Card */}
+                        <motion.div
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() => navigate('/shop')}
+                            className="flex-shrink-0 w-28 bg-gray-50 border border-gray-200 rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer"
+                        >
+                            <div className="w-9 h-9 bg-white border border-gray-200 rounded-xl flex items-center justify-center">
+                                <ArrowRight size={16} className="text-content-muted" strokeWidth={2} />
+                            </div>
+                            <p className="text-[9px] font-black text-content-subtle uppercase tracking-widest text-center leading-tight">See All<br />Products</p>
+                        </motion.div>
+                    </div>
+
+                    {/* Minimal perks strip */}
+                    <div className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 mt-3">
+                        {[
+                            { icon: Zap, label: 'Free Delivery', sub: 'Above ₹999' },
+                            { icon: ShieldCheck, label: 'Easy Returns', sub: '7-day policy' },
+                            { icon: Droplets, label: 'Genuine', sub: '100% authentic' },
+                        ].map((perk, i) => (
+                            <div key={i} className="flex flex-col items-center gap-1 flex-1">
+                                <perk.icon size={14} className="text-content-muted" />
+                                <p className="text-[8px] font-black text-content uppercase tracking-widest leading-none">{perk.label}</p>
+                                <p className="text-[8px] font-bold text-content-subtle">{perk.sub}</p>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
@@ -204,6 +354,30 @@ const Home = () => {
                 </div>
 
             </div>
+
+            {/* ── Toast Notification ── */}
+            <AnimatePresence>
+                {toast && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 48, x: '-50%' }}
+                        animate={{ opacity: 1, y: 0, x: '-50%' }}
+                        exit={{ opacity: 0, y: 48, x: '-50%' }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+                        className="fixed bottom-28 left-1/2 z-[200] bg-content text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 pointer-events-none"
+                    >
+                        <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Check size={11} strokeWidth={3} className="text-white" />
+                        </div>
+                        <span className="text-[11px] font-black whitespace-nowrap">Added to cart!</span>
+                        <button
+                            onClick={() => navigate('/cart')}
+                            className="text-brand text-[10px] font-black uppercase tracking-widest ml-1 pointer-events-auto"
+                        >
+                            View →
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </MobileLayout>
     );
 };

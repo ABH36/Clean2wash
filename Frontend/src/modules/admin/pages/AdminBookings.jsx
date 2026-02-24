@@ -1,0 +1,375 @@
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import AdminLayout from '../components/AdminLayout';
+import {
+    Search,
+    Filter,
+    Calendar,
+    Clock,
+    MoreVertical,
+    CheckCircle2,
+    XCircle,
+    Truck,
+    Navigation2,
+    User,
+    Package,
+    ChevronDown,
+    ExternalLink,
+    AlertCircle,
+    UserCheck,
+} from 'lucide-react';
+import { useAuth } from '../../../context/AuthContext';
+
+const AdminBookings = () => {
+    const { bookings, updateBookingStatus, registeredUsers, assignStaffToBooking } = useAuth();
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [selectedBooking, setSelectedBooking] = useState(null);
+    const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+    const [assignmentType, setAssignmentType] = useState('pickup'); // 'pickup' or 'delivery'
+
+    // Filter logic
+    const filteredBookings = bookings.filter(b => {
+        const matchesSearch =
+            b.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (b.userName || '').toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = statusFilter === 'all' || b.status === statusFilter;
+        return matchesSearch && matchesStatus;
+    });
+
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'pending': return 'bg-amber-50 text-amber-600 border-amber-100';
+            case 'confirmed': return 'bg-blue-50 text-blue-600 border-blue-100';
+            case 'in-progress': return 'bg-indigo-50 text-indigo-600 border-indigo-100';
+            case 'at-studio': return 'bg-violet-50 text-violet-600 border-violet-100';
+            case 'delivery-assigned': return 'bg-cyan-50 text-cyan-600 border-cyan-100';
+            case 'completed': return 'bg-green-50 text-green-600 border-green-100';
+            case 'cancelled': return 'bg-red-50 text-red-600 border-red-100';
+            default: return 'bg-gray-50 text-gray-600 border-gray-100';
+        }
+    };
+
+    const handleUpdateStatus = (bookingId, status) => {
+        updateBookingStatus(bookingId, status);
+        setSelectedBooking(prev => prev && prev.id === bookingId ? { ...prev, status } : prev);
+    };
+
+    const handleAssign = (staff) => {
+        if (!selectedBooking) return;
+        assignStaffToBooking(selectedBooking.id, staff.id, assignmentType);
+        setIsAssignModalOpen(false);
+        // Update local state if needed
+    };
+
+    return (
+        <AdminLayout title="Operations Hub">
+            <div className="space-y-6">
+                {/* Tactical Action Bar */}
+                <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
+                    <div className="flex bg-gray-100 p-1 rounded-2xl w-full lg:w-auto">
+                        {['all', 'pending', 'confirmed', 'in-progress', 'completed'].map(f => (
+                            <button
+                                key={f}
+                                onClick={() => setStatusFilter(f)}
+                                className={`flex-1 lg:px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === f ? 'bg-white text-brand shadow-sm' : 'text-content-subtle'}`}
+                            >
+                                {f}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="flex items-center gap-3 w-full lg:w-auto">
+                        <div className="flex-1 lg:w-80 bg-white border border-gray-100 rounded-2xl px-4 py-2.5 flex items-center gap-3 shadow-soft">
+                            <Search size={16} className="text-content-subtle" />
+                            <input
+                                type="text"
+                                placeholder="Search by ID or Customer..."
+                                className="bg-transparent outline-none text-xs font-bold text-content w-full"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Main Data Terminal */}
+                <div className="bg-white rounded-[3rem] border border-gray-100 shadow-soft overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="bg-gray-50/50">
+                                <tr>
+                                    <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Order Node</th>
+                                    <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest italic">User Entity</th>
+                                    <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Service Protocol</th>
+                                    <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Current Status</th>
+                                    <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Valuation</th>
+                                    <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest italic text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {filteredBookings.map((booking, i) => (
+                                    <tr
+                                        key={booking.id}
+                                        className="hover:bg-gray-50/30 transition-all cursor-pointer group"
+                                        onClick={() => setSelectedBooking(booking)}
+                                    >
+                                        <td className="px-8 py-6">
+                                            <div>
+                                                <p className="text-xs font-black text-content italic leading-none truncate max-w-[120px]">{booking.id}</p>
+                                                <p className="text-[9px] font-bold text-content-subtle mt-1">{new Date(booking.createdAt).toLocaleDateString()}</p>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-xl bg-brand/5 flex items-center justify-center font-black text-brand text-[10px] italic">
+                                                    {(booking.userName || 'G')[0]}
+                                                </div>
+                                                <p className="text-xs font-bold text-content">{booking.userName || 'Guest'}</p>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <p className="text-xs font-bold text-content-muted leading-tight">{booking.serviceName}</p>
+                                            <p className="text-[9px] font-black text-brand uppercase tracking-widest mt-0.5">{booking.bookingType || 'Standard'}</p>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <span className={`text-[8px] font-black uppercase px-2.5 py-1 rounded-full border ${getStatusColor(booking.status)}`}>
+                                                {booking.status.replace('-', ' ')}
+                                            </span>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <p className="text-xs font-black text-content italic">{booking.price}</p>
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setSelectedBooking(booking); }}
+                                                    className="p-2 bg-gray-50 hover:bg-brand hover:text-white rounded-lg text-content-subtle transition-all"
+                                                >
+                                                    <ExternalLink size={14} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {filteredBookings.length === 0 && (
+                                    <tr>
+                                        <td colSpan="6" className="px-8 py-20 text-center">
+                                            <AlertCircle size={40} className="mx-auto text-gray-200 mb-4" />
+                                            <p className="text-sm font-black text-content-subtle uppercase tracking-widest italic">No matching records found in system</p>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            {/* Sidebar Details Drawer */}
+            <AnimatePresence>
+                {selectedBooking && (
+                    <div className="fixed inset-0 z-[100] flex justify-end">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setSelectedBooking(null)}
+                            className="absolute inset-0 bg-content/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ x: '100%' }}
+                            animate={{ x: 0 }}
+                            exit={{ x: '100%' }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                            className="w-full max-w-md bg-white h-full relative z-10 shadow-2xl flex flex-col"
+                        >
+                            {/* Drawer Header */}
+                            <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+                                <div>
+                                    <h3 className="text-xl font-black text-content italic leading-none">{selectedBooking.id}</h3>
+                                    <p className="text-[10px] font-black text-brand uppercase tracking-[0.2em] mt-2 italic">Payload Details</p>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedBooking(null)}
+                                    className="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-content-subtle hover:bg-white transition-all"
+                                >
+                                    <XCircle size={20} />
+                                </button>
+                            </div>
+
+                            {/* Drawer Content */}
+                            <div className="flex-1 overflow-y-auto p-8 space-y-8">
+                                {/* Entity Information */}
+                                <div className="space-y-4">
+                                    <h4 className="text-[9px] font-black text-content-subtle uppercase tracking-widest italic px-1">Customer Insight</h4>
+                                    <div className="p-5 rounded-3xl bg-gray-50 border border-gray-100 flex items-start gap-4">
+                                        <div className="w-12 h-12 rounded-2xl bg-white border border-gray-100 flex items-center justify-center font-black text-brand italic">
+                                            {(selectedBooking.userName || 'G')[0]}
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-black text-content italic">{selectedBooking.userName || 'Guest'}</p>
+                                            <p className="text-[10px] font-bold text-content-subtle mt-1">{selectedBooking.phone || 'No Data'}</p>
+                                            <div className="flex items-center gap-4 mt-3">
+                                                <button className="text-[9px] font-black text-brand uppercase tracking-widest border-b border-brand/20">Call Node</button>
+                                                <button className="text-[9px] font-black text-blue-600 uppercase tracking-widest border-b border-blue-100">Message Hub</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Logistic details */}
+                                <div className="space-y-4">
+                                    <h4 className="text-[9px] font-black text-content-subtle uppercase tracking-widest italic px-1">Operation Detail</h4>
+                                    <div className="space-y-3">
+                                        <DetailItem icon={<Package size={16} />} label="Service" value={selectedBooking.serviceName} />
+                                        <DetailItem icon={<Calendar size={16} />} label="Date" value={selectedBooking.date || 'Today'} />
+                                        <DetailItem icon={<Clock size={16} />} label="Time Slot" value={selectedBooking.time || 'Immediate'} />
+                                        <DetailItem icon={<Truck size={16} />} label="Vehicle" value={selectedBooking.vehicle} />
+                                    </div>
+                                </div>
+
+                                {/* Command Center: Status Management */}
+                                <div className="space-y-4">
+                                    <h4 className="text-[9px] font-black text-content-subtle uppercase tracking-widest italic px-1">Command Control</h4>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {['pending', 'confirmed', 'in-progress', 'completed', 'cancelled'].map(s => (
+                                            <button
+                                                key={s}
+                                                onClick={() => handleUpdateStatus(selectedBooking.id, s)}
+                                                className={`p-3 rounded-2xl border text-[9px] font-black uppercase tracking-widest transition-all ${selectedBooking.status === s
+                                                    ? 'bg-content text-white border-content shadow-lg'
+                                                    : 'bg-white text-content-subtle border-gray-100 hover:border-brand/30 hover:text-brand'}`}
+                                            >
+                                                {s}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Personnel Assignment */}
+                                <div className="space-y-4">
+                                    <h4 className="text-[9px] font-black text-content-subtle uppercase tracking-widest italic px-1">Logistics Assignment</h4>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button
+                                            onClick={() => { setAssignmentType('pickup'); setIsAssignModalOpen(true); }}
+                                            className="p-5 rounded-3xl border border-dashed border-gray-200 bg-gray-50/50 flex flex-col items-center gap-2 group hover:border-brand transition-all"
+                                        >
+                                            <Navigation2 size={20} className="text-content-subtle group-hover:text-brand transition-all" />
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-content-subtle group-hover:text-brand">Assign Pickup</span>
+                                            {selectedBooking.pickupStaffId && <span className="text-[7px] font-bold bg-green-50 text-green-600 px-2 py-0.5 rounded-full">ACTIVE</span>}
+                                        </button>
+                                        <button
+                                            onClick={() => { setAssignmentType('delivery'); setIsAssignModalOpen(true); }}
+                                            className="p-5 rounded-3xl border border-dashed border-gray-200 bg-gray-50/50 flex flex-col items-center gap-2 group hover:border-brand transition-all"
+                                        >
+                                            <Truck size={20} className="text-content-subtle group-hover:text-brand transition-all" />
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-content-subtle group-hover:text-brand">Assign Delivery</span>
+                                            {selectedBooking.deliveryStaffId && <span className="text-[7px] font-bold bg-green-50 text-green-600 px-2 py-0.5 rounded-full">ACTIVE</span>}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Drawer Footer */}
+                            <div className="p-8 border-t border-gray-100 bg-gray-50/50">
+                                <button className="w-full h-14 bg-content text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl hover:bg-brand transition-all flex items-center justify-center gap-3">
+                                    Sync Protocol <CheckCircle2 size={18} />
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Personnel Assignment Modal */}
+            <AdminModal
+                isOpen={isAssignModalOpen}
+                onClose={() => setIsAssignModalOpen(false)}
+                title={`Assign ${assignmentType.toUpperCase()} Personnel`}
+            >
+                <div className="space-y-6">
+                    <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest px-1 italic">
+                        Selecting available field agents for {selectedBooking?.id}
+                    </p>
+                    <div className="grid grid-cols-1 gap-3 max-h-[400px] overflow-y-auto pr-2">
+                        {(registeredUsers.staff || []).map(staff => (
+                            <button
+                                key={staff.id}
+                                onClick={() => handleAssign(staff)}
+                                className="w-full p-5 rounded-[2rem] border border-gray-100 bg-gray-50/30 flex items-center justify-between hover:border-brand hover:bg-white transition-all group"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center text-brand font-black italic">
+                                        {staff.name[0]}
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-xs font-black text-content italic leading-none">{staff.name}</p>
+                                        <p className="text-[9px] font-bold text-content-subtle mt-1 uppercase tracking-widest">{staff.role || 'Field Agent'} · {staff.hub || 'HQ'}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-[8px] font-black text-green-600 uppercase tracking-widest">Available</span>
+                                        <span className="text-[10px] font-black text-content italic mt-0.5">⭐ 4.9</span>
+                                    </div>
+                                    <UserCheck size={18} className="text-content-subtle group-hover:text-brand transition-all" />
+                                </div>
+                            </button>
+                        ))}
+                        {(!registeredUsers.staff || registeredUsers.staff.length === 0) && (
+                            <div className="py-10 text-center bg-gray-50 rounded-[2rem] border border-dashed border-gray-100">
+                                <User size={30} className="mx-auto text-gray-200 mb-3" />
+                                <p className="text-xs font-black text-content-subtle uppercase italic">No active personnel in network</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </AdminModal>
+        </AdminLayout>
+    );
+};
+
+const DetailItem = ({ icon, label, value }) => (
+    <div className="flex items-center justify-between p-4 rounded-2xl bg-white border border-gray-100 shadow-sm transition-all hover:shadow-soft">
+        <div className="flex items-center gap-3">
+            <div className="text-brand opacity-60">{icon}</div>
+            <span className="text-[9px] font-black uppercase text-content-subtle tracking-widest">{label}</span>
+        </div>
+        <span className="text-xs font-black text-content italic">{value}</span>
+    </div>
+);
+
+const AdminModal = ({ isOpen, onClose, title, children }) => {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                onClick={onClose}
+                className="absolute inset-0 bg-content/60 backdrop-blur-sm"
+            />
+            <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                className="bg-white w-full max-w-lg rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-gray-100"
+            >
+                <div className="px-10 py-8 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
+                    <div>
+                        <h2 className="text-xl font-black text-content italic leading-none">{title}</h2>
+                        <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-2 ml-1 italic">Enterprise Management System</p>
+                    </div>
+                    <button onClick={onClose} className="p-3 hover:bg-white rounded-2xl border border-gray-100 text-content-subtle transition-all">
+                        <XCircle size={20} />
+                    </button>
+                </div>
+                <div className="p-10">
+                    {children}
+                </div>
+            </motion.div>
+        </div>
+    );
+};
+
+export default AdminBookings;

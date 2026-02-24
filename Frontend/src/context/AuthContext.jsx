@@ -25,7 +25,29 @@ export const AuthProvider = ({ children }) => {
     const [registeredUsers, setRegisteredUsers] = useState(() => {
         try {
             const saved = localStorage.getItem('carwash_registered_users');
-            return saved ? JSON.parse(saved) : { consumer: [], captain: [], vendor: [], staff: [] };
+            if (saved) return JSON.parse(saved);
+
+            // Initial Seed Data for Demo
+            return {
+                consumer: [],
+                captain: [],
+                vendor: [
+                    {
+                        id: 'VND-DEMO-01',
+                        name: 'Aryan Pathak',
+                        email: 'vendor@carwash.in',
+                        password: 'vendor123',
+                        studioName: 'Premium Shine Studio',
+                        phone: '9876543210',
+                        city: 'Mumbai',
+                        role: 'vendor',
+                        verificationStatus: 'pending',
+                        registeredAt: new Date().toISOString(),
+                        idProof: 'https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?w=800&q=80'
+                    }
+                ],
+                staff: []
+            };
         } catch {
             return { consumer: [], captain: [], vendor: [], staff: [] };
         }
@@ -34,7 +56,7 @@ export const AuthProvider = ({ children }) => {
     // Track vehicles from localStorage
     const [vehicles, setVehicles] = useState(() => {
         try {
-            const saved = localStorage.getItem('CarWash_vehicles');
+            const saved = localStorage.getItem('carwash_vehicles');
             const initial = [
                 { id: 1, brand: 'Honda', model: 'City', type: 'Sedan', color: '#3498db', plate: 'KA 05 MR 7821', img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80', isPrimary: true, userId: 'GUEST' }
             ];
@@ -52,8 +74,6 @@ export const AuthProvider = ({ children }) => {
             return saved ? JSON.parse(saved) : initial;
         } catch { return []; }
     });
-
-
 
     // Track bookings from localStorage
     const [bookings, setBookings] = useState(() => {
@@ -96,16 +116,16 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('carwash_addresses', JSON.stringify(addresses));
     }, [addresses]);
 
-
-
     // Cross-tab synchronization
     useEffect(() => {
         const handleStorageChange = (e) => {
             if (e.key === 'carwash_bookings' && e.newValue) {
                 setBookings(JSON.parse(e.newValue));
             }
-            if (SESSION_KEYS[e.key] || Object.values(SESSION_KEYS).includes(e.key)) {
-                // Refresh sessions if auth changes in another tab
+            if (e.key === 'carwash_registered_users' && e.newValue) {
+                setRegisteredUsers(JSON.parse(e.newValue));
+            }
+            if (SESSION_KEYS[e.key] || Object.values(SESSION_KEYS).includes(e.key) || e.key === 'carwash_registered_users') {
                 const newSessions = {};
                 for (const [role, key] of Object.entries(SESSION_KEYS)) {
                     const raw = localStorage.getItem(key);
@@ -118,6 +138,23 @@ export const AuthProvider = ({ children }) => {
         window.addEventListener('storage', handleStorageChange);
         return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
+
+    // Effect to sync logged-in session data with master registeredUsers list
+    useEffect(() => {
+        Object.entries(sessions).forEach(([role, sessionUser]) => {
+            if (sessionUser && sessionUser.id) {
+                const masterUser = (registeredUsers[role] || []).find(u => u.id === sessionUser.id);
+                if (masterUser) {
+                    const hasChanges = Object.keys(masterUser).some(key => masterUser[key] !== sessionUser[key]);
+                    if (hasChanges) {
+                        const updatedSession = { ...sessionUser, ...masterUser };
+                        localStorage.setItem(SESSION_KEYS[role], JSON.stringify(updatedSession));
+                        setSessions(prev => ({ ...prev, [role]: updatedSession }));
+                    }
+                }
+            }
+        });
+    }, [registeredUsers, sessions]);
 
     const isLoggedIn = useCallback((role) => !!sessions[role], [sessions]);
 
@@ -137,7 +174,6 @@ export const AuthProvider = ({ children }) => {
 
     // Validate mock or registered credentials
     const validateCredentials = useCallback((role, creds) => {
-        // 1. Check Registered Users first
         const users = registeredUsers[role] || [];
         const inputEmail = (creds.email || '').toLowerCase().trim();
         const inputPhone = (creds.phone || '').trim();
@@ -151,7 +187,6 @@ export const AuthProvider = ({ children }) => {
 
         if (registeredUser) return registeredUser;
 
-        // 2. Check Mock Credentials (Fallback)
         const mock = MOCK_CREDENTIALS[role];
         if (mock) {
             const mockEmailMatch = mock.email && (inputEmail === mock.email.toLowerCase() || (role === 'admin' && inputEmail === 'admin'));
@@ -207,17 +242,37 @@ export const AuthProvider = ({ children }) => {
         ));
     }, []);
 
-    // Vehicle Helpers
     const addVehicle = useCallback((v) => setVehicles(prev => [...prev, v]), []);
     const removeVehicle = useCallback((id) => setVehicles(prev => prev.filter(v => v.id !== id)), []);
     const setPrimaryVehicle = useCallback((id) => setVehicles(prev => prev.map(v => ({ ...v, isPrimary: v.id === id }))), []);
 
-    // Address Helpers
     const addAddress = useCallback((a) => setAddresses(prev => [...prev, a]), []);
     const removeAddress = useCallback((id) => setAddresses(prev => prev.filter(a => a.id !== id)), []);
     const setPrimaryAddress = useCallback((id) => setAddresses(prev => prev.map(a => ({ ...a, isPrimary: a.id === id }))), []);
 
+    const deleteUser = useCallback((role, userId) => {
+        setRegisteredUsers(prev => ({
+            ...prev,
+            [role]: prev[role].filter(u => u.id !== userId)
+        }));
+    }, []);
 
+    const updateUser = useCallback((role, userId, updatedData) => {
+        setRegisteredUsers(prev => ({
+            ...prev,
+            [role]: prev[role].map(u => u.id === userId ? { ...u, ...updatedData } : u)
+        }));
+
+        setSessions(prev => {
+            const currentSession = prev[role];
+            if (currentSession && currentSession.id === userId) {
+                const updatedSession = { ...currentSession, ...updatedData };
+                localStorage.setItem(SESSION_KEYS[role], JSON.stringify(updatedSession));
+                return { ...prev, [role]: updatedSession };
+            }
+            return prev;
+        });
+    }, []);
 
     return (
         <AuthContext.Provider value={{
@@ -227,6 +282,8 @@ export const AuthProvider = ({ children }) => {
             getUser,
             validateCredentials,
             register,
+            deleteUser,
+            updateUser,
             bookings,
             addBooking,
             updateBookingStatus,

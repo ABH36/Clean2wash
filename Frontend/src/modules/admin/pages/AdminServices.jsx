@@ -1,252 +1,223 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import AdminLayout from '../components/AdminLayout';
 import {
-    Car,
-    Clock,
     Plus,
+    Search,
     Edit2,
     Trash2,
+    X,
+    Clock,
     LayoutGrid,
     List,
-    ToggleLeft,
-    ToggleRight,
-    Tag,
-    X
+    CheckCircle2,
+    Settings,
+    Shield,
+    Image as ImageIcon,
+    ChevronLeft,
+    ChevronRight,
 } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
 
-const VisibilityToggle = () => {
-    const [enabled, setEnabled] = useState(true);
-    return (
-        <button
-            onClick={() => setEnabled(!enabled)}
-            className={`transition-colors ${enabled ? 'text-brand' : 'text-gray-300'}`}
-        >
-            {enabled ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}
-        </button>
-    );
-};
-
-const DEFAULT_SERVICES = [
-    { id: 'SVC-001', name: 'Eco-Express Wash', category: 'Doorstep', price: '₹299', time: '30m', status: 'Live', type: 'Waterless', color: 'bg-green-500' },
-    { id: 'SVC-002', name: 'Full Deep Clean', category: 'Doorstep', price: '₹1,299', time: '90m', status: 'Live', type: 'Steam', color: 'bg-brand' },
-    { id: 'SVC-003', name: 'Ceramic Coating', category: 'Studio', price: '₹14,999', time: '4h', status: 'Featured', type: 'Pro', color: 'bg-violet-600' },
-    { id: 'SVC-004', name: 'Interior Detailing', category: 'Studio', price: '₹899', time: '60m', status: 'Live', type: 'Chemical', color: 'bg-blue-600' },
-    { id: 'SVC-005', name: 'Tire & Rim Polish', category: 'Add-ons', price: '₹199', time: '15m', status: 'Live', type: 'Wash', color: 'bg-amber-500' },
-];
+const CATEGORIES = ['All', 'Doorstep', 'Studio', 'Add-ons'];
 
 const AdminServices = () => {
     const [view, setView] = useState('grid');
-    const [activeTab, setActiveTab] = useState('All Services');
-    const [showModal, setShowModal] = useState(false);
-    const [editService, setEditService] = useState(null);
-
-    // Load from localStorage on first render, fallback to defaults
-    const [servicesList, setServicesList] = useState(() => {
-        try {
-            const saved = localStorage.getItem('admin_services');
-            return saved ? JSON.parse(saved) : DEFAULT_SERVICES;
-        } catch {
-            return DEFAULT_SERVICES;
-        }
+    const [search, setSearch] = useState('');
+    const [filter, setFilter] = useState('All');
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingService, setEditingService] = useState(null);
+    const [services, setServices] = useState(() => {
+        const saved = localStorage.getItem('CarWash_services');
+        return saved ? JSON.parse(saved) : [
+            { id: 'SVC-001', name: 'Eco-Express Wash', category: 'Doorstep', price: '299', time: '30m', status: 'Live', type: 'Waterless', color: 'bg-green-500' },
+            { id: 'SVC-002', name: 'Full Deep Clean', category: 'Doorstep', price: '1299', time: '90m', status: 'Live', type: 'Steam', color: 'bg-brand' },
+            { id: 'SVC-003', name: 'Ceramic Coating', category: 'Studio', price: '14999', time: '4h', status: 'Featured', type: 'Pro', color: 'bg-violet-600' },
+            { id: 'SVC-004', name: 'Interior Detailing', category: 'Studio', price: '899', time: '60m', status: 'Live', type: 'Chemical', color: 'bg-blue-600' },
+            { id: 'SVC-005', name: 'Tire & Rim Polish', category: 'Add-ons', price: '199', time: '15m', status: 'Live', type: 'Wash', color: 'bg-amber-500' },
+        ];
     });
 
-    // Persist to localStorage whenever list changes
-    React.useEffect(() => {
-        localStorage.setItem('admin_services', JSON.stringify(servicesList));
-    }, [servicesList]);
+    const [formData, setFormData] = useState({ name: '', category: 'Doorstep', price: '', time: '', status: 'Live', type: 'Standard' });
+    const [loading, setLoading] = useState(false);
 
-    const [newService, setNewService] = useState({
-        name: '',
-        category: 'Doorstep',
-        price: '',
-        time: '',
-        type: 'Standard',
-        color: 'bg-brand'
+    useEffect(() => {
+        localStorage.setItem('CarWash_services', JSON.stringify(services));
+    }, [services]);
+
+    const filteredServices = services.filter(s => {
+        const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase());
+        const matchesFilter = filter === 'All' || s.category === filter;
+        return matchesSearch && matchesFilter;
     });
 
-    const handleAddService = (e) => {
-        e.preventDefault();
-        const id = `SVC-${String(servicesList.length + 1).padStart(3, '0')}`;
-        const updated = [...servicesList, { ...newService, id, status: 'Live', price: `₹${newService.price}` }];
-        setServicesList(updated);
-        setShowModal(false);
-        setNewService({ name: '', category: 'Doorstep', price: '', time: '', type: 'Standard', color: 'bg-brand' });
+    const handleOpenAdd = () => {
+        setEditingService(null);
+        setFormData({ name: '', category: 'Doorstep', price: '', time: '', status: 'Live', type: 'Standard' });
+        setIsModalOpen(true);
     };
 
-    const openEdit = (svc) => {
-        setEditService({ ...svc, rawPrice: svc.price.replace('₹', '').replace(',', '') });
+    const handleOpenEdit = (service) => {
+        setEditingService(service);
+        setFormData({ ...service });
+        setIsModalOpen(true);
     };
 
-    const handleEditService = (e) => {
+    const handleSave = (e) => {
         e.preventDefault();
-        const updated = servicesList.map(s =>
-            s.id === editService.id
-                ? { ...editService, price: `₹${Number(editService.rawPrice).toLocaleString('en-IN')}` }
-                : s
-        );
-        setServicesList(updated);
-        setEditService(null);
+        setLoading(true);
+        setTimeout(() => {
+            if (editingService) {
+                setServices(prev => prev.map(s => s.id === editingService.id ? { ...s, ...formData } : s));
+            } else {
+                const newId = `SVC-${String(services.length + 1).padStart(3, '0')}`;
+                setServices(prev => [{ ...formData, id: newId }, ...prev]);
+            }
+            setLoading(false);
+            setIsModalOpen(false);
+        }, 600);
     };
 
     const handleDelete = (id) => {
-        if (window.confirm('Kya aap is service ko delete karna chahte hain?')) {
-            setServicesList(servicesList.filter(s => s.id !== id));
+        if (window.confirm('Decommission this service protocol?')) {
+            setServices(prev => prev.filter(s => s.id !== id));
         }
     };
 
-    const filteredServices = activeTab === 'All Services'
-        ? servicesList
-        : servicesList.filter(svc => svc.category === activeTab);
-
     return (
-        <AdminLayout title="Service Catalog">
+        <AdminLayout title="Catalog Control">
             <div className="space-y-6">
-                {/* catalog actions */}
+                {/* Control Matrix Header */}
                 <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
-                    <div className="space-y-1 text-center lg:text-left">
-                        <h3 className="text-lg font-black text-content italic uppercase tracking-tight leading-none">Global Catalog</h3>
-                        <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em]">Manage prices and service logic</p>
+                    <div className="flex bg-gray-100 p-1 rounded-2xl w-full lg:w-auto overflow-x-auto scrollbar-hide">
+                        {CATEGORIES.map(cat => (
+                            <button
+                                key={cat}
+                                onClick={() => setFilter(cat)}
+                                className={`flex-1 lg:px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${filter === cat ? 'bg-white text-brand shadow-sm' : 'text-content-subtle hover:text-content'}`}
+                            >
+                                {cat}
+                            </button>
+                        ))}
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <div className="bg-gray-100 p-1 rounded-xl flex items-center">
-                            <button onClick={() => setView('grid')} className={`p-2 rounded-lg transition-all ${view === 'grid' ? 'bg-white text-brand shadow-sm' : 'text-content-subtle'}`}>
-                                <LayoutGrid size={16} />
-                            </button>
-                            <button onClick={() => setView('list')} className={`p-2 rounded-lg transition-all ${view === 'list' ? 'bg-white text-brand shadow-sm' : 'text-content-subtle'}`}>
-                                <List size={16} />
-                            </button>
+                    <div className="flex items-center gap-3 w-full lg:w-auto">
+                        <div className="flex-1 lg:w-72 bg-white border border-gray-100 rounded-2xl px-4 py-2.5 flex items-center gap-3 shadow-soft group focus-within:border-brand transition-all">
+                            <Search size={16} className="text-content-subtle group-focus-within:text-brand" />
+                            <input
+                                type="text"
+                                placeholder="Locate protocol..."
+                                className="bg-transparent outline-none text-xs font-bold text-content w-full"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex bg-gray-100 p-1 rounded-2xl">
+                            <button onClick={() => setView('grid')} className={`p-2 rounded-xl transition-all ${view === 'grid' ? 'bg-white text-brand shadow-sm' : 'text-content-subtle'}`}><LayoutGrid size={18} /></button>
+                            <button onClick={() => setView('list')} className={`p-2 rounded-xl transition-all ${view === 'list' ? 'bg-white text-brand shadow-sm' : 'text-content-subtle'}`}><List size={18} /></button>
                         </div>
                         <button
-                            onClick={() => setShowModal(true)}
-                            className="h-11 px-6 bg-content text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-content/20 flex items-center gap-2"
+                            onClick={handleOpenAdd}
+                            className="h-11 px-6 bg-brand text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand/20 flex items-center gap-2 shrink-0 hover:scale-105 active:scale-95 transition-all"
                         >
-                            <Plus size={16} /> New Service
+                            <Plus size={18} /> New Protocol
                         </button>
                     </div>
                 </div>
 
-                {/* categories filter */}
-                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                    {['All Services', 'Doorstep', 'Studio', 'Add-ons', 'Prestige'].map(cat => (
-                        <button
-                            key={cat}
-                            onClick={() => setActiveTab(cat)}
-                            className={`shrink-0 px-6 py-2.5 border rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-soft italic ${activeTab === cat
-                                ? 'bg-white border-brand/50 text-brand scale-105'
-                                : 'bg-white border-gray-100 text-content-subtle hover:text-brand hover:border-brand/20'
-                                }`}
-                        >
-                            {cat}
-                        </button>
-                    ))}
-                </div>
-
-                {/* Grid View */}
+                {/* Service Grid/List */}
                 {view === 'grid' ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {filteredServices.map((svc, i) => (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {filteredServices.map((service, i) => (
                             <motion.div
-                                key={svc.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: i * 0.1 }}
-                                className="bg-white p-6 rounded-[3rem] border border-gray-100 shadow-soft group hover:border-brand transition-all relative"
+                                key={service.id}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: i * 0.05 }}
+                                className="bg-white rounded-[2rem] border border-gray-100 shadow-soft overflow-hidden group hover:border-brand transition-all flex flex-col"
                             >
-                                <div className="flex justify-between items-start mb-6">
-                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white ${svc.color} shadow-lg`}>
-                                        <Car size={24} />
-                                    </div>
-                                    <div className="flex flex-col items-end gap-1">
-                                        <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-lg ${svc.status === 'Live' ? 'bg-green-50 text-green-600' : 'bg-brand/10 text-brand'
-                                            }`}>
-                                            {svc.status}
+                                <div className="h-40 bg-gray-100 flex items-center justify-center relative overflow-hidden">
+                                    <div className={`absolute inset-0 ${service.color || 'bg-brand'} opacity-10`} />
+                                    <ImageIcon size={40} className="text-gray-300 relative z-10" />
+                                    <div className="absolute top-4 left-4">
+                                        <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg ${service.status === 'Live' ? 'bg-green-100 text-green-600' : 'bg-brand/10 text-brand'}`}>
+                                            {service.status}
                                         </span>
-                                        <span className="text-[10px] font-black text-content-subtle italic uppercase">{svc.category}</span>
+                                    </div>
+                                    <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                        <button onClick={() => handleOpenEdit(service)} className="w-8 h-8 bg-white/90 backdrop-blur rounded-lg flex items-center justify-center text-content hover:bg-brand hover:text-white shadow-sm transition-all"><Edit2 size={12} /></button>
+                                        <button onClick={() => handleDelete(service.id)} className="w-8 h-8 bg-white/90 backdrop-blur rounded-lg flex items-center justify-center text-content hover:bg-red-500 hover:text-white shadow-sm transition-all"><Trash2 size={12} /></button>
                                     </div>
                                 </div>
-
-                                <div className="space-y-4">
-                                    <div>
-                                        <h4 className="text-xl font-black text-content italic uppercase tracking-tight">{svc.name}</h4>
-                                        <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-1">Tech: <span className="text-brand">{svc.type}</span></p>
+                                <div className="p-6 flex-1 flex flex-col">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="text-[9px] font-black text-brand uppercase tracking-widest italic">{service.category}</p>
+                                        <p className="text-[9px] font-bold text-content-subtle">{service.id}</p>
                                     </div>
-
-                                    <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                                        <div className="flex items-center gap-4">
-                                            <div className="flex items-center gap-1.5">
-                                                <Clock size={12} className="text-content-subtle" />
-                                                <span className="text-xs font-black text-content italic">{svc.time}</span>
-                                            </div>
-                                            <div className="flex items-center gap-1.5">
-                                                <Tag size={12} className="text-content-subtle" />
-                                                <span className="text-base font-black text-brand italic">{svc.price}</span>
-                                            </div>
-                                        </div>
+                                    <h3 className="text-sm font-black text-content italic leading-tight mb-4 group-hover:text-brand transition-colors">{service.name}</h3>
+                                    <div className="mt-auto flex items-center justify-between pt-4 border-t border-gray-50">
                                         <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={() => openEdit(svc)}
-                                                className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-content-subtle hover:bg-brand hover:text-white transition-all shadow-sm z-10 relative"
-                                                title="Edit"
-                                            >
-                                                <Edit2 size={15} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(svc.id)}
-                                                className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-content-subtle hover:bg-red-500 hover:text-white transition-all shadow-sm z-10 relative"
-                                                title="Delete"
-                                            >
-                                                <Trash2 size={15} />
-                                            </button>
+                                            <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center text-content-subtle"><Clock size={14} /></div>
+                                            <p className="text-[10px] font-black text-content italic">{service.time}</p>
                                         </div>
+                                        <p className="text-lg font-black text-content italic leading-none truncate ml-2">₹{service.price}</p>
                                     </div>
                                 </div>
-
-                                {/* background decorative */}
-                                <div className={`absolute -right-4 -bottom-4 w-24 h-24 ${svc.color} opacity-5 rounded-full blur-2xl group-hover:scale-150 transition-all duration-700`} />
                             </motion.div>
                         ))}
                     </div>
                 ) : (
-                    <div className="bg-white rounded-[3rem] border border-gray-100 shadow-soft overflow-hidden">
+                    <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-soft overflow-hidden">
                         <table className="w-full text-left">
                             <thead className="bg-gray-50/50">
                                 <tr>
-                                    <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Service ID</th>
-                                    <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Name</th>
-                                    <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Category</th>
-                                    <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Price</th>
-                                    <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Visible</th>
-                                    <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest italic text-right">Actions</th>
+                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest italic">Protocol Desc</th>
+                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest italic">Metadata</th>
+                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest italic text-center">Status</th>
+                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest italic text-right">Valuation</th>
+                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest italic text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
-                                {filteredServices.map((svc, i) => (
-                                    <tr key={i} className="hover:bg-gray-50/30 transition-all">
-                                        <td className="px-8 py-5"><span className="text-[10px] font-black text-brand italic tracking-widest uppercase">{svc.id}</span></td>
-                                        <td className="px-8 py-5"><span className="text-xs font-black text-content italic uppercase">{svc.name}</span></td>
-                                        <td className="px-8 py-5"><span className="text-[10px] font-black text-content-subtle uppercase tracking-widest">{svc.category}</span></td>
-                                        <td className="px-8 py-5"><span className="text-sm font-black text-content italic">{svc.price}</span></td>
-                                        <td className="px-8 py-5">
-                                            <VisibilityToggle />
+                                {filteredServices.map(service => (
+                                    <tr key={service.id} className="group hover:bg-gray-50/30 transition-all">
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className={`w-10 h-10 rounded-2xl ${service.color || 'bg-brand'} bg-opacity-10 flex items-center justify-center text-content italic border border-gray-100 group-hover:bg-brand group-hover:text-white transition-all`}>
+                                                    <Settings size={18} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-black text-content italic leading-none mb-1.5 uppercase truncate max-w-[200px]">{service.name}</p>
+                                                    <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest">{service.category}</p>
+                                                </div>
+                                            </div>
                                         </td>
-                                        <td className="px-8 py-5 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button
-                                                    onClick={() => openEdit(svc)}
-                                                    className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-content-subtle hover:bg-brand hover:text-white transition-all"
-                                                    title="Edit"
-                                                >
-                                                    <Edit2 size={14} />
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="flex items-center gap-2">
+                                                    <Clock size={12} className="text-brand" />
+                                                    <span className="text-[10px] font-bold text-content-muted uppercase whitespace-nowrap">{service.time}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Shield size={12} className="text-brand" />
+                                                    <span className="text-[10px] font-bold text-content-muted uppercase whitespace-nowrap">{service.type || 'Standard'}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6 text-center">
+                                            <span className={`text-[8px] font-black uppercase px-2.5 py-1 rounded-lg border ${service.status === 'Live' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-brand/10 text-brand border-brand/10'}`}>
+                                                {service.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            <p className="text-sm font-black text-content italic">₹{service.price}</p>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                                <button onClick={() => handleOpenEdit(service)} className="p-2.5 bg-gray-50 hover:bg-brand hover:text-white rounded-xl text-content-subtle transition-all shadow-sm">
+                                                    <Edit2 size={13} />
                                                 </button>
-                                                <button
-                                                    onClick={() => handleDelete(svc.id)}
-                                                    className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-content-subtle hover:bg-red-500 hover:text-white transition-all"
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 size={14} />
+                                                <button onClick={() => handleDelete(service.id)} className="p-2.5 bg-gray-50 hover:bg-red-500 hover:text-white rounded-xl text-content-subtle transition-all shadow-sm">
+                                                    <Trash2 size={13} />
                                                 </button>
                                             </div>
                                         </td>
@@ -258,236 +229,105 @@ const AdminServices = () => {
                 )}
             </div>
 
-            {/* Add Service Modal */}
+            {/* Protocol Configuration Terminal */}
             <AnimatePresence>
-                {showModal && (
+                {isModalOpen && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={() => setShowModal(false)}
+                            onClick={() => setIsModalOpen(false)}
                             className="absolute inset-0 bg-content/60 backdrop-blur-sm"
                         />
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="bg-white w-full max-w-lg rounded-[3rem] p-8 relative z-10 shadow-2xl overflow-hidden"
+                            className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-gray-100"
                         >
-                            <div className="flex justify-between items-center mb-8">
+                            <div className="px-10 py-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                                 <div>
-                                    <h3 className="text-2xl font-black text-content italic uppercase tracking-tight">Add New Service</h3>
-                                    <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Global Catalog Entry</p>
+                                    <h2 className="text-xl font-black text-content italic leading-none uppercase">{editingService ? 'Update Protocol' : 'New Service Node'}</h2>
+                                    <p className="text-[10px] font-black text-brand uppercase tracking-widest mt-2 italic px-1">Control Configuration Terminal</p>
                                 </div>
-                                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-50 rounded-xl transition-all">
+                                <button onClick={() => setIsModalOpen(false)} className="p-3 bg-white hover:bg-gray-50 rounded-2xl border border-gray-100 text-content-subtle transition-all">
                                     <X size={20} />
                                 </button>
                             </div>
-
-                            <form onSubmit={handleAddService} className="space-y-5">
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest px-1">Service Name</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="e.g. Hydro-Shield Wax"
-                                        className="w-full h-14 bg-gray-50 border border-gray-100 rounded-2xl px-6 text-sm font-bold text-content outline-none focus:border-brand transition-all"
-                                        value={newService.name}
-                                        onChange={(e) => setNewService({ ...newService, name: e.target.value })}
-                                    />
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest px-1">Category</label>
-                                        <select
-                                            className="w-full h-14 bg-gray-50 border border-gray-100 rounded-2xl px-6 text-sm font-bold text-content outline-none focus:border-brand transition-all appearance-none"
-                                            value={newService.category}
-                                            onChange={(e) => setNewService({ ...newService, category: e.target.value })}
+                            <div className="p-10">
+                                <form onSubmit={handleSave} className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        <div className="md:col-span-2 space-y-1.5 font-sans">
+                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1 italic">Protocol Identity</label>
+                                            <input
+                                                required
+                                                placeholder="e.g. Ultra Steam Detail"
+                                                className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
+                                                value={formData.name}
+                                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5 font-sans">
+                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1 italic">Operational Category</label>
+                                            <select
+                                                className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm appearance-none"
+                                                value={formData.category}
+                                                onChange={e => setFormData({ ...formData, category: e.target.value })}
+                                            >
+                                                <option value="Doorstep">Doorstep Delivery</option>
+                                                <option value="Studio">Studio Detailing</option>
+                                                <option value="Add-ons">Supplemental Add-on</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1.5 font-sans">
+                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1 italic">Network Node Type</label>
+                                            <select
+                                                className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm appearance-none"
+                                                value={formData.type}
+                                                onChange={e => setFormData({ ...formData, type: e.target.value })}
+                                            >
+                                                <option value="Standard">Standard</option>
+                                                <option value="Premium">Premium</option>
+                                                <option value="Elite">Elite</option>
+                                                <option value="Waterless">Waterless</option>
+                                                <option value="Steam">Steam</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1.5 font-sans">
+                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1 italic">Valuation (₹)</label>
+                                            <input
+                                                required
+                                                type="number"
+                                                placeholder="e.g. 599"
+                                                className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
+                                                value={formData.price}
+                                                onChange={e => setFormData({ ...formData, price: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5 font-sans">
+                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1 italic">Protocol Duration</label>
+                                            <input
+                                                required
+                                                placeholder="e.g. 45m"
+                                                className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
+                                                value={formData.time}
+                                                onChange={e => setFormData({ ...formData, time: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="pt-4">
+                                        <button
+                                            disabled={loading}
+                                            className="w-full bg-content text-white py-5 rounded-[2rem] font-black text-[10px] uppercase tracking-[0.25em] shadow-2xl shadow-content/20 flex items-center justify-center gap-3 hover:bg-brand transition-all disabled:opacity-50"
                                         >
-                                            <option value="Doorstep">Doorstep</option>
-                                            <option value="Studio">Studio</option>
-                                            <option value="Add-ons">Add-ons</option>
-                                            <option value="Prestige">Prestige</option>
-                                        </select>
+                                            {loading ? 'Synchronizing Node...' : (
+                                                <>{editingService ? 'Apply Synchronization' : 'Commit Protocol'} <CheckCircle2 size={18} /></>
+                                            )}
+                                        </button>
                                     </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest px-1">Tech Type</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            placeholder="Steam/Wash/Pro"
-                                            className="w-full h-14 bg-gray-50 border border-gray-100 rounded-2xl px-6 text-sm font-bold text-content outline-none focus:border-brand transition-all"
-                                            value={newService.type}
-                                            onChange={(e) => setNewService({ ...newService, type: e.target.value })}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest px-1">Price (₹)</label>
-                                        <input
-                                            type="number"
-                                            required
-                                            placeholder="499"
-                                            className="w-full h-14 bg-gray-50 border border-gray-100 rounded-2xl px-6 text-sm font-bold text-content outline-none focus:border-brand transition-all font-mono"
-                                            value={newService.price}
-                                            onChange={(e) => setNewService({ ...newService, price: e.target.value })}
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest px-1">Duration</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            placeholder="45m / 2h"
-                                            className="w-full h-14 bg-gray-50 border border-gray-100 rounded-2xl px-6 text-sm font-bold text-content outline-none focus:border-brand transition-all"
-                                            value={newService.time}
-                                            onChange={(e) => setNewService({ ...newService, time: e.target.value })}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="pt-4 flex gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowModal(false)}
-                                        className="flex-1 h-14 bg-gray-50 text-content-subtle rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-gray-100 transition-all"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="flex-[2] h-14 bg-brand text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-brand/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
-                                    >
-                                        Create Service
-                                    </button>
-                                </div>
-                            </form>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-
-            {/* Edit Service Modal */}
-            <AnimatePresence>
-                {editService && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setEditService(null)}
-                            className="absolute inset-0 bg-content/60 backdrop-blur-sm"
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="bg-white w-full max-w-lg rounded-[3rem] p-8 relative z-10 shadow-2xl"
-                        >
-                            <div className="flex justify-between items-center mb-8">
-                                <div>
-                                    <h3 className="text-2xl font-black text-content italic uppercase tracking-tight">Edit Service</h3>
-                                    <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest">{editService.id}</p>
-                                </div>
-                                <button onClick={() => setEditService(null)} className="p-2 hover:bg-gray-50 rounded-xl transition-all">
-                                    <X size={20} />
-                                </button>
+                                </form>
                             </div>
-
-                            <form onSubmit={handleEditService} className="space-y-5">
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest px-1">Service Name</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        className="w-full h-14 bg-gray-50 border border-gray-100 rounded-2xl px-6 text-sm font-bold text-content outline-none focus:border-brand transition-all"
-                                        value={editService.name}
-                                        onChange={(e) => setEditService({ ...editService, name: e.target.value })}
-                                    />
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest px-1">Category</label>
-                                        <select
-                                            className="w-full h-14 bg-gray-50 border border-gray-100 rounded-2xl px-6 text-sm font-bold text-content outline-none focus:border-brand transition-all appearance-none"
-                                            value={editService.category}
-                                            onChange={(e) => setEditService({ ...editService, category: e.target.value })}
-                                        >
-                                            <option value="Doorstep">Doorstep</option>
-                                            <option value="Studio">Studio</option>
-                                            <option value="Add-ons">Add-ons</option>
-                                            <option value="Prestige">Prestige</option>
-                                        </select>
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest px-1">Status</label>
-                                        <select
-                                            className="w-full h-14 bg-gray-50 border border-gray-100 rounded-2xl px-6 text-sm font-bold text-content outline-none focus:border-brand transition-all appearance-none"
-                                            value={editService.status}
-                                            onChange={(e) => setEditService({ ...editService, status: e.target.value })}
-                                        >
-                                            <option value="Live">Live</option>
-                                            <option value="Featured">Featured</option>
-                                            <option value="Draft">Draft</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest px-1">Price (₹)</label>
-                                        <input
-                                            type="number"
-                                            required
-                                            className="w-full h-14 bg-gray-50 border border-gray-100 rounded-2xl px-6 text-sm font-bold text-content outline-none focus:border-brand transition-all font-mono"
-                                            value={editService.rawPrice}
-                                            onChange={(e) => setEditService({ ...editService, rawPrice: e.target.value })}
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest px-1">Duration</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            className="w-full h-14 bg-gray-50 border border-gray-100 rounded-2xl px-6 text-sm font-bold text-content outline-none focus:border-brand transition-all"
-                                            value={editService.time}
-                                            onChange={(e) => setEditService({ ...editService, time: e.target.value })}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest px-1">Tech Type</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        className="w-full h-14 bg-gray-50 border border-gray-100 rounded-2xl px-6 text-sm font-bold text-content outline-none focus:border-brand transition-all"
-                                        value={editService.type}
-                                        onChange={(e) => setEditService({ ...editService, type: e.target.value })}
-                                    />
-                                </div>
-
-                                <div className="pt-4 flex gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setEditService(null)}
-                                        className="flex-1 h-14 bg-gray-50 text-content-subtle rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-gray-100 transition-all"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="flex-[2] h-14 bg-brand text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-brand/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
-                                    >
-                                        Save Changes
-                                    </button>
-                                </div>
-                            </form>
                         </motion.div>
                     </div>
                 )}

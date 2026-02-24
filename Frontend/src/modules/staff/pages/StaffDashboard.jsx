@@ -17,9 +17,11 @@ import {
 } from 'lucide-react';
 import StaffLayout from '../components/StaffLayout';
 import { useAuth } from '../../../context/AuthContext';
+import { useTheme } from '../../../context/ThemeContext';
 
 const StaffDashboard = () => {
     const navigate = useNavigate();
+    const { isDarkMode } = useTheme();
     const { bookings, updateBookingStatus, getUser } = useAuth();
     const user = getUser('staff') || { name: 'Staff Member', id: 'STF-DEFAULT' };
     const [activeTab, setActiveTab] = useState('assigned'); // 'assigned' | 'ongoing' | 'completed'
@@ -64,10 +66,10 @@ const StaffDashboard = () => {
             <div className="space-y-6">
                 {/* Visual Stats */}
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-soft relative overflow-hidden group">
-                        <div className="relative z-10">
-                            <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-1 italic">Efficiency</p>
-                            <h4 className="text-2xl font-black text-content italic">98.4%</h4>
+                    <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} p-6 rounded-[2.5rem] border relative overflow-hidden group transition-all duration-500`}>
+                        <div className="relative z-10 transition-colors duration-500">
+                            <p className={`text-[8px] font-black uppercase tracking-widest mb-1 italic ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Efficiency</p>
+                            <h4 className={`text-2xl font-black italic ${isDarkMode ? 'text-white' : 'text-content'}`}>98.4%</h4>
                             <div className="w-12 h-1 bg-brand/20 rounded-full mt-2 overflow-hidden">
                                 <motion.div
                                     initial={{ width: 0 }}
@@ -78,9 +80,9 @@ const StaffDashboard = () => {
                         </div>
                         <div className="absolute -top-4 -right-4 w-16 h-16 bg-brand/5 rounded-full blur-xl group-hover:bg-brand/10 transition-colors" />
                     </div>
-                    <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-soft relative overflow-hidden group">
-                        <div className="relative z-10">
-                            <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-1 italic">Today's Earnings</p>
+                    <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} p-6 rounded-[2.5rem] border relative overflow-hidden group transition-all duration-500`}>
+                        <div className="relative z-10 transition-colors duration-500">
+                            <p className={`text-[8px] font-black uppercase tracking-widest mb-1 italic ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Today's Earnings</p>
                             <h4 className="text-2xl font-black text-brand italic">₹1,240</h4>
                             <p className="text-[7px] font-black text-green-500 uppercase mt-1">+12% from avg</p>
                         </div>
@@ -89,14 +91,14 @@ const StaffDashboard = () => {
                 </div>
 
                 {/* Glass Tabs */}
-                <div className="flex bg-gray-100/50 p-1.5 rounded-[2rem] border border-gray-200/30 backdrop-blur-md">
+                <div className={`flex p-1.5 rounded-[2rem] border backdrop-blur-md transition-all duration-500 ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-100/50 border-gray-200/30'}`}>
                     {['assigned', 'ongoing', 'completed'].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`flex-1 py-3.5 rounded-2xl text-[9px] font-black uppercase tracking-[0.15em] transition-all duration-500 ${activeTab === tab
-                                ? 'bg-content text-white shadow-xl shadow-content/20 scale-[1.02]'
-                                : 'text-content-subtle hover:text-content'
+                                ? (isDarkMode ? 'bg-white text-[#0F172A] shadow-xl shadow-white/5 scale-[1.02]' : 'bg-content text-white shadow-xl shadow-content/20 scale-[1.02]')
+                                : (isDarkMode ? 'text-white/30 hover:text-white/60' : 'text-content-subtle hover:text-content')
                                 }`}
                         >
                             {tab}
@@ -119,34 +121,36 @@ const StaffDashboard = () => {
                                     <motion.div
                                         key={task.id}
                                         whileTap={{ scale: 0.98 }}
-                                        className="bg-white rounded-[2.5rem] p-6 border border-gray-100 shadow-soft relative overflow-hidden group hover:border-brand/40 transition-all duration-500"
+                                        className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} rounded-[2.5rem] p-6 border relative overflow-hidden group hover:border-brand/40 transition-all duration-500`}
                                         onClick={() => navigate(`/staff/task/${task.id}`)}
                                     >
                                         <div className="flex justify-between items-start mb-5">
                                             <div className="flex gap-4">
-                                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-transform duration-500 group-hover:scale-110 ${task.type === 'Pickup' ? 'bg-blue-50 text-blue-600' : 'bg-green-50 text-green-600'
+                                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-transform duration-500 group-hover:scale-110 ${task.type === 'Pickup'
+                                                    ? (isDarkMode ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-600')
+                                                    : (isDarkMode ? 'bg-green-500/10 text-green-400' : 'bg-green-50 text-green-600')
                                                     }`}>
                                                     {task.type === 'Pickup' ? <Truck size={28} /> : <Package size={28} />}
                                                 </div>
                                                 <div>
                                                     <p className="text-[10px] font-black text-brand uppercase tracking-[0.2em] mb-0.5 italic">{task.id}</p>
-                                                    <h3 className="text-xl font-black text-content italic uppercase tracking-tighter">{task.type} Request</h3>
+                                                    <h3 className={`text-xl font-black italic uppercase tracking-tighter ${isDarkMode ? 'text-white' : 'text-content'}`}>{task.type} Request</h3>
                                                 </div>
                                             </div>
-                                            <div className="bg-gray-50 px-3 py-1.5 rounded-xl">
-                                                <p className="text-[9px] font-black text-content uppercase tracking-widest">{task.time}</p>
+                                            <div className={`${isDarkMode ? 'bg-white/5' : 'bg-gray-50'} px-3 py-1.5 rounded-xl transition-colors`}>
+                                                <p className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/60' : 'text-content'}`}>{task.time}</p>
                                             </div>
                                         </div>
 
                                         <div className="space-y-4 mb-6">
                                             <div className="flex items-start gap-4">
-                                                <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
-                                                    <MapPin size={14} className="text-content-subtle" />
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${isDarkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
+                                                    <MapPin size={14} className={isDarkMode ? 'text-white/20' : 'text-content-subtle'} />
                                                 </div>
                                                 <div className="flex-1">
-                                                    <p className="text-[10px] font-bold text-content-muted uppercase tracking-widest leading-none mb-1.5">{task.customer}</p>
+                                                    <p className={`text-[10px] font-bold uppercase tracking-widest leading-none mb-1.5 ${isDarkMode ? 'text-white/20' : 'text-content-muted'}`}>{task.customer}</p>
                                                     <div className="flex items-center justify-between gap-4">
-                                                        <p className="text-sm font-black text-content leading-tight italic">{task.address}</p>
+                                                        <p className={`text-sm font-black leading-tight italic ${isDarkMode ? 'text-white/80' : 'text-content'}`}>{task.address}</p>
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(task.address)}`, '_blank'); }}
                                                             className="px-3 py-2 bg-brand/10 text-brand rounded-lg text-[8px] font-black uppercase tracking-widest whitespace-nowrap"
@@ -156,14 +160,14 @@ const StaffDashboard = () => {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-4 bg-gray-50/50 p-4 rounded-2xl">
+                                            <div className={`flex items-center gap-4 p-4 rounded-2xl transition-colors ${isDarkMode ? 'bg-white/5' : 'bg-gray-50/50'}`}>
                                                 <ShieldCheck size={18} className="text-brand shrink-0" />
-                                                <p className="text-xs font-black text-content uppercase tracking-widest italic">{task.vehicle}</p>
+                                                <p className={`text-xs font-black uppercase tracking-widest italic ${isDarkMode ? 'text-white/60' : 'text-content'}`}>{task.vehicle}</p>
                                             </div>
                                         </div>
 
                                         <div className="flex gap-3">
-                                            <button className="flex-1 h-14 bg-content text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-content/20 flex items-center justify-center gap-2 hover:bg-brand transition-all">
+                                            <button className={`flex-1 h-14 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg flex items-center justify-center gap-2 hover:bg-brand hover:text-white transition-all ${isDarkMode ? 'bg-white/10 text-white shadow-black/20' : 'bg-content text-white shadow-content/20'}`}>
                                                 Protocol Details <ChevronRight size={16} strokeWidth={3} />
                                             </button>
                                             {activeTab === 'assigned' && (
@@ -184,11 +188,11 @@ const StaffDashboard = () => {
                                 animate={{ opacity: 1 }}
                                 className="flex flex-col items-center justify-center py-20 text-center"
                             >
-                                <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-6 border border-dashed border-gray-200">
-                                    <Truck size={40} className="text-gray-200" />
+                                <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-6 border border-dashed transition-all ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
+                                    <Truck size={40} className={isDarkMode ? 'text-white/10' : 'text-gray-200'} />
                                 </div>
-                                <h3 className="font-black text-content italic uppercase tracking-widest mb-2">No Active Logs</h3>
-                                <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest px-10">We'll notify you when a new assignment is pushed to your terminal.</p>
+                                <h3 className={`font-black italic uppercase tracking-widest mb-2 ${isDarkMode ? 'text-white' : 'text-content'}`}>No Active Logs</h3>
+                                <p className={`text-[10px] font-bold uppercase tracking-widest px-10 ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>We'll notify you when a new assignment is pushed to your terminal.</p>
                             </motion.div>
                         )}
                     </AnimatePresence>

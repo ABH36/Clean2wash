@@ -1,11 +1,13 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Navigation, Calendar, User, LogOut } from 'lucide-react';
+import { Navigation, Calendar, User, LogOut, Moon, Sun } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTheme } from '../../../context/ThemeContext';
 
 const StaffLayout = ({ children, title, subtitle, showBack = false }) => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { isDarkMode, toggleTheme } = useTheme();
 
     const tabs = [
         { id: 'jobs', label: 'Jobs', icon: <Navigation size={20} />, path: '/staff' },
@@ -14,19 +16,27 @@ const StaffLayout = ({ children, title, subtitle, showBack = false }) => {
     ];
 
     return (
-        <div className="min-h-screen bg-[#FDFDFF] font-sans pb-28">
+        <div className={`min-h-screen ${isDarkMode ? 'bg-[#0F172A]' : 'bg-[#FDFDFF]'} font-sans pb-28 transition-colors duration-500`}>
             {/* Top Bar */}
-            <header className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-xl z-[60] px-6 pt-12 pb-6 border-b border-gray-100 flex items-center justify-between">
+            <header className={`fixed top-0 left-0 right-0 ${isDarkMode ? 'bg-[#0F172A]/80 border-white/5' : 'bg-white/80 border-gray-100'} backdrop-blur-xl z-[60] px-6 pt-12 pb-6 border-b transition-all flex items-center justify-between`}>
                 <div>
-                    <p className="text-[10px] font-black text-brand uppercase tracking-[0.3em] mb-1 italic">{subtitle || 'Staff Workspace'}</p>
-                    <h1 className="text-2xl font-black text-content italic leading-none tracking-tight uppercase">{title || 'Dashboard'}</h1>
+                    <p className={`text-[10px] font-black uppercase tracking-[0.3em] mb-1 italic ${isDarkMode ? 'text-brand-light' : 'text-brand'}`}>{subtitle || 'Staff Workspace'}</p>
+                    <h1 className={`text-2xl font-black italic leading-none tracking-tight uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>{title || 'Dashboard'}</h1>
                 </div>
-                <button
-                    onClick={() => navigate('/staff/profile')}
-                    className="w-12 h-12 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-center text-content-subtle hover:text-brand hover:border-brand/20 transition-all shadow-sm"
-                >
-                    <User size={22} />
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={toggleTheme}
+                        className={`w-12 h-12 rounded-2xl border flex items-center justify-center transition-all shadow-sm ${isDarkMode ? 'bg-white/5 border-white/10 text-brand-light' : 'bg-gray-50 border-gray-100 text-content-subtle hover:text-brand'}`}
+                    >
+                        {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+                    </button>
+                    <button
+                        onClick={() => navigate('/staff/profile')}
+                        className={`w-12 h-12 rounded-2xl border flex items-center justify-center transition-all shadow-sm ${isDarkMode ? 'bg-white/5 border-white/10 text-white/40 hover:text-brand' : 'bg-gray-50 border-gray-100 text-content-subtle hover:text-brand hover:border-brand/20'}`}
+                    >
+                        <User size={22} />
+                    </button>
+                </div>
             </header>
 
             {/* Main Content */}

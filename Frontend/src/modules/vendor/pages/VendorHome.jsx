@@ -21,8 +21,8 @@ const VendorHome = () => {
         .reduce((acc, b) => acc + parseInt(b.price.replace(/[^0-9]/g, '') || 0), 0);
 
     const STATS = [
-        { label: 'Active Jobs', val: activeVendorJobs.length.toString().padStart(2, '0'), trend: '+2', color: 'text-blue-500', bg: 'bg-blue-50' },
-        { label: 'Today Revenue', val: `₹${todayRevenue.toLocaleString()}`, trend: '15%', color: 'text-green-500', bg: 'bg-green-50' },
+        { label: 'Active Jobs', val: activeVendorJobs.length.toString().padStart(2, '0'), trend: `+${activeVendorJobs.length}`, color: 'text-blue-600', bg: 'bg-blue-50' },
+        { label: 'Today Revenue', val: `₹${todayRevenue.toLocaleString()}`, trend: '100%', color: 'text-green-600', bg: 'bg-green-50' },
         { label: 'New Requests', val: incomingRequests.length.toString().padStart(2, '0'), trend: 'Live', color: 'text-brand', bg: 'bg-brand/10' },
     ];
 
@@ -34,16 +34,18 @@ const VendorHome = () => {
         customer: b.userName || 'Guest User',
         car: b.vehicle || 'Unknown Car',
         service: b.serviceName,
-        status: b.category === 'Request' ? 'Incoming' : b.status.toUpperCase(),
-        time: new Date(b.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        address: b.address || 'Bengaluru',
+        status: b.category === 'Request' ? 'INCOMING' : b.status.toUpperCase(),
+        time: new Date(b.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        address: b.address || 'HSR Layout, Bengaluru',
         type: b.category === 'Request' ? 'Market' : 'Pickup'
     }));
 
     const QUICK_ACTIONS = [
-        { label: 'New Booking', icon: Plus, color: 'bg-brand' },
-        { label: 'Add Driver', icon: Users, color: 'bg-content' },
-        { label: 'Report Issue', icon: MessageSquare, color: 'bg-red-500' },
+        { label: 'View Orders', icon: Plus, color: 'bg-brand', path: '/vendor/orders' },
+        { label: 'Manage Products', icon: Package, color: 'bg-blue-500', path: '/vendor/products' },
+        { label: 'Inventory Hub', icon: Package, color: 'bg-slate-700', path: '/vendor/inventory' },
+        { label: 'Manage Fleet', icon: Users, color: 'bg-content', path: '/vendor/fleet' },
+        { label: 'Studio Settings', icon: MessageSquare, color: 'bg-gray-400', path: '/vendor/settings' },
     ];
 
     return (

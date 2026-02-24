@@ -17,9 +17,11 @@ import {
 } from 'lucide-react';
 
 import StaffLayout from '../components/StaffLayout';
+import { useTheme } from '../../../context/ThemeContext';
 
 const StaffProfile = () => {
     const navigate = useNavigate();
+    const { isDarkMode } = useTheme();
     const { getUser, logout, registeredUsers } = useAuth();
     const user = getUser('staff') || { name: 'Staff Member', id: 'STF-000', hub: 'Main Hub' };
 
@@ -52,29 +54,29 @@ const StaffProfile = () => {
         <StaffLayout title="Terminal Control" subtitle="Staff Node">
             <div className="space-y-8">
                 {/* Profile Card */}
-                <div className="bg-white rounded-[3rem] p-8 border border-gray-100 shadow-soft text-center group relative overflow-hidden">
+                <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} rounded-[3rem] p-8 border text-center group relative overflow-hidden transition-all duration-500`}>
                     <div className="relative w-28 h-28 mx-auto mb-6">
                         <div className="absolute inset-0 bg-brand/20 rounded-[2.5rem] rotate-6 scale-105 group-hover:rotate-12 transition-transform duration-500" />
                         <img
                             src={STAFF_DATA.image}
-                            className="relative z-10 w-full h-full object-cover rounded-[2.5rem] border-4 border-white shadow-xl"
+                            className={`relative z-10 w-full h-full object-cover rounded-[2.5rem] border-4 ${isDarkMode ? 'border-[#1E293B]' : 'border-white'} shadow-xl`}
                             alt="Profile"
                         />
-                        <button className="absolute -bottom-2 -right-2 w-10 h-10 bg-brand text-white rounded-full flex items-center justify-center border-4 border-white shadow-lg z-20">
+                        <button className={`absolute -bottom-2 -right-2 w-10 h-10 bg-brand text-white rounded-full flex items-center justify-center border-4 ${isDarkMode ? 'border-[#1E293B]' : 'border-white'} shadow-lg z-20`}>
                             <Camera size={18} />
                         </button>
                     </div>
-                    <h2 className="text-2xl font-black text-content italic leading-none mb-1">{STAFF_DATA.name}</h2>
+                    <h2 className={`text-2xl font-black italic leading-none mb-1 ${isDarkMode ? 'text-white' : 'text-content'}`}>{STAFF_DATA.name}</h2>
                     <p className="text-[10px] font-black text-brand uppercase tracking-[0.2em]">{STAFF_DATA.id}</p>
 
-                    <div className="flex gap-4 mt-8 pt-8 border-t border-gray-50">
+                    <div className={`flex gap-4 mt-8 pt-8 border-t ${isDarkMode ? 'border-white/5' : 'border-gray-50'}`}>
                         <div className="flex-1">
-                            <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-1 italic">Attached Hub</p>
-                            <p className="text-xs font-black text-content italic uppercase tracking-tighter">{STAFF_DATA.hub}</p>
+                            <p className={`text-[8px] font-black uppercase tracking-widest mb-1 italic ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Attached Hub</p>
+                            <p className={`text-xs font-black italic uppercase tracking-tighter ${isDarkMode ? 'text-white' : 'text-content'}`}>{STAFF_DATA.hub}</p>
                         </div>
-                        <div className="w-px h-8 bg-gray-100 self-center" />
+                        <div className={`w-px h-8 self-center ${isDarkMode ? 'bg-white/5' : 'bg-gray-100'}`} />
                         <div className="flex-1">
-                            <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-1 italic">Clearance</p>
+                            <p className={`text-[8px] font-black uppercase tracking-widest mb-1 italic ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Clearance</p>
                             <p className="text-xs font-black text-brand italic uppercase tracking-tighter">{STAFF_DATA.role}</p>
                         </div>
                     </div>
@@ -84,29 +86,29 @@ const StaffProfile = () => {
 
                 {/* Menu List */}
                 <div className="space-y-4">
-                    <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] px-4 italic">Security & Ops</p>
+                    <p className={`text-[10px] font-black uppercase tracking-[0.2em] px-4 italic ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Security & Ops</p>
                     {MENU_ITEMS.map((item, i) => (
                         <button
                             key={i}
                             onClick={() => navigate(item.path)}
-                            className="w-full flex items-center justify-between p-6 bg-white rounded-[2.5rem] border border-gray-100 shadow-soft group hover:border-brand/40 transition-all duration-500"
+                            className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} w-full flex items-center justify-between p-6 rounded-[2.5rem] border group hover:border-brand/40 transition-all duration-500`}
                         >
                             <div className="flex items-center gap-5">
-                                <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-content-subtle group-hover:bg-brand group-hover:text-white transition-all duration-500">
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 ${isDarkMode ? 'bg-white/5 text-white/40 group-hover:bg-brand group-hover:text-white' : 'bg-gray-50 text-content-subtle group-hover:bg-brand group-hover:text-white'}`}>
                                     {item.icon}
                                 </div>
                                 <div className="text-left">
-                                    <h4 className="text-sm font-black text-content italic uppercase leading-none mb-1.5">{item.label}</h4>
-                                    <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest leading-none">{item.sub}</p>
+                                    <h4 className={`text-sm font-black italic uppercase leading-none mb-1.5 ${isDarkMode ? 'text-white' : 'text-content'}`}>{item.label}</h4>
+                                    <p className={`text-[10px] font-bold uppercase tracking-widest leading-none ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>{item.sub}</p>
                                 </div>
                             </div>
-                            <ChevronRight size={18} className="text-gray-200 group-hover:text-brand group-hover:translate-x-1 transition-all" />
+                            <ChevronRight size={18} className={`${isDarkMode ? 'text-white/10' : 'text-gray-200'} group-hover:text-brand group-hover:translate-x-1 transition-all`} />
                         </button>
                     ))}
                 </div>
 
                 <div className="pt-8 text-center">
-                    <p className="text-[9px] font-black text-content-subtle uppercase tracking-[0.3em] opacity-30 select-none">
+                    <p className={`text-[9px] font-black uppercase tracking-[0.3em] opacity-30 select-none ${isDarkMode ? 'text-white' : 'text-content-subtle'}`}>
                         CarWash Secure Identity Terminal <br />
                         v4.2.0-STF
                     </p>

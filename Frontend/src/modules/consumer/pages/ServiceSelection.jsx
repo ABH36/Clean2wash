@@ -271,7 +271,7 @@ const ServiceSelection = () => {
                                     whileTap={{ scale: 0.95 }}
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        navigate(s.provider === 'vendor' ? '/studios' : `/map?type=instant&service=${s.id}`);
+                                        navigate(s.provider === 'vendor' ? '/studios' : `/map?type=${s.provider}&service=${s.id}`);
                                     }}
                                     className="h-10 bg-brand text-white px-5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand/20 flex items-center gap-1.5"
                                 >

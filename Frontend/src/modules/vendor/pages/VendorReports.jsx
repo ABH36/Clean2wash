@@ -30,13 +30,13 @@ const VendorReports = () => {
                 {/* Hero Metrics */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {METRICS.map(m => (
-                        <div key={m.label} className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-soft relative overflow-hidden group">
+                        <div key={m.label} className="bg-surface p-8 rounded-[2.5rem] border border-gray-100/10 shadow-soft relative overflow-hidden group">
                             <div className="relative z-10">
-                                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest mb-1 italic">{m.label}</p>
+                                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest mb-1 italic font-bold">{m.label}</p>
                                 <h2 className={`text-4xl font-black ${m.color} tracking-tighter italic`}>{m.val}</h2>
                                 <p className="text-[10px] font-bold text-content-subtle mt-1 uppercase tracking-widest">{m.sub}</p>
                             </div>
-                            <div className="absolute top-4 right-4 text-gray-100 group-hover:text-brand/10 transition-colors">
+                            <div className="absolute top-4 right-4 text-content-subtle/10 group-hover:text-brand/20 transition-colors">
                                 <BarChart3 size={40} />
                             </div>
                         </div>
@@ -45,7 +45,7 @@ const VendorReports = () => {
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Revenue Trend Chart Placeholder */}
-                    <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-soft space-y-6">
+                    <div className="bg-surface p-8 rounded-[2.5rem] border border-gray-100/10 shadow-soft space-y-6">
                         <div className="flex items-center justify-between">
                             <h3 className="text-[10px] font-black text-content uppercase tracking-[0.2em] italic">Revenue Trends</h3>
                             <div className="flex gap-2">
@@ -53,7 +53,7 @@ const VendorReports = () => {
                                     <button
                                         key={p}
                                         onClick={() => setPeriod(p)}
-                                        className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${period === p ? 'bg-content text-white' : 'text-content-muted hover:bg-gray-100'}`}
+                                        className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${period === p ? 'bg-brand text-white' : 'text-content-muted hover:bg-background'}`}
                                     >
                                         {p}
                                     </button>
@@ -66,9 +66,9 @@ const VendorReports = () => {
                                     <motion.div
                                         initial={{ height: 0 }}
                                         animate={{ height: `${h}%` }}
-                                        className="w-full bg-brand/10 rounded-t-xl group hover:bg-brand transition-all relative"
+                                        className="w-full bg-brand/10 rounded-t-xl group hover:bg-brand transition-all relative border-x border-t border-brand/20"
                                     >
-                                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-content text-white text-[8px] font-black px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-surface border border-gray-100/10 text-content text-[8px] font-black px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                                             {h}k
                                         </div>
                                     </motion.div>
@@ -80,16 +80,16 @@ const VendorReports = () => {
 
                     {/* Customer Satisfaction */}
                     <div className="space-y-6">
-                        <div className="bg-content rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-content/30">
+                        <div className="bg-surface rounded-[2.5rem] p-8 text-content relative overflow-hidden shadow-2xl border border-gray-100/10">
                             <div className="relative z-10">
-                                <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] italic">Customer Feedback</p>
+                                <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em] italic">Customer Feedback</p>
                                 <div className="flex items-center gap-4 mt-2">
                                     <h2 className="text-5xl font-black italic tracking-tighter">4.9</h2>
                                     <div className="space-y-1">
                                         <div className="flex gap-0.5 text-brand">
                                             {[1, 2, 3, 4, 5].map(s => <Star key={s} size={14} fill="currentColor" />)}
                                         </div>
-                                        <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest">Studio Rating (120 Users)</p>
+                                        <p className="text-[9px] font-bold text-content-subtle uppercase tracking-widest">Studio Rating (120 Users)</p>
                                     </div>
                                 </div>
                             </div>
@@ -98,14 +98,14 @@ const VendorReports = () => {
                             </div>
                         </div>
 
-                        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-soft space-y-6">
+                        <div className="bg-surface p-8 rounded-[2.5rem] border border-gray-100/10 shadow-soft space-y-6">
                             <h3 className="text-[10px] font-black text-content uppercase tracking-[0.2em] italic">Recent Reviews</h3>
                             <div className="space-y-6">
                                 {RECENT_REVIEWS.map(rev => (
                                     <div key={rev.id} className="space-y-2 group cursor-pointer">
                                         <div className="flex justify-between items-start">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center font-black text-[10px] text-brand">
+                                                <div className="w-8 h-8 rounded-lg bg-background border border-gray-100/10 flex items-center justify-center font-black text-[10px] text-brand">
                                                     {rev.user[0]}
                                                 </div>
                                                 <span className="text-sm font-black text-content tracking-tight">{rev.user}</span>
@@ -119,7 +119,7 @@ const VendorReports = () => {
                                     </div>
                                 ))}
                             </div>
-                            <button className="w-full py-4 border-2 border-dashed border-gray-100 rounded-2xl text-[10px] font-black text-content-subtle uppercase tracking-widest hover:border-brand hover:text-brand transition-all">
+                            <button className="w-full py-4 border-2 border-dashed border-gray-100/10 bg-background rounded-2xl text-[10px] font-black text-content-subtle uppercase tracking-widest hover:border-brand hover:text-brand transition-all">
                                 View Full Review Log
                             </button>
                         </div>
@@ -127,7 +127,7 @@ const VendorReports = () => {
                 </div>
 
                 {/* Popular Services Section */}
-                <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-soft">
+                <div className="bg-surface p-8 rounded-[2.5rem] border border-gray-100/10 shadow-soft">
                     <div className="flex items-center justify-between mb-8">
                         <div>
                             <h3 className="text-[10px] font-black text-content uppercase tracking-[0.2em] italic">Best Sellers</h3>
@@ -144,7 +144,7 @@ const VendorReports = () => {
                             { name: 'Full Detail', sales: 42, trend: '-2%' },
                             { name: 'Ceramic', sales: 12, trend: '+20%' },
                         ].map(service => (
-                            <div key={service.name} className="p-5 bg-gray-50 rounded-[2rem] border border-gray-100 group hover:bg-white hover:border-brand/20 transition-all">
+                            <div key={service.name} className="p-5 bg-background rounded-[2rem] border border-gray-100/10 group hover:border-brand/20 transition-all">
                                 <div className="flex justify-between items-start mb-2">
                                     <h4 className="text-sm font-black text-content tracking-tight">{service.name}</h4>
                                     <div className={`flex items-center gap-1 text-[9px] font-black ${service.name === 'Full Detail' ? 'text-red-500' : 'text-green-500'}`}>

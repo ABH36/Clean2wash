@@ -9,7 +9,6 @@ const VendorHome = () => {
     const navigate = useNavigate();
     const { bookings, getUser } = useAuth();
     const user = getUser('vendor') || { studioName: 'CarWash Studio', city: 'Bengaluru' };
-    const [activeTab, setActiveTab] = useState('Today');
 
     // Filter vendor bookings
     const incomingRequests = bookings.filter(b => b.type === 'vendor' && b.status === 'pending');
@@ -36,54 +35,52 @@ const VendorHome = () => {
         service: b.serviceName,
         status: b.category === 'Request' ? 'INCOMING' : b.status.toUpperCase(),
         time: new Date(b.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        address: b.address || 'HSR Layout, Bengaluru',
+        address: b.address || 'HSR Layout',
         type: b.category === 'Request' ? 'Market' : 'Pickup'
     }));
 
     const QUICK_ACTIONS = [
         { label: 'View Orders', icon: Plus, color: 'bg-brand', path: '/vendor/orders' },
-        { label: 'Manage Products', icon: Package, color: 'bg-blue-500', path: '/vendor/products' },
-        { label: 'Inventory Hub', icon: Package, color: 'bg-slate-700', path: '/vendor/inventory' },
-        { label: 'Manage Fleet', icon: Users, color: 'bg-content', path: '/vendor/fleet' },
-        { label: 'Studio Settings', icon: MessageSquare, color: 'bg-gray-400', path: '/vendor/settings' },
+        { label: 'Products', icon: Package, color: 'bg-blue-500', path: '/vendor/products' },
+        { label: 'Inventory', icon: Package, color: 'bg-slate-700', path: '/vendor/inventory' },
+        { label: 'Fleet Hub', icon: Users, color: 'bg-content', path: '/vendor/fleet' },
+        { label: 'Settings', icon: MessageSquare, color: 'bg-gray-400', path: '/vendor/settings' },
     ];
 
     return (
         <VendorLayout
             title={user.studioName || "Studio Dashboard"}
-            subtitle={`${user.city || 'Bengaluru'} · Connected`}
+            subtitle={`${user.city || 'Bengaluru'} · Active Session`}
         >
-            <div className="space-y-8">
+            <div className="space-y-6 max-w-7xl mx-auto">
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     {STATS.map(s => (
                         <motion.div
                             key={s.label}
-                            initial={{ opacity: 0, y: 20 }}
+                            initial={{ opacity: 0, y: 15 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-soft relative overflow-hidden group"
+                            className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group"
                         >
                             <div className="relative z-10">
-                                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest mb-1 italic">{s.label}</p>
+                                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest mb-1">{s.label}</p>
                                 <div className="flex items-end gap-3">
-                                    <h2 className={`text-4xl font-black ${s.color} tracking-tighter italic`}>{s.val}</h2>
-                                    <span className={`mb-1 text-[10px] font-black px-2 py-0.5 rounded-md ${s.bg} ${s.color}`}>
+                                    <h2 className={`text-3xl font-black ${s.color} tracking-tight`}>{s.val}</h2>
+                                    <span className={`mb-1 text-[9px] font-black px-2 py-0.5 rounded-md ${s.bg} ${s.color}`}>
                                         {s.trend}
                                     </span>
                                 </div>
                             </div>
-                            <div className={`absolute -right-4 -bottom-4 w-24 h-24 ${s.bg} rounded-full opacity-20 group-hover:scale-150 transition-transform duration-700`} />
                         </motion.div>
                     ))}
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Recent Jobs */}
                     <div className="lg:col-span-2 space-y-4">
-                        <div className="flex items-center justify-between px-2">
-                            <h3 className="text-[10px] font-black text-content uppercase tracking-[0.2em] italic">Live Tracking</h3>
-                            <h3 className="text-[10px] font-black text-content uppercase tracking-[0.2em] italic">Active Tracking & Requests</h3>
-                            <button onClick={() => navigate('/vendor/orders')} className="text-[10px] font-black text-brand uppercase tracking-widest border-b border-brand/20">View All Bookings</button>
+                        <div className="flex items-center justify-between px-1">
+                            <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-[0.15em]">Live Operations</h3>
+                            <button onClick={() => navigate('/vendor/orders')} className="text-[10px] font-black text-brand uppercase tracking-widest border-b border-brand/20">View All</button>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -92,36 +89,34 @@ const VendorHome = () => {
                                     key={job.id}
                                     layoutId={job.id}
                                     onClick={() => navigate(`/vendor/order/${job.id}`)}
-                                    className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-soft group hover:scale-[1.02] transition-all cursor-pointer relative overflow-hidden"
+                                    className="bg-surface p-5 rounded-3xl border border-gray-100/10 shadow-sm group hover:border-brand/20 transition-all cursor-pointer relative"
                                 >
-                                    <div className="relative z-10 space-y-4">
+                                    <div className="space-y-4">
                                         <div className="flex justify-between items-start">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-brand">
-                                                    <Package size={20} />
+                                                <div className="w-9 h-9 bg-background rounded-xl flex items-center justify-center text-brand">
+                                                    <Package size={18} />
                                                 </div>
                                                 <div>
-                                                    <p className="text-[10px] font-black text-brand uppercase tracking-widest italic mb-0.5">{job.id}</p>
-                                                    <p className="text-[11px] font-bold text-content-subtle uppercase tracking-tighter">Scheduled · Now</p>
+                                                    <p className="text-[10px] font-black text-brand uppercase tracking-widest mb-0.5">{job.id}</p>
+                                                    <p className="text-[10px] font-bold text-content-subtle uppercase tracking-tight">{job.time}</p>
                                                 </div>
                                             </div>
-                                            <div className={`px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${job.status === 'INCOMING' ? 'bg-brand text-white shadow-lg shadow-brand/20' :
-                                                job.status === 'COMPLETED' ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-blue-600'
+                                            <div className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${job.status === 'INCOMING' ? 'bg-brand text-white' :
+                                                job.status === 'COMPLETED' ? 'bg-green-500/10 text-green-500' : 'bg-blue-500/10 text-blue-500'
                                                 }`}>
                                                 {job.status}
                                             </div>
                                         </div>
 
                                         <div>
-                                            <h4 className="text-base font-black text-content tracking-tight">{job.customer}</h4>
-                                            <p className="text-[11px] font-black text-brand uppercase italic tracking-tighter">{job.car} · {job.service}</p>
+                                            <h4 className="text-sm font-black text-content tracking-tight">{job.customer}</h4>
+                                            <p className="text-[10px] font-bold text-content-subtle uppercase tracking-tight">{job.car} · {job.service}</p>
                                         </div>
 
-                                        <div className="flex items-center gap-4 pt-2 border-t border-gray-50">
-                                            <div className="flex items-center gap-2">
-                                                <MapPin size={12} className="text-content-subtle" />
-                                                <span className="text-[10px] font-black text-content-subtle italic">{job.address}</span>
-                                            </div>
+                                        <div className="flex items-center gap-2 pt-3 border-t border-gray-100/5">
+                                            <MapPin size={10} className="text-content-subtle" />
+                                            <span className="text-[10px] font-bold text-content-subtle italic">{job.address}</span>
                                         </div>
                                     </div>
                                 </motion.div>
@@ -129,45 +124,43 @@ const VendorHome = () => {
                         </div>
                     </div>
 
-                    {/* Quick Actions & News */}
+                    {/* Quick Actions */}
                     <div className="space-y-6">
                         <div className="space-y-4">
-                            <h3 className="text-[10px] font-black text-content uppercase tracking-[0.2em] italic px-2">Quick Actions</h3>
-                            <div className="grid grid-cols-1 gap-3">
+                            <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-[0.15em] px-1">Quick Actions</h3>
+                            <div className="grid grid-cols-1 gap-2">
                                 {QUICK_ACTIONS.map(action => (
                                     <button
                                         key={action.label}
                                         onClick={() => navigate(action.path)}
-                                        className="w-full bg-white p-4 rounded-2xl border border-gray-100 shadow-soft flex items-center justify-between group hover:border-brand/20 transition-all"
+                                        className="w-full bg-surface p-4 rounded-2xl border border-gray-100/10 shadow-sm flex items-center justify-between group hover:border-brand/20 transition-all"
                                     >
                                         <div className="flex items-center gap-4">
-                                            <div className={`w-10 h-10 ${action.color} rounded-xl flex items-center justify-center text-white shadow-lg shadow-black/5`}>
-                                                <action.icon size={18} />
+                                            <div className={`w-9 h-9 ${action.color} rounded-xl flex items-center justify-center text-white`}>
+                                                <action.icon size={16} />
                                             </div>
-                                            <span className="text-[11px] font-black text-content uppercase tracking-widest italic">{action.label}</span>
+                                            <span className="text-[11px] font-black text-content uppercase tracking-widest">{action.label}</span>
                                         </div>
-                                        <Plus size={16} className="text-content-muted group-hover:rotate-90 transition-transform" />
+                                        <Plus size={14} className="text-content-subtle group-hover:rotate-90 transition-transform" />
                                     </button>
                                 ))}
                             </div>
                         </div>
 
-                        {/* Studio Performance */}
-                        <div className="bg-content rounded-[2rem] p-6 text-white relative overflow-hidden">
+                        {/* Performance Mini-Card */}
+                        <div className="bg-content rounded-3xl p-6 text-white relative overflow-hidden shadow-xl shadow-content/10">
                             <div className="relative z-10">
-                                <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] italic mb-4">Studio Health</h3>
+                                <h3 className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] mb-4">Studio Health</h3>
                                 <div className="flex items-center justify-between mb-4">
                                     <div>
-                                        <p className="text-2xl font-black italic tracking-tighter">98.4<span className="text-brand">%</span></p>
+                                        <p className="text-2xl font-black tracking-tight">98.4<span className="text-brand">%</span></p>
                                         <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mt-1">Consistency Score</p>
                                     </div>
-                                    <div className="w-12 h-12 rounded-full border-4 border-brand border-t-transparent animate-[spin_3s_linear_infinite]" />
                                 </div>
                                 <button className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all">
-                                    View Performance Report
+                                    Performance Report
                                 </button>
                             </div>
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-brand/10 rounded-full blur-3xl opacity-50" />
                         </div>
                     </div>
                 </div>

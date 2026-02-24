@@ -51,7 +51,7 @@ const VendorSignup = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6 lg:py-12 relative overflow-hidden font-sans">
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 lg:py-12 relative overflow-hidden font-sans">
             {/* Background Decorative */}
             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2" />
 
@@ -62,7 +62,7 @@ const VendorSignup = () => {
             >
                 {/* Header */}
                 <div className="flex flex-col items-center text-center mb-10">
-                    <div className="w-16 h-16 bg-content text-white rounded-[2rem] flex items-center justify-center shadow-2xl mb-6">
+                    <div className="w-16 h-16 bg-surface border border-gray-100/10 text-brand rounded-[2rem] flex items-center justify-center shadow-2xl mb-6">
                         <Building2 size={32} />
                     </div>
                     <h1 className="text-3xl font-black text-content italic tracking-tighter uppercase leading-none">Partner <br /><span className="text-brand">Signup</span></h1>
@@ -70,7 +70,7 @@ const VendorSignup = () => {
                 </div>
 
                 {/* Card */}
-                <div className="bg-white rounded-[3rem] p-8 lg:p-10 shadow-soft border border-gray-100">
+                <div className="bg-surface rounded-[3rem] p-8 lg:p-10 shadow-soft border border-gray-100/10">
                     <form onSubmit={handleSignup} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <InputField
@@ -128,7 +128,7 @@ const VendorSignup = () => {
                             <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic flex items-center gap-2 px-1">
                                 <FileText size={14} /> Identity Verification (Aadhar/PAN/GST)
                             </label>
-                            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-200 rounded-[2rem] hover:border-brand/50 hover:bg-brand/5 cursor-pointer bg-gray-50/50 transition-all group">
+                            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-100/10 rounded-[2rem] hover:border-brand/50 hover:bg-brand/5 cursor-pointer bg-background transition-all group shadow-sm">
                                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                     <Camera size={24} className="text-content-subtle group-hover:text-brand mb-2" />
                                     <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest group-hover:text-brand">Upload ID Document</p>
@@ -151,7 +151,7 @@ const VendorSignup = () => {
                                 />
                             </label>
                             {formData.idProof && (
-                                <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-xl border border-green-100">
+                                <div className="flex items-center gap-2 px-3 py-2 bg-green-500/10 rounded-xl border border-green-500/20">
                                     <ShieldCheck size={14} className="text-green-600" />
                                     <span className="text-[9px] font-black text-green-700 uppercase italic">Document Attached Successfully</span>
                                 </div>
@@ -160,7 +160,7 @@ const VendorSignup = () => {
 
                         <button
                             disabled={loading}
-                            className="w-full h-16 bg-content text-white rounded-[1.5rem] font-black uppercase text-xs tracking-[0.2em] shadow-lg shadow-content/20 flex items-center justify-center gap-3 hover:bg-brand transition-all mt-4"
+                            className="w-full h-16 bg-brand text-white rounded-[1.5rem] font-black uppercase text-xs tracking-[0.2em] shadow-lg shadow-brand/20 flex items-center justify-center gap-3 hover:scale-[1.02] transition-all mt-4"
                         >
                             {loading ? (
                                 <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin" />
@@ -179,7 +179,7 @@ const VendorSignup = () => {
                 </div>
 
                 <div className="mt-8 flex justify-center">
-                    <div className="flex items-center gap-3 bg-blue-500/5 px-6 py-4 rounded-3xl border border-blue-500/10">
+                    <div className="flex items-center gap-3 bg-blue-500/5 px-6 py-4 rounded-3xl border border-blue-500/10 shadow-sm shadow-blue-500/5">
                         <ShieldCheck size={20} className="text-blue-500" />
                         <p className="text-[10px] font-bold text-blue-500/70 uppercase tracking-tight">Enterprise Onboarding Protocol</p>
                     </div>
@@ -197,7 +197,7 @@ const InputField = ({ label, icon, ...props }) => (
         <input
             {...props}
             required
-            className="w-full h-14 bg-gray-50 border border-gray-100 rounded-2xl px-6 text-xs font-bold text-content outline-none focus:border-brand transition-all"
+            className="w-full h-14 bg-background border border-gray-100/10 rounded-2xl px-6 text-xs font-bold text-content outline-none focus:border-brand transition-all"
         />
     </div>
 );

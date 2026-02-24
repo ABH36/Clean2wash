@@ -6,9 +6,10 @@ import {
     Wallet, Settings, Bell, Search, Box, LayoutGrid,
     BarChart3, LogOut, ShoppingBag, ChevronRight,
     ShieldCheck, ShieldAlert, Lock, Clock, XCircle,
-    Menu, X
+    Menu, X, Sun, Moon, UserPlus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTheme } from '../../../context/ThemeContext';
 
 const NAV_GROUPS = [
     {
@@ -36,12 +37,19 @@ const NAV_GROUPS = [
             { icon: Settings, label: 'Studio Settings', path: '/vendor/settings' },
         ],
     },
+    {
+        label: 'Team',
+        items: [
+            { icon: UserPlus, label: 'Add Staff', path: '/vendor/staff' },
+        ],
+    },
 ];
 
 const VendorLayout = ({ children, title, subtitle }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { getUser, logout } = useAuth();
+    const { isDarkMode, toggleTheme } = useTheme();
     const user = getUser('vendor') || {};
     const isVerified = user.verificationStatus === 'verified';
     const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
@@ -49,7 +57,7 @@ const VendorLayout = ({ children, title, subtitle }) => {
     const closeDrawer = () => setIsMobileDrawerOpen(false);
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row font-sans">
+        <div className="min-h-screen bg-background flex flex-col md:flex-row font-sans transition-colors duration-500">
 
             {/* ── Mobile Drawer (Overlay) ── */}
             <AnimatePresence>
@@ -214,11 +222,11 @@ const VendorLayout = ({ children, title, subtitle }) => {
             {/* ── Main Content ── */}
             <main className="flex-1 overflow-y-auto relative h-screen">
                 {/* Header */}
-                <header className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+                <header className="bg-surface/80 backdrop-blur-xl border-b border-gray-100/10 px-6 py-4 flex items-center justify-between sticky top-0 z-50 transition-colors duration-500">
                     <div className="flex items-center gap-4">
                         <button
                             onClick={() => setIsMobileDrawerOpen(true)}
-                            className="md:hidden w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-content border border-gray-100"
+                            className="md:hidden w-10 h-10 bg-background rounded-xl flex items-center justify-center text-content border border-gray-100/10"
                         >
                             <Menu size={20} />
                         </button>
@@ -228,7 +236,7 @@ const VendorLayout = ({ children, title, subtitle }) => {
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        <div className="hidden sm:flex items-center bg-gray-50 border border-gray-100 rounded-xl px-3 py-2">
+                        <div className="hidden sm:flex items-center bg-background border border-gray-100/10 rounded-xl px-3 py-2">
                             <Search size={13} className="text-content-subtle" />
                             <input
                                 type="text"
@@ -236,12 +244,21 @@ const VendorLayout = ({ children, title, subtitle }) => {
                                 className="bg-transparent border-none outline-none px-2 text-[11px] font-bold text-content placeholder:text-content-subtle w-36"
                             />
                         </div>
-                        <button className="relative w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 hover:bg-white transition-all">
+
+                        {/* Theme Toggle */}
+                        <button
+                            onClick={toggleTheme}
+                            className="w-9 h-9 bg-background rounded-xl flex items-center justify-center text-content-subtle border border-gray-100/10 hover:text-brand transition-all"
+                        >
+                            {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+                        </button>
+
+                        <button className="relative w-9 h-9 bg-background rounded-xl flex items-center justify-center border border-gray-100/10 hover:bg-surface transition-all">
                             <Bell size={16} className="text-content-muted" />
                             <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-brand rounded-full" />
                         </button>
                         <div
-                            className="w-9 h-9 rounded-xl overflow-hidden border-2 border-gray-100 cursor-pointer hover:border-brand/30 transition-all"
+                            className="w-9 h-9 rounded-xl overflow-hidden border-2 border-gray-100/10 cursor-pointer hover:border-brand/30 transition-all"
                             onClick={() => navigate('/vendor/settings')}
                         >
                             <img
@@ -255,11 +272,11 @@ const VendorLayout = ({ children, title, subtitle }) => {
 
                 <div className="p-4 md:p-8 max-w-7xl mx-auto relative">
                     {!isVerified && location.pathname !== '/vendor/settings' && (
-                        <div className="fixed inset-0 z-[200] backdrop-blur-xl bg-white/40 flex items-center justify-center p-6 text-center">
+                        <div className="fixed inset-0 z-[200] backdrop-blur-xl bg-background/40 flex items-center justify-center p-6 text-center">
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                className="bg-white border border-gray-100 shadow-2xl rounded-[3rem] p-10 max-w-md w-full flex flex-col items-center"
+                                className="bg-surface border border-gray-100/10 shadow-2xl rounded-[3rem] p-10 max-w-md w-full flex flex-col items-center"
                             >
                                 <div className={`w-20 h-20 rounded-[2rem] flex items-center justify-center mb-8 shadow-xl ${user.verificationStatus === 'rejected' ? 'bg-red-500 text-white shadow-red-500/30' : 'bg-brand text-white shadow-brand/30'}`}>
                                     {user.verificationStatus === 'rejected' ? <XCircle size={36} /> : <ShieldAlert size={36} />}
@@ -272,7 +289,7 @@ const VendorLayout = ({ children, title, subtitle }) => {
                                 </p>
 
                                 <div className="grid grid-cols-2 gap-4 w-full">
-                                    <div className="bg-gray-50 p-4 rounded-3xl border border-gray-100">
+                                    <div className="bg-background p-4 rounded-3xl border border-gray-100/10">
                                         <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-1.5">Current Status</p>
                                         <div className="flex items-center gap-2 justify-center">
                                             <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${user.verificationStatus === 'rejected' ? 'bg-red-500' : 'bg-brand'}`} />
@@ -281,7 +298,7 @@ const VendorLayout = ({ children, title, subtitle }) => {
                                             </span>
                                         </div>
                                     </div>
-                                    <div className="bg-gray-50 p-4 rounded-3xl border border-gray-100 flex flex-col justify-center">
+                                    <div className="bg-background p-4 rounded-3xl border border-gray-100/10 flex flex-col justify-center">
                                         <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-1.5">Support Port</p>
                                         <span className="text-[10px] font-black text-content uppercase tracking-tighter italic">VND-OPS-0421</span>
                                     </div>
@@ -289,7 +306,7 @@ const VendorLayout = ({ children, title, subtitle }) => {
 
                                 <button
                                     onClick={() => navigate('/vendor/settings')}
-                                    className="w-full h-14 bg-content text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] mt-8 hover:bg-brand transition-all flex items-center justify-center gap-2"
+                                    className="w-full h-14 bg-brand text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] mt-8 hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-lg shadow-brand/20"
                                 >
                                     Review Documents <Settings size={14} />
                                 </button>

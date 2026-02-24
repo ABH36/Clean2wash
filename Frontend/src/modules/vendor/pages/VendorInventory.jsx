@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import VendorLayout from '../components/VendorLayout';
+import { useAuth } from '../../../context/AuthContext';
 
 // ─── Initial Seed Data ────────────────────────────────────────────────────────
 const INITIAL_INVENTORY = [
@@ -77,17 +78,17 @@ const SupplyDrawer = ({ open, onClose, initial, onSave }) => {
                     />
                     <motion.div
                         initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-                        className="fixed right-0 top-0 h-full bg-white z-[210] shadow-2xl flex flex-col"
+                        className="fixed right-0 top-0 h-full bg-surface z-[210] shadow-2xl flex flex-col border-l border-gray-100/10"
                         style={{ width: 400 }}
                     >
-                        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+                        <div className="px-6 py-5 border-b border-gray-100/10 flex items-center justify-between">
                             <div>
                                 <h2 className="text-base font-black text-content tracking-tight uppercase">
                                     {initial ? 'Edit Supply' : 'Add New Supply'}
                                 </h2>
                                 <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-1 italic">Resource Logging</p>
                             </div>
-                            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-all">
+                            <button onClick={onClose} className="p-2 hover:bg-background rounded-xl transition-all border border-gray-100/10">
                                 <X size={18} className="text-content-muted" />
                             </button>
                         </div>
@@ -98,7 +99,7 @@ const SupplyDrawer = ({ open, onClose, initial, onSave }) => {
                                 <input
                                     type="text" placeholder="e.g. Ultra Foam Shampoo"
                                     value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-                                    className={`w-full h-11 bg-gray-50 border ${errors.name ? 'border-red-400' : 'border-gray-100'} rounded-xl px-4 text-[12px] font-bold outline-none focus:bg-white focus:border-brand transition-all`}
+                                    className={`w-full h-11 bg-background border ${errors.name ? 'border-red-400' : 'border-gray-100/10'} rounded-xl px-4 text-[12px] font-bold outline-none focus:border-brand transition-all text-content`}
                                 />
                             </div>
 
@@ -107,7 +108,7 @@ const SupplyDrawer = ({ open, onClose, initial, onSave }) => {
                                     <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Category</label>
                                     <select
                                         value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}
-                                        className="w-full h-11 bg-gray-50 border border-gray-100 rounded-xl px-4 text-[12px] font-bold outline-none cursor-pointer"
+                                        className="w-full h-11 bg-background border border-gray-100/10 rounded-xl px-4 text-[12px] font-bold outline-none cursor-pointer text-content"
                                     >
                                         {CATEGORIES.map(c => <option key={c}>{c}</option>)}
                                     </select>
@@ -116,7 +117,7 @@ const SupplyDrawer = ({ open, onClose, initial, onSave }) => {
                                     <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Unit Type</label>
                                     <select
                                         value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })}
-                                        className="w-full h-11 bg-gray-50 border border-gray-100 rounded-xl px-4 text-[12px] font-bold outline-none cursor-pointer"
+                                        className="w-full h-11 bg-background border border-gray-100/10 rounded-xl px-4 text-[12px] font-bold outline-none cursor-pointer text-content"
                                     >
                                         {UNITS.map(u => <option key={u}>{u}</option>)}
                                     </select>
@@ -129,7 +130,7 @@ const SupplyDrawer = ({ open, onClose, initial, onSave }) => {
                                     <input
                                         type="number" placeholder="0"
                                         value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })}
-                                        className={`w-full h-11 bg-gray-50 border ${errors.stock ? 'border-red-400' : 'border-gray-100'} rounded-xl px-4 text-[12px] font-bold outline-none`}
+                                        className={`w-full h-11 bg-background border ${errors.stock ? 'border-red-400' : 'border-gray-100/10'} rounded-xl px-4 text-[12px] font-bold outline-none text-content`}
                                     />
                                 </div>
                                 <div className="space-y-1.5">
@@ -137,7 +138,7 @@ const SupplyDrawer = ({ open, onClose, initial, onSave }) => {
                                     <input
                                         type="number" placeholder="5"
                                         value={form.threshold} onChange={e => setForm({ ...form, threshold: e.target.value })}
-                                        className={`w-full h-11 bg-gray-50 border ${errors.threshold ? 'border-red-400' : 'border-gray-100'} rounded-xl px-4 text-[12px] font-bold outline-none`}
+                                        className={`w-full h-11 bg-background border ${errors.threshold ? 'border-red-400' : 'border-gray-100/10'} rounded-xl px-4 text-[12px] font-bold outline-none text-content`}
                                     />
                                 </div>
                             </div>
@@ -149,8 +150,8 @@ const SupplyDrawer = ({ open, onClose, initial, onSave }) => {
                             </div>
                         </form>
 
-                        <div className="p-6 border-t border-gray-100 flex gap-3">
-                            <button onClick={onClose} className="flex-1 h-11 border border-gray-100 rounded-xl text-[10px] font-black uppercase text-content-muted">Cancel</button>
+                        <div className="p-6 border-t border-gray-100/10 flex gap-3">
+                            <button onClick={onClose} className="flex-1 h-11 border border-gray-100/10 rounded-xl text-[10px] font-black uppercase text-content-subtle hover:bg-background transition-all">Cancel</button>
                             <button onClick={handleSubmit} className="flex-[2] h-11 bg-brand text-white rounded-xl text-[10px] font-black uppercase shadow-lg shadow-brand/20">
                                 {initial ? 'Update Supply' : 'Add Supply Item'}
                             </button>
@@ -164,7 +165,10 @@ const SupplyDrawer = ({ open, onClose, initial, onSave }) => {
 
 // ─── Main Inventory Component ───────────────────────────────────────────────────
 const VendorInventory = () => {
-    const [inventory, setInventory] = useState(INITIAL_INVENTORY);
+    const { getUser, updateUser } = useAuth();
+    const vendor = getUser('vendor') || {};
+    const inventory = vendor.inventory || INITIAL_INVENTORY;
+
     const [activeTab, setActiveTab] = useState('All Items');
     const [searchQuery, setSearchQuery] = useState('');
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -178,28 +182,32 @@ const VendorInventory = () => {
 
     // ── CRUD Handlers ──
     const handleSave = (item) => {
+        let updatedInventory;
         if (editTarget) {
-            setInventory(ps => ps.map(p => p.id === item.id ? item : p));
+            updatedInventory = inventory.map(p => p.id === item.id ? item : p);
             showToast('Supply updated successfully');
         } else {
-            setInventory(ps => [item, ...ps]);
+            updatedInventory = [item, ...inventory];
             showToast('New supply logged');
         }
+        updateUser('vendor', vendor.id, { inventory: updatedInventory });
         setDrawerOpen(false);
         setEditTarget(null);
     };
 
     const handleRefill = (id) => {
-        setInventory(ps => ps.map(p => p.id === id ? {
+        const updatedInventory = inventory.map(p => p.id === id ? {
             ...p,
             stock: p.stock + 10,
             status: 'Healthy'
-        } : p));
+        } : p);
+        updateUser('vendor', vendor.id, { inventory: updatedInventory });
         showToast('Inventory Refilled +10');
     };
 
     const handleDelete = (id) => {
-        setInventory(ps => ps.filter(p => p.id !== id));
+        const updatedInventory = inventory.filter(p => p.id !== id);
+        updateUser('vendor', vendor.id, { inventory: updatedInventory });
         showToast('Supply removed from inventory', 'error');
     };
 
@@ -230,12 +238,12 @@ const VendorInventory = () => {
                 {/* Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {stats.map(s => (
-                        <div key={s.label} className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-soft flex items-center justify-between group overflow-hidden relative">
+                        <div key={s.label} className="bg-surface p-6 rounded-[2.5rem] border border-gray-100/10 shadow-soft flex items-center justify-between group overflow-hidden relative">
                             <div className="relative z-10">
-                                <p className="text-[9px] font-black text-content-subtle uppercase tracking-[0.2em] mb-1.5 italic">{s.label}</p>
+                                <p className="text-[9px] font-black text-content-subtle uppercase tracking-[0.2em] mb-1.5 italic font-bold">{s.label}</p>
                                 <h2 className={`text-2xl font-black ${s.color} tracking-tighter italic`}>{s.val}</h2>
                             </div>
-                            <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-content-muted group-hover:bg-brand/5 group-hover:text-brand transition-all relative z-10">
+                            <div className="w-12 h-12 bg-background rounded-2xl flex items-center justify-center text-content-muted group-hover:bg-brand/5 group-hover:text-brand transition-all relative z-10 border border-gray-100/10">
                                 <s.icon size={22} />
                             </div>
                             <div className={`absolute -right-2 -bottom-2 w-16 h-16 ${s.color.replace('text-', 'bg-')} opacity-5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700`} />
@@ -244,11 +252,11 @@ const VendorInventory = () => {
                 </div>
 
                 {/* Filters */}
-                <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-3xl border border-gray-100 shadow-soft">
-                    <div className="flex gap-1.5 bg-gray-100 p-1.5 rounded-2xl w-full md:w-auto">
+                <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-surface p-4 rounded-3xl border border-gray-100/10 shadow-soft">
+                    <div className="flex gap-1.5 bg-background p-1.5 rounded-2xl w-full md:w-auto border border-gray-100/10">
                         {['All Items', 'Cleaning', 'Tools', 'Detailing'].map(t => (
                             <button key={t} onClick={() => setActiveTab(t)}
-                                className={`flex-1 md:flex-none px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === t ? 'bg-white text-brand shadow-sm' : 'text-content-muted hover:text-content'}`}>
+                                className={`flex-1 md:flex-none px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === t ? 'bg-surface text-brand shadow-sm' : 'text-content-subtle hover:text-content'}`}>
                                 {t}
                             </button>
                         ))}
@@ -259,7 +267,7 @@ const VendorInventory = () => {
                             <input
                                 type="text" placeholder="Search stock..."
                                 value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                                className="w-full h-11 bg-gray-100 border-none rounded-2xl pl-10 pr-4 text-[11px] font-bold text-content outline-none focus:ring-2 ring-brand/20 transition-all"
+                                className="w-full h-11 bg-background border border-gray-100/10 rounded-2xl pl-10 pr-4 text-[11px] font-bold text-content outline-none focus:ring-2 ring-brand/20 transition-all font-bold italic"
                             />
                         </div>
                         <motion.button
@@ -278,7 +286,7 @@ const VendorInventory = () => {
                         <motion.div
                             key={item.id}
                             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                            className="bg-white p-7 rounded-[3rem] border border-gray-100 shadow-soft space-y-6 relative overflow-hidden group hover:border-brand/20 transition-all"
+                            className="bg-surface p-7 rounded-[3rem] border border-gray-100/10 shadow-soft space-y-6 relative overflow-hidden group hover:border-brand/20 transition-all"
                         >
                             <div className="flex justify-between items-start">
                                 <div className="space-y-1">
@@ -289,8 +297,8 @@ const VendorInventory = () => {
                                     <h3 className="text-lg font-black text-content tracking-tight">{item.name}</h3>
                                 </div>
                                 <div className="flex gap-2">
-                                    <button onClick={() => { setEditTarget(item); setDrawerOpen(true); }} className="p-2.5 rounded-xl bg-gray-50 text-content-muted hover:bg-brand/10 hover:text-brand transition-all"><Edit2 size={13} /></button>
-                                    <button onClick={() => handleDelete(item.id)} className="p-2.5 rounded-xl bg-gray-50 text-content-muted hover:bg-red-50 hover:text-red-500 transition-all"><Trash2 size={13} /></button>
+                                    <button onClick={() => { setEditTarget(item); setDrawerOpen(true); }} className="p-2.5 rounded-xl bg-background text-content-muted hover:bg-brand/10 hover:text-brand transition-all border border-gray-100/10"><Edit2 size={13} /></button>
+                                    <button onClick={() => handleDelete(item.id)} className="p-2.5 rounded-xl bg-background text-content-muted hover:bg-red-500/10 hover:text-red-500 transition-all border border-gray-100/10"><Trash2 size={13} /></button>
                                 </div>
                             </div>
 
@@ -317,7 +325,7 @@ const VendorInventory = () => {
                                         {item.status}
                                     </span>
                                 </div>
-                                <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden p-[1px]">
+                                <div className="h-2 w-full bg-background rounded-full overflow-hidden p-[1px] border border-gray-100/5">
                                     <motion.div
                                         initial={{ width: 0 }}
                                         animate={{ width: `${Math.min((item.stock / 50) * 100, 100)}%` }}

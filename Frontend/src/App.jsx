@@ -58,6 +58,7 @@ import VendorReports from './modules/vendor/pages/VendorReports';
 import VendorLogin from './modules/vendor/pages/VendorLogin';
 import VendorSignup from './modules/vendor/pages/VendorSignup';
 import VendorProducts from './modules/vendor/pages/VendorProducts';
+import VendorStaff from './modules/vendor/pages/VendorStaff';
 
 
 // ── Staff Module ──
@@ -176,6 +177,7 @@ function App() {
                 <Route path="/vendor/products" element={P('vendor', <VendorProducts />)} />
                 <Route path="/vendor/services" element={P('vendor', <VendorServices />)} />
                 <Route path="/vendor/reports" element={P('vendor', <VendorReports />)} />
+                <Route path="/vendor/staff" element={P('vendor', <VendorStaff />)} />
 
                 {/* ── Staff: Protected ── */}
                 <Route path="/staff" element={P('staff', <StaffDashboard />)} />

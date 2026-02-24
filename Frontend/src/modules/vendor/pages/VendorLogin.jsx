@@ -11,7 +11,6 @@ import {
     ArrowLeft,
     Building2
 } from 'lucide-react';
-
 const VendorLogin = () => {
     const navigate = useNavigate();
     const { login, validateCredentials } = useAuth();
@@ -36,10 +35,10 @@ const VendorLogin = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 relative overflow-hidden">
             {/* Background Decorative */}
-            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2" />
-            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-500/5 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2" />
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2 opacity-50" />
+            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-500/5 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2 opacity-50" />
 
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -48,7 +47,7 @@ const VendorLogin = () => {
             >
                 {/* Logo Section */}
                 <div className="flex flex-col items-center text-center mb-10">
-                    <div className="w-16 h-16 bg-content text-white rounded-[2rem] flex items-center justify-center shadow-2xl mb-6">
+                    <div className="w-16 h-16 bg-surface border border-gray-100/10 text-brand rounded-[2rem] flex items-center justify-center shadow-2xl mb-6">
                         <Building2 size={32} />
                     </div>
                     <h1 className="text-3xl font-black text-content italic tracking-tighter uppercase leading-none">Vendor <br /><span className="text-brand">Workspace</span></h1>
@@ -56,7 +55,7 @@ const VendorLogin = () => {
                 </div>
 
                 {/* Login Card */}
-                <div className="bg-white rounded-[3rem] p-8 lg:p-10 shadow-soft border border-gray-100">
+                <div className="bg-surface rounded-[3rem] p-8 lg:p-10 shadow-soft border border-gray-100/10">
                     <form onSubmit={handleLogin} className="space-y-6">
                         <div className="space-y-4">
                             <div className="space-y-1.5 px-1">
@@ -69,7 +68,7 @@ const VendorLogin = () => {
                                     required
                                     value={email}
                                     onChange={e => setEmail(e.target.value)}
-                                    className="w-full h-14 bg-gray-50 border border-gray-100 rounded-2xl px-6 text-xs font-bold text-content outline-none focus:border-brand transition-all"
+                                    className="w-full h-14 bg-background border border-gray-100/10 rounded-2xl px-6 text-xs font-bold text-content outline-none focus:border-brand transition-all"
                                 />
                             </div>
                             <div className="space-y-1.5 px-1">
@@ -82,12 +81,12 @@ const VendorLogin = () => {
                                     required
                                     value={password}
                                     onChange={e => setPassword(e.target.value)}
-                                    className="w-full h-14 bg-gray-50 border border-gray-100 rounded-2xl px-6 text-xs font-bold text-content outline-none focus:border-brand transition-all"
+                                    className="w-full h-14 bg-background border border-gray-100/10 rounded-2xl px-6 text-xs font-bold text-content outline-none focus:border-brand transition-all"
                                 />
                             </div>
                         </div>
                         {error && (
-                            <p className="text-red-500 text-[10px] font-black uppercase tracking-widest text-center bg-red-50 border border-red-100 rounded-xl px-4 py-2 mt-1">{error}</p>
+                            <p className="text-red-500 text-[10px] font-black uppercase tracking-widest text-center bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2 mt-1">{error}</p>
                         )}
 
                         <div className="flex items-center justify-between px-1">
@@ -100,7 +99,7 @@ const VendorLogin = () => {
 
                         <button
                             disabled={loading}
-                            className="w-full h-16 bg-content text-white rounded-[1.5rem] font-black uppercase text-xs tracking-[0.2em] shadow-lg shadow-content/20 flex items-center justify-center gap-3 hover:bg-brand transition-all relative overflow-hidden group"
+                            className="w-full h-16 bg-brand text-white rounded-[1.5rem] font-black uppercase text-xs tracking-[0.2em] shadow-lg shadow-brand/20 flex items-center justify-center gap-3 hover:scale-[1.02] transition-all relative overflow-hidden group"
                         >
                             {loading ? (
                                 <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin" />
@@ -128,7 +127,7 @@ const VendorLogin = () => {
                         <ArrowLeft size={14} /> Back to Consumer Port
                     </button>
 
-                    <div className="flex items-center gap-3 bg-blue-500/5 px-6 py-4 rounded-3xl border border-blue-500/10">
+                    <div className="flex items-center gap-3 bg-blue-500/5 px-6 py-4 rounded-3xl border border-blue-500/10 shadow-sm shadow-blue-500/5">
                         <ShieldCheck size={20} className="text-blue-500" />
                         <p className="text-[10px] font-bold text-blue-500/70 uppercase tracking-tight">Enterprise SSL Encryption Active</p>
                     </div>

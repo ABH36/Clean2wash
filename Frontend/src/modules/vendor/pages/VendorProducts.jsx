@@ -1,12 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     ShoppingBag, Search, Plus, Trash2, Edit2,
     X, Check, Package, Grid, List as ListIcon,
     Tag, DollarSign, AlertTriangle, ImageIcon,
-    Star, ChevronDown, Upload
+    Star, ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import VendorLayout from '../components/VendorLayout';
+import { useAuth } from '../../../context/AuthContext';
 
 // ─── Initial seed data ───────────────────────────────────────────────────────
 const SEED = [
@@ -42,7 +43,7 @@ const SEED = [
     },
 ];
 
-const CATEGORIES = ['Electronics', 'Accessories', 'Cleaning'];
+const CATEGORIES = ['Electronics', 'Accessories', 'Cleaning', 'Enhancement'];
 const BADGES = ['', 'Bestseller', 'Top Rated', 'Popular', 'New', 'Sale'];
 
 const emptyForm = {
@@ -104,7 +105,7 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
     );
 
     const inputCls = (err) =>
-        `w-full h-10 bg-gray-50 border rounded-xl px-3 text-[12px] font-bold text-content outline-none transition-all focus:border-brand/50 focus:bg-white ${err ? 'border-red-300' : 'border-gray-200'}`;
+        `w-full h-10 bg-background border rounded-xl px-3 text-[12px] font-bold text-content outline-none transition-all focus:border-brand/50 ${err ? 'border-red-300' : 'border-gray-100/10'}`;
 
     return (
         <AnimatePresence>
@@ -121,11 +122,11 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
                     <motion.div
                         initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
                         transition={{ type: 'spring', stiffness: 340, damping: 32 }}
-                        className="fixed right-0 top-0 h-full z-[210] bg-white shadow-2xl flex flex-col"
+                        className="fixed right-0 top-0 h-full z-[210] bg-surface shadow-2xl flex flex-col border-l border-gray-100/10"
                         style={{ width: 420 }}
                     >
                         {/* Header */}
-                        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+                        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100/10">
                             <div>
                                 <h2 className="text-base font-black text-content tracking-tight">
                                     {isEdit ? 'Edit Product' : 'Add New Product'}
@@ -134,7 +135,7 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
                                     {isEdit ? `Editing: ${initial?.id}` : 'Fill in the product details below'}
                                 </p>
                             </div>
-                            <button onClick={onClose} className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center text-content-muted hover:bg-gray-100 transition-all">
+                            <button onClick={onClose} className="w-9 h-9 rounded-xl bg-background border border-gray-100/10 flex items-center justify-center text-content-muted hover:text-brand transition-all">
                                 <X size={18} />
                             </button>
                         </div>
@@ -143,7 +144,7 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
                         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4" style={{ scrollbarWidth: 'none' }}>
 
                             {/* Image preview */}
-                            <div className="relative h-44 bg-gray-50 border border-gray-200 rounded-2xl overflow-hidden flex items-center justify-center">
+                            <div className="relative h-44 bg-background border border-gray-100/10 rounded-2xl overflow-hidden flex items-center justify-center">
                                 {form.image && !imgError ? (
                                     <img
                                         src={form.image} alt="Preview"
@@ -187,7 +188,7 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
                                     value={form.description}
                                     onChange={e => set('description', e.target.value)}
                                     rows={2}
-                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-[12px] font-bold text-content outline-none transition-all focus:border-brand/50 focus:bg-white resize-none"
+                                    className="w-full bg-background border border-gray-100/10 rounded-xl px-3 py-2.5 text-[12px] font-bold text-content outline-none transition-all focus:border-brand/50 resize-none"
                                 />
                             </Field>
 
@@ -249,9 +250,9 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
 
                             {/* Discount preview */}
                             {form.price && form.salePrice && Number(form.salePrice) < Number(form.price) && (
-                                <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-2 flex items-center gap-2">
-                                    <Check size={13} className="text-green-600" strokeWidth={3} />
-                                    <p className="text-[11px] font-black text-green-700">
+                                <div className="bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-2 flex items-center gap-2">
+                                    <Check size={13} className="text-green-500" strokeWidth={3} />
+                                    <p className="text-[11px] font-black text-green-500">
                                         {Math.round(((form.price - form.salePrice) / form.price) * 100)}% discount applied
                                     </p>
                                 </div>
@@ -284,10 +285,10 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
                         </div>
 
                         {/* Footer */}
-                        <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
+                        <div className="px-6 py-4 border-t border-gray-100/10 flex gap-3">
                             <button
                                 onClick={onClose}
-                                className="flex-1 h-11 border border-gray-200 rounded-xl text-[11px] font-black text-content-muted tracking-widest uppercase hover:bg-gray-50 transition-all"
+                                className="flex-1 h-11 border border-gray-100/10 rounded-xl text-[11px] font-black text-content-muted tracking-widest uppercase hover:bg-background transition-all"
                             >
                                 Cancel
                             </button>
@@ -313,7 +314,7 @@ const DeleteConfirm = ({ onConfirm, onCancel }) => (
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
-        className="absolute inset-0 bg-white/95 backdrop-blur-sm rounded-[2.5rem] z-10 flex flex-col items-center justify-center gap-3 p-6"
+        className="absolute inset-0 bg-surface/95 backdrop-blur-sm rounded-[2.5rem] z-10 flex flex-col items-center justify-center gap-3 p-6"
     >
         <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center">
             <AlertTriangle size={22} className="text-red-500" />
@@ -321,56 +322,54 @@ const DeleteConfirm = ({ onConfirm, onCancel }) => (
         <p className="text-sm font-black text-content text-center">Delete product?</p>
         <p className="text-[10px] font-bold text-content-subtle text-center">This action cannot be undone.</p>
         <div className="flex gap-2 w-full mt-1">
-            <button onClick={onCancel} className="flex-1 py-2 border border-gray-200 rounded-xl text-[10px] font-black text-content-muted uppercase tracking-widest">Keep</button>
+            <button onClick={onCancel} className="flex-1 py-2 border border-gray-100/10 rounded-xl text-[10px] font-black text-content-muted uppercase tracking-widest hover:bg-background transition-all">Keep</button>
             <button onClick={onConfirm} className="flex-1 py-2 bg-red-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Delete</button>
         </div>
     </motion.div>
 );
 
 // ─── Grid Card ────────────────────────────────────────────────────────────────
-const ProductGridCard = ({ product, index, onEdit, onDelete }) => {
+const ProductCard = ({ p, onEdit, onDelete }) => {
     const [confirmDelete, setConfirmDelete] = useState(false);
     return (
         <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.04 }}
-            className="bg-white group rounded-[2.5rem] border border-gray-100 shadow-soft overflow-hidden flex flex-col hover:border-brand/20 transition-all relative"
+            layout
+            className="bg-surface group rounded-[2.5rem] border border-gray-100/10 shadow-soft overflow-hidden flex flex-col hover:border-brand/20 transition-all relative"
         >
             <AnimatePresence>
                 {confirmDelete && (
                     <DeleteConfirm
-                        onConfirm={() => onDelete(product.id)}
+                        onConfirm={() => onDelete(p.id)}
                         onCancel={() => setConfirmDelete(false)}
                     />
                 )}
             </AnimatePresence>
 
             <div className="relative h-48 overflow-hidden">
-                <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                 <div className="absolute top-3 right-3 flex flex-col gap-2">
                     <button
-                        onClick={() => onEdit(product)}
-                        className="p-2 bg-white/90 backdrop-blur-md rounded-xl text-content-muted hover:text-brand shadow-sm transition-colors"
+                        onClick={() => onEdit(p)}
+                        className="p-2 bg-surface/90 backdrop-blur-md border border-gray-100/10 rounded-xl text-content-muted hover:text-brand shadow-sm transition-colors"
                     >
                         <Edit2 size={13} />
                     </button>
                     <button
                         onClick={() => setConfirmDelete(true)}
-                        className="p-2 bg-white/90 backdrop-blur-md rounded-xl text-content-muted hover:text-red-500 shadow-sm transition-colors"
+                        className="p-2 bg-surface/90 backdrop-blur-md border border-gray-100/10 rounded-xl text-content-muted hover:text-red-500 shadow-sm transition-colors"
                     >
                         <Trash2 size={13} />
                     </button>
                 </div>
-                {product.stock === 0 && (
+                {p.stock === 0 && (
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
                         <span className="bg-red-500 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl">Out of Stock</span>
                     </div>
                 )}
-                {product.badge && (
+                {p.badge && (
                     <div className="absolute top-3 left-3">
-                        <span className="bg-white/90 backdrop-blur-sm text-[8px] font-black uppercase tracking-wider text-content px-2 py-1 rounded-lg border border-gray-200">
-                            {product.badge}
+                        <span className="bg-surface/90 backdrop-blur-sm text-[8px] font-black uppercase tracking-wider text-content px-2 py-1 rounded-lg border border-gray-100/10">
+                            {p.badge}
                         </span>
                     </div>
                 )}
@@ -379,27 +378,27 @@ const ProductGridCard = ({ product, index, onEdit, onDelete }) => {
             <div className="p-5 flex flex-col flex-1">
                 <div className="flex justify-between items-start mb-3">
                     <div>
-                        <span className="text-[9px] font-black text-brand uppercase tracking-[0.2em]">{product.category}</span>
-                        <h4 className="text-[13px] font-black text-content tracking-tight mt-0.5 group-hover:text-brand transition-colors line-clamp-1">{product.name}</h4>
+                        <span className="text-[9px] font-black text-brand uppercase tracking-[0.2em]">{p.category}</span>
+                        <h4 className="text-[13px] font-black text-content tracking-tight mt-0.5 group-hover:text-brand transition-colors line-clamp-1">{p.name}</h4>
                     </div>
                     <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg flex-shrink-0">
                         <Star size={9} className="text-yellow-500" fill="currentColor" />
-                        <span className="text-[10px] font-black text-yellow-700">{product.rating}</span>
+                        <span className="text-[10px] font-black text-yellow-700">{p.rating}</span>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3 mt-auto pt-4 border-t border-gray-50 font-black italic">
+                <div className="flex items-center gap-3 mt-auto pt-4 border-t border-gray-100/10 font-black italic">
                     <div className="flex-1">
                         <p className="text-[9px] text-content-subtle uppercase tracking-widest leading-none mb-1">Stock</p>
-                        <p className={`text-lg transition-colors ${product.stock < 10 ? 'text-amber-500' : 'text-content'}`}>
-                            {product.stock} <span className="text-[10px] uppercase font-black not-italic opacity-40">units</span>
+                        <p className={`text-lg transition-colors ${p.stock < 10 ? 'text-amber-500' : 'text-content'}`}>
+                            {p.stock} <span className="text-[10px] uppercase font-black not-italic opacity-40">units</span>
                         </p>
                     </div>
                     <div className="text-right">
                         <p className="text-[9px] text-content-subtle uppercase tracking-widest leading-none mb-1">Price</p>
                         <p className="text-lg text-brand tracking-tighter">
-                            ₹{product.salePrice.toLocaleString()}
-                            <span className="text-[10px] text-content-subtle line-through ml-1.5 opacity-50 not-italic">₹{product.price.toLocaleString()}</span>
+                            ₹{p.salePrice.toLocaleString()}
+                            <span className="text-[10px] text-content-subtle line-through ml-1.5 opacity-50 not-italic">₹{p.price.toLocaleString()}</span>
                         </p>
                     </div>
                 </div>
@@ -409,72 +408,53 @@ const ProductGridCard = ({ product, index, onEdit, onDelete }) => {
 };
 
 // ─── List Row ─────────────────────────────────────────────────────────────────
-const ProductListRow = ({ product, onEdit, onDelete }) => {
+const ProductRow = ({ p, onEdit, onDelete }) => {
     const [confirmDelete, setConfirmDelete] = useState(false);
     return (
-        <tr className="group hover:bg-gray-50 transition-colors relative">
-            <td className="px-6 py-4">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
-                        <img src={product.image} alt="" className="w-full h-full object-cover" />
-                    </div>
-                    <div>
-                        <p className="text-sm font-black text-content tracking-tight group-hover:text-brand transition-colors">{product.name}</p>
-                        <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest">{product.id}</p>
-                    </div>
-                </div>
-            </td>
-            <td className="px-6 py-4">
-                <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-gray-100 text-content-muted text-[10px] font-black uppercase tracking-widest">
-                    {product.category}
+        <motion.div layout className="bg-surface p-4 rounded-3xl border border-gray-100/10 shadow-soft flex items-center gap-6 group hover:border-brand/20 transition-all">
+            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-background border border-gray-100/10 flex-shrink-0">
+                <img src={p.image} alt="" className="w-full h-full object-cover" />
+            </div>
+            <div className="flex-1">
+                <span className="text-[8px] font-black text-brand uppercase tracking-widest italic leading-none mb-1 block">{p.category}</span>
+                <h4 className="text-sm font-black text-content tracking-tight">{p.name}</h4>
+            </div>
+            <div className="w-32">
+                <p className="text-[9px] font-bold text-content-subtle uppercase tracking-widest italic mb-0.5 leading-none">Price</p>
+                <p className="text-base font-black italic tracking-tighter text-content">₹{p.salePrice}</p>
+            </div>
+            <div className="w-32">
+                <p className="text-[9px] font-bold text-content-subtle uppercase tracking-widest italic mb-0.5 leading-none">Status</p>
+                <span className={`text-[10px] font-black uppercase tracking-widest ${p.stock > 10 ? 'text-green-500' : p.stock > 0 ? 'text-amber-500' : 'text-red-500'}`}>
+                    {p.stock > 10 ? 'In Stock' : p.stock > 0 ? `Low (${p.stock})` : 'Sold Out'}
                 </span>
-            </td>
-            <td className="px-6 py-4">
-                <p className={`text-sm font-black italic tracking-tighter ${product.stock < 10 ? 'text-amber-500' : 'text-content'}`}>
-                    {product.stock} Units
-                </p>
-                <div className="w-20 h-1 bg-gray-100 rounded-full mt-1.5 overflow-hidden">
-                    <div
-                        className={`h-full rounded-full ${product.stock < 10 ? 'bg-amber-500' : 'bg-brand'}`}
-                        style={{ width: `${Math.min(product.stock, 100)}%` }}
+            </div>
+            <div className="flex gap-2">
+                <button onClick={() => onEdit(p)} className="w-10 h-10 bg-background border border-gray-100/10 rounded-xl flex items-center justify-center text-content-muted hover:text-brand transition-all font-bold">
+                    <Edit2 size={16} />
+                </button>
+                <button onClick={() => setConfirmDelete(true)} className="w-10 h-10 bg-background border border-gray-100/10 rounded-xl flex items-center justify-center text-content-muted hover:text-red-500 transition-all font-bold">
+                    <Trash2 size={16} />
+                </button>
+            </div>
+            <AnimatePresence>
+                {confirmDelete && (
+                    <DeleteConfirm
+                        onConfirm={() => onDelete(p.id)}
+                        onCancel={() => setConfirmDelete(false)}
                     />
-                </div>
-            </td>
-            <td className="px-6 py-4">
-                <p className="text-sm font-black italic text-brand tracking-tight">₹{product.salePrice.toLocaleString()}</p>
-                <p className="text-[10px] font-bold text-content-subtle line-through opacity-50">₹{product.price.toLocaleString()}</p>
-            </td>
-            <td className="px-6 py-4 text-right">
-                {confirmDelete ? (
-                    <div className="flex items-center justify-end gap-2">
-                        <span className="text-[10px] font-bold text-red-500 mr-1">Delete?</span>
-                        <button onClick={() => onDelete(product.id)} className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-[10px] font-black uppercase">Yes</button>
-                        <button onClick={() => setConfirmDelete(false)} className="px-3 py-1.5 border border-gray-200 rounded-lg text-[10px] font-black text-content-muted uppercase">No</button>
-                    </div>
-                ) : (
-                    <div className="flex items-center justify-end gap-2">
-                        <button
-                            onClick={() => onEdit(product)}
-                            className="w-8 h-8 rounded-lg bg-white border border-gray-100 flex items-center justify-center text-content-subtle hover:text-brand hover:border-brand/20 transition-all"
-                        >
-                            <Edit2 size={13} />
-                        </button>
-                        <button
-                            onClick={() => setConfirmDelete(true)}
-                            className="w-8 h-8 rounded-lg bg-white border border-gray-100 flex items-center justify-center text-content-subtle hover:text-red-500 hover:border-red-200 transition-all"
-                        >
-                            <Trash2 size={13} />
-                        </button>
-                    </div>
                 )}
-            </td>
-        </tr>
+            </AnimatePresence>
+        </motion.div>
     );
 };
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 const VendorProducts = () => {
-    const [products, setProducts] = useState(SEED);
+    const { getUser, updateUser } = useAuth();
+    const vendor = getUser('vendor') || {};
+    const products = vendor.products || SEED;
+
     const [viewMode, setViewMode] = useState('grid');
     const [activeTab, setActiveTab] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
@@ -489,46 +469,41 @@ const VendorProducts = () => {
 
     // ── CRUD ──
     const handleSave = (data) => {
+        let updatedProducts;
         if (editTarget) {
             // Edit
-            setProducts(ps => ps.map(p => p.id === editTarget.id ? { ...data, id: editTarget.id } : p));
+            updatedProducts = products.map(p => p.id === editTarget.id ? { ...data, id: editTarget.id } : p);
             showToast('Product updated successfully');
         } else {
             // Add — generate new ID
             const newId = `P${String(products.length + 1).padStart(3, '0')}`;
-            setProducts(ps => [{ ...data, id: newId }, ...ps]);
+            updatedProducts = [{ ...data, id: newId }, ...products];
             showToast('Product added successfully');
         }
+        updateUser('vendor', vendor.id, { products: updatedProducts });
         setDrawerOpen(false);
         setEditTarget(null);
     };
 
-    const handleEdit = (product) => {
-        setEditTarget(product);
-        setDrawerOpen(true);
-    };
-
-    const handleAdd = () => {
-        setEditTarget(null);
-        setDrawerOpen(true);
-    };
-
     const handleDelete = (id) => {
-        setProducts(ps => ps.filter(p => p.id !== id));
+        const updatedProducts = products.filter(p => p.id !== id);
+        updateUser('vendor', vendor.id, { products: updatedProducts });
         showToast('Product deleted', 'error');
     };
 
-    const filtered = products.filter(p =>
-        (activeTab === 'All' || p.category === activeTab) &&
-        p.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filtered = useMemo(() => {
+        return products.filter(p =>
+            (activeTab === 'All' || p.category === activeTab) &&
+            p.name.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [products, activeTab, searchQuery]);
 
     const outOfStock = products.filter(p => p.stock === 0).length;
     const lowStock = products.filter(p => p.stock > 0 && p.stock < 10).length;
-    const totalRevenue = products.reduce((s, p) => s + p.salePrice * Math.max(p.stock, 1), 0);
+    const totalRevenue = products.reduce((s, p) => s + p.salePrice * Math.max(p.stock, 0), 0);
 
     return (
-        <VendorLayout title="Product Management" subtitle="Manage your shop items & accessories">
+        <VendorLayout title="Tactical Shop" subtitle="Manage your studio inventory & products">
 
             {/* Drawer */}
             <ProductDrawer
@@ -547,29 +522,29 @@ const VendorProducts = () => {
                 {/* Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
-                        { label: 'Total Products', val: products.length, icon: ShoppingBag, color: 'text-blue-500' },
-                        { label: 'Low Stock', val: String(lowStock).padStart(2, '0'), icon: Package, color: 'text-amber-500' },
-                        { label: 'Out of Stock', val: String(outOfStock).padStart(2, '0'), icon: Trash2, color: 'text-red-500' },
-                        { label: 'Catalogue Value', val: `₹${(totalRevenue / 100000).toFixed(1)}L`, icon: DollarSign, color: 'text-green-500' },
+                        { label: 'Total Stock', val: products.length, icon: ShoppingBag, color: 'text-blue-500' },
+                        { label: 'Low Alert', val: String(lowStock).padStart(2, '0'), icon: Package, color: 'text-amber-500' },
+                        { label: 'Out of Registry', val: String(outOfStock).padStart(2, '0'), icon: Trash2, color: 'text-red-500' },
+                        { label: 'Total Value', val: `₹${(totalRevenue / 1000).toFixed(1)}k`, icon: DollarSign, color: 'text-green-500' },
                     ].map(s => (
-                        <div key={s.label} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-soft flex items-center justify-between">
+                        <div key={s.label} className="bg-surface p-5 rounded-3xl border border-gray-100/10 shadow-soft flex items-center justify-between transition-all hover:scale-105">
                             <div>
-                                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest">{s.label}</p>
-                                <h3 className={`text-xl font-black ${s.color} mt-1`}>{s.val}</h3>
+                                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-none mb-2 font-bold">{s.label}</p>
+                                <h3 className={`text-xl font-black ${s.color}`}>{s.val}</h3>
                             </div>
-                            <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-content-muted">
-                                <s.icon size={18} />
+                            <div className="w-10 h-10 bg-background border border-gray-100/10 rounded-xl flex items-center justify-center text-content-muted">
+                                <s.icon size={18} strokeWidth={2.5} />
                             </div>
                         </div>
                     ))}
                 </div>
 
                 {/* Controls */}
-                <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-3xl border border-gray-100 shadow-soft">
-                    <div className="flex gap-2 bg-gray-50 p-1 rounded-2xl">
-                        {['All', 'Electronics', 'Accessories', 'Cleaning'].map(t => (
+                <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-surface p-4 rounded-3xl border border-gray-100/10 shadow-soft">
+                    <div className="flex gap-2 bg-background p-1 rounded-2xl border border-gray-100/10 overflow-x-auto max-w-full no-scrollbar">
+                        {['All', ...CATEGORIES].map(t => (
                             <button key={t} onClick={() => setActiveTab(t)}
-                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === t ? 'bg-white text-brand shadow-sm' : 'text-content-muted hover:text-content'}`}>
+                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === t ? 'bg-surface text-brand shadow-sm' : 'text-content-subtle hover:text-content'}`}>
                                 {t}
                             </button>
                         ))}
@@ -579,22 +554,22 @@ const VendorProducts = () => {
                         <div className="relative flex-1 md:w-56">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-content-subtle" size={14} />
                             <input
-                                type="text" placeholder="Search products..."
+                                type="text" placeholder="Search weapons..."
                                 value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                                className="w-full h-10 bg-gray-50 border-none rounded-xl pl-10 pr-4 text-[11px] font-bold text-content outline-none focus:ring-2 ring-brand/20 transition-all"
+                                className="w-full h-10 bg-background border border-gray-100/10 rounded-xl pl-10 pr-4 text-[11px] font-black text-content outline-none focus:ring-2 ring-brand/20 transition-all font-bold italic"
                             />
                         </div>
-                        <div className="flex bg-gray-50 p-1 rounded-xl">
-                            <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white text-brand shadow-sm' : 'text-content-muted'}`}>
+                        <div className="flex bg-background border border-gray-100/10 p-1 rounded-xl">
+                            <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-surface text-brand shadow-sm' : 'text-content-muted'}`}>
                                 <Grid size={16} />
                             </button>
-                            <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white text-brand shadow-sm' : 'text-content-muted'}`}>
+                            <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-surface text-brand shadow-sm' : 'text-content-muted'}`}>
                                 <ListIcon size={16} />
                             </button>
                         </div>
                         <motion.button
                             whileTap={{ scale: 0.97 }}
-                            onClick={handleAdd}
+                            onClick={() => { setEditTarget(null); setDrawerOpen(true); }}
                             className="h-10 px-5 bg-brand text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand/20 flex items-center gap-2 hover:-translate-y-0.5 transition-all"
                         >
                             <Plus size={15} strokeWidth={3} /> Add Product
@@ -604,48 +579,32 @@ const VendorProducts = () => {
 
                 {/* Empty state */}
                 {filtered.length === 0 && (
-                    <div className="bg-white rounded-3xl border border-gray-100 p-16 flex flex-col items-center gap-4">
-                        <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center">
-                            <Package size={28} className="text-content-muted" />
+                    <div className="bg-surface rounded-3xl border border-dashed border-gray-100/20 p-20 flex flex-col items-center gap-4 text-center">
+                        <div className="w-16 h-16 bg-background rounded-2xl flex items-center justify-center border border-gray-100/10">
+                            <Package size={32} className="text-content-subtle/20" />
                         </div>
-                        <p className="text-base font-black text-content">No products found</p>
-                        <p className="text-[11px] font-bold text-content-subtle">Try a different filter or add a new product</p>
-                        <button onClick={handleAdd} className="mt-2 h-10 px-6 bg-brand text-white rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
-                            <Plus size={14} /> Add Product
-                        </button>
+                        <h3 className="text-base font-black text-content italic uppercase tracking-tighter">No items found</h3>
+                        <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest">Adjust filters or add a new package to the shop</p>
                     </div>
                 )}
 
                 {/* Products */}
-                <AnimatePresence mode="wait">
+                <AnimatePresence mode="popLayout">
                     {filtered.length > 0 && viewMode === 'grid' ? (
                         <motion.div key="grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {filtered.map((p, i) => (
-                                <ProductGridCard key={p.id} product={p} index={i}
-                                    onEdit={handleEdit} onDelete={handleDelete} />
+                            {filtered.map((p) => (
+                                <ProductCard key={p.id} p={p}
+                                    onEdit={() => { setEditTarget(p); setDrawerOpen(true); }} onDelete={() => handleDelete(p.id)} />
                             ))}
                         </motion.div>
                     ) : filtered.length > 0 ? (
                         <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="bg-white rounded-3xl border border-gray-100 shadow-soft overflow-hidden">
-                            <table className="w-full text-left">
-                                <thead className="bg-gray-50 border-b border-gray-100">
-                                    <tr className="text-[10px] font-black text-content-subtle uppercase tracking-widest">
-                                        <th className="px-6 py-4">Product</th>
-                                        <th className="px-6 py-4">Category</th>
-                                        <th className="px-6 py-4">Stock</th>
-                                        <th className="px-6 py-4">Price</th>
-                                        <th className="px-6 py-4 text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {filtered.map(p => (
-                                        <ProductListRow key={p.id} product={p}
-                                            onEdit={handleEdit} onDelete={handleDelete} />
-                                    ))}
-                                </tbody>
-                            </table>
+                            className="space-y-4">
+                            {filtered.map(p => (
+                                <ProductRow key={p.id} p={p}
+                                    onEdit={() => { setEditTarget(p); setDrawerOpen(true); }} onDelete={() => handleDelete(p.id)} />
+                            ))}
                         </motion.div>
                     ) : null}
                 </AnimatePresence>

@@ -3,7 +3,7 @@
 :root {
   --brand: #FF6B00;
   --brand-light: #FF8533;
-  --brand-dark: #cc5600;
+  --brand-dark: #CC5600;
   --brand-rgb: 255, 107, 0;
 
   --bg-main: #F8FAFC;
@@ -47,9 +47,10 @@
   --radius-card: 2.5rem;
   --radius-button: 1.25rem;
 
-  --shadow-premium: 0 20px 50px -12px rgba(255, 107, 0, 0.15);
-  --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.04);
-  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+  --shadow-premium: 0 12px 40px -8px rgba(0, 0, 0, 0.08);
+  --shadow-premium-color: 0 12px 40px -8px rgba(255, 107, 0, 0.2);
+  --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.03);
+  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
 }
 
 @layer base {
@@ -62,7 +63,7 @@
 
 @layer components {
   .mobile-container {
-    @apply max-w-md mx-auto min-h-screen relative flex flex-col;
+    @apply max-w-[430px] mx-auto min-h-screen relative flex flex-col bg-white overflow-x-hidden shadow-[0_0_100px_rgba(0, 0, 0, 0.05)];
   }
 
   .safe-area-bottom {

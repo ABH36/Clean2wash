@@ -1,129 +1,131 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-import {
-    User, Settings, LogOut, ChevronRight, CreditCard, MapPin,
-    Bell, ShieldCheck, Smartphone, Zap, History,
-    HelpCircle, Share2, Award, Star, Car
-} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import MobileLayout from '../components/layout/MobileLayout';
+import {
+    User, Car, MapPin, Gift, ChevronRight,
+    ArrowLeft, ShieldCheck, Heart, Settings,
+    LogOut, MoreHorizontal, Wallet
+} from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 
 const Profile = () => {
     const navigate = useNavigate();
-    const { getUser, logout } = useAuth();
-    const user = getUser('consumer') || { name: 'User' };
+    const { logout, getUser } = useAuth();
+    const user = getUser('consumer');
 
-    const handleLogout = () => {
-        logout('consumer');
-        navigate('/login');
+    const menuItems = [
+        { label: 'My Bookings', icon: Car, path: '/bookings', color: 'blue' },
+        { label: 'Saved Vehicles', icon: Car, path: '/vehicles', color: 'orange' },
+        { label: 'Saved Addresses', icon: MapPin, path: '/addresses', color: 'green' },
+        { label: 'Wallet & Rewards', icon: Wallet, path: '/wallet', color: 'purple' },
+        { label: 'Refer & Earn', icon: Gift, path: '/refer', color: 'brand' },
+        { label: 'Help & Support', icon: Settings, path: '/help', color: 'gray' },
+    ];
+
+    const getColorClass = (color) => {
+        const classes = {
+            blue: 'bg-blue-50 text-blue-500',
+            orange: 'bg-orange-50 text-orange-500',
+            green: 'bg-green-50 text-green-500',
+            purple: 'bg-purple-50 text-purple-500',
+            brand: 'bg-brand/10 text-brand',
+            gray: 'bg-gray-50 text-gray-500',
+        };
+        return classes[color] || classes.gray;
     };
 
     return (
-        <MobileLayout>
-            {/* ── Header ── */}
-            <header className="px-4 pt-10 pb-4 bg-white sticky top-0 z-50 border-b border-gray-100">
-                <div className="flex justify-between items-center mb-5">
-                    <h1 className="text-xl font-black tracking-tight text-content">My <span className="text-brand">Account</span></h1>
-                    <div className="flex gap-2">
-                        <button onClick={() => navigate('/notifications')} className="w-9 h-9 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-content-muted">
-                            <Bell size={18} strokeWidth={2.5} />
-                        </button>
-                        <button className="w-9 h-9 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-content-muted">
-                            <Settings size={18} strokeWidth={2.5} />
-                        </button>
-                    </div>
-                </div>
-
-                {/* User row */}
-                <div className="flex items-center gap-4">
-                    <div className="relative">
-                        <div className="w-16 h-16 rounded-2xl bg-brand p-0.5 shadow-md">
-                            <div className="w-full h-full rounded-[14px] bg-white flex items-center justify-center">
-                                <User size={28} className="text-brand" />
-                            </div>
-                        </div>
-                        <div className="absolute -bottom-1 -right-1 bg-accent-yellow p-1 rounded-lg shadow border border-white">
-                            <Award size={12} fill="currentColor" strokeWidth={2} className="text-black" />
-                        </div>
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-black tracking-tight text-content leading-none mb-0.5">{user.name}</h2>
-                        <p className="text-[9px] font-black text-brand uppercase tracking-widest mb-2">CarWash Elite Member</p>
-                        <div className="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100">
-                            <Star size={10} className="text-yellow-500" fill="currentColor" />
-                            <span className="text-[9px] font-black uppercase tracking-wider text-content-muted">4.8 Rating</span>
-                        </div>
-                    </div>
-                </div>
+        <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans">
+            {/* Header */}
+            <header className="px-6 pt-12 pb-6 flex items-center justify-between bg-white border-b border-gray-100">
+                <button onClick={() => navigate(-1)}
+                    className="w-11 h-11 bg-gray-50 rounded-2xl flex items-center justify-center border border-gray-100">
+                    <ArrowLeft size={20} className="text-content" strokeWidth={2.5} />
+                </button>
+                <h1 className="text-lg font-black text-content tracking-tight">Account Profile</h1>
+                <button className="w-11 h-11 bg-gray-50 rounded-2xl flex items-center justify-center border border-gray-100 text-content-muted">
+                    <MoreHorizontal size={20} />
+                </button>
             </header>
 
-            <div className="px-4 py-4 space-y-4 pb-24">
+            <div className="flex-1 px-6 py-8">
+                {/* User Info Card */}
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-white p-6 rounded-[2.5rem] shadow-soft border border-gray-100 flex flex-col items-center mb-10"
+                >
+                    <div className="w-24 h-24 bg-brand/10 rounded-[2.5rem] flex items-center justify-center border-4 border-[#FAFAFA] shadow-xl mb-4 relative overflow-hidden group">
+                        <User size={40} className="text-brand" strokeWidth={2.5} />
+                        <div className="absolute inset-0 bg-brand/5 group-hover:bg-brand/10 transition-colors" />
+                    </div>
 
+                    <h2 className="text-2xl font-black text-content italic tracking-tight">{user?.name || 'Aryan Pathak'}</h2>
+                    <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] mt-1">{user?.phone || '+91 98765 43210'}</p>
 
+                    <div className="flex gap-4 mt-6">
+                        <div className="flex flex-col items-center">
+                            <span className="text-lg font-black text-content">12</span>
+                            <span className="text-[9px] font-black text-content-subtle uppercase">Washes</span>
+                        </div>
+                        <div className="w-px h-8 bg-gray-100" />
+                        <div className="flex flex-col items-center">
+                            <span className="text-lg font-black text-content tracking-tight">₹2,450</span>
+                            <span className="text-[9px] font-black text-content-subtle uppercase tracking-widest">Saved</span>
+                        </div>
+                        <div className="w-px h-8 bg-gray-100" />
+                        <div className="flex flex-col items-center">
+                            <span className="text-lg font-black text-brand flex items-center gap-1">4.9 <Heart size={12} fill="currentColor" /></span>
+                            <span className="text-[9px] font-black text-content-subtle uppercase tracking-widest">Rating</span>
+                        </div>
+                    </div>
+                </motion.div>
 
-                {/* ── Menu Sections ── */}
-                <MenuSection title="Vehicle Ecosystem">
-                    <MenuItem icon={<Zap />} label="My Bookings" sub="Active & Past Washes" count="3" onClick={() => navigate('/bookings')} />
-                    <MenuItem icon={<Car />} label="My Vehicles" sub="Manage your garage" onClick={() => navigate('/vehicles')} />
-                    <MenuItem icon={<MapPin />} label="Saved Addresses" sub="Home, Office, Other" onClick={() => navigate('/addresses')} />
-                </MenuSection>
+                {/* Profile Menu */}
+                <div className="space-y-3">
+                    {menuItems.map((item, idx) => (
+                        <motion.button
+                            key={item.label}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: idx * 0.05 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => navigate(item.path)}
+                            className="w-full bg-white p-5 rounded-2xl flex items-center justify-between border border-gray-50 shadow-sm"
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${getColorClass(item.color)}`}>
+                                    <item.icon size={20} strokeWidth={2.5} />
+                                </div>
+                                <span className="text-sm font-black text-content tracking-tight">{item.label}</span>
+                            </div>
+                            <ChevronRight size={18} className="text-gray-300" strokeWidth={3} />
+                        </motion.button>
+                    ))}
 
-                <MenuSection title="Payments & Trust">
-                    <MenuItem icon={<CreditCard />} label="Payment Methods" sub="Cards, UPI, Netbanking" onClick={() => navigate('/payments')} />
-                    <MenuItem icon={<ShieldCheck />} label="Insurance Center" sub="Manage Vehicle Policies" onClick={() => navigate('/insurance')} />
-                </MenuSection>
+                    <div className="pt-8 pb-12">
+                        <div className="bg-gray-900 p-6 rounded-[2.5rem] relative overflow-hidden shadow-2xl mb-6 group cursor-pointer">
+                            <div className="relative z-10">
+                                <h3 className="text-white text-lg font-black tracking-tight leading-none mb-1 group-hover:text-brand transition-colors">Become a Captain</h3>
+                                <p className="text-white/40 text-[11px] font-bold">Start earning with CarWash today</p>
+                            </div>
+                            <ShieldCheck size={80} className="absolute -right-4 -top-4 text-white/5 -rotate-12 group-hover:scale-110 transition-transform" />
+                        </div>
 
-                <MenuSection title="Support & Community">
-                    <MenuItem icon={<HelpCircle />} label="Help & Support" sub="FAQ, Chat, Call" onClick={() => navigate('/help')} />
-                    <MenuItem icon={<Share2 />} label="Refer & Earn" sub="Get ₹100 per referral" badge="NEW" onClick={() => navigate('/refer')} last />
-                </MenuSection>
+                        <button
+                            onClick={() => { logout('consumer'); navigate('/login'); }}
+                            className="w-full py-5 rounded-2xl bg-red-50 text-red-500 font-black text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 active:scale-95 transition-all"
+                        >
+                            <LogOut size={16} strokeWidth={3} />
+                            Log out Account
+                        </button>
 
-                {/* ── Footer ── */}
-                <div className="text-center space-y-3 pt-2">
-                    <p className="text-[9px] font-bold text-content-subtle uppercase tracking-widest">CarWash v4.2.0</p>
-                    <button
-                        onClick={() => {
-                            if (window.confirm('Do you want to logout?')) {
-                                handleLogout();
-                            }
-                        }}
-                        className="flex items-center gap-2 bg-red-50 text-red-500 border border-red-100 px-6 py-3 rounded-xl mx-auto font-black text-xs uppercase tracking-widest active:scale-95 transition-all">
-                        <LogOut size={14} /> Logout
-                    </button>
+                        <p className="text-center mt-6 text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] opacity-50 italic">CarWash v2.4.0 • Built for Performance</p>
+                    </div>
                 </div>
             </div>
-        </MobileLayout>
+        </div>
     );
 };
-
-const MenuSection = ({ title, children }) => (
-    <section className="space-y-2">
-        <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest px-1">{title}</p>
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden">
-            {children}
-        </div>
-    </section>
-);
-
-const MenuItem = ({ icon, label, sub, onClick, count, badge, last }) => (
-    <motion.button whileTap={{ scale: 0.98 }} onClick={onClick}
-        className={`w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50/50 transition-colors group ${!last && 'border-b border-gray-50'}`}>
-        <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-content-muted group-hover:bg-brand/10 group-hover:text-brand transition-all">
-                {React.cloneElement(icon, { size: 18, strokeWidth: 2.5 })}
-            </div>
-            <div className="text-left">
-                <div className="flex items-center gap-2">
-                    <h3 className="font-black text-sm text-content tracking-tight group-hover:text-brand transition-colors">{label}</h3>
-                    {count && <span className="bg-brand text-white text-[8px] font-black px-1.5 py-0.5 rounded-md">{count}</span>}
-                    {badge && <span className="bg-green-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-md">{badge}</span>}
-                </div>
-                <p className="text-[9px] font-bold text-content-subtle mt-0.5">{sub}</p>
-            </div>
-        </div>
-        <ChevronRight size={14} strokeWidth={2.5} className="text-gray-300 group-hover:text-brand transition-colors" />
-    </motion.button>
-);
 
 export default Profile;

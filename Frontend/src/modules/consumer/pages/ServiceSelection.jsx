@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Zap, Shield, Droplets, CheckCircle2, Clock, Tag } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Zap, Shield, Droplets, CheckCircle2, Clock, Tag, Car } from 'lucide-react';
 import MobileLayout from '../components/layout/MobileLayout';
 
 // Original hardcoded services
@@ -57,12 +57,20 @@ const STEPS = [
     { n: '03', title: 'Spotless Results', desc: 'CarWash-guaranteed clean car' },
 ];
 
+const VEHICLE_TYPES = [
+    { id: 'hatchback', label: 'Hatch', multiplier: 1.0 },
+    { id: 'sedan', label: 'Sedan', multiplier: 1.2 },
+    { id: 'suv', label: 'SUV', multiplier: 1.5 },
+    { id: 'luxury', label: 'Luxury', multiplier: 2.0 },
+];
+
 const ServiceSelection = () => {
     const navigate = useNavigate();
     const [active, setActive] = useState('eco');
     const [mode, setMode] = useState('instant');
     const [serviceType, setServiceType] = useState('captain');
     const [selectedSlot, setSelectedSlot] = useState(null);
+    const [selectedVehicle, setSelectedVehicle] = useState('sedan');
 
     const SLOTS = [
         { id: 1, time: '09:00 AM', status: 'Available' },
@@ -101,6 +109,16 @@ const ServiceSelection = () => {
     // Merge hardcoded + admin services, filter by active tab
     const allServices = [...HARDCODED_SERVICES, ...adminServices];
     const filteredServices = allServices.filter(s => s.provider === serviceType);
+
+    const getPrice = (priceStr) => {
+        const base = parseInt(priceStr.replace(/[^\d]/g, ''));
+        const multiplier = VEHICLE_TYPES.find(v => v.id === selectedVehicle)?.multiplier || 1;
+        return Math.round(base * multiplier);
+    };
+
+    const formatPrice = (price) => {
+        return `₹${price.toLocaleString()}`;
+    };
 
     return (
         <MobileLayout>
@@ -174,6 +192,26 @@ const ServiceSelection = () => {
                             <p className="text-[7.5px] font-bold text-content-subtle uppercase mt-1 opacity-70">{type.sub}</p>
                         </button>
                     ))}
+                </div>
+
+                {/* Vehicle Type Selector */}
+                <div className="mb-4">
+                    <p className="text-[8px] font-black text-content-subtle uppercase tracking-[0.2em] mb-2 px-1">Select Car Category</p>
+                    <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                        {VEHICLE_TYPES.map((v) => (
+                            <button
+                                key={v.id}
+                                onClick={() => setSelectedVehicle(v.id)}
+                                className={`flex-shrink-0 px-4 py-2 rounded-xl flex items-center gap-2 border transition-all ${selectedVehicle === v.id
+                                    ? 'bg-brand text-white border-brand shadow-md shadow-brand/20'
+                                    : 'bg-white border-gray-100 text-content-muted hover:border-brand/30'
+                                    }`}
+                            >
+                                <Car size={13} strokeWidth={selectedVehicle === v.id ? 3 : 2} />
+                                <span className="text-[10px] font-black uppercase tracking-tight">{v.label}</span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Category Chips */}
@@ -257,9 +295,13 @@ const ServiceSelection = () => {
                             <div className="flex items-center justify-between mb-4">
                                 <div className="space-y-0.5">
                                     <div className="flex items-baseline gap-1.5">
-                                        <span className="text-2xl font-black text-content italic tabular-nums tracking-tighter">{s.price}</span>
+                                        <span className="text-2xl font-black text-content italic tabular-nums tracking-tighter">
+                                            {formatPrice(getPrice(s.price))}
+                                        </span>
                                         {s.original && (
-                                            <span className="text-xs line-through text-content-subtle font-black opacity-30">{s.original}</span>
+                                            <span className="text-xs line-through text-content-subtle font-black opacity-30">
+                                                {formatPrice(getPrice(s.original))}
+                                            </span>
                                         )}
                                     </div>
                                     <div className="flex items-center gap-1.5">

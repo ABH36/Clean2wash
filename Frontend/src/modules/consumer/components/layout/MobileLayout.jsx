@@ -1,40 +1,42 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, ClipboardList, MapPin, User, Bell } from 'lucide-react';
+import { Home, Gift, User } from 'lucide-react';
 
 const NAV_ITEMS = [
-    { to: '/', icon: Home, label: 'Home' },
-    { to: '/services', icon: ClipboardList, label: 'Wash' },
-    { to: '/map', icon: MapPin, label: 'Track' },
-    { to: '/bookings', icon: Bell, label: 'Bookings' },
-    { to: '/profile', icon: User, label: 'Profile' },
+    { id: 'home', to: '/', icon: Home, label: 'Home' },
+    { id: 'refer', to: '/refer', icon: Gift, label: 'Referral' },
+    { id: 'profile', to: '/profile', icon: User, label: 'Profile' }
 ];
 
 const MobileLayout = ({ children, hideNav = false }) => {
     return (
-        <div className="mobile-container bg-background">
-            <main className="flex-1">
+        <div className="mobile-container bg-[#FAFAFA]">
+            <main className="flex-1 pb-10">
                 {children}
             </main>
 
             {!hideNav && (
-                <nav className="fixed bottom-0 w-full max-w-md bg-white border-t border-gray-100 px-4 pt-2.5 pb-5 flex justify-between items-end safe-area-bottom z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.04)]">
-                    {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
-                        <NavLink key={to} to={to} end={to === '/'}
-                            className={({ isActive }) =>
-                                `flex flex-col items-center gap-1 transition-all duration-200 ${isActive ? 'text-brand' : 'text-content-subtle'}`
-                            }>
+                <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-100 px-8 py-1.5 pb-4 flex items-center justify-between z-[100]">
+                    {NAV_ITEMS.map((tab) => (
+                        <NavLink
+                            key={tab.id}
+                            to={tab.to}
+                            end={tab.to === '/'}
+                            className={({ isActive }) => `flex flex-col items-center gap-1 relative ${isActive ? 'text-brand' : 'text-content-subtle'}`}
+                        >
                             {({ isActive }) => (
                                 <>
-                                    <div className={`relative p-2 rounded-xl transition-all ${isActive ? 'bg-brand/10' : ''}`}>
-                                        <Icon size={19} strokeWidth={isActive ? 2.5 : 2} />
-                                        {isActive && (
-                                            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-brand rounded-full border-2 border-white" />
-                                        )}
+                                    <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-brand text-white shadow-lg shadow-brand/20 scale-105' : 'text-content-subtle'}`}>
+                                        <tab.icon size={18} strokeWidth={isActive ? 2.5 : 2} />
                                     </div>
-                                    <span className={`text-[8px] font-black uppercase tracking-widest leading-none ${isActive ? 'text-brand' : 'text-content-subtle'}`}>
-                                        {label}
+                                    <span className={`text-[8px] font-[900] uppercase tracking-wider ${isActive ? 'text-brand' : 'text-content-subtle'}`}>
+                                        {tab.label}
                                     </span>
+                                    {tab.id === 'refer' && !isActive && (
+                                        <div className="absolute -top-1 -right-4 bg-purple-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full shadow-lg shadow-purple-500/20 whitespace-nowrap">
+                                            Free Petrol
+                                        </div>
+                                    )}
                                 </>
                             )}
                         </NavLink>

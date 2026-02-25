@@ -15,6 +15,7 @@ import Profile from './modules/consumer/pages/Profile';
 import Onboarding from './modules/consumer/pages/Onboarding';
 import Login from './modules/consumer/pages/Login';
 import Signup from './modules/consumer/pages/Signup';
+import OTPVerification from './modules/consumer/pages/OTPVerification';
 import MyBookings from './modules/consumer/pages/MyBookings';
 import Notifications from './modules/consumer/pages/Notifications';
 import RateExperience from './modules/consumer/pages/RateExperience';
@@ -29,6 +30,8 @@ import PaymentMethods from './modules/consumer/pages/PaymentMethods';
 import InsuranceCenter from './modules/consumer/pages/InsuranceCenter';
 import ShopPage from './modules/consumer/pages/ShopPage';
 import CartPage from './modules/consumer/pages/CartPage';
+import WashAndCare from './modules/consumer/pages/WashAndCare';
+import Subscriptions from './modules/consumer/pages/Subscriptions';
 
 // ── Captain Module ──
 import CaptainHome from './modules/captain/pages/CaptainHome';
@@ -120,6 +123,7 @@ function App() {
                 <Route path="/onboarding" element={<Onboarding />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
+                <Route path="/otp-verify" element={<OTPVerification />} />
                 <Route path="/captain/login" element={<CaptainLogin />} />
                 <Route path="/captain/signup" element={<CaptainSignup />} />
                 <Route path="/vendor/login" element={<VendorLogin />} />
@@ -142,6 +146,8 @@ function App() {
                 <Route path="/profile" element={P('consumer', <Profile />)} />
                 <Route path="/vehicles" element={P('consumer', <VehicleManager />)} />
                 <Route path="/addresses" element={P('consumer', <AddressManager />)} />
+                <Route path="/wash-and-care" element={P('consumer', <WashAndCare />)} />
+                <Route path="/subscriptions" element={P('consumer', <Subscriptions />)} />
 
                 <Route path="/refer" element={P('consumer', <ReferEarn />)} />
                 <Route path="/help" element={P('consumer', <HelpSupport />)} />

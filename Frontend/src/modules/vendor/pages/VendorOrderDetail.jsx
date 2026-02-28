@@ -61,8 +61,9 @@ const VendorOrderDetail = () => {
             'pending': '10%',
             'accepted': '30%',
             'confirmed': '45%',
-            'in-progress': '60%',
-            'at-studio': '75%',
+            'in-progress': '55%',
+            'at-studio': '70%',
+            'packing': '80%',
             'delivery-assigned': '90%',
             'completed': '100%'
         };
@@ -74,6 +75,7 @@ const VendorOrderDetail = () => {
         { label: 'Studio Accepted', time: liveBooking.vendorId ? '10:05 AM' : '--', status: liveBooking.vendorId ? 'completed' : 'pending' },
         { label: 'Pickup Assigned', time: liveBooking.pickupStaffId ? '10:15 AM' : '--', status: liveBooking.pickupStaffId ? 'completed' : 'pending' },
         { label: 'Vehicle at Studio', time: '--', status: liveBooking.status === 'at-studio' ? 'active' : 'pending' },
+        { label: 'Order Packed & QC', time: '--', status: liveBooking.status === 'packing' ? 'active' : 'pending' },
         { label: 'Service Finished', time: '--', status: liveBooking.status === 'delivery-assigned' ? 'active' : 'pending' },
         { label: 'Delivery Complete', time: '--', status: liveBooking.status === 'completed' ? 'completed' : 'pending' },
     ];
@@ -134,6 +136,7 @@ const VendorOrderDetail = () => {
                                     >
                                         <option value="accepted" className="text-content">Accepted</option>
                                         <option value="at-studio" className="text-content">In Studio</option>
+                                        <option value="packing" className="text-content">Order Packing</option>
                                         <option value="delivery-assigned" className="text-content">Ready for Delivery</option>
                                         <option value="completed" className="text-content">Completed</option>
                                     </select>

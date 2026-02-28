@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
-import { ChevronLeft, Phone, Mail, ArrowRight, ShieldCheck, Fingerprint } from 'lucide-react';
+import { ChevronLeft, Phone, Mail, ArrowRight, ShieldCheck, Fingerprint, Zap } from 'lucide-react';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -25,90 +25,111 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen bg-white flex flex-col font-sans">
-            <header className="px-6 pt-12 pb-6 flex items-center justify-between">
+        <div className="min-h-screen bg-slate-50 flex flex-col font-sans relative overflow-hidden text-content">
+            {/* Background Texture/Image */}
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none">
+                <img src="/assets/carwash/1.png" className="w-full h-full object-cover scale-150 blur-3xl" alt="" />
+            </div>
+
+            {/* Premium Header */}
+            <header className="px-6 pt-10 pb-6 flex items-center justify-between relative z-10">
                 <button onClick={() => navigate(-1)}
-                    className="w-11 h-11 bg-gray-50 rounded-2xl flex items-center justify-center border border-gray-100">
-                    <ChevronLeft size={20} className="text-content" strokeWidth={2.5} />
+                    className="w-10 h-10 bg-white/80 backdrop-blur-md rounded-xl flex items-center justify-center border border-white shadow-sm active:scale-95 transition-all">
+                    <ChevronLeft size={18} className="text-brand" strokeWidth={2.5} />
                 </button>
-                <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 shadow-inner">
+                <div className="flex bg-white/50 backdrop-blur-md p-1 rounded-xl border border-white shadow-sm">
                     <button
                         onClick={() => { setLoginType('phone'); setIdentifier(''); }}
-                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${loginType === 'phone' ? 'bg-white text-brand shadow-sm' : 'text-content-muted'}`}
+                        className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${loginType === 'phone' ? 'bg-brand text-white shadow-lg shadow-brand/20' : 'text-content-subtle'}`}
                     >
                         Phone
                     </button>
                     <button
                         onClick={() => { setLoginType('email'); setIdentifier(''); }}
-                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${loginType === 'email' ? 'bg-white text-brand shadow-sm' : 'text-content-muted'}`}
+                        className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${loginType === 'email' ? 'bg-brand text-white shadow-lg shadow-brand/20' : 'text-content-subtle'}`}
                     >
                         Email
                     </button>
                 </div>
             </header>
 
-            <div className="flex-1 px-8 flex flex-col pt-8">
+            <div className="flex-1 px-8 flex flex-col pt-2 relative z-10">
+                {/* Main Hero Card */}
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="mb-12"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-white rounded-2xl border border-white shadow-2xl shadow-brand/5 overflow-hidden mb-8"
                 >
-                    <div className="w-16 h-16 bg-brand/10 rounded-3xl flex items-center justify-center mb-6 shadow-brand/10 shadow-xl">
-                        <Fingerprint size={32} className="text-brand" strokeWidth={2.5} />
+                    <div className="relative aspect-[16/10]">
+                        <img
+                            src="/assets/carwash/1.png"
+                            className="w-full h-full object-cover"
+                            alt="Premium Car Wash"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent" />
+
+                        <div className="absolute bottom-4 left-5 right-5 flex items-end justify-between">
+                            <div>
+                                <div className="flex items-center gap-1.5 mb-1">
+                                    <div className="w-2 h-2 bg-brand rounded-full animate-pulse" />
+                                    <span className="text-[8px] font-black uppercase tracking-[0.2em] text-brand">Secure Access</span>
+                                </div>
+                                <h1 className="text-2xl font-[1000] text-content tracking-tighter uppercase italic leading-none">
+                                    Welcome <span className="text-brand">Back.</span>
+                                </h1>
+                            </div>
+                            <div className="w-10 h-10 bg-white/90 backdrop-blur-md rounded-xl border border-white shadow-xl flex items-center justify-center">
+                                <Fingerprint size={20} className="text-brand" />
+                            </div>
+                        </div>
                     </div>
-                    <h1 className="text-4xl font-black text-content tracking-tighter leading-tight mb-2 italic">
-                        Welcome Back.
-                    </h1>
-                    <p className="text-content-subtle text-[10px] font-black uppercase tracking-[0.2em]">
-                        {loginType === 'phone' ? 'Login with Mobile OTP' : 'Login with Email OTP'}
-                    </p>
                 </motion.div>
 
-                <div className="space-y-8 flex-1">
+                {/* Input Section */}
+                <div className="space-y-6 flex-1">
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={loginType}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            className="group"
+                            initial={{ opacity: 0, x: 10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -10 }}
                         >
-                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] mb-3 block ml-1">
-                                {loginType === 'phone' ? 'Mobile Number' : 'Email Address'}
+                            <label className="text-[10px] font-black text-brand uppercase tracking-[0.3em] mb-3 block ml-1 opacity-70">
+                                {loginType === 'phone' ? 'Identification Number' : 'Digital Address'}
                             </label>
 
                             <div className="relative">
                                 {loginType === 'phone' ? (
                                     <div className="flex gap-3">
-                                        <div className="bg-gray-50 border border-gray-100 rounded-2xl px-4 flex items-center gap-2 flex-shrink-0">
+                                        <div className="bg-white border border-gray-100 rounded-xl px-4 flex items-center gap-2 flex-shrink-0 shadow-sm transition-all focus-within:border-brand/40">
                                             <span className="text-sm">🇮🇳</span>
-                                            <span className="font-black text-content text-sm">+91</span>
+                                            <span className="font-black text-brand text-xs">+91</span>
                                         </div>
                                         <div className="relative flex-1">
-                                            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-content-subtle">
-                                                <Phone size={18} strokeWidth={2.5} />
+                                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-brand/30">
+                                                <Phone size={16} strokeWidth={2.5} />
                                             </div>
                                             <input
                                                 type="tel"
                                                 maxLength={10}
-                                                placeholder="98765 43210"
+                                                placeholder="00000 00000"
                                                 value={identifier}
                                                 onChange={(e) => setIdentifier(e.target.value.replace(/\D/g, ''))}
-                                                className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-13 pr-5 py-4.5 font-bold text-content text-lg outline-none focus:border-brand/30 focus:bg-white transition-all tracking-widest font-mono"
+                                                className="w-full bg-white border border-gray-100 rounded-xl pl-11 pr-4 py-4 font-bold text-content text-base outline-none focus:border-brand/40 shadow-sm transition-all tracking-widest font-mono placeholder:text-gray-100"
                                             />
                                         </div>
                                     </div>
                                 ) : (
                                     <div className="relative">
-                                        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-content-subtle">
-                                            <Mail size={18} strokeWidth={2.5} />
+                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-brand/30">
+                                            <Mail size={16} strokeWidth={2.5} />
                                         </div>
                                         <input
                                             type="email"
-                                            placeholder="name@example.com"
+                                            placeholder="your@email.com"
                                             value={identifier}
                                             onChange={(e) => setIdentifier(e.target.value)}
-                                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-13 pr-5 py-4.5 font-bold text-content outline-none focus:border-brand/30 focus:bg-white transition-all shadow-sm"
+                                            className="w-full bg-white border border-gray-100 rounded-xl pl-11 pr-4 py-4 font-bold text-content text-sm outline-none focus:border-brand/40 shadow-sm transition-all placeholder:text-gray-100"
                                         />
                                     </div>
                                 )}
@@ -119,31 +140,32 @@ const Login = () => {
                     <div className="pt-2">
                         <motion.button
                             disabled={!identifier || loading}
-                            whileTap={{ scale: 0.97 }}
+                            whileTap={{ scale: 0.98 }}
                             onClick={handleLogin}
-                            className={`w-full h-15 rounded-2xl font-black text-base flex items-center justify-between px-8 shadow-2xl transition-all ${identifier ? 'bg-brand text-white shadow-brand/25' : 'bg-gray-100 text-content-subtle shadow-transparent'
+                            className={`w-full h-14 rounded-xl font-black text-[10px] uppercase tracking-[0.4em] flex items-center justify-between px-10 shadow-2xl transition-all ${identifier ? 'bg-brand text-white shadow-brand/30 ring-4 ring-brand/10' : 'bg-gray-100 text-content-subtle shadow-transparent'
                                 }`}
                         >
-                            <span>{loading ? 'Requesting OTP...' : 'Login with OTP'}</span>
+                            <span>{loading ? 'Processing...' : 'Continue'}</span>
                             {loading ? (
                                 <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                             ) : (
-                                <ArrowRight size={20} strokeWidth={3} />
+                                <Zap size={18} fill="currentColor" strokeWidth={0} />
                             )}
                         </motion.button>
                     </div>
 
                     <div className="text-center">
-                        <p className="text-content-muted text-[11px] font-bold uppercase tracking-widest">
-                            New here?{' '}
-                            <Link to="/signup" className="text-brand font-black ml-1 border-b-2 border-brand/20 pb-0.5">Signup Free</Link>
+                        <p className="text-content-subtle text-[10px] font-bold uppercase tracking-widest opacity-60">
+                            Don't have an account?{' '}
+                            <Link to="/signup" className="text-brand font-black ml-1 border-b border-brand/20 pb-0.5 opacity-100">JOIN clean2wash</Link>
                         </p>
                     </div>
                 </div>
 
-                <div className="mt-auto pb-12 flex items-center justify-center gap-2 opacity-30">
-                    <ShieldCheck size={14} className="text-content" />
-                    <p className="text-[9px] font-black text-content uppercase tracking-[0.2em]">End-to-End Encryption</p>
+                {/* Footer Security */}
+                <div className="mt-auto pb-8 flex items-center justify-center gap-3 opacity-30">
+                    <ShieldCheck size={14} className="text-brand" />
+                    <p className="text-[8px] font-black text-content uppercase tracking-[0.3em]">End-to-End Encryption</p>
                 </div>
             </div>
         </div>

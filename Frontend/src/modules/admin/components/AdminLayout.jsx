@@ -21,7 +21,9 @@ import {
     Tag,
     Package,
     Moon,
-    Sun
+    Sun,
+    Crown,
+    ShoppingBag
 } from 'lucide-react';
 
 const AdminLayout = ({ children, title }) => {
@@ -49,9 +51,11 @@ const AdminLayout = ({ children, title }) => {
         { icon: <BarChart3 size={18} />, label: 'Analytics', path: '/admin/analytics' },
         { icon: <Users size={18} />, label: 'User Management', path: '/admin/users' },
         { icon: <ShieldCheck size={18} />, label: 'Vendor Registry', path: '/admin/users?type=vendors' },
+        { icon: <ShoppingBag size={18} />, label: 'Product Governance', path: '/admin/products' },
         { icon: <Package size={18} />, label: 'Operations Hub', path: '/admin/bookings' },
         { icon: <Car size={18} />, label: 'Service Catalog', path: '/admin/services' },
         { icon: <MapPin size={18} />, label: 'Hubs & Studio', path: '/admin/hubs' },
+        { icon: <Crown size={18} />, label: 'Subscription Control', path: '/admin/subscriptions' },
         { icon: <Tag size={18} />, label: 'Promotions', path: '/admin/promotions' },
         { icon: <Settings size={18} />, label: 'System Settings', path: '/admin/settings' },
     ];

@@ -12,7 +12,7 @@ const MOCK_PROMOS = [
 
 const Notifications = () => {
     const navigate = useNavigate();
-    const { bookings, user } = useAuth();
+    const { bookings, user, vehicles } = useAuth();
 
     // Map real bookings to notification format
     const bookingNotifs = bookings.filter(b => b.userId === user?.id || b.userId === 'GUEST').map(b => {
@@ -21,20 +21,22 @@ const Notifications = () => {
         let icon = <Navigation size={17} className="text-blue-600" />;
         let bg = 'bg-blue-50';
 
-        if (b.status === 'pending') {
+        if (b.status === 'CREATED') {
             title = 'Finding Captain';
             desc = `We are matching you with the best captain for your ${b.serviceName}.`;
             icon = <Zap size={17} className="text-violet-600" />;
             bg = 'bg-violet-50';
-        } else if (b.status === 'confirmed') {
+        } else if (b.status === 'ASSIGNED') {
             title = 'Captain Assigned!';
             desc = `Captain has accepted your request for ${b.serviceName}.`;
-        } else if (b.status === 'in-progress') {
+            icon = <ShieldCheck size={17} className="text-blue-600" />;
+            bg = 'bg-blue-50';
+        } else if (b.status === 'IN_PROGRESS') {
             title = 'Service Started';
             desc = `Your ${b.serviceName} is currently in progress.`;
             icon = <CheckCircle2 size={17} className="text-brand" />;
             bg = 'bg-brand/10';
-        } else if (b.status === 'completed') {
+        } else if (b.status === 'COMPLETED') {
             title = 'Wash Completed! ✨';
             desc = `Your car is now sparkling clean. Order #${b.id} is finished.`;
             icon = <CheckCircle2 size={17} className="text-green-600" />;
@@ -54,7 +56,43 @@ const Notifications = () => {
         };
     });
 
-    const allNotifs = [...bookingNotifs, ...MOCK_PROMOS];
+    // Strategy: Generate Compliance Alerts from Vehicles
+    const complianceNotifs = vehicles.flatMap(v => {
+        const alerts = [];
+        if (v.insuranceExpiry) {
+            const daysLeft = Math.ceil((new Date(v.insuranceExpiry) - new Date()) / (1000 * 60 * 60 * 24));
+            if (daysLeft < 15) {
+                alerts.push({
+                    id: `ins-${v.id}`,
+                    type: 'compliance',
+                    icon: <ShieldCheck size={17} className="text-red-600" />,
+                    iconBg: 'bg-red-50',
+                    title: 'Insurance Expiry Alert',
+                    desc: `Insurance for your ${v.brand} ${v.model} expires in ${daysLeft} days. Renew now at best rates.`,
+                    time: 'High Priority',
+                    isNew: true
+                });
+            }
+        }
+        if (v.pucExpiry) {
+            const daysLeft = Math.ceil((new Date(v.pucExpiry) - new Date()) / (1000 * 60 * 60 * 24));
+            if (daysLeft < 7) {
+                alerts.push({
+                    id: `puc-${v.id}`,
+                    type: 'compliance',
+                    icon: <CheckCircle2 size={17} className="text-orange-600" />,
+                    iconBg: 'bg-orange-50',
+                    title: 'PUC / Emission Due',
+                    desc: `Pollution certificate for ${v.plate} expires in ${daysLeft} days. Get it checked to avoid fines.`,
+                    time: 'Action Required',
+                    isNew: true
+                });
+            }
+        }
+        return alerts;
+    });
+
+    const allNotifs = [...complianceNotifs, ...bookingNotifs, ...MOCK_PROMOS];
     const newN = allNotifs.filter(n => n.isNew);
     const oldN = allNotifs.filter(n => !n.isNew);
 

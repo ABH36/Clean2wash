@@ -12,7 +12,10 @@ const VendorOrders = () => {
     const user = getUser('vendor');
     const [activeTab, setActiveTab] = useState('Active');
 
-    const vendorBookings = bookings.filter(b => b.vendorId === user?.id || (b.type === 'vendor' && b.status === 'pending'));
+    const vendorBookings = bookings.filter(b =>
+        b.vendorId === user?.id ||
+        ((b.type === 'vendor' || b.type === 'shop_order') && b.status === 'pending')
+    );
 
     const mappedOrders = vendorBookings.map(b => ({
         id: b.id,

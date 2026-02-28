@@ -1,21 +1,46 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
     ChevronLeft, MapPin, Clock, CheckCircle2, Navigation,
-    Star, Phone, MessageSquare, ShieldCheck, Download, RotateCcw
+    Star, Phone, MessageSquare, ShieldCheck, Download, RotateCcw,
+    ShoppingBag, Package, Truck, CheckCircle
 } from 'lucide-react';
-
-const TIMELINE = [
-    { status: 'Order Placed', time: '2:28 PM', done: true },
-    { status: 'Captain Matched', time: '2:29 PM', done: true },
-    { status: 'Captain En Route', time: '2:30 PM', done: true },
-    { status: 'Wash In Progress', time: '3:05 PM', done: true },
-    { status: 'Completed', time: '3:47 PM', done: true },
-];
+import { useAuth } from '../../../context/AuthContext';
 
 const OrderDetails = () => {
     const navigate = useNavigate();
+    const { id } = useParams();
+    const { bookings } = useAuth();
+
+    // Find the specific order
+    const order = useMemo(() => {
+        return bookings.find(b => b.id === id);
+    }, [bookings, id]);
+
+    if (!order) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-10 text-center">
+                <ShoppingBag size={48} className="text-gray-200 mb-4" />
+                <h2 className="text-lg font-black text-content uppercase tracking-tight italic">Order Not Found</h2>
+                <p className="text-content-subtle text-[10px] font-bold mt-2 uppercase tracking-widest leading-relaxed">We couldn't find the order with ID: <span className="text-brand">#{id}</span></p>
+                <button onClick={() => navigate('/')} className="mt-8 px-8 py-3 bg-brand text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand/20">Go Home</button>
+            </div>
+        );
+    }
+
+    // Dynamic Timeline based on status
+    const getTimeline = (status) => {
+        const baseTimeline = [
+            { status: 'Order Placed', time: 'Just Now', done: true, icon: <Package size={16} /> },
+            { status: 'Vendor Assigned', time: 'Pending', done: ['confirmed', 'in-progress', 'completed'].includes(status), icon: <ShieldCheck size={16} /> },
+            { status: 'Out for Delivery', time: '—', done: ['in-progress', 'completed'].includes(status), icon: <Truck size={16} /> },
+            { status: 'Completed', time: '—', done: status === 'completed', icon: <CheckCircle size={16} /> },
+        ];
+        return baseTimeline;
+    };
+
+    const timeline = getTimeline(order.status);
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -23,160 +48,114 @@ const OrderDetails = () => {
             <header className="px-4 pt-10 pb-4 bg-white sticky top-0 z-50 border-b border-gray-100">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <button onClick={() => navigate(-1)} className="w-9 h-9 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center">
+                        <button onClick={() => navigate(-1)} className="w-9 h-9 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform">
                             <ChevronLeft size={18} strokeWidth={2.5} className="text-content" />
                         </button>
                         <div>
-                            <h1 className="text-lg font-black tracking-tight text-content leading-none">Order Details</h1>
-                            <p className="text-[9px] text-brand font-black uppercase tracking-widest mt-0.5">#CarWash-7761</p>
+                            <h1 className="text-lg font-black tracking-tight text-content leading-none">Order Status</h1>
+                            <p className="text-[9px] text-brand font-black uppercase tracking-widest mt-0.5">#{order.id}</p>
                         </div>
                     </div>
-                    <button className="flex items-center gap-1.5 bg-gray-50 border border-gray-100 px-3 py-2 rounded-xl text-content-muted text-[9px] font-black uppercase tracking-widest">
-                        <Download size={13} strokeWidth={2.5} /> Invoice
+                    <button className="flex items-center gap-1.5 bg-gray-50 border border-gray-100 px-3 py-2 rounded-xl text-content-muted text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all">
+                        <Download size={13} strokeWidth={2.5} /> Tracking
                     </button>
                 </div>
             </header>
 
             <div className="px-4 py-4 space-y-4 pb-28">
 
-                {/* ── Service Banner ── */}
-                <div className="relative rounded-2xl overflow-hidden border border-gray-100 shadow-soft" style={{ height: 160 }}>
-                    <img src="https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=600&q=80"
-                        alt="Service" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                    <div className="absolute inset-0 p-5 flex flex-col justify-between">
-                        <div className="flex items-center justify-between">
-                            <span className="bg-green-500 text-white text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg flex items-center gap-1">
-                                <CheckCircle2 size={9} strokeWidth={3} /> Completed
-                            </span>
-                            <span className="bg-white/20 backdrop-blur-sm text-white text-[9px] font-black px-3 py-1 rounded-lg">Feb 19 · 3:47 PM</span>
+                {/* ── Status Banner ── */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-soft p-5 text-center relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+                    <div className="relative z-10">
+                        <div className={`w-14 h-14 rounded-2xl mx-auto flex items-center justify-center mb-4 ${order.status === 'completed' ? 'bg-green-500 text-white' : 'bg-brand text-white animate-pulse'
+                            }`}>
+                            {order.status === 'completed' ? <CheckCircle2 size={30} /> : <Package size={30} />}
                         </div>
-                        <div>
-                            <h2 className="text-white text-xl font-black tracking-tight leading-none mb-0.5">Full Deep Clean</h2>
-                            <p className="text-white/60 text-[10px] font-bold">Honda City · KA 05 MR 7821</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ── Quick Stats ── */}
-                <div className="grid grid-cols-3 gap-3">
-                    {[
-                        { label: 'Amount', value: '₹1,199' },
-                        { label: 'Duration', value: '42 min' },
-                        { label: 'Rating', value: '4.9 ★' },
-                    ].map(s => (
-                        <div key={s.label} className="bg-white rounded-xl border border-gray-100 shadow-soft px-3 py-3.5 text-center">
-                            <p className="font-black text-base text-content tracking-tight leading-none">{s.value}</p>
-                            <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mt-1">{s.label}</p>
-                        </div>
-                    ))}
-                </div>
-
-                {/* ── Location ── */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-soft px-4 py-4 flex items-start gap-3">
-                    <div className="w-9 h-9 bg-brand/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <MapPin size={16} className="text-brand" fill="currentColor" strokeWidth={1.5} />
-                    </div>
-                    <div>
-                        <p className="text-[8px] font-black uppercase tracking-widest text-content-subtle mb-0.5">Service Location</p>
-                        <p className="font-black text-sm text-content tracking-tight">HSR Layout, Sector 2</p>
-                        <p className="text-[10px] font-bold text-content-subtle mt-0.5">Bengaluru, Karnataka 560102</p>
-                    </div>
-                </div>
-
-                {/* ── Captain Card ── */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden">
-                    <div className="px-4 py-3 border-b border-gray-50">
-                        <p className="text-[8px] font-black uppercase tracking-widest text-content-subtle">Captain</p>
-                    </div>
-                    <div className="px-4 py-3.5 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="relative">
-                                <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&q=80"
-                                    alt="Amit" className="w-12 h-12 rounded-xl object-cover border border-gray-100" />
-                                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-400 rounded-full border-2 border-white" />
-                            </div>
-                            <div>
-                                <h3 className="font-black text-sm text-content tracking-tight">Amit Singh</h3>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                    <div className="flex items-center gap-1">
-                                        <Star size={10} className="text-yellow-500" fill="currentColor" />
-                                        <span className="font-black text-[10px] text-content">4.9</span>
-                                    </div>
-                                    <span className="text-content-subtle text-[9px] font-bold">1,800 washes</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex gap-2">
-                            <button className="w-9 h-9 bg-green-50 border border-green-100 rounded-xl flex items-center justify-center">
-                                <Phone size={15} className="text-green-600" strokeWidth={2.5} />
-                            </button>
-                            <button className="w-9 h-9 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-center">
-                                <MessageSquare size={15} className="text-blue-600" strokeWidth={2.5} />
-                            </button>
-                        </div>
+                        <h2 className="text-lg font-black text-content tracking-tighter uppercase italic leading-none mb-1">
+                            {order.status === 'pending' ? 'Waiting for Vendor' :
+                                order.status === 'confirmed' ? 'Vendor Confirmed' :
+                                    order.status === 'in-progress' ? 'Out for Delivery' : 'Delivered Success'}
+                        </h2>
+                        <p className="text-content-subtle text-[8px] font-black uppercase tracking-[0.2em] opacity-70">
+                            {order.status === 'pending' ? 'Your order request has been sent to nearby vendors' :
+                                order.status === 'confirmed' ? 'A vendor has accepted your order and preparing' :
+                                    order.status === 'in-progress' ? 'Our delivery partner is on the way' : 'Your products have been safely delivered'}
+                        </p>
                     </div>
                 </div>
 
                 {/* ── Timeline ── */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden">
-                    <div className="px-4 py-3 border-b border-gray-50">
-                        <p className="text-[8px] font-black uppercase tracking-widest text-content-subtle">Order Timeline</p>
+                    <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
+                        <p className="text-[9px] font-black uppercase tracking-widest text-content-subtle">Live Track History</p>
+                        <span className="text-[8px] font-black text-brand bg-brand/10 px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">Live</span>
                     </div>
-                    <div className="px-4 py-3 space-y-0">
-                        {TIMELINE.map((step, i) => (
-                            <div key={step.status} className="flex items-start gap-4 py-2.5 relative">
-                                {/* Connector */}
-                                {i < TIMELINE.length - 1 && (
-                                    <div className="absolute left-[17px] top-9 w-px h-4 bg-brand/20" />
+                    <div className="px-5 py-5 space-y-0">
+                        {timeline.map((step, i) => (
+                            <div key={step.status} className="flex items-start gap-4 py-3 relative">
+                                {i < timeline.length - 1 && (
+                                    <div className={`absolute left-[17px] top-11 w-px h-6 ${step.done ? 'bg-brand' : 'bg-gray-100'}`} />
                                 )}
-                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border-2 ${step.done ? 'bg-brand border-brand' : 'bg-gray-50 border-gray-100'
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border-2 transition-all duration-500 ${step.done ? 'bg-brand border-brand text-white shadow-lg shadow-brand/20' : 'bg-gray-50 border-gray-100 text-gray-300'
                                     }`}>
-                                    <CheckCircle2 size={16} className={step.done ? 'text-white' : 'text-gray-300'} strokeWidth={2.5} />
+                                    {step.icon}
                                 </div>
-                                <div className="flex-1 flex items-center justify-between pt-1.5">
-                                    <p className={`font-black text-sm tracking-tight ${step.done ? 'text-content' : 'text-gray-300'}`}>{step.status}</p>
-                                    <p className="text-[9px] font-black text-content-subtle">{step.time}</p>
+                                <div className="flex-1 flex items-center justify-between pt-1">
+                                    <div>
+                                        <p className={`font-black text-xs tracking-tight transition-colors ${step.done ? 'text-content' : 'text-gray-300'}`}>{step.status}</p>
+                                        <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mt-0.5">{step.done ? (i === 0 ? 'Confirmed' : 'Processed') : 'Waiting...'}</p>
+                                    </div>
+                                    <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest">{step.time}</p>
                                 </div>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                {/* ── Bill Breakdown ── */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-soft p-4 space-y-2.5">
-                    <p className="text-[8px] font-black uppercase tracking-widest text-content-subtle mb-1">Payment Summary</p>
-                    {[
-                        { label: 'Full Deep Clean', val: '₹999', muted: false },
-                        { label: 'Ecosystem Fee', val: '₹89', muted: true },
-                        { label: 'CarWashFIRST Discount', val: '-₹0', muted: true },
-                    ].map(row => (
-                        <div key={row.label} className="flex justify-between">
-                            <span className={`text-sm ${row.muted ? 'font-bold text-content-subtle' : 'font-black text-content'}`}>{row.label}</span>
-                            <span className="font-black text-sm text-content">{row.val}</span>
-                        </div>
-                    ))}
-                    <div className="border-t border-gray-100 pt-2.5 flex justify-between">
-                        <span className="font-black text-content">Total Paid</span>
-                        <span className="font-black text-brand text-base">₹1,199</span>
+                {/* ── Order Content ── */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden">
+                    <div className="px-5 py-4 border-b border-gray-50">
+                        <p className="text-[9px] font-black uppercase tracking-widest text-content-subtle">Order Summary</p>
                     </div>
-                    <div className="flex items-center gap-2 bg-green-50 border border-green-100 rounded-xl px-3 py-2.5 mt-1">
-                        <ShieldCheck size={13} className="text-green-600" />
-                        <p className="text-[9px] font-black text-green-700">Paid via GPay · Transaction ID: GPAY7282817</p>
+                    <div className="p-4 space-y-3">
+                        {order.items?.map((item, idx) => (
+                            <div key={idx} className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-100 overflow-hidden">
+                                    <img src={item.image} className="w-8 h-8 object-contain" alt="" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-[10px] font-black text-content uppercase tracking-tight leading-none">{item.name}</p>
+                                    <p className="text-[8px] font-bold text-content-subtle uppercase tracking-widest mt-1">Qty: {item.qty} · ₹{item.salePrice.toLocaleString()}</p>
+                                </div>
+                                <p className="text-[11px] font-black text-content">₹{(item.salePrice * item.qty).toLocaleString()}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* ── Bill Breakdown ── */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-soft p-5 space-y-3">
+                    <div className="flex justify-between items-center text-[10px] font-bold text-content-subtle uppercase tracking-widest">
+                        <span>Total Payable</span>
+                        <span className="text-content font-black text-base">{order.price}</span>
+                    </div>
+                    <div className="pt-2 border-t border-gray-50 flex items-center gap-2">
+                        <ShieldCheck size={14} className="text-green-600" />
+                        <p className="text-[8px] font-black text-green-700 uppercase tracking-widest">Paid via Digital Wallet</p>
                     </div>
                 </div>
 
             </div>
 
-            {/* ── Sticky Actions ── */}
-            <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/90 backdrop-blur-md border-t border-gray-100 px-4 py-4 flex gap-3 z-50">
-                <button className="flex-1 h-12 bg-gray-50 border border-gray-100 rounded-xl text-content-muted font-black text-sm flex items-center justify-center gap-2">
-                    <RotateCcw size={15} strokeWidth={2.5} /> Rebook
+            {/* ── Footer ── */}
+            <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-100 px-6 py-4 flex gap-4 z-50">
+                <button className="flex-1 h-12 bg-gray-50 border border-gray-100 rounded-xl text-content font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all">
+                    <MessageSquare size={16} /> Support
                 </button>
-                <motion.button whileTap={{ scale: 0.97 }} onClick={() => navigate('/rate')}
-                    className="flex-1 h-12 bg-brand rounded-xl text-white font-black text-sm flex items-center justify-center gap-2 shadow-md shadow-brand/25">
-                    <Star size={15} fill="white" strokeWidth={1.5} /> Rate Wash
-                </motion.button>
+                <button onClick={() => navigate('/')} className="flex-1 h-12 bg-content text-white rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">
+                    Back to Feed
+                </button>
             </div>
         </div>
     );

@@ -75,13 +75,31 @@ export const AuthProvider = ({ children }) => {
         } catch { return []; }
     });
 
-    // Track bookings from localStorage
+    // Track trusted contacts from localStorage
+    const [trustedContacts, setTrustedContacts] = useState(() => {
+        try {
+            const saved = localStorage.getItem('carwash_trusted_contacts');
+            return saved ? JSON.parse(saved) : [
+                { id: 1, name: 'Aryan Pathak (Self)', phone: '9876543210', relation: 'Brother', userId: 'GUEST' }
+            ];
+        } catch { return []; }
+    });
     const [bookings, setBookings] = useState(() => {
         try {
             const saved = localStorage.getItem('carwash_bookings');
             return saved ? JSON.parse(saved) : [];
         } catch {
             return [];
+        }
+    });
+
+    // Track user subscription
+    const [userSubscription, setUserSubscription] = useState(() => {
+        try {
+            const saved = localStorage.getItem('carwash_subscription');
+            return saved ? JSON.parse(saved) : null;
+        } catch {
+            return null;
         }
     });
 
@@ -113,8 +131,12 @@ export const AuthProvider = ({ children }) => {
     }, [vehicles]);
 
     useEffect(() => {
-        localStorage.setItem('carwash_addresses', JSON.stringify(addresses));
-    }, [addresses]);
+        localStorage.setItem('carwash_trusted_contacts', JSON.stringify(trustedContacts));
+    }, [trustedContacts]);
+
+    useEffect(() => {
+        localStorage.setItem('carwash_subscription', JSON.stringify(userSubscription));
+    }, [userSubscription]);
 
     // Cross-tab synchronization
     useEffect(() => {
@@ -213,7 +235,7 @@ export const AuthProvider = ({ children }) => {
         const newBooking = {
             ...bookingData,
             id: 'CARWASH-' + Math.floor(1000 + Math.random() * 9000),
-            status: 'pending',
+            status: 'CREATED',
             createdAt: new Date().toISOString()
         };
         setBookings(prev => [newBooking, ...prev]);
@@ -296,7 +318,12 @@ export const AuthProvider = ({ children }) => {
             addAddress,
             removeAddress,
             setPrimaryAddress,
-            registeredUsers
+            registeredUsers,
+            trustedContacts,
+            addContact: (c) => setTrustedContacts(prev => [...prev, { ...c, id: Date.now() }]),
+            removeContact: (id) => setTrustedContacts(prev => prev.filter(c => c.id !== id)),
+            userSubscription,
+            setUserSubscription
         }}>
             {children}
         </AuthContext.Provider>

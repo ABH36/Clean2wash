@@ -3,7 +3,7 @@ import {
     ShoppingBag, Search, Plus, Trash2, Edit2,
     X, Check, Package, Grid, List as ListIcon,
     Tag, DollarSign, AlertTriangle, ImageIcon,
-    Star, ChevronDown
+    Star, ChevronDown, Zap, Award
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import VendorLayout from '../components/VendorLayout';
@@ -41,6 +41,13 @@ const SEED = [
         description: 'Real-time GPS vehicle tracker with geofencing & mobile alerts.',
         image: 'https://images.unsplash.com/photo-1580672154843-44f2221d41b1?w=400&q=80', status: 'Out of Stock'
     },
+    {
+        id: 'P006', name: 'Clean2Wash Ultra Foam Shampoo', category: 'Cleaning',
+        price: 999, salePrice: 799, stock: 50, rating: 5.0, badge: 'Own Brand',
+        isPriority: true, isOwnBrand: true,
+        description: 'Professional grade high-foaming car shampoo designed specifically for our captains.',
+        image: 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=400&q=80', status: 'Active'
+    },
 ];
 
 const CATEGORIES = ['Electronics', 'Accessories', 'Cleaning', 'Enhancement'];
@@ -48,7 +55,9 @@ const BADGES = ['', 'Bestseller', 'Top Rated', 'Popular', 'New', 'Sale'];
 
 const emptyForm = {
     name: '', category: 'Electronics', price: '', salePrice: '',
-    stock: '', rating: '4.5', badge: '', description: '', image: ''
+    stock: '', rating: '4.5', badge: '', description: '', image: '',
+    video: '', specifications: [{ key: '', value: '' }],
+    isPriority: false, isOwnBrand: false, status: 'Pending'
 };
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
@@ -90,8 +99,16 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
     const handleSubmit = () => {
         const e = validate();
         if (Object.keys(e).length) { setErrors(e); return; }
-        const status = Number(form.stock) === 0 ? 'Out of Stock' : Number(form.stock) < 10 ? 'Low Stock' : 'Active';
-        onSave({ ...form, price: Number(form.price), salePrice: Number(form.salePrice), stock: Number(form.stock), rating: Number(form.rating), status });
+        // Keep existing status if editing, or set to 'Pending' if new/re-verify
+        const newStatus = isEdit ? (initial.status === 'Approved' ? 'Approved' : 'Pending') : 'Pending';
+        onSave({
+            ...form,
+            price: Number(form.price),
+            salePrice: Number(form.salePrice),
+            stock: Number(form.stock),
+            rating: Number(form.rating),
+            status: newStatus
+        });
     };
 
     const isEdit = !!initial?.id;
@@ -184,13 +201,72 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
                             {/* Description */}
                             <Field label="Description" error={null}>
                                 <textarea
-                                    placeholder="Short product description..."
+                                    placeholder="Detailed product description..."
                                     value={form.description}
                                     onChange={e => set('description', e.target.value)}
-                                    rows={2}
+                                    rows={4}
                                     className="w-full bg-background border border-gray-100/10 rounded-xl px-3 py-2.5 text-[12px] font-bold text-content outline-none transition-all focus:border-brand/50 resize-none"
                                 />
                             </Field>
+
+                            {/* Video URL */}
+                            <Field label="Video URL (Optional)" error={null}>
+                                <input
+                                    type="url"
+                                    placeholder="https://youtube.com/..."
+                                    value={form.video}
+                                    onChange={e => set('video', e.target.value)}
+                                    className={inputCls(false)}
+                                />
+                            </Field>
+
+                            {/* Specifications */}
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Specifications</p>
+                                    <button
+                                        onClick={() => set('specifications', [...(form.specifications || []), { key: '', value: '' }])}
+                                        className="text-[9px] font-black text-brand uppercase tracking-widest flex items-center gap-1"
+                                    >
+                                        <Plus size={12} /> Add Row
+                                    </button>
+                                </div>
+                                <div className="space-y-2">
+                                    {(form.specifications || []).map((spec, i) => (
+                                        <div key={i} className="flex gap-2">
+                                            <input
+                                                placeholder="Key (e.g. Color)"
+                                                value={spec.key}
+                                                onChange={e => {
+                                                    const newSpecs = [...form.specifications];
+                                                    newSpecs[i].key = e.target.value;
+                                                    set('specifications', newSpecs);
+                                                }}
+                                                className="flex-1 h-9 bg-background border border-gray-100/10 rounded-lg px-2 text-[10px] font-bold text-content outline-none focus:border-brand/40"
+                                            />
+                                            <input
+                                                placeholder="Value (e.g. Matte Black)"
+                                                value={spec.value}
+                                                onChange={e => {
+                                                    const newSpecs = [...form.specifications];
+                                                    newSpecs[i].value = e.target.value;
+                                                    set('specifications', newSpecs);
+                                                }}
+                                                className="flex-1 h-9 bg-background border border-gray-100/10 rounded-lg px-2 text-[10px] font-bold text-content outline-none focus:border-brand/40"
+                                            />
+                                            <button
+                                                onClick={() => {
+                                                    const newSpecs = form.specifications.filter((_, idx) => idx !== i);
+                                                    set('specifications', newSpecs);
+                                                }}
+                                                className="p-2 text-content-muted hover:text-red-500"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
 
                             {/* Category + Badge */}
                             <div className="grid grid-cols-2 gap-3">
@@ -258,7 +334,6 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
                                 </div>
                             )}
 
-                            {/* Stock + Rating */}
                             <div className="grid grid-cols-2 gap-3">
                                 <Field label="Stock Qty *" error={errors.stock}>
                                     <input
@@ -281,6 +356,34 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
                                         />
                                     </div>
                                 </Field>
+                            </div>
+
+                            {/* Priority & Own Brand */}
+                            <div className="grid grid-cols-2 gap-3 p-4 bg-background border border-gray-100/10 rounded-2xl">
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={form.isPriority}
+                                        onChange={e => set('isPriority', e.target.checked)}
+                                        className="w-4 h-4 accent-brand rounded"
+                                    />
+                                    <div>
+                                        <p className="text-[10px] font-black text-content uppercase tracking-tight">Priority</p>
+                                        <p className="text-[7px] font-bold text-content-subtle uppercase">Top of search</p>
+                                    </div>
+                                </label>
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={form.isOwnBrand}
+                                        onChange={e => set('isOwnBrand', e.target.checked)}
+                                        className="w-4 h-4 accent-brand rounded"
+                                    />
+                                    <div>
+                                        <p className="text-[10px] font-black text-content uppercase tracking-tight">Own Brand</p>
+                                        <p className="text-[7px] font-bold text-content-subtle uppercase">High-Margin</p>
+                                    </div>
+                                </label>
                             </div>
                         </div>
 
@@ -366,10 +469,37 @@ const ProductCard = ({ p, onEdit, onDelete }) => {
                         <span className="bg-red-500 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl">Out of Stock</span>
                     </div>
                 )}
-                {p.badge && (
+                {p.status && (
+                    <div className="absolute top-3 left-3 flex flex-col gap-2">
+                        <span className={`backdrop-blur-sm text-[8px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-xl border shadow-lg
+                            ${p.status === 'Approved' ? 'bg-green-500 text-white border-green-400' :
+                                p.status === 'Rejected' ? 'bg-red-500 text-white border-red-400' :
+                                    'bg-amber-500 text-white border-amber-400'}`}>
+                            {p.status === 'Approved' ? <Check size={8} className="inline mr-1" strokeWidth={4} /> :
+                                p.status === 'Rejected' ? <X size={8} className="inline mr-1" strokeWidth={4} /> :
+                                    <Zap size={8} className="inline mr-1" fill="white" />}
+                            {p.status === 'Approved' ? 'Verified' : p.status === 'Rejected' ? 'Rejected' : 'Pending Verification'}
+                        </span>
+                    </div>
+                )}
+                {p.badge && !p.status && (
                     <div className="absolute top-3 left-3">
                         <span className="bg-surface/90 backdrop-blur-sm text-[8px] font-black uppercase tracking-wider text-content px-2 py-1 rounded-lg border border-gray-100/10">
                             {p.badge}
+                        </span>
+                    </div>
+                )}
+                {p.isPriority && (
+                    <div className="absolute top-12 left-3">
+                        <span className="bg-brand text-white text-[7px] font-black uppercase tracking-[0.2em] px-2 py-1 rounded-lg flex items-center gap-1">
+                            <Zap size={8} fill="currentColor" /> Priority
+                        </span>
+                    </div>
+                )}
+                {p.isOwnBrand && (
+                    <div className="absolute top-20 left-3">
+                        <span className="bg-emerald-500 text-white text-[7px] font-black uppercase tracking-[0.2em] px-2 py-1 rounded-lg flex items-center gap-1">
+                            <Award size={8} fill="currentColor" /> Exclusive
                         </span>
                     </div>
                 )}
@@ -403,7 +533,7 @@ const ProductCard = ({ p, onEdit, onDelete }) => {
                     </div>
                 </div>
             </div>
-        </motion.div>
+        </motion.div >
     );
 };
 

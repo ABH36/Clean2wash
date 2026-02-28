@@ -63,7 +63,8 @@
 
 @layer components {
   .mobile-container {
-    @apply max-w-[430px] mx-auto min-h-screen relative flex flex-col bg-white overflow-x-hidden shadow-[0_0_100px_rgba(0, 0, 0, 0.05)];
+    @apply max-w-[430px] mx-auto min-h-screen relative flex flex-col bg-white overflow-x-hidden;
+    box-shadow: 0 0 100px rgba(0, 0, 0, 0.05);
   }
 
   .safe-area-bottom {

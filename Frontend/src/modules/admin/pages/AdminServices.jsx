@@ -29,15 +29,15 @@ const AdminServices = () => {
     const [services, setServices] = useState(() => {
         const saved = localStorage.getItem('CarWash_services');
         return saved ? JSON.parse(saved) : [
-            { id: 'SVC-001', name: 'Eco-Express Wash', category: 'Doorstep', price: '299', time: '30m', status: 'Live', type: 'Waterless', color: 'bg-green-500' },
-            { id: 'SVC-002', name: 'Full Deep Clean', category: 'Doorstep', price: '1299', time: '90m', status: 'Live', type: 'Steam', color: 'bg-brand' },
-            { id: 'SVC-003', name: 'Ceramic Coating', category: 'Studio', price: '14999', time: '4h', status: 'Featured', type: 'Pro', color: 'bg-violet-600' },
-            { id: 'SVC-004', name: 'Interior Detailing', category: 'Studio', price: '899', time: '60m', status: 'Live', type: 'Chemical', color: 'bg-blue-600' },
-            { id: 'SVC-005', name: 'Tire & Rim Polish', category: 'Add-ons', price: '199', time: '15m', status: 'Live', type: 'Wash', color: 'bg-amber-500' },
+            { id: 'SVC-001', name: 'Eco-Express Wash', category: 'Doorstep', price: '299', time: '30m', status: 'Live', type: 'Waterless', color: 'bg-green-500', subscriptionOffer: { enabled: true, washCount: 10, freeWashes: 1, label: 'Buy 10 Washes, Get 1 Free' }, plans: [{ label: '4/mo', perWash: 249, total: 996 }], plansText: '4 Times/Month | 249 | 996' },
+            { id: 'SVC-002', name: 'Full Deep Clean', category: 'Doorstep', price: '1299', time: '90m', status: 'Live', type: 'Steam', color: 'bg-brand', subscriptionOffer: { enabled: true, washCount: 5, freeWashes: 1, label: 'Buy 5 Full Cleans, Get 1 FREE' }, plans: [], plansText: '' },
+            { id: 'SVC-003', name: 'Ceramic Coating', category: 'Studio', price: '14999', time: '4h', status: 'Featured', type: 'Pro', color: 'bg-violet-600', subscriptionOffer: { enabled: true, washCount: 3, freeWashes: 1, label: 'Buy 3 Coats, Get 1 Maintenance Wash' }, plans: [], plansText: '' },
+            { id: 'SVC-004', name: 'Interior Detailing', category: 'Studio', price: '899', time: '60m', status: 'Live', type: 'Chemical', color: 'bg-blue-600', subscriptionOffer: { enabled: true, washCount: 10, freeWashes: 2, label: 'Buy 10, Get 2 Free' }, plans: [], plansText: '' },
+            { id: 'SVC-005', name: 'Tire & Rim Polish', category: 'Add-ons', price: '199', time: '15m', status: 'Live', type: 'Wash', color: 'bg-amber-500', subscriptionOffer: { enabled: true, washCount: 5, freeWashes: 1, label: 'Buy 5 Polishes, Get 1 Free' }, plans: [], plansText: '' },
         ];
     });
 
-    const [formData, setFormData] = useState({ name: '', category: 'Doorstep', price: '', time: '', status: 'Live', type: 'Standard' });
+    const [formData, setFormData] = useState({ name: '', category: 'Doorstep', price: '', time: '', status: 'Live', type: 'Standard', subscriptionOffer: { enabled: true, washCount: 10, freeWashes: 1, label: '' }, plans: [], plansText: '' });
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -58,19 +58,30 @@ const AdminServices = () => {
 
     const handleOpenEdit = (service) => {
         setEditingService(service);
-        setFormData({ ...service });
+        const plansText = (service.plans || []).map(p => `${p.label} | ${p.perWash} | ${p.total}`).join('\n');
+        setFormData({ ...service, plansText });
         setIsModalOpen(true);
     };
 
     const handleSave = (e) => {
         e.preventDefault();
         setLoading(true);
+
+        const parsedPlans = (formData.plansText || '').split('\n')
+            .filter(line => line.includes('|'))
+            .map((line, idx) => {
+                const [label, perWash, total] = line.split('|').map(s => s.trim());
+                return { id: `p${idx}`, label, perWash: parseInt(perWash), total: parseInt(total) };
+            });
+
+        const finalData = { ...formData, plans: parsedPlans };
+
         setTimeout(() => {
             if (editingService) {
-                setServices(prev => prev.map(s => s.id === editingService.id ? { ...s, ...formData } : s));
+                setServices(prev => prev.map(s => s.id === editingService.id ? { ...s, ...finalData } : s));
             } else {
                 const newId = `SVC-${String(services.length + 1).padStart(3, '0')}`;
-                setServices(prev => [{ ...formData, id: newId }, ...prev]);
+                setServices(prev => [{ ...finalData, id: newId }, ...prev]);
             }
             setLoading(false);
             setIsModalOpen(false);
@@ -316,6 +327,90 @@ const AdminServices = () => {
                                             />
                                         </div>
                                     </div>
+
+                                    {/* ── Loyalty Reward Protocol (Customizable) ── */}
+                                    <div className="bg-amber-50/50 rounded-2xl p-5 border border-amber-100 space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600">
+                                                    <Gift size={16} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-black text-amber-900 uppercase tracking-widest leading-none">Reward Protocol</p>
+                                                    <p className="text-[9px] font-bold text-amber-700/60 mt-1 uppercase">Buy X, Get Y Free Offer</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormData(prev => ({ ...prev, subscriptionOffer: { ...prev.subscriptionOffer, enabled: !prev.subscriptionOffer?.enabled } }))}
+                                                className={`w-11 h-6 rounded-full transition-all relative ${formData.subscriptionOffer?.enabled ? 'bg-amber-500' : 'bg-gray-200'}`}
+                                            >
+                                                <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all ${formData.subscriptionOffer?.enabled ? 'left-5' : 'left-0.5'}`} />
+                                            </button>
+                                        </div>
+
+                                        {formData.subscriptionOffer?.enabled && (
+                                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="grid grid-cols-2 gap-4 pt-4 border-t border-amber-200/50">
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[9px] font-black text-amber-800 uppercase tracking-widest ml-1">Pay for Washes (X)</label>
+                                                    <input
+                                                        type="number" min="1"
+                                                        placeholder="10"
+                                                        className="w-full bg-white border border-amber-200 px-4 py-3 rounded-xl text-xs font-bold text-content outline-none focus:border-amber-500 transition-all"
+                                                        value={formData.subscriptionOffer?.washCount || 10}
+                                                        onChange={e => setFormData(prev => ({ ...prev, subscriptionOffer: { ...prev.subscriptionOffer, washCount: parseInt(e.target.value) } }))}
+                                                    />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[9px] font-black text-amber-800 uppercase tracking-widest ml-1">Get Free Washes (Y)</label>
+                                                    <input
+                                                        type="number" min="1"
+                                                        placeholder="1"
+                                                        className="w-full bg-white border border-amber-200 px-4 py-3 rounded-xl text-xs font-bold text-content outline-none focus:border-amber-500 transition-all"
+                                                        value={formData.subscriptionOffer?.freeWashes || 1}
+                                                        onChange={e => setFormData(prev => ({ ...prev, subscriptionOffer: { ...prev.subscriptionOffer, freeWashes: parseInt(e.target.value) } }))}
+                                                    />
+                                                </div>
+                                                <div className="col-span-2 space-y-1.5">
+                                                    <label className="text-[9px] font-black text-amber-800 uppercase tracking-widest ml-1">Custom Ribbon Text (Preview)</label>
+                                                    <input
+                                                        type="text"
+                                                        placeholder={`Buy ${formData.subscriptionOffer?.washCount || 10} Get ${formData.subscriptionOffer?.freeWashes || 1} FREE`}
+                                                        className="w-full bg-white border border-amber-200 px-4 py-3 rounded-xl text-xs font-bold text-content outline-none focus:border-amber-500 transition-all"
+                                                        value={formData.subscriptionOffer?.label || ''}
+                                                        onChange={e => setFormData(prev => ({ ...prev, subscriptionOffer: { ...prev.subscriptionOffer, label: e.target.value } }))}
+                                                    />
+                                                    <p className="text-[8px] font-bold text-amber-600/60 italic ml-1 select-none whitespace-nowrap overflow-hidden">
+                                                        Logic: User pays for {formData.subscriptionOffer?.washCount || 10} washes and receives {formData.subscriptionOffer?.freeWashes || 1} additional wash at no cost.
+                                                    </p>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </div>
+
+                                    {/* ── Monthly Plans Management ── */}
+                                    <div className="bg-indigo-50/50 rounded-2xl p-5 border border-indigo-100 space-y-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600">
+                                                <Crown size={16} />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-indigo-900 uppercase tracking-widest">Monthly Subscriptions</p>
+                                                <p className="text-[9px] font-bold text-indigo-700/60 mt-0.5">Define tiered wash cycles</p>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <textarea
+                                                rows={3}
+                                                placeholder="4 Times/Month | 249 | 996&#10;8 Times/Month | 139 | 1112"
+                                                className="w-full bg-white border border-indigo-100 px-4 py-3 rounded-xl text-xs font-bold text-indigo-900 outline-none focus:border-indigo-400 transition-all resize-none shadow-sm"
+                                                value={formData.plansText || ''}
+                                                onChange={e => setFormData(prev => ({ ...prev, plansText: e.target.value }))}
+                                            />
+                                            <p className="text-[8px] font-bold text-indigo-300 italic ml-1 select-none">Format: Label | PerWashPrice | TotalPrice (One per line)</p>
+                                        </div>
+                                    </div>
+
                                     <div className="pt-4">
                                         <button
                                             disabled={loading}

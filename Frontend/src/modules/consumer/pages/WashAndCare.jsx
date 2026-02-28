@@ -185,44 +185,44 @@ const WashAndCare = () => {
         </section>
     );
 
-    const renderHooraAdvantage = () => (
-        <div className="px-5 mt-12 mb-8">
-            <div className="bg-gradient-to-br from-gray-900 via-black to-gray-950 rounded-2xl p-8 relative overflow-hidden shadow-2xl">
-                {/* Accent Decoration */}
-                <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-[#F29F05]/10 to-transparent" />
+    const renderclean2washAdvantage = () => (
+        <div className="px-5 mt-4 mb-4">
+            <div className="bg-[#0A0A0A] rounded-xl p-5 relative overflow-hidden shadow-xl border border-white/5">
+                {/* Subtle Accent */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[#F29F05]/5 rounded-full blur-3xl -mr-16 -mt-16" />
 
-                <div className="relative z-10 text-center mb-10">
-                    <div className="inline-block bg-[#F29F05] text-black text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-[0.3em] mb-4">The Advantage</div>
-                    <h3 className="text-white text-[24px] font-black uppercase italic tracking-tighter leading-none">HOORA VS. LOCAL</h3>
+                <div className="relative z-10 text-center mb-6">
+                    <div className="inline-block bg-[#F29F05] text-black text-[8px] font-black px-2 py-0.5 rounded-lg uppercase tracking-[0.2em] mb-2">The Advantage</div>
+                    <h3 className="text-white text-[18px] font-black uppercase italic tracking-tighter leading-none">clean2wash VS. LOCAL</h3>
                 </div>
 
-                <div className="grid grid-cols-3 gap-6 relative z-10 border-b border-white/5 pb-10">
+                <div className="grid grid-cols-3 items-center gap-2 relative z-10 border-b border-white/5 pb-6">
                     <div className="text-center group">
-                        <div className="w-12 h-12 bg-[#F29F05] rounded-2xl mx-auto flex items-center justify-center mb-3 shadow-lg group-hover:scale-110 transition-transform">
-                            <Zap size={20} className="text-black" />
+                        <div className="w-10 h-10 bg-[#F29F05] rounded-xl mx-auto flex items-center justify-center mb-2 shadow-lg group-hover:scale-110 transition-transform">
+                            <Zap size={16} className="text-black" />
                         </div>
-                        <p className="text-[9px] font-black text-[#F29F05] uppercase tracking-widest">High Tech<br />Solutions</p>
+                        <p className="text-[8px] font-black text-[#F29F05] uppercase tracking-widest leading-tight">High Tech<br />Solutions</p>
                     </div>
 
-                    <div className="flex flex-center items-center justify-center text-white/10 font-black italic text-4xl">/</div>
+                    <div className="flex items-center justify-center text-white/5 font-black italic text-2xl">/</div>
 
                     <div className="text-center group opacity-40">
-                        <div className="w-12 h-12 bg-white/10 rounded-2xl mx-auto flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                            <Clock size={20} className="text-white" />
+                        <div className="w-10 h-10 bg-white/5 rounded-xl mx-auto flex items-center justify-center mb-2 border border-white/10 group-hover:scale-110 transition-transform">
+                            <Clock size={16} className="text-white" />
                         </div>
-                        <p className="text-[9px] font-black text-white/50 uppercase tracking-widest">Slow<br />Service</p>
+                        <p className="text-[8px] font-black text-white/50 uppercase tracking-widest leading-tight">Slow<br />Service</p>
                     </div>
                 </div>
 
-                <div className="mt-10 space-y-4 relative z-10">
+                <div className="mt-6 space-y-2 relative z-10">
                     {[
                         { label: '95% Water Saving Tech', icon: ShieldCheck },
                         { label: 'Certified Pro Captains', icon: ShieldCheck },
                         { label: 'Premium Quality Foam', icon: ShieldCheck }
                     ].map((item, i) => (
-                        <div key={i} className="flex items-center gap-4 bg-white/5 py-4 px-6 rounded-xl border border-white/5 group hover:bg-white/10 transition-colors">
-                            <item.icon size={18} className="text-[#F29F05]" />
-                            <span className="text-white/80 text-[11px] font-black uppercase tracking-widest leading-none">{item.label}</span>
+                        <div key={i} className="flex items-center gap-3 bg-white/[0.03] py-2.5 px-4 rounded-xl border border-white/5 group hover:bg-white/[0.05] transition-colors">
+                            <item.icon size={14} className="text-[#F29F05]" />
+                            <span className="text-white/70 text-[10px] font-black uppercase tracking-widest leading-none">{item.label}</span>
                         </div>
                     ))}
                 </div>
@@ -230,10 +230,10 @@ const WashAndCare = () => {
                 {/* Bottom Trigger */}
                 <button
                     onClick={() => navigate('/services')}
-                    className="mt-8 w-full bg-[#F29F05] text-black py-4 rounded-xl font-black uppercase text-[11px] tracking-[0.2em] flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all"
+                    className="mt-6 w-full bg-[#F29F05] text-black py-3 rounded-xl font-[1000] uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
                 >
                     Compare Detailed Features
-                    <ArrowRight size={16} />
+                    <ArrowRight size={14} />
                 </button>
             </div>
         </div>
@@ -254,7 +254,7 @@ const WashAndCare = () => {
                 <div className="flex-1 overflow-y-auto overflow-x-hidden">
                     {renderHero()}
                     {renderServiceGrid()}
-                    {renderHooraAdvantage()}
+                    {renderclean2washAdvantage()}
 
                     {/* Bottom Padding */}
                     <div className="h-32" />

@@ -1,16 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Plus, Car, Trash2, Check, Edit3, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, Plus, Car, Trash2, Check, Edit3, AlertCircle, CheckCircle2, ShieldAlert, FileSearch, Zap, Calendar } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 
-const BRANDS = ['Honda', 'Maruti', 'Hyundai', 'Toyota', 'Tata', 'Mahindra', 'Kia', 'BMW'];
+const BRANDS = ['Honda', 'Maruti', 'Hyundai', 'Toyota', 'Tata', 'Mahindra', 'Kia', 'BMW', 'Mercedes', 'Audi'];
 const COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#ffffff', '#1a1a1a', '#95a5a6', '#e67e22'];
-const TYPES = ['Hatchback', 'Sedan', 'SUV', 'MPV', 'Pickup', 'Luxury'];
+const TYPES = ['Hatchback', 'Sedan', 'SUV', 'MPV', 'Pickup', 'Luxury', 'Traveler', 'Bus'];
 
-const BLANK_FORM = { brand: '', model: '', type: 'Sedan', color: '#3498db', plate: '' };
+const BLANK_FORM = { brand: '', model: '', type: 'Sedan', color: '#3498db', plate: '', insuranceExpiry: '', pucExpiry: '' };
 
-// Car image map by type
 const TYPE_IMG = {
     Hatchback: 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=400&q=80',
     Sedan: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80',
@@ -18,14 +17,10 @@ const TYPE_IMG = {
     MPV: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=400&q=80',
     Pickup: 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=400&q=80',
     Luxury: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400&q=80',
+    Traveler: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=400&q=80',
+    Bus: 'https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=400&q=80',
 };
 
-const INITIAL_VEHICLES = [
-    { id: 1, brand: 'Honda', model: 'City', type: 'Sedan', color: '#3498db', plate: 'KA 05 MR 7821', img: TYPE_IMG['Sedan'], isPrimary: true },
-    { id: 2, brand: 'Maruti', model: 'Swift', type: 'Hatchback', color: '#e74c3c', plate: 'KA 01 AB 1122', img: TYPE_IMG['Hatchback'], isPrimary: false },
-];
-
-/* ── Toast ─────────────────────────────── */
 const Toast = ({ msg, type = 'success', onDone }) => (
     <motion.div initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
         exit={{ y: 80, opacity: 0 }} onAnimationComplete={() => setTimeout(onDone, 2000)}
@@ -37,17 +32,16 @@ const Toast = ({ msg, type = 'success', onDone }) => (
     </motion.div>
 );
 
-/* ── Main Component ─────────────────────── */
 const VehicleManager = () => {
     const navigate = useNavigate();
     const { vehicles, addVehicle, removeVehicle, setPrimaryVehicle, user } = useAuth();
     const [showSheet, setShowSheet] = useState(false);
-    const [editId, setEditId] = useState(null);   // null = add mode, number = edit mode
+    const [editId, setEditId] = useState(null);
     const [form, setForm] = useState(BLANK_FORM);
     const [errors, setErrors] = useState({});
-    const [toast, setToast] = useState(null);   // { msg, type }
+    const [toast, setToast] = useState(null);
+    const [isFetching, setIsFetching] = useState(false);
 
-    /* helpers */
     const showToast = (msg, type = 'success') => setToast({ msg, type });
     const closeSheet = () => { setShowSheet(false); setEditId(null); setErrors({}); };
 
@@ -59,56 +53,85 @@ const VehicleManager = () => {
     };
 
     const openEdit = (v) => {
-        setForm({ brand: v.brand, model: v.model, type: v.type, color: v.color, plate: v.plate });
+        setForm({
+            brand: v.brand,
+            model: v.model,
+            type: v.type,
+            color: v.color,
+            plate: v.plate,
+            insuranceExpiry: v.insuranceExpiry || '',
+            pucExpiry: v.pucExpiry || ''
+        });
         setEditId(v.id);
         setErrors({});
         setShowSheet(true);
     };
 
-    /* validation */
+    const handleVahanFetch = async () => {
+        if (!form.plate) {
+            setErrors({ plate: 'Enter plate number first' });
+            return;
+        }
+        setIsFetching(true);
+        // Simulate VAHAN API delay
+        await new Promise(r => setTimeout(r, 1500));
+
+        // Mock data logic based on common plate patterns or random
+        setForm(prev => ({
+            ...prev,
+            brand: 'Maruti',
+            model: 'Dzire VXI',
+            type: 'Sedan',
+            insuranceExpiry: '2025-12-10',
+            pucExpiry: '2024-09-15'
+        }));
+        setIsFetching(false);
+        showToast('Details fetched from VAHAN!');
+    };
+
     const validate = () => {
         const e = {};
-        if (!form.brand) e.brand = 'Please select a brand';
-        if (!form.model.trim()) e.model = 'Model name is required';
-        if (!form.plate.trim()) e.plate = 'Number plate is required';
-        else if (!/^[A-Z]{2}\s?\d{2}\s?[A-Z]{1,3}\s?\d{4}$/.test(form.plate.replace(/\s/g, '').toUpperCase()))
-            e.plate = 'Enter valid plate (e.g. KA 05 MR 7821)';
+        if (!form.brand) e.brand = 'Required';
+        if (!form.model.trim()) e.model = 'Required';
+        if (!form.plate.trim()) e.plate = 'Required';
         setErrors(e);
         return Object.keys(e).length === 0;
     };
 
-    /* save (add or edit) */
+    const handleSetPrimary = (id) => {
+        setPrimaryVehicle(id);
+        showToast('Set as primary vehicle');
+    };
+
+    const handleDelete = (id) => {
+        if (window.confirm('Delete this vehicle from your garage?')) {
+            removeVehicle(id);
+            showToast('Vehicle removed', 'error');
+        }
+    };
+
     const handleSave = () => {
         if (!validate()) return;
-
         const img = TYPE_IMG[form.type] || TYPE_IMG['Sedan'];
 
         if (editId) {
-            // Since we don't have a direct updateVehicle in context yet, 
-            // we'll remove and add or handle as simple addition for now 
-            // OR I can easily add updateVehicle to context if needed.
-            // For now, let's just use addVehicle for simplicity or keep local edits if complex.
-            // Actually, I'll just use addVehicle with a new ID if it's new.
-            // For editing, let's just make it a local-ish update if possible.
-            // Better: I'll just handle it as a replacement.
             removeVehicle(editId);
             addVehicle({ ...form, id: editId, isPrimary: false, img, userId: user?.id || 'GUEST' });
             showToast('Vehicle updated successfully!');
         } else {
             addVehicle({ ...form, id: Date.now(), isPrimary: false, img, userId: user?.id || 'GUEST' });
-            showToast('Vehicle added to your garage!');
+            showToast('Vehicle added to garage!');
         }
         closeSheet();
     };
 
-    const handleDelete = (id) => {
-        removeVehicle(id);
-        showToast('Vehicle removed', 'error');
-    };
-
-    const handleSetPrimary = (id) => {
-        setPrimaryVehicle(id);
-        showToast('Primary vehicle updated!');
+    const getExpiryStatus = (date) => {
+        if (!date) return null;
+        const diff = new Date(date) - new Date();
+        const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+        if (days < 0) return { label: 'Expired', color: 'text-red-500', bg: 'bg-red-50' };
+        if (days < 30) return { label: `${days}d left`, color: 'text-orange-500', bg: 'bg-orange-50' };
+        return { label: 'Active', color: 'text-green-500', bg: 'bg-green-50' };
     };
 
     const setField = (key, val) => {
@@ -117,187 +140,204 @@ const VehicleManager = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50 font-outfit">
+            <style dangerouslySetInnerHTML={{ __html: `@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap'); .font-outfit { font-family: 'Outfit', sans-serif; }` }} />
 
-            {/* ── Toast ── */}
             <AnimatePresence>
                 {toast && <Toast key={toast.msg} msg={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
             </AnimatePresence>
 
-            {/* ── Header ── */}
-            <header className="px-4 pt-10 pb-4 bg-white sticky top-0 z-50 border-b border-gray-100">
+            <header className="px-4 pt-10 pb-4 bg-white sticky top-0 z-50 border-b border-gray-100 shadow-sm">
                 <div className="flex items-center gap-3">
-                    <button onClick={() => navigate(-1)} className="w-9 h-9 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center">
+                    <button onClick={() => navigate(-1)} className="w-9 h-9 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform">
                         <ChevronLeft size={18} strokeWidth={2.5} className="text-content" />
                     </button>
                     <div>
-                        <h1 className="text-lg font-black tracking-tight text-content leading-none">My Vehicles</h1>
-                        <p className="text-[9px] text-brand font-black uppercase tracking-widest mt-0.5">{vehicles.length} in Garage</p>
+                        <h1 className="text-lg font-black tracking-tight text-content leading-none">Garages & Fleet</h1>
+                        <p className="text-[9px] text-brand font-black uppercase tracking-widest mt-0.5">{vehicles.length} Vehicles Managed</p>
                     </div>
                     <button onClick={openAdd}
-                        className="ml-auto flex items-center gap-1.5 bg-brand text-white px-3 py-2 rounded-xl font-black text-xs shadow-md shadow-brand/20 active:scale-95 transition-all">
-                        <Plus size={14} strokeWidth={3} /> Add
+                        className="ml-auto flex items-center gap-1.5 bg-brand text-white px-3 py-2 rounded-xl font-black text-xs shadow-lg shadow-brand/20 active:scale-95 transition-all">
+                        <Plus size={14} strokeWidth={3} /> Add New
                     </button>
                 </div>
             </header>
 
-            <div className="px-4 py-4 space-y-3 pb-24">
-
-                {/* ── Vehicle Cards ── */}
+            <div className="px-4 py-4 space-y-4 pb-24">
                 <AnimatePresence>
-                    {vehicles.map((v, i) => (
-                        <motion.div key={v.id} layout
-                            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.96 }} transition={{ delay: i * 0.04 }}
-                            className={`bg-white rounded-2xl border shadow-soft overflow-hidden ${v.isPrimary ? 'border-brand/25 ring-1 ring-brand/10' : 'border-gray-100'}`}>
+                    {vehicles.map((v, i) => {
+                        const insStatus = getExpiryStatus(v.insuranceExpiry);
+                        const pucStatus = getExpiryStatus(v.pucExpiry);
 
-                            {/* Image */}
-                            <div className="relative h-28 overflow-hidden">
-                                <img src={v.img} alt={v.model} className="w-full h-full object-cover" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                                {v.isPrimary && (
-                                    <div className="absolute top-3 left-3 bg-brand text-white text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg flex items-center gap-1">
-                                        <Check size={9} strokeWidth={3} /> Primary
-                                    </div>
-                                )}
-                                <div className="absolute bottom-3 left-3">
-                                    <h3 className="text-white font-black text-base tracking-tight leading-none">{v.brand} {v.model}</h3>
-                                    <p className="text-white/60 text-[10px] font-bold mt-0.5">{v.type}</p>
-                                </div>
-                                <div className="absolute bottom-3 right-3 w-5 h-5 rounded-full border-2 border-white shadow-md" style={{ backgroundColor: v.color }} />
-                            </div>
+                        return (
+                            <motion.div key={v.id} layout
+                                initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }} transition={{ delay: i * 0.05 }}
+                                className={`bg-white rounded-3xl border shadow-xl overflow-hidden ${v.isPrimary ? 'border-brand/30' : 'border-gray-100'}`}>
 
-                            {/* Actions row */}
-                            <div className="px-4 py-3 flex items-center justify-between">
-                                <div className="bg-gray-50 border border-gray-100 px-3 py-1.5 rounded-lg">
-                                    <p className="font-black text-sm text-content tracking-widest">{v.plate}</p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    {!v.isPrimary && (
-                                        <button onClick={() => handleSetPrimary(v.id)}
-                                            className="text-[9px] font-black text-brand bg-brand/10 px-3 py-1.5 rounded-lg uppercase tracking-widest active:scale-95 transition-all">
-                                            Set Primary
-                                        </button>
+                                <div className="relative h-32 overflow-hidden">
+                                    <img src={v.img} alt={v.model} className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                    {v.isPrimary && (
+                                        <div className="absolute top-3 left-3 bg-brand text-white text-[7px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full flex items-center gap-1 shadow-lg">
+                                            <Check size={8} strokeWidth={4} /> Primary Vehicle
+                                        </div>
                                     )}
-                                    <button onClick={() => openEdit(v)}
-                                        className="w-8 h-8 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-content-subtle hover:text-blue-500 hover:bg-blue-50 hover:border-blue-100 transition-colors">
-                                        <Edit3 size={13} strokeWidth={2.5} />
-                                    </button>
-                                    <button onClick={() => handleDelete(v.id)}
-                                        className="w-8 h-8 bg-red-50 border border-red-100 rounded-lg flex items-center justify-center text-red-400 hover:text-red-600 transition-colors active:scale-95">
-                                        <Trash2 size={13} strokeWidth={2.5} />
-                                    </button>
+                                    <div className="absolute bottom-3 left-4">
+                                        <h3 className="text-white font-black text-lg tracking-tight leading-none uppercase italic">{v.brand} {v.model}</h3>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className="text-white/60 text-[8px] font-black tracking-widest uppercase bg-white/10 px-1.5 py-0.5 rounded-md">{v.type}</span>
+                                            <div className="w-2 h-2 rounded-full border border-white/30" style={{ backgroundColor: v.color }} />
+                                        </div>
+                                    </div>
+                                    <div className="absolute top-3 right-3 bg-white/90 px-2.5 py-1.5 rounded-xl border border-white flex flex-col items-center">
+                                        <p className="text-[7px] font-black text-content-subtle uppercase leading-none mb-0.5 tracking-tighter">Plate</p>
+                                        <p className="text-[10px] font-black text-content tracking-widest leading-none">{v.plate.replace(/\s/g, '')}</p>
+                                    </div>
                                 </div>
-                            </div>
-                        </motion.div>
-                    ))}
-                </AnimatePresence>
 
-                {/* ── Empty State ── */}
-                {vehicles.length === 0 && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16">
-                        <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                            <Car size={28} className="text-content-subtle" />
-                        </div>
-                        <p className="font-black text-content-subtle text-sm">No vehicles added yet</p>
-                        <button onClick={openAdd} className="mt-4 text-brand font-black text-xs uppercase tracking-widest">+ Add Vehicle</button>
-                    </motion.div>
-                )}
+                                <div className="px-5 py-4 bg-white space-y-3">
+                                    {/* Compliance Row */}
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {insStatus && (
+                                            <div className={`p-2.5 rounded-2xl border border-gray-50 ${insStatus.bg} flex flex-col gap-1`}>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[7px] font-black text-content-subtle uppercase tracking-widest">Insurance</span>
+                                                    <ShieldAlert size={10} className={insStatus.color} />
+                                                </div>
+                                                <p className={`text-[10px] font-black ${insStatus.color}`}>{insStatus.label}</p>
+                                            </div>
+                                        )}
+                                        {pucStatus && (
+                                            <div className={`p-2.5 rounded-2xl border border-gray-50 ${pucStatus.bg} flex flex-col gap-1`}>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[7px] font-black text-content-subtle uppercase tracking-widest">PUC / Emission</span>
+                                                    <Zap size={10} className={pucStatus.color} />
+                                                </div>
+                                                <p className={`text-[10px] font-black ${pucStatus.color}`}>{pucStatus.label}</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex items-center justify-between pt-1">
+                                        <div className="flex items-center gap-2">
+                                            {!v.isPrimary && (
+                                                <button onClick={() => handleSetPrimary(v.id)}
+                                                    className="h-8 px-3 bg-brand/5 text-brand text-[8px] font-black uppercase tracking-widest rounded-xl hover:bg-brand hover:text-white transition-all">
+                                                    Select
+                                                </button>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button onClick={() => openEdit(v)} className="w-8 h-8 bg-gray-50 text-content-subtle rounded-xl flex items-center justify-center border border-gray-100 hover:border-brand/30 hover:text-brand transition-all">
+                                                <Edit3 size={14} />
+                                            </button>
+                                            <button onClick={() => handleDelete(v.id)} className="w-8 h-8 bg-red-50 text-red-400 rounded-xl flex items-center justify-center border border-red-100 hover:bg-red-500 hover:text-white transition-all">
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        );
+                    })}
+                </AnimatePresence>
             </div>
 
-            {/* ── Add / Edit Bottom Sheet ── */}
             <AnimatePresence>
                 {showSheet && (
                     <>
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/40 z-40" onClick={closeSheet} />
+                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={closeSheet} />
 
                         <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-                            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                            className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white rounded-t-3xl z-50 flex flex-col"
-                            style={{ maxHeight: '88vh' }}>
+                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                            className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white rounded-t-[2.5rem] z-50 overflow-hidden shadow-2xl"
+                            style={{ maxHeight: '90vh' }}>
 
-                            {/* Sheet header — sticky */}
-                            <div className="px-5 pt-4 pb-3 flex-shrink-0">
-                                <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
+                            <div className="px-6 pt-5 pb-3 border-b border-gray-50 sticky top-0 bg-white/80 backdrop-blur-md z-10">
+                                <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-5" />
                                 <div className="flex items-center justify-between">
-                                    <h3 className="font-black text-lg tracking-tight text-content">
-                                        {editId ? 'Edit Vehicle' : 'Add Vehicle'}
+                                    <h3 className="font-black text-xl tracking-tight text-content italic uppercase">
+                                        {editId ? 'Modify Fleet' : 'Recruit Vehicle'}
                                     </h3>
-                                    <button onClick={closeSheet} className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-content-muted text-sm font-black">✕</button>
+                                    <button onClick={closeSheet} className="w-9 h-9 bg-gray-50 rounded-full flex items-center justify-center text-content-muted font-black">✕</button>
                                 </div>
                             </div>
 
-                            {/* Scrollable form body */}
-                            <div className="flex-1 overflow-y-auto px-5 pb-6 space-y-4">
-
-                                {/* Brand */}
-                                <div>
-                                    <p className="text-[8px] font-black uppercase tracking-widest text-content-subtle mb-2">
-                                        Brand {errors.brand && <span className="text-red-500 normal-case font-bold tracking-normal">— {errors.brand}</span>}
-                                    </p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {BRANDS.map(b => (
-                                            <button key={b} onClick={() => setField('brand', b)}
-                                                className={`px-3 py-1.5 rounded-xl font-black text-xs border transition-all ${form.brand === b ? 'bg-brand text-white border-brand' : 'bg-gray-50 border-gray-100 text-content-muted'} ${errors.brand ? 'border-red-200' : ''}`}>
-                                                {b}
-                                            </button>
-                                        ))}
+                            <div className="overflow-y-auto px-6 py-6 pb-12 space-y-6">
+                                {/* VAHAN FETCH Integration */}
+                                <div className="space-y-3">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-brand italic">Vehicle Identification</p>
+                                    <div className="flex gap-2">
+                                        <div className="flex-1 relative">
+                                            <input placeholder="ENTER PLATE (e.g. KA05MR7821)" value={form.plate}
+                                                onChange={e => setField('plate', e.target.value.toUpperCase())}
+                                                className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-4 font-black text-sm tracking-widest uppercase focus:border-brand transition-all outline-none" />
+                                        </div>
+                                        <button onClick={handleVahanFetch} disabled={isFetching}
+                                            className={`w-14 bg-brand text-white rounded-2xl flex items-center justify-center shadow-lg shadow-brand/20 ${isFetching ? 'animate-pulse' : 'active:scale-95'}`}>
+                                            {isFetching ? <Zap size={20} className="animate-spin" /> : <ShieldAlert size={20} />}
+                                        </button>
+                                    </div>
+                                    <div className="flex items-center gap-2 px-1">
+                                        <FileSearch size={12} className="text-gray-400" />
+                                        <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Auto-fill details via VAHAN API</span>
                                     </div>
                                 </div>
 
-                                {/* Model */}
-                                <div>
-                                    <p className="text-[8px] font-black uppercase tracking-widest text-content-subtle mb-1.5">
-                                        Model {errors.model && <span className="text-red-500 normal-case font-bold tracking-normal">— {errors.model}</span>}
-                                    </p>
-                                    <input placeholder="e.g. City, Swift, Creta" value={form.model}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-content-subtle ml-1">Brand</p>
+                                        <select value={form.brand} onChange={e => setField('brand', e.target.value)}
+                                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3.5 font-bold text-sm outline-none appearance-none">
+                                            <option value="">Select</option>
+                                            {BRANDS.map(b => <option key={b} value={b}>{b}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-content-subtle ml-1">Type</p>
+                                        <select value={form.type} onChange={e => setField('type', e.target.value)}
+                                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3.5 font-bold text-sm outline-none appearance-none">
+                                            {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-content-subtle ml-1">Full Model Name</p>
+                                    <input placeholder="e.g. Range Rover Evoque" value={form.model}
                                         onChange={e => setField('model', e.target.value)}
-                                        className={`w-full bg-gray-50 border rounded-xl px-4 py-3 font-bold text-sm text-content outline-none transition-colors placeholder:text-content-subtle ${errors.model ? 'border-red-300 bg-red-50' : 'border-gray-100 focus:border-brand/30'}`} />
+                                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 font-bold text-sm outline-none focus:border-brand/30" />
                                 </div>
 
-                                {/* Type */}
-                                <div>
-                                    <p className="text-[8px] font-black uppercase tracking-widest text-content-subtle mb-2">Vehicle Type</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {TYPES.map(t => (
-                                            <button key={t} onClick={() => setField('type', t)}
-                                                className={`px-3 py-1.5 rounded-xl font-black text-xs border transition-all ${form.type === t ? 'bg-content text-white border-content' : 'bg-gray-50 border-gray-100 text-content-muted'}`}>
-                                                {t}
-                                            </button>
-                                        ))}
+                                {/* COMPLIANCE DATES */}
+                                <div className="space-y-3 pt-2">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-brand italic">Compliance & Reminders</p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between px-1">
+                                                <span className="text-[9px] font-black uppercase text-content-subtle tracking-widest">Insurance Exp.</span>
+                                                <Calendar size={10} className="text-blue-500" />
+                                            </div>
+                                            <input type="date" value={form.insuranceExpiry} onChange={e => setField('insuranceExpiry', e.target.value)}
+                                                className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3.5 font-bold text-xs" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between px-1">
+                                                <span className="text-[9px] font-black uppercase text-content-subtle tracking-widest">PUC / Emission</span>
+                                                <Calendar size={10} className="text-emerald-500" />
+                                            </div>
+                                            <input type="date" value={form.pucExpiry} onChange={e => setField('pucExpiry', e.target.value)}
+                                                className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3.5 font-bold text-xs" />
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Color */}
-                                <div>
-                                    <p className="text-[8px] font-black uppercase tracking-widest text-content-subtle mb-2">Color</p>
-                                    <div className="flex gap-3 flex-wrap">
-                                        {COLORS.map(c => (
-                                            <button key={c} onClick={() => setField('color', c)}
-                                                className={`w-9 h-9 rounded-xl border-2 flex items-center justify-center transition-all ${form.color === c ? 'border-brand scale-110 shadow-md' : 'border-gray-200'}`}
-                                                style={{ backgroundColor: c }}>
-                                                {form.color === c && <Check size={13} className={c === '#ffffff' ? 'text-black' : 'text-white'} strokeWidth={3} />}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Plate */}
-                                <div>
-                                    <p className="text-[8px] font-black uppercase tracking-widest text-content-subtle mb-1.5">
-                                        Number Plate {errors.plate && <span className="text-red-500 normal-case font-bold tracking-normal">— {errors.plate}</span>}
-                                    </p>
-                                    <input placeholder="e.g. KA 05 MR 7821" value={form.plate}
-                                        onChange={e => setField('plate', e.target.value.toUpperCase())}
-                                        className={`w-full bg-gray-50 border rounded-xl px-4 py-3 font-black text-sm text-content outline-none tracking-widest uppercase transition-colors placeholder:font-bold placeholder:text-content-subtle placeholder:normal-case placeholder:tracking-normal ${errors.plate ? 'border-red-300 bg-red-50' : 'border-gray-100 focus:border-brand/30'}`} />
-                                </div>
-
-                                {/* Save Button */}
                                 <motion.button whileTap={{ scale: 0.97 }} onClick={handleSave}
-                                    className="w-full h-12 bg-brand text-white rounded-xl font-black text-sm shadow-md shadow-brand/20 mt-1 flex items-center justify-center gap-2">
-                                    <Check size={16} strokeWidth={3} />
-                                    {editId ? 'Update Vehicle' : 'Save Vehicle'}
+                                    className="w-full h-14 bg-content text-white rounded-2xl font-black text-sm shadow-xl shadow-content/20 flex items-center justify-center gap-3 uppercase italic tracking-widest">
+                                    <CheckCircle2 size={18} />
+                                    {editId ? 'Update Modifications' : 'Confirm Registration'}
                                 </motion.button>
                             </div>
                         </motion.div>

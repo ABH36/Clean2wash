@@ -10,8 +10,49 @@ const CaptainLogin = () => {
     const navigate = useNavigate();
     const { isDarkMode } = useTheme();
     const { login, validateCredentials } = useAuth();
-    // ... logic (same as before)
+    const [phase, setPhase] = useState('phone');
+    const [phone, setPhone] = useState('');
+    const [otp, setOtp] = useState(['', '', '', '']);
+    const [loading, setLoading] = useState(false);
+    const otpRefs = useRef([]);
 
+    const handleSendOtp = () => {
+        if (phone.length === 10) {
+            setLoading(true);
+            setTimeout(() => {
+                setLoading(false);
+                setPhase('otp');
+            }, 1000);
+        }
+    };
+
+    const handleOtpChange = (value, index) => {
+        const newOtp = [...otp];
+        newOtp[index] = value;
+        setOtp(newOtp);
+        if (value && index < 3) {
+            otpRefs.current[index + 1]?.focus();
+        }
+    };
+
+    const handleVerify = async () => {
+        if (otp.join('').length === 4) {
+            setLoading(true);
+            try {
+                // Determine if this is a known number to differentiate login vs register in UI later if needed
+                const isKnown = validateCredentials(phone, otp.join(''));
+                await login('captain', { phone, type: 'captain' });
+                navigate('/captain');
+            } catch (err) {
+                console.error(err);
+                // Fallback to demo login if validation fails on mock backend
+                await login('captain', { phone, type: 'captain' });
+                navigate('/captain');
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
     return (
         <div className={`min-h-screen ${isDarkMode ? 'bg-[#0F172A]' : 'bg-[#F8FAFC]'} flex flex-col font-sans overflow-hidden transition-colors duration-500`}>
             {/* ── Visual Header ── */}

@@ -7,6 +7,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import MobileLayout from '../components/layout/MobileLayout';
 import { useCart, SHOP_PRODUCTS } from '../../../context/CartContext';
+import { useAuth } from '../../../context/AuthContext';
 
 const CATEGORIES = ['All', 'Electronics', 'Accessories', 'Cleaning'];
 const SORT_OPTIONS = [
@@ -19,6 +20,7 @@ const SORT_OPTIONS = [
 const ShopPage = () => {
     const navigate = useNavigate();
     const { addToCart, isInCart, cartCount } = useCart();
+    const { registeredUsers } = useAuth();
     const [activeCategory, setActiveCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState('featured');
@@ -35,8 +37,20 @@ const ShopPage = () => {
         showToast(product.name);
     };
 
+    const allAvailableProducts = useMemo(() => {
+        const vendorApproved = [];
+        (registeredUsers.vendor || []).forEach(v => {
+            if (v.products) {
+                v.products.filter(p => p.status === 'Approved').forEach(p => {
+                    vendorApproved.push(p);
+                });
+            }
+        });
+        return [...SHOP_PRODUCTS, ...vendorApproved];
+    }, [registeredUsers.vendor]);
+
     const filteredProducts = useMemo(() => {
-        let list = [...SHOP_PRODUCTS];
+        let list = [...allAvailableProducts];
         if (activeCategory !== 'All') list = list.filter(p => p.category === activeCategory);
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase();
@@ -49,7 +63,7 @@ const ShopPage = () => {
             default: break;
         }
         return list;
-    }, [activeCategory, searchQuery, sortBy]);
+    }, [activeCategory, searchQuery, sortBy, allAvailableProducts]);
 
     return (
         <MobileLayout>
@@ -240,7 +254,10 @@ const ProductCard = ({ product, index, inCart, onAddToCart, onViewCart }) => {
             className="bg-white rounded-3xl border border-gray-100 shadow-soft overflow-hidden flex flex-col group transition-all"
         >
             <div className="p-2.5">
-                <div className="relative aspect-square rounded-2xl overflow-hidden bg-[#f8fafc]">
+                <div
+                    className="relative aspect-square rounded-2xl overflow-hidden bg-[#f8fafc] cursor-pointer"
+                    onClick={() => navigate(`/e-shop/product/${product.id}`)}
+                >
                     <img src={product.image} alt={product.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
 
@@ -268,7 +285,12 @@ const ProductCard = ({ product, index, inCart, onAddToCart, onViewCart }) => {
 
             <div className="px-4 pb-4 pt-1 flex flex-col flex-1">
                 <p className="text-[8px] font-black text-brand uppercase tracking-[0.2em] mb-0.5 opacity-80">{product.category}</p>
-                <h3 className="text-[13px] font-bold text-[#0f172a] leading-tight mb-2 line-clamp-2 min-h-[34px] group-hover:text-brand transition-colors font-sans">{product.name}</h3>
+                <h3
+                    className="text-[13px] font-bold text-[#0f172a] leading-tight mb-2 line-clamp-2 min-h-[34px] group-hover:text-brand transition-colors font-sans cursor-pointer"
+                    onClick={() => navigate(`/e-shop/product/${product.id}`)}
+                >
+                    {product.name}
+                </h3>
 
                 <div className="flex items-baseline gap-1.5 mb-4">
                     <span className="text-lg font-black text-[#0f172a] tracking-tight">₹{product.salePrice.toLocaleString()}</span>

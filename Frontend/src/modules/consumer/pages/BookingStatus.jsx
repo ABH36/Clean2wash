@@ -10,18 +10,25 @@ import MobileLayout from '../components/layout/MobileLayout';
 import { useAuth } from '../../../context/AuthContext';
 
 const CAPTAIN_STEPS = [
-    { id: 0, label: 'Matching Captain', desc: 'Scanning nearby experts…', Icon: Zap, activeColor: 'text-violet-500', activeBg: 'bg-violet-50', activeBorder: 'border-violet-200' },
-    { id: 1, label: 'Captain En Route', desc: 'Captain is heading your way', Icon: Navigation, activeColor: 'text-blue-500', activeBg: 'bg-blue-50', activeBorder: 'border-blue-200' },
-    { id: 2, label: 'Wash in Progress', desc: 'Vehicle is being serviced', Icon: Droplets, activeColor: 'text-brand', activeBg: 'bg-brand/10', activeBorder: 'border-brand/20' },
-    { id: 3, label: 'Completed', desc: 'Your car is spotless. Enjoy!', Icon: CheckCircle2, activeColor: 'text-green-500', activeBg: 'bg-green-50', activeBorder: 'border-green-200' },
+    { id: 'CREATED', label: 'Booking Created', desc: 'Wash requested successfully', Icon: Zap, activeColor: 'text-violet-500', activeBg: 'bg-violet-50', activeBorder: 'border-violet-200' },
+    { id: 'ASSIGNED', label: 'Captain Assigned', desc: 'Expert captain on the job', Icon: ShieldCheck, activeColor: 'text-blue-500', activeBg: 'bg-blue-50', activeBorder: 'border-blue-200' },
+    { id: 'CAPTAIN_EN_ROUTE', label: 'En Route', desc: 'Captain is heading your way', Icon: Navigation, activeColor: 'text-blue-600', activeBg: 'bg-blue-100', activeBorder: 'border-blue-300' },
+    { id: 'ARRIVED', label: 'Arrived', desc: 'Captain reached your location', Icon: MapPin, activeColor: 'text-brand', activeBg: 'bg-brand/10', activeBorder: 'border-brand/20' },
+    { id: 'BEFORE_PHOTO_DONE', label: 'Inspection Done', desc: 'Vehicle condition documented', Icon: CheckCircle2, activeColor: 'text-orange-500', activeBg: 'bg-orange-50', activeBorder: 'border-orange-200' },
+    { id: 'IN_PROGRESS', label: 'Wash in Progress', desc: 'Deep cleaning in action', Icon: Droplets, activeColor: 'text-sky-500', activeBg: 'bg-sky-50', activeBorder: 'border-sky-200' },
+    { id: 'AFTER_PHOTO_DONE', label: 'Final Inspection', desc: 'Quality check completed', Icon: CheckCircle2, activeColor: 'text-emerald-500', activeBg: 'bg-emerald-50', activeBorder: 'border-emerald-200' },
+    { id: 'COMPLETED', label: 'Completed', desc: 'Spotless! Enjoy your ride', Icon: CheckCircle2, activeColor: 'text-green-600', activeBg: 'bg-green-50', activeBorder: 'border-green-200' },
 ];
 
 const VENDOR_STEPS = [
-    { id: 0, label: 'Matching Studio', desc: 'Finding the best nearby studio…', Icon: Zap, activeColor: 'text-violet-500', activeBg: 'bg-violet-50', activeBorder: 'border-violet-200' },
-    { id: 1, label: 'Pickup En Route', desc: 'Driver assigned for pickup', Icon: Navigation, activeColor: 'text-blue-500', activeBg: 'bg-blue-50', activeBorder: 'border-blue-200' },
-    { id: 2, label: 'At Studio', desc: 'Expert cleaning in progress', Icon: Droplets, activeColor: 'text-brand', activeBg: 'bg-brand/10', activeBorder: 'border-brand/20' },
-    { id: 3, label: 'Ready for Drop', desc: 'Service finished, out for drop-off', Icon: Truck, activeColor: 'text-amber-500', activeBg: 'bg-amber-50', activeBorder: 'border-amber-200' },
-    { id: 4, label: 'Completed', desc: 'Your car is sparkling clean!', Icon: CheckCircle2, activeColor: 'text-green-500', activeBg: 'bg-green-50', activeBorder: 'border-green-200' },
+    { id: 'CREATED', label: 'Studio Request', desc: 'Awaiting studio confirmation', Icon: Zap },
+    { id: 'ASSIGNED', label: 'Studio Confirmed', desc: 'Premium studio assigned', Icon: ShieldCheck },
+    { id: 'CAPTAIN_EN_ROUTE', label: 'Pickup En Route', desc: 'Driver is coming for pickup', Icon: Navigation },
+    { id: 'ARRIVED', label: 'At Your Door', desc: 'Vehicle handover in progress', Icon: MapPin },
+    { id: 'BEFORE_PHOTO_DONE', label: 'Condition Noted', desc: 'Pre-wash photos captured', Icon: CheckCircle2 },
+    { id: 'AT_STUDIO', label: 'At Studio', desc: 'Deep cleaning at facility', Icon: Droplets },
+    { id: 'AFTER_PHOTO_DONE', label: 'Ready for Drop', desc: 'Post-wash photos captured', Icon: CheckCircle2 },
+    { id: 'COMPLETED', label: 'Delivered', desc: 'Returned in pristine condition', Icon: CheckCircle2 },
 ];
 
 const BookingStatus = () => {
@@ -34,25 +41,16 @@ const BookingStatus = () => {
     const STEPS = type === 'vendor' ? VENDOR_STEPS : CAPTAIN_STEPS;
 
     // Find live booking
-    const liveBooking = bookings.find(b => b.id === bookingId) || { id: 'CarWash-8821', serviceName: 'Eco Doorstep Wash', price: '₹473', status: 'pending' };
+    const liveBooking = bookings.find(b => b.id === bookingId) || { id: 'CarWash-8821', serviceName: 'Eco Doorstep Wash', price: '₹473', status: 'CREATED' };
 
     const [step, setStep] = useState(0);
 
     // Sync step with booking status
     useEffect(() => {
-        if (type === 'vendor') {
-            if (liveBooking.status === 'completed') setStep(4);
-            else if (liveBooking.status === 'delivery-assigned') setStep(3);
-            else if (liveBooking.status === 'at-studio') setStep(2);
-            else if (['accepted', 'confirmed', 'in-progress'].includes(liveBooking.status)) setStep(1);
-            else setStep(0);
-        } else {
-            if (liveBooking.status === 'completed') setStep(3);
-            else if (liveBooking.status === 'in-progress') setStep(2);
-            else if (['confirmed'].includes(liveBooking.status)) setStep(1);
-            else setStep(0);
-        }
-    }, [liveBooking.status, type]);
+        const status = liveBooking.status || 'CREATED';
+        const index = STEPS.findIndex(s => s.id === status);
+        setStep(index !== -1 ? index : 0);
+    }, [liveBooking.status, type, STEPS]);
 
     // Find performer details (Captain or Staff)
     const { registeredUsers } = useAuth();
@@ -157,6 +155,66 @@ const BookingStatus = () => {
                         <span className="text-[8px] font-bold text-content-subtle ml-1">HSR Layout → Koramangala</span>
                     </div>
                 </div>
+
+                {/* ── Photo Documentation ─────────────────────────────── */}
+                <AnimatePresence>
+                    {step >= 4 && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden"
+                        >
+                            <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
+                                <div>
+                                    <p className="text-[8px] font-black uppercase tracking-widest text-content-subtle">Documentation</p>
+                                    <h2 className="text-base font-black tracking-tight text-content mt-0.5">Vehicle Inspections</h2>
+                                </div>
+                                <ShieldCheck size={18} className="text-brand" />
+                            </div>
+
+                            <div className="p-4 grid grid-cols-2 gap-3">
+                                {/* Before Photos */}
+                                <div className="space-y-2">
+                                    <span className="text-[9px] font-black text-content-subtle uppercase tracking-widest ml-1">Pre-Wash / Before</span>
+                                    <div className="aspect-[3/4] rounded-xl bg-gray-50 border border-gray-100 overflow-hidden relative group">
+                                        <img
+                                            src={liveBooking.beforePhotos?.[0] || "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=400&q=80"}
+                                            className="w-full h-full object-cover grayscale-[0.5] group-hover:grayscale-0 transition-all"
+                                            alt="Before Wash"
+                                        />
+                                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 p-2">
+                                            <p className="text-[7px] font-black text-white uppercase tracking-widest">Captured at {liveBooking.beforeTime || '10:42 AM'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* After Photos */}
+                                <div className="space-y-2">
+                                    <span className="text-[9px] font-black text-content-subtle uppercase tracking-widest ml-1">Post-Wash / After</span>
+                                    <div className={`aspect-[3/4] rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all ${step >= 6 ? 'bg-gray-50 border-gray-100 overflow-hidden' : 'bg-brand/5 border-brand/20'}`}>
+                                        {step >= 6 ? (
+                                            <>
+                                                <img
+                                                    src={liveBooking.afterPhotos?.[0] || "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&q=80"}
+                                                    className="w-full h-full object-cover"
+                                                    alt="After Wash"
+                                                />
+                                                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 p-2">
+                                                    <p className="text-[7px] font-black text-white uppercase tracking-widest">Captured at {liveBooking.afterTime || '11:15 AM'}</p>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Droplets size={24} className="text-brand/30 animate-bounce" />
+                                                <p className="text-[8px] font-black text-brand/40 uppercase tracking-widest text-center px-4">Waiting for<br />Final Polish</p>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {/* ── Stepper ─────────────────────────────────── */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden">

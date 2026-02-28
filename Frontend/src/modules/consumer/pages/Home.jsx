@@ -4,7 +4,7 @@ import {
     MapPin, ChevronDown, Bell, ChevronRight, Star,
     Home as HomeIcon, Gift, User, Car, ShoppingBag, Image,
     Shield, FileText, Search, Zap, ShieldCheck, CreditCard, Sparkles,
-    Instagram, Twitter, Facebook, Heart, Truck, Building, Briefcase,
+    Instagram, Twitter, Facebook, Heart, Truck, Building, Briefcase, Wallet,
     AlertTriangle, BatteryCharging, ArrowRight, Activity, BellRing, MoreHorizontal, X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -31,7 +31,10 @@ const Home = () => {
                         </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                    <button onClick={() => navigate('/wallet')} className="w-10 h-10 bg-black/5 rounded-xl flex items-center justify-center relative">
+                        <Wallet size={20} className="text-black" />
+                    </button>
                     <button onClick={() => navigate('/portfolio')} className="w-10 h-10 bg-black/5 rounded-xl flex items-center justify-center relative">
                         <Image size={20} className="text-black" />
                     </button>
@@ -218,7 +221,7 @@ const Home = () => {
                                 { title: 'SOS', icon: AlertTriangle, color: '#EF4444', action: triggerSOS },
                                 { title: 'Support', icon: Heart, color: '#EC4899', path: '/help' },
                                 { title: 'Vehicle', icon: Truck, color: '#3B82F6', path: '/vehicles' },
-                                { title: 'Earnings', icon: CreditCard, color: '#F59E0B', path: '/wallet' }
+                                { title: 'Wallet', icon: Wallet, color: '#F59E0B', path: '/wallet' }
                             ].map((item, idx) => (
                                 <motion.button
                                     key={idx}
@@ -470,7 +473,7 @@ const Home = () => {
 
                     <div className="grid grid-cols-1 gap-2.5">
                         {[
-                            { name: 'Showrooms', icon: Building, color: 'from-orange-500/25 to-brand/40', glow: 'shadow-orange-500/10', border: 'border-orange-500/20', desc: 'Elite Maintenance' },
+                            { name: 'Spare Drivers', icon: User, color: 'from-orange-500/25 to-brand/40', glow: 'shadow-orange-500/10', border: 'border-orange-500/20', desc: 'Professional Chauffeurs' },
                             { name: 'Apartments', icon: HomeIcon, color: 'from-blue-500/25 to-indigo-500/40', glow: 'shadow-blue-500/10', border: 'border-blue-500/20', desc: 'Residential slots' },
                             { name: 'Corporate', icon: Briefcase, color: 'from-emerald-500/25 to-teal-500/40', glow: 'shadow-emerald-500/10', border: 'border-emerald-500/20', desc: 'Workspace Care' }
                         ].map((item, idx) => (

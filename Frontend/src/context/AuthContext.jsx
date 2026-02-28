@@ -103,6 +103,15 @@ export const AuthProvider = ({ children }) => {
         }
     });
 
+    const [walletBalance, setWalletBalance] = useState(() => {
+        try {
+            const saved = localStorage.getItem('carwash_wallet_balance');
+            return saved ? Number(saved) : 1000;
+        } catch {
+            return 1000;
+        }
+    });
+
     // Initialize state from localStorage
     const [sessions, setSessions] = useState(() => {
         const result = {};
@@ -137,6 +146,10 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         localStorage.setItem('carwash_subscription', JSON.stringify(userSubscription));
     }, [userSubscription]);
+
+    useEffect(() => {
+        localStorage.setItem('carwash_wallet_balance', walletBalance.toString());
+    }, [walletBalance]);
 
     // Cross-tab synchronization
     useEffect(() => {
@@ -252,6 +265,10 @@ export const AuthProvider = ({ children }) => {
         ));
     }, []);
 
+    const updateBalance = useCallback((amountToAdd) => {
+        setWalletBalance(prev => prev + amountToAdd);
+    }, []);
+
     const assignStaffToBooking = useCallback((bookingId, staffId, role = 'pickup', vendorId = null) => {
         setBookings(prev => prev.map(b =>
             b.id === bookingId ? {
@@ -263,6 +280,7 @@ export const AuthProvider = ({ children }) => {
             } : b
         ));
     }, []);
+
 
     const addVehicle = useCallback((v) => setVehicles(prev => [...prev, v]), []);
     const removeVehicle = useCallback((id) => setVehicles(prev => prev.filter(v => v.id !== id)), []);
@@ -323,7 +341,9 @@ export const AuthProvider = ({ children }) => {
             addContact: (c) => setTrustedContacts(prev => [...prev, { ...c, id: Date.now() }]),
             removeContact: (id) => setTrustedContacts(prev => prev.filter(c => c.id !== id)),
             userSubscription,
-            setUserSubscription
+            setUserSubscription,
+            walletBalance,
+            updateBalance
         }}>
             {children}
         </AuthContext.Provider>

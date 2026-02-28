@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Zap, Plus, ArrowDownLeft, ArrowUpRight, Gift, Clock, ChevronRight } from 'lucide-react';
 import MobileLayout from '../components/layout/MobileLayout';
 import { useAuth } from '../../../context/AuthContext';
+import { walletAPI } from '../../../utils/api';
 
 const MOCK_TRANSACTIONS = [
     { id: 'TXN001', type: 'credit', title: 'CarWash — Wallet Refill', sub: 'Added to wallet', amount: '+₹1,000', date: 'Yesterday, 10:15 AM', status: 'success' },
@@ -20,26 +21,56 @@ const Wallet = () => {
     const { walletBalance, updateBalance, bookings } = useAuth();
     const [addMode, setAddMode] = useState(false);
     const [selectedAmt, setSelectedAmt] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [walletData, setWalletData] = useState(null);
+    const [transactions, setTransactions] = useState([]);
+    const [error, setError] = useState('');
 
-    const realTransactions = bookings
-        .filter(b => b.paymentMethod === 'wallet')
-        .map(b => ({
-            id: `TXN-${b.id}`,
-            type: 'debit',
-            title: b.serviceName,
-            sub: `Wash #${b.id}`,
-            amount: `-${b.price}`,
-            date: new Date(b.timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }),
-            status: 'success'
-        }));
+    // Fetch wallet data from backend
+    useEffect(() => {
+        fetchWalletData();
+    }, []);
 
-    const allTransactions = [...realTransactions, ...MOCK_TRANSACTIONS];
+    const fetchWalletData = async () => {
+        try {
+            setLoading(true);
+            const response = await walletAPI.getWallet();
+            setWalletData(response.data.wallet);
+            setTransactions(response.data.transactions || []);
+            updateBalance(response.data.wallet.balance - walletBalance);
+        } catch (err) {
+            console.error('Failed to fetch wallet data:', err);
+            setError('Failed to load wallet data');
+            // Fallback to mock data
+            setTransactions(MOCK_TRANSACTIONS);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    const handleAddMoney = () => {
+    const handleAddMoney = async () => {
         if (!selectedAmt) return;
-        updateBalance(Number(selectedAmt));
-        setSelectedAmt(null);
-        setAddMode(false);
+        
+        try {
+            setLoading(true);
+            setError('');
+            
+            const response = await walletAPI.addToWallet(Number(selectedAmt), 'wallet');
+            
+            // Update local state
+            updateBalance(Number(selectedAmt));
+            setSelectedAmt(null);
+            setAddMode(false);
+            
+            // Refresh wallet data
+            await fetchWalletData();
+            
+        } catch (err) {
+            console.error('Failed to add money:', err);
+            setError(err.message || 'Failed to add money to wallet');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -134,29 +165,55 @@ const Wallet = () => {
                 <section className="space-y-3">
                     <div className="flex justify-between items-center">
                         <h2 className="text-base font-black tracking-tight text-content">Transactions</h2>
-                        <span className="text-brand text-[9px] font-black uppercase tracking-widest">All Activity</span>
+                        <button onClick={fetchWalletData} className="text-brand text-[9px] font-black uppercase tracking-widest">Refresh</button>
                     </div>
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden">
-                        {allTransactions.map((txn, i) => (
-                            <div key={txn.id} className={`flex items-center gap-4 px-4 py-4 ${i < allTransactions.length - 1 ? 'border-b border-gray-50' : ''}`}>
-                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${txn.type === 'credit' ? 'bg-green-50' : 'bg-red-50'}`}>
-                                    {txn.type === 'credit'
-                                        ? <ArrowDownLeft size={16} className="text-green-600" strokeWidth={2.5} />
-                                        : <ArrowUpRight size={16} className="text-red-500" strokeWidth={2.5} />}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-black text-sm text-content tracking-tight truncate">{txn.title}</p>
-                                    <p className="text-[9px] text-content-subtle font-bold">{txn.sub} · {txn.date}</p>
-                                </div>
-                                <div className="text-right flex-shrink-0">
-                                    <p className={`font-black text-sm ${txn.type === 'credit' ? 'text-green-600' : 'text-red-500'}`}>{txn.amount}</p>
-                                    {txn.status === 'pending' && (
-                                        <p className="text-[8px] text-amber-500 font-black flex items-center gap-0.5 justify-end"><Clock size={8} /> Pending</p>
+                    
+                    {error && (
+                        <div className="bg-red-50 border border-red-100 rounded-xl p-3">
+                            <p className="text-red-600 text-xs font-black">{error}</p>
+                        </div>
+                    )}
+                    
+                    {loading ? (
+                        <div className="flex justify-center py-8">
+                            <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                    ) : transactions.length === 0 ? (
+                        <div className="text-center py-8">
+                            <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                                <Clock size={20} className="text-content-subtle" />
+                            </div>
+                            <p className="font-black text-content-subtle text-sm">No transactions yet</p>
+                        </div>
+                    ) : (
+                        transactions.map((txn) => (
+                            <motion.div key={txn.id || txn._id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+                                className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${txn.type === 'credit' ? 'bg-green-50' : 'bg-red-50'}`}>
+                                    {txn.type === 'credit' ? (
+                                        <ArrowDownLeft size={18} className="text-green-600" strokeWidth={2.5} />
+                                    ) : (
+                                        <ArrowUpRight size={18} className="text-red-600" strokeWidth={2.5} />
                                     )}
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="font-black text-sm text-content tracking-tight leading-none">{txn.description || txn.title}</h3>
+                                    <p className="text-[10px] font-bold text-content-subtle mt-0.5">{txn.category || txn.sub}</p>
+                                    <p className="text-[8px] font-black text-content-subtle/50 uppercase tracking-widest mt-1.5">
+                                        {new Date(txn.createdAt || txn.date).toLocaleDateString()}
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <p className={`font-black text-base tracking-tight ${txn.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
+                                        {txn.type === 'credit' ? '+' : '-'}₹{txn.amount}
+                                    </p>
+                                    <p className="text-[8px] font-black text-content-subtle/50 uppercase tracking-widest">
+                                        {txn.status || 'success'}
+                                    </p>
+                                </div>
+                            </motion.div>
+                        ))
+                    )}
                 </section>
 
             </div>

@@ -2,30 +2,39 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { ChevronLeft, Phone, Mail, ArrowRight, ShieldCheck, Zap, Star } from 'lucide-react';
+import { useAuth } from '../../../context/AuthContext';
 
 const Signup = () => {
     const navigate = useNavigate();
+    const { sendOTP } = useAuth();
     const [formData, setFormData] = useState({ phone: '', email: '' });
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
-    const handleContinue = () => {
+    const userData = {
+        name: `User_${formData.phone.slice(-4)}`,
+        phone: formData.phone,
+        email: formData.email,
+        role: 'consumer'
+    };
+
+    const handleContinue = async () => {
         if (formData.phone.length < 10 || !formData.email) return;
+        setError('');
         setLoading(true);
-        // Simulate sending OTP
-        setTimeout(() => {
-            setLoading(false);
+        const res = await sendOTP(formData.phone, 'phone', userData);
+        setLoading(false);
+        if (res.success) {
             navigate('/otp-verify', {
                 state: {
                     type: 'phone',
                     identifier: formData.phone,
-                    userData: {
-                        ...formData,
-                        name: `User_${formData.phone.slice(-4)}`,
-                        role: 'consumer'
-                    }
+                    userData
                 }
             });
-        }, 1200);
+        } else {
+            setError(res.error || 'Failed to send OTP. Please try again.');
+        }
     };
 
     return (
@@ -115,6 +124,9 @@ const Signup = () => {
                         </div>
                     </div>
 
+                    {error && (
+                        <p className="text-red-500 text-xs font-bold uppercase tracking-wide">{error}</p>
+                    )}
                     <div className="pt-2">
                         <motion.button
                             disabled={formData.phone.length < 10 || !formData.email || loading}

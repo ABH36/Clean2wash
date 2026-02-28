@@ -9,20 +9,24 @@ import { useTheme } from '../../../context/ThemeContext';
 const CaptainLogin = () => {
     const navigate = useNavigate();
     const { isDarkMode } = useTheme();
-    const { login, validateCredentials } = useAuth();
+    const { captainSendOTP, captainVerifyOTP } = useAuth();
     const [phase, setPhase] = useState('phone');
     const [phone, setPhone] = useState('');
     const [otp, setOtp] = useState(['', '', '', '']);
     const [loading, setLoading] = useState(false);
     const otpRefs = useRef([]);
 
-    const handleSendOtp = () => {
+    const handleSendOtp = async () => {
         if (phone.length === 10) {
             setLoading(true);
-            setTimeout(() => {
-                setLoading(false);
+            const result = await captainSendOTP(phone, { name: `Captain_${phone.slice(-4)}`, city: '', experience: '', vehicleType: '', plate: '', kit: '' });
+            setLoading(false);
+            
+            if (result.success) {
                 setPhase('otp');
-            }, 1000);
+            } else {
+                console.error('OTP send failed:', result.error);
+            }
         }
     };
 
@@ -39,15 +43,16 @@ const CaptainLogin = () => {
         if (otp.join('').length === 4) {
             setLoading(true);
             try {
-                // Determine if this is a known number to differentiate login vs register in UI later if needed
-                const isKnown = validateCredentials(phone, otp.join(''));
-                await login('captain', { phone, type: 'captain' });
-                navigate('/captain');
+                // Verify OTP
+                const result = await captainVerifyOTP(phone, otp.join(''));
+                
+                if (result.success) {
+                    navigate('/captain');
+                } else {
+                    console.error('OTP verification failed:', result.error);
+                }
             } catch (err) {
-                console.error(err);
-                // Fallback to demo login if validation fails on mock backend
-                await login('captain', { phone, type: 'captain' });
-                navigate('/captain');
+                console.error('Verification error:', err);
             } finally {
                 setLoading(false);
             }
@@ -114,23 +119,22 @@ const CaptainLogin = () => {
                                         ? 'bg-white/5 border-white/10 text-white focus:border-brand/40 placeholder:text-white/10'
                                         : 'bg-white border-gray-100 text-content focus:border-brand/40 shadow-sm placeholder:text-gray-300'}`}
                                 />
-                            </div>
-
-                            <motion.button
-                                disabled={phone.length < 10 || loading}
-                                whileTap={{ scale: 0.97 }}
-                                onClick={handleSendOtp}
-                                className={`w-full h-14 rounded-2xl font-black text-base flex items-center justify-center gap-3 transition-all ${phone.length === 10
-                                    ? 'bg-brand text-white shadow-xl shadow-brand/20'
-                                    : isDarkMode ? 'bg-white/5 text-white/10 pointer-events-none' : 'bg-gray-100 text-gray-300 pointer-events-none'
+                                <motion.button
+                                    disabled={phone.length < 10 || loading}
+                                    whileTap={{ scale: 0.97 }}
+                                    onClick={handleSendOtp}
+                                    className={`w-full h-14 rounded-2xl font-black text-base flex items-center justify-center gap-3 transition-all ${phone.length === 10
+                                        ? 'bg-brand text-white shadow-xl shadow-brand/20'
+                                        : isDarkMode ? 'bg-white/5 text-white/10 pointer-events-none' : 'bg-gray-100 text-gray-300 pointer-events-none'
                                     }`}
-                            >
-                                {loading ? (
-                                    <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                                ) : (
-                                    <>Get OTP <ArrowRight size={18} strokeWidth={3} /></>
-                                )}
-                            </motion.button>
+                                >
+                                    {loading ? (
+                                        <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                                    ) : (
+                                        <>Get OTP <ArrowRight size={18} strokeWidth={3} /></>
+                                    )}
+                                </motion.button>
+                            </div>
 
                             <div className="mt-auto grid grid-cols-2 gap-4 pt-10">
                                 <div className={`${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white border-gray-100 shadow-sm'} p-4 rounded-2xl border transition-all`}>

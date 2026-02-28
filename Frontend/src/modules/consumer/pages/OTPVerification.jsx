@@ -7,15 +7,16 @@ import { useAuth } from '../../../context/AuthContext';
 const OTPVerification = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { login, register } = useAuth();
+    const { verifyOTP } = useAuth();
 
-    // Get phone/email from navigation state (passed from login/signup)
-    const { type, identifier, userData } = location.state || { type: 'phone', identifier: '00000 00000' };
+    // Get from navigation state (login = no userData, signup = userData)
+    const { type, identifier, userData } = location.state || { type: 'phone', identifier: '' };
 
     const [otp, setOtp] = useState(['', '', '', '']);
     const [timeLeft, setTimeLeft] = useState(45);
     const [loading, setLoading] = useState(false);
-    const [status, setStatus] = useState('entering'); // 'entering' | 'verifying' | 'success'
+    const [status, setStatus] = useState('entering');
+    const [error, setError] = useState('');
     const otpRefs = useRef([]);
 
     useEffect(() => {
@@ -30,34 +31,29 @@ const OTPVerification = () => {
         newOtp[i] = val.slice(-1);
         setOtp(newOtp);
         if (val && i < 3) otpRefs.current[i + 1]?.focus();
+        setError('');
     };
 
-    const handleVerify = () => {
+    const handleVerify = async () => {
         if (otp.join('').length < 4) return;
+        setError('');
         setLoading(true);
         setStatus('verifying');
 
-        // Simulate OTP verification
-        setTimeout(() => {
-            setLoading(false);
+        const isSignup = !!userData;
+        const res = await verifyOTP(identifier, otp.join(''), type, {
+            isSignup,
+            userData: isSignup ? userData : null
+        });
 
-            // If it was a signup, register first
-            if (userData) {
-                register('consumer', userData);
-                login('consumer', userData);
-            } else {
-                // Mock login logic - find user by phone or email or create guest
-                const user = userData || {
-                    id: 'USR-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-                    role: 'consumer',
-                    [type]: identifier
-                };
-                login('consumer', user);
-            }
-
+        setLoading(false);
+        if (res.success) {
             setStatus('success');
             setTimeout(() => navigate('/'), 1500);
-        }, 1500);
+        } else {
+            setStatus('entering');
+            setError(res.error || 'Invalid or expired OTP. Please try again.');
+        }
     };
 
     return (
@@ -121,6 +117,9 @@ const OTPVerification = () => {
                     ))}
                 </div>
 
+                {error && (
+                    <p className="text-red-500 text-xs font-bold uppercase tracking-wide mb-2">{error}</p>
+                )}
                 <div className="space-y-5">
                     <motion.button
                         disabled={otp.join('').length < 4 || loading}

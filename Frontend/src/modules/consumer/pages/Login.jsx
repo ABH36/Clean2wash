@@ -2,26 +2,30 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { ChevronLeft, Phone, Mail, ArrowRight, ShieldCheck, Fingerprint, Zap } from 'lucide-react';
+import { useAuth } from '../../../context/AuthContext';
 
 const Login = () => {
     const navigate = useNavigate();
     const [loginType, setLoginType] = useState('phone'); // 'phone' | 'email'
     const [identifier, setIdentifier] = useState('');
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
-    const handleLogin = () => {
+    const { sendOTP } = useAuth();
+
+    const handleLogin = async () => {
         if (!identifier) return;
+        setError('');
         setLoading(true);
-        // Simulate sending OTP
-        setTimeout(() => {
-            setLoading(false);
+        const res = await sendOTP(identifier.trim(), loginType);
+        setLoading(false);
+        if (res.success) {
             navigate('/otp-verify', {
-                state: {
-                    type: loginType,
-                    identifier: identifier
-                }
+                state: { type: loginType, identifier: identifier.trim() }
             });
-        }, 1200);
+        } else {
+            setError(res.error || 'Failed to send OTP. Please try again.');
+        }
     };
 
     return (
@@ -137,6 +141,9 @@ const Login = () => {
                         </motion.div>
                     </AnimatePresence>
 
+                    {error && (
+                        <p className="text-red-500 text-xs font-bold uppercase tracking-wide">{error}</p>
+                    )}
                     <div className="pt-2">
                         <motion.button
                             disabled={!identifier || loading}

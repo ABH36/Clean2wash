@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import apiClient, { authAPI } from '../utils/api';
+import captainAPI from '../utils/captainApi';
 
 // Each panel stores its session under a separate key
 const SESSION_KEYS = {
@@ -265,6 +267,204 @@ export const AuthProvider = ({ children }) => {
         ));
     }, []);
 
+    // Captain API-based authentication methods
+    const captainSendOTP = useCallback(async (phone, userData = null) => {
+        try {
+            const response = await captainAPI.sendOTP(phone, userData);
+            return { success: true, data: response.data };
+        } catch (error) {
+            console.error('Captain Send OTP error:', error);
+            return { success: false, error: error.message };
+        }
+    }, []);
+
+    const captainVerifyOTP = useCallback(async (phone, otp, options = {}) => {
+        try {
+            const { userData = null, isSignup = false } = options;
+            const response = await captainAPI.verifyOTP(phone, otp, { isSignup, userData });
+            const { captain, token } = response.data;
+            
+            if (token) {
+                apiClient.setToken(token);
+            }
+            
+            const sessionData = {
+                id: captain._id,
+                name: captain.name,
+                email: captain.email,
+                phone: captain.phone,
+                role: 'captain',
+                ...captain
+            };
+            
+            login('captain', sessionData);
+            return { success: true, data: { captain: sessionData, token } };
+        } catch (error) {
+            console.error('Captain Verify OTP error:', error);
+            return { success: false, error: error.message };
+        }
+    }, []);
+
+    const captainLogin = useCallback(async (phone, password) => {
+        try {
+            const response = await captainAPI.login(phone, password);
+            const { captain, token } = response.data;
+            
+            if (token) {
+                apiClient.setToken(token);
+            }
+            
+            const sessionData = {
+                id: captain._id,
+                name: captain.name,
+                email: captain.email,
+                phone: captain.phone,
+                role: 'captain',
+                ...captain
+            };
+            
+            login('captain', sessionData);
+            return { success: true, data: { captain: sessionData, token } };
+        } catch (error) {
+            console.error('Captain Login error:', error);
+            return { success: false, error: error.message };
+        }
+    }, []);
+
+    const captainLogout = useCallback(async () => {
+        try {
+            await captainAPI.logout();
+            apiClient.setToken(null);
+            logout('captain');
+            return { success: true };
+        } catch (error) {
+            console.error('Captain Logout error:', error);
+            return { success: false, error: error.message };
+        }
+    }, []);
+
+    const captainGetProfile = useCallback(async () => {
+        try {
+            const response = await captainAPI.getProfile();
+            return { success: true, data: response.data };
+        } catch (error) {
+            console.error('Captain Get Profile error:', error);
+            return { success: false, error: error.message };
+        }
+    }, []);
+
+    const captainUpdateProfile = useCallback(async (profileData) => {
+        try {
+            const response = await captainAPI.updateProfile(profileData);
+            return { success: true, data: response.data };
+        } catch (error) {
+            console.error('Captain Update Profile error:', error);
+            return { success: false, error: error.message };
+        }
+    }, []);
+
+    // API-based authentication methods
+    const sendOTP = useCallback(async (identifier, type = 'phone', userData = null) => {
+        try {
+            const response = await authAPI.sendOTP(identifier, type, userData);
+            return { success: true, data: response.data };
+        } catch (error) {
+            console.error('Send OTP error:', error);
+            return { success: false, error: error.message };
+        }
+    }, []);
+
+    // Login = verify only (no data stored). Signup = verify + userData stored on backend.
+    const verifyOTP = useCallback(async (identifier, otp, type = 'phone', options = {}) => {
+        try {
+            const { isSignup = false, userData: signupUserData = null } = options;
+            const response = await authAPI.verifyOTP(identifier, otp, type, { isSignup, userData: signupUserData });
+            const { consumer, token } = response.data;
+            
+            if (token) {
+                apiClient.setToken(token);
+            }
+            
+            const userSession = {
+                id: consumer._id,
+                name: consumer.name,
+                email: consumer.email,
+                phone: consumer.phone,
+                role: 'consumer',
+                ...consumer
+            };
+            
+            login('consumer', userSession);
+            return { success: true, data: { consumer: userSession, token } };
+        } catch (error) {
+            console.error('Verify OTP error:', error);
+            return { success: false, error: error.message };
+        }
+    }, []);
+
+    const apiLogin = useCallback(async (identifier, password) => {
+        try {
+            const response = await authAPI.login(identifier, password);
+            const { consumer, token } = response.data;
+            
+            if (token) {
+                apiClient.setToken(token);
+            }
+            
+            const userSession = {
+                id: consumer._id,
+                name: consumer.name,
+                email: consumer.email,
+                phone: consumer.phone,
+                role: 'consumer',
+                ...consumer
+            };
+            
+            login('consumer', userSession);
+            return { success: true, data: { consumer: userSession, token } };
+        } catch (error) {
+            console.error('Login error:', error);
+            return { success: false, error: error.message };
+        }
+    }, []);
+
+    const apiSignup = useCallback(async (userData) => {
+        try {
+            const response = await authAPI.signup(userData);
+            const { consumer, token } = response.data;
+            
+            if (token) {
+                apiClient.setToken(token);
+            }
+            
+            const userSession = {
+                id: consumer._id,
+                name: consumer.name,
+                email: consumer.email,
+                phone: consumer.phone,
+                role: 'consumer',
+                ...consumer
+            };
+            
+            login('consumer', userSession);
+            register('consumer', userSession);
+            return { success: true, data: { consumer: userSession, token } };
+        } catch (error) {
+            console.error('Signup error:', error);
+            return { success: false, error: error.message };
+        }
+    }, [register]);
+
+    const apiLogout = useCallback(async (role) => {
+        try {
+            await authAPI.logout();
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+        apiClient.setToken(null);
+        logout(role);
+    }, [logout]);
+
     const updateBalance = useCallback((amountToAdd) => {
         setWalletBalance(prev => prev + amountToAdd);
     }, []);
@@ -343,7 +543,20 @@ export const AuthProvider = ({ children }) => {
             userSubscription,
             setUserSubscription,
             walletBalance,
-            updateBalance
+            updateBalance,
+            // API methods
+            sendOTP,
+            verifyOTP,
+            apiLogin,
+            apiSignup,
+            apiLogout,
+            // Captain API methods
+            captainSendOTP,
+            captainVerifyOTP,
+            captainLogin,
+            captainLogout,
+            captainGetProfile,
+            captainUpdateProfile
         }}>
             {children}
         </AuthContext.Provider>

@@ -8,13 +8,14 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 // ── Consumer Pages ──
 import Home from './modules/consumer/pages/Home';
-import ServiceSelection from './modules/consumer/pages/ServiceSelection';
-import MapScreen from './modules/consumer/pages/MapScreen';
+import InstantWash from './modules/consumer/pages/InstantWash';
 import BookingType from './modules/consumer/pages/BookingType';
 import BookingStatus from './modules/consumer/pages/BookingStatus';
 import Profile from './modules/consumer/pages/Profile';
 import Onboarding from './modules/consumer/pages/Onboarding';
 import Login from './modules/consumer/pages/Login';
+import ServiceSelection from './modules/consumer/pages/ServiceSelection';
+import MapScreen from './modules/consumer/pages/MapScreen';
 import Signup from './modules/consumer/pages/Signup';
 import OTPVerification from './modules/consumer/pages/OTPVerification';
 import MyBookings from './modules/consumer/pages/MyBookings';
@@ -38,7 +39,6 @@ import EShop from './modules/consumer/pages/EShop';
 import Wishlist from './modules/consumer/pages/Wishlist';
 import Wallet from './modules/consumer/pages/Wallet';
 import ModelDetail from './modules/consumer/pages/ModelDetail';
-import InstantWash from './modules/consumer/pages/InstantWash';
 import FullWashBooking from './modules/consumer/pages/FullWashBooking';
 import BookingConfirmation from './modules/consumer/pages/BookingConfirmation';
 import SafetyContacts from './modules/consumer/pages/SafetyContacts';
@@ -46,6 +46,10 @@ import ComplianceCenter from './modules/consumer/pages/ComplianceCenter';
 import IncidentLog from './modules/consumer/pages/IncidentLog';
 import ProductDetail from './modules/consumer/pages/ProductDetail';
 import Portfolio from './modules/consumer/pages/Portfolio';
+import PaymentCheckout from './modules/consumer/pages/PaymentCheckout.jsx';
+
+// ── Spare Driver Module (self-contained) ──
+import SpareDriverRoutes from './modules/sparedrivers/SpareDriverRoutes.jsx';
 
 // ── Captain Module ──
 import CaptainHome from './modules/captain/pages/CaptainHome';
@@ -101,6 +105,7 @@ import AdminPromotions from './modules/admin/pages/AdminPromotions';
 import AdminSubscriptions from './modules/admin/pages/AdminSubscriptions';
 import AdminLogin from './modules/admin/pages/AdminLogin';
 import AdminProductVerification from './modules/admin/pages/AdminProductVerification';
+import AdminSpareDrivers from './modules/admin/pages/AdminSpareDrivers';
 
 // ── Scroll to top on route change ──
 const ScrollToTop = () => {
@@ -154,13 +159,13 @@ function App() {
                   <Route path="/cart" element={<CartPage />} />
 
                   {/* ── Consumer: Protected ── */}
-                  <Route path="/services" element={P('consumer', <ServiceSelection />)} />
-                  <Route path="/service/:id" element={P('consumer', <ServiceDetails />)} />
+                  <Route path="/instant-wash" element={P('consumer', <InstantWash />)} />
                   <Route path="/e-shop" element={P('consumer', <EShop />)} />
                   <Route path="/e-shop/product/:id" element={P('consumer', <ProductDetail />)} />
                   <Route path="/wishlist" element={P('consumer', <Wishlist />)} />
                   <Route path="/studios" element={P('consumer', <StudioDiscovery />)} />
                   <Route path="/map" element={P('consumer', <MapScreen />)} />
+                  <Route path="/service/:id" element={P('consumer', <ServiceDetails />)} />
                   <Route path="/booking-type" element={P('consumer', <BookingType />)} />
                   <Route path="/booking-status" element={P('consumer', <BookingStatus />)} />
                   <Route path="/profile" element={P('consumer', <Profile />)} />
@@ -187,6 +192,12 @@ function App() {
                   <Route path="/compliance" element={P('consumer', <ComplianceCenter />)} />
                   <Route path="/safety/incidents" element={P('consumer', <IncidentLog />)} />
                   <Route path="/portfolio" element={P('consumer', <Portfolio />)} />
+
+                  {/* ── Payment Checkout ── */}
+                  <Route path="/payment-checkout" element={P('consumer', <PaymentCheckout />)} />
+
+                  {/* ── Spare Driver Module (fully self-contained) ── */}
+                  <Route path="/spare-driver/*" element={<SpareDriverRoutes />} />
 
                   {/* ── Captain: Protected ── */}
                   <Route path="/captain" element={P('captain', <CaptainHome />)} />
@@ -236,6 +247,7 @@ function App() {
                   <Route path="/admin/hubs" element={P('admin', <AdminHubs />)} />
                   <Route path="/admin/products" element={P('admin', <AdminProductVerification />)} />
                   <Route path="/admin/promotions" element={P('admin', <AdminPromotions />)} />
+                  <Route path="/admin/spare-drivers" element={P('admin', <AdminSpareDrivers />)} />
 
                   {/* ── Fallback ── */}
                   <Route path="*" element={<Home />} />

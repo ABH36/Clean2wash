@@ -32,43 +32,45 @@ const MyBookings = () => {
     const userBookings = bookings.filter(b => b.userId === user?.id || b.userId === 'GUEST');
 
     const mappedBookings = {
-        Active: userBookings.filter(b => ['pending', 'confirmed', 'in-progress'].includes(b.status)).map(b => {
+        Active: userBookings.filter(b => ['pending', 'confirmed', 'in-progress', 'scheduled'].includes(b.status)).map(b => {
             const performer = b.performerId ? [...(registeredUsers.captain || []), ...(registeredUsers.staff || [])].find(u => u.id === b.performerId) : null;
+            const isDriver = b.type === 'sparedrivers' || b.category === 'Chauffeur';
+
             return {
-                id: b.id,
-                service: b.serviceName,
-                captain: performer?.name || 'Searching…',
-                captainImg: null,
-                carImg: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80',
-                status: b.status === 'pending' ? 'Matching' : b.status === 'confirmed' ? 'En Route' : 'In Progress',
-                statusColor: b.status === 'pending' ? 'text-violet-600 bg-violet-50' : 'text-blue-600 bg-blue-50',
-                eta: b.status === 'confirmed' ? '12 min' : (b.status === 'in-progress' ? 'Washing' : '—'),
-                amount: b.price,
-                date: new Date(b.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                id: b.id || b._id,
+                service: b.serviceName || b.service?.name || 'Cleaning Service',
+                captain: b.driver?.name || performer?.name || 'Searching…',
+                captainImg: b.driver?.img || null,
+                carImg: b.vehicleImg || (isDriver ? 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800&q=80' : 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80'),
+                status: b.status === 'pending' ? 'Matching' : b.status === 'confirmed' ? 'En Route' : b.status === 'in-progress' ? 'In Progress' : 'Scheduled',
+                statusColor: b.status === 'pending' ? 'text-violet-600 bg-violet-50' : b.status === 'scheduled' ? 'text-emerald-600 bg-emerald-50' : 'text-blue-600 bg-blue-50',
+                eta: b.status === 'scheduled' ? (b.service?.scheduledAt || b.date || 'Soon') : (b.status === 'confirmed' ? '12 min' : (b.status === 'in-progress' ? 'Washing' : '—')),
+                amount: b.price || b.amount || '—',
+                date: b.date || new Date(b.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 type: b.type
             };
         }),
-        Past: userBookings.filter(b => b.status === 'completed').map(b => ({
-            id: b.id,
-            service: b.serviceName,
-            captain: 'Rahul Sharma', // Fallback or fetch performer
-            captainImg: null,
-            carImg: 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=400&q=80',
+        Past: userBookings.filter(b => b.status === 'completed' || b.status === 'finished').map(b => ({
+            id: b.id || b._id,
+            service: b.serviceName || b.service?.name,
+            captain: b.driver?.name || 'Rahul Sharma',
+            captainImg: b.driver?.img || null,
+            carImg: b.vehicleImg || 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=400&q=80',
             status: 'Completed',
             statusColor: 'text-green-600 bg-green-50',
-            rating: 4.9,
-            rated: true,
-            amount: b.price,
-            date: new Date(b.timestamp).toLocaleDateString()
+            rating: b.rating || 4.9,
+            rated: b.rated !== undefined ? b.rated : true,
+            amount: b.price || b.amount,
+            date: b.date || new Date(b.timestamp).toLocaleDateString()
         })),
         Cancelled: userBookings.filter(b => ['cancelled', 'rejected'].includes(b.status)).map(b => ({
-            id: b.id,
-            service: b.serviceName,
+            id: b.id || b._id,
+            service: b.serviceName || b.service?.name,
             status: 'Cancelled',
             statusColor: 'text-red-600 bg-red-50',
-            amount: b.price,
-            date: new Date(b.timestamp).toLocaleDateString(),
-            carImg: 'https://images.unsplash.com/photo-1611455600759-99abfc83e9c4?w=400&q=80'
+            amount: b.price || b.amount,
+            date: b.date || new Date(b.timestamp).toLocaleDateString(),
+            carImg: b.vehicleImg || 'https://images.unsplash.com/photo-1611455600759-99abfc83e9c4?w=400&q=80'
         }))
     };
 
@@ -120,7 +122,7 @@ const MyBookings = () => {
                 </AnimatePresence>
 
                 {/* ── Book Again CTA ── */}
-                <div onClick={() => navigate('/services')} className="flex items-center gap-4 bg-content p-4 rounded-2xl cursor-pointer group">
+                <div onClick={() => navigate('/instant-wash')} className="flex items-center gap-4 bg-content p-4 rounded-2xl cursor-pointer group">
                     <div className="w-11 h-11 bg-brand rounded-xl flex items-center justify-center flex-shrink-0">
                         <Zap size={20} className="text-white" fill="white" />
                     </div>
@@ -150,7 +152,7 @@ const BookingCard = ({ booking: b, onNavigate }) => (
             <div className={`absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-xl ${b.statusColor}`}>
                 {b.status === 'Completed' && <CheckCircle2 size={10} strokeWidth={3} />}
                 {b.status === 'Cancelled' && <XCircle size={10} strokeWidth={3} />}
-                {['Matching', 'En Route', 'In Progress'].includes(b.status) && <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />}
+                {['Matching', 'En Route', 'In Progress', 'Scheduled'].includes(b.status) && <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />}
                 <span className="text-[8px] font-black uppercase tracking-widest">{b.status}</span>
             </div>
             <div className="absolute bottom-3 left-3">
@@ -177,7 +179,7 @@ const BookingCard = ({ booking: b, onNavigate }) => (
                 </div>
             </div>
             <div>
-                {['En Route', 'In Progress'].includes(b.status) && (
+                {['En Route', 'In Progress', 'Scheduled'].includes(b.status) && (
                     <div className="flex items-center gap-1.5 bg-blue-50 text-blue-600 px-3 py-2 rounded-xl">
                         <Clock size={12} strokeWidth={3} /><span className="font-black text-xs">{b.eta}</span>
                     </div>

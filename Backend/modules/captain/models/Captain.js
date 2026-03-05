@@ -70,7 +70,7 @@ const captainSchema = new mongoose.Schema({
 captainSchema.index({ phone: 1 });
 captainSchema.index({ isActive: 1, isOnline: 1 });
 
-captainSchema.methods.generateOTP = function() {
+captainSchema.methods.generateOTP = function () {
     const otp = '1234';
     this.otp = {
         code: otp,
@@ -79,22 +79,22 @@ captainSchema.methods.generateOTP = function() {
     return otp;
 };
 
-captainSchema.methods.verifyOTP = function(enteredOTP) {
+captainSchema.methods.verifyOTP = function (enteredOTP) {
     if (!this.otp || !this.otp.code) return false;
     if (this.otp.expiresAt < new Date()) return false;
     return this.otp.code === enteredOTP;
 };
 
-captainSchema.methods.correctPassword = async function(candidatePassword, storedPassword) {
+captainSchema.methods.correctPassword = async function (candidatePassword, storedPassword) {
     if (!storedPassword) return false;
     return await bcrypt.compare(candidatePassword, storedPassword);
 };
 
-captainSchema.statics.findByPhone = function(phone) {
+captainSchema.statics.findByPhone = function (phone) {
     return this.findOne({ phone: phone.trim() });
 };
 
-captainSchema.pre('save', async function() {
+captainSchema.pre('save', async function () {
     if (!this.isModified('password') || !this.password) return;
     this.password = await bcrypt.hash(this.password, 10);
 });

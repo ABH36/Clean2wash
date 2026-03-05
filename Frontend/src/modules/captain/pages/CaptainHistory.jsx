@@ -12,13 +12,30 @@ import {
     MapPin,
     ArrowLeft
 } from 'lucide-react';
+import CaptainLayout from '../components/CaptainLayout';
+import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
 
 const CaptainHistory = () => {
     const navigate = useNavigate();
     const { isDarkMode } = useTheme();
-    const { bookings, getUser } = useAuth();
-    // ... logic (same as before)
+    const { captainJobs } = useAuth();
+    const [activeTab, setActiveTab] = useState('All');
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // Filter jobs based on tab and search
+    const filteredJobs = captainJobs.filter(job => {
+        const matchesTab = activeTab === 'All' || 
+            (activeTab === 'Completed' && job.status === 'completed') ||
+            (activeTab === 'Cancelled' && job.status === 'cancelled');
+        
+        const matchesSearch = !searchQuery || 
+            job.serviceName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            job.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            job.userName?.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        return matchesTab && matchesSearch;
+    });
 
     return (
         <CaptainLayout>

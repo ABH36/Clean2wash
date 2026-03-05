@@ -5,7 +5,8 @@ import {
     User, Car, MapPin, Gift, ChevronRight,
     ArrowLeft, ShieldCheck, Heart, Settings,
     LogOut, MoreHorizontal, Wallet, Shield,
-    Bell, CreditCard, HelpCircle, Activity
+    Bell, CreditCard, HelpCircle, Activity,
+    Clock
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import MobileLayout from '../components/layout/MobileLayout';

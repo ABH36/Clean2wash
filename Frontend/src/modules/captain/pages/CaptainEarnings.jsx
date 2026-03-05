@@ -12,11 +12,10 @@ const TABS = ['Today', 'Week', 'Month'];
 const CaptainEarnings = () => {
     const navigate = useNavigate();
     const { isDarkMode } = useTheme();
-    const { bookings, getUser } = useAuth();
-    const user = getUser('captain') || { id: 'CPT-DEFAULT' };
+    const { captainJobs, captainEarnings, captainEarningsLoading, loadCaptainEarnings } = useAuth();
     const [tab, setTab] = useState('Week');
 
-    const myJobs = bookings.filter(b => b.captainId === user.id && b.status === 'completed');
+    const myJobs = captainJobs.filter(job => job.status === 'completed');
 
     const stats = {
         Today: { earned: '₹0', jobs: 0, rating: '5.0', hours: '0', target: '₹2,000' },
@@ -24,21 +23,20 @@ const CaptainEarnings = () => {
         Month: { earned: '₹0', jobs: 0, rating: '5.0', hours: '0', target: '₹50,000' },
     };
 
-    const total = myJobs.reduce((acc, b) => {
-        const val = parseInt(b.price?.replace(/[^0-9]/g, '') || '0');
-        return acc + (isNaN(val) ? 0 : val);
-    }, 0);
+    // Use backend earnings data if available
+    const total = captainEarnings.totalEarned || 0;
+    const jobsCount = captainEarnings.jobs?.length || myJobs.length;
 
     stats.Week.earned = `₹${total.toLocaleString()}`;
-    stats.Week.jobs = myJobs.length;
-    stats.Week.hours = (myJobs.length * 0.8).toFixed(1);
+    stats.Week.jobs = jobsCount;
+    stats.Week.hours = (jobsCount * 0.8).toFixed(1);
 
     stats.Today.earned = `₹${Math.round(total * 0.15).toLocaleString()}`;
-    stats.Today.jobs = Math.round(myJobs.length * 0.15);
+    stats.Today.jobs = Math.round(jobsCount * 0.15);
     stats.Today.hours = (stats.Today.jobs * 0.8).toFixed(1);
 
     stats.Month.earned = `₹${Math.round(total * 4.2).toLocaleString()}`;
-    stats.Month.jobs = Math.round(myJobs.length * 4.2);
+    stats.Month.jobs = Math.round(jobsCount * 4.2);
     stats.Month.hours = (stats.Month.jobs * 0.8).toFixed(1);
 
     const activeD = stats[tab];

@@ -9,13 +9,15 @@ const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
 const colors = require('colors');
+const path = require('path');
 
 // Load environment variables
-dotenv.config({ path: './.env' });
+dotenv.config({ path: './.env.local' });
 
 // Import routes
 const consumerRoutes = require('./modules/consumer/routes/consumerRoutes');
 const captainRoutes = require('./modules/captain/routes/captainRoutes');
+const spareDriverRoutes = require('./modules/sparedrivers/routes/spareDriverRoutes');
 
 // Initialize Express app
 const app = express();
@@ -30,8 +32,8 @@ app.use(cors({
 
 // Database connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/carwash')
-.then(() => console.log('✅ MongoDB Connected'.green.bold))
-.catch((err) => console.log('❌ MongoDB Connection Error:'.red.bold, err));
+    .then(() => console.log('✅ MongoDB Connected'.green.bold))
+    .catch((err) => console.log('❌ MongoDB Connection Error:'.red.bold, err));
 
 // Security middleware
 app.use(helmet());
@@ -41,7 +43,7 @@ app.use(helmet());
 // Rate limiting
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
+    max: 1000, // increased from 100 to 1000 for development
     message: {
         error: 'Too many requests from this IP, please try again later.'
     }
@@ -71,6 +73,10 @@ app.get('/api/health', (req, res) => {
 // API routes
 app.use('/api/consumer', consumerRoutes);
 app.use('/api/captain', captainRoutes);
+app.use('/api/sparedrivers', spareDriverRoutes);
+
+// Serve uploaded driver documents as static files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // 404 handler
 app.use((req, res) => {
@@ -106,6 +112,7 @@ app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`.yellow.bold);
     console.log(`📱 Consumer API: http://localhost:${PORT}/api/consumer`.cyan.bold);
     console.log(`👷 Captain API: http://localhost:${PORT}/api/captain`.cyan.bold);
+    console.log(`🚗 SpareDriver API: http://localhost:${PORT}/api/sparedrivers`.cyan.bold);
     console.log(`🏥 Health Check: http://localhost:${PORT}/api/health`.green.bold);
 });
 

@@ -7,6 +7,7 @@ const vehicleController = require('../controllers/vehicleController');
 const bookingController = require('../controllers/bookingController');
 const serviceController = require('../controllers/serviceController');
 const profileController = require('../controllers/profileController');
+const paymentController = require('../controllers/paymentController');
 
 // Authentication routes
 router.post('/auth/send-otp', authController.sendOTP);
@@ -24,6 +25,9 @@ router.post('/services/calculate-pricing', serviceController.calculatePricing);
 router.get('/services/time-slots', serviceController.getTimeSlots);
 router.post('/services/validate-availability', serviceController.validateServiceAvailability);
 router.get('/vehicles/types', vehicleController.getVehicleTypes);
+
+// Payment routes (public - for getting key)
+router.get('/payment/key', paymentController.getRazorpayKey);
 
 // Protected routes (require authentication)
 router.use(authController.protect);
@@ -65,6 +69,10 @@ router.post('/bookings/:id/issues', bookingController.reportIssue);
 // Wallet routes
 router.get('/wallet', profileController.getWallet);
 router.post('/wallet/add', profileController.addToWallet);
+
+// Payment routes (protected)
+router.post('/payment/create-order', paymentController.createOrder);
+router.post('/payment/verify', paymentController.verifyPayment);
 
 // Notification routes
 router.get('/notifications', profileController.getNotifications);

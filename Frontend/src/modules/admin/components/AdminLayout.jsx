@@ -23,8 +23,10 @@ import {
     Moon,
     Sun,
     Crown,
-    ShoppingBag
+    ShoppingBag,
+    UserCheck
 } from 'lucide-react';
+
 
 const AdminLayout = ({ children, title }) => {
     const navigate = useNavigate();
@@ -52,6 +54,7 @@ const AdminLayout = ({ children, title }) => {
         { icon: <Users size={18} />, label: 'User Management', path: '/admin/users' },
         { icon: <ShieldCheck size={18} />, label: 'Vendor Registry', path: '/admin/users?type=vendors' },
         { icon: <ShoppingBag size={18} />, label: 'Product Governance', path: '/admin/products' },
+        { icon: <UserCheck size={18} />, label: 'Chauffeur Drivers', path: '/admin/spare-drivers' },
         { icon: <Package size={18} />, label: 'Operations Hub', path: '/admin/bookings' },
         { icon: <Car size={18} />, label: 'Service Catalog', path: '/admin/services' },
         { icon: <MapPin size={18} />, label: 'Hubs & Studio', path: '/admin/hubs' },

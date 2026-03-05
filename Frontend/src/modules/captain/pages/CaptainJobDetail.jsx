@@ -29,7 +29,7 @@ const CaptainJobDetail = () => {
     const navigate = useNavigate();
     const { isDarkMode } = useTheme();
     const [searchParams] = useSearchParams();
-    const { bookings, updateBookingStatus, getUser } = useAuth();
+    const { captainJobs, updateJobStatus, getUser } = useAuth();
     const user = getUser('captain') || { id: 'CPT-DEFAULT' };
 
     const bookingId = searchParams.get('id');
@@ -38,29 +38,33 @@ const CaptainJobDetail = () => {
     const [pendingRequest, setPendingRequest] = useState(null);
 
     useEffect(() => {
-        let found = bookings.find(b => b.id === bookingId);
+        let found = captainJobs.find(job => job.id === bookingId);
         if (!found && !bookingId) {
-            found = bookings.find(b => (b.status === 'confirmed' || b.status === 'in-progress') && b.captainId === user.id);
+            found = captainJobs.find(job => (job.status === 'accepted' || job.status === 'in-progress'));
         }
         setLiveBooking(found);
 
         // If no active job, look for pending ones
         if (!found) {
-            const pending = bookings.find(b => b.status === 'pending' && b.type === 'captain');
+            const pending = captainJobs.find(job => job.status === 'pending');
             setPendingRequest(pending);
         } else {
             setPendingRequest(null);
         }
-    }, [bookingId, bookings, user.id]);
+    }, [bookingId, captainJobs]);
 
     const [isAccepting, setIsAccepting] = useState(false);
-    const handleAcceptRequest = (jobId) => {
+    const handleAcceptRequest = async (jobId) => {
         setIsAccepting(true);
-        updateBookingStatus(jobId, 'confirmed', { captainId: user.id });
-        setTimeout(() => {
+        const result = await updateJobStatus(jobId, 'accepted');
+        if (result.success) {
+            setTimeout(() => {
+                setIsAccepting(false);
+                navigate(`/captain/job?id=${jobId}`);
+            }, 800);
+        } else {
             setIsAccepting(false);
-            navigate(`/captain/job?id=${jobId}`);
-        }, 800);
+        }
     };
 
     const getInitialStep = () => {
@@ -176,16 +180,20 @@ const CaptainJobDetail = () => {
     const stepIdx_safe = Math.max(0, Math.min(stepIdx, STEPS_ORDER.length - 1));
     const step = STEPS_ORDER[stepIdx_safe];
 
-    const handleNext = () => {
+    const handleNext = async () => {
         const nextIdx = stepIdx + 1;
         if (nextIdx === 1) {
             setStepIdx(nextIdx);
         } else if (nextIdx === 2) {
-            updateBookingStatus(bookingId, 'in-progress');
-            setStepIdx(nextIdx);
+            const result = await updateJobStatus(bookingId, 'in-progress');
+            if (result.success) {
+                setStepIdx(nextIdx);
+            }
         } else if (nextIdx === 3) {
-            updateBookingStatus(bookingId, 'completed');
-            setStepIdx(nextIdx);
+            const result = await updateJobStatus(bookingId, 'completed');
+            if (result.success) {
+                setStepIdx(nextIdx);
+            }
         } else {
             navigate('/captain');
         }

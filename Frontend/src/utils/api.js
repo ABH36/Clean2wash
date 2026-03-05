@@ -29,7 +29,26 @@ class ApiClient {
 
         try {
             const response = await fetch(url, config);
-            const data = await response.json();
+
+            // Check if response is empty (status 204) or has no body
+            if (response.status === 204 || response.headers.get('content-length') === '0') {
+                return null;
+            }
+
+            const contentType = response.headers.get('content-type');
+            let data;
+
+            if (contentType && contentType.includes('application/json')) {
+                try {
+                    data = await response.json();
+                } catch (parseError) {
+                    console.error('JSON Parse Error:', parseError);
+                    data = { message: 'Failed to parse server response' };
+                }
+            } else {
+                const text = await response.text();
+                data = { message: text || `HTTP error! status: ${response.status}` };
+            }
 
             if (!response.ok) {
                 throw new Error(data.message || `HTTP error! status: ${response.status}`);
@@ -106,6 +125,25 @@ class ApiClient {
         return this.request('/wallet/add', {
             method: 'POST',
             body: JSON.stringify({ amount, paymentMethod }),
+        });
+    }
+
+    // Payment methods
+    async getRazorpayKey() {
+        return this.request('/payment/key');
+    }
+
+    async createOrder(amount, currency = 'INR', receipt) {
+        return this.request('/payment/create-order', {
+            method: 'POST',
+            body: JSON.stringify({ amount, currency, receipt }),
+        });
+    }
+
+    async verifyPayment(razorpay_order_id, razorpay_payment_id, razorpay_signature) {
+        return this.request('/payment/verify', {
+            method: 'POST',
+            body: JSON.stringify({ razorpay_order_id, razorpay_payment_id, razorpay_signature }),
         });
     }
 
@@ -260,8 +298,15 @@ export const authAPI = {
 };
 
 export const walletAPI = {
-    getWallet: (params) => apiClient.getWallet(params),
-    addToWallet: (amount, method) => apiClient.addToWallet(amount, method),
+    getBalance: (params) => apiClient.getWallet(params),
+    addMoney: (amount, paymentMethod) => apiClient.addToWallet(amount, paymentMethod),
+    getTransactions: (params) => apiClient.getTransactions(params),
+};
+
+export const paymentAPI = {
+    getRazorpayKey: () => apiClient.getRazorpayKey(),
+    createOrder: (amount, currency, receipt) => apiClient.createOrder(amount, currency, receipt),
+    verifyPayment: (orderId, paymentId, signature) => apiClient.verifyPayment(orderId, paymentId, signature),
 };
 
 export const notificationAPI = {

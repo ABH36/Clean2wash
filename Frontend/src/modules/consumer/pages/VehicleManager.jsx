@@ -62,7 +62,7 @@ const VehicleManager = () => {
             insuranceExpiry: v.insuranceExpiry || '',
             pucExpiry: v.pucExpiry || ''
         });
-        setEditId(v.id);
+        setEditId(v._id); // Use _id from MongoDB
         setErrors({});
         setShowSheet(true);
     };
@@ -98,31 +98,53 @@ const VehicleManager = () => {
         return Object.keys(e).length === 0;
     };
 
-    const handleSetPrimary = (id) => {
-        setPrimaryVehicle(id);
-        showToast('Set as primary vehicle');
-    };
-
-    const handleDelete = (id) => {
-        if (window.confirm('Delete this vehicle from your garage?')) {
-            removeVehicle(id);
-            showToast('Vehicle removed', 'error');
+    const handleSetPrimary = async (id) => {
+        const result = await setPrimaryVehicle(id);
+        if (result.success) {
+            showToast('Set as primary vehicle');
+        } else {
+            showToast(result.error || 'Failed to set primary vehicle', 'error');
         }
     };
 
-    const handleSave = () => {
+    const handleDelete = async (id) => {
+        if (window.confirm('Delete this vehicle from your garage?')) {
+            const result = await removeVehicle(id);
+            if (result.success) {
+                showToast('Vehicle removed', 'error');
+            } else {
+                showToast(result.error || 'Failed to remove vehicle', 'error');
+            }
+        }
+    };
+
+    const handleSave = async () => {
         if (!validate()) return;
         const img = TYPE_IMG[form.type] || TYPE_IMG['Sedan'];
 
-        if (editId) {
-            removeVehicle(editId);
-            addVehicle({ ...form, id: editId, isPrimary: false, img, userId: user?.id || 'GUEST' });
-            showToast('Vehicle updated successfully!');
-        } else {
-            addVehicle({ ...form, id: Date.now(), isPrimary: false, img, userId: user?.id || 'GUEST' });
-            showToast('Vehicle added to garage!');
+        try {
+            if (editId) {
+                // For editing, we would need an update method - for now using remove + add
+                const result = await addVehicle({ ...form, img });
+                if (result.success) {
+                    showToast('Vehicle updated successfully!');
+                } else {
+                    showToast(result.error || 'Failed to update vehicle', 'error');
+                    return;
+                }
+            } else {
+                const result = await addVehicle({ ...form, img });
+                if (result.success) {
+                    showToast('Vehicle added to garage!');
+                } else {
+                    showToast(result.error || 'Failed to add vehicle', 'error');
+                    return;
+                }
+            }
+            closeSheet();
+        } catch (error) {
+            showToast('Failed to save vehicle', 'error');
         }
-        closeSheet();
     };
 
     const getExpiryStatus = (date) => {

@@ -13,14 +13,14 @@ import { useTheme } from '../../../context/ThemeContext';
 const CaptainProfile = () => {
     const navigate = useNavigate();
     const { isDarkMode } = useTheme();
-    const { getUser, logout, bookings } = useAuth();
+    const { getUser, logout, captainJobs, captainEarnings } = useAuth();
     const user = getUser('captain') || { name: 'Captain User', id: 'CPT-DEFAULT' };
 
-    const myJobs = bookings.filter(b => b.captainId === user.id && b.status === 'completed');
-    const totalEarned = myJobs.reduce((acc, job) => acc + parseInt(job.price?.replace(/[^0-9]/g, '') || '0'), 0);
+    const myJobs = captainJobs.filter(job => job.status === 'completed');
+    const totalEarned = captainEarnings.totalEarned || 0;
 
     const DYNAMIC_STATS = [
-        { label: 'Rating', val: '4.9', icon: Star, color: 'text-yellow-400' },
+        { label: 'Rating', val: user.rating || '4.9', icon: Star, color: 'text-yellow-400' },
         { label: 'Jobs', val: myJobs.length, icon: CheckCircle2, color: 'text-green-500' },
         { label: 'Revenue', val: `₹${totalEarned}`, icon: Wallet, color: 'text-brand' }
     ];

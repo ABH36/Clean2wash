@@ -13,27 +13,35 @@ import { useTheme } from '../../../context/ThemeContext';
 const CaptainHome = () => {
     const navigate = useNavigate();
     const { isDarkMode, toggleDarkMode } = useTheme();
-    const { getUser, bookings, updateBookingStatus } = useAuth();
+    const { getUser, captainJobs, captainEarnings, acceptJob, updateJobStatus, toggleOnline } = useAuth();
     const user = getUser('captain') || { name: 'Captain', id: 'CPT-DEFAULT' };
-    const [online, setOnline] = useState(true);
+    const [online, setOnline] = useState(user.isOnline || false);
 
-    // Dynamic Stats
-    const completedJobs = bookings.filter(b => b.captainId === user.id && b.status === 'completed');
-    const totalEarnings = completedJobs.reduce((acc, b) => acc + parseInt(b.price?.replace(/[^0-9]/g, '') || 0), 0);
-    // Filter by type: 'captain' and status: 'pending'
-    const pendingJobs = bookings.filter(b => b.status === 'pending' && b.type === 'captain');
-    const liveJob = pendingJobs[0];
+    // Dynamic Stats from backend
+    const completedJobs = captainJobs.filter(job => job.status === 'completed');
+    const totalEarnings = captainEarnings.totalEarned || 0;
+    const pendingJobs = captainJobs.filter(job => job.status === 'pending');
+    const liveJob = captainJobs.find(job => job.status === 'accepted' || job.status === 'in-progress');
 
     const [acceptedJobId, setAcceptedJobId] = useState(null);
 
-    const handleAccept = (jobId) => {
+    const handleAccept = async (jobId) => {
         setAcceptedJobId(jobId);
-        updateBookingStatus(jobId, 'confirmed', { captainId: user.id });
-        setTimeout(() => navigate(`/captain/job?id=${jobId}`), 800);
+        const result = await acceptJob(jobId);
+        if (result.success) {
+            setTimeout(() => navigate(`/captain/job?id=${jobId}`), 800);
+        }
     };
 
     const handleDecline = (jobId) => {
-        // Just ignore locally for now
+        // Just ignore for now - could add decline API call later
+    };
+
+    const handleToggleOnline = async () => {
+        const newStatus = !online;
+        setOnline(newStatus);
+        // Note: toggleOnline function would need to be implemented in AuthContext
+        // await toggleOnline(newStatus);
     };
 
     return (

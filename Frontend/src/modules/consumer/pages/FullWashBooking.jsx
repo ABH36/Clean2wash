@@ -151,7 +151,7 @@ const pkgAddonImages = {
 
 const FullWashBooking = () => {
     const navigate = useNavigate();
-    const { vehicles, addresses, addBooking, updateBookingStatus, bookings, userSubscription, setUserSubscription } = useAuth();
+    const { vehicles, addresses, addBooking, updateBookingStatus, bookings, userSubscription, setUserSubscription, getRazorpayKey, createPaymentOrder, verifyPayment } = useAuth();
 
     const [phase, setPhase] = useState(PHASES.SERVICE_SELECTION);
     const [selectedVehicle, setSelectedVehicle] = useState(vehicles.find(v => v.isPrimary) || vehicles[0]);
@@ -1789,14 +1789,110 @@ const FullWashBooking = () => {
                             <p className="text-[9px] font-[1000] text-black/20 uppercase tracking-[0.2em] leading-none">Incl. GST & Fees</p>
                         </div>
                         <button
-                            onClick={() => {
+                            onClick={async () => {
                                 if (!paymentMethod || isProcessing) return;
                                 setIsProcessing(true);
-                                // Simulate high-end payment gateway processing
-                                setTimeout(() => {
+                                
+                                try {
+                                    // Calculate total amount
+                                    const servicePrice = getPrice(activeService?.price || '299');
+                                    const addonsPrice = (serviceAddons[activeServiceId] || []).reduce((total, addonId) => {
+                                        const addon = activeService.addons?.find(a => a.id === addonId);
+                                        return total + (addon?.price || 0);
+                                    }, 0);
+                                    const totalAmount = servicePrice + addonsPrice;
+                                    
+                                    // Get Razorpay key
+                                    const { data: { key_id } } = await getRazorpayKey();
+                                    
+                                    // Create payment order
+                                    const { data: { order_id, amount, currency } } = await createPaymentOrder(
+                                        totalAmount * 100, // Convert to paise
+                                        'INR',
+                                        `receipt_${Date.now()}`
+                                    );
+                                    
+                                    // Initialize Razorpay
+                                    const options = {
+                                        key: key_id,
+                                        amount: amount,
+                                        currency: currency,
+                                        name: 'Clean2Wash',
+                                        description: `${activeService?.title || 'Car Wash Service'}`,
+                                        order_id: order_id,
+                                        handler: async function (response) {
+                                            // Verify payment
+                                            const verificationResult = await verifyPayment(
+                                                response.razorpay_order_id,
+                                                response.razorpay_payment_id,
+                                                response.razorpay_signature
+                                            );
+                                            
+                                            if (verificationResult.success) {
+                                                // Payment successful - create booking
+                                                const result = await addBooking({
+                                                    service: {
+                                                        name: activeService?.title || 'Full Wash Booking',
+                                                        type: 'vendor',
+                                                        category: 'Studio',
+                                                        basePrice: servicePrice,
+                                                        duration: activeService?.duration || '120 min'
+                                                    },
+                                                    vehicle: selectedVehicle,
+                                                    addons: serviceAddons[activeServiceId] || [],
+                                                    totalAmount: totalAmount,
+                                                    paymentMethod: paymentMethod,
+                                                    paymentId: response.razorpay_payment_id,
+                                                    orderId: response.razorpay_order_id,
+                                                    status: 'pending',
+                                                    address: addresses.find(a => a.isPrimary) || addresses[0],
+                                                    scheduledTime: selectedDate && selectedSlot ? `${selectedDate} ${selectedSlot}` : null,
+                                                    createdAt: new Date().toISOString()
+                                                });
+                                                
+                                                if (result.success) {
+                                                    setActiveBookingId(result.data.id);
+                                                    // Redirect to booking confirmation page
+                                                    navigate('/booking-confirmation', {
+                                                        state: {
+                                                            bookingId: result.data.id,
+                                                            provider: 'vendor',
+                                                            service: activeService?.title || 'Full Wash Booking',
+                                                            vehicle: selectedVehicle,
+                                                            totalAmount: totalAmount
+                                                        }
+                                                    });
+                                                } else {
+                                                    alert('Booking creation failed. Please try again.');
+                                                }
+                                            } else {
+                                                alert('Payment verification failed. Please contact support.');
+                                            }
+                                            setIsProcessing(false);
+                                        },
+                                        prefill: {
+                                            name: 'Customer',
+                                            email: 'customer@carwash.in',
+                                            contact: '9999999999'
+                                        },
+                                        theme: {
+                                            color: '#1A1A1A'
+                                        },
+                                        modal: {
+                                            ondismiss: function() {
+                                                setIsProcessing(false);
+                                            }
+                                        }
+                                    };
+                                    
+                                    const rzp = new window.Razorpay(options);
+                                    rzp.open();
+                                    
+                                } catch (error) {
+                                    console.error('Payment error:', error);
+                                    alert('Payment failed. Please try again.');
                                     setIsProcessing(false);
-                                    setPhase(PHASES.FINDING);
-                                }, 2200);
+                                }
                             }}
                             disabled={!paymentMethod || isProcessing}
                             className={`flex-1 max-w-[200px] h-11 rounded-xl font-[1000] text-[12px] uppercase tracking-widest transition-all flex items-center justify-center gap-2.5 shadow-xl ${!paymentMethod || isProcessing

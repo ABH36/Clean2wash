@@ -21,7 +21,7 @@ import {
 import { useAuth } from '../../../context/AuthContext';
 
 const AdminBookings = () => {
-    const { bookings, updateBookingStatus, registeredUsers, assignStaffToBooking } = useAuth();
+    const { bookings, updateBookingStatus, registeredUsers = {}, assignStaffToBooking } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [selectedBooking, setSelectedBooking] = useState(null);
@@ -293,7 +293,7 @@ const AdminBookings = () => {
                         Selecting available field agents for {selectedBooking?.id}
                     </p>
                     <div className="grid grid-cols-1 gap-3 max-h-[400px] overflow-y-auto pr-2">
-                        {(registeredUsers.staff || []).map(staff => (
+                        {(registeredUsers?.staff || []).map(staff => (
                             <button
                                 key={staff.id}
                                 onClick={() => handleAssign(staff)}
@@ -317,7 +317,7 @@ const AdminBookings = () => {
                                 </div>
                             </button>
                         ))}
-                        {(!registeredUsers.staff || registeredUsers.staff.length === 0) && (
+                        {(!registeredUsers?.staff || registeredUsers.staff.length === 0) && (
                             <div className="py-10 text-center bg-gray-50 rounded-[2rem] border border-dashed border-gray-100">
                                 <User size={30} className="mx-auto text-gray-200 mb-3" />
                                 <p className="text-xs font-black text-content-subtle uppercase italic">No active personnel in network</p>

@@ -118,7 +118,7 @@ const WashAndCare = () => {
                 {/* Car Wash & Care */}
                 <motion.div
                     whileTap={{ scale: 0.96 }}
-                    onClick={() => navigate('/services')}
+                    onClick={() => navigate('/instant-wash')}
                     className="bg-white p-5 rounded-2xl shadow-xl border border-gray-100 h-[195px] flex flex-col justify-between group overflow-hidden relative"
                 >
                     <div className="z-10">
@@ -164,7 +164,7 @@ const WashAndCare = () => {
             {/* Bike Wash - Elegant Section */}
             <motion.div
                 whileTap={{ scale: 0.98 }}
-                onClick={() => navigate('/services')}
+                onClick={() => navigate('/instant-wash')}
                 className="bg-white p-7 rounded-2xl shadow-xl border border-gray-100 flex items-center justify-between h-[130px] group overflow-hidden relative"
             >
                 <div className="flex flex-col gap-1 z-10">
@@ -229,7 +229,7 @@ const WashAndCare = () => {
 
                 {/* Bottom Trigger */}
                 <button
-                    onClick={() => navigate('/services')}
+                    onClick={() => navigate('/instant-wash')}
                     className="mt-6 w-full bg-[#F29F05] text-black py-3 rounded-xl font-[1000] uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
                 >
                     Compare Detailed Features

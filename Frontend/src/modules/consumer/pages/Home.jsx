@@ -5,7 +5,7 @@ import {
     Home as HomeIcon, Gift, User, Car, ShoppingBag, Image,
     Shield, FileText, Search, Zap, ShieldCheck, CreditCard, Sparkles,
     Instagram, Twitter, Facebook, Heart, Truck, Building, Briefcase, Wallet,
-    AlertTriangle, BatteryCharging, ArrowRight, Activity, BellRing, MoreHorizontal, X
+    AlertTriangle, BatteryCharging, ArrowRight, Activity, BellRing, MoreHorizontal, X, LayoutGrid, Calendar
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
@@ -76,7 +76,7 @@ const Home = () => {
 
                 <motion.button
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => navigate('/services')}
+                    onClick={() => navigate('/instant-wash')}
                     className="mt-6 bg-black text-white px-6 py-3 rounded-xl flex items-center gap-3 font-black text-[11px] uppercase tracking-widest shadow-2xl active:bg-gray-900"
                 >
                     <Car size={16} className="text-[#F29F05]" fill="currentColor" />
@@ -215,6 +215,8 @@ const Home = () => {
                         <div className="grid grid-cols-4 gap-y-8 gap-x-4">
                             {[
                                 { title: 'Instant Wash', icon: Car, color: '#F29F05', path: '/instant-wash' },
+                                { title: 'Appointment', icon: Calendar, color: '#3B82F6', path: '/full-wash-booking' },
+                                { title: 'Spare Drivers', icon: User, color: '#FF8533', path: '/spare-driver' },
                                 { title: 'Alerts', icon: Bell, color: '#A855F7', path: '/notifications' },
                                 { title: 'E-Shop', icon: ShoppingBag, color: '#10B981', path: '/e-shop' },
                                 { title: 'Studio Wash', icon: HomeIcon, color: '#6366F1', path: '/full-wash-booking' },
@@ -305,16 +307,13 @@ const Home = () => {
                 <section className="px-5">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-[15px] font-black text-black opacity-40 uppercase tracking-widest">Explore</h3>
-                        <button className="text-[11px] text-brand font-black uppercase tracking-widest flex items-center gap-1">
-                            View All <ChevronRight size={14} />
-                        </button>
                     </div>
                     <div className="grid grid-cols-4 gap-4">
                         {[
                             { title: 'Products', image: '/assets/product-accessories/product.png', path: '/e-shop' },
                             { title: 'Insurance', icon: ShieldCheck, color: '#EF4444', path: '/insurance' },
                             { title: 'PUC', icon: Activity, color: '#F59E0B', action: () => alert('PUC Testing module active.') },
-                            { title: 'SOS', icon: AlertTriangle, color: '#EF4444', action: triggerSOS },
+                            { title: 'View More', icon: LayoutGrid, color: '#6366F1', action: () => setShowAllServices(true) },
                         ].map((item, idx) => (
                             <motion.button
                                 key={idx}
@@ -473,7 +472,7 @@ const Home = () => {
 
                     <div className="grid grid-cols-1 gap-2.5">
                         {[
-                            { name: 'Spare Drivers', icon: User, color: 'from-orange-500/25 to-brand/40', glow: 'shadow-orange-500/10', border: 'border-orange-500/20', desc: 'Professional Chauffeurs' },
+                            { name: 'Spare Drivers', icon: User, color: 'from-orange-500/25 to-brand/40', glow: 'shadow-orange-500/10', border: 'border-orange-500/20', desc: 'Elite Driving Career', path: '/spare-driver/register' },
                             { name: 'Apartments', icon: HomeIcon, color: 'from-blue-500/25 to-indigo-500/40', glow: 'shadow-blue-500/10', border: 'border-blue-500/20', desc: 'Residential slots' },
                             { name: 'Corporate', icon: Briefcase, color: 'from-emerald-500/25 to-teal-500/40', glow: 'shadow-emerald-500/10', border: 'border-emerald-500/20', desc: 'Workspace Care' }
                         ].map((item, idx) => (
@@ -481,7 +480,8 @@ const Home = () => {
                                 key={idx}
                                 whileHover={{ scale: 1.02, y: -2 }}
                                 whileTap={{ scale: 0.98 }}
-                                className={`bg-gradient-to-r ${item.color} backdrop-blur-xl border ${item.border} px-4 py-3 rounded-2xl flex items-center justify-between group/item transition-all duration-300 shadow-xl ${item.glow}`}
+                                onClick={() => item.path && navigate(item.path)}
+                                className={`bg-gradient-to-r ${item.color} backdrop-blur-xl border ${item.border} px-4 py-3 rounded-2xl flex items-center justify-between group/item transition-all duration-300 shadow-xl ${item.glow} cursor-pointer`}
                             >
                                 <div className="flex items-center gap-4">
                                     <div className="w-11 h-11 bg-white/10 rounded-xl flex items-center justify-center border border-white/20 shadow-2xl transition-all duration-500 group-hover/item:scale-110 group-hover/item:bg-white/20">
@@ -492,8 +492,8 @@ const Home = () => {
                                         <span className="text-white/40 text-[8px] font-black uppercase mt-1 tracking-widest">{item.desc}</span>
                                     </div>
                                 </div>
-                                <div className="bg-white/20 backdrop-blur-md text-white text-[9px] font-black px-3 py-1.5 rounded-xl uppercase tracking-[0.2em] border border-white/20 group-hover/item:bg-white group-hover/item:text-black transition-colors duration-300">
-                                    Soon
+                                <div className={`bg-white/20 backdrop-blur-md text-white text-[9px] font-black px-3 py-1.5 rounded-xl uppercase tracking-[0.2em] border border-white/20 group-hover/item:bg-white group-hover/item:text-black transition-colors duration-300 ${item.path ? 'bg-white text-black' : ''}`}>
+                                    {item.path ? 'Join Now' : 'Soon'}
                                 </div>
                             </motion.div>
                         ))}
@@ -625,7 +625,7 @@ const Home = () => {
                     {renderHero()}
 
                     {/* Rapido Style Search Bar - Now between Hero and Dashboard */}
-                    <div className="px-5 mb-2 -mt-8 relative z-30" onClick={() => navigate('/services')}>
+                    <div className="px-5 mb-2 -mt-8 relative z-30" onClick={() => navigate('/instant-wash')}>
                         <div className="relative">
                             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
                                 <Search size={18} className="text-black opacity-30" />

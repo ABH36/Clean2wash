@@ -9,7 +9,7 @@ import AdminLayout from '../components/AdminLayout';
 import { useAuth } from '../../../context/AuthContext';
 
 const AdminProductVerification = () => {
-    const { registeredUsers, updateUser } = useAuth();
+    const { registeredUsers = {}, updateUser } = useAuth();
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState('Pending'); // Pending, Approved, Rejected, All
     const [selectedProduct, setSelectedProduct] = useState(null);
@@ -17,7 +17,7 @@ const AdminProductVerification = () => {
     // Flatten all vendor products into a single list with vendor info
     const allProducts = useMemo(() => {
         const products = [];
-        (registeredUsers.vendor || []).forEach(vendor => {
+        (registeredUsers?.vendor || []).forEach(vendor => {
             if (vendor.products) {
                 vendor.products.forEach(product => {
                     products.push({
@@ -30,7 +30,7 @@ const AdminProductVerification = () => {
             }
         });
         return products;
-    }, [registeredUsers.vendor]);
+    }, [registeredUsers?.vendor]);
 
     const filtered = allProducts.filter(p => {
         const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -40,7 +40,7 @@ const AdminProductVerification = () => {
     });
 
     const handleAction = (product, newStatus) => {
-        const vendor = registeredUsers.vendor.find(v => v.id === product.vendorId);
+        const vendor = (registeredUsers?.vendor || []).find(v => v.id === product.vendorId);
         if (!vendor) return;
 
         const updatedProducts = vendor.products.map(p =>

@@ -1,236 +1,234 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     MapPin, ChevronLeft, Search, Navigation, Home, Briefcase,
     Plus, ChevronRight, Check, Zap, Calendar, Clock,
-    ChevronDown
+    ChevronDown, Locate, Map as MapIcon, Crosshair
 } from 'lucide-react';
-import MobileLayout from '../components/layout/MobileLayout';
 
-const SAVED = [
-    { id: 1, label: 'Home', sub: 'HSR Layout, Sector 2, Bengaluru 560102', icon: <Home size={16} />, color: 'bg-blue-50 text-blue-600' },
-    { id: 2, label: 'Office', sub: 'Koramangala 5th Block, Bengaluru 560095', icon: <Briefcase size={16} />, color: 'bg-violet-50 text-violet-600' },
+const SAVED_PLACES = [
+    { id: 'home', label: 'Home', address: 'HSR Layout, Sector 2, Bengaluru 560102', icon: Home, type: 'residential' },
+    { id: 'work', label: 'Office', address: 'Koramangala 5th Block, Bengaluru 560095', icon: Briefcase, type: 'commercial' },
 ];
 
-const NEARBY = [
-    { id: 3, label: 'Forum Mall Parking', sub: '0.3 km · Koramangala' },
-    { id: 4, label: 'EGL Tech Park, B Block', sub: '1.1 km · Brookefield' },
-    { id: 5, label: 'Nexus Mall Open Lot', sub: '2.0 km · Whitefield' },
-    { id: 6, label: 'Salt Lake Society Gate 3', sub: '2.7 km · HSR Layout' },
-];
-
-const DATES = [
-    { day: 'Today', date: '21 Feb' },
-    { day: 'Tomorrow', date: '22 Feb' },
-    { day: 'Sun', date: '23 Feb' },
-    { day: 'Mon', date: '24 Feb' },
-    { day: 'Tue', date: '25 Feb' },
-];
-
-const SLOTS = [
-    { id: 's1', time: '09:00 AM', label: 'Morning' },
-    { id: 's2', time: '11:00 AM', label: 'Morning' },
-    { id: 's3', time: '01:00 PM', label: 'Afternoon' },
-    { id: 's4', time: '04:00 PM', label: 'Evening' },
-    { id: 's5', time: '07:00 PM', label: 'Late Evening' },
+const RECENT_LOCATIONS = [
+    { id: 'r1', label: 'Indiranagar 100ft Road', address: 'Near Starbucks, Indiranagar, Bengaluru' },
+    { id: 'r2', label: 'Phoenix Marketcity', address: 'Whitefield Main Road, Bengaluru' },
+    { id: 'r3', label: 'MG Road Metro', address: 'Church Street, Bengaluru' },
 ];
 
 const MapScreen = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const type = searchParams.get('type') || 'captain';
-    const studioId = searchParams.get('studio');
-    const price = searchParams.get('price');
+    const context = searchParams.get('from') || 'wash';
 
-    const [selected, setSelected] = useState(SAVED[0]);
-    const [search, setSearch] = useState('');
-    const [mode, setMode] = useState('instant'); // 'instant' or 'scheduled'
-    const [selectedDate, setSelectedDate] = useState(DATES[0].date);
-    const [selectedSlot, setSelectedSlot] = useState('s1');
+    const searchInputRef = useRef(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedLocation, setSelectedLocation] = useState(SAVED_PLACES[0]);
+    const [searchResults, setSearchResults] = useState([]);
+    const [mapOpacity, setMapOpacity] = useState(0.4);
+
+    // Filter results based on search query
+    useEffect(() => {
+        if (searchQuery.trim().length > 0) {
+            const results = RECENT_LOCATIONS.filter(loc =>
+                loc.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                loc.address.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+            setSearchResults(results);
+        } else {
+            setSearchResults([]);
+        }
+    }, [searchQuery]);
+
+    const handleLocateMe = () => {
+        setMapOpacity(0.8);
+        setTimeout(() => setMapOpacity(0.4), 1000);
+        const myLocation = { id: 'current', label: 'Current Location', address: 'Lavelle Road, Near UB City, Bengaluru', icon: Navigation };
+        setSelectedLocation(myLocation);
+    };
+
+    const handleConfirm = () => {
+        navigate(-1);
+    };
+
+    const handleEdit = () => {
+        setSearchQuery('');
+        searchInputRef.current?.focus();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
 
     return (
-        <MobileLayout hideNav>
-            {/* ── Header ── */}
-            <header className="px-4 pt-10 pb-4 bg-white sticky top-0 z-50 border-b border-gray-100">
-                <div className="flex items-center gap-3 mb-4">
-                    <button onClick={() => navigate(-1)} className="w-9 h-9 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center">
-                        <ChevronLeft size={18} strokeWidth={2.5} className="text-content" />
-                    </button>
-                    <div>
-                        <h1 className="text-lg font-black tracking-tight text-content leading-none">Wash Location</h1>
-                        <p className="text-[9px] text-brand font-black uppercase tracking-widest mt-0.5">Where is your vehicle parked?</p>
-                    </div>
-                </div>
-                {/* Search */}
-                <div className="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
-                    <Search size={16} className="text-content-subtle flex-shrink-0" strokeWidth={2.5} />
-                    <input type="text" placeholder="Search area, landmark or address…"
-                        value={search} onChange={e => setSearch(e.target.value)}
-                        className="flex-1 bg-transparent text-sm font-bold text-content outline-none placeholder:text-content-subtle placeholder:font-medium" />
-                </div>
-            </header>
+        <div className="h-screen w-full bg-white relative overflow-hidden flex flex-col font-sans">
+            {/* ── Background Map Surface ── */}
+            <div className="absolute inset-0 z-0">
+                <motion.img
+                    animate={{ opacity: mapOpacity }}
+                    src="https://images.unsplash.com/photo-1524661135-423995f22d0b?w=1000&q=80"
+                    className="w-full h-full object-cover grayscale mix-blend-multiply"
+                    alt="Map Background"
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-white via-transparent to-white/90" />
 
-            <div className={`space-y-4 pt-4 px-4 ${mode === 'scheduled' ? 'pb-80' : 'pb-44'}`}>
+                {/* Visual Grid */}
+                <div className="absolute inset-0 opacity-[0.02] pointer-events-none"
+                    style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
 
-                {/* ── Map Preview ── */}
-                <div className="relative rounded-2xl overflow-hidden border border-gray-100 shadow-soft" style={{ height: 220 }}>
-                    <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&q=80"
-                        alt="Map" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-blue-900/20" />
-
-                    {/* Pulsing pin */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-full z-10">
-                        <div className="relative">
-                            <div className="w-10 h-10 bg-brand rounded-xl flex items-center justify-center shadow-lg border-2 border-white">
-                                <MapPin size={18} className="text-white" fill="white" strokeWidth={1.5} />
-                            </div>
-                            <div className="w-2 h-2 bg-brand rounded-full mx-auto mt-0.5" />
-                            <div className="absolute inset-0 bg-brand/25 rounded-xl animate-ping scale-125" />
+                {/* Center Pin Indicator - MOVED UP to avoid UI overlap */}
+                <div className="absolute top-[38%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10">
+                    <motion.div
+                        initial={{ y: -20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        className="relative"
+                    >
+                        <div className="w-14 h-14 bg-black rounded-[1.25rem] flex items-center justify-center shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-2 border-white relative z-10">
+                            <MapPin size={28} className="text-brand" fill="currentColor" strokeWidth={1} />
                         </div>
-                    </div>
-
-                    {/* Current location button */}
-                    <button className="absolute bottom-4 right-4 bg-white px-3 py-2 rounded-xl shadow-md border border-gray-100 flex items-center gap-2">
-                        <Navigation size={14} className="text-brand" strokeWidth={2.5} />
-                        <span className="text-[10px] font-black text-content uppercase tracking-widest">Use Current</span>
-                    </button>
-
-                    {/* Selected label */}
-                    <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-xl px-3 py-2 max-w-[55%] shadow-md">
-                        <p className="text-[9px] font-black uppercase tracking-widest text-content-subtle">Selected</p>
-                        <p className="text-sm font-black text-content truncate">{selected.label}</p>
-                    </div>
+                        <div className="w-2 h-2 bg-black rounded-full mx-auto mt-1 shadow-2xl" />
+                        <motion.div
+                            animate={{ scale: [1, 2.5, 1], opacity: [0.15, 0, 0.15] }}
+                            transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+                            className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-12 h-12 bg-black/10 rounded-full blur-md"
+                        />
+                    </motion.div>
                 </div>
-
-                {/* ── Saved Addresses ── */}
-                <section className="space-y-2">
-                    <p className="text-[9px] font-black text-content-subtle uppercase tracking-widest px-1">Saved Places</p>
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden">
-                        {SAVED.map((addr, i) => (
-                            <motion.button key={addr.id} whileTap={{ scale: 0.99 }} onClick={() => setSelected(addr)}
-                                className={`w-full flex items-center gap-4 px-4 py-3.5 ${i < SAVED.length - 1 ? 'border-b border-gray-50' : ''} transition-colors ${selected.id === addr.id ? 'bg-brand/5' : 'hover:bg-gray-50'}`}>
-                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${addr.color}`}>{addr.icon}</div>
-                                <div className="flex-1 text-left min-w-0">
-                                    <p className="font-black text-sm text-content">{addr.label}</p>
-                                    <p className="text-[10px] font-bold text-content-subtle truncate mt-0.5">{addr.sub}</p>
-                                </div>
-                                {selected.id === addr.id && <Check size={16} className="text-brand flex-shrink-0" strokeWidth={2.5} />}
-                            </motion.button>
-                        ))}
-                        <button onClick={() => navigate('/addresses')}
-                            className="w-full flex items-center gap-4 px-4 py-3.5 border-t border-gray-50 hover:bg-gray-50 transition-colors">
-                            <div className="w-9 h-9 rounded-xl bg-gray-50 border-2 border-dashed border-gray-200 flex items-center justify-center flex-shrink-0">
-                                <Plus size={16} className="text-content-subtle" strokeWidth={2.5} />
-                            </div>
-                            <p className="font-black text-sm text-content-subtle">Add New Address</p>
-                        </button>
-                    </div>
-                </section>
-
-                {/* ── Nearby Locations ── */}
-                <section className="space-y-2">
-                    <p className="text-[9px] font-black text-content-subtle uppercase tracking-widest px-1">Nearby</p>
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden">
-                        {NEARBY.map((loc, i) => (
-                            <motion.button key={loc.id} whileTap={{ scale: 0.99 }} onClick={() => setSelected(loc)}
-                                className={`w-full flex items-center gap-4 px-4 py-3.5 ${i < NEARBY.length - 1 ? 'border-b border-gray-50' : ''} hover:bg-gray-50 transition-colors`}>
-                                <div className="w-9 h-9 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0">
-                                    <MapPin size={16} className="text-content-subtle" strokeWidth={2} />
-                                </div>
-                                <div className="flex-1 text-left">
-                                    <p className="font-black text-sm text-content">{loc.label}</p>
-                                    <p className="text-[10px] font-bold text-content-subtle mt-0.5">{loc.sub}</p>
-                                </div>
-                                <ChevronRight size={13} strokeWidth={2.5} className="text-gray-300" />
-                            </motion.button>
-                        ))}
-                    </div>
-                </section>
             </div>
 
-            {/* ── Sticky Footer with Schedule Options ── */}
-            <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.08)] rounded-t-3xl overflow-hidden">
-
-                {/* Mode Selector */}
-                <div className="px-4 pt-4">
-                    <div className="bg-gray-100 p-1 rounded-2xl flex gap-1">
-                        <button onClick={() => setMode('instant')}
-                            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl transition-all ${mode === 'instant' ? 'bg-white text-brand shadow-sm' : 'text-content-muted'}`}>
-                            <Zap size={13} fill={mode === 'instant' ? 'currentColor' : 'none'} strokeWidth={2.5} />
-                            <span className="font-black text-[9px] uppercase tracking-wider">Instant Wash</span>
-                        </button>
-                        <button onClick={() => setMode('scheduled')}
-                            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl transition-all ${mode === 'scheduled' ? 'bg-white text-brand shadow-sm' : 'text-content-muted'}`}>
-                            <Calendar size={13} strokeWidth={2.5} />
-                            <span className="font-black text-[9px] uppercase tracking-wider">Schedule Later</span>
-                        </button>
+            {/* ── Top Bar Container ── */}
+            <header className="relative z-50 px-5 pt-12 space-y-5">
+                <div className="flex items-center justify-between">
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="w-12 h-12 bg-white/90 backdrop-blur-2xl border border-black/[0.03] rounded-2xl flex items-center justify-center shadow-2xl active:scale-90 transition-all"
+                    >
+                        <ChevronLeft size={24} strokeWidth={3} className="text-black" />
+                    </button>
+                    <div className="text-center">
+                        <span className="text-[10px] font-black tracking-[0.3em] text-black/20 uppercase block mb-0.5">Positioning</span>
+                        <h1 className="text-[15px] font-black text-black uppercase tracking-tight">Set Location</h1>
                     </div>
+                    <button className="w-12 h-12 bg-white/90 backdrop-blur-2xl border border-black/[0.03] rounded-2xl flex items-center justify-center shadow-2xl">
+                        <MapIcon size={22} className="text-black/30" />
+                    </button>
                 </div>
 
-                {/* Expanded Schedule Options */}
+                <div className="relative group shadow-[0_20px_60px_rgba(0,0,0,0.08)] rounded-[1.5rem] overflow-hidden">
+                    <div className="absolute inset-y-0 left-6 flex items-center text-black/20 group-focus-within:text-brand transition-colors duration-300">
+                        <Search size={22} strokeWidth={3} />
+                    </div>
+                    <input
+                        ref={searchInputRef}
+                        type="text"
+                        placeholder="Search area, landmark..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full h-16 bg-white border-0 pl-16 pr-16 text-sm font-black text-black placeholder:text-black/20 focus:ring-4 focus:ring-brand/10 transition-all outline-none"
+                    />
+                    <button
+                        onClick={handleLocateMe}
+                        className="absolute inset-y-0 right-6 flex items-center text-brand"
+                    >
+                        <Locate size={22} strokeWidth={3} />
+                    </button>
+                </div>
+
                 <AnimatePresence>
-                    {mode === 'scheduled' && (
-                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                            className="px-4 pt-4 space-y-4">
-
-                            {/* Date Picker */}
-                            <div>
-                                <p className="text-[8px] font-black uppercase tracking-widest text-content-subtle mb-2">Select Date</p>
-                                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-                                    {DATES.map(d => (
-                                        <button key={d.date} onClick={() => setSelectedDate(d.date)}
-                                            className={`flex-shrink-0 min-w-[64px] flex flex-col items-center py-2.5 rounded-2xl border transition-all ${selectedDate === d.date ? 'bg-brand border-brand shadow-md text-white' : 'bg-gray-50 border-gray-100'}`}>
-                                            <span className={`text-[8px] font-black uppercase tracking-widest ${selectedDate === d.date ? 'text-white/70' : 'text-content-subtle'}`}>{d.day}</span>
-                                            <span className="text-sm font-black tracking-tight">{d.date.split(' ')[0]}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Slot Picker */}
-                            <div>
-                                <p className="text-[8px] font-black uppercase tracking-widest text-content-subtle mb-2">Available Slots</p>
-                                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-                                    {SLOTS.map(s => (
-                                        <button key={s.id} onClick={() => setSelectedSlot(s.id)}
-                                            className={`flex-shrink-0 px-4 py-2.5 rounded-2xl border flex flex-col items-center transition-all ${selectedSlot === s.id ? 'bg-content border-content text-white' : 'bg-gray-50 border-gray-100 text-content-muted'}`}>
-                                            <span className="text-sm font-black tracking-tight">{s.time}</span>
-                                            <span className={`text-[8px] font-bold uppercase tracking-widest ${selectedSlot === s.id ? 'text-white/50' : 'text-content-subtle'}`}>{s.label}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                    {searchResults.length > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="bg-white/95 backdrop-blur-3xl rounded-[2.5rem] mt-2 border border-black/[0.02] shadow-[0_40px_80px_rgba(0,0,0,0.15)] max-h-[40vh] overflow-y-auto p-4 space-y-1"
+                        >
+                            {searchResults.map((loc) => (
+                                <button
+                                    key={loc.id}
+                                    onClick={() => {
+                                        setSelectedLocation(loc);
+                                        setSearchQuery('');
+                                    }}
+                                    className="w-full flex items-center gap-5 p-4 hover:bg-black/[0.02] rounded-[2rem] transition-all group"
+                                >
+                                    <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-black/15 group-hover:text-brand transition-all">
+                                        <MapPin size={22} />
+                                    </div>
+                                    <div className="text-left flex-1 min-w-0">
+                                        <h4 className="text-[15px] font-[1000] text-black uppercase tracking-tight leading-none mb-1.5">{loc.label}</h4>
+                                        <p className="text-[11px] font-bold text-black/30 uppercase tracking-widest truncate">{loc.address}</p>
+                                    </div>
+                                </button>
+                            ))}
                         </motion.div>
                     )}
                 </AnimatePresence>
+            </header>
 
-                {/* Final Confirm Row */}
-                <div className="px-4 py-5 flex items-center justify-between gap-4 border-t border-gray-50 mt-2 bg-white">
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 mb-1">
-                            <div className="w-5 h-5 bg-brand/10 rounded-lg flex items-center justify-center">
-                                {mode === 'instant' ? <Zap size={10} className="text-brand" fill="currentColor" /> : <Clock size={10} className="text-brand" strokeWidth={3} />}
+            {/* ── Bottom Section ── */}
+            <div className="mt-auto relative z-50">
+                {/* Saved Places section removed as requested */}
+
+                <div className="bg-white rounded-t-[2.5rem] p-6 pt-5 shadow-[0_-30px_60px_rgba(0,0,0,0.1)] border-t border-black/[0.03]">
+                    <div className="w-12 h-1 bg-gray-100 rounded-full mx-auto mb-6" />
+
+                    <div className="space-y-5">
+                        <div className="flex items-start gap-4">
+                            <div className="w-11 h-11 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-500 flex-shrink-0">
+                                <MapPin size={22} strokeWidth={3} />
                             </div>
-                            <p className="font-black text-[10px] text-content leading-none">
-                                {mode === 'instant' ? 'Instant Wash' : `${selectedDate}, ${SLOTS.find(s => s.id === selectedSlot).time}`}
-                            </p>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-1">
+                                    <h3 className="text-[9px] font-black text-black/25 uppercase tracking-[0.25em]">Drop Point</h3>
+                                    <button onClick={handleEdit} className="text-brand text-[9px] font-black uppercase tracking-widest underline underline-offset-4">Edit</button>
+                                </div>
+                                <h4 className="text-[15px] font-[1000] text-black uppercase tracking-tight leading-tight mb-0.5 truncate">
+                                    {selectedLocation.label}
+                                </h4>
+                                <p className="text-[10px] font-bold text-black/30 uppercase tracking-widest leading-relaxed">
+                                    {selectedLocation.address}
+                                </p>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                            <MapPin size={10} className="text-content-subtle" />
-                            <p className="text-[9px] font-bold text-content-subtle truncate">{selected.label}</p>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-gray-50/70 p-3 rounded-[1.25rem] border border-black/[0.01]">
+                                <p className="text-[8px] font-black text-black/20 uppercase tracking-[0.2em] mb-1.5 leading-none">Security</p>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
+                                    <span className="text-[10px] font-black text-black uppercase tracking-tight">Active Zone</span>
+                                </div>
+                            </div>
+                            <div className="bg-gray-50/70 p-3 rounded-[1.25rem] border border-black/[0.01]">
+                                <p className="text-[8px] font-black text-black/20 uppercase tracking-[0.2em] mb-1.5 leading-none">Category</p>
+                                <div className="flex items-center gap-2">
+                                    <Zap size={10} className="text-brand" fill="currentColor" />
+                                    <span className="text-[10px] font-black text-black uppercase tracking-tight">{context === 'chauffeur' ? 'Expert Driver' : 'Elite Care'}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <motion.button whileTap={{ scale: 0.96 }}
-                        onClick={() => navigate(`/booking-type?mode=${mode}&date=${selectedDate}&slot=${selectedSlot}&type=${type}${studioId ? `&studio=${studioId}` : ''}${price ? `&price=${price}` : ''}`)}
-                        className="bg-brand text-white px-7 h-12 rounded-2xl font-black text-xs uppercase tracking-[0.1em] shadow-lg shadow-brand/25 flex items-center gap-2 group">
-                        Next
-                        <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" strokeWidth={3} />
-                    </motion.button>
+                    <div className="pt-6">
+                        <motion.button
+                            whileTap={{ scale: 0.96 }}
+                            onClick={handleConfirm}
+                            className="w-full bg-black text-white h-14 rounded-2xl font-black text-[14px] uppercase tracking-[0.3em] shadow-[0_20px_40px_rgba(0,0,0,0.15)] flex items-center justify-center relative group overflow-hidden"
+                        >
+                            <span className="relative z-10 pl-4">Confirm Location</span>
+                            <div className="absolute right-6 opacity-30 group-hover:translate-x-1 transition-transform relative z-10">
+                                <ChevronRight size={22} strokeWidth={3} />
+                            </div>
+                        </motion.button>
+                    </div>
                 </div>
             </div>
-        </MobileLayout>
+
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                .font-black { font-weight: 1000; }
+                .tracking-tighter { letter-spacing: -0.05em; }
+            `}} />
+        </div>
     );
 };
 

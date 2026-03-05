@@ -27,7 +27,8 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 
 const AdminUsers = () => {
-    const { registeredUsers, register, deleteUser, updateUser } = useAuth();
+    const { registeredUsers = {}, register, deleteUser, updateUser } = useAuth();
+
     const location = useLocation();
     const [activeTab, setActiveTab] = useState('Consumers');
 

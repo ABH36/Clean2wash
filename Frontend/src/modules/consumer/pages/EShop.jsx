@@ -15,7 +15,7 @@ const EShop = () => {
     const navigate = useNavigate();
     const { addToCart, isInCart, cartCount } = useCart();
     const { toggleWishlist, isInWishlist } = useWishlist();
-    const { registeredUsers } = useAuth();
+    const { registeredUsers = {} } = useAuth();
     const [activeTab, setActiveTab] = useState('shop');
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearching, setIsSearching] = useState(false);
@@ -35,7 +35,7 @@ const EShop = () => {
 
     const allAvailableProducts = useMemo(() => {
         const vendorApproved = [];
-        (registeredUsers.vendor || []).forEach(v => {
+        (registeredUsers?.vendor || []).forEach(v => {
             if (v.products) {
                 v.products.filter(p => p.status === 'Approved').forEach(p => {
                     vendorApproved.push(p);
@@ -43,7 +43,7 @@ const EShop = () => {
             }
         });
         return [...SHOP_PRODUCTS, ...vendorApproved];
-    }, [registeredUsers.vendor]);
+    }, [registeredUsers?.vendor]);
 
     const filteredProducts = useMemo(() => {
         let list = [...allAvailableProducts];

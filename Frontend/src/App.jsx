@@ -47,6 +47,7 @@ import IncidentLog from './modules/consumer/pages/IncidentLog';
 import ProductDetail from './modules/consumer/pages/ProductDetail';
 import Portfolio from './modules/consumer/pages/Portfolio';
 import PaymentCheckout from './modules/consumer/pages/PaymentCheckout.jsx';
+import ApartmentWash from './modules/consumer/pages/ApartmentWash';
 
 // ── Spare Driver Module (self-contained) ──
 import SpareDriverRoutes from './modules/sparedrivers/SpareDriverRoutes.jsx';
@@ -160,6 +161,7 @@ function App() {
 
                   {/* ── Consumer: Protected ── */}
                   <Route path="/instant-wash" element={P('consumer', <InstantWash />)} />
+                  <Route path="/apartments" element={P('consumer', <ApartmentWash />)} />
                   <Route path="/e-shop" element={P('consumer', <EShop />)} />
                   <Route path="/e-shop/product/:id" element={P('consumer', <ProductDetail />)} />
                   <Route path="/wishlist" element={P('consumer', <Wishlist />)} />

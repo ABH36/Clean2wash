@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Heart, ShoppingCart, User, Gift, Zap, Truck, ShoppingBag } from 'lucide-react';
+import { Home, Heart, ShoppingCart, User, Gift, Zap, Truck, ShoppingBag, UserCheck } from 'lucide-react';
 import { useCart } from '../../../../context/CartContext';
 
 const SHOP_NAV_ITEMS = [
@@ -14,7 +14,8 @@ const SHOP_NAV_ITEMS = [
 const MAIN_NAV_ITEMS = [
     { id: 'home', to: '/', icon: Home, label: 'Home' },
     { id: 'instant', to: '/instant-wash', icon: Zap, label: 'Instant' },
-    { id: 'pickup', to: '/full-wash-booking', icon: Truck, label: 'Pickup' },
+    { id: 'pickup', to: '/full-wash-booking', icon: Truck, label: 'Studio' },
+    { id: 'spare-driver', to: '/spare-driver', icon: UserCheck, label: 'Driver' },
     { id: 'products', to: '/e-shop', icon: ShoppingBag, label: 'Products' },
     { id: 'profile', to: '/profile', icon: User, label: 'Profile' }
 ];

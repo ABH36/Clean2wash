@@ -32,8 +32,6 @@ const AdminPromotions = () => {
     const [loading, setLoading] = useState(false);
 
     const getInitialPromos = () => {
-        const saved = localStorage.getItem('CarWash_promotions');
-        if (saved) return JSON.parse(saved);
         return {
             Coupons: [
                 { id: 1, code: 'WASH50', type: 'Percentage', val: '50%', expiry: '2026-03-01', usage: '1.2k', status: 'Active' },
@@ -44,20 +42,46 @@ const AdminPromotions = () => {
             ],
             Offers: [
                 { id: 4, name: 'Weekend Blitz', type: 'Flash Sale', val: '20%', expiry: '2026-02-28', usage: '210', status: 'Active' }
+            ],
+            Banners: [
+                { id: 1, title: '100% CASHBACK', subtitle: 'ON YOUR FIRST SERVICE', image: '', cta: 'Book Now', path: '/instant-wash', theme: 'dark', status: 'Active' },
+                { id: 2, title: 'MONTHLY SHINE', subtitle: 'EXCLUSIVE DOORSTEP CARE', image: '', cta: 'Explore Plans', path: '/subscriptions', theme: 'light', status: 'Active' }
             ]
         };
     };
 
-    const [promos, setPromos] = useState(getInitialPromos());
-    const [formData, setFormData] = useState({ code: '', name: '', type: 'Percentage', val: '', expiry: '', status: 'Active', userGets: '', friendGets: '' });
+    const [promos, setPromos] = useState(() => {
+        const saved = localStorage.getItem('CarWash_promotions');
+        const banners = localStorage.getItem('CarWash_banners');
+        let base = getInitialPromos();
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            base = { ...base, ...parsed };
+        }
+        if (banners) {
+            base.Banners = JSON.parse(banners);
+        }
+        return base;
+    });
 
     useEffect(() => {
         localStorage.setItem('CarWash_promotions', JSON.stringify(promos));
+        localStorage.setItem('CarWash_banners', JSON.stringify(promos.Banners));
     }, [promos]);
+
+    const [formData, setFormData] = useState({
+        code: '', name: '', type: 'Percentage', val: '', expiry: '', status: 'Active',
+        userGets: '', friendGets: '',
+        title: '', subtitle: '', image: '', cta: '', path: '', theme: 'dark'
+    });
 
     const handleOpenAdd = () => {
         setEditingPromo(null);
-        setFormData({ code: '', name: '', type: 'Percentage', val: '', expiry: '', status: 'Active', userGets: '', friendGets: '' });
+        setFormData({
+            code: '', name: '', type: 'Percentage', val: '', expiry: '', status: 'Active',
+            userGets: '', friendGets: '',
+            title: '', subtitle: '', image: '', cta: '', path: '', theme: 'dark'
+        });
         setIsModalOpen(true);
     };
 
@@ -111,7 +135,7 @@ const AdminPromotions = () => {
                 {/* Control Header */}
                 <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
                     <div className="flex bg-gray-100 p-1 rounded-2xl w-full lg:w-auto overflow-x-auto scrollbar-hide">
-                        {['Coupons', 'Referrals', 'Offers'].map(tab => (
+                        {['Coupons', 'Referrals', 'Offers', 'Banners'].map(tab => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
@@ -155,25 +179,33 @@ const AdminPromotions = () => {
                             <div className="p-8 pb-4">
                                 <div className="flex justify-between items-start mb-6">
                                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border border-gray-100 group-hover:bg-brand group-hover:text-white transition-all shadow-sm ${p.status === 'Active' ? 'bg-brand/10 text-brand' : 'bg-gray-50 text-content-subtle'}`}>
-                                        {activeTab === 'Referrals' ? <Gift size={28} /> : (activeTab === 'Offers' ? <TrendingUp size={28} /> : <Tag size={28} />)}
+                                        {activeTab === 'Referrals' ? <Gift size={28} /> : (activeTab === 'Banners' ? <LayoutGrid size={28} /> : (activeTab === 'Offers' ? <TrendingUp size={28} /> : <Tag size={28} />))}
                                     </div>
                                     <div className="flex flex-col items-end gap-1.5">
                                         <button onClick={() => handleToggle(p.id)} className="transition-all">
                                             {p.status === 'Active' ? <ToggleRight size={32} className="text-green-500" /> : <ToggleLeft size={32} className="text-gray-300" />}
                                         </button>
-                                        <span className="text-[10px] font-bold text-content-subtle uppercase tracking-widest italic">{p.usage} Uses</span>
+                                        {activeTab !== 'Banners' && <span className="text-[10px] font-bold text-content-subtle uppercase tracking-widest italic">{p.usage} Uses</span>}
                                     </div>
                                 </div>
 
                                 <div>
-                                    <h4 className="text-2xl font-black text-content italic uppercase tracking-tighter truncate group-hover:text-brand transition-colors">
-                                        {p.code || p.name}
+                                    <h4 className="text-xl font-black text-content italic uppercase tracking-tighter truncate group-hover:text-brand transition-colors">
+                                        {p.code || p.name || p.title}
                                     </h4>
                                     <p className="text-[10px] font-black text-brand uppercase tracking-widest mt-1 italic">
-                                        {activeTab === 'Referrals' ? `Reward: ${p.userGets}` : `${p.val} ${p.type}`}
+                                        {activeTab === 'Referrals' ? `Reward: ${p.userGets}` : (activeTab === 'Banners' ? `Theme: ${p.theme}` : `${p.val} ${p.type}`)}
                                     </p>
                                 </div>
                             </div>
+
+                            {activeTab === 'Banners' && p.image && (
+                                <div className="px-8 pb-4">
+                                    <div className="h-20 w-full rounded-xl overflow-hidden border border-gray-100 bg-gray-50">
+                                        <img src={p.image} className="w-full h-full object-cover" alt="" />
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="px-8 py-5 bg-gray-50/50 mt-auto flex items-center justify-between border-t border-gray-100">
                                 <div className="flex items-center gap-2">
@@ -231,17 +263,57 @@ const AdminPromotions = () => {
                                 <form onSubmit={handleSave} className="space-y-6">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                         <div className="md:col-span-2 space-y-1.5 font-sans">
-                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1 italic">{activeTab === 'Referrals' ? 'Campaign Name' : 'Protocol Code'}</label>
+                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1 italic">
+                                                {activeTab === 'Referrals' ? 'Campaign Name' : (activeTab === 'Banners' ? 'Banner Title' : 'Protocol Code')}
+                                            </label>
                                             <input
                                                 required
-                                                placeholder={activeTab === 'Referrals' ? 'Standard Growth Referral' : 'WASHPRO100'}
+                                                placeholder={activeTab === 'Referrals' ? 'Standard Growth Referral' : (activeTab === 'Banners' ? 'ENTER TITLE' : 'WASHPRO100')}
                                                 className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm uppercase"
-                                                value={activeTab === 'Referrals' ? formData.name : formData.code}
-                                                onChange={e => activeTab === 'Referrals' ? setFormData({ ...formData, name: e.target.value }) : setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                                                value={activeTab === 'Referrals' ? formData.name : (activeTab === 'Banners' ? formData.title : formData.code)}
+                                                onChange={e => {
+                                                    const val = e.target.value;
+                                                    if (activeTab === 'Referrals') setFormData({ ...formData, name: val });
+                                                    else if (activeTab === 'Banners') setFormData({ ...formData, title: val });
+                                                    else setFormData({ ...formData, code: val.toUpperCase() });
+                                                }}
                                             />
                                         </div>
 
-                                        {activeTab !== 'Referrals' ? (
+                                        {activeTab === 'Banners' ? (
+                                            <>
+                                                <div className="md:col-span-2 space-y-1.5 font-sans">
+                                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1 italic">Subtitle</label>
+                                                    <input
+                                                        required
+                                                        placeholder="SUB-TEXT OR PROMO LINE"
+                                                        className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm uppercase"
+                                                        value={formData.subtitle}
+                                                        onChange={e => setFormData({ ...formData, subtitle: e.target.value })}
+                                                    />
+                                                </div>
+                                                <div className="space-y-1.5 font-sans">
+                                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1 italic">Image URL</label>
+                                                    <input
+                                                        placeholder="/assets/example.png"
+                                                        className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
+                                                        value={formData.image}
+                                                        onChange={e => setFormData({ ...formData, image: e.target.value })}
+                                                    />
+                                                </div>
+                                                <div className="md:col-span-2 space-y-1.5 font-sans">
+                                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1 italic">Theme</label>
+                                                    <select
+                                                        className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm appearance-none"
+                                                        value={formData.theme}
+                                                        onChange={e => setFormData({ ...formData, theme: e.target.value })}
+                                                    >
+                                                        <option value="dark">Dark</option>
+                                                        <option value="light">Light</option>
+                                                    </select>
+                                                </div>
+                                            </>
+                                        ) : activeTab !== 'Referrals' ? (
                                             <>
                                                 <div className="space-y-1.5 font-sans">
                                                     <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1 italic">Reduction Type</label>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     MapPin, ChevronDown, Bell, ChevronRight, Star,
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
+import { SHOP_PRODUCTS } from '../../../context/CartContext';
 import MobileLayout from '../components/layout/MobileLayout';
 
 const Home = () => {
@@ -17,6 +18,100 @@ const Home = () => {
     const user = getUser('consumer');
 
     const [showAllServices, setShowAllServices] = useState(false);
+    const [isSearching, setIsSearching] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const [showSOS, setShowSOS] = useState(false);
+    const [sosCountdown, setSosCountdown] = useState(5);
+    const [sosActive, setSosActive] = useState(false);
+
+    const triggerSOS = () => {
+        setShowSOS(true);
+        setSosCountdown(5);
+        setSosActive(false);
+    };
+
+    // Banner state for admin-manageability
+    const [banners, setBanners] = useState(() => {
+        const saved = localStorage.getItem('CarWash_banners');
+        if (saved) return JSON.parse(saved);
+        return [
+            {
+                id: 1,
+                title: "100% CASHBACK",
+                subtitle: "ON YOUR FIRST SERVICE",
+                image: "/assets/carwash/banner_main.png", // Fallback, will use generated one if available
+                cta: "Book Now",
+                path: "/instant-wash",
+                theme: "dark"
+            },
+            {
+                id: 2,
+                title: "MONTHLY SHINE",
+                subtitle: "EXCLUSIVE DOORSTEP CARE",
+                image: "/assets/carwash/banner_2.png",
+                cta: "Explore Plans",
+                path: "/subscriptions",
+                theme: "light"
+            }
+        ];
+    });
+
+    useEffect(() => {
+        const handleStorage = (e) => {
+            if (e.key === 'CarWash_banners') {
+                setBanners(JSON.parse(e.newValue));
+            }
+        };
+        window.addEventListener('storage', handleStorage);
+        return () => window.removeEventListener('storage', handleStorage);
+    }, []);
+
+    const [activeBanner, setActiveBanner] = useState(0);
+
+    // Auto-scroll banners
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setActiveBanner(prev => (prev + 1) % banners.length);
+        }, 5000);
+        return () => clearInterval(timer);
+    }, [banners.length]);
+
+    // Searchable Items Definition
+    const searchableItems = useMemo(() => {
+        const services = [
+            { id: 's1', title: 'Instant Car Wash', desc: 'Uber-style on-demand wash', cat: 'Service', icon: Car, path: '/instant-wash', tags: 'wash clean bike car instant soap' },
+            { id: 's2', title: 'Studio Deep Cleaning', desc: 'Professional detailing center', cat: 'Service', icon: Sparkles, path: '/full-wash-booking', tags: 'deep full studio detail ceramic wax polish' },
+            { id: 's3', title: 'Spare Driver', desc: 'Hire professional drivers', cat: 'Career', icon: User, path: '/spare-driver', tags: 'driver job hire captain' },
+            { id: 's4', title: 'Monthly Shine', desc: 'Subscription based cleaning', cat: 'Plan', icon: Zap, path: '/subscriptions', tags: 'monthly subscription points pack' },
+            { id: 's5', title: 'Refer & Earn', desc: 'Gift ₹100 to friends', cat: 'Offer', icon: Gift, path: '/refer', tags: 'free referral money invite' },
+            { id: 's6', title: 'Wallet Balance', desc: 'Manage your credits', cat: 'Finance', icon: Wallet, path: '/wallet', tags: 'recharge money payment' },
+            { id: 's7', title: 'Apartments Wash', desc: 'Cluster subscription plans', cat: 'Plan', icon: Building, path: '/apartments', tags: 'apartment society basement building tower' },
+            { id: 's8', title: 'Safety SOS', desc: 'Emergency response protocol', cat: 'Safety', icon: AlertTriangle, action: triggerSOS, tags: 'help accident emergency' }
+        ];
+
+        const products = (SHOP_PRODUCTS || []).map(p => ({
+            id: `p-${p.id}`,
+            title: p.name,
+            desc: `Rs. ${p.salePrice}`,
+            cat: 'Product',
+            image: p.image,
+            path: '/e-shop',
+            tags: `buy shop e-shop ${p.name}`
+        }));
+
+        return [...services, ...products];
+    }, [SHOP_PRODUCTS]);
+
+    const filteredResults = useMemo(() => {
+        if (!searchQuery.trim()) return [];
+        const q = searchQuery.toLowerCase();
+        return searchableItems.filter(item =>
+            item.title.toLowerCase().includes(q) ||
+            (item.desc && item.desc.toLowerCase().includes(q)) ||
+            (item.tags && item.tags.toLowerCase().includes(q))
+        ).slice(0, 8);
+    }, [searchQuery, searchableItems]);
 
     const renderHeader = () => (
         <header className="px-5 pt-8 pb-4 bg-[#FFF6E9] flex flex-col gap-5">
@@ -51,53 +146,68 @@ const Home = () => {
     );
 
     const renderHero = () => (
-        <section className="relative h-[290px] w-full bg-[#FFF6E9] overflow-hidden">
-            <motion.img
-                initial={{ opacity: 0, x: 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-                src="/assets/carwash/6.png"
-                alt="Car Wash Illustration"
-                className="absolute right-[-5%] bottom-0 h-[85%] object-contain z-0"
-            />
+        <section className="relative h-[240px] w-full overflow-hidden bg-black">
+            <AnimatePresence mode="wait">
+                {banners.map((banner, idx) => idx === activeBanner && (
+                    <motion.div
+                        key={banner.id}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.6, ease: "circOut" }}
+                        className="absolute inset-0"
+                    >
+                        {/* Banner Image with Overlay */}
+                        <div className="absolute inset-0">
+                            <img
+                                src={banner.image || "/assets/carwash/6.png"}
+                                alt={banner.title}
+                                className="w-full h-full object-cover opacity-80"
+                                onError={(e) => { e.target.src = "/assets/carwash/6.png"; }}
+                            />
+                            <div className={`absolute inset-0 bg-gradient-to-r ${banner.theme === 'dark' ? 'from-black/80 via-black/40 to-transparent' : 'from-white/80 via-white/40 to-transparent'}`} />
+                        </div>
 
-            <div className="absolute top-6 left-8 z-10 select-none">
-                <h1 className="flex flex-col">
-                    <span className="text-[#F29F05] text-[64px] font-black font-black leading-[0.8] tracking-tighter -skew-x-12">
-                        100%
-                    </span>
-                    <span className="text-stroke-black text-transparent text-[58px] font-black leading-[0.8] tracking-tighter -mt-2">
-                        CASHBACK
-                    </span>
-                </h1>
-                <p className="text-black font-black text-[13px] mt-4 tracking-tight uppercase">
-                    On Your First Service
-                </p>
+                        {/* Banner Content */}
+                        <div className="absolute inset-0 flex flex-col justify-center px-8 z-10 select-none">
+                            <motion.div
+                                initial={{ y: 20, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                transition={{ delay: 0.2 }}
+                            >
+                                <h2 className={`text-[42px] font-[1000] leading-[0.85] tracking-tighter uppercase mb-2 ${banner.theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                                    {banner.title.split(' ').map((word, i) => (
+                                        <React.Fragment key={i}>
+                                            {word === '100%' ? <span className="text-brand">{word}</span> : word}
+                                            <br />
+                                        </React.Fragment>
+                                    ))}
+                                </h2>
+                                <p className={`text-[10px] font-black uppercase tracking-[0.3em] mb-6 ${banner.theme === 'dark' ? 'text-white/40' : 'text-black/40'}`}>
+                                    {banner.subtitle}
+                                </p>
 
-                <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => navigate('/instant-wash')}
-                    className="mt-6 bg-black text-white px-6 py-3 rounded-xl flex items-center gap-3 font-black text-[11px] uppercase tracking-widest shadow-2xl active:bg-gray-900"
-                >
-                    <Car size={16} className="text-[#F29F05]" fill="currentColor" />
-                    Book Now
-                </motion.button>
+                                {/* CTA Button Removed */}
+                            </motion.div>
+                        </div>
+                    </motion.div>
+                ))}
+            </AnimatePresence>
+
+            {/* Banner Indicators - minimal style */}
+            <div className="absolute bottom-4 left-8 flex gap-1.5 z-20">
+                {banners.map((_, i) => (
+                    <button
+                        key={i}
+                        onClick={() => setActiveBanner(i)}
+                        className={`h-1 transition-all duration-300 rounded-full ${i === activeBanner ? 'w-8 bg-brand' : 'w-2 bg-white/20'}`}
+                    />
+                ))}
             </div>
 
-            <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-black/5 to-transparent" />
-
-            <style dangerouslySetInnerHTML={{
-                __html: `
-                .text-stroke-black {
-                    -webkit-text-stroke: 1.5px black;
-                }
-            `}} />
+            <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent dark:from-black z-10" />
         </section>
     );
-
-    const [showSOS, setShowSOS] = useState(false);
-    const [sosCountdown, setSosCountdown] = useState(5);
-    const [sosActive, setSosActive] = useState(false);
 
     useEffect(() => {
         let timer;
@@ -110,11 +220,115 @@ const Home = () => {
         return () => clearTimeout(timer);
     }, [showSOS, sosCountdown, sosActive]);
 
-    const triggerSOS = () => {
-        setShowSOS(true);
-        setSosCountdown(5);
-        setSosActive(false);
-    };
+    const renderSearchOverlay = () => (
+        <AnimatePresence>
+            {isSearching && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[2000] bg-white flex flex-col pt-8"
+                >
+                    {/* Search Header */}
+                    <div className="px-5 mb-4 flex items-center gap-4">
+                        <div className="relative flex-1">
+                            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                                <Search size={18} className="text-brand" />
+                            </div>
+                            <input
+                                autoFocus
+                                type="text"
+                                placeholder="Search car wash, products..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full h-12 bg-gray-50 border border-gray-100 rounded-2xl pl-12 pr-10 text-[14px] font-bold text-black outline-none focus:border-brand/30 transition-all"
+                            />
+                            {searchQuery && (
+                                <button
+                                    onClick={() => setSearchQuery('')}
+                                    className="absolute inset-y-0 right-0 px-4 flex items-center"
+                                >
+                                    <X size={16} className="text-black/30" />
+                                </button>
+                            )}
+                        </div>
+                        <button
+                            onClick={() => {
+                                setIsSearching(false);
+                                setSearchQuery('');
+                            }}
+                            className="text-[10px] font-black text-black/40 uppercase tracking-widest"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+
+                    {/* Quick Tags when no query */}
+                    {!searchQuery && (
+                        <div className="px-5 mb-8">
+                            <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em] mb-4">Popular Searches</p>
+                            <div className="flex flex-wrap gap-2">
+                                {['Instant Wash', 'Polish', 'Shampoo', 'Driver', 'Subscription'].map(tag => (
+                                    <button
+                                        key={tag}
+                                        onClick={() => setSearchQuery(tag)}
+                                        className="px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-[10px] font-black uppercase tracking-tight text-black/60"
+                                    >
+                                        {tag}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Results Area */}
+                    <div className="flex-1 overflow-y-auto px-5 pb-10">
+                        {searchQuery && filteredResults.length > 0 ? (
+                            <div className="space-y-3">
+                                <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em] mb-2">{filteredResults.length} Results Found</p>
+                                {filteredResults.map((item, idx) => (
+                                    <motion.div
+                                        key={item.id}
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: idx * 0.05 }}
+                                        onClick={() => {
+                                            setIsSearching(false);
+                                            setSearchQuery('');
+                                            item.action ? item.action() : navigate(item.path);
+                                        }}
+                                        className="group p-4 bg-gray-50/50 hover:bg-brand/5 border border-gray-100 rounded-2xl flex items-center gap-4 transition-all cursor-pointer active:scale-[0.98]"
+                                    >
+                                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-gray-100 shadow-sm overflow-hidden flex-shrink-0">
+                                            {item.image ? (
+                                                <img src={item.image} className="w-full h-full object-contain p-1" alt="" />
+                                            ) : (
+                                                <item.icon size={20} className="text-brand" />
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-0.5">
+                                                <h4 className="text-[13px] font-[1000] text-black uppercase tracking-tight truncate">{item.title}</h4>
+                                                <span className="px-1.5 py-0.5 bg-brand/10 text-brand text-[7px] font-black rounded-md uppercase">{item.cat}</span>
+                                            </div>
+                                            <p className="text-[10px] font-bold text-black/40 uppercase truncate">{item.desc}</p>
+                                        </div>
+                                        <ChevronRight size={16} className="text-black/10 group-hover:text-brand" />
+                                    </motion.div>
+                                ))}
+                            </div>
+                        ) : searchQuery ? (
+                            <div className="h-64 flex flex-col items-center justify-center text-center">
+                                <Search size={40} className="text-black/5 mb-4" />
+                                <p className="text-sm font-black text-black/40 uppercase tracking-tight">No results matched your search</p>
+                                <p className="text-[10px] font-bold text-black/20 uppercase tracking-widest mt-1">Try searching for 'Wash' or 'Polish'</p>
+                            </div>
+                        ) : null}
+                    </div>
+                </motion.div>
+            )}
+        </AnimatePresence>
+    );
 
     const renderSOSOverlay = () => (
         <AnimatePresence>
@@ -215,6 +429,7 @@ const Home = () => {
                         <div className="grid grid-cols-4 gap-y-8 gap-x-4">
                             {[
                                 { title: 'Instant Wash', icon: Car, color: '#F29F05', path: '/instant-wash' },
+                                { title: 'Apartments', icon: Building, color: '#6366F1', path: '/apartments' },
                                 { title: 'Appointment', icon: Calendar, color: '#3B82F6', path: '/full-wash-booking' },
                                 { title: 'Spare Drivers', icon: User, color: '#FF8533', path: '/spare-driver' },
                                 { title: 'Alerts', icon: Bell, color: '#A855F7', path: '/notifications' },
@@ -259,7 +474,7 @@ const Home = () => {
                         <motion.button
                             whileTap={{ scale: 0.96 }}
                             onClick={() => navigate('/instant-wash')}
-                            className="bg-white rounded-xl p-4 text-left flex flex-col justify-between h-[155px] shadow-[0_8px_20px_-8px_rgba(0,0,0,0.06)] border border-gray-100 relative overflow-hidden group"
+                            className="bg-amber-50/50 rounded-xl p-4 text-left flex flex-col justify-between h-[155px] shadow-[0_8px_20px_-8px_rgba(0,0,0,0.06)] border border-amber-100/50 relative overflow-hidden group"
                         >
                             {/* Visual Asset - Shifted to avoid bottom pill overlap */}
                             <div className="absolute right-[-15%] top-[10%] w-[110%] h-[80%] transition-transform duration-700 group-hover:scale-105 pointer-events-none z-0">
@@ -282,7 +497,7 @@ const Home = () => {
                         <motion.button
                             whileTap={{ scale: 0.96 }}
                             onClick={() => navigate('/full-wash-booking')}
-                            className="bg-white rounded-xl p-4 text-left flex flex-col justify-between h-[155px] shadow-[0_8px_20px_-8px_rgba(0,0,0,0.06)] border border-gray-100 relative overflow-hidden group"
+                            className="bg-blue-50/50 rounded-xl p-4 text-left flex flex-col justify-between h-[155px] shadow-[0_8px_20px_-8px_rgba(0,0,0,0.06)] border border-blue-100/50 relative overflow-hidden group"
                         >
                             {/* Visual Asset */}
                             <div className="absolute right-[-15%] top-[10%] w-[110%] h-[80%] transition-transform duration-700 group-hover:scale-105 pointer-events-none z-0">
@@ -303,9 +518,42 @@ const Home = () => {
                     </div>
                 </section>
 
+                {/* Secondary Services */}
+                <section className="flex gap-3 px-5 -mt-5">
+                    {/* Apartment Wash */}
+                    <motion.button
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => navigate('/apartments')}
+                        className="flex-1 bg-indigo-50/50 p-3 text-left flex flex-col justify-between h-[85px] rounded-2xl relative overflow-hidden group shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-indigo-100/50"
+                    >
+                        <div className="absolute right-[-15%] top-[15%] w-[100%] h-[95%] transition-transform duration-700 group-hover:scale-105 pointer-events-none z-0">
+                            <img src="/assets/appartment/appartment.png" className="w-full h-full object-contain opacity-90" alt="" />
+                        </div>
+                        <div className="relative z-20">
+                            <p className="text-[9px] font-black text-indigo-600 uppercase tracking-widest mb-0.5">Subscription</p>
+                            <h4 className="text-[14px] font-[1000] text-black uppercase tracking-tighter leading-[0.9]">Apartment<br />Car Wash</h4>
+                        </div>
+                    </motion.button>
+
+                    {/* Spare Driver */}
+                    <motion.button
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => navigate('/spare-driver')}
+                        className="flex-1 bg-orange-50/40 p-3 text-left flex flex-col justify-between h-[85px] rounded-2xl relative overflow-hidden group shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-orange-100/50"
+                    >
+                        <div className="absolute right-[-15%] top-[15%] w-[100%] h-[95%] transition-transform duration-700 group-hover:scale-105 pointer-events-none z-0">
+                            <img src="/assets/sparedriver/sparedriver.png" className="w-full h-full object-contain opacity-90" alt="" />
+                        </div>
+                        <div className="relative z-20">
+                            <p className="text-[9px] font-black text-orange-600 uppercase tracking-widest mb-0.5">On-Demand</p>
+                            <h4 className="text-[14px] font-[1000] text-black uppercase tracking-tighter leading-[0.9]">Spare<br />Driver</h4>
+                        </div>
+                    </motion.button>
+                </section>
+
                 {/* Explore Categories - Grid Icons */}
-                <section className="px-5">
-                    <div className="flex items-center justify-between mb-4">
+                <section className="px-5 pt-0 -mt-3">
+                    <div className="flex items-center justify-between mb-3">
                         <h3 className="text-[15px] font-black text-black opacity-40 uppercase tracking-widest">Explore</h3>
                     </div>
                     <div className="grid grid-cols-4 gap-4">
@@ -620,12 +868,13 @@ const Home = () => {
                 `}} />
                 <div>
                     {renderAllServicesSheet()}
+                    {renderSearchOverlay()}
                     {renderSOSOverlay()}
                     {renderHeader()}
                     {renderHero()}
 
-                    {/* Rapido Style Search Bar - Now between Hero and Dashboard */}
-                    <div className="px-5 mb-2 -mt-8 relative z-30" onClick={() => navigate('/instant-wash')}>
+                    {/* Rapido Style Search Bar - Now triggers the Search Overlay */}
+                    <div className="px-5 mb-2 -mt-8 relative z-30" onClick={() => setIsSearching(true)}>
                         <div className="relative">
                             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
                                 <Search size={18} className="text-black opacity-30" />

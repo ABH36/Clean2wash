@@ -537,6 +537,7 @@ const InstantWash = () => {
                     if (configRes.status === 'success') {
                         setGlobalSettings(configRes.data.settings || {});
                         if (configRes.data.plans) setSubscriptionPlans(configRes.data.plans);
+                        if (configRes.data.passConfig) setPassConfig(configRes.data.passConfig);
                     }
                 } catch (configErr) {
                     console.error("InstantWash: Config fetch failed", configErr);

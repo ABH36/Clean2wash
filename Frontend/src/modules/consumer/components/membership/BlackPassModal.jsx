@@ -19,12 +19,9 @@ const BlackPassModal = ({ isOpen, onClose }) => {
     const fetchBlackPlan = async () => {
         try {
             setLoading(true);
-            const res = await serviceAPI.getPromotions();
-            if (res.status === 'success') {
-                // Find Black Pass in promotional packages or fetch directly from plans
-                const allPlansRes = await serviceAPI.getServices({ type: 'subscription' });
-                const blackPass = allPlansRes.data?.services?.find(s => s.title?.toLowerCase().includes('black')) || 
-                                 allPlansRes.data?.plans?.find(p => p.name?.toLowerCase().includes('black'));
+            const res = await serviceAPI.getPlans();
+            if (res.status === 'success' && res.data?.plans) {
+                const blackPass = res.data.plans.find(p => p.name?.toLowerCase().includes('black'));
                 
                 if (blackPass) {
                     setPlan(blackPass);
@@ -90,15 +87,17 @@ const BlackPassModal = ({ isOpen, onClose }) => {
                         if (verificationResult.success) {
                             // 5. Create subscription record
                             const subRes = await subscriptionAPI.createSubscription({
-                                plan: 'black',
+                                plan: plan?.name || plan?.id || 'black',
+                                planId: plan?.id || plan?._id,
                                 paymentMethod: 'razorpay',
-                                paymentId: response.razorpay_payment_id
+                                paymentId: response.razorpay_payment_id,
+                                orderId: response.razorpay_order_id
                             });
 
                             if (subRes.status === 'success') {
                                 setUserSubscription(subRes.data.subscription);
                                 // Re-fetch profile to sync state (if login updates user context)
-                                if (user?.phone) await login(user.phone); 
+                                if (user?.phone) await login('consumer', user); 
                                 onClose(); // Close modal on success
                                 // Trigger success confetti or message could go here
                             } else {

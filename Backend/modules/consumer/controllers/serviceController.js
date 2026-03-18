@@ -1155,14 +1155,15 @@ exports.getHomeData = async (req, res) => {
             isActive: true
         }).sort({ createdAt: -1 });
 
-        const fetchStats = MasterData.find({ type: 'CONFIG', isActive: true }).sort({ sortOrder: 1 });
+        const fetchPassConfig = Setting.findOne({ key: 'WASH_PASS_CONFIG' });
 
-        const [dbBanners, dbServices, dbCategories, dbPromotions, dbStats] = await Promise.all([
+        const [dbBanners, dbServices, dbCategories, dbPromotions, dbStats, passConfig] = await Promise.all([
             fetchBanners,
             fetchServices,
             fetchCategories,
             fetchPromotions,
-            fetchStats
+            fetchStats,
+            fetchPassConfig
         ]);
 
         const banners = dbBanners.map(doc => ({
@@ -1222,7 +1223,8 @@ exports.getHomeData = async (req, res) => {
                 services,
                 categories,
                 cards,
-                stats
+                stats,
+                passConfig: passConfig?.value || passConfig?.metadata || { discount: 0.3, marketingLine: '30% OFF ON ALL SERVICES' }
             }
         });
 
@@ -1295,10 +1297,11 @@ exports.likePortfolioItem = async (req, res) => {
 exports.getInstantWashConfig = async (req, res) => {
     try {
         const Setting = require('../../../models/Setting');
-        const [services, plans, settings] = await Promise.all([
+        const [services, plans, settings, passSetting] = await Promise.all([
             require('../../../models/Service').find({ category: { $in: ['Cleaning', 'Doorstep', 'Wash', 'Express'] }, isActive: true }),
             SubscriptionPlan.find({ isActive: true, status: 'Live' }),
-            Setting.find({ key: { $in: ['combo_discount_pct', 'multi_asset_discount_pct', 'studio_base_multiplier'] } })
+            Setting.find({ key: { $in: ['combo_discount_pct', 'multi_asset_discount_pct', 'studio_base_multiplier'] } }),
+            Setting.findOne({ key: 'WASH_PASS_CONFIG' })
         ]);
 
         const settingsMap = {};
@@ -1311,7 +1314,8 @@ exports.getInstantWashConfig = async (req, res) => {
             data: {
                 services,
                 plans,
-                settings: settingsMap
+                settings: settingsMap,
+                passConfig: passSetting?.value || passSetting?.metadata || { discount: 0.3, marketingLine: '30% OFF ON ALL SERVICES' }
             }
         });
     } catch (error) {

@@ -1,5 +1,5 @@
-const Captain = require('../models/Captain');
-const Booking = require('../../consumer/models/Booking');
+const Captain = require('../../../models/Captain');
+const Booking = require('../../../models/Booking');
 
 const LEVELS = [
     { name: 'Rookie', minWashes: 0, maxWashes: 100, perks: [] },

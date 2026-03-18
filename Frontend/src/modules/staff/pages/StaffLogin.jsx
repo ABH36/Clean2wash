@@ -8,25 +8,28 @@ import { useTheme } from '../../../context/ThemeContext';
 const StaffLogin = () => {
     const navigate = useNavigate();
     const { isDarkMode } = useTheme();
-    const { login, validateCredentials } = useAuth();
+    const { staffLogin } = useAuth();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [phone, setPhone] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
-        const user = validateCredentials('staff', { phone, password });
-        if (!user) {
-            setError('ACCESS DENIED: INVALID CREDENTIALS');
-            return;
-        }
         setLoading(true);
-        setTimeout(() => {
-            login('staff', user);
-            navigate('/staff');
-        }, 1200);
+        try {
+            const result = await staffLogin(email, password);
+            if (result.success) {
+                navigate('/staff');
+            } else {
+                setError(result.error || 'ACCESS DENIED: INVALID CREDENTIALS');
+            }
+        } catch (err) {
+            setError('CONNECTION FAILURE — RETRY');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -56,17 +59,16 @@ const StaffLogin = () => {
 
                 <form className="space-y-5" onSubmit={handleLogin}>
                     <div className="space-y-2">
-                        <label className={`text-[9px] font-black uppercase tracking-[0.25em] px-4 italic ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Device Identity (Phone)</label>
+                        <label className={`text-[9px] font-black uppercase tracking-[0.25em] px-4 italic ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Staff Email</label>
                         <div className="relative group">
                             <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none transition-colors group-focus-within:text-brand">
                                 <PhoneIcon size={18} className={`${isDarkMode ? 'text-white/10' : 'text-content-subtle'} group-focus-within:text-brand transition-colors`} />
                             </div>
                             <input
-                                type="tel"
-                                placeholder="+91 00000 00000"
-                                value={phone}
-                                onChange={e => setPhone(e.target.value.replace(/\D/g, ''))}
-                                maxLength={10}
+                                type="email"
+                                placeholder="staff@clean2wash.in"
+                                value={email}
+                                onChange={e => setEmail(e.target.value)}
                                 className={`w-full border px-16 py-5 rounded-[2rem] text-sm font-black outline-none transition-all shadow-soft placeholder:tracking-normal ${isDarkMode ? 'bg-white/5 border-white/5 text-white placeholder:text-white/10 focus:bg-white/10 focus:border-brand/40' : 'bg-gray-50 border-gray-100 text-content placeholder:text-gray-200 focus:bg-white focus:border-brand/40'}`}
                             />
                         </div>

@@ -1,52 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useAuth } from '../../../context/AuthContext';
+import { vendorAPI } from '../../../utils/vendorApi';
 import {
     Users, Search, Filter, Mail, Phone,
-    ChevronRight, Star, History, ShoppingBag
+    ChevronRight, Star, History, ShoppingBag, Loader2
 } from 'lucide-react';
 import VendorLayout from '../components/VendorLayout';
 
 const VendorCustomers = () => {
-    const { bookings, getUser } = useAuth();
-    const vendor = getUser('vendor') || {};
+    const [customers, setCustomers] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Extract dynamic customers from bookings
-    const vendorBookings = bookings.filter(b => b.vendorId === vendor.id);
+    useEffect(() => {
+        const fetchCustomers = async () => {
+            try {
+                const res = await vendorAPI.getCustomers();
+                if (res.status === 'success') {
+                    setCustomers(res.data.customers);
+                }
+            } catch (err) {
+                console.error('Failed to fetch customers', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchCustomers();
+    }, []);
 
-    const customersMap = vendorBookings.reduce((acc, b) => {
-        const userId = b.userId || b.userName; // Use userName if userId is missing
-        if (!acc[userId]) {
-            acc[userId] = {
-                id: userId,
-                name: b.userName || 'Guest User',
-                bookings: 0,
-                spent: 0,
-                lastActiveRaw: new Date(0),
-                phone: b.userPhone || '+91 9XXXX XXXXX',
-                status: 'Regular'
-            };
-        }
-        acc[userId].bookings += 1;
-        const price = parseInt(b.price.replace(/[^\d]/g, '') || 0);
-        acc[userId].spent += price;
-        const bookingDate = new Date(b.timestamp || Date.now());
-        if (bookingDate > acc[userId].lastActiveRaw) {
-            acc[userId].lastActiveRaw = bookingDate;
-        }
-        acc[userId].status = acc[userId].bookings >= 5 ? 'Elite' : 'Regular';
-        return acc;
-    }, {});
-
-    const CUSTOMERS = Object.values(customersMap).map(c => ({
-        ...c,
-        spent: `₹${c.spent.toLocaleString()}`,
-        lastActive: new Date() - c.lastActiveRaw < 24 * 60 * 60 * 1000 ? 'Today' :
-            new Date() - c.lastActiveRaw < 7 * 24 * 60 * 60 * 1000 ? 'This Week' : 'Older'
-    })).filter(c =>
-        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.phone.includes(searchTerm)
+    const filteredCustomers = customers.filter(c =>
+        (c.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (c.phone || '').includes(searchTerm)
     );
 
     return (
@@ -71,73 +55,83 @@ const VendorCustomers = () => {
 
                 {/* Desktop Table View */}
                 <div className="hidden md:block bg-surface rounded-3xl border border-gray-100/10 shadow-soft overflow-hidden">
-                    <table className="w-full text-left">
-                        <thead className="bg-background border-b border-gray-100/10 text-[10px] font-black uppercase tracking-[0.15em] text-content-subtle">
-                            <tr>
-                                <th className="px-6 py-4">Customer</th>
-                                <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4">Total Bookings</th>
-                                <th className="px-6 py-4">Total Spent</th>
-                                <th className="px-6 py-4">Last Activity</th>
-                                <th className="px-6 py-4 text-center">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100/5">
-                            {CUSTOMERS.length > 0 ? CUSTOMERS.map(customer => (
-                                <tr key={customer.id} className="hover:bg-background/50 transition-colors group">
-                                    <td className="px-6 py-5">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-xl bg-background border border-gray-100/10 flex items-center justify-center text-content-muted font-black text-xs">
-                                                {customer.name.charAt(0)}
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-black text-content tracking-tight">{customer.name}</p>
-                                                <p className="text-[10px] font-bold text-content-subtle">{customer.phone}</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${customer.status === 'Elite' ? 'bg-brand/10 text-brand' : 'bg-background border border-gray-100/10 text-content-muted'
-                                            }`}>
-                                            {customer.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        <div className="flex items-center gap-2">
-                                            <ShoppingBag size={14} className="text-content-subtle" />
-                                            <span className="text-sm font-black text-content">{customer.bookings} orders</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        <span className="text-sm font-black text-green-600 tracking-tight">{customer.spent}</span>
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        <div className="flex items-center gap-2">
-                                            <History size={14} className="text-content-subtle" />
-                                            <span className="text-xs font-bold text-content-subtle italic">{customer.lastActive}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-5 text-center">
-                                        <button className="text-content-muted hover:text-brand transition-all group-hover:translate-x-1">
-                                            <ChevronRight size={18} strokeWidth={3} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            )) : (
+                    {loading ? (
+                        <div className="p-20 flex justify-center">
+                            <Loader2 className="w-8 h-8 text-brand animate-spin" />
+                        </div>
+                    ) : (
+                        <table className="w-full text-left">
+                            <thead className="bg-background border-b border-gray-100/10 text-[10px] font-black uppercase tracking-[0.15em] text-content-subtle">
                                 <tr>
-                                    <td colSpan="6" className="p-20 text-center">
-                                        <Users size={32} className="mx-auto text-content-subtle/20 mb-2" />
-                                        <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic">No client records found</p>
-                                    </td>
+                                    <th className="px-6 py-4">Customer</th>
+                                    <th className="px-6 py-4">Status</th>
+                                    <th className="px-6 py-4">Total Bookings</th>
+                                    <th className="px-6 py-4">Total Spent</th>
+                                    <th className="px-6 py-4">Last Activity</th>
+                                    <th className="px-6 py-4 text-center">Action</th>
                                 </tr>
-                            )}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100/5">
+                                {filteredCustomers.length > 0 ? filteredCustomers.map(customer => (
+                                    <tr key={customer.id} className="hover:bg-background/50 transition-colors group">
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-background border border-gray-100/10 flex items-center justify-center text-content-muted font-black text-xs">
+                                                    {customer.name.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-black text-content tracking-tight">{customer.name}</p>
+                                                    <p className="text-[10px] font-bold text-content-subtle">{customer.phone}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${customer.status === 'Elite' ? 'bg-brand/10 text-brand' : 'bg-background border border-gray-100/10 text-content-muted'
+                                                }`}>
+                                                {customer.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center gap-2">
+                                                <ShoppingBag size={14} className="text-content-subtle" />
+                                                <span className="text-sm font-black text-content">{customer.bookings} orders</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <span className="text-sm font-black text-green-600 tracking-tight">₹{customer.spent ? Number(customer.spent).toLocaleString('en-IN') : '0'}</span>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center gap-2">
+                                                <History size={14} className="text-content-subtle" />
+                                                <span className="text-xs font-bold text-content-subtle italic">{new Date(customer.lastActive).toLocaleDateString()}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5 text-center">
+                                            <button className="text-content-muted hover:text-brand transition-all group-hover:translate-x-1">
+                                                <ChevronRight size={18} strokeWidth={3} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                )) : (
+                                    <tr>
+                                        <td colSpan="6" className="p-20 text-center">
+                                            <Users size={32} className="mx-auto text-content-subtle/20 mb-2" />
+                                            <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic">No client records found</p>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
 
                 {/* Mobile Card View */}
                 <div className="md:hidden space-y-4 pb-24">
-                    {CUSTOMERS.map(customer => (
+                    {loading ? (
+                        <div className="py-20 flex justify-center">
+                            <Loader2 className="w-8 h-8 text-brand animate-spin" />
+                        </div>
+                    ) : filteredCustomers.map(customer => (
                         <motion.div
                             key={customer.id}
                             whileHover={{ y: -4 }}
@@ -168,12 +162,12 @@ const VendorCustomers = () => {
                                 </div>
                                 <div>
                                     <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-1 italic">Contribution</p>
-                                    <p className="text-xs font-black text-green-600">{customer.spent}</p>
+                                    <p className="text-xs font-black text-green-600">₹{customer.spent ? Number(customer.spent).toLocaleString('en-IN') : '0'}</p>
                                 </div>
                             </div>
 
                             <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-bold text-content-subtle uppercase tracking-widest italic leading-none">Activity: {customer.lastActive}</span>
+                                <span className="text-[10px] font-bold text-content-subtle uppercase tracking-widest italic leading-none">Activity: {new Date(customer.lastActive).toLocaleDateString()}</span>
                                 <button className="flex items-center gap-1 text-[10px] font-black text-brand uppercase tracking-widest">
                                     Profile <ChevronRight size={14} strokeWidth={3} />
                                 </button>

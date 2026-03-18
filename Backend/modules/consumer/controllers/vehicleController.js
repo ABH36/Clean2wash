@@ -1,12 +1,12 @@
-const Vehicle = require('../models/Vehicle');
-const Consumer = require('../models/Consumer');
+const Vehicle = require('../../../models/Vehicle');
+const User = require('../../../models/User');
 
 // Get all vehicles for a consumer
 exports.getMyVehicles = async (req, res) => {
     try {
-        const vehicles = await Vehicle.find({ 
-            owner: req.consumer.id,
-            isActive: true 
+        const vehicles = await Vehicle.find({
+            owner: req.user.id,
+            isActive: true
         }).sort({ isPrimary: -1, createdAt: -1 });
 
         res.status(200).json({
@@ -31,7 +31,7 @@ exports.getVehicle = async (req, res) => {
     try {
         const vehicle = await Vehicle.findOne({
             _id: req.params.id,
-            owner: req.consumer.id,
+            owner: req.user.id,
             isActive: true
         });
 
@@ -82,7 +82,7 @@ exports.addVehicle = async (req, res) => {
 
         // Create new vehicle
         const newVehicle = await Vehicle.create({
-            owner: req.consumer.id,
+            owner: req.user.id,
             brand,
             model,
             type,
@@ -94,19 +94,19 @@ exports.addVehicle = async (req, res) => {
         });
 
         // If this is the first vehicle, make it primary
-        const vehicleCount = await Vehicle.countDocuments({ owner: req.consumer.id, isActive: true });
+        const vehicleCount = await Vehicle.countDocuments({ owner: req.user.id, isActive: true });
         if (vehicleCount === 1) {
             newVehicle.isPrimary = true;
             await newVehicle.save();
-            
+
             // Update consumer's primary vehicle
-            await Consumer.findByIdAndUpdate(req.consumer.id, {
+            await User.findByIdAndUpdate(req.user.id, {
                 primaryVehicle: newVehicle._id
             });
         }
 
         // Add vehicle to consumer's vehicles array
-        await Consumer.findByIdAndUpdate(req.consumer.id, {
+        await User.findByIdAndUpdate(req.user.id, {
             $push: { vehicles: newVehicle._id }
         });
 
@@ -120,7 +120,7 @@ exports.addVehicle = async (req, res) => {
 
     } catch (error) {
         console.error('Error in addVehicle:', error);
-        
+
         // Handle validation errors
         if (error.name === 'ValidationError') {
             const errors = Object.values(error.errors).map(err => err.message);
@@ -154,7 +154,7 @@ exports.updateVehicle = async (req, res) => {
         // Find vehicle
         const vehicle = await Vehicle.findOne({
             _id: req.params.id,
-            owner: req.consumer.id,
+            owner: req.user.id,
             isActive: true
         });
 
@@ -167,11 +167,11 @@ exports.updateVehicle = async (req, res) => {
 
         // If plate number is being updated, check for duplicates
         if (plate && plate !== vehicle.plate) {
-            const existingVehicle = await Vehicle.findOne({ 
+            const existingVehicle = await Vehicle.findOne({
                 plate: plate.toUpperCase(),
                 _id: { $ne: req.params.id }
             });
-            
+
             if (existingVehicle) {
                 return res.status(400).json({
                     status: 'fail',
@@ -205,7 +205,7 @@ exports.updateVehicle = async (req, res) => {
 
     } catch (error) {
         console.error('Error in updateVehicle:', error);
-        
+
         // Handle validation errors
         if (error.name === 'ValidationError') {
             const errors = Object.values(error.errors).map(err => err.message);
@@ -228,7 +228,7 @@ exports.deleteVehicle = async (req, res) => {
     try {
         const vehicle = await Vehicle.findOne({
             _id: req.params.id,
-            owner: req.consumer.id,
+            owner: req.user.id,
             isActive: true
         });
 
@@ -251,7 +251,7 @@ exports.deleteVehicle = async (req, res) => {
         await Vehicle.findByIdAndUpdate(req.params.id, { isActive: false });
 
         // Remove from consumer's vehicles array
-        await Consumer.findByIdAndUpdate(req.consumer.id, {
+        await User.findByIdAndUpdate(req.user.id, {
             $pull: { vehicles: req.params.id }
         });
 
@@ -274,7 +274,7 @@ exports.setPrimaryVehicle = async (req, res) => {
     try {
         const vehicle = await Vehicle.findOne({
             _id: req.params.id,
-            owner: req.consumer.id,
+            owner: req.user.id,
             isActive: true
         });
 
@@ -287,7 +287,7 @@ exports.setPrimaryVehicle = async (req, res) => {
 
         // Unset primary status from all vehicles of this consumer
         await Vehicle.updateMany(
-            { owner: req.consumer.id, isActive: true },
+            { owner: req.user.id, isActive: true },
             { isPrimary: false }
         );
 
@@ -296,7 +296,7 @@ exports.setPrimaryVehicle = async (req, res) => {
         await vehicle.save();
 
         // Update consumer's primary vehicle
-        await Consumer.findByIdAndUpdate(req.consumer.id, {
+        await User.findByIdAndUpdate(req.user.id, {
             primaryVehicle: vehicle._id
         });
 
@@ -317,19 +317,40 @@ exports.setPrimaryVehicle = async (req, res) => {
     }
 };
 
+const VehicleType = require('../../../models/VehicleType');
+
 // Get vehicle types with pricing multipliers
 exports.getVehicleTypes = async (req, res) => {
     try {
-        const vehicleTypes = [
-            { id: 'hatchback', label: 'Hatch', multiplier: 1.0 },
-            { id: 'sedan', label: 'Sedan', multiplier: 1.2 },
-            { id: 'suv', label: 'SUV', multiplier: 1.5 },
-            { id: 'luxury', label: 'Luxury', multiplier: 2.0 },
-            { id: 'muv', label: 'MUV', multiplier: 1.4 },
-            { id: 'bike', label: 'Bike', multiplier: 0.6 },
-            { id: 'scooter', label: 'Scooter', multiplier: 0.5 },
-            { id: 'superbike', label: 'Super Bike', multiplier: 0.9 }
-        ];
+        const vehicleTypes = await VehicleType.find({ isActive: true }).sort({ sortOrder: 1 });
+
+        // If no types in DB, provide basic defaults (safety net)
+        if (vehicleTypes.length === 0) {
+            const defaults = [
+                { id: 'hatchback', name: 'Hatch', type: 'Hatchback', multiplier: 1.0, image: 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=400&q=80' },
+                { id: 'sedan', name: 'Sedan', type: 'Sedan', multiplier: 1.2, image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80' },
+                { id: 'suv', name: 'SUV', type: 'SUV', multiplier: 1.5, image: 'https://images.unsplash.com/photo-1518987048-93e29699e79a?w=400&q=80' },
+                { id: 'muv', name: 'MUV', type: 'MUV', multiplier: 1.4, image: 'https://images.unsplash.com/photo-1594731802111-07ee4940d995?w=400&q=80' },
+                { id: 'compact suv', name: 'Compact SUV', type: 'Compact SUV', multiplier: 1.4, image: 'https://images.unsplash.com/photo-1517524008410-b44336d29a0c?w=400&q=80' },
+                { id: 'luxury sedan', name: 'Luxury Sedan', type: 'Luxury Sedan', multiplier: 2.0, image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=400&q=80' },
+                { id: 'luxury suv', name: 'Luxury SUV', type: 'Luxury SUV', multiplier: 2.2, image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=400&q=80' },
+                { id: 'coupe', name: 'Coupe', type: 'Coupe', multiplier: 1.8, image: 'https://images.unsplash.com/photo-1502877338535-766e145cca6c?w=400&q=80' },
+                { id: 'convertible', name: 'Convertible', type: 'Convertible', multiplier: 2.0, image: 'https://images.unsplash.com/photo-1551830820-330a71b99659?w=400&q=80' },
+                { id: 'sports car', name: 'Sports Car', type: 'Sports Car', multiplier: 2.5, image: 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&q=80' },
+                { id: 'supercar', name: 'Super Car', type: 'Supercar', multiplier: 3.0, image: 'https://images.unsplash.com/photo-1525609002952-7621bfea801d?w=400&q=80' },
+                { id: 'ev', name: 'EV', type: 'EV', multiplier: 1.2, image: 'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=400&q=80' },
+                { id: 'mini truck', name: 'Mini Truck', type: 'Mini Truck', multiplier: 1.8, image: 'https://images.unsplash.com/photo-1519003722824-194d4455a60c?w=400&q=80' },
+                { id: 'truck', name: 'Truck', type: 'Truck', multiplier: 2.5, image: 'https://images.unsplash.com/photo-1586191582056-a15cd11ec618?w=400&q=80' },
+                { id: 'van', name: 'Van', type: 'Van', multiplier: 1.8, image: 'https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?w=400&q=80' },
+                { id: 'tractor', name: 'Tractor', type: 'Tractor', multiplier: 2.0, image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=400&q=80' },
+                { id: 'vintage', name: 'Vintage', type: 'Vintage', multiplier: 2.5, image: 'https://images.unsplash.com/photo-1511919884226-fd3cad34687c?w=400&q=80' },
+                { id: 'bike', name: 'Bike', type: 'Bike', multiplier: 0.6, image: 'https://images.unsplash.com/photo-1558981285-6f0c94958bb6?w=400&q=80' },
+                { id: 'scooter', name: 'Scooter', type: 'Scooter', multiplier: 0.5, image: 'https://images.unsplash.com/photo-1449495940867-33d54ed0ec84?w=400&q=80' },
+                { id: 'superbike', name: 'Super Bike', type: 'Superbike', multiplier: 0.9, image: 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=400&q=80' },
+                { id: 'luxury', name: 'Luxury', type: 'Luxury', multiplier: 2.0, image: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400&q=80' }
+            ];
+            return res.status(200).json({ status: 'success', data: { vehicleTypes: defaults } });
+        }
 
         res.status(200).json({
             status: 'success',
@@ -399,7 +420,7 @@ exports.getComplianceStatus = async (req, res) => {
     try {
         const vehicle = await Vehicle.findOne({
             _id: req.params.id,
-            owner: req.consumer.id,
+            owner: req.user.id,
             isActive: true
         });
 

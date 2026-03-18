@@ -7,8 +7,9 @@ import {
     Zap, ShoppingBag, Check, Plus, Minus, MessageCircle
 } from 'lucide-react';
 import MobileLayout from '../components/layout/MobileLayout';
-import { useCart, SHOP_PRODUCTS } from '../../../context/CartContext';
+import { useCart } from '../../../context/CartContext';
 import { useWishlist } from '../../../context/WishlistContext';
+import { productAPI } from '../../../utils/api';
 
 const ProductDetail = () => {
     const { id } = useParams();
@@ -16,23 +17,44 @@ const ProductDetail = () => {
     const { addToCart, isInCart, cartCount } = useCart();
     const { toggleWishlist, isInWishlist } = useWishlist();
     const [product, setProduct] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [quantity, setQuantity] = useState(1);
     const [activeTab, setActiveTab] = useState('description');
     const [toast, setToast] = useState(false);
 
     useEffect(() => {
-        const found = SHOP_PRODUCTS.find(p => p.id === id);
-        if (found) {
-            setProduct(found);
-        } else {
-            navigate('/e-shop');
-        }
+        const fetchProduct = async () => {
+            try {
+                setLoading(true);
+                const res = await productAPI.getProduct(id);
+                if (res.status === 'success') {
+                    setProduct(res.data.product);
+                } else {
+                    navigate('/e-shop');
+                }
+            } catch (err) {
+                console.error("Failed to fetch product:", err);
+                navigate('/e-shop');
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProduct();
     }, [id, navigate]);
+
+    if (loading) return (
+        <MobileLayout hideNav={true}>
+            <div className="bg-white min-h-screen flex items-center justify-center">
+                <div className="w-10 h-10 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+            </div>
+        </MobileLayout>
+    );
 
     if (!product) return null;
 
-    const inCart = isInCart(product.id);
-    const inWishlist = isInWishlist(product.id);
+    const pId = product._id || product.id;
+    const inCart = isInCart(pId);
+    const inWishlist = isInWishlist(pId);
     const discount = Math.round(((product.price - product.salePrice) / product.price) * 100);
 
     const handleAddToCart = () => {

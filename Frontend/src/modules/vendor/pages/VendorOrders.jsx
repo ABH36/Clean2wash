@@ -1,38 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Calendar, ChevronRight, Filter, Search
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import VendorLayout from '../components/VendorLayout';
-import { useAuth } from '../../../context/AuthContext';
+import { vendorAPI } from '../../../utils/vendorApi';
 
 const VendorOrders = () => {
     const navigate = useNavigate();
-    const { bookings, getUser } = useAuth();
-    const user = getUser('vendor');
     const [activeTab, setActiveTab] = useState('Active');
+    const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const vendorBookings = bookings.filter(b =>
-        b.vendorId === user?.id ||
-        ((b.type === 'vendor' || b.type === 'shop_order') && b.status === 'pending')
-    );
+    useEffect(() => {
+        const fetchOrders = async () => {
+            try {
+                const res = await vendorAPI.getOrders();
+                if (res.status === 'success') {
+                    setOrders(res.data.orders);
+                }
+            } catch (err) {
+                console.error('Failed to load orders', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchOrders();
+    }, []);
 
-    const mappedOrders = vendorBookings.map(b => ({
-        id: b.id,
-        customer: b.userName || 'Guest',
-        car: b.vehicle || 'Unknown',
-        type: b.serviceName,
-        status: b.status.toUpperCase(),
-        date: new Date(b.timestamp).toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
-        amount: b.price,
-        location: b.address || 'Bengaluru'
+    const mappedOrders = orders.map(b => ({
+        id: b._id || b.id,
+        customer: b.consumer?.name || 'Guest',
+        car: b.vehicle?.brand ? `${b.vehicle.brand} ${b.vehicle.model}` : 'Unknown',
+        type: b.service?.name || 'Service',
+        status: (b.status || 'pending').toUpperCase(),
+        date: new Date(b.createdAt).toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
+        amount: b.price || b.service?.defaultPrice || '₹0',
+        location: b.consumer?.profile?.address?.city || 'Bengaluru'
     }));
 
     // Local filtering based on tab
     const filteredOrders = mappedOrders.filter(o => {
-        if (activeTab === 'Active') return ['ACCEPTED', 'CONFIRMED', 'IN-PROGRESS', 'AT-STUDIO', 'DELIVERY-ASSIGNED'].includes(o.status);
+        if (activeTab === 'Active') return ['ACCEPTED', 'CONFIRMED', 'ASSIGNED', 'PICKUP-ASSIGNED', 'EN_ROUTE', 'AT-STUDIO', 'IN_PROGRESS', 'QUALITY-CHECK', 'DELIVERY-ASSIGNED'].includes(o.status);
         if (activeTab === 'Completed') return o.status === 'COMPLETED';
-        if (activeTab === 'Cancelled') return o.status === 'CANCELLED';
+        if (activeTab === 'Cancelled') return ['CANCELLED', 'REFUNDED'].includes(o.status);
         if (activeTab === 'Market') return o.status === 'PENDING';
         return true;
     });
@@ -69,14 +80,29 @@ const VendorOrders = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100/5">
-                            {filteredOrders.map(order => (
+                            {loading && (
+                                <tr>
+                                    <td colSpan="7" className="px-6 py-20 text-center">
+                                        <div className="w-8 h-8 mx-auto border-4 border-brand/30 border-t-brand rounded-full animate-spin" />
+                                        <p className="text-[10px] mt-4 font-black text-content-subtle uppercase italic">Loading Orders...</p>
+                                    </td>
+                                </tr>
+                            )}
+                            {!loading && filteredOrders.length === 0 && (
+                                <tr>
+                                    <td colSpan="7" className="px-6 py-20 text-center text-[10px] font-black uppercase tracking-widest text-content-subtle italic bg-surface-hover/30">
+                                        No Orders in {activeTab} Tab
+                                    </td>
+                                </tr>
+                            )}
+                            {!loading && filteredOrders.map(order => (
                                 <tr
                                     key={order.id}
                                     onClick={() => navigate(`/vendor/order/${order.id}`)}
                                     className="hover:bg-background/50 transition-colors cursor-pointer group"
                                 >
                                     <td className="px-6 py-4">
-                                        <span className="text-xs font-black text-brand tracking-wider">{order.id}</span>
+                                        <span className="text-xs font-black text-brand tracking-wider">{order.id.substring(0, 8)}</span>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col">
@@ -117,40 +143,53 @@ const VendorOrders = () => {
 
                 {/* Mobile Card View */}
                 <div className="md:hidden space-y-3 pb-20">
-                    {filteredOrders.map(order => (
-                        <div key={order.id} className="bg-surface p-5 rounded-2xl border border-gray-100/10 shadow-sm space-y-4">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <p className="text-[10px] font-black text-brand uppercase tracking-widest mb-1">{order.id}</p>
-                                    <h3 className="font-black text-base text-content tracking-tight">{order.customer}</h3>
-                                </div>
-                                <div className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${order.status === 'COMPLETED' ? 'bg-green-500/10 text-green-500' : 'bg-blue-500/10 text-blue-500'
-                                    }`}>
-                                    {order.status}
-                                </div>
-                            </div>
-                            <div className="space-y-2 py-3 border-y border-gray-100/5 text-[11px]">
-                                <div className="flex justify-between">
-                                    <span className="text-content-subtle font-bold">Service</span>
-                                    <span className="text-content font-black">{order.type}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-content-subtle font-bold">Scheduled</span>
-                                    <span className="text-content font-black">{order.date}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-content-subtle font-bold">Amount</span>
-                                    <span className="text-green-500 font-black">{order.amount}</span>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => navigate(`/vendor/order/${order.id}`)}
-                                className="w-full h-11 bg-background rounded-xl font-black text-[10px] uppercase tracking-widest text-content-subtle hover:bg-surface-hover transition-all"
-                            >
-                                View Summary
-                            </button>
+                    {loading ? (
+                        <div className="bg-surface p-10 rounded-2xl border border-gray-100/10 mb-4 flex justify-center">
+                            <div className="w-8 h-8 border-4 border-brand/30 border-t-brand rounded-full animate-spin" />
                         </div>
-                    ))}
+                    ) : (
+                        <>
+                            {filteredOrders.length === 0 && (
+                                <div className="bg-surface p-10 rounded-2xl border border-gray-100/10 flex justify-center text-center">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-content-subtle italic">No Orders in {activeTab} Tab</p>
+                                </div>
+                            )}
+                            {filteredOrders.map(order => (
+                                <div key={order.id} className="bg-surface p-5 rounded-2xl border border-gray-100/10 shadow-sm space-y-4">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="text-[10px] font-black text-brand uppercase tracking-widest mb-1">{order.id.substring(0, 8)}</p>
+                                            <h3 className="font-black text-base text-content tracking-tight">{order.customer}</h3>
+                                        </div>
+                                        <div className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${order.status === 'COMPLETED' ? 'bg-green-500/10 text-green-500' : 'bg-blue-500/10 text-blue-500'
+                                            }`}>
+                                            {order.status}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2 py-3 border-y border-gray-100/5 text-[11px]">
+                                        <div className="flex justify-between">
+                                            <span className="text-content-subtle font-bold">Service</span>
+                                            <span className="text-content font-black">{order.type}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-content-subtle font-bold">Scheduled</span>
+                                            <span className="text-content font-black">{order.date}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-content-subtle font-bold">Amount</span>
+                                            <span className="text-green-500 font-black">{order.amount}</span>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => navigate(`/vendor/order/${order.id}`)}
+                                        className="w-full h-11 bg-background rounded-xl font-black text-[10px] uppercase tracking-widest text-content-subtle hover:bg-surface-hover transition-all"
+                                    >
+                                        View Summary
+                                    </button>
+                                </div>
+                            ))}
+                        </>
+                    )}
                 </div>
             </div>
         </VendorLayout>

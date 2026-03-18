@@ -1,14 +1,192 @@
-const Consumer = require('../models/Consumer');
-const Vehicle = require('../models/Vehicle');
-const Booking = require('../models/Booking');
-const WalletTransaction = require('../models/WalletTransaction');
-const Notification = require('../models/Notification');
-const Subscription = require('../models/Subscription');
+const User = require('../../../models/User');
+const Vehicle = require('../../../models/Vehicle');
+const Booking = require('../../../models/Booking');
+const WalletTransaction = require('../../../models/WalletTransaction');
+const Notification = require('../../../models/Notification');
+const Subscription = require('../../../models/Subscription');
+const SubscriptionPlan = require('../../../models/SubscriptionPlan');
+const Hub = require('../../../models/Hub');
+const MasterData = require('../../../models/MasterData');
+const { sendNotification } = require('../../../utils/notificationService');
+
+// Create subscription
+exports.createSubscription = async (req, res) => {
+    try {
+        const { 
+            plan: planId, 
+            paymentMethod, 
+            autoRenew = false,
+            vehicleId,
+            hubId,
+            parkingDetails,
+            slot,
+            paymentId,
+            orderId
+        } = req.body;
+
+        if (!planId || !paymentMethod) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'Plan and payment method are required'
+            });
+        }
+
+        // Check if user already has active subscription
+        const existingSubscription = await Subscription.getActiveSubscription(req.user.id);
+        if (existingSubscription) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'You already have an active subscription'
+            });
+        }
+
+        // Fetch plan data dynamically
+        const SubscriptionPlan = require('../../../models/SubscriptionPlan');
+        const planObj = await SubscriptionPlan.findById(planId);
+        
+        if (!planObj) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'Invalid subscription plan'
+            });
+        }
+
+        let durationMonths = 1;
+        if (planObj.interval === 'Annual') durationMonths = 12;
+        else if (planObj.interval === 'Quarterly') durationMonths = 3;
+
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setMonth(endDate.getMonth() + durationMonths);
+
+        // Map benefits from plan features
+        const benefits = planObj.features || [];
+
+        const subscription = await Subscription.createSubscription({
+            user: req.user.id,
+            plan: planObj.name,
+            vehicle: vehicleId,
+            hub: hubId,
+            parkingDetails,
+            slot,
+            startDate,
+            endDate,
+            autoRenew,
+            benefits: benefits.filter(b => [
+                'free_wash_monthly', 'discount_20_percent', 'discount_30_percent',
+                'priority_booking', 'free_pickup_drop', 'vip_support', 'bonus_credits'
+            ].includes(b)),
+            monthlyCredits: planObj.credits || 0,
+            price: {
+                amount: planObj.price,
+                currency: 'INR',
+                billingCycle: planObj.interval?.toLowerCase() || 'monthly'
+            },
+            paymentMethod,
+            lastPaymentDate: new Date(),
+            nextBillingDate: endDate,
+            paymentId,
+            orderId
+        });
+
+        // Update user stats
+        await User.findByIdAndUpdate(req.user.id, {
+            $inc: { 'stats.totalSubscriptions': 1 }
+        });
+
+        res.status(201).json({
+            status: 'success',
+            message: 'Subscription created successfully',
+            data: { subscription }
+        });
+
+    } catch (error) {
+        console.error('Error in createSubscription:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to create subscription. Please try again.'
+        });
+    }
+};
+
+// --- Trusted Contacts ---
+
+// Get trusted contacts
+exports.getTrustedContacts = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('profile.trustedContacts');
+        res.status(200).json({
+            status: 'success',
+            data: {
+                contacts: user.profile.trustedContacts || []
+            }
+        });
+    } catch (error) {
+        console.error('Error in getTrustedContacts:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to get trusted contacts' });
+    }
+};
+
+// Add trusted contact
+exports.addTrustedContact = async (req, res) => {
+    try {
+        const { name, phone, relation } = req.body;
+        if (!name || !phone) {
+            return res.status(400).json({ status: 'fail', message: 'Name and phone are required' });
+        }
+
+        const user = await User.findById(req.user.id);
+
+        // Limit to 5 contacts
+        if (user.profile.trustedContacts.length >= 5) {
+            return res.status(400).json({ status: 'fail', message: 'Maximum 5 trusted contacts allowed' });
+        }
+
+        user.profile.trustedContacts.push({ name, phone, relation });
+        await user.save();
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Contact added successfully',
+            data: {
+                contacts: user.profile.trustedContacts
+            }
+        });
+    } catch (error) {
+        console.error('Error in addTrustedContact:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to add trusted contact' });
+    }
+};
+
+// Remove trusted contact
+exports.removeTrustedContact = async (req, res) => {
+    try {
+        const { contactId } = req.params;
+        const user = await User.findById(req.user.id);
+
+        user.profile.trustedContacts = user.profile.trustedContacts.filter(
+            c => c._id.toString() !== contactId
+        );
+
+        await user.save();
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Contact removed successfully',
+            data: {
+                contacts: user.profile.trustedContacts
+            }
+        });
+    } catch (error) {
+        console.error('Error in removeTrustedContact:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to remove trusted contact' });
+    }
+};
 
 // Get consumer profile
 exports.getProfile = async (req, res) => {
     try {
-        const consumer = await Consumer.findById(req.consumer.id)
+        const consumer = await User.findById(req.user.id)
             .populate('vehicles', 'brand model type plate image isPrimary')
             .populate('primaryVehicle', 'brand model type plate image')
             .populate('subscription');
@@ -50,11 +228,11 @@ exports.updateProfile = async (req, res) => {
         if (name) updateData.name = name;
         if (email) {
             // Check if email is already taken by another user
-            const existingConsumer = await Consumer.findOne({ 
-                email, 
-                _id: { $ne: req.consumer.id } 
+            const existingConsumer = await User.findOne({
+                email,
+                _id: { $ne: req.user.id }
             });
-            
+
             if (existingConsumer) {
                 return res.status(400).json({
                     status: 'fail',
@@ -63,14 +241,14 @@ exports.updateProfile = async (req, res) => {
             }
             updateData.email = email;
         }
-        
+
         if (phone) {
             // Check if phone is already taken by another user
-            const existingConsumer = await Consumer.findOne({ 
-                phone, 
-                _id: { $ne: req.consumer.id } 
+            const existingConsumer = await User.findOne({
+                phone,
+                _id: { $ne: req.user.id }
             });
-            
+
             if (existingConsumer) {
                 return res.status(400).json({
                     status: 'fail',
@@ -83,7 +261,7 @@ exports.updateProfile = async (req, res) => {
         // Update profile address
         if (profile && profile.address) {
             updateData['profile.address'] = {
-                ...req.consumer.profile.address,
+                ...req.user.profile.address,
                 ...profile.address
             };
         }
@@ -93,14 +271,14 @@ exports.updateProfile = async (req, res) => {
             updateData['profile.avatar'] = profile.avatar;
         }
 
-        const updatedConsumer = await Consumer.findByIdAndUpdate(
-            req.consumer.id,
+        const updatedConsumer = await User.findByIdAndUpdate(
+            req.user.id,
             updateData,
             { new: true, runValidators: true }
         )
-        .populate('vehicles', 'brand model type plate image isPrimary')
-        .populate('primaryVehicle', 'brand model type plate image')
-        .populate('subscription');
+            .populate('vehicles', 'brand model type plate image isPrimary')
+            .populate('primaryVehicle', 'brand model type plate image')
+            .populate('subscription');
 
         // Remove sensitive data
         updatedConsumer.password = undefined;
@@ -116,7 +294,7 @@ exports.updateProfile = async (req, res) => {
 
     } catch (error) {
         console.error('Error in updateProfile:', error);
-        
+
         // Handle validation errors
         if (error.name === 'ValidationError') {
             const errors = Object.values(error.errors).map(err => err.message);
@@ -146,8 +324,8 @@ exports.updateAddress = async (req, res) => {
             });
         }
 
-        const updatedConsumer = await Consumer.findByIdAndUpdate(
-            req.consumer.id,
+        const updatedConsumer = await User.findByIdAndUpdate(
+            req.user.id,
             {
                 'profile.address': {
                     street,
@@ -190,8 +368,8 @@ exports.updateAvatar = async (req, res) => {
             });
         }
 
-        const updatedConsumer = await Consumer.findByIdAndUpdate(
-            req.consumer.id,
+        const updatedConsumer = await User.findByIdAndUpdate(
+            req.user.id,
             { 'profile.avatar': avatar },
             { new: true }
         );
@@ -216,7 +394,7 @@ exports.updateAvatar = async (req, res) => {
 // Get consumer statistics
 exports.getStats = async (req, res) => {
     try {
-        const consumerId = req.consumer.id;
+        const consumerId = req.user.id;
 
         // Get booking statistics
         const bookingStats = await Booking.getConsumerStats(consumerId);
@@ -228,8 +406,8 @@ exports.getStats = async (req, res) => {
         });
 
         // Get wallet balance
-        const consumer = await Consumer.findById(consumerId).select('wallet');
-        
+        const consumer = await User.findById(consumerId).select('wallet');
+
         // Get upcoming bookings count
         const upcomingBookings = await Booking.countDocuments({
             consumer: consumerId,
@@ -255,7 +433,7 @@ exports.getStats = async (req, res) => {
             walletBalance: consumer.wallet.balance,
             upcomingBookings,
             thisMonthServices,
-            memberSince: req.consumer.createdAt,
+            memberSince: req.user.createdAt,
             totalSavings: bookingStats.totalSpent * 0.1 // Mock calculation
         };
 
@@ -279,9 +457,9 @@ exports.getStats = async (req, res) => {
 exports.getWallet = async (req, res) => {
     try {
         const { page = 1, limit = 20, type, category, startDate, endDate } = req.query;
-        
+
         // Get consumer with wallet info
-        const consumer = await Consumer.findById(req.consumer.id)
+        const consumer = await User.findById(req.user.id)
             .select('wallet');
 
         if (!consumer) {
@@ -292,8 +470,8 @@ exports.getWallet = async (req, res) => {
         }
 
         // Get transaction history
-        const transactionData = await WalletTransaction.getConsumerTransactions(
-            req.consumer.id,
+        const transactionData = await WalletTransaction.getUserTransactions(
+            req.user.id,
             { page, limit, type, category, startDate, endDate }
         );
 
@@ -328,7 +506,7 @@ exports.addToWallet = async (req, res) => {
         }
 
         // Get current consumer
-        const consumer = await Consumer.findById(req.consumer.id);
+        const consumer = await User.findById(req.user.id);
         if (!consumer) {
             return res.status(404).json({
                 status: 'fail',
@@ -336,16 +514,23 @@ exports.addToWallet = async (req, res) => {
             });
         }
 
-        const balanceBefore = consumer.wallet.balance;
+        if (!consumer.wallet) {
+            consumer.wallet = { balance: 0, lastUpdated: new Date() };
+        }
+
+        const balanceBefore = consumer.wallet.balance || 0;
         const balanceAfter = balanceBefore + amount;
+        consumer.wallet.balance = balanceAfter;
+        consumer.wallet.lastUpdated = new Date();
+        await consumer.save({ validateBeforeSave: false });
 
         // Create wallet transaction
         const transaction = await WalletTransaction.createTransaction({
-            consumer: req.consumer.id,
+            user: req.user.id,
             type: 'credit',
             amount,
             description: `Wallet recharge of ₹${amount}`,
-            category: 'wallet_recharge',
+            category: 'WALLET_RECHARGE',
             paymentMethod,
             balanceBefore,
             balanceAfter,
@@ -354,6 +539,15 @@ exports.addToWallet = async (req, res) => {
 
         // TODO: Process payment with payment gateway
         // TODO: Send confirmation notification
+
+        // Send notification
+        await sendNotification(req.user.id, {
+            title: 'Money Added to Wallet 💰',
+            message: `₹${amount} has been successfully credited to your wallet.`,
+            type: 'payment',
+            priority: 'medium',
+            metaData: { amount, transactionId: transaction._id }
+        });
 
         res.status(200).json({
             status: 'success',
@@ -367,6 +561,7 @@ exports.addToWallet = async (req, res) => {
     } catch (error) {
         console.error('Error in addToWallet:', error);
         res.status(500).json({
+            status: 'error',
             message: 'Failed to add money to wallet. Please try again.'
         });
     }
@@ -376,9 +571,9 @@ exports.addToWallet = async (req, res) => {
 exports.getNotifications = async (req, res) => {
     try {
         const { page = 1, limit = 20, type, isRead, priority } = req.query;
-        
+
         const notificationData = await Notification.getConsumerNotifications(
-            req.consumer.id,
+            req.user.id,
             { page, limit, type, isRead, priority }
         );
 
@@ -400,21 +595,21 @@ exports.getNotifications = async (req, res) => {
 exports.markNotificationRead = async (req, res) => {
     try {
         const { notificationId } = req.params;
-        
+
         const notification = await Notification.findOne({
             _id: notificationId,
-            consumer: req.consumer.id
+            consumer: req.user.id
         });
-        
+
         if (!notification) {
             return res.status(404).json({
                 status: 'fail',
                 message: 'Notification not found'
             });
         }
-        
+
         await notification.markAsRead();
-        
+
         res.status(200).json({
             status: 'success',
             message: 'Notification marked as read',
@@ -433,8 +628,8 @@ exports.markNotificationRead = async (req, res) => {
 // Mark all notifications as read
 exports.markAllNotificationsRead = async (req, res) => {
     try {
-        await Notification.markAllAsRead(req.consumer.id);
-        
+        await Notification.markAllAsRead(req.user.id);
+
         res.status(200).json({
             status: 'success',
             message: 'All notifications marked as read'
@@ -449,15 +644,34 @@ exports.markAllNotificationsRead = async (req, res) => {
     }
 };
 
+// Clear all notifications
+exports.clearNotifications = async (req, res) => {
+    try {
+        await Notification.clearAll(req.user.id);
+
+        res.status(200).json({
+            status: 'success',
+            message: 'All notifications cleared successfully'
+        });
+
+    } catch (error) {
+        console.error('Error in clearNotifications:', error);
+        res.status(500).json({
+            status: 'fail',
+            message: 'Failed to clear notifications. Please try again.'
+        });
+    }
+};
+
 // Get subscription details
 exports.getSubscription = async (req, res) => {
     try {
-        const subscription = await Subscription.getActiveSubscription(req.consumer.id);
-        
+        const subscription = await Subscription.getActiveSubscription(req.user.id);
+
         if (!subscription) {
-            return res.status(404).json({
-                status: 'fail',
-                message: 'No active subscription found'
+            return res.status(200).json({
+                status: 'success',
+                data: { subscription: null }
             });
         }
 
@@ -478,17 +692,47 @@ exports.getSubscription = async (req, res) => {
 // Create subscription
 exports.createSubscription = async (req, res) => {
     try {
-        const { plan, paymentMethod, autoRenew = false } = req.body;
+        const {
+            plan: planRaw,
+            planId,
+            paymentMethod,
+            autoRenew = false,
+            vehicleId,
+            vehicleIds,
+            hubId,
+            parkingDetails = {},
+            slot,
+            paymentId,
+            orderId,
+            serviceId,
+            serviceKey
+        } = req.body;
 
-        if (!plan || !paymentMethod) {
+        if (!(planRaw || planId) || !paymentMethod) {
             return res.status(400).json({
                 status: 'fail',
                 message: 'Plan and payment method are required'
             });
         }
 
+        const normalize = (value = '') => String(value)
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+
+        const resolvedVehicleId = vehicleId || (Array.isArray(vehicleIds) && vehicleIds.length > 0 ? vehicleIds[0] : null);
+        const normalizedServiceHint = normalize(serviceKey || serviceId);
+        const parkingProvided = Boolean(parkingDetails?.basement || parkingDetails?.block || parkingDetails?.pillar);
+        const isApartmentFlow = Boolean(
+            hubId ||
+            slot ||
+            parkingProvided ||
+            normalizedServiceHint.includes('apartment')
+        );
+
         // Check if user already has active subscription
-        const existingSubscription = await Subscription.getActiveSubscription(req.consumer.id);
+        const existingSubscription = await Subscription.getActiveSubscription(req.user.id);
         if (existingSubscription) {
             return res.status(400).json({
                 status: 'fail',
@@ -496,60 +740,180 @@ exports.createSubscription = async (req, res) => {
             });
         }
 
-        // Plan configurations
-        const planConfigs = {
-            basic: {
-                price: 299,
-                duration: 1, // months
-                benefits: ['discount_10_percent', 'priority_booking'],
-                monthlyCredits: 2
-            },
-            premium: {
-                price: 599,
-                duration: 1,
-                benefits: ['discount_20_percent', 'priority_booking', 'free_pickup_drop', 'bonus_credits'],
-                monthlyCredits: 5
-            },
-            elite: {
-                price: 999,
-                duration: 1,
-                benefits: ['free_wash_monthly', 'discount_30_percent', 'priority_booking', 'free_pickup_drop', 'vip_support', 'bonus_credits'],
-                monthlyCredits: 10
-            }
-        };
+        const allPlans = await SubscriptionPlan.find({ isActive: true, status: 'Live' });
+        const normalizedRequestedPlan = normalize(planId || planRaw);
+        const planObj = allPlans.find((p) => {
+            const byId = normalize(p._id) === normalizedRequestedPlan;
+            const byName = normalize(p.name) === normalizedRequestedPlan;
+            return byId || byName;
+        });
 
-        const config = planConfigs[plan];
-        if (!config) {
+        if (!planObj) {
             return res.status(400).json({
                 status: 'fail',
                 message: 'Invalid subscription plan'
             });
         }
 
-        const startDate = new Date();
-        const endDate = new Date();
-        endDate.setMonth(endDate.getMonth() + config.duration);
+        let hub = null;
+        if (hubId) {
+            hub = await Hub.findOne({ _id: hubId, isActive: true });
+            if (!hub) {
+                return res.status(400).json({
+                    status: 'fail',
+                    message: 'Selected apartment society is not available'
+                });
+            }
+        }
 
-        const subscription = await Subscription.createSubscription({
-            consumer: req.consumer.id,
-            plan,
+        if (resolvedVehicleId) {
+            const vehicle = await Vehicle.findOne({
+                _id: resolvedVehicleId,
+                owner: req.user.id,
+                isActive: true
+            });
+
+            if (!vehicle) {
+                return res.status(400).json({
+                    status: 'fail',
+                    message: 'Selected vehicle is invalid'
+                });
+            }
+        }
+
+        if (isApartmentFlow) {
+            if (!hubId) {
+                return res.status(400).json({
+                    status: 'fail',
+                    message: 'Apartment society selection is required'
+                });
+            }
+
+            if (!parkingDetails?.basement || !parkingDetails?.block || !parkingDetails?.pillar) {
+                return res.status(400).json({
+                    status: 'fail',
+                    message: 'Basement, block and pillar details are required for Apartment Wash'
+                });
+            }
+
+            if (!slot || !['morning', 'afternoon', 'evening', 'night'].includes(slot)) {
+                return res.status(400).json({
+                    status: 'fail',
+                    message: 'Valid apartment slot is required'
+                });
+            }
+        }
+
+        const allowedPaymentMethods = ['card', 'upi', 'wallet', 'netbanking', 'razorpay'];
+        const normalizedPaymentMethod = String(paymentMethod).toLowerCase();
+        if (!allowedPaymentMethods.includes(normalizedPaymentMethod)) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'Invalid payment method'
+            });
+        }
+
+        const interval = String(planObj.interval || 'Monthly').toLowerCase();
+        const durationMonths = interval === 'annual' ? 12 : interval === 'quarterly' ? 3 : 1;
+
+        const startDate = new Date();
+        const endDate = new Date(startDate);
+        endDate.setMonth(endDate.getMonth() + durationMonths);
+
+        const featureText = Array.isArray(planObj.features) ? planObj.features.join(' ') : '';
+        const washesMatch = featureText.match(/(\d+)\s*(wash|washes|credit|credits)/i);
+        const monthlyCredits = washesMatch ? Number(washesMatch[1]) : 0;
+
+        const planBenefits = [];
+        (planObj.features || []).forEach((feature) => {
+            const lower = String(feature).toLowerCase();
+            if (/free wash|complimentary wash/.test(lower)) planBenefits.push('free_wash_monthly');
+            if (/20%/.test(lower)) planBenefits.push('discount_20_percent');
+            if (/30%|40%/.test(lower)) planBenefits.push('discount_30_percent');
+            if (/priority/.test(lower)) planBenefits.push('priority_booking');
+            if (/pickup|drop/.test(lower)) planBenefits.push('free_pickup_drop');
+            if (/vip|support/.test(lower)) planBenefits.push('vip_support');
+            if (/bonus|credit/.test(lower)) planBenefits.push('bonus_credits');
+        });
+
+        const apartmentService = await MasterData.findOne({
+            type: 'SERVICE',
+            isActive: true,
+            $or: [
+                { key: 'APARTMENT_WASH' },
+                { 'metadata.path': '/apartments' },
+                { 'metadata.id': 'apartment-wash' }
+            ]
+        }).lean();
+
+        const servicePayload = isApartmentFlow ? {
+            id: apartmentService?.metadata?.id || serviceId || 'apartment-wash',
+            key: apartmentService?.key || serviceKey || 'APARTMENT_WASH',
+            title: apartmentService?.title || 'Apartment Car Wash',
+            path: apartmentService?.metadata?.path || '/apartments'
+        } : undefined;
+
+        const subscriptionPayload = {
+            user: req.user.id,
+            plan: planObj.name,
             startDate,
             endDate,
             autoRenew,
-            benefits: config.benefits,
-            monthlyCredits: config.monthlyCredits,
+            benefits: [...new Set(planBenefits)],
+            monthlyCredits,
             price: {
-                amount: config.price,
+                amount: planObj.price,
                 currency: 'INR',
-                billingCycle: 'monthly'
+                billingCycle: interval === 'annual' ? 'yearly' : interval === 'quarterly' ? 'quarterly' : 'monthly'
             },
-            paymentMethod,
+            paymentMethod: normalizedPaymentMethod,
             lastPaymentDate: new Date(),
-            nextBillingDate: endDate
+            nextBillingDate: endDate,
+            orderId: orderId || undefined,
+            paymentId: paymentId || undefined
+        };
+
+        if (resolvedVehicleId) {
+            subscriptionPayload.vehicle = resolvedVehicleId;
+        }
+        if (hubId) {
+            subscriptionPayload.hub = hubId;
+        }
+        if (parkingProvided) {
+            subscriptionPayload.parkingDetails = {
+                basement: parkingDetails.basement,
+                block: parkingDetails.block,
+                pillar: parkingDetails.pillar,
+                carModel: parkingDetails.carModel || undefined,
+                carNumber: parkingDetails.carNumber || undefined
+            };
+        }
+        if (slot) {
+            subscriptionPayload.slot = slot;
+        }
+        if (servicePayload) {
+            subscriptionPayload.service = servicePayload;
+        }
+        if (orderId || paymentId) {
+            subscriptionPayload.paymentGateway = {
+                provider: 'razorpay',
+                orderId: orderId || undefined,
+                paymentId: paymentId || undefined
+            };
+        }
+
+        const subscription = await Subscription.createSubscription(subscriptionPayload);
+
+        await User.findByIdAndUpdate(req.user.id, {
+            $inc: { 'stats.totalSubscriptions': 1 }
         });
 
-        // TODO: Process payment
-        // TODO: Send confirmation notification
+        await sendNotification(req.user.id, {
+            title: 'Subscription Activated',
+            message: `${planObj.name} activated successfully.`,
+            type: 'subscription',
+            priority: 'medium'
+        });
 
         res.status(201).json({
             status: 'success',
@@ -569,8 +933,8 @@ exports.createSubscription = async (req, res) => {
 // Cancel subscription
 exports.cancelSubscription = async (req, res) => {
     try {
-        const subscription = await Subscription.getActiveSubscription(req.consumer.id);
-        
+        const subscription = await Subscription.getActiveSubscription(req.user.id);
+
         if (!subscription) {
             return res.status(404).json({
                 status: 'fail',
@@ -582,8 +946,13 @@ exports.cancelSubscription = async (req, res) => {
         subscription.autoRenew = false;
         await subscription.save();
 
-        // TODO: Send cancellation notification
-        // TODO: Process refund if applicable
+        const { sendNotification } = require('../../../utils/notificationService');
+        await sendNotification(req.user.id, {
+            title: 'Subscription Cancelled',
+            message: 'Your Clean2Wash Pass has been cancelled. You can resubscribe anytime.',
+            type: 'subscription',
+            priority: 'medium'
+        });
 
         res.status(200).json({
             status: 'success',
@@ -596,6 +965,77 @@ exports.cancelSubscription = async (req, res) => {
         res.status(500).json({
             status: 'error',
             message: 'Failed to cancel subscription. Please try again.'
+        });
+    }
+};
+
+// Pause subscription
+exports.pauseSubscription = async (req, res) => {
+    try {
+        const subscription = await Subscription.getActiveSubscription(req.user.id);
+
+        if (!subscription) {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'No active subscription found'
+            });
+        }
+
+        if (subscription.status !== 'active') {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'Only active subscriptions can be paused'
+            });
+        }
+
+        subscription.status = 'paused';
+        await subscription.save();
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Subscription paused successfully',
+            data: { subscription }
+        });
+
+    } catch (error) {
+        console.error('Error in pauseSubscription:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to pause subscription. Please try again.'
+        });
+    }
+};
+
+// Resume subscription
+exports.resumeSubscription = async (req, res) => {
+    try {
+        const subscription = await Subscription.findOne({
+            user: req.user.id,
+            status: 'paused',
+            endDate: { $gte: new Date() } // Not yet expired
+        });
+
+        if (!subscription) {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'No paused subscription found or subscription has expired'
+            });
+        }
+
+        subscription.status = 'active';
+        await subscription.save();
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Subscription resumed successfully',
+            data: { subscription }
+        });
+
+    } catch (error) {
+        console.error('Error in resumeSubscription:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to resume subscription. Please try again.'
         });
     }
 };
@@ -613,7 +1053,7 @@ exports.deleteAccount = async (req, res) => {
         }
 
         // Verify password
-        const consumer = await Consumer.findById(req.consumer.id).select('+password');
+        const consumer = await User.findById(req.user.id).select('+password');
         const isPasswordCorrect = await consumer.correctPassword(password, consumer.password);
 
         if (!isPasswordCorrect) {
@@ -625,8 +1065,8 @@ exports.deleteAccount = async (req, res) => {
 
         // Cancel all active bookings
         await Booking.updateMany(
-            { 
-                consumer: req.consumer.id,
+            {
+                consumer: req.user.id,
                 status: { $in: ['pending', 'confirmed', 'assigned'] }
             },
             { status: 'cancelled' }
@@ -634,12 +1074,12 @@ exports.deleteAccount = async (req, res) => {
 
         // Deactivate vehicles
         await Vehicle.updateMany(
-            { owner: req.consumer.id },
+            { owner: req.user.id },
             { isActive: false }
         );
 
         // Deactivate consumer account
-        await Consumer.findByIdAndUpdate(req.consumer.id, { isActive: false });
+        await User.findByIdAndUpdate(req.user.id, { isActive: false });
 
         res.status(200).json({
             status: 'success',
@@ -654,3 +1094,4 @@ exports.deleteAccount = async (req, res) => {
         });
     }
 };
+

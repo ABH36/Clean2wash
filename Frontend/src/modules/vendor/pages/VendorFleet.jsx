@@ -1,26 +1,48 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Users, Truck, Plus, Search,
     MoreVertical, MapPin, Phone, Mail,
     Star, Shield, AlertCircle, X, Check,
-    Trash2, Edit3, Briefcase, Zap, Car
+    Trash2, Edit3, Briefcase, Zap, Car, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 import VendorLayout from '../components/VendorLayout';
-import { useAuth } from '../../../context/AuthContext';
+import { vendorAPI } from '../../../utils/vendorApi';
 
 const VEHICLE_TYPES = ['Electric Eco', 'Service Van', 'Mobile Unit', 'Mini Truck'];
 
 const VendorFleet = () => {
-    const { getUser, updateUser, registeredUsers } = useAuth();
-    const vendor = getUser('vendor') || {};
-    const vehicles = vendor.vehicles || [];
-    const staffList = (registeredUsers.staff || []).filter(s => s.vendorId === vendor?.id);
-
+    const [vehicles, setVehicles] = useState([]);
+    const [staffList, setStaffList] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
     const [activeTab, setActiveTab] = useState('personnel'); // 'personnel' or 'vehicles'
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [editTarget, setEditTarget] = useState(null);
     const [form, setForm] = useState({ model: '', plate: '', status: 'Available', type: 'Electric Eco' });
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [profileRes, staffRes] = await Promise.all([
+                    vendorAPI.getProfile(),
+                    vendorAPI.getStaff()
+                ]);
+                if (profileRes.status === 'success') {
+                    setVehicles(profileRes.data.vendor.profile?.fleet || []);
+                }
+                if (staffRes.status === 'success') {
+                    setStaffList(staffRes.data.staff || []);
+                }
+            } catch (err) {
+                console.error('Failed to fetch fleet data', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
 
     const handleOpenDrawer = (target = null) => {
         if (target) {
@@ -33,24 +55,66 @@ const VendorFleet = () => {
         setDrawerOpen(true);
     };
 
-    const handleSaveVehicle = () => {
+    const handleSaveVehicle = async () => {
         if (!form.model || !form.plate) return;
+        setSaving(true);
 
-        let updatedVehicles;
-        if (editTarget) {
-            updatedVehicles = vehicles.map(v => v.id === editTarget.id ? { ...form } : v);
-        } else {
-            const newVehicle = { ...form, id: 'VH-' + Math.random().toString(36).substr(2, 4).toUpperCase() };
-            updatedVehicles = [...vehicles, newVehicle];
+        try {
+            let updatedVehicles;
+            if (editTarget) {
+                updatedVehicles = vehicles.map(v => v.id === editTarget.id ? { ...form } : v);
+            } else {
+                const timestamp = Date.now().toString().slice(-4);
+                const random = Math.random().toString(36).substr(2, 2).toUpperCase();
+                const newVehicle = { ...form, id: `VH-${timestamp}-${random}` };
+                updatedVehicles = [...vehicles, newVehicle];
+            }
+
+            const res = await vendorAPI.updateProfile({ 'profile.fleet': updatedVehicles });
+            if (res.status === 'success') {
+                setVehicles(updatedVehicles);
+                setDrawerOpen(false);
+            }
+        } catch (err) {
+            console.error('Failed to save vehicle', err);
+        } finally {
+            setSaving(false);
         }
-
-        updateUser('vendor', vendor.id, { vehicles: updatedVehicles });
-        setDrawerOpen(false);
     };
 
-    const handleDeleteVehicle = (id) => {
-        const updatedVehicles = vehicles.filter(v => v.id !== id);
-        updateUser('vendor', vendor.id, { vehicles: updatedVehicles });
+    const handleDeleteVehicle = async (id) => {
+        toast((t) => (
+            <div className="flex flex-col gap-3">
+                <p className="text-xs font-bold text-content uppercase tracking-tight italic">Are you sure you want to delete this unit?</p>
+                <div className="flex gap-2">
+                    <button
+                        onClick={async () => {
+                            toast.dismiss(t.id);
+                            const updatedVehicles = vehicles.filter(v => v.id !== id);
+                            try {
+                                const res = await vendorAPI.updateProfile({ 'profile.fleet': updatedVehicles });
+                                if (res.status === 'success') {
+                                    setVehicles(updatedVehicles);
+                                    toast.success('Unit decommissioned');
+                                }
+                            } catch (err) {
+                                console.error('Failed to delete vehicle', err);
+                                toast.error('Decommissioning failed');
+                            }
+                        }}
+                        className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase"
+                    >
+                        Decommission
+                    </button>
+                    <button
+                        onClick={() => toast.dismiss(t.id)}
+                        className="bg-gray-100 text-content px-3 py-1.5 rounded-lg text-[10px] font-black uppercase"
+                    >
+                        Keep Unit
+                    </button>
+                </div>
+            </div>
+        ), { duration: 5000 });
     };
 
     return (
@@ -105,7 +169,11 @@ const VendorFleet = () => {
 
                 {/* Tab Content */}
                 <AnimatePresence mode="wait">
-                    {activeTab === 'personnel' ? (
+                    {loading ? (
+                        <div className="py-20 flex justify-center">
+                            <Loader2 className="w-10 h-10 text-brand animate-spin" />
+                        </div>
+                    ) : activeTab === 'personnel' ? (
                         <motion.div
                             key="personnel" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
                             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
@@ -269,9 +337,10 @@ const VendorFleet = () => {
                             <div className="p-8 border-t border-gray-100/10">
                                 <button
                                     onClick={handleSaveVehicle}
-                                    className="w-full h-16 bg-content text-white rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-content/20 hover:bg-brand transition-all flex items-center justify-center gap-3"
+                                    disabled={saving}
+                                    className="w-full h-16 bg-content text-white rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-content/20 hover:bg-brand transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                                 >
-                                    <Check size={18} strokeWidth={3} /> {editTarget ? 'Update Dispatch' : 'Complete Registry'}
+                                    {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Check size={18} strokeWidth={3} /> {editTarget ? 'Update Dispatch' : 'Complete Registry'}</>}
                                 </button>
                             </div>
                         </motion.aside>

@@ -7,16 +7,19 @@ import {
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import MobileLayout from '../components/layout/MobileLayout';
+import { toast } from 'react-hot-toast';
+import { bookingAPI } from '../../../utils/api';
 
 const BookingConfirmation = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { bookingId, provider } = location.state || {};
+    const { bookingId, provider, type, plan, society } = location.state || {};
+    const [loading, setLoading] = useState(!!bookingId);
 
     // Standard Job State Machine (as per document)
     const JOB_STATES = {
         CREATED: 'CREATED',
-        ASSIGNED: 'ASSIGNED', 
+        ASSIGNED: 'ASSIGNED',
         CAPTAIN_EN_ROUTE: 'CAPTAIN_EN_ROUTE',
         ARRIVED: 'ARRIVED',
         BEFORE_PHOTO_DONE: 'BEFORE_PHOTO_DONE',
@@ -29,25 +32,25 @@ const BookingConfirmation = () => {
 
     // Mock booking data - in real app this would come from API or context
     const [bookingData, setBookingData] = useState({
-        id: bookingId || 'BK' + Date.now(),
-        serviceName: 'Full Studio Clean',
-        vehicle: 'Maruti Swift',
+        id: bookingId || (type === 'subscription' ? 'SUB' : 'BK') + Date.now(),
+        serviceName: type === 'subscription' ? plan : 'Full Studio Clean',
+        vehicle: 'Multiple/Subscription',
         vehicleId: 'VH001', // Core Vehicle Object
-        price: '₹1299',
-        type: 'scheduled',
-        status: JOB_STATES.ASSIGNED, // Using proper job state machine
+        price: type === 'subscription' ? '-' : '₹1299',
+        type: type || 'scheduled',
+        status: type === 'subscription' ? 'ACTIVE' : JOB_STATES.ASSIGNED, // Using proper job state machine
         timestamp: new Date().toISOString(),
-        location: '123, Sector 15, Gurgaon, Haryana 122001',
-        coordinates: { lat: 28.4595, lng: 77.0266 }, // GPS coordinates for tracking
+        location: type === 'subscription' ? society : '123, Sector 15, Gurgaon, Haryana 122001',
+        coordinates: { lat: 28.4526, lng: 77.0345 }, // GPS coordinates for tracking
         provider: provider || 'vendor',
-        scheduledDate: 'Today',
-        scheduledTime: '2:00 PM',
-        estimatedDuration: '3-4 hrs',
+        scheduledDate: 'Monthly',
+        scheduledTime: '6:00 AM',
+        estimatedDuration: 'Daily',
         userId: 'USR001', // Core User Object
         jobId: 'JOB' + Date.now(), // Core Job Object
         insuranceExpiry: '2024-12-31', // Vehicle insurance info
         pucExpiry: '2024-11-30', // PUC expiry info
-        subscriptionId: 'SUB001', // Subscription engine
+        subscriptionId: type === 'subscription' ? (bookingId || 'SUB' + Date.now()) : 'SUB001', // Subscription engine
         photos: {
             before: [],
             after: []
@@ -56,14 +59,12 @@ const BookingConfirmation = () => {
         timestampLock: true, // Timestamp lock requirement
         captain: {
             id: 'CAP001',
-            name: 'Rajesh Kumar',
+            name: 'Society Supervisor',
             phone: '+91 98765 43210',
-            rating: 4.8,
+            rating: 4.9,
             photo: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&q=80',
-            capabilities: ['car', 'SUV'], // Capability tagging
-            currentLocation: { lat: 28.4595, lng: 77.0266 },
+            capabilities: ['cluster', 'apartment'], // Capability tagging
             isOnline: true, // Online/offline toggle
-            lastPing: new Date().toISOString() // GPS ping every 3-5 seconds
         },
         vendor: {
             id: 'VEND001',
@@ -76,7 +77,7 @@ const BookingConfirmation = () => {
     const [activeTab, setActiveTab] = useState('details');
     const [timeLeft, setTimeLeft] = useState({ hours: 2, minutes: 30, seconds: 0 });
     const [showSOS, setShowSOS] = useState(false);
-    
+
     // Pricing Engine
     const pricingEngine = {
         basePrice: 1299,
@@ -84,6 +85,23 @@ const BookingConfirmation = () => {
             'hatchback': 1.0,
             'sedan': 1.2,
             'suv': 1.5,
+            'muv': 1.4,
+            'compact suv': 1.4,
+            'luxury sedan': 2.0,
+            'luxury suv': 2.2,
+            'coupe': 1.8,
+            'convertible': 2.0,
+            'sports car': 2.5,
+            'supercar': 3.0,
+            'ev': 1.2,
+            'mini truck': 1.8,
+            'truck': 2.5,
+            'van': 1.8,
+            'tractor': 2.0,
+            'vintage': 2.5,
+            'bike': 0.6,
+            'scooter': 0.5,
+            'superbike': 0.9,
             'luxury': 2.0
         },
         cityPricing: {
@@ -221,11 +239,68 @@ const BookingConfirmation = () => {
             captainId: bookingData.captain.id,
             emergency: true
         };
-        
+
         console.log('SOS Triggered:', sosData);
         // In real app: Send to control room, alert trusted contacts, enable live tracking
-        alert('SOS Alert Sent! Emergency contacts and control room notified.');
+        toast.error('SOS Alert Sent! Emergency contacts and control room notified.', {
+            icon: '🚨',
+            duration: 6000,
+            style: {
+                background: '#ef4444',
+                color: '#fff',
+                fontWeight: 'bold',
+                textTransform: 'uppercase',
+                fontSize: '10px'
+            }
+        });
     };
+
+    // Fetch real booking data
+    useEffect(() => {
+        const fetchBooking = async () => {
+            if (!bookingId) return;
+            try {
+                const res = await bookingAPI.getBooking(bookingId);
+                if (res.status === 'success') {
+                    const b = res.data.booking;
+                    setBookingData({
+                        id: b.bookingId || b._id,
+                        serviceName: b.service.name,
+                        vehicle: b.vehicle ? `${b.vehicle.brand} ${b.vehicle.model}` : 'Selected Vehicle',
+                        vehicleId: b.vehicle?._id,
+                        price: `₹${b.pricing.totalAmount}`,
+                        type: b.schedule.type,
+                        status: b.status.toUpperCase(),
+                        timestamp: b.createdAt,
+                        location: b.location.address.street + (b.location.address.city ? `, ${b.location.address.city}` : ''),
+                        coordinates: b.location.address.coordinates,
+                        provider: b.service.type,
+                        scheduledDate: b.schedule.date ? new Date(b.schedule.date).toLocaleDateString() : 'Today',
+                        scheduledTime: b.schedule.timeSlot?.start || '10:00 AM',
+                        estimatedDuration: b.schedule.estimatedDuration || '1 hr',
+                        userId: b.consumer,
+                        jobId: b._id,
+                        captain: b.provider.id ? {
+                            name: b.provider.name,
+                            phone: b.provider.phone,
+                            photo: b.provider.photo || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&q=80',
+                            rating: b.provider.rating || 4.8
+                        } : {
+                            name: b.service.category === 'Chauffeur' ? 'Assigning Chauffeur' : 'Assigning Captain',
+                            phone: '',
+                            photo: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&q=80',
+                            rating: 5.0
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to fetch booking details:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchBooking();
+    }, [bookingId]);
 
     // Countdown timer
     useEffect(() => {
@@ -275,15 +350,19 @@ const BookingConfirmation = () => {
                         <ChevronLeft size={16} strokeWidth={2.5} className="text-content" />
                     </motion.button>
                     <div className="flex-1">
-                        <h1 className="text-base font-black tracking-tight text-content leading-none">Booking Confirmed</h1>
+                        <h1 className="text-base font-black tracking-tight text-content leading-none">
+                            {bookingData.status === 'COMPLETED' ? 'Booking Completed' : 'Booking Confirmed'}
+                        </h1>
                         <div className="flex items-center gap-1 mt-0.5">
-                            <span className="w-1 h-1 bg-green-500 rounded-full animate-pulse" />
-                            <p className="text-[8px] text-green-600 font-black uppercase tracking-widest">{bookingData.status}</p>
+                            <span className={`w-1 h-1 rounded-full animate-pulse ${bookingData.status === 'COMPLETED' ? 'bg-green-500' : 'bg-orange-500'}`} />
+                            <p className={`text-[8px] font-black uppercase tracking-widest ${bookingData.status === 'COMPLETED' ? 'text-green-600' : 'text-orange-600'}`}>
+                                {bookingData.status}
+                            </p>
                         </div>
                     </div>
                     {/* SOS Button */}
-                    <motion.button 
-                        whileTap={{ scale: 0.9 }} 
+                    <motion.button
+                        whileTap={{ scale: 0.9 }}
                         onClick={handleSOS}
                         className="w-8 h-8 bg-red-500 border border-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-500/20"
                     >
@@ -295,9 +374,9 @@ const BookingConfirmation = () => {
                 <div className={`px-3 py-2 rounded-xl border-2 flex items-center justify-center gap-2 ${getStatusColor(bookingData.status)}`}>
                     <CheckCircle2 size={16} strokeWidth={3} />
                     <span className="text-[10px] font-black uppercase tracking-wider">
-                        {bookingData.status === 'SCHEDULED' ? 'Service Scheduled' : 
-                         bookingData.status === 'ASSIGNED' ? 'Captain Assigned' :
-                         bookingData.status === 'IN_PROGRESS' ? 'Service in Progress' : 'Service Completed'}
+                        {bookingData.status === 'SCHEDULED' ? 'Service Scheduled' :
+                            bookingData.status === 'ASSIGNED' ? 'Captain Assigned' :
+                                bookingData.status === 'IN_PROGRESS' ? 'Service in Progress' : 'Service Completed'}
                     </span>
                 </div>
             </header>
@@ -323,7 +402,7 @@ const BookingConfirmation = () => {
                     <p className="text-[10px] font-bold text-content-subtle uppercase tracking-wider mb-4">
                         Booking ID: {bookingData.id}
                     </p>
-                    
+
                     {/* Countdown Timer */}
                     {bookingData.status === 'SCHEDULED' && (
                         <div className="bg-white rounded-xl p-3 border border-orange-200">
@@ -347,16 +426,14 @@ const BookingConfirmation = () => {
                         </div>
                         <div className="space-y-2">
                             {alerts.map((alert, i) => (
-                                <div key={i} className={`flex items-start gap-2 p-2 rounded-lg border ${
-                                    alert.priority === 'high' ? 'bg-red-50 border-red-200' :
+                                <div key={i} className={`flex items-start gap-2 p-2 rounded-lg border ${alert.priority === 'high' ? 'bg-red-50 border-red-200' :
                                     alert.priority === 'medium' ? 'bg-orange-50 border-orange-200' :
-                                    'bg-blue-50 border-blue-200'
-                                }`}>
-                                    <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${
-                                        alert.priority === 'high' ? 'bg-red-500' :
+                                        'bg-blue-50 border-blue-200'
+                                    }`}>
+                                    <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${alert.priority === 'high' ? 'bg-red-500' :
                                         alert.priority === 'medium' ? 'bg-orange-500' :
-                                        'bg-blue-500'
-                                    }`} />
+                                            'bg-blue-500'
+                                        }`} />
                                     <p className="text-[8px] font-semibold text-content leading-tight flex-1">{alert.message}</p>
                                 </div>
                             ))}
@@ -375,11 +452,10 @@ const BookingConfirmation = () => {
                         ].map(tab => (
                             <button key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-[8.5px] font-black uppercase tracking-wide transition-all ${
-                                    activeTab === tab.id
-                                        ? 'bg-brand text-white shadow-sm'
-                                        : 'text-content-subtle hover:bg-gray-50'
-                                }`}>
+                                className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-[8.5px] font-black uppercase tracking-wide transition-all ${activeTab === tab.id
+                                    ? 'bg-brand text-white shadow-sm'
+                                    : 'text-content-subtle hover:bg-gray-50'
+                                    }`}>
                                 <tab.icon size={12} strokeWidth={2.5} />
                                 {tab.label}
                             </button>
@@ -393,11 +469,10 @@ const BookingConfirmation = () => {
                         ].map(tab => (
                             <button key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center justify-center gap-1 py-2 rounded-lg text-[7px] font-black uppercase tracking-wide transition-all ${
-                                    activeTab === tab.id
-                                        ? 'bg-brand text-white shadow-sm'
-                                        : 'text-content-subtle hover:bg-gray-50'
-                                }`}>
+                                className={`flex items-center justify-center gap-1 py-2 rounded-lg text-[7px] font-black uppercase tracking-wide transition-all ${activeTab === tab.id
+                                    ? 'bg-brand text-white shadow-sm'
+                                    : 'text-content-subtle hover:bg-gray-50'
+                                    }`}>
                                 <tab.icon size={10} strokeWidth={2.5} />
                                 {tab.label}
                             </button>
@@ -421,7 +496,7 @@ const BookingConfirmation = () => {
                                     <p className="text-[8.5px] font-black text-content-subtle uppercase tracking-widest">Service Details</p>
                                     <Package size={12} className="text-brand" strokeWidth={3} />
                                 </div>
-                                
+
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between py-2 border-b border-gray-50">
                                         <span className="text-[9px] font-semibold text-content-subtle">Service</span>
@@ -483,7 +558,7 @@ const BookingConfirmation = () => {
                                     <p className="text-[8.5px] font-black text-content-subtle uppercase tracking-widest">Service Captain</p>
                                     <User size={12} className="text-brand" strokeWidth={3} />
                                 </div>
-                                
+
                                 <div className="flex items-center gap-3 mb-4">
                                     <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-brand">
                                         <img src={bookingData.captain.photo} alt={bookingData.captain.name} className="w-full h-full object-cover" />
@@ -540,7 +615,7 @@ const BookingConfirmation = () => {
                                     <p className="text-[8.5px] font-black text-content-subtle uppercase tracking-widest">Live Tracking</p>
                                     <Navigation size={12} className="text-brand" strokeWidth={3} />
                                 </div>
-                                
+
                                 <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-4 border border-orange-100 mb-4">
                                     <div className="flex items-center gap-2 mb-2">
                                         <div className="w-2 h-2 bg-brand rounded-full animate-pulse" />
@@ -562,15 +637,13 @@ const BookingConfirmation = () => {
                                         { state: 'COMPLETED', title: 'Service Completed', time: 'Estimated 4:15 PM', completed: false }
                                     ].map((item, i) => (
                                         <div key={i} className="flex items-center gap-3">
-                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-black transition-all ${
-                                                item.completed ? 'bg-brand text-white' : 'bg-gray-100 text-content-subtle'
-                                            } ${item.active ? 'ring-2 ring-brand ring-offset-2 animate-pulse' : ''}`}>
+                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-black transition-all ${item.completed ? 'bg-brand text-white' : 'bg-gray-100 text-content-subtle'
+                                                } ${item.active ? 'ring-2 ring-brand ring-offset-2 animate-pulse' : ''}`}>
                                                 {item.completed ? '✓' : item.state.substring(0, 2)}
                                             </div>
                                             <div className="flex-1">
-                                                <p className={`text-[9px] font-black uppercase tracking-tight leading-none ${
-                                                    item.completed ? 'text-content' : 'text-content-subtle'
-                                                }`}>
+                                                <p className={`text-[9px] font-black uppercase tracking-tight leading-none ${item.completed ? 'text-content' : 'text-content-subtle'
+                                                    }`}>
                                                     {item.title}
                                                 </p>
                                                 <p className="text-[7px] font-bold text-content-subtle mt-0.5">{item.time}</p>
@@ -578,7 +651,7 @@ const BookingConfirmation = () => {
                                         </div>
                                     ))}
                                 </div>
-                                
+
                                 {/* Geo-tagged Photos Info */}
                                 <div className="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-200">
                                     <div className="flex items-center gap-2 mb-2">
@@ -782,7 +855,7 @@ const BookingConfirmation = () => {
                                         <div key={time} className="flex items-center gap-3">
                                             <span className="text-[9px] font-semibold text-content-subtle capitalize w-16">{time}</span>
                                             <div className="flex-1 bg-gray-100 rounded-full h-4 overflow-hidden">
-                                                <div 
+                                                <div
                                                     className="h-full bg-gradient-to-r from-brand to-orange-400 rounded-full"
                                                     style={{ width: `${(count / Math.max(...Object.values(apartmentData.demandHeatmap))) * 100}%` }}
                                                 />

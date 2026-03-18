@@ -14,26 +14,31 @@ import {
 } from 'lucide-react';
 import CaptainLayout from '../components/CaptainLayout';
 import { useAuth } from '../../../context/AuthContext';
+import { useCaptain } from '../../../context/CaptainContext';
 import { useTheme } from '../../../context/ThemeContext';
 
 const CaptainHistory = () => {
     const navigate = useNavigate();
     const { isDarkMode } = useTheme();
-    const { captainJobs } = useAuth();
+    const { captainJobs, loadCaptainJobs } = useCaptain();
     const [activeTab, setActiveTab] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
 
+    React.useEffect(() => {
+        loadCaptainJobs();
+    }, [loadCaptainJobs]);
+
     // Filter jobs based on tab and search
     const filteredJobs = captainJobs.filter(job => {
-        const matchesTab = activeTab === 'All' || 
+        const matchesTab = activeTab === 'All' ||
             (activeTab === 'Completed' && job.status === 'completed') ||
             (activeTab === 'Cancelled' && job.status === 'cancelled');
-        
-        const matchesSearch = !searchQuery || 
+
+        const matchesSearch = !searchQuery ||
             job.serviceName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             job.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             job.userName?.toLowerCase().includes(searchQuery.toLowerCase());
-        
+
         return matchesTab && matchesSearch;
     });
 
@@ -67,7 +72,7 @@ const CaptainHistory = () => {
 
                 {/* History List */}
                 <div className="px-4 mt-6 space-y-4">
-                    {filteredData.map((item, i) => (
+                    {filteredJobs.map((item, i) => (
                         <motion.div
                             key={item.id}
                             initial={{ opacity: 0, y: 10 }}
@@ -92,7 +97,9 @@ const CaptainHistory = () => {
                             <div className={`space-y-3 pb-4 border-b ${isDarkMode ? 'border-white/5' : 'border-gray-50'}`}>
                                 <div className={`flex items-center gap-3 ${isDarkMode ? 'text-white/40' : 'text-content-subtle'}`}>
                                     <Calendar size={14} className="shrink-0" />
-                                    <span className="text-[11px] font-bold">{item.timestamp || 'Recent'}</span>
+                                    <span className="text-[11px] font-bold">
+                                        {item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recent'}
+                                    </span>
                                 </div>
                                 <div className={`flex items-center gap-3 ${isDarkMode ? 'text-white/40' : 'text-content-subtle'}`}>
                                     <MapPin size={14} className="shrink-0 text-brand" />
@@ -119,7 +126,7 @@ const CaptainHistory = () => {
                         </motion.div>
                     ))}
 
-                    {filteredData.length === 0 && (
+                    {filteredJobs.length === 0 && (
                         <div className="py-20 text-center">
                             <Clock size={48} className={`${isDarkMode ? 'text-white/10' : 'text-gray-200'} mx-auto mb-4`} />
                             <p className={`${isDarkMode ? 'text-white/40' : 'text-content-subtle'} font-black uppercase text-xs tracking-widest italic`}>No history found</p>

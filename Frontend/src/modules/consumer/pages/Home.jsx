@@ -5,25 +5,23 @@ import {
     Home as HomeIcon, Gift, User, Car, ShoppingBag, Image,
     Shield, FileText, Search, Zap, ShieldCheck, CreditCard, Sparkles,
     Instagram, Twitter, Facebook, Heart, Truck, Building, Briefcase, Wallet,
-    AlertTriangle, BatteryCharging, ArrowRight, Activity, BellRing, MoreHorizontal, X, LayoutGrid, Calendar
+    AlertTriangle, BatteryCharging, ArrowRight, Activity, BellRing, MoreHorizontal, X, LayoutGrid, Calendar, ShieldAlert
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
-import { SHOP_PRODUCTS } from '../../../context/CartContext';
+import { serviceAPI } from '../../../utils/api';
 import MobileLayout from '../components/layout/MobileLayout';
+import PremiumBadge from '../components/membership/PremiumBadge';
+import BlackPassModal from '../components/membership/BlackPassModal';
 
 const Home = () => {
     const navigate = useNavigate();
-    const { getUser, userSubscription } = useAuth();
-    const user = getUser('consumer');
-
-    const [showAllServices, setShowAllServices] = useState(false);
-    const [isSearching, setIsSearching] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-
     const [showSOS, setShowSOS] = useState(false);
     const [sosCountdown, setSosCountdown] = useState(5);
     const [sosActive, setSosActive] = useState(false);
+    const [showBlackPassModal, setShowBlackPassModal] = useState(false);
+    const { getUser, userSubscription, isBlackPassMember, bookings } = useAuth();
+    const user = getUser('consumer');
 
     const triggerSOS = () => {
         setShowSOS(true);
@@ -31,87 +29,74 @@ const Home = () => {
         setSosActive(false);
     };
 
-    // Banner state for admin-manageability
-    const [banners, setBanners] = useState(() => {
-        const saved = localStorage.getItem('CarWash_banners');
-        if (saved) return JSON.parse(saved);
-        return [
-            {
-                id: 1,
-                title: "100% CASHBACK",
-                subtitle: "ON YOUR FIRST SERVICE",
-                image: "/assets/carwash/banner_main.png", // Fallback, will use generated one if available
-                cta: "Book Now",
-                path: "/instant-wash",
-                theme: "dark"
-            },
-            {
-                id: 2,
-                title: "MONTHLY SHINE",
-                subtitle: "EXCLUSIVE DOORSTEP CARE",
-                image: "/assets/carwash/banner_2.png",
-                cta: "Explore Plans",
-                path: "/subscriptions",
-                theme: "light"
-            }
-        ];
-    });
+    // Unified state for Home content
+    const [services, setServices] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [stats, setStats] = useState([]);
+    const [promotionalCards, setPromotionalCards] = useState([]);
+    const [banners, setBanners] = useState([]);
+    const [activeBanner, setActiveBanner] = useState(0);
+    const [loadingServices, setLoadingServices] = useState(true);
+
+    // Search Results State
+    const [searchResults, setSearchResults] = useState([]);
+    const [isSearchingResults, setIsSearchingResults] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isSearching, setIsSearching] = useState(false);
+    const [showAllServices, setShowAllServices] = useState(false);
 
     useEffect(() => {
-        const handleStorage = (e) => {
-            if (e.key === 'CarWash_banners') {
-                setBanners(JSON.parse(e.newValue));
+        const fetchHomeData = async () => {
+            try {
+                setLoadingServices(true);
+                const response = await serviceAPI.getHomeData();
+
+                if (response.status === 'success') {
+                    const { banners, services, categories, cards, stats } = response.data;
+                    setBanners(banners || []);
+                    setServices(services || []);
+                    setCategories(categories || []);
+                    setPromotionalCards(cards || []);
+                    setStats(stats || []);
+                }
+            } catch (err) {
+                console.error("Failed to fetch dynamic home data", err);
+            } finally {
+                setLoadingServices(false);
             }
         };
-        window.addEventListener('storage', handleStorage);
-        return () => window.removeEventListener('storage', handleStorage);
+
+        fetchHomeData();
     }, []);
 
-    const [activeBanner, setActiveBanner] = useState(0);
-
-    // Auto-scroll banners
+    // Backend Search Trigger
     useEffect(() => {
-        const timer = setInterval(() => {
-            setActiveBanner(prev => (prev + 1) % banners.length);
-        }, 5000);
-        return () => clearInterval(timer);
-    }, [banners.length]);
+        const delayDebounceFn = setTimeout(async () => {
+            if (searchQuery.trim().length > 1) {
+                try {
+                    setIsSearchingResults(true);
+                    const res = await serviceAPI.search(searchQuery);
+                    if (res.status === 'success') {
+                        // Map backend results to UI icons
+                        const results = res.data.results.map(item => ({
+                            ...item,
+                            icon: item.type === 'CATEGORY' ? LayoutGrid : Car
+                        }));
+                        setSearchResults(results);
+                    }
+                } catch (err) {
+                    console.error("Search failed", err);
+                } finally {
+                    setIsSearchingResults(false);
+                }
+            } else {
+                setSearchResults([]);
+            }
+        }, 300);
 
-    // Searchable Items Definition
-    const searchableItems = useMemo(() => {
-        const services = [
-            { id: 's1', title: 'Instant Car Wash', desc: 'Uber-style on-demand wash', cat: 'Service', icon: Car, path: '/instant-wash', tags: 'wash clean bike car instant soap' },
-            { id: 's2', title: 'Studio Deep Cleaning', desc: 'Professional detailing center', cat: 'Service', icon: Sparkles, path: '/full-wash-booking', tags: 'deep full studio detail ceramic wax polish' },
-            { id: 's3', title: 'Spare Driver', desc: 'Hire professional drivers', cat: 'Career', icon: User, path: '/spare-driver', tags: 'driver job hire captain' },
-            { id: 's4', title: 'Monthly Shine', desc: 'Subscription based cleaning', cat: 'Plan', icon: Zap, path: '/subscriptions', tags: 'monthly subscription points pack' },
-            { id: 's5', title: 'Refer & Earn', desc: 'Gift ₹100 to friends', cat: 'Offer', icon: Gift, path: '/refer', tags: 'free referral money invite' },
-            { id: 's6', title: 'Wallet Balance', desc: 'Manage your credits', cat: 'Finance', icon: Wallet, path: '/wallet', tags: 'recharge money payment' },
-            { id: 's7', title: 'Apartments Wash', desc: 'Cluster subscription plans', cat: 'Plan', icon: Building, path: '/apartments', tags: 'apartment society basement building tower' },
-            { id: 's8', title: 'Safety SOS', desc: 'Emergency response protocol', cat: 'Safety', icon: AlertTriangle, action: triggerSOS, tags: 'help accident emergency' }
-        ];
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchQuery]);
 
-        const products = (SHOP_PRODUCTS || []).map(p => ({
-            id: `p-${p.id}`,
-            title: p.name,
-            desc: `Rs. ${p.salePrice}`,
-            cat: 'Product',
-            image: p.image,
-            path: '/e-shop',
-            tags: `buy shop e-shop ${p.name}`
-        }));
-
-        return [...services, ...products];
-    }, [SHOP_PRODUCTS]);
-
-    const filteredResults = useMemo(() => {
-        if (!searchQuery.trim()) return [];
-        const q = searchQuery.toLowerCase();
-        return searchableItems.filter(item =>
-            item.title.toLowerCase().includes(q) ||
-            (item.desc && item.desc.toLowerCase().includes(q)) ||
-            (item.tags && item.tags.toLowerCase().includes(q))
-        ).slice(0, 8);
-    }, [searchQuery, searchableItems]);
 
     const renderHeader = () => (
         <header className="px-5 pt-8 pb-4 bg-[#FFF6E9] flex flex-col gap-5">
@@ -121,7 +106,7 @@ const Home = () => {
                     <div className="flex flex-col leading-none">
                         <span className="text-[10px] font-bold text-black/40 uppercase tracking-widest">Clean2Wash</span>
                         <div className="flex items-center gap-1">
-                            <span className="text-[13px] font-black text-black">Indore</span>
+                            <span className="text-[13px] font-black text-black">{user?.profile?.address?.city || user?.address?.city || 'Indore'}</span>
                             <ChevronDown size={14} className="text-black/60" />
                         </div>
                     </div>
@@ -137,75 +122,174 @@ const Home = () => {
                         <Bell size={20} className="text-black" />
                         <span className="absolute top-2 right-2 w-2 h-2 bg-brand border-2 border-[#FFF6E9] rounded-full" />
                     </button>
-                    <button onClick={() => navigate('/profile')} className="w-10 h-10 bg-black/5 rounded-xl flex items-center justify-center overflow-hidden">
+                    <button onClick={() => navigate('/profile')} className="w-10 h-10 bg-black/5 rounded-xl flex items-center justify-center overflow-hidden relative">
                         <User size={20} className="text-black" />
+                        {isBlackPassMember && (
+                            <div className="absolute -top-1 -right-1 z-30 scale-[0.6]">
+                                <PremiumBadge />
+                            </div>
+                        )}
                     </button>
                 </div>
             </div>
         </header>
     );
 
+    const userBookings = bookings?.filter(b => b.consumer === user?.id || b.consumer?.id === user?.id || b.userId === user?.id) || [];
+    
+    // Find active booking for live tracking banner
+    const activeBooking = useMemo(() => {
+        return userBookings.find(b => 
+            ['pending', 'confirmed', 'assigned', 'en_route', 'arrived', 'before_photo', 'in_progress', 'washing', 'after_photo', 'pickup-assigned', 'at-studio', 'quality-check', 'ready-for-delivery'].includes(b.status)
+        );
+    }, [userBookings]);
+
+    const DEFAULT_BANNERS = [
+        {
+            id: 'def-1',
+            title: '100% Doorstep Prep',
+            subtitle: 'Professional car care at your location',
+            image: '/assets/carwash/6.png',
+            theme: 'dark',
+            path: '/services'
+        },
+        {
+            id: 'def-2',
+            title: 'Studio Shine Level',
+            subtitle: 'Ultra-premium detailing & coating',
+            image: '/assets/carwash/3.png',
+            theme: 'light',
+            path: '/studios'
+        }
+    ];
+
+    const displayBanners = (banners && banners.length > 0) ? banners : DEFAULT_BANNERS;
+
+    // Auto-scroll banners with progress
+    const [progress, setProgress] = useState(0);
+    const BANNER_DURATION = 5000;
+
+    useEffect(() => {
+        if (displayBanners.length <= 1) return;
+
+        const interval = 100; // Update progress every 100ms
+        const step = (interval / BANNER_DURATION) * 100;
+
+        const timer = setInterval(() => {
+            setProgress(prev => {
+                if (prev >= 100) {
+                    setActiveBanner(curr => (curr + 1) % displayBanners.length);
+                    return 0;
+                }
+                return prev + step;
+            });
+        }, interval);
+
+        return () => clearInterval(timer);
+    }, [displayBanners.length, activeBanner]);
+
+    const handleBannerClick = (banner) => {
+        navigate(banner.path || '/services');
+    };
+
     const renderHero = () => (
-        <section className="relative h-[240px] w-full overflow-hidden bg-black">
-            <AnimatePresence mode="wait">
-                {banners.map((banner, idx) => idx === activeBanner && (
-                    <motion.div
-                        key={banner.id}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        transition={{ duration: 0.6, ease: "circOut" }}
-                        className="absolute inset-0"
-                    >
-                        {/* Banner Image with Overlay */}
-                        <div className="absolute inset-0">
-                            <img
-                                src={banner.image || "/assets/carwash/6.png"}
-                                alt={banner.title}
-                                className="w-full h-full object-cover opacity-80"
-                                onError={(e) => { e.target.src = "/assets/carwash/6.png"; }}
-                            />
-                            <div className={`absolute inset-0 bg-gradient-to-r ${banner.theme === 'dark' ? 'from-black/80 via-black/40 to-transparent' : 'from-white/80 via-white/40 to-transparent'}`} />
-                        </div>
-
-                        {/* Banner Content */}
-                        <div className="absolute inset-0 flex flex-col justify-center px-8 z-10 select-none">
+        <section className="relative h-[250px] w-full overflow-hidden bg-black group">
+            {loadingServices ? (
+                <div className="absolute inset-0 bg-gray-900 animate-pulse flex items-center px-8">
+                    <div className="space-y-4 w-full">
+                        <div className="h-12 w-2/3 bg-white/10 rounded-xl" />
+                        <div className="h-3 w-1/3 bg-white/5 rounded-full" />
+                    </div>
+                </div>
+            ) : (
+                <>
+                    <AnimatePresence mode="wait">
+                        {displayBanners.map((banner, idx) => idx === activeBanner && (
                             <motion.div
-                                initial={{ y: 20, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                transition={{ delay: 0.2 }}
+                                key={banner.id || idx}
+                                initial={{ opacity: 0, scale: 1.1 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                                onClick={() => handleBannerClick(banner)}
+                                className="absolute inset-0 cursor-pointer"
                             >
-                                <h2 className={`text-[42px] font-[1000] leading-[0.85] tracking-tighter uppercase mb-2 ${banner.theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                                    {banner.title.split(' ').map((word, i) => (
-                                        <React.Fragment key={i}>
-                                            {word === '100%' ? <span className="text-brand">{word}</span> : word}
-                                            <br />
-                                        </React.Fragment>
-                                    ))}
-                                </h2>
-                                <p className={`text-[10px] font-black uppercase tracking-[0.3em] mb-6 ${banner.theme === 'dark' ? 'text-white/40' : 'text-black/40'}`}>
-                                    {banner.subtitle}
-                                </p>
+                                {/* Banner Image with Ken Burns Effect */}
+                                <motion.div
+                                    initial={{ scale: 1 }}
+                                    animate={{ scale: 1.1 }}
+                                    transition={{ duration: 6, ease: "linear" }}
+                                    className="absolute inset-0"
+                                >
+                                    <img
+                                        src={banner.image || "/assets/carwash/6.png"}
+                                        alt={banner.title}
+                                        className="w-full h-full object-cover"
+                                        style={{ opacity: banner.theme === 'dark' ? 0.6 : 0.8 }}
+                                        onError={(e) => { e.target.src = "/assets/carwash/6.png"; }}
+                                    />
+                                </motion.div>
 
-                                {/* CTA Button Removed */}
+                                <div className={`absolute inset-0 ${banner.theme === 'dark'
+                                        ? 'bg-gradient-to-r from-black via-black/40 to-transparent'
+                                        : 'bg-gradient-to-r from-white via-white/20 to-transparent'
+                                    }`} />
+
+                                {/* Banner Content */}
+                                <div className="absolute inset-0 flex flex-col justify-center px-8 z-10 select-none">
+                                    <motion.div
+                                        initial={{ y: 30, opacity: 0 }}
+                                        animate={{ y: 0, opacity: 1 }}
+                                        transition={{ delay: 0.3, duration: 0.6 }}
+                                    >
+                                        <h2 className={`text-[44px] font-[1000] leading-[0.8] tracking-[ -0.05em] uppercase mb-3 ${banner.theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                                            {banner.title.split(' ').map((word, i) => (
+                                                <React.Fragment key={i}>
+                                                    {word === '100%' ? <span className="text-brand">{word}</span> : word}
+                                                    {i % 2 === 1 ? <br /> : ' '}
+                                                </React.Fragment>
+                                            ))}
+                                        </h2>
+                                        <p className={`text-[10px] font-black uppercase tracking-[0.4em] mb-6 ${banner.theme === 'dark' ? 'text-white/40' : 'text-black/40'}`}>
+                                            {banner.subtitle}
+                                        </p>
+
+                                        <motion.div
+                                            whileHover={{ x: 5 }}
+                                            className={`flex items-center gap-3 text-[11px] font-black uppercase tracking-[0.2em] ${banner.theme === 'dark' ? 'text-brand' : 'text-black'}`}
+                                        >
+                                            <span className="border-b-2 border-current pb-0.5">{banner.cta || 'Explore Now'}</span>
+                                            <ArrowRight size={16} strokeWidth={3} />
+                                        </motion.div>
+                                    </motion.div>
+                                </div>
                             </motion.div>
-                        </div>
-                    </motion.div>
-                ))}
-            </AnimatePresence>
+                        ))}
+                    </AnimatePresence>
 
-            {/* Banner Indicators - minimal style */}
-            <div className="absolute bottom-4 left-8 flex gap-1.5 z-20">
-                {banners.map((_, i) => (
-                    <button
-                        key={i}
-                        onClick={() => setActiveBanner(i)}
-                        className={`h-1 transition-all duration-300 rounded-full ${i === activeBanner ? 'w-8 bg-brand' : 'w-2 bg-white/20'}`}
-                    />
-                ))}
-            </div>
+                    {/* Banner Progress Indicators */}
+                    <div className="absolute bottom-6 left-8 right-8 flex gap-2 z-20">
+                        {displayBanners.map((_, i) => (
+                            <div
+                                key={i}
+                                onClick={() => { setActiveBanner(i); setProgress(0); }}
+                                className="h-1 flex-1 bg-white/20 rounded-full overflow-hidden cursor-pointer"
+                            >
+                                {i === activeBanner && (
+                                    <motion.div
+                                        className="h-full bg-brand"
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${progress}%` }}
+                                        transition={{ ease: "linear" }}
+                                    />
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </>
+            )}
 
-            <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent dark:from-black z-10" />
+            <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#FFF6E9] to-transparent z-10" />
         </section>
     );
 
@@ -283,52 +367,137 @@ const Home = () => {
 
                     {/* Results Area */}
                     <div className="flex-1 overflow-y-auto px-5 pb-10">
-                        {searchQuery && filteredResults.length > 0 ? (
+                        {isSearchingResults ? (
+                            <div className="h-64 flex flex-col items-center justify-center text-center">
+                                <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                                    className="w-10 h-10 border-4 border-brand/20 border-t-brand rounded-full mb-4"
+                                />
+                                <p className="text-[10px] font-black text-black/40 uppercase tracking-widest">Searching Ecosystem...</p>
+                            </div>
+                        ) : searchQuery && searchResults.length > 0 ? (
                             <div className="space-y-3">
-                                <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em] mb-2">{filteredResults.length} Results Found</p>
-                                {filteredResults.map((item, idx) => (
+                                {searchResults.map((item, idx) => (
                                     <motion.div
                                         key={item.id}
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: idx * 0.05 }}
                                         onClick={() => {
                                             setIsSearching(false);
                                             setSearchQuery('');
-                                            item.action ? item.action() : navigate(item.path);
+                                            navigate(item.path);
                                         }}
-                                        className="group p-4 bg-gray-50/50 hover:bg-brand/5 border border-gray-100 rounded-2xl flex items-center gap-4 transition-all cursor-pointer active:scale-[0.98]"
+                                        className="group p-4 bg-white hover:bg-brand/5 border border-gray-100 rounded-2xl flex items-center gap-4 transition-all cursor-pointer active:scale-[0.98] shadow-sm"
                                     >
-                                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-gray-100 shadow-sm overflow-hidden flex-shrink-0">
+                                        <div className="w-14 h-14 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 shadow-sm overflow-hidden flex-shrink-0 relative">
                                             {item.image ? (
-                                                <img src={item.image} className="w-full h-full object-contain p-1" alt="" />
+                                                <img src={item.image} className="w-full h-full object-cover p-1" alt="" />
                                             ) : (
-                                                <item.icon size={20} className="text-brand" />
+                                                <Search size={24} className="text-black/10" />
                                             )}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-0.5">
-                                                <h4 className="text-[13px] font-[1000] text-black uppercase tracking-tight truncate">{item.title}</h4>
-                                                <span className="px-1.5 py-0.5 bg-brand/10 text-brand text-[7px] font-black rounded-md uppercase">{item.cat}</span>
+                                            <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                                                <h4 className="text-[14px] font-[1000] text-black uppercase tracking-tight truncate">{item.title}</h4>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${item.type === 'SERVICE' ? 'bg-brand/10 text-brand' :
+                                                            item.type === 'PRODUCT' ? 'bg-blue-500/10 text-blue-600' :
+                                                                'bg-gray-100 text-black/40'
+                                                        }`}>
+                                                        {item.cat || item.type}
+                                                    </span>
+                                                    {item.price && (
+                                                        <span className="text-[12px] font-black text-black">₹{item.price}</span>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <p className="text-[10px] font-bold text-black/40 uppercase truncate">{item.desc}</p>
+                                            <p className="text-[11px] font-bold text-black/40 uppercase truncate leading-none">{item.desc}</p>
                                         </div>
-                                        <ChevronRight size={16} className="text-black/10 group-hover:text-brand" />
+                                        <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-black/20 group-hover:bg-brand group-hover:text-white transition-colors">
+                                            <ChevronRight size={16} strokeWidth={3} />
+                                        </div>
                                     </motion.div>
                                 ))}
                             </div>
                         ) : searchQuery ? (
-                            <div className="h-64 flex flex-col items-center justify-center text-center">
-                                <Search size={40} className="text-black/5 mb-4" />
-                                <p className="text-sm font-black text-black/40 uppercase tracking-tight">No results matched your search</p>
-                                <p className="text-[10px] font-bold text-black/20 uppercase tracking-widest mt-1">Try searching for 'Wash' or 'Polish'</p>
-                            </div>
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="h-80 flex flex-col items-center justify-center text-center px-10"
+                            >
+                                <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6 border border-gray-100">
+                                    <Search size={32} className="text-black/5" />
+                                </div>
+                                <h3 className="text-lg font-[1000] text-black uppercase tracking-tight mb-2">No results found</h3>
+                                <p className="text-[11px] font-black text-black/30 uppercase tracking-[0.2em] leading-relaxed">
+                                    We couldn't find anything matching <span className="text-brand">"{searchQuery}"</span> in our ecosystem.
+                                </p>
+                                <button
+                                    onClick={() => setSearchQuery('')}
+                                    className="mt-8 text-[10px] font-black text-brand uppercase tracking-widest border-b-2 border-brand pb-1"
+                                >
+                                    Clear and try again
+                                </button>
+                            </motion.div>
                         ) : null}
                     </div>
                 </motion.div>
             )}
         </AnimatePresence>
     );
+
+    // Memoized Sections
+    const studioServices = useMemo(() => services.filter(s => s.metadata?.category?.toLowerCase() === 'studio' || s.category?.toLowerCase() === 'studio').slice(0, 3), [services]);
+    const expansionItems = useMemo(() => promotionalCards.filter(c => c.type === 'Expansion'), [promotionalCards]);
+    const sliderCards = useMemo(() => {
+        const dbCards = promotionalCards.filter(c => c.type !== 'Expansion');
+
+        // Inject Premium Black Pass Card if user OR if not a member
+        const blackCard = {
+            id: 'static-black-pass',
+            title: 'Black Pass Membership',
+            subtitle: '30% OFF ON ALL SERVICES FOREVER',
+            badge: 'PREMIUM',
+            theme: 'dark',
+            cta: 'Purchase Now',
+            image: '/assets/carwash/7.png',
+            action: () => setShowBlackPassModal(true)
+        };
+
+        return [blackCard, ...dbCards];
+    }, [promotionalCards, isBlackPassMember]);
+
+    const exploreItems = useMemo(() => {
+        const dbExplore = categories.filter(c => c.metadata?.isExplore);
+        // Add Products link if not present
+        if (!dbExplore.find(i => i.title === 'Products' || i.name === 'Products')) {
+            dbExplore.unshift({ title: 'Products', image: '/assets/product-accessories/product.png', path: '/e-shop' });
+        }
+        return dbExplore.map(item => ({
+            ...item,
+            title: item.title || item.name,
+            icon: item.iconUrl || item.icon,
+            image: item.image || (item.icon?.startsWith('/') ? item.icon : null),
+            color: item.metadata?.color || item.color,
+            action: item.metadata?.action || item.action
+        }));
+    }, [categories]);
+
+    const viewMoreServices = [
+        { title: 'Instant Wash', icon: Car, color: '#F29F05', path: '/instant-wash' },
+        { title: 'Apartments', icon: Building, color: '#6366F1', path: '/apartments' },
+        { title: 'Appointment', icon: Calendar, color: '#3B82F6', path: '/full-wash-booking' },
+        { title: 'Spare Drivers', icon: User, color: '#FF8533', path: '/spare-driver' },
+        { title: 'Alerts', icon: Bell, color: '#A855F7', path: '/notifications' },
+        { title: 'E-Shop', icon: ShoppingBag, color: '#10B981', path: '/e-shop' },
+        { title: 'Studio Wash', icon: HomeIcon, color: '#6366F1', path: '/studios' },
+        { title: 'SOS', icon: AlertTriangle, color: '#EF4444', action: triggerSOS },
+        { title: 'Support', icon: Heart, color: '#EC4899', path: '/help' },
+        { title: 'Vehicle', icon: Truck, color: '#3B82F6', path: '/vehicles' },
+        { title: 'Wallet', icon: Wallet, color: '#F59E0B', path: '/wallet' }
+    ];
 
     const renderSOSOverlay = () => (
         <AnimatePresence>
@@ -427,19 +596,7 @@ const Home = () => {
                         </div>
 
                         <div className="grid grid-cols-4 gap-y-8 gap-x-4">
-                            {[
-                                { title: 'Instant Wash', icon: Car, color: '#F29F05', path: '/instant-wash' },
-                                { title: 'Apartments', icon: Building, color: '#6366F1', path: '/apartments' },
-                                { title: 'Appointment', icon: Calendar, color: '#3B82F6', path: '/full-wash-booking' },
-                                { title: 'Spare Drivers', icon: User, color: '#FF8533', path: '/spare-driver' },
-                                { title: 'Alerts', icon: Bell, color: '#A855F7', path: '/notifications' },
-                                { title: 'E-Shop', icon: ShoppingBag, color: '#10B981', path: '/e-shop' },
-                                { title: 'Studio Wash', icon: HomeIcon, color: '#6366F1', path: '/full-wash-booking' },
-                                { title: 'SOS', icon: AlertTriangle, color: '#EF4444', action: triggerSOS },
-                                { title: 'Support', icon: Heart, color: '#EC4899', path: '/help' },
-                                { title: 'Vehicle', icon: Truck, color: '#3B82F6', path: '/vehicles' },
-                                { title: 'Wallet', icon: Wallet, color: '#F59E0B', path: '/wallet' }
-                            ].map((item, idx) => (
+                            {viewMoreServices.map((item, idx) => (
                                 <motion.button
                                     key={idx}
                                     whileTap={{ scale: 0.9 }}
@@ -467,6 +624,56 @@ const Home = () => {
         return (
             <div className="pb-6 space-y-8">
                 {/* Everything In Minutes - Rapido Style Bento Grid */}
+                {/* Active Booking Live Tracker Card */}
+                <AnimatePresence>
+                    {activeBooking && (
+                        <motion.section 
+                            initial={{ opacity: 0, y: -20, height: 0 }}
+                            animate={{ opacity: 1, y: 0, height: 'auto' }}
+                            className="px-5 pt-3"
+                        >
+                            <div 
+                                onClick={() => navigate(`/booking-status?id=${activeBooking._id || activeBooking.id}&type=${activeBooking.service?.type || activeBooking.type || 'captain'}`)}
+                                className="bg-[#0F172A] rounded-3xl p-5 text-white flex flex-col gap-4 relative overflow-hidden shadow-2xl cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform"
+                            >
+                                {/* Decorative Blur */}
+                                <div className="absolute -right-8 -top-8 w-32 h-32 bg-brand/30 rounded-full blur-3xl pointer-events-none" />
+                                
+                                <div className="relative z-10 flex items-center justify-between">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/10 backdrop-blur-md">
+                                            <Zap size={20} className="text-brand" fill="currentColor" />
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="font-[1000] text-[15px] uppercase tracking-tighter leading-none">Live Mission</h3>
+                                                <span className="flex items-center gap-1 bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border border-green-500/30">
+                                                    <span className="w-1 h-1 bg-green-500 rounded-full animate-ping" /> Active
+                                                </span>
+                                            </div>
+                                            <p className="text-white/40 text-[10px] uppercase font-bold tracking-widest mt-1">Tap to track status</p>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white/5 w-10 h-10 rounded-xl flex items-center justify-center border border-white/10">
+                                        <ChevronRight size={20} className="text-white/40" />
+                                    </div>
+                                </div>
+
+                                <div className="relative z-10 bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-4">
+                                    <div className="flex-1">
+                                        <p className="text-[10px] text-brand font-black uppercase tracking-widest mb-1">Service</p>
+                                        <p className="text-[14px] font-black leading-tight tracking-snug">{activeBooking.service?.name || activeBooking.serviceName || 'Car Wash'}</p>
+                                    </div>
+                                    <div className="w-px h-8 bg-white/10" />
+                                    <div className="flex-1">
+                                        <p className="text-[10px] text-brand font-black uppercase tracking-widest mb-1">Status</p>
+                                        <p className="text-[14px] font-black leading-tight tracking-snug text-green-400 capitalize">{(activeBooking.status || '').replace('_', ' ')}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.section>
+                    )}
+                </AnimatePresence>
                 <section className="px-5">
                     <h3 className="text-[14px] font-black text-black opacity-40 uppercase tracking-widest mb-3">Everything In Minutes</h3>
                     <div className="grid grid-cols-2 gap-3">
@@ -518,7 +725,6 @@ const Home = () => {
                     </div>
                 </section>
 
-                {/* Secondary Services */}
                 <section className="flex gap-3 px-5 -mt-5">
                     {/* Apartment Wash */}
                     <motion.button
@@ -551,29 +757,73 @@ const Home = () => {
                     </motion.button>
                 </section>
 
+                {/* Studio Detailing - Premium Section */}
+                {studioServices.length > 0 && (
+                    <section className="px-5">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-[15px] font-black text-black opacity-40 uppercase tracking-widest">Studio Detailing</h3>
+                            <button onClick={() => navigate('/studios')} className="text-[10px] font-black text-brand uppercase tracking-widest">Show All</button>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3">
+                            {studioServices.map((service) => (
+                                <motion.div
+                                    key={service.id}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => navigate(service.metadata?.path || `/service/${service.id}`)}
+                                    className="bg-white rounded-2xl p-4 flex items-center gap-4 border border-black/[0.05] shadow-sm relative overflow-hidden group"
+                                >
+                                    <div className="absolute right-[-5%] top-1/2 -translate-y-1/2 w-24 h-24 bg-brand/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+                                    <div className="w-16 h-16 bg-gray-50 rounded-xl flex items-center justify-center border border-black/[0.03] overflow-hidden flex-shrink-0 z-10">
+                                        <img src={service.image} className="w-full h-full object-cover" />
+                                    </div>
+                                    <div className="flex-1 z-10">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h4 className="text-[14px] font-[1000] text-black uppercase tracking-tight">{service.title}</h4>
+                                            {service.badge && (
+                                                <span className="bg-brand/10 text-brand text-[7px] font-black px-1.5 py-0.5 rounded-full uppercase italic">{service.badge}</span>
+                                            )}
+                                        </div>
+                                        <p className="text-[9px] font-black text-black/30 uppercase tracking-widest leading-none">
+                                            Premium care • {service.price}
+                                        </p>
+                                    </div>
+                                    <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-black/20 group-hover:bg-brand group-hover:text-white transition-all z-10">
+                                        <ChevronRight size={16} strokeWidth={3} />
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    </section>
+                )}
+
                 {/* Explore Categories - Grid Icons */}
                 <section className="px-5 pt-0 -mt-3">
                     <div className="flex items-center justify-between mb-3">
                         <h3 className="text-[15px] font-black text-black opacity-40 uppercase tracking-widest">Explore</h3>
                     </div>
                     <div className="grid grid-cols-4 gap-4">
-                        {[
-                            { title: 'Products', image: '/assets/product-accessories/product.png', path: '/e-shop' },
-                            { title: 'Insurance', icon: ShieldCheck, color: '#EF4444', path: '/insurance' },
-                            { title: 'PUC', icon: Activity, color: '#F59E0B', action: () => alert('PUC Testing module active.') },
+                        {loadingServices ? (
+                            [1, 2, 3, 4].map(i => <div key={i} className="w-14 h-14 bg-gray-50 animate-pulse rounded-xl mx-auto" />)
+                        ) : [
+                            ...exploreItems,
                             { title: 'View More', icon: LayoutGrid, color: '#6366F1', action: () => setShowAllServices(true) },
                         ].map((item, idx) => (
                             <motion.button
                                 key={idx}
                                 whileTap={{ scale: 0.9 }}
-                                onClick={() => item.action ? item.action() : navigate(item.path)}
+                                onClick={() => item.action ? (typeof item.action === 'function' ? item.action() : (item.action === 'triggerSOS' ? triggerSOS() : null)) : navigate(item.path)}
                                 className="flex flex-col items-center gap-2"
                             >
                                 <div className={`w-14 h-14 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100/50 shadow-sm overflow-hidden ${item.image ? '' : 'p-2'}`}>
                                     {item.image ? (
                                         <img src={item.image} alt={item.title} className="w-full h-full object-contain scale-[1.5]" />
                                     ) : (
-                                        <item.icon size={22} style={{ color: item.color }} strokeWidth={2.5} />
+                                        <div style={{ color: item.color }}>
+                                            {item.icon === 'shield-check' ? <ShieldCheck size={22} strokeWidth={2.5} /> :
+                                                item.icon === 'activity' ? <Activity size={22} strokeWidth={2.5} /> :
+                                                    item.icon === 'alert-triangle' ? <AlertTriangle size={22} strokeWidth={2.5} /> :
+                                                        <LayoutGrid size={22} strokeWidth={2.5} />}
+                                        </div>
                                     )}
                                 </div>
                                 <span className="text-[10px] font-black text-black/60 uppercase tracking-tight leading-tight">{item.title}</span>
@@ -582,25 +832,37 @@ const Home = () => {
                     </div>
                 </section>
 
-                {/* Promotional Banner - FULL WIDTH */}
-                <motion.div
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => navigate('/refer')}
-                    className="bg-black relative overflow-hidden group h-[130px] shadow-2xl flex items-center px-10"
-                >
-                    <div className="absolute right-[-5%] top-[-20%] w-48 h-48 bg-brand/20 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700" />
-                    <div className="relative z-10">
-                        <span className="text-[11px] font-black text-brand uppercase tracking-[0.3em] mb-2 block">Special Offer</span>
-                        <h3 className="text-[22px] font-[1000] text-white uppercase leading-none tracking-tighter">Refer & Get<br />100% Cashback</h3>
-                        <div className="mt-4 flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest leading-none">Limited Period Only</span>
-                            <ArrowRight size={14} className="text-brand" />
-                        </div>
-                    </div>
-                    <div className="absolute right-[-10%] bottom-[-20%] w-40 h-40 opacity-20 rotate-[15deg]">
-                        <img src="/assets/carwash/6.png" className="w-full h-full object-contain" alt="" />
-                    </div>
-                </motion.div>
+                {/* Dynamic Promotional Cards (Slider) */}
+                <section className="px-5 overflow-x-auto no-scrollbar flex gap-4">
+                    {sliderCards.length > 0 ? sliderCards.map((card, idx) => (
+                        <motion.div
+                            key={idx}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => card.action ? card.action() : navigate(card.path)}
+                            className={`${card.theme === 'dark' ? 'bg-black' : 'bg-brand/5'} relative overflow-hidden group min-w-[300px] h-[160px] rounded-3xl shadow-xl flex items-center px-8 border border-black/5`}
+                        >
+                            <div className={`absolute right-[-5%] top-[-20%] w-48 h-48 ${card.theme === 'dark' ? 'bg-brand/20' : 'bg-brand/10'} rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700`} />
+                            <div className="relative z-10 flex-1">
+                                <span className="text-[11px] font-black text-brand uppercase tracking-[0.3em] mb-2 block">{card.badge}</span>
+                                <h3 className={`text-[20px] font-[1000] uppercase leading-none tracking-tighter ${card.theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                                    {card.title.split(' ').slice(0, 2).join(' ')}<br />{card.title.split(' ').slice(2).join(' ')}
+                                </h3>
+                                <p className={`text-[9px] font-bold uppercase tracking-widest mt-2 ${card.theme === 'dark' ? 'text-white/40' : 'text-black/40'}`}>
+                                    {card.subtitle}
+                                </p>
+                                <div className="mt-4 flex items-center gap-2">
+                                    <span className={`text-[10px] font-black uppercase tracking-tight ${card.theme === 'dark' ? 'text-brand' : 'text-black'}`}>{card.cta}</span>
+                                    <ArrowRight size={14} className={card.theme === 'dark' ? 'text-brand' : 'text-black'} />
+                                </div>
+                            </div>
+                            <div className="absolute right-[-10%] bottom-[-10%] w-32 h-32 opacity-20 rotate-[15deg]">
+                                <img src={card.image} className="w-full h-full object-contain" alt="" onError={(e) => { e.target.style.display = 'none'; }} />
+                            </div>
+                        </motion.div>
+                    )) : (
+                        <div className="w-full h-32 bg-gray-50 rounded-3xl animate-pulse" />
+                    )}
+                </section>
             </div>
         );
     };
@@ -614,60 +876,6 @@ const Home = () => {
                     <div className="h-[2px] bg-gradient-to-l from-transparent via-black/10 to-black/20 flex-1" />
                 </div>
             </div>
-
-            {/* Monthly Shine Subscription Card - FULL WIDTH */}
-            <motion.div
-                whileTap={{ scale: 0.98 }}
-                onClick={() => navigate('/subscriptions')}
-                className="bg-gradient-to-br from-[#EEF2FF] to-white relative h-48 group cursor-pointer border-y border-indigo-50 shadow-inner"
-            >
-                <div className="absolute right-0 bottom-0 w-1/2 h-full z-0 opacity-100 group-hover:scale-105 transition-transform duration-700">
-                    <img src="/assets/carwashsubscription/7.png" className="w-full h-full object-contain object-right-bottom" alt="Monthly Shine" />
-                </div>
-
-                <div className="absolute inset-0 px-10 py-8 flex flex-col justify-between z-10">
-                    <div>
-                        <div className="flex items-center gap-2 mb-2">
-                            <span className="bg-indigo-600 text-white text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-widest shadow-lg shadow-indigo-200">Best Seller</span>
-                        </div>
-                        <h3 className="text-[24px] font-[1000] text-indigo-950 uppercase leading-[0.85] tracking-tighter">MONTHLY<br />SHINE</h3>
-                        <p className="text-indigo-900/40 text-[10px] font-bold uppercase mt-2 tracking-widest leading-none">Hassle-free elite care</p>
-                    </div>
-
-                    <div className="flex items-center gap-6">
-                        <div className="bg-indigo-950 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-2xl active:scale-95 transition-transform">
-                            View Plans
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-black text-indigo-900/30 uppercase leading-none">From only</span>
-                            <span className="text-indigo-950 font-black text-3xl tracking-tighter leading-none mt-1">₹299</span>
-                        </div>
-                    </div>
-                </div>
-            </motion.div>
-
-            {/* Refer & Earn Banner - FULL WIDTH */}
-            <motion.div
-                whileTap={{ scale: 0.99 }}
-                onClick={() => navigate('/refer')}
-                className="bg-gradient-to-r from-orange-500 to-brand h-40 relative overflow-hidden shadow-2xl group cursor-pointer border-y border-orange-400/20 px-10 flex items-center"
-            >
-                <div className="relative z-10 flex items-center justify-between w-full">
-                    <div className="max-w-[70%]">
-                        <div className="bg-white/30 backdrop-blur-md w-fit px-2 py-1 rounded-lg text-[9px] font-[1000] uppercase tracking-widest text-white mb-3 leading-none shadow-sm">Invite Rewards</div>
-                        <h3 className="text-white text-[22px] font-black leading-[0.9] uppercase tracking-tighter">GIFT YOUR FRIENDS<br />₹100 REWARD</h3>
-                        <p className="text-white/80 text-[10px] font-bold mt-3 uppercase tracking-widest leading-none">Share the shine & earn together</p>
-                    </div>
-                    <div className="bg-white text-brand px-6 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-2xl active:scale-95 transition-all group-hover:bg-black group-hover:text-white">
-                        Invite
-                    </div>
-                </div>
-                {/* Decorative Elements */}
-                <div className="absolute top-[-20%] right-[-10%] w-56 h-56 bg-white/10 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-700" />
-                <div className="absolute right-0 bottom-[-20px] opacity-20 group-hover:scale-110 transition-transform duration-500 rotate-[-15deg]">
-                    <Gift size={120} className="text-white" />
-                </div>
-            </motion.div>
 
             {/* Premium Guarantee Section */}
             <div className="mt-6">
@@ -719,29 +927,29 @@ const Home = () => {
                     </div>
 
                     <div className="grid grid-cols-1 gap-2.5">
-                        {[
-                            { name: 'Spare Drivers', icon: User, color: 'from-orange-500/25 to-brand/40', glow: 'shadow-orange-500/10', border: 'border-orange-500/20', desc: 'Elite Driving Career', path: '/spare-driver/register' },
-                            { name: 'Apartments', icon: HomeIcon, color: 'from-blue-500/25 to-indigo-500/40', glow: 'shadow-blue-500/10', border: 'border-blue-500/20', desc: 'Residential slots' },
-                            { name: 'Corporate', icon: Briefcase, color: 'from-emerald-500/25 to-teal-500/40', glow: 'shadow-emerald-500/10', border: 'border-emerald-500/20', desc: 'Workspace Care' }
-                        ].map((item, idx) => (
+                        {expansionItems.map((item, idx) => (
                             <motion.div
                                 key={idx}
                                 whileHover={{ scale: 1.02, y: -2 }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => item.path && navigate(item.path)}
-                                className={`bg-gradient-to-r ${item.color} backdrop-blur-xl border ${item.border} px-4 py-3 rounded-2xl flex items-center justify-between group/item transition-all duration-300 shadow-xl ${item.glow} cursor-pointer`}
+                                className={`bg-gradient-to-r ${item.val} backdrop-blur-xl border border-white/20 px-4 py-3 rounded-2xl flex items-center justify-between group/item transition-all duration-300 shadow-xl cursor-pointer`}
                             >
                                 <div className="flex items-center gap-4">
                                     <div className="w-11 h-11 bg-white/10 rounded-xl flex items-center justify-center border border-white/20 shadow-2xl transition-all duration-500 group-hover/item:scale-110 group-hover/item:bg-white/20">
-                                        <item.icon size={22} className="text-white" />
+                                        <div className="text-white">
+                                            {item.title === 'Spare Drivers' ? <User size={22} /> :
+                                                item.title === 'Apartments' ? <HomeIcon size={22} /> :
+                                                    <Briefcase size={22} />}
+                                        </div>
                                     </div>
                                     <div className="flex flex-col">
-                                        <h4 className="text-white text-[15px] font-[1000] uppercase tracking-tighter leading-none">{item.name}</h4>
-                                        <span className="text-white/40 text-[8px] font-black uppercase mt-1 tracking-widest">{item.desc}</span>
+                                        <h4 className="text-white text-[15px] font-[1000] uppercase tracking-tighter leading-none">{item.title}</h4>
+                                        <span className="text-white/40 text-[8px] font-black uppercase mt-1 tracking-widest">{item.subtitle}</span>
                                     </div>
                                 </div>
-                                <div className={`bg-white/20 backdrop-blur-md text-white text-[9px] font-black px-3 py-1.5 rounded-xl uppercase tracking-[0.2em] border border-white/20 group-hover/item:bg-white group-hover/item:text-black transition-colors duration-300 ${item.path ? 'bg-white text-black' : ''}`}>
-                                    {item.path ? 'Join Now' : 'Soon'}
+                                <div className={`bg-white/20 backdrop-blur-md text-white text-[9px] font-black px-3 py-1.5 rounded-xl uppercase tracking-[0.2em] border border-white/20 group-hover/item:bg-white group-hover/item:text-black transition-colors duration-300 ${item.cta === 'Join Now' ? 'bg-white text-black' : ''}`}>
+                                    {item.cta}
                                 </div>
                             </motion.div>
                         ))}
@@ -777,18 +985,15 @@ const Home = () => {
                 </h2>
 
                 <div className="grid grid-cols-3 gap-4 border-b border-black/5 pb-8 mb-8">
-                    <div>
-                        <p className="text-[16px] font-black text-black leading-none uppercase">1 Lac+</p>
-                        <p className="text-[8px] font-black text-black/50 uppercase mt-2 tracking-widest">Users</p>
-                    </div>
-                    <div className="border-x border-black/10">
-                        <p className="text-[16px] font-black text-black leading-none uppercase">5 Yrs+</p>
-                        <p className="text-[8px] font-black text-black/50 uppercase mt-2 tracking-widest">Legacy</p>
-                    </div>
-                    <div>
-                        <p className="text-[16px] font-black text-black leading-none uppercase">60+</p>
-                        <p className="text-[8px] font-black text-black/50 uppercase mt-2 tracking-widest">Cities</p>
-                    </div>
+                    {stats.map((stat, i) => (
+                        <div key={i} className={i === 1 ? "border-x border-black/10" : ""}>
+                            <p className="text-[16px] font-black text-black leading-none uppercase">{stat.value}</p>
+                            <p className="text-[8px] font-black text-black/50 uppercase mt-2 tracking-widest">{stat.label}</p>
+                        </div>
+                    ))}
+                    {stats.length === 0 && (
+                        [1, 2, 3].map(i => <div key={i} className="h-10 bg-black/5 animate-pulse rounded-lg" />)
+                    )}
                 </div>
 
                 {/* Compact Trust Badges */}
@@ -870,6 +1075,10 @@ const Home = () => {
                     {renderAllServicesSheet()}
                     {renderSearchOverlay()}
                     {renderSOSOverlay()}
+                    <BlackPassModal
+                        isOpen={showBlackPassModal}
+                        onClose={() => setShowBlackPassModal(false)}
+                    />
                     {renderHeader()}
                     {renderHero()}
 

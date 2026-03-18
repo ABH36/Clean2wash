@@ -15,13 +15,27 @@ const Login = () => {
 
     const handleLogin = async () => {
         if (!identifier) return;
+        
+        if (loginType === 'phone') {
+            if (identifier.length < 10) {
+                setError('Please enter a valid 10-digit phone number.');
+                return;
+            }
+        } else if (loginType === 'email') {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(identifier)) {
+                setError('Please enter a valid email address.');
+                return;
+            }
+        }
+
         setError('');
         setLoading(true);
         const res = await sendOTP(identifier.trim(), loginType);
         setLoading(false);
         if (res.success) {
             navigate('/otp-verify', {
-                state: { type: loginType, identifier: identifier.trim() }
+                state: { type: loginType, identifier: identifier.trim(), devOtp: res.data?.otp }
             });
         } else {
             setError(res.error || 'Failed to send OTP. Please try again.');
@@ -118,7 +132,10 @@ const Login = () => {
                                                 maxLength={10}
                                                 placeholder="00000 00000"
                                                 value={identifier}
-                                                onChange={(e) => setIdentifier(e.target.value.replace(/\D/g, ''))}
+                                                onChange={(e) => {
+                                                    const val = e.target.value.replace(/\D/g, '');
+                                                    if (val.length <= 10) setIdentifier(val);
+                                                }}
                                                 className="w-full bg-white border border-gray-100 rounded-xl pl-11 pr-4 py-4 font-bold text-content text-base outline-none focus:border-brand/40 shadow-sm transition-all tracking-widest font-mono placeholder:text-gray-100"
                                             />
                                         </div>

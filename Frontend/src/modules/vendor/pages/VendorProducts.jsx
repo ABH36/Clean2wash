@@ -1,60 +1,20 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
     ShoppingBag, Search, Plus, Trash2, Edit2,
     X, Check, Package, Grid, List as ListIcon,
     Tag, DollarSign, AlertTriangle, ImageIcon,
-    Star, ChevronDown, Zap, Award
+    Star, ChevronDown, Zap, Award, PlayCircle, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import VendorLayout from '../components/VendorLayout';
 import { useAuth } from '../../../context/AuthContext';
-
-// ─── Initial seed data ───────────────────────────────────────────────────────
-const SEED = [
-    {
-        id: 'P001', name: 'CarWash 2-in-1 Adaptive Adapter', category: 'Electronics',
-        price: 4999, salePrice: 3499, stock: 25, rating: 4.8, badge: 'Bestseller',
-        description: 'Universal adaptive connector for all modern car audio systems.',
-        image: 'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=400&q=80', status: 'Active'
-    },
-    {
-        id: 'P002', name: 'CarWash 3D Carbon Fiber Tape', category: 'Accessories',
-        price: 899, salePrice: 599, stock: 142, rating: 4.5, badge: 'Popular',
-        description: 'Premium 3D carbon fibre wrap tape for car interior & exterior.',
-        image: 'https://images.unsplash.com/photo-1512428559087-560fa5ceab42?w=400&q=80', status: 'Active'
-    },
-    {
-        id: 'P003', name: 'CarWash Wet & Dry Vacuum', category: 'Cleaning',
-        price: 7999, salePrice: 5499, stock: 12, rating: 4.9, badge: 'Top Rated',
-        description: 'Powerful handheld vacuum with dual wet & dry suction modes.',
-        image: 'https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?w=400&q=80', status: 'Low Stock'
-    },
-    {
-        id: 'P004', name: 'Premium Car Wash Kit', category: 'Cleaning',
-        price: 2499, salePrice: 1999, stock: 85, rating: 4.7, badge: '',
-        description: 'All-in-one car wash kit with shampoo, wax, and microfiber towels.',
-        image: 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=400&q=80', status: 'Active'
-    },
-    {
-        id: 'P005', name: 'CarWash Smart GPS Tracker', category: 'Electronics',
-        price: 3999, salePrice: 2499, stock: 0, rating: 4.6, badge: 'New',
-        description: 'Real-time GPS vehicle tracker with geofencing & mobile alerts.',
-        image: 'https://images.unsplash.com/photo-1580672154843-44f2221d41b1?w=400&q=80', status: 'Out of Stock'
-    },
-    {
-        id: 'P006', name: 'Clean2Wash Ultra Foam Shampoo', category: 'Cleaning',
-        price: 999, salePrice: 799, stock: 50, rating: 5.0, badge: 'Own Brand',
-        isPriority: true, isOwnBrand: true,
-        description: 'Professional grade high-foaming car shampoo designed specifically for our captains.',
-        image: 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=400&q=80', status: 'Active'
-    },
-];
+import { vendorAPI } from '../../../utils/vendorApi';
 
 const CATEGORIES = ['Electronics', 'Accessories', 'Cleaning', 'Enhancement'];
-const BADGES = ['', 'Bestseller', 'Top Rated', 'Popular', 'New', 'Sale'];
+const BADGES = ['', 'Bestseller', 'Top Rated', 'Popular', 'New', 'Sale', 'Own Brand'];
 
 const emptyForm = {
-    name: '', category: 'Electronics', price: '', salePrice: '',
+    name: '', category: 'Cleaning', price: '', salePrice: '',
     stock: '', rating: '4.5', badge: '', description: '', image: '',
     video: '', specifications: [{ key: '', value: '' }],
     isPriority: false, isOwnBrand: false, status: 'Pending'
@@ -73,6 +33,18 @@ const Toast = ({ msg, type }) => (
     </motion.div>
 );
 
+// ─── Shared Form Components ──────────────────────────────────────────────────
+const Field = ({ label, error, children }) => (
+    <div>
+        <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest mb-1.5">{label}</p>
+        {children}
+        {error && <p className="text-[10px] text-red-500 font-bold mt-1">{error}</p>}
+    </div>
+);
+
+const inputCls = (err) =>
+    `w-full h-10 bg-background border rounded-xl px-3 text-[12px] font-bold text-content outline-none transition-all focus:border-brand/50 ${err ? 'border-red-300' : 'border-gray-100/10'}`;
+
 // ─── Product Drawer (Add / Edit) ──────────────────────────────────────────────
 const ProductDrawer = ({ open, onClose, initial, onSave }) => {
     const [form, setForm] = useState(initial || emptyForm);
@@ -80,8 +52,21 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
     const [imgError, setImgError] = useState(false);
 
     // Reset form whenever drawer opens
-    React.useEffect(() => {
-        if (open) { setForm(initial || emptyForm); setErrors({}); setImgError(false); }
+    useEffect(() => {
+        if (open) {
+            if (initial) {
+                setForm({
+                    ...initial,
+                    price: initial.price.toString(),
+                    salePrice: initial.salePrice?.toString() || '',
+                    stock: initial.stock?.toString() || '0'
+                });
+            } else {
+                setForm(emptyForm);
+            }
+            setErrors({});
+            setImgError(false);
+        }
     }, [open, initial]);
 
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -99,30 +84,19 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
     const handleSubmit = () => {
         const e = validate();
         if (Object.keys(e).length) { setErrors(e); return; }
-        // Keep existing status if editing, or set to 'Pending' if new/re-verify
-        const newStatus = isEdit ? (initial.status === 'Approved' ? 'Approved' : 'Pending') : 'Pending';
+
         onSave({
             ...form,
             price: Number(form.price),
             salePrice: Number(form.salePrice),
             stock: Number(form.stock),
             rating: Number(form.rating),
-            status: newStatus
+            status: 'Pending' // Always re-verify on edit/add
         });
     };
 
-    const isEdit = !!initial?.id;
+    const isEdit = !!initial?._id;
 
-    const Field = ({ label, error, children }) => (
-        <div>
-            <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest mb-1.5">{label}</p>
-            {children}
-            {error && <p className="text-[10px] text-red-500 font-bold mt-1">{error}</p>}
-        </div>
-    );
-
-    const inputCls = (err) =>
-        `w-full h-10 bg-background border rounded-xl px-3 text-[12px] font-bold text-content outline-none transition-all focus:border-brand/50 ${err ? 'border-red-300' : 'border-gray-100/10'}`;
 
     return (
         <AnimatePresence>
@@ -139,8 +113,7 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
                     <motion.div
                         initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
                         transition={{ type: 'spring', stiffness: 340, damping: 32 }}
-                        className="fixed right-0 top-0 h-full z-[210] bg-surface shadow-2xl flex flex-col border-l border-gray-100/10"
-                        style={{ width: 420 }}
+                        className="fixed right-0 top-0 h-full z-[210] bg-surface shadow-2xl flex flex-col border-l border-gray-100/10 w-full md:w-[420px]"
                     >
                         {/* Header */}
                         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100/10">
@@ -149,7 +122,7 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
                                     {isEdit ? 'Edit Product' : 'Add New Product'}
                                 </h2>
                                 <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-0.5">
-                                    {isEdit ? `Editing: ${initial?.id}` : 'Fill in the product details below'}
+                                    {isEdit ? (initial?.status === 'Approved' ? 'Note: Saving edits will trigger re-verification' : 'Updating listing details') : 'Fill in the product details below'}
                                 </p>
                             </div>
                             <button onClick={onClose} className="w-9 h-9 rounded-xl bg-background border border-gray-100/10 flex items-center justify-center text-content-muted hover:text-brand transition-all">
@@ -160,32 +133,79 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
                         {/* Body — scrollable */}
                         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4" style={{ scrollbarWidth: 'none' }}>
 
-                            {/* Image preview */}
-                            <div className="relative h-44 bg-background border border-gray-100/10 rounded-2xl overflow-hidden flex items-center justify-center">
-                                {form.image && !imgError ? (
-                                    <img
-                                        src={form.image} alt="Preview"
-                                        className="w-full h-full object-cover"
-                                        onError={() => setImgError(true)}
+                            <div className="flex gap-3">
+                                {/* Image Preview & Upload */}
+                                <div
+                                    onClick={() => document.getElementById('product-image-upload').click()}
+                                    className="flex-1 relative h-44 bg-background border border-dashed border-gray-100/20 rounded-2xl overflow-hidden flex flex-col items-center justify-center cursor-pointer hover:border-brand/50 transition-all group"
+                                >
+                                    <input
+                                        id="product-image-upload"
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                            const file = e.target.files[0];
+                                            if (file) {
+                                                const reader = new FileReader();
+                                                reader.onloadend = () => set('image', reader.result);
+                                                reader.readAsDataURL(file);
+                                            }
+                                        }}
                                     />
-                                ) : (
-                                    <div className="flex flex-col items-center gap-2 text-content-subtle">
-                                        <ImageIcon size={28} strokeWidth={1.5} />
-                                        <p className="text-[10px] font-bold uppercase tracking-widest">Image Preview</p>
-                                    </div>
-                                )}
+                                    {form.image && !imgError ? (
+                                        <>
+                                            <img src={form.image} alt="Preview" className="w-full h-full object-cover" onError={() => setImgError(true)} />
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <p className="text-[10px] font-black text-white uppercase tracking-widest">Change Image</p>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="flex flex-col items-center gap-2 text-content-subtle group-hover:text-brand">
+                                            <ImageIcon size={28} strokeWidth={1.5} />
+                                            <p className="text-[10px] font-bold uppercase tracking-widest">Add Product Image</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Video Preview & Upload */}
+                                <div
+                                    onClick={() => document.getElementById('product-video-upload').click()}
+                                    className="flex-1 relative h-44 bg-background border border-dashed border-gray-100/20 rounded-2xl overflow-hidden flex flex-col items-center justify-center cursor-pointer hover:border-brand/50 transition-all group"
+                                >
+                                    <input
+                                        id="product-video-upload"
+                                        type="file"
+                                        accept="video/*"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                            const file = e.target.files[0];
+                                            if (file) {
+                                                const reader = new FileReader();
+                                                reader.onloadend = () => set('video', reader.result);
+                                                reader.readAsDataURL(file);
+                                            }
+                                        }}
+                                    />
+                                    {form.video ? (
+                                        <>
+                                            <div className="w-full h-full bg-black flex items-center justify-center">
+                                                <PlayCircle size={40} className="text-white opacity-50" />
+                                            </div>
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <p className="text-[10px] font-black text-white uppercase tracking-widest">Change Video</p>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="flex flex-col items-center gap-2 text-content-subtle group-hover:text-amber-500">
+                                            <PlayCircle size={28} strokeWidth={1.5} />
+                                            <p className="text-[10px] font-bold uppercase tracking-widest">Add Product Video</p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
-                            {/* Image URL */}
-                            <Field label="Image URL" error={null}>
-                                <input
-                                    type="url"
-                                    placeholder="https://..."
-                                    value={form.image}
-                                    onChange={e => { set('image', e.target.value); setImgError(false); }}
-                                    className={inputCls(false)}
-                                />
-                            </Field>
+
 
                             {/* Name */}
                             <Field label="Product Name *" error={errors.name}>
@@ -209,16 +229,7 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
                                 />
                             </Field>
 
-                            {/* Video URL */}
-                            <Field label="Video URL (Optional)" error={null}>
-                                <input
-                                    type="url"
-                                    placeholder="https://youtube.com/..."
-                                    value={form.video}
-                                    onChange={e => set('video', e.target.value)}
-                                    className={inputCls(false)}
-                                />
-                            </Field>
+
 
                             {/* Specifications */}
                             <div>
@@ -277,7 +288,7 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
                                             onChange={e => set('category', e.target.value)}
                                             className={`${inputCls(false)} appearance-none pr-8 cursor-pointer`}
                                         >
-                                            {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                                            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                                         </select>
                                         <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-content-muted pointer-events-none" />
                                     </div>
@@ -442,7 +453,7 @@ const ProductCard = ({ p, onEdit, onDelete }) => {
             <AnimatePresence>
                 {confirmDelete && (
                     <DeleteConfirm
-                        onConfirm={() => onDelete(p.id)}
+                        onConfirm={() => onDelete(p._id)}
                         onCancel={() => setConfirmDelete(false)}
                     />
                 )}
@@ -570,7 +581,7 @@ const ProductRow = ({ p, onEdit, onDelete }) => {
             <AnimatePresence>
                 {confirmDelete && (
                     <DeleteConfirm
-                        onConfirm={() => onDelete(p.id)}
+                        onConfirm={() => onDelete(p._id)}
                         onCancel={() => setConfirmDelete(false)}
                     />
                 )}
@@ -581,10 +592,11 @@ const ProductRow = ({ p, onEdit, onDelete }) => {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 const VendorProducts = () => {
-    const { getUser, updateUser } = useAuth();
+    const { getUser } = useAuth();
     const vendor = getUser('vendor') || {};
-    const products = vendor.products || SEED;
 
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState('grid');
     const [activeTab, setActiveTab] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
@@ -592,33 +604,61 @@ const VendorProducts = () => {
     const [editTarget, setEditTarget] = useState(null); // null = add mode
     const [toast, setToast] = useState(null);
 
+    const fetchProducts = async () => {
+        try {
+            const res = await vendorAPI.getProducts();
+            if (res.status === 'success') {
+                setProducts(res.data.products);
+            }
+        } catch (err) {
+            console.error("Failed to fetch products", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchProducts();
+    }, []);
+
     const showToast = (msg, type = 'success') => {
         setToast({ msg, type });
         setTimeout(() => setToast(null), 2800);
     };
 
     // ── CRUD ──
-    const handleSave = (data) => {
-        let updatedProducts;
-        if (editTarget) {
-            // Edit
-            updatedProducts = products.map(p => p.id === editTarget.id ? { ...data, id: editTarget.id } : p);
-            showToast('Product updated successfully');
-        } else {
-            // Add — generate new ID
-            const newId = `P${String(products.length + 1).padStart(3, '0')}`;
-            updatedProducts = [{ ...data, id: newId }, ...products];
-            showToast('Product added successfully');
+    const handleSave = async (data) => {
+        try {
+            if (editTarget) {
+                // Edit
+                const res = await vendorAPI.updateProduct(editTarget._id, data);
+                if (res.status === 'success') {
+                    showToast('Product updated successfully');
+                    fetchProducts();
+                }
+            } else {
+                // Add
+                const res = await vendorAPI.createProduct(data);
+                if (res.status === 'success') {
+                    showToast('Product added successfully');
+                    fetchProducts();
+                }
+            }
+            setDrawerOpen(false);
+            setEditTarget(null);
+        } catch (err) {
+            showToast(err.message || 'Failed to save product', 'error');
         }
-        updateUser('vendor', vendor.id, { products: updatedProducts });
-        setDrawerOpen(false);
-        setEditTarget(null);
     };
 
-    const handleDelete = (id) => {
-        const updatedProducts = products.filter(p => p.id !== id);
-        updateUser('vendor', vendor.id, { products: updatedProducts });
-        showToast('Product deleted', 'error');
+    const handleDelete = async (id) => {
+        try {
+            await vendorAPI.deleteProduct(id);
+            showToast('Product deleted', 'error');
+            fetchProducts();
+        } catch (err) {
+            showToast('Failed to delete product', 'error');
+        }
     };
 
     const filtered = useMemo(() => {
@@ -653,8 +693,8 @@ const VendorProducts = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
                         { label: 'Total Stock', val: products.length, icon: ShoppingBag, color: 'text-blue-500' },
-                        { label: 'Low Alert', val: String(lowStock).padStart(2, '0'), icon: Package, color: 'text-amber-500' },
-                        { label: 'Out of Registry', val: String(outOfStock).padStart(2, '0'), icon: Trash2, color: 'text-red-500' },
+                        { label: 'Low Alert', val: String(lowStock).padStart(2, '0') || '00', icon: Package, color: 'text-amber-500' },
+                        { label: 'Out of Registry', val: String(outOfStock).padStart(2, '0') || '00', icon: Trash2, color: 'text-red-500' },
                         { label: 'Total Value', val: `₹${(totalRevenue / 1000).toFixed(1)}k`, icon: DollarSign, color: 'text-green-500' },
                     ].map(s => (
                         <div key={s.label} className="bg-surface p-5 rounded-3xl border border-gray-100/10 shadow-soft flex items-center justify-between transition-all hover:scale-105">
@@ -684,7 +724,7 @@ const VendorProducts = () => {
                         <div className="relative flex-1 md:w-56">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-content-subtle" size={14} />
                             <input
-                                type="text" placeholder="Search weapons..."
+                                type="text" placeholder="Search products..."
                                 value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                                 className="w-full h-10 bg-background border border-gray-100/10 rounded-xl pl-10 pr-4 text-[11px] font-black text-content outline-none focus:ring-2 ring-brand/20 transition-all font-bold italic"
                             />
@@ -707,37 +747,46 @@ const VendorProducts = () => {
                     </div>
                 </div>
 
-                {/* Empty state */}
-                {filtered.length === 0 && (
-                    <div className="bg-surface rounded-3xl border border-dashed border-gray-100/20 p-20 flex flex-col items-center gap-4 text-center">
-                        <div className="w-16 h-16 bg-background rounded-2xl flex items-center justify-center border border-gray-100/10">
-                            <Package size={32} className="text-content-subtle/20" />
-                        </div>
-                        <h3 className="text-base font-black text-content italic uppercase tracking-tighter">No items found</h3>
-                        <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest">Adjust filters or add a new package to the shop</p>
+                {/* Loading state */}
+                {loading ? (
+                    <div className="flex justify-center py-20">
+                        <div className="w-8 h-8 border-4 border-brand/30 border-t-brand rounded-full animate-spin" />
                     </div>
-                )}
+                ) : (
+                    <>
+                        {/* Empty state */}
+                        {filtered.length === 0 && (
+                            <div className="bg-surface rounded-3xl border border-dashed border-gray-100/20 p-20 flex flex-col items-center gap-4 text-center">
+                                <div className="w-16 h-16 bg-background rounded-2xl flex items-center justify-center border border-gray-100/10">
+                                    <Package size={32} className="text-content-subtle/20" />
+                                </div>
+                                <h3 className="text-base font-black text-content italic uppercase tracking-tighter">No items found</h3>
+                                <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest">Adjust filters or add a new package to the shop</p>
+                            </div>
+                        )}
 
-                {/* Products */}
-                <AnimatePresence mode="popLayout">
-                    {filtered.length > 0 && viewMode === 'grid' ? (
-                        <motion.div key="grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {filtered.map((p) => (
-                                <ProductCard key={p.id} p={p}
-                                    onEdit={() => { setEditTarget(p); setDrawerOpen(true); }} onDelete={() => handleDelete(p.id)} />
-                            ))}
-                        </motion.div>
-                    ) : filtered.length > 0 ? (
-                        <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="space-y-4">
-                            {filtered.map(p => (
-                                <ProductRow key={p.id} p={p}
-                                    onEdit={() => { setEditTarget(p); setDrawerOpen(true); }} onDelete={() => handleDelete(p.id)} />
-                            ))}
-                        </motion.div>
-                    ) : null}
-                </AnimatePresence>
+                        {/* Products */}
+                        <AnimatePresence mode="popLayout">
+                            {filtered.length > 0 && viewMode === 'grid' ? (
+                                <motion.div key="grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                    {filtered.map((p) => (
+                                        <ProductCard key={p._id} p={p}
+                                            onEdit={() => { setEditTarget(p); setDrawerOpen(true); }} onDelete={() => handleDelete(p._id)} />
+                                    ))}
+                                </motion.div>
+                            ) : filtered.length > 0 ? (
+                                <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                    className="space-y-4">
+                                    {filtered.map(p => (
+                                        <ProductRow key={p._id} p={p}
+                                            onEdit={() => { setEditTarget(p); setDrawerOpen(true); }} onDelete={() => handleDelete(p._id)} />
+                                    ))}
+                                </motion.div>
+                            ) : null}
+                        </AnimatePresence>
+                    </>
+                )}
             </div>
         </VendorLayout>
     );

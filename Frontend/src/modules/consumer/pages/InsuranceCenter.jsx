@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import {
     ArrowLeft,
@@ -140,10 +140,10 @@ const InsuranceCenter = () => {
                             ].map((item, i) => (
                                 <motion.div
                                     key={i}
-                                    whileTap={{ scale: 0.97 }}
-                                    className="bg-white rounded-lg p-3.5 border border-gray-100 shadow-sm flex flex-col gap-3 group hover:border-brand/30 transition-all cursor-pointer"
-                                    onClick={() => alert(`${item.title} protocol is active and verified for your current session.`)}
-                                >
+                                     whileTap={{ scale: 0.97 }}
+                                     className="bg-white rounded-lg p-3.5 border border-gray-100 shadow-sm flex flex-col gap-3 group hover:border-brand/30 transition-all cursor-pointer"
+                                     onClick={() => toast.success(`${item.title} protocol is active and verified for your current session.`)}
+                                 >
                                     <div className={`w-8 h-8 ${item.bg} ${item.color} rounded-md flex items-center justify-center group-hover:bg-brand group-hover:text-white transition-all`}>
                                         {item.icon}
                                     </div>

@@ -1,5 +1,6 @@
-const Captain = require('../models/Captain');
+const Captain = require('../../../models/Captain');
 const jwt = require('jsonwebtoken');
+const { sanitizePhone } = require('../../../utils/authUtils');
 
 const signToken = (id) => {
     return jwt.sign({ id, role: 'captain' }, process.env.JWT_SECRET || 'your-secret-key', {
@@ -21,6 +22,75 @@ const createSendToken = (captain, statusCode, res, message) => {
 
 const validatePhone = (phone) => /^[6-9]\d{9}$/.test(phone);
 
+exports.register = async (req, res) => {
+    try {
+        const { name, email, phone, password, city, vehicleType, plate, kit, experience, drivingLicense, aadharCard, photo } = req.body;
+
+        // 1) Check if user already exists
+        const existingCaptain = await Captain.findOne({
+            $or: [{ phone }, email ? { email } : null].filter(Boolean)
+        });
+
+        if (existingCaptain) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Captain with this phone or email already exists'
+            });
+        }
+
+        // 2) Create new captain
+        const captainData = {
+            name,
+            email: email || undefined,
+            phone: sanitizePhone(phone),
+            password: password || '1234',
+            isVerified: false,
+            profile: {
+                city,
+                vehicleType,
+                plate,
+                kit,
+                experience,
+                drivingLicense: '',
+                aadharCard: '',
+                photo: ''
+            }
+        };
+
+        const cloudinary = require('../../../utils/cloudinary'); // Ensure cloudinary is imported locally or globally
+
+        // 2a) Upload documents if provided
+        try {
+            if (drivingLicense && drivingLicense.startsWith('data:')) {
+                const dlRes = await cloudinary.uploadImage(drivingLicense, 'clean2wash/captains/documents');
+                captainData.profile.drivingLicense = dlRes.secure_url;
+            }
+            if (aadharCard && aadharCard.startsWith('data:')) {
+                const aadharRes = await cloudinary.uploadImage(aadharCard, 'clean2wash/captains/documents');
+                captainData.profile.aadharCard = aadharRes.secure_url;
+            }
+            if (photo && photo.startsWith('data:')) {
+                const photoRes = await cloudinary.uploadImage(photo, 'clean2wash/captains/photos');
+                captainData.profile.photo = photoRes.secure_url;
+            }
+        } catch (uploadError) {
+            console.error('Document upload failed:', uploadError);
+            // Non-blocking for now, or you can fail the request
+        }
+
+        const newCaptain = await Captain.create(captainData);
+
+        // 3) Send token
+        createSendToken(newCaptain, 201, res, 'Captain registered successfully');
+    } catch (error) {
+        console.error('Captain register error:', error);
+        res.status(400).json({
+            status: 'error',
+            message: error.message || 'Failed to register captain'
+        });
+    }
+};
+
 exports.sendOTP = async (req, res) => {
     try {
         const { phone, userData } = req.body;
@@ -34,10 +104,18 @@ exports.sendOTP = async (req, res) => {
         let captain = await Captain.findByPhone(phone);
         const isNewUser = !captain;
 
+        // If trying to signup (userData present) but captain already exists and is verified
+        if (userData && captain && captain.isVerified) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'This phone number is already registered. Please login instead.'
+            });
+        }
+
         if (isNewUser && userData) {
             captain = new Captain({
                 name: userData.name || `Captain_${phone.slice(-4)}`,
-                phone,
+                phone: sanitizePhone(phone),
                 password: userData.password || '1234',
                 profile: {
                     city: userData.city || '',
@@ -77,7 +155,7 @@ exports.sendOTP = async (req, res) => {
         res.status(500).json({
             status: 'error',
             message: 'Failed to send OTP. Please try again.',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            error: process.env.NODE_ENV === 'development' ? error.stack || error.message : undefined
         });
     }
 };
@@ -89,7 +167,8 @@ exports.verifyOTP = async (req, res) => {
             return res.status(400).json({ status: 'fail', message: 'Phone and OTP are required' });
         }
 
-        const captain = await Captain.findByPhone(phone);
+        const sanitizedPhone = sanitizePhone(phone);
+        const captain = await Captain.findByPhone(sanitizedPhone);
         if (!captain) {
             return res.status(404).json({ status: 'fail', message: 'User not found. Please request a new OTP.' });
         }
@@ -103,12 +182,33 @@ exports.verifyOTP = async (req, res) => {
 
         if (isSignup && userData) {
             if (userData.name) captain.name = userData.name;
+            if (userData.password) captain.password = userData.password;
             if (!captain.profile) captain.profile = {};
             if (userData.city !== undefined) captain.profile.city = userData.city;
             if (userData.experience !== undefined) captain.profile.experience = userData.experience;
             if (userData.vehicleType !== undefined) captain.profile.vehicleType = userData.vehicleType;
             if (userData.plate !== undefined) captain.profile.plate = userData.plate;
             if (userData.kit !== undefined) captain.profile.kit = userData.kit;
+            
+            // Handle file uploads if present in userData
+            const cloudinary = require('../../../utils/cloudinary');
+            try {
+                if (userData.drivingLicense && userData.drivingLicense.startsWith('data:')) {
+                    const dlRes = await cloudinary.uploadImage(userData.drivingLicense, 'clean2wash/captains/documents');
+                    captain.profile.drivingLicense = dlRes.secure_url;
+                }
+                if (userData.aadharCard && userData.aadharCard.startsWith('data:')) {
+                    const aadharRes = await cloudinary.uploadImage(userData.aadharCard, 'clean2wash/captains/documents');
+                    captain.profile.aadharCard = aadharRes.secure_url;
+                }
+                if (userData.photo && userData.photo.startsWith('data:')) {
+                    const photoRes = await cloudinary.uploadImage(userData.photo, 'clean2wash/captains/photos');
+                    captain.profile.photo = photoRes.secure_url;
+                }
+            } catch (uploadError) {
+                console.error('Document upload failed during verifyOTP:', uploadError);
+                // We'll still allow verification to succeed but documents might be missing
+            }
         }
 
         captain.lastLogin = new Date();
@@ -134,7 +234,8 @@ exports.login = async (req, res) => {
             return res.status(400).json({ status: 'fail', message: 'Phone and password are required' });
         }
 
-        const captain = await Captain.findByPhone(phone).select('+password');
+        const sanitizedPhone = sanitizePhone(phone);
+        const captain = await Captain.findByPhone(sanitizedPhone).select('+password');
         if (!captain || !(await captain.correctPassword(password, captain.password))) {
             return res.status(401).json({ status: 'fail', message: 'Incorrect phone or password' });
         }
@@ -142,6 +243,12 @@ exports.login = async (req, res) => {
         if (!captain.isActive) {
             return res.status(401).json({ status: 'fail', message: 'Your account has been deactivated.' });
         }
+
+        // Optional: Check if verified, but maybe allow login to see "Pending" dashboard?
+        // If you strictly want them not to login until verified (Vendor allows login but restricted features):
+        // if (!captain.isVerified) {
+        //     return res.status(401).json({ status: 'fail', message: 'Your account is pending verification by an Admin.' });
+        // }
 
         captain.lastLogin = new Date();
         captain.loginCount += 1;

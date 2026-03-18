@@ -1,6 +1,7 @@
-const Consumer = require('../models/Consumer');
+const User = require('../../../models/User');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { sanitizePhone } = require('../../../utils/authUtils');
 
 // Helper function to create JWT token
 const signToken = (id) => {
@@ -12,11 +13,11 @@ const signToken = (id) => {
 // Helper function to create and send token
 const createSendToken = (consumer, statusCode, res, message) => {
     const token = signToken(consumer._id);
-    
+
     // Remove password from output
     consumer.password = undefined;
     consumer.otp = undefined;
-    
+
     res.status(statusCode).json({
         status: 'success',
         message,
@@ -44,7 +45,7 @@ const validateEmail = (email) => {
 exports.sendOTP = async (req, res) => {
     try {
         const { identifier, type } = req.body; // identifier can be phone or email, type can be 'phone' or 'email'
-        
+
         if (!identifier) {
             return res.status(400).json({
                 status: 'fail',
@@ -68,17 +69,18 @@ exports.sendOTP = async (req, res) => {
         }
 
         // Find consumer by phone or email
-        let consumer = await Consumer.findByEmailOrPhone(identifier);
+        let consumer = await User.findByEmailOrPhone(identifier);
         const isNewUser = !consumer;
 
         // Signup: new user with userData — create consumer only then
         if (isNewUser && req.body.userData) {
             const { name, phone, email } = req.body.userData;
-            consumer = new Consumer({
+            consumer = new User({
                 name: name || `User_${identifier.slice(-4)}`,
-                phone: phone || (type === 'phone' ? identifier : ''),
+                phone: sanitizePhone(phone || (type === 'phone' ? identifier : '')),
                 email: email || (type === 'email' ? identifier : `user_${identifier}@temp.com`),
-                password: 'defaultPassword123' // Will be updated after OTP verification
+                password: 'defaultPassword123', // Will be updated after OTP verification
+                role: 'consumer'
             });
         }
 
@@ -98,7 +100,7 @@ exports.sendOTP = async (req, res) => {
             console.error('Error saving consumer:', saveError);
             // If save fails due to duplicate, try to find existing consumer
             if (saveError.code === 11000) {
-                consumer = await Consumer.findByEmailOrPhone(identifier);
+                consumer = await User.findByEmailOrPhone(identifier);
                 if (!consumer) {
                     throw saveError;
                 }
@@ -111,7 +113,7 @@ exports.sendOTP = async (req, res) => {
 
         // In development, send OTP in response
         if (process.env.NODE_ENV === 'development') {
-            console.log(`🔢 OTP for ${identifier}: ${otp}`.cyan.bold);
+            console.log(`🔢 OTP for ${identifier}: ${otp}`);
         }
 
         // TODO: Integrate with SMS/Email service for production
@@ -130,12 +132,19 @@ exports.sendOTP = async (req, res) => {
 
     } catch (error) {
         console.error('Error in sendOTP:', error);
-        console.error('Error stack:', error.stack);
+
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(el => el.message);
+            return res.status(400).json({
+                status: 'fail',
+                message: `Validation Error: ${messages.join('. ')}`
+            });
+        }
+
         res.status(500).json({
             status: 'error',
             message: 'Failed to send OTP. Please try again.',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            error: process.env.NODE_ENV === 'development' ? error.stack || error.message : undefined
         });
     }
 };
@@ -153,7 +162,7 @@ exports.verifyOTP = async (req, res, next) => {
         }
 
         // Find consumer
-        const consumer = await Consumer.findByEmailOrPhone(identifier);
+        const consumer = await User.findByEmailOrPhone(identifier);
         if (!consumer) {
             return res.status(404).json({
                 status: 'fail',
@@ -172,13 +181,20 @@ exports.verifyOTP = async (req, res, next) => {
         // Clear OTP after successful verification
         consumer.otp = undefined;
         consumer.isVerified = true;
-        
-        // Update user data only when completing signup (not on login)
+
         const isSignup = req.body.isSignup === true;
         if (isSignup && userData) {
             if (userData.name) consumer.name = userData.name;
             if (userData.email && userData.email !== consumer.email) consumer.email = userData.email;
             if (userData.phone && userData.phone !== consumer.phone) consumer.phone = userData.phone;
+
+            // Handle Referral Code Linkage
+            if (userData.referralCode && !consumer.referredBy) {
+                const referrer = await User.findOne({ referralCode: userData.referralCode.toUpperCase() });
+                if (referrer && referrer._id.toString() !== consumer._id.toString()) {
+                    consumer.referredBy = referrer._id;
+                }
+            }
         }
 
         // Update login info
@@ -215,8 +231,16 @@ exports.login = async (req, res, next) => {
             });
         }
 
+        const sanitizedIdentifier = sanitizePhone(identifier);
+
         // Find consumer and include password
-        const consumer = await Consumer.findByEmailOrPhone(identifier).select('+password');
+        const consumer = await User.findOne({
+            $or: [
+                { phone: sanitizedIdentifier },
+                { email: identifier.toLowerCase() }
+            ]
+        }).select('+password');
+
         if (!consumer || !(await consumer.correctPassword(password, consumer.password))) {
             return res.status(401).json({
                 status: 'fail',
@@ -278,7 +302,7 @@ exports.signup = async (req, res, next) => {
         }
 
         // Check if consumer already exists
-        const existingConsumer = await Consumer.findOne({
+        const existingConsumer = await User.findOne({
             $or: [{ email }, { phone }]
         });
 
@@ -290,13 +314,24 @@ exports.signup = async (req, res, next) => {
         }
 
         // Create new consumer
-        const newConsumer = await Consumer.create({
+        const signupData = {
             name,
             email,
-            phone,
+            phone: sanitizePhone(phone),
             password,
+            role: 'consumer',
             isVerified: false
-        });
+        };
+
+        // Handle referral code during direct signup
+        if (req.body.referralCode) {
+            const referrer = await User.findOne({ referralCode: req.body.referralCode.toUpperCase() });
+            if (referrer) {
+                signupData.referredBy = referrer._id;
+            }
+        }
+
+        const newConsumer = await User.create(signupData);
 
         // Generate OTP for verification
         const otp = newConsumer.generateOTP();
@@ -325,7 +360,16 @@ exports.signup = async (req, res, next) => {
 
     } catch (error) {
         console.error('Error in signup:', error);
-        
+
+        // Handle Mongoose validation errors
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(el => el.message);
+            return res.status(400).json({
+                status: 'fail',
+                message: messages.join('. ')
+            });
+        }
+
         // Handle duplicate key errors
         if (error.code === 11000) {
             const field = Object.keys(error.keyValue)[0];
@@ -370,7 +414,7 @@ exports.protect = async (req, res, next) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
 
         // 3) Check if consumer still exists
-        const currentConsumer = await Consumer.findById(decoded.id);
+        const currentConsumer = await User.findById(decoded.id);
         if (!currentConsumer) {
             return res.status(401).json({
                 status: 'fail',
@@ -387,7 +431,7 @@ exports.protect = async (req, res, next) => {
         }
 
         // Grant access to protected route
-        req.consumer = currentConsumer;
+        req.user = currentConsumer;
         next();
 
     } catch (error) {
@@ -397,7 +441,7 @@ exports.protect = async (req, res, next) => {
                 message: 'Invalid token. Please log in again.'
             });
         }
-        
+
         if (error.name === 'TokenExpiredError') {
             return res.status(401).json({
                 status: 'fail',
@@ -415,7 +459,7 @@ exports.protect = async (req, res, next) => {
 // Get current user profile
 exports.getMe = async (req, res) => {
     try {
-        const consumer = await Consumer.findById(req.consumer.id)
+        const consumer = await User.findById(req.user.id)
             .populate('vehicles')
             .populate('primaryVehicle')
             .populate('subscription');

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
+import { vendorAPI } from '../../../utils/vendorApi';
+import { toast } from 'react-hot-toast';
 import {
     Building2,
     Mail,
@@ -18,7 +20,7 @@ import {
 
 const VendorSignup = () => {
     const navigate = useNavigate();
-    const { register, login } = useAuth();
+    const { vendorSignup } = useAuth();
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
@@ -30,24 +32,26 @@ const VendorSignup = () => {
         idProof: null
     });
 
-    const handleSignup = (e) => {
+    const handleSignup = async (e) => {
         e.preventDefault();
         setLoading(true);
 
-        setTimeout(() => {
-            const userData = {
-                ...formData,
-                role: 'vendor',
-                id: 'VND-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
-                verificationStatus: 'pending',
-                registeredAt: new Date().toISOString(),
-                idProof: formData.idProof || 'https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?w=400&q=80' // Placeholder if no file
-            };
-            register('vendor', userData);
+        try {
+            const res = await vendorSignup(formData);
+            if (res.success) {
+                toast.success('Registration successful! Redirecting...');
+                setTimeout(() => {
+                    navigate('/vendor');
+                }, 1000);
+            } else {
+                toast.error(res.error || 'Signup failed. Please try again.');
+            }
+        } catch (error) {
+            console.error('Signup failed:', error);
+            toast.error('Connection failure. Please retry.');
+        } finally {
             setLoading(false);
-            login('vendor', userData);
-            navigate('/vendor');
-        }, 1500);
+        }
     };
 
     return (

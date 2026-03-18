@@ -3,6 +3,8 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Home, Heart, ShoppingCart, User, Gift, Zap, Truck, ShoppingBag, UserCheck } from 'lucide-react';
 import { useCart } from '../../../../context/CartContext';
+import { useAuth } from '../../../../context/AuthContext';
+import PremiumBadge from '../membership/PremiumBadge';
 
 const SHOP_NAV_ITEMS = [
     { id: 'shop', to: '/e-shop', icon: Home, label: 'Shop' },
@@ -15,6 +17,7 @@ const MAIN_NAV_ITEMS = [
     { id: 'home', to: '/', icon: Home, label: 'Home' },
     { id: 'instant', to: '/instant-wash', icon: Zap, label: 'Instant' },
     { id: 'pickup', to: '/full-wash-booking', icon: Truck, label: 'Studio' },
+    { id: 'gallery', to: '/portfolio', icon: ShoppingBag, label: 'Gallery' },
     { id: 'spare-driver', to: '/spare-driver', icon: UserCheck, label: 'Driver' },
     { id: 'products', to: '/e-shop', icon: ShoppingBag, label: 'Products' },
     { id: 'profile', to: '/profile', icon: User, label: 'Profile' }
@@ -22,6 +25,7 @@ const MAIN_NAV_ITEMS = [
 
 const MobileLayout = ({ children, hideNav = false }) => {
     const { cartCount } = useCart();
+    const { isBlackPassMember } = useAuth();
     const location = useLocation();
 
     // Determine if we are in the shop flow
@@ -61,6 +65,11 @@ const MobileLayout = ({ children, hideNav = false }) => {
                                             </span>
                                         )}
 
+                                        {tab.id === 'profile' && isBlackPassMember && (
+                                            <div className="absolute -top-2 -right-3 scale-[0.45]">
+                                                <PremiumBadge />
+                                            </div>
+                                        )}
                                     </div>
                                     <span className={`text-[9px] font-[1000] uppercase tracking-widest ${isActive ? 'text-brand' : (isShopFlow ? 'text-[#A0A0A0]' : 'text-[#8E7E74]')
                                         }`}>

@@ -8,49 +8,47 @@ import {
 } from 'lucide-react';
 import MobileLayout from '../components/layout/MobileLayout';
 
-const STUDIOS = [
-    {
-        id: 'studio-1',
-        name: 'Glow Auto Studio',
-        location: 'Indiranagar · 2.4 km',
-        rating: 4.9,
-        reviews: 840,
-        image: 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=600&q=80',
-        tags: ['Ceramic Pro', 'Eco Wash'],
-        price: '₹1,299',
-        isElite: true,
-        features: ['Pickup Available', 'CCTV Monitor', 'Waiting Lounge']
-    },
-    {
-        id: 'studio-2',
-        name: 'CarWash Signature Hub',
-        location: 'HSR Layout · 0.8 km',
-        rating: 4.8,
-        reviews: 1200,
-        image: 'https://images.unsplash.com/photo-1601362840469-51e4d8d59085?w=600&q=80',
-        tags: ['Express Wash', 'Foam Detail'],
-        price: '₹899',
-        isElite: true,
-        features: ['Pickup Available', 'Snack Bar', 'Fast Lane']
-    },
-    {
-        id: 'studio-3',
-        name: 'The Detailer Lab',
-        location: 'Koramangala · 3.2 km',
-        rating: 4.7,
-        reviews: 450,
-        image: 'https://images.unsplash.com/photo-1552933529-e359b247726e?w=600&q=80',
-        tags: ['Interior Deep', 'Leather Care'],
-        price: '₹1,499',
-        isElite: false,
-        features: ['Self-Drop only', 'Expert Polish']
-    },
-];
-
 const StudioDiscovery = () => {
     const navigate = useNavigate();
     const [search, setSearch] = useState('');
     const [activeFilter, setActiveFilter] = useState('All');
+    const [studios, setStudios] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    React.useEffect(() => {
+        const fetchStudios = async () => {
+            try {
+                setLoading(true);
+                const response = await serviceAPI.getHubs({ type: 'Studio' });
+                if (response.status === 'success') {
+                    // Map backend Hubs to UI format
+                    const mappedStudios = response.data.hubs.map(hub => ({
+                        id: hub._id,
+                        name: hub.vendor?.profile?.studioName || hub.name,
+                        location: `${hub.city} · ${hub.load} Load`,
+                        rating: hub.vendor?.rating || 4.8,
+                        reviews: Math.floor(Math.random() * 500) + 100, // Simulated reviews count
+                        image: hub.vendor?.profile?.avatar || 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=600&q=80',
+                        tags: [hub.city, 'Express Wash'],
+                        price: '₹899', // Starting price placeholder
+                        isElite: hub.type === 'Studio',
+                        features: ['Pickup Available', 'CCTV Monitor', 'Waiting Lounge']
+                    }));
+                    setStudios(mappedStudios);
+                }
+            } catch (error) {
+                console.error('Failed to fetch studios:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchStudios();
+    }, []);
+
+    const filteredStudios = studios.filter(s =>
+        s.name.toLowerCase().includes(search.toLowerCase()) ||
+        s.location.toLowerCase().includes(search.toLowerCase())
+    );
 
     return (
         <MobileLayout hideNav>
@@ -111,59 +109,70 @@ const StudioDiscovery = () => {
 
                 {/* ── Studio List ── */}
                 <div className="space-y-4">
-                    {STUDIOS.map((studio, i) => (
-                        <motion.div
-                            key={studio.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.1 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => navigate(`/map?studio=${studio.id}&type=vendor&price=${studio.price}`)}
-                            className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden group cursor-pointer"
-                        >
-                            {/* Image Header */}
-                            <div className="relative h-44 overflow-hidden">
-                                <img src={studio.image} alt={studio.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                                {studio.isElite && (
-                                    <div className="absolute top-3 left-3 bg-brand px-2.5 py-1.5 rounded-lg flex items-center gap-1.5">
-                                        <Zap size={10} className="text-white" fill="white" />
-                                        <span className="text-white text-[8px] font-black uppercase tracking-widest">Elite Service</span>
-                                    </div>
-                                )}
-                                <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
-                                    <div>
-                                        <h3 className="text-white text-lg font-black tracking-tight leading-none mb-1">{studio.name}</h3>
-                                        <div className="flex items-center gap-2">
-                                            <div className="flex items-center gap-1 bg-white/20 backdrop-blur-md px-2 py-0.5 rounded-md">
-                                                <Star size={10} className="text-amber-400" fill="currentColor" />
-                                                <span className="text-white text-[10px] font-black">{studio.rating}</span>
+                    {loading ? (
+                        [1, 2, 3].map(i => (
+                            <div key={i} className="h-64 bg-gray-50 rounded-2xl animate-pulse" />
+                        ))
+                    ) : filteredStudios.length === 0 ? (
+                        <div className="py-20 text-center">
+                            <MapPin size={40} className="mx-auto text-gray-200 mb-4" />
+                            <p className="text-xs font-bold text-content-subtle uppercase tracking-widest">No studios found nearby</p>
+                        </div>
+                    ) : (
+                        filteredStudios.map((studio, i) => (
+                            <motion.div
+                                key={studio.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: i * 0.1 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => navigate(`/map?studio=${studio.id}&type=vendor&price=${studio.price}`)}
+                                className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden group cursor-pointer"
+                            >
+                                {/* Image Header */}
+                                <div className="relative h-44 overflow-hidden">
+                                    <img src={studio.image} alt={studio.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                    {studio.isElite && (
+                                        <div className="absolute top-3 left-3 bg-brand px-2.5 py-1.5 rounded-lg flex items-center gap-1.5">
+                                            <Zap size={10} className="text-white" fill="white" />
+                                            <span className="text-white text-[8px] font-black uppercase tracking-widest">Elite Service</span>
+                                        </div>
+                                    )}
+                                    <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
+                                        <div>
+                                            <h3 className="text-white text-lg font-black tracking-tight leading-none mb-1">{studio.name}</h3>
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-1 bg-white/20 backdrop-blur-md px-2 py-0.5 rounded-md">
+                                                    <Star size={10} className="text-amber-400" fill="currentColor" />
+                                                    <span className="text-white text-[10px] font-black">{studio.rating}</span>
+                                                </div>
+                                                <span className="text-white/60 text-[10px] font-bold">{studio.location}</span>
                                             </div>
-                                            <span className="text-white/60 text-[10px] font-bold">{studio.location}</span>
+                                        </div>
+                                        <div className="bg-white p-2.5 rounded-xl shadow-lg">
+                                            <p className="text-[7px] font-black text-content-subtle uppercase tracking-widest leading-none mb-0.5">Starts at</p>
+                                            <p className="text-brand font-black text-base leading-none italic">{studio.price}</p>
                                         </div>
                                     </div>
-                                    <div className="bg-white p-2.5 rounded-xl shadow-lg">
-                                        <p className="text-[7px] font-black text-content-subtle uppercase tracking-widest leading-none mb-0.5">Starts at</p>
-                                        <p className="text-brand font-black text-base leading-none italic">{studio.price}</p>
-                                    </div>
                                 </div>
-                            </div>
 
-                            {/* Features Footer */}
-                            <div className="p-4 flex items-center justify-between">
-                                <div className="flex gap-2">
-                                    {studio.features.slice(0, 2).map(f => (
-                                        <div key={f} className="flex items-center gap-1 text-[9px] font-black text-content-subtle uppercase tracking-wider">
-                                            <ShieldCheck size={12} className="text-brand" /> {f}
-                                        </div>
-                                    ))}
+                                {/* Features Footer */}
+                                <div className="p-4 flex items-center justify-between">
+                                    <div className="flex gap-2">
+                                        {studio.features.slice(0, 2).map(f => (
+                                            <div key={f} className="flex items-center gap-1 text-[9px] font-black text-content-subtle uppercase tracking-wider">
+                                                <ShieldCheck size={12} className="text-brand" /> {f}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <button className="w-8 h-8 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-brand group-hover:bg-brand group-hover:text-white transition-all">
+                                        <ArrowRight size={14} strokeWidth={3} />
+                                    </button>
                                 </div>
-                                <button className="w-8 h-8 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-brand group-hover:bg-brand group-hover:text-white transition-all">
-                                    <ArrowRight size={14} strokeWidth={3} />
-                                </button>
-                            </div>
-                        </motion.div>
-                    ))}
+                            </motion.div>
+                        ))
+                    )}
                 </div>
 
                 {/* ── Promotion ── */}

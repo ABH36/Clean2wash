@@ -1,15 +1,76 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Gift, ChevronLeft, Copy, Share2, Users, Trophy } from 'lucide-react';
+import { Gift, ChevronLeft, Copy, Share2, Users, Trophy, Check } from 'lucide-react';
+import { referralAPI } from '../../../utils/api';
 
 const ReferEarn = () => {
     const navigate = useNavigate();
+    const [loading, setLoading] = useState(true);
+    const [copied, setCopied] = useState(false);
+    const [referralData, setReferralData] = useState({
+        referralCode: 'WASH50PA',
+        referralsCount: 0,
+        totalEarnings: 0,
+        rewardDetails: {
+            userGets: '₹50',
+            friendGets: '₹50',
+            subtitle: 'Refer a friend and you both get ₹50 credits on the next premium wash!'
+        }
+    });
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const res = await referralAPI.getStats();
+                if (res.status === 'success') {
+                    setReferralData(res.data);
+                }
+            } catch (err) {
+                console.error("Failed to load referral stats:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchStats();
+    }, []);
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(referralData.referralCode);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleShare = async () => {
+        const shareData = {
+            title: 'Clean-2-Wash Referral',
+            text: `Get ${referralData.rewardDetails.friendGets} off on your first premium car wash with my code: ${referralData.referralCode}`,
+            url: window.location.origin
+        };
+
+        try {
+            if (navigator.share) {
+                await navigator.share(shareData);
+            } else {
+                handleCopy();
+            }
+        } catch (err) {
+            console.error('Error sharing:', err);
+        }
+    };
 
     const stats = [
-        { label: 'Referrals', value: '04', icon: Users },
-        { label: 'Earned', value: '₹450', icon: Trophy }
+        { label: 'Referrals', value: referralData.referralsCount.toString().padStart(2, '0'), icon: Users },
+        { label: 'Earned', value: `₹${referralData.totalEarnings}`, icon: Trophy }
     ];
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-white flex items-center justify-center">
+                <div className="w-10 h-10 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans">
@@ -31,7 +92,7 @@ const ReferEarn = () => {
                         </div>
                         <h2 className="text-2xl font-black text-white italic tracking-tight leading-none mb-3">Share the Shine!</h2>
                         <p className="text-white/80 text-xs font-bold leading-relaxed max-w-[80%] mx-auto">
-                            Refer a friend and you both get ₹50 credits on the next premium wash!
+                            {referralData.rewardDetails.subtitle}
                         </p>
                     </div>
                     {/* Decorative Blur */}
@@ -55,10 +116,25 @@ const ReferEarn = () => {
                 <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-soft mb-8">
                     <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] mb-4 text-center">Your Referral Code</p>
                     <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl border border-gray-100 border-dashed relative">
-                        <span className="flex-1 font-mono text-xl font-black text-content tracking-[0.3em] uppercase italic text-center">WASH50PA</span>
+                        <span className="flex-1 font-mono text-xl font-black text-content tracking-[0.3em] uppercase italic text-center">
+                            {referralData.referralCode}
+                        </span>
                         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-2">
-                            <button className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-gray-100 text-brand active:scale-95 transition-all">
-                                <Copy size={16} />
+                            <button 
+                                onClick={handleCopy}
+                                className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-gray-100 text-brand active:scale-95 transition-all"
+                            >
+                                <AnimatePresence mode="wait">
+                                    {copied ? (
+                                        <motion.div key="check" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
+                                            <Check size={16} />
+                                        </motion.div>
+                                    ) : (
+                                        <motion.div key="copy" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
+                                            <Copy size={16} />
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </button>
                         </div>
                     </div>
@@ -67,6 +143,7 @@ const ReferEarn = () => {
                 {/* Primary CTA */}
                 <motion.button
                     whileTap={{ scale: 0.97 }}
+                    onClick={handleShare}
                     className="w-full h-16 bg-content text-white rounded-[2rem] font-black text-base flex items-center justify-center gap-3 shadow-2xl shadow-gray-200"
                 >
                     <Share2 size={20} />

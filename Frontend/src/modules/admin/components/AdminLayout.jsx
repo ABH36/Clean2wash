@@ -24,7 +24,9 @@ import {
     Sun,
     Crown,
     ShoppingBag,
-    UserCheck
+    UserCheck,
+    Wallet,
+    Zap
 } from 'lucide-react';
 
 
@@ -57,9 +59,11 @@ const AdminLayout = ({ children, title }) => {
         { icon: <UserCheck size={18} />, label: 'Chauffeur Drivers', path: '/admin/spare-drivers' },
         { icon: <Package size={18} />, label: 'Operations Hub', path: '/admin/bookings' },
         { icon: <Car size={18} />, label: 'Service Catalog', path: '/admin/services' },
+        { icon: <Car size={18} />, label: 'Vehicle Catalog', path: '/admin/vehicle-catalog' },
         { icon: <MapPin size={18} />, label: 'Hubs & Studio', path: '/admin/hubs' },
         { icon: <Crown size={18} />, label: 'Subscription Control', path: '/admin/subscriptions' },
         { icon: <Tag size={18} />, label: 'Promotions', path: '/admin/promotions' },
+        { icon: <Wallet size={18} />, label: 'Audit Ledger', path: '/admin/transactions' },
         { icon: <Settings size={18} />, label: 'System Settings', path: '/admin/settings' },
     ];
 
@@ -134,7 +138,7 @@ const AdminLayout = ({ children, title }) => {
                             <Menu size={18} />
                         </button>
                         <div className="h-6 w-px bg-gray-100/20 mx-2 hidden lg:block" />
-                        <h2 className="text-sm lg:text-lg font-black text-content italic tracking-tight uppercase truncate max-w-[150px] lg:max-w-none">
+                        <h2 className="text-sm lg:text-lg font-black text-content tracking-tight uppercase truncate max-w-[150px] lg:max-w-none">
                             {title}
                         </h2>
                     </div>
@@ -145,7 +149,7 @@ const AdminLayout = ({ children, title }) => {
                             <input
                                 type="text"
                                 placeholder="Universal Query..."
-                                className="bg-transparent outline-none text-[11px] font-bold text-content w-48 uppercase tracking-widest italic"
+                                className="bg-transparent outline-none text-[11px] font-bold text-content w-48 uppercase tracking-widest"
                             />
                         </div>
                         <div className="flex items-center gap-2">
@@ -163,12 +167,12 @@ const AdminLayout = ({ children, title }) => {
                             </button>
                             <div className="w-px h-8 bg-gray-100/20 mx-1 lg:mx-2" />
                             <div className="flex items-center gap-3 bg-background pr-4 pl-1.5 py-1.5 rounded-2xl border border-gray-100/10 hover:border-brand/30 transition-all cursor-pointer group">
-                                <div className="w-9 h-9 rounded-xl bg-brand/10 flex items-center justify-center text-brand font-black text-xs italic shrink-0 group-hover:bg-brand group-hover:text-white transition-all">
+                                <div className="w-9 h-9 rounded-xl bg-brand/10 flex items-center justify-center text-brand font-black text-xs shrink-0 group-hover:bg-brand group-hover:text-white transition-all">
                                     SY
                                 </div>
                                 <div className="hidden sm:block text-left overflow-hidden">
-                                    <p className="text-[10px] font-black text-content italic leading-none truncate w-20 uppercase">Admin</p>
-                                    <p className="text-[7px] font-black text-brand uppercase tracking-widest mt-1.5 opacity-60 italic">Superuser</p>
+                                    <p className="text-[10px] font-black text-content leading-none truncate w-20 uppercase">Admin</p>
+                                    <p className="text-[7px] font-black text-brand uppercase tracking-widest mt-1.5 opacity-60">Superuser</p>
                                 </div>
                             </div>
                         </div>
@@ -197,8 +201,8 @@ const SidebarContent = ({ isSidebarOpen, NAV_ITEMS, location, navigate, onLogout
                     transition={{ delay: 0.1 }}
                     className="flex flex-col"
                 >
-                    <span className="text-xl font-black italic tracking-tighter leading-none text-white whitespace-nowrap">CARWASH <span className="text-brand">BASE</span></span>
-                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white/30 mt-1.5 italic">Operational Unit</span>
+                    <span className="text-xl font-black tracking-tighter leading-none text-white whitespace-nowrap">CARWASH <span className="text-brand">BASE</span></span>
+                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white/30 mt-1.5">Operational Unit</span>
                 </motion.div>
             )}
         </div>
@@ -229,7 +233,7 @@ const SidebarContent = ({ isSidebarOpen, NAV_ITEMS, location, navigate, onLogout
                             {item.icon}
                         </div>
                         {isSidebarOpen && (
-                            <span className={`relative z-10 text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 italic ${isActive ? 'translate-x-1' : 'group-hover:translate-x-1'}`}>
+                            <span className={`relative z-10 text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 ${isActive ? 'translate-x-1' : 'group-hover:translate-x-1'}`}>
                                 {item.label}
                             </span>
                         )}
@@ -251,7 +255,7 @@ const SidebarContent = ({ isSidebarOpen, NAV_ITEMS, location, navigate, onLogout
                 className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-red-600 text-white/20 hover:text-white transition-all group relative overflow-hidden"
             >
                 <LogOut size={18} className="relative z-10 group-hover:-translate-x-1 transition-transform" />
-                {isSidebarOpen && <span className="relative z-10 text-[10px] font-black uppercase tracking-[0.2em] italic">Decommission Login</span>}
+                {isSidebarOpen && <span className="relative z-10 text-[10px] font-black uppercase tracking-[0.2em]">Decommission Login</span>}
             </button>
         </div>
     </div>

@@ -6,8 +6,16 @@ const authController = require('../controllers/authController');
 const vehicleController = require('../controllers/vehicleController');
 const bookingController = require('../controllers/bookingController');
 const serviceController = require('../controllers/serviceController');
+const productController = require('../controllers/productController');
 const profileController = require('../controllers/profileController');
 const paymentController = require('../controllers/paymentController');
+const mapController = require('../controllers/mapController');
+
+// Import Auth Middleware
+const authMiddleware = require('../../../middlewares/authMiddleware');
+
+const walletRoutes = require('./walletRoutes');
+const referralRoutes = require('./referralRoutes');
 
 // Authentication routes
 router.post('/auth/send-otp', authController.sendOTP);
@@ -18,19 +26,51 @@ router.post('/auth/logout', authController.logout);
 
 // Public routes (no authentication required)
 router.get('/services', serviceController.getServices);
-router.get('/services/:serviceId', serviceController.getServiceDetails);
+router.get('/services/banners', serviceController.getBanners);
 router.get('/services/categories', serviceController.getServiceCategories);
-router.get('/services/:serviceId/plans', serviceController.getServicePlans);
+router.get('/services/home', serviceController.getHomeData);
+router.get('/services/apartment-flow', serviceController.getApartmentFlowData);
+router.get('/services/instant-config', serviceController.getInstantWashConfig);
+router.get('/services/search', serviceController.search);
+router.get('/services/stats', serviceController.getPlatformStats);
+
+router.get('/portfolio', authMiddleware.optionalProtect, serviceController.getPortfolio);
+router.patch('/portfolio/:id/like', serviceController.likePortfolioItem);
+router.get('/services/promotions', serviceController.getPromotionalCards);
+router.post('/services/promotions/validate-coupon', serviceController.validateCoupon);
+router.get('/hubs', serviceController.getHubs);
+router.get('/services/vehicle-models', serviceController.getVehicleModels);
+
+// Product routes
+router.get('/products', productController.getProducts);
+router.get('/eshop/metadata', productController.getEshopMetadata);
+router.get('/products/:id', productController.getProductDetails);
+
+// Service Routes (Specific endpoints before parameterized)
+router.get('/services/plans', serviceController.getPlans);
+router.get('/services/promotions/active-referral', serviceController.getActiveReferral);
 router.post('/services/calculate-pricing', serviceController.calculatePricing);
 router.get('/services/time-slots', serviceController.getTimeSlots);
 router.post('/services/validate-availability', serviceController.validateServiceAvailability);
+router.get('/services/:serviceId/plans', serviceController.getServicePlans);
+router.get('/services/:serviceId', serviceController.getServiceDetails);
+
 router.get('/vehicles/types', vehicleController.getVehicleTypes);
 
 // Payment routes (public - for getting key)
 router.get('/payment/key', paymentController.getRazorpayKey);
 
+// Map Proxy routes
+router.get('/maps/proxy/reverse', mapController.reverseGeocodeProxy);
+router.get('/maps/proxy/search', mapController.searchProxy);
+
 // Protected routes (require authentication)
-router.use(authController.protect);
+router.use(authMiddleware.protect);
+router.use(authMiddleware.restrictTo('consumer'));
+
+// Wallet routes
+router.use('/wallet', walletRoutes);
+router.use('/referral', referralRoutes);
 
 // Profile routes
 router.get('/profile', authController.getMe);
@@ -49,11 +89,6 @@ router.patch('/vehicles/:id/set-primary', vehicleController.setPrimaryVehicle);
 router.get('/vehicles/:id/compliance', vehicleController.getComplianceStatus);
 router.post('/vehicles/fetch-vahan', vehicleController.fetchFromVAHAN);
 
-// Service routes (protected)
-router.post('/services/calculate-pricing', serviceController.calculatePricing);
-router.get('/services/time-slots', serviceController.getTimeSlots);
-router.post('/services/validate-availability', serviceController.validateServiceAvailability);
-
 // Booking routes
 router.get('/bookings', bookingController.getMyBookings);
 router.get('/bookings/upcoming', bookingController.getUpcomingBookings);
@@ -66,10 +101,6 @@ router.delete('/bookings/:id', bookingController.cancelBooking);
 router.post('/bookings/:id/feedback', bookingController.submitFeedback);
 router.post('/bookings/:id/issues', bookingController.reportIssue);
 
-// Wallet routes
-router.get('/wallet', profileController.getWallet);
-router.post('/wallet/add', profileController.addToWallet);
-
 // Payment routes (protected)
 router.post('/payment/create-order', paymentController.createOrder);
 router.post('/payment/verify', paymentController.verifyPayment);
@@ -78,10 +109,18 @@ router.post('/payment/verify', paymentController.verifyPayment);
 router.get('/notifications', profileController.getNotifications);
 router.patch('/notifications/:notificationId/read', profileController.markNotificationRead);
 router.patch('/notifications/read-all', profileController.markAllNotificationsRead);
+router.delete('/notifications/clear', profileController.clearNotifications);
+
+// Trusted Contacts routes
+router.get('/profile/trusted-contacts', profileController.getTrustedContacts);
+router.post('/profile/trusted-contacts', profileController.addTrustedContact);
+router.delete('/profile/trusted-contacts/:contactId', profileController.removeTrustedContact);
 
 // Account management
 router.get('/subscription', profileController.getSubscription);
 router.post('/subscription', profileController.createSubscription);
+router.patch('/subscription/pause', profileController.pauseSubscription);
+router.patch('/subscription/resume', profileController.resumeSubscription);
 router.delete('/subscription', profileController.cancelSubscription);
 router.delete('/account', profileController.deleteAccount);
 

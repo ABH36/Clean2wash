@@ -2,23 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdminLayout from '../components/AdminLayout';
 import {
-    MapPin,
-    Navigation,
-    Plus,
     Search,
-    Edit2,
-    Trash2,
-    X,
-    Activity,
-    Shield,
-    Users,
-    Zap,
     LayoutGrid,
     List,
-    MoreVertical,
-    CheckCircle2,
-    Globe
+    Plus,
+    MapPin,
+    Edit2,
+    Trash2,
+    Globe,
+    Navigation,
+    Users,
+    X,
+    CheckCircle2
 } from 'lucide-react';
+import { adminAPI } from '../../../utils/adminApi';
+import { toast } from 'react-hot-toast';
 
 const AdminHubs = () => {
     const [view, setView] = useState('grid');
@@ -26,22 +24,42 @@ const AdminHubs = () => {
     const [filter, setFilter] = useState('All');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingHub, setEditingHub] = useState(null);
-    const [hubs, setHubs] = useState(() => {
-        const saved = localStorage.getItem('CarWash_hubs');
-        return saved ? JSON.parse(saved) : [
-            { id: 'HUB-001', name: 'Sector 15 Studio', city: 'Faridabad', captains: 24, status: 'Online', efficiency: '98%', manager: 'Rahul K.', load: 'High', type: 'Studio' },
-            { id: 'HUB-002', name: 'Cyber Hub Node', city: 'Gurugram', captains: 42, status: 'Online', efficiency: '95%', manager: 'Sneha G.', load: 'Peak', type: 'Node' },
-            { id: 'HUB-003', name: 'Indirapuram Hub', city: 'Noida', captains: 18, status: 'Offline', efficiency: '88%', manager: 'Amit S.', load: 'Low', type: 'Hub' },
-            { id: 'HUB-004', name: 'HSR Layout Node', city: 'Bengaluru', captains: 35, status: 'Online', efficiency: '92%', manager: 'Vikram D.', load: 'Moderate', type: 'Node' },
-        ];
-    });
-
-    const [formData, setFormData] = useState({ name: '', city: '', captains: '', manager: '', status: 'Online', type: 'Studio', load: 'Moderate' });
+    const [hubs, setHubs] = useState([]);
+    const [vendors, setVendors] = useState([]);
+    const [formData, setFormData] = useState({ name: '', city: '', captains: '', manager: '', status: 'Online', type: 'Studio', load: 'Moderate', vendor: '' });
     const [loading, setLoading] = useState(false);
+    const [pageLoading, setPageLoading] = useState(true);
+    const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, id: null });
 
     useEffect(() => {
-        localStorage.setItem('CarWash_hubs', JSON.stringify(hubs));
-    }, [hubs]);
+        fetchHubs();
+        fetchVendors();
+    }, []);
+
+    const fetchVendors = async () => {
+        try {
+            const response = await adminAPI.getUsers('vendor');
+            if (response.status === 'success') {
+                setVendors(response.data.users || []);
+            }
+        } catch (error) {
+            console.error('Failed to fetch vendors:', error);
+        }
+    };
+
+    const fetchHubs = async () => {
+        try {
+            setPageLoading(true);
+            const response = await adminAPI.getHubs();
+            if (response.status === 'success') {
+                setHubs(response.data.hubs.map(h => ({ ...h, id: h._id })));
+            }
+        } catch (error) {
+            console.error('Failed to fetch hubs:', error);
+        } finally {
+            setPageLoading(false);
+        }
+    };
 
     const filteredHubs = hubs.filter(h => {
         const matchesSearch = h.name.toLowerCase().includes(search.toLowerCase()) || h.city.toLowerCase().includes(search.toLowerCase());
@@ -51,34 +69,46 @@ const AdminHubs = () => {
 
     const handleOpenAdd = () => {
         setEditingHub(null);
-        setFormData({ name: '', city: '', captains: '', manager: '', status: 'Online', type: 'Studio', load: 'Moderate' });
+        setFormData({ name: '', city: '', captains: '', manager: '', status: 'Online', type: 'Studio', load: 'Moderate', vendor: '' });
         setIsModalOpen(true);
     };
 
     const handleOpenEdit = (hub) => {
         setEditingHub(hub);
-        setFormData({ ...hub });
+        setFormData({ ...hub, vendor: hub.vendor?._id || hub.vendor || '' });
         setIsModalOpen(true);
     };
 
-    const handleSave = (e) => {
+    const handleSave = async (e) => {
         e.preventDefault();
         setLoading(true);
-        setTimeout(() => {
+        try {
             if (editingHub) {
-                setHubs(prev => prev.map(h => h.id === editingHub.id ? { ...h, ...formData } : h));
+                await adminAPI.updateHub(editingHub._id, formData);
             } else {
-                const newId = `HUB-${String(hubs.length + 1).padStart(3, '0')}`;
-                setHubs(prev => [{ ...formData, id: newId, efficiency: '0%' }, ...prev]);
+                await adminAPI.createHub(formData);
             }
-            setLoading(false);
+            await fetchHubs();
             setIsModalOpen(false);
-        }, 600);
+            toast.success(editingHub ? 'Node configuration updated' : 'New node deployed successfully');
+        } catch (error) {
+            toast.error('Operation failed: ' + error.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleDelete = (id) => {
-        if (window.confirm('Decommission this infrastructure node?')) {
+    const handleDelete = async () => {
+        const id = deleteConfirm.id;
+        if (!id) return;
+        
+        try {
+            await adminAPI.deleteHub(id);
             setHubs(prev => prev.filter(h => h.id !== id));
+            toast.success('Infrastructure node decommissioned');
+            setDeleteConfirm({ isOpen: false, id: null });
+        } catch (error) {
+            toast.error('Decommission failed: ' + error.message);
         }
     };
 
@@ -124,7 +154,17 @@ const AdminHubs = () => {
                 </div>
 
                 {/* Hub Grid/List */}
-                {view === 'grid' ? (
+                {pageLoading ? (
+                    <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[2.5rem] border border-gray-100 shadow-soft">
+                        <div className="w-12 h-12 border-4 border-brand border-t-transparent rounded-full animate-spin mb-4" />
+                        <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em]">Scanning Node Grid...</p>
+                    </div>
+                ) : filteredHubs.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[2.5rem] border border-gray-100 shadow-soft">
+                        <MapPin size={40} className="text-gray-100 mb-4" />
+                        <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em]">No operational nodes detected</p>
+                    </div>
+                ) : view === 'grid' ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {filteredHubs.map((hub, i) => (
                             <motion.div
@@ -145,16 +185,24 @@ const AdminHubs = () => {
                                             </span>
                                             <div className="flex gap-1">
                                                 <button onClick={() => handleOpenEdit(hub)} className="w-7 h-7 bg-gray-50 rounded-lg flex items-center justify-center text-content hover:bg-brand hover:text-white transition-all"><Edit2 size={12} /></button>
-                                                <button onClick={() => handleDelete(hub.id)} className="w-7 h-7 bg-gray-50 rounded-lg flex items-center justify-center text-content hover:bg-red-500 hover:text-white transition-all"><Trash2 size={12} /></button>
+                                                <button onClick={() => setDeleteConfirm({ isOpen: true, id: hub.id })} className="w-7 h-7 bg-gray-50 rounded-lg flex items-center justify-center text-content hover:bg-red-500 hover:text-white transition-all"><Trash2 size={12} /></button>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div>
-                                        <h4 className="text-xl font-black text-content italic uppercase tracking-tight truncate group-hover:text-brand transition-colors">{hub.name}</h4>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <Globe size={10} className="text-content-subtle" />
-                                            <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest italic">{hub.city} • {hub.id}</p>
+                                        <h4 className="text-xl font-black text-content uppercase tracking-tight truncate group-hover:text-brand transition-colors">{hub.name}</h4>
+                                        <div className="flex flex-col gap-1 mt-1">
+                                            <div className="flex items-center gap-2">
+                                                <Globe size={10} className="text-content-subtle" />
+                                                <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest">{hub.city}</p>
+                                            </div>
+                                            {hub.vendor && (
+                                                <div className="flex items-center gap-2">
+                                                    <Users size={10} className="text-brand" />
+                                                    <p className="text-[10px] font-black text-brand uppercase tracking-widest">{hub.vendor.profile?.studioName || hub.vendor.name}</p>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -162,11 +210,11 @@ const AdminHubs = () => {
                                 <div className="px-8 py-6 grid grid-cols-3 gap-4 border-t border-gray-50 mt-auto">
                                     <div>
                                         <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-1">Captains</p>
-                                        <h5 className="text-sm font-black text-content italic">{hub.captains}</h5>
+                                        <h5 className="text-sm font-black text-content">{hub.captains}</h5>
                                     </div>
                                     <div>
                                         <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-1">Efficiency</p>
-                                        <h5 className="text-sm font-black text-brand italic">{hub.efficiency}</h5>
+                                        <h5 className="text-sm font-black text-brand">{hub.efficiency}</h5>
                                     </div>
                                     <div className="text-right">
                                         <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-1">Load</p>
@@ -190,11 +238,11 @@ const AdminHubs = () => {
                         <table className="w-full text-left">
                             <thead className="bg-gray-50/50">
                                 <tr>
-                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest italic">Node / Location</th>
-                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest italic">Management</th>
-                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest italic text-center">Resources</th>
-                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest italic text-right">Metrics</th>
-                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest italic text-right">Status</th>
+                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest">Node / Location</th>
+                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest">Management</th>
+                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest text-center">Resources</th>
+                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest text-right">Metrics</th>
+                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest text-right">Status</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
@@ -206,15 +254,15 @@ const AdminHubs = () => {
                                                     <MapPin size={18} />
                                                 </div>
                                                 <div>
-                                                    <p className="text-xs font-black text-content italic leading-none mb-1.5 uppercase truncate max-w-[200px]">{hub.name}</p>
+                                                    <p className="text-xs font-black text-content leading-none mb-1.5 uppercase truncate max-w-[200px]">{hub.name}</p>
                                                     <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest">{hub.city} • {hub.type}</p>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-8 py-6">
                                             <div className="flex flex-col">
-                                                <p className="text-[10px] font-black text-content italic leading-none">{hub.manager}</p>
-                                                <p className="text-[8px] font-bold text-content-subtle uppercase tracking-widest mt-1">Lead Manager</p>
+                                                <p className="text-[10px] font-black text-content leading-none">{hub.vendor?.name || hub.manager || 'No Manager'}</p>
+                                                <p className="text-[8px] font-bold text-content-subtle uppercase tracking-widest mt-1">{hub.vendor?.profile?.studioName || 'Lead Manager'}</p>
                                             </div>
                                         </td>
                                         <td className="px-8 py-6 text-center">
@@ -225,7 +273,7 @@ const AdminHubs = () => {
                                         </td>
                                         <td className="px-8 py-6 text-right">
                                             <div className="flex flex-col items-end">
-                                                <p className="text-sm font-black text-content italic leading-none">{hub.efficiency}</p>
+                                                <p className="text-sm font-black text-content leading-none">{hub.efficiency}</p>
                                                 <p className="text-[8px] font-bold text-content-subtle uppercase tracking-widest mt-1">Avg Efficiency</p>
                                             </div>
                                         </td>
@@ -236,7 +284,7 @@ const AdminHubs = () => {
                                                 </span>
                                                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
                                                     <button onClick={() => handleOpenEdit(hub)} className="p-2 bg-gray-50 hover:bg-brand hover:text-white rounded-xl text-content-subtle transition-all"><Edit2 size={13} /></button>
-                                                    <button onClick={() => handleDelete(hub.id)} className="p-2 bg-gray-50 hover:bg-red-500 hover:text-white rounded-xl text-content-subtle transition-all"><Trash2 size={13} /></button>
+                                                    <button onClick={() => setDeleteConfirm({ isOpen: true, id: hub.id })} className="p-2 bg-gray-50 hover:bg-red-500 hover:text-white rounded-xl text-content-subtle transition-all"><Trash2 size={13} /></button>
                                                 </div>
                                             </div>
                                         </td>
@@ -263,22 +311,22 @@ const AdminHubs = () => {
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="bg-white w-full max-w-3xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-gray-100"
+                            className="bg-white w-[95%] md:w-full max-w-3xl rounded-[2rem] md:rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-gray-100 max-h-[90vh] overflow-y-auto"
                         >
-                            <div className="px-10 py-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                            <div className="px-6 md:px-10 py-6 md:py-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                                 <div>
-                                    <h2 className="text-xl font-black text-content italic leading-none uppercase">{editingHub ? 'Update Node Configuration' : 'Deploy New Node'}</h2>
-                                    <p className="text-[10px] font-black text-brand uppercase tracking-widest mt-2 italic px-1">Infrastructure Control Terminal</p>
+                                    <h2 className="text-xl font-black text-content leading-none uppercase">{editingHub ? 'Update Node Configuration' : 'Deploy New Node'}</h2>
+                                    <p className="text-[10px] font-black text-brand uppercase tracking-widest mt-2 px-1">Infrastructure Control Terminal</p>
                                 </div>
                                 <button onClick={() => setIsModalOpen(false)} className="p-3 bg-white hover:bg-gray-50 rounded-2xl border border-gray-100 text-content-subtle transition-all">
                                     <X size={20} />
                                 </button>
                             </div>
-                            <div className="p-10">
-                                <form onSubmit={handleSave} className="space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="p-6 md:p-10">
+                                <form onSubmit={handleSave} className="space-y-4 md:space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1 italic">Node Identity</label>
+                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Node Identity</label>
                                             <input
                                                 required
                                                 placeholder="e.g. Cyber Node Alpha"
@@ -288,7 +336,7 @@ const AdminHubs = () => {
                                             />
                                         </div>
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1 italic">Deployment City</label>
+                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Deployment City</label>
                                             <input
                                                 required
                                                 placeholder="e.g. Gurugram"
@@ -298,7 +346,7 @@ const AdminHubs = () => {
                                             />
                                         </div>
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1 italic">Station Type</label>
+                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Station Type</label>
                                             <select
                                                 className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm appearance-none"
                                                 value={formData.type}
@@ -310,7 +358,7 @@ const AdminHubs = () => {
                                             </select>
                                         </div>
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1 italic">Ops Status</label>
+                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Ops Status</label>
                                             <select
                                                 className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm appearance-none"
                                                 value={formData.status}
@@ -321,7 +369,7 @@ const AdminHubs = () => {
                                             </select>
                                         </div>
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1 italic">Active Captains</label>
+                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Active Captains</label>
                                             <input
                                                 required
                                                 type="number"
@@ -332,7 +380,27 @@ const AdminHubs = () => {
                                             />
                                         </div>
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1 italic">Lead Manager</label>
+                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Managed By (Vendor)</label>
+                                            <select
+                                                className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm appearance-none"
+                                                value={formData.vendor}
+                                                onChange={e => {
+                                                    const selectedVendor = vendors.find(v => v._id === e.target.value);
+                                                    setFormData({
+                                                        ...formData,
+                                                        vendor: e.target.value,
+                                                        manager: selectedVendor ? selectedVendor.name : formData.manager
+                                                    });
+                                                }}
+                                            >
+                                                <option value="">Select Vendor Partner</option>
+                                                {vendors.map(v => (
+                                                    <option key={v._id} value={v._id}>{v.profile?.studioName || v.name} ({v.name})</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Backup Manager Name</label>
                                             <input
                                                 required
                                                 placeholder="e.g. John Doe"
@@ -342,10 +410,10 @@ const AdminHubs = () => {
                                             />
                                         </div>
                                     </div>
-                                    <div className="pt-4">
+                                    <div className="pt-2 md:pt-4">
                                         <button
                                             disabled={loading}
-                                            className="w-full bg-content text-white py-5 rounded-[2rem] font-black text-[10px] uppercase tracking-[0.25em] shadow-2xl shadow-content/20 flex items-center justify-center gap-3 hover:bg-brand transition-all disabled:opacity-50"
+                                            className="w-full bg-content text-white py-4 md:py-5 rounded-[1.5rem] md:rounded-[2rem] font-black text-[10px] uppercase tracking-[0.25em] shadow-2xl shadow-content/20 flex items-center justify-center gap-3 hover:bg-brand transition-all disabled:opacity-50"
                                         >
                                             {loading ? 'Initializing Node...' : (
                                                 <>{editingHub ? 'Commit Configuration' : 'Confirm Deployment'} <CheckCircle2 size={18} /></>
@@ -353,6 +421,48 @@ const AdminHubs = () => {
                                         </button>
                                     </div>
                                 </form>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Delete Confirmation Modal */}
+            <AnimatePresence>
+                {deleteConfirm.isOpen && (
+                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setDeleteConfirm({ isOpen: false, id: null })}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 relative z-10 border border-gray-100 shadow-2xl text-center"
+                        >
+                            <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                                <Trash2 size={32} />
+                            </div>
+                            <h3 className="text-xl font-black text-content leading-none uppercase tracking-tighter mb-2">Decommission Node?</h3>
+                            <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mb-8 px-4">This action will permanently terminate this infrastructure node protocol.</p>
+                            
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setDeleteConfirm({ isOpen: false, id: null })}
+                                    className="flex-1 bg-gray-100 text-content-subtle py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDelete}
+                                    className="flex-1 bg-red-500 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all"
+                                >
+                                    Terminate
+                                </button>
                             </div>
                         </motion.div>
                     </div>

@@ -10,9 +10,9 @@ const OTPVerification = () => {
     const { verifyOTP } = useAuth();
 
     // Get from navigation state (login = no userData, signup = userData)
-    const { type, identifier, userData } = location.state || { type: 'phone', identifier: '' };
+    const { type, identifier, userData, devOtp } = location.state || { type: 'phone', identifier: '' };
 
-    const [otp, setOtp] = useState(['', '', '', '']);
+    const [otp, setOtp] = useState(devOtp ? devOtp.split('') : ['', '', '', '']);
     const [timeLeft, setTimeLeft] = useState(45);
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState('entering');
@@ -95,6 +95,14 @@ const OTPVerification = () => {
                     <p className="text-content-subtle text-[8px] font-black mb-8 leading-relaxed uppercase tracking-[0.2em] opacity-80">
                         Code sent to <span className="text-brand font-black ml-1 border-b border-brand/20">{identifier}</span>
                     </p>
+
+                    {devOtp && (
+                        <div className="bg-brand/10 border border-brand/20 rounded-lg p-3 mb-6 text-center">
+                            <p className="text-[10px] font-bold text-brand uppercase tracking-widest">
+                                Dev Mode OTP Auto-filled: {devOtp}
+                            </p>
+                        </div>
+                    )}
                 </motion.div>
 
                 <div className="flex justify-center gap-2.5 mb-8">

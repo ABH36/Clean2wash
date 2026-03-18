@@ -1,17 +1,18 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/captain';
+const API_BASE_URL = import.meta.env.VITE_CAPTAIN_API_URL || '/api/captain';
+const CAPTAIN_TOKEN_KEY = 'auth_captain_token';
 
 class ApiClient {
     constructor(baseURL = API_BASE_URL) {
         this.baseURL = baseURL;
-        this.token = localStorage.getItem('auth_token');
+        this.token = localStorage.getItem(CAPTAIN_TOKEN_KEY) || null;
     }
 
     setToken(token) {
         this.token = token;
         if (token) {
-            localStorage.setItem('auth_token', token);
+            localStorage.setItem(CAPTAIN_TOKEN_KEY, token);
         } else {
-            localStorage.removeItem('auth_token');
+            localStorage.removeItem(CAPTAIN_TOKEN_KEY);
         }
     }
 
@@ -28,6 +29,14 @@ class ApiClient {
 
         try {
             const response = await fetch(url, config);
+
+            // Handle 401 Unauthorized globally: Token expired or invalid
+            if (response.status === 401) {
+                console.warn('Captain API returned 401 Unauthorized. Clearing token to force re-login.');
+                this.setToken(null);
+                // Dispatch event so AuthContext or Root can catch and redirect
+                window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+            }
 
             // Check if response is empty (status 204) or has no body
             if (response.status === 204 || response.headers.get('content-length') === '0') {
@@ -50,7 +59,12 @@ class ApiClient {
             }
 
             if (!response.ok) {
-                throw new Error(data.message || `HTTP error! status: ${response.status}`);
+                // Attach the status to the error object so callers can distinguish types of failures
+                const error = new Error(data.message || `HTTP error! status: ${response.status}`);
+                error.status = response.status;
+
+                error.data = data;
+                throw error;
             }
 
             return data;
@@ -85,6 +99,13 @@ class ApiClient {
         });
     }
 
+    async signup(userData) {
+        return this.request('/auth/signup', {
+            method: 'POST',
+            body: JSON.stringify(userData),
+        });
+    }
+
     async logout() {
         return this.request('/auth/logout', {
             method: 'POST',
@@ -99,6 +120,16 @@ class ApiClient {
         return this.request('/profile', {
             method: 'PUT',
             body: JSON.stringify(profileData),
+        });
+    }
+
+    async updateLocation(lat, lng) {
+        // Handle both positional (lat, lng) and object {lat, lng} calls
+        // This ensures compatibility with existing calls and fixes the sync bug
+        const payload = (lat && typeof lat === 'object') ? lat : { lat, lng };
+        return this.request('/profile/location', {
+            method: 'PUT',
+            body: JSON.stringify(payload),
         });
     }
 
@@ -121,10 +152,16 @@ class ApiClient {
         });
     }
 
-    async updateJobStatus(jobId, status) {
+    async declineJob(jobId) {
+        return this.request(`/jobs/${jobId}/decline`, {
+            method: 'POST',
+        });
+    }
+
+    async updateJobStatus(jobId, status, extraData = {}) {
         return this.request(`/jobs/${jobId}/status`, {
             method: 'PATCH',
-            body: JSON.stringify({ status }),
+            body: JSON.stringify({ status, ...extraData }),
         });
     }
 
@@ -159,6 +196,29 @@ class ApiClient {
     async getRewards() {
         return this.request('/rewards');
     }
+
+    async getNotifications(params = {}) {
+        const queryString = new URLSearchParams(params).toString();
+        return this.request(`/notifications${queryString ? `?${queryString}` : ''}`);
+    }
+
+    async markNotificationRead(id) {
+        return this.request(`/notifications/${id}/read`, {
+            method: 'PATCH'
+        });
+    }
+
+    async markAllNotificationsRead() {
+        return this.request('/notifications/read-all', {
+            method: 'PATCH'
+        });
+    }
+
+    async clearNotifications() {
+        return this.request('/notifications/clear', {
+            method: 'DELETE'
+        });
+    }
 }
 
 // Create and export singleton instance
@@ -171,18 +231,26 @@ export const captainAPI = {
     sendOTP: (phone, userData) => apiClient.sendOTP(phone, userData),
     verifyOTP: (phone, otp, options) => apiClient.verifyOTP(phone, otp, options),
     login: (phone, password) => apiClient.login(phone, password),
+    signup: (userData) => apiClient.signup(userData),
     logout: () => apiClient.logout(),
     getProfile: () => apiClient.getProfile(),
     updateProfile: (data) => apiClient.updateProfile(data),
+    updateLocation: (lat, lng) => apiClient.updateLocation(lat, lng),
     getPendingJobs: () => apiClient.getPendingJobs(),
     getMyJobs: (params) => apiClient.getMyJobs(params),
     getMyJob: (id) => apiClient.getMyJob(id),
     acceptJob: (id) => apiClient.acceptJob(id),
-    updateJobStatus: (id, status) => apiClient.updateJobStatus(id, status),
+    declineJob: (id) => apiClient.declineJob(id),
+    updateJobStatus: (id, status, extraData) => apiClient.updateJobStatus(id, status, extraData),
     getDashboard: () => apiClient.getDashboard(),
     getEarnings: (params) => apiClient.getEarnings(params),
     getHistory: (params) => apiClient.getHistory(params),
     withdrawPayout: (amount) => apiClient.withdrawPayout(amount),
     toggleOnline: (isOnline) => apiClient.toggleOnline(isOnline),
     getRewards: () => apiClient.getRewards(),
+    getNotifications: (params) => apiClient.getNotifications(params),
+    markNotificationRead: (id) => apiClient.markNotificationRead(id),
+    markAllNotificationsRead: () => apiClient.markAllNotificationsRead(),
+    clearNotifications: () => apiClient.clearNotifications(),
+    setToken: (token) => apiClient.setToken(token)
 };

@@ -1,23 +1,6 @@
 const crypto = require('crypto');
-const Razorpay = require('razorpay');
-
-// Load environment variables
-require('dotenv').config();
-
-// Initialize Razorpay instance only if keys are available
-let razorpay = null;
-if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
-    razorpay = new Razorpay({
-        key_id: process.env.RAZORPAY_KEY_ID,
-        key_secret: process.env.RAZORPAY_KEY_SECRET
-    });
-} else {
-    // Fallback to hardcoded keys for development
-    razorpay = new Razorpay({
-        key_id: 'rzp_test_8sYbzHWidwe5Zw',
-        key_secret: 'GkxKRQ2B0U63BKBoayuugS3D'
-    });
-}
+const razorpay = require('../../../config/razorpay');
+const { sendNotification } = require('../../../utils/notificationService');
 
 // Create Razorpay Order
 exports.createOrder = async (req, res) => {
@@ -39,7 +22,7 @@ exports.createOrder = async (req, res) => {
         }
 
         const options = {
-            amount: amount * 100, // Razorpay expects amount in paise
+            amount: Math.round(amount * 100), // Razorpay expects amount in paise (integers only)
             currency,
             receipt: receipt || `receipt_${Date.now()}`,
             payment_capture: 1
@@ -80,8 +63,15 @@ exports.verifyPayment = async (req, res) => {
             });
         }
 
+        const secret = process.env.RAZORPAY_KEY_SECRET;
+        if (!secret && process.env.NODE_ENV === 'production') {
+            throw new Error('Razorpay secret missing in production');
+        }
+        // Use development fallback for signature verification if secret missing
+        const verificationSecret = secret || 'GkxKRQ2B0U63BKBoayuugS3D';
+
         const generated_signature = crypto
-            .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+            .createHmac('sha256', verificationSecret)
             .update(`${razorpay_order_id}|${razorpay_payment_id}`)
             .digest('hex');
 
@@ -91,6 +81,15 @@ exports.verifyPayment = async (req, res) => {
                 message: 'Invalid payment signature'
             });
         }
+
+        // Send notification
+        await sendNotification(req.user.id, {
+            title: 'Payment Successful ✅',
+            message: `Your payment for booking successfully verified. Order ID: ${razorpay_order_id}`,
+            type: 'payment',
+            priority: 'medium',
+            metaData: { orderId: razorpay_order_id, paymentId: razorpay_payment_id }
+        });
 
         // Payment is verified, you can update booking status here
         res.status(200).json({
@@ -115,12 +114,17 @@ exports.verifyPayment = async (req, res) => {
 // Get Razorpay Key (for frontend)
 exports.getRazorpayKey = (req, res) => {
     try {
-        const keyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_8sYbzHWidwe5Zw';
-        
+        if (!razorpay || !razorpay.key_id) {
+            return res.status(500).json({
+                status: 'error',
+                message: 'Payment gateway not configured'
+            });
+        }
+
         res.status(200).json({
             status: 'success',
             data: {
-                key_id: keyId
+                key_id: razorpay.key_id
             }
         });
     } catch (error) {

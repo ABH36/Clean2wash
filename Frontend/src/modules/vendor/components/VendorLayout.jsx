@@ -48,11 +48,18 @@ const NAV_GROUPS = [
 const VendorLayout = ({ children, title, subtitle }) => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { getUser, logout } = useAuth();
+    const { getUser, logout, vendorGetProfile } = useAuth();
     const { isDarkMode, toggleTheme } = useTheme();
     const user = getUser('vendor') || {};
-    const isVerified = user.verificationStatus === 'verified';
+    const isVerified = (user.profile?.verificationStatus === 'verified') || (user.verificationStatus === 'verified');
     const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+
+    // Refresh profile on mount to sync verification status
+    React.useEffect(() => {
+        if (user.id || user._id) {
+            vendorGetProfile();
+        }
+    }, []);
 
     const closeDrawer = () => setIsMobileDrawerOpen(false);
 

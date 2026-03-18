@@ -11,6 +11,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import MobileLayout from '../components/layout/MobileLayout';
+import { serviceAPI, bookingAPI } from '../../../utils/api';
 
 import pointImg from '../../../assets/services/point.png';
 import hourlyImg from '../../../assets/services/hourly.png';
@@ -37,7 +38,9 @@ const SERVICE_TYPES = [
 
 const SpareDriverBooking = () => {
     const navigate = useNavigate();
-    const { vehicles, addresses, addBooking, updateBookingStatus } = useAuth();
+    const { vehicles, addresses, refreshStats } = useAuth();
+    const [services, setServices] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     // State
     const [phase, setPhase] = useState(() => {
@@ -78,6 +81,23 @@ const SpareDriverBooking = () => {
     const [driverInfo, setDriverInfo] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
 
+    // Fetch services
+    useEffect(() => {
+        const fetchServices = async () => {
+            try {
+                const res = await serviceAPI.getChauffeurServices();
+                if (res.status === 'success') {
+                    setServices(res.data.services);
+                }
+            } catch (err) {
+                console.error("Failed to fetch services:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchServices();
+    }, []);
+
     // Initial check for vehicles
     useEffect(() => {
         if (vehicles?.length > 0 && !selectedVehicle) {
@@ -85,43 +105,63 @@ const SpareDriverBooking = () => {
         }
     }, [vehicles, selectedVehicle]);
 
-    const handleConfirmBooking = () => {
-        // Clear session state
-        sessionStorage.removeItem('chauffeur_booking_phase');
-        sessionStorage.removeItem('chauffeur_selected_type');
-        sessionStorage.removeItem('chauffeur_booking_details');
-
-        navigate('/payment-checkout', {
-            state: {
-                amount: selectedType.basePrice,
-                serviceName: `Premium ${selectedType.title}`,
-                date: bookingDetails.date,
-                time: bookingDetails.time,
-                bookingInfo: {
-                    service: {
-                        name: `Scheduled: ${selectedType.title}`,
-                        type: 'sparedrivers',
-                        category: 'Chauffeur',
-                        basePrice: selectedType.basePrice,
-                        duration: bookingDetails.duration,
-                        scheduledAt: `${bookingDetails.date} ${bookingDetails.time}`
-                    },
-                    vehicle: selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model}` : "Selected Car",
-                    vehicleImg: selectedVehicle?.img,
-                    price: `₹${selectedType.basePrice}`,
-                    status: 'scheduled',
-                    timestamp: new Date().toISOString(),
-                    location: addresses?.find(a => a.isPrimary)?.address || 'HSR Layout, Bengaluru',
-                    driver: {
-                        name: 'Karan Singh',
-                        rating: 4.9,
-                        trips: 1250,
-                        img: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=400&q=80',
-                        phone: '+91 9876543210'
+    const handleConfirmBooking = async () => {
+        try {
+            setIsProcessing(true);
+            const bookingData = {
+                vehicle: selectedVehicle._id,
+                service: {
+                    id: selectedType.id,
+                    name: selectedType.title,
+                    category: 'Chauffeur',
+                    type: 'sparedriver',
+                    basePrice: selectedType.basePrice,
+                    duration: bookingDetails.duration
+                },
+                pricing: {
+                    baseAmount: selectedType.basePrice,
+                    totalAmount: selectedType.basePrice
+                },
+                schedule: {
+                    type: 'scheduled',
+                    date: bookingDetails.date,
+                    timeSlot: { start: bookingDetails.time, end: bookingDetails.time },
+                    estimatedDuration: bookingDetails.duration
+                },
+                location: {
+                    type: 'home',
+                    address: {
+                        street: addresses?.find(a => a.isPrimary)?.address || 'HSR Layout',
+                        city: 'Bengaluru'
                     }
+                },
+                provider: {
+                    type: 'sparedriver'
                 }
+            };
+
+            const res = await bookingAPI.createBooking(bookingData);
+            if (res.status === 'success') {
+                // Clear session state
+                sessionStorage.removeItem('chauffeur_booking_phase');
+                sessionStorage.removeItem('chauffeur_selected_type');
+                sessionStorage.removeItem('chauffeur_booking_details');
+
+                navigate('/payment-checkout', {
+                    state: {
+                        bookingId: res.data.booking._id,
+                        amount: selectedType.basePrice,
+                        serviceName: `Premium ${selectedType.title}`,
+                        date: bookingDetails.date,
+                        time: bookingDetails.time
+                    }
+                });
             }
-        });
+        } catch (err) {
+            console.error("Booking creation failed:", err);
+        } finally {
+            setIsProcessing(false);
+        }
     };
 
     const handleStartTrip = () => {
@@ -165,18 +205,29 @@ const SpareDriverBooking = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-3">
-                {SERVICE_TYPES.map((type) => (
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center py-12 gap-4">
+                        <Loader2 className="w-8 h-8 text-brand animate-spin" />
+                        <p className="text-[10px] font-black text-black/20 uppercase tracking-widest">Loading Premium Drivers...</p>
+                    </div>
+                ) : services.map((type) => (
                     <motion.button
                         key={type.id}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => {
-                            setSelectedType(type);
+                            setSelectedType({
+                                id: type.id,
+                                title: type.title,
+                                subtitle: type.subtitle,
+                                img: type.image || pointImg,
+                                basePrice: type.basePrice
+                            });
                             setPhase(PHASES.BOOKING_DETAILS);
                         }}
                         className="bg-white rounded-2xl p-4 text-left border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex items-center gap-4 group transition-all hover:border-brand/20"
                     >
                         <div className="w-16 h-16 rounded-xl overflow-hidden flex items-center justify-center transition-all duration-300 shadow-lg group-hover:scale-110 flex-shrink-0">
-                            <img src={type.img} className="w-full h-full object-cover" alt={type.title} />
+                            <img src={type.image || pointImg} className="w-full h-full object-cover" alt={type.title} />
                         </div>
                         <div className="flex-1">
                             <h3 className="text-[15px] font-[1000] text-black uppercase tracking-tight leading-none mb-1">{type.title}</h3>
@@ -187,7 +238,7 @@ const SpareDriverBooking = () => {
                                 </div>
                                 <div className="flex items-center gap-1 text-[#F29F05]">
                                     <Star size={10} fill="currentColor" />
-                                    <span className="text-[10px] font-black uppercase leading-none">4.9</span>
+                                    <span className="text-[10px] font-black uppercase leading-none">{type.rating || '4.9'}</span>
                                 </div>
                             </div>
                         </div>

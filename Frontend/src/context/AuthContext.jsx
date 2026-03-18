@@ -1,6 +1,11 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
 import apiClient, { authAPI, walletAPI, paymentAPI } from '../utils/api';
-import captainAPI from '../utils/captainApi';
+import { captainAPI } from '../utils/captainApi';
+import { adminAPI } from '../utils/adminApi';
+import { vendorAPI } from '../utils/vendorApi';
+import { staffAPI } from '../utils/staffApi';
+
+import { socketService } from '../utils/socket';
 
 // Each panel stores its session under a separate key
 const SESSION_KEYS = {
@@ -11,54 +16,12 @@ const SESSION_KEYS = {
     staff: 'auth_staff',
 };
 
-// Mock credentials (replace with real API later)
-const MOCK_CREDENTIALS = {
-    admin: { id: 'ADM001', email: 'admin@carwash.in', password: 'admin123' },
-    captain: { id: 'CPT001', phone: '9999999999', password: 'captain123' },
-    vendor: { id: 'VND001', email: 'vendor@carwash.in', password: 'vendor123' },
-    staff: { id: 'STF001', phone: '8888888888', password: 'staff123', vendorId: 'VND001' },
-    // consumer uses OTP — no password needed
-};
+// Mock credentials removed to force API usage
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-    // Track registered users from localStorage
-    const [registeredUsers, setRegisteredUsers] = useState(() => {
-        const DEFAULT = { consumer: [], captain: [], vendor: [], staff: [] };
-        try {
-            const saved = localStorage.getItem('carwash_registered_users');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                // Merge with defaults so all keys always exist even with old cached data
-                return { ...DEFAULT, ...parsed };
-            }
-
-            // Initial Seed Data for Demo
-            return {
-                consumer: [],
-                captain: [],
-                vendor: [
-                    {
-                        id: 'VND-DEMO-01',
-                        name: 'Aryan Pathak',
-                        email: 'vendor@carwash.in',
-                        password: 'vendor123',
-                        studioName: 'Premium Shine Studio',
-                        phone: '9876543210',
-                        city: 'Mumbai',
-                        role: 'vendor',
-                        verificationStatus: 'pending',
-                        registeredAt: new Date().toISOString(),
-                        idProof: 'https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?w=800&q=80'
-                    }
-                ],
-                staff: []
-            };
-        } catch {
-            return DEFAULT;
-        }
-    });
+    // Removed static registered users state, users should only come from backend API
 
     // Initialize state from localStorage - moved up to fix initialization order
     const [sessions, setSessions] = useState(() => {
@@ -74,86 +37,176 @@ export const AuthProvider = ({ children }) => {
         return result;
     });
 
-    // Captain-specific backend integration
-    const [captainJobs, setCaptainJobs] = useState([]);
-    const [captainJobsLoading, setCaptainJobsLoading] = useState(false);
-    const [captainEarnings, setCaptainEarnings] = useState({ balance: 0, totalEarned: 0, jobs: [] });
-    const [captainEarningsLoading, setCaptainEarningsLoading] = useState(false);
-
-    // Load captain jobs when captain logs in
+    // Dynamic Token Restoration on mount
     useEffect(() => {
-        if (sessions.captain && sessions.captain.id) {
-            loadCaptainJobs();
-            loadCaptainEarnings();
-        }
-    }, [sessions.captain]);
+        if (sessions.consumer?.token) apiClient.setToken(sessions.consumer.token);
+        if (sessions.vendor?.token) vendorAPI.setToken(sessions.vendor.token);
+        if (sessions.admin?.token) adminAPI.setToken(sessions.admin.token);
+        if (sessions.staff?.token) staffAPI.setToken(sessions.staff.token);
+        if (sessions.captain?.token) captainAPI.setToken(sessions.captain.token);
+    }, [sessions]);
 
-    const loadCaptainJobs = useCallback(async () => {
-        if (!sessions.captain) return;
-        try {
-            setCaptainJobsLoading(true);
-            const response = await captainAPI.getMyJobs();
-            setCaptainJobs(response.data.jobs || []);
-        } catch (error) {
-            console.error('Failed to load captain jobs:', error);
-        } finally {
-            setCaptainJobsLoading(false);
-        }
-    }, [sessions.captain]);
+    // --- CORE AUTH FUNCTIONS (Moved to top to prevent reference errors) ---
+    const isLoggedIn = useCallback((role) => !!sessions[role], [sessions]);
 
-    const loadCaptainEarnings = useCallback(async () => {
-        if (!sessions.captain) return;
-        try {
-            setCaptainEarningsLoading(true);
-            const response = await captainAPI.getEarnings();
-            setCaptainEarnings(response.data || { balance: 0, totalEarned: 0, jobs: [] });
-        } catch (error) {
-            console.error('Failed to load captain earnings:', error);
-        } finally {
-            setCaptainEarningsLoading(false);
-        }
-    }, [sessions.captain]);
+    const getUser = useCallback((role) => sessions[role], [sessions]);
 
-    const acceptJob = useCallback(async (jobId) => {
+    const login = useCallback((role, userData) => {
+        const data = { ...userData, loggedInAt: Date.now() };
+        localStorage.setItem(SESSION_KEYS[role], JSON.stringify(data));
+        setSessions(prev => ({ ...prev, [role]: data }));
+        return true;
+    }, []);
+
+    const logout = useCallback((role) => {
+        localStorage.removeItem(SESSION_KEYS[role]);
+        
+        // Clear consumer-specific state and legacy storage
+        if (role === 'consumer') {
+            localStorage.removeItem('carwash_bookings');
+            localStorage.removeItem('carwash_subscription');
+            setBookings([]);
+            setUserSubscription(null);
+            setWalletBalance(0);
+            setAddresses([]);
+            setTrustedContacts([]);
+        }
+
+        setSessions(prev => ({ ...prev, [role]: null }));
+    }, []);
+
+    const sendOTP = useCallback(async (identifier, type = 'phone', userData = null) => {
         try {
-            const response = await captainAPI.acceptJob(jobId);
-            setCaptainJobs(prev => prev.map(job =>
-                job.id === jobId ? { ...job, status: 'accepted' } : job
-            ));
+            const response = await authAPI.sendOTP(identifier, type, userData);
             return { success: true, data: response.data };
         } catch (error) {
-            console.error('Failed to accept job:', error);
+            console.error('Send OTP error:', error);
             return { success: false, error: error.message };
         }
     }, []);
 
-    const updateJobStatus = useCallback(async (jobId, status) => {
+    const verifyOTP = useCallback(async (identifier, otp, type = 'phone', options = {}) => {
         try {
-            const response = await captainAPI.updateJobStatus(jobId, { status });
-            setCaptainJobs(prev => prev.map(job =>
-                job.id === jobId ? { ...job, status, ...response.data.job } : job
-            ));
-            return { success: true, data: response.data };
+            const { isSignup = false, userData: signupUserData = null } = options;
+            const response = await authAPI.verifyOTP(identifier, otp, type, { isSignup, userData: signupUserData });
+            const token = response.token || response.data?.token;
+            const consumer = response.data?.consumer || response.consumer || response.data;
+
+            if (token) {
+                apiClient.setToken(token);
+            }
+
+            const userSession = {
+                id: consumer._id,
+                name: consumer.name,
+                email: consumer.email,
+                phone: consumer.phone,
+                token,
+                role: 'consumer',
+                ...consumer
+            };
+
+            login('consumer', userSession);
+            return { success: true, data: { consumer: userSession, token } };
         } catch (error) {
-            console.error('Failed to update job status:', error);
+            console.error('Verify OTP error:', error);
             return { success: false, error: error.message };
         }
-    }, []);
+    }, [login]);
+
+    const apiLogin = useCallback(async (identifier, password) => {
+        try {
+            const response = await authAPI.login(identifier, password);
+            const token = response.token || response.data?.token;
+            const consumer = response.data?.consumer || response.consumer || response.data;
+
+            if (token) {
+                apiClient.setToken(token);
+            }
+
+            const userSession = {
+                id: consumer._id,
+                name: consumer.name,
+                email: consumer.email,
+                phone: consumer.phone,
+                token,
+                role: 'consumer',
+                ...consumer
+            };
+
+            login('consumer', userSession);
+            return { success: true, data: { consumer: userSession, token } };
+        } catch (error) {
+            console.error('Login error:', error);
+            return { success: false, error: error.message };
+        }
+    }, [login]);
+
+    const apiSignup = useCallback(async (userData) => {
+        try {
+            const response = await authAPI.signup(userData);
+            const token = response.token || response.data?.token;
+            const consumer = response.data?.consumer || response.consumer || response.data;
+
+            if (token) {
+                apiClient.setToken(token);
+            }
+
+            const userSession = {
+                id: consumer._id,
+                name: consumer.name,
+                email: consumer.email,
+                phone: consumer.phone,
+                role: 'consumer',
+                ...consumer
+            };
+
+            login('consumer', userSession);
+            return { success: true, data: { consumer: userSession, token } };
+        } catch (error) {
+            console.error('Signup error:', error);
+            return { success: false, error: error.message };
+        }
+    }, [login]);
+
+    const apiLogout = useCallback(async (role) => {
+        try {
+            await authAPI.logout();
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+        apiClient.setToken(null);
+        logout(role);
+    }, [logout]);
+    // ----------------------------------------------------------------------
+
+
+
+
+
 
     // Vehicle management with backend integration
-    const [vehicles, setVehicles] = useState([
-        {
-            id: 'demo-vehicle-1',
-            _id: 'demo-vehicle-1',
-            brand: 'Maruti Suzuki',
-            model: 'Baleno',
-            type: 'Sedan',
-            plate: 'DEMO-1234',
-            isPrimary: true,
-            img: 'https://images.unsplash.com/photo-1550355291-bbee04a92027?w=400&q=80'
-        }
-    ]);
+    const [vehicles, setVehicles] = useState([]);
     const [vehiclesLoading, setVehiclesLoading] = useState(false);
+    const [globalCatalog, setGlobalCatalog] = useState([]);
+    const [catalogLoading, setCatalogLoading] = useState(false);
+
+    // Load global catalog for vehicle selection
+    const loadGlobalCatalog = useCallback(async () => {
+        try {
+            setCatalogLoading(true);
+            const response = await apiClient.getVehicleModels();
+            setGlobalCatalog(response.data.models || []);
+        } catch (error) {
+            console.error('Failed to load global catalog:', error);
+        } finally {
+            setCatalogLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadGlobalCatalog();
+    }, [loadGlobalCatalog]);
 
     // Load vehicles from backend when user logs in
     useEffect(() => {
@@ -189,7 +242,20 @@ export const AuthProvider = ({ children }) => {
             return { success: true, data: response.data.vehicle };
         } catch (error) {
             console.error('Failed to add vehicle:', error);
-            return { success: false, error: error.message };
+            const errorMsg = error.data?.errors ? error.data.errors.join(', ') : (error.data?.message || error.message);
+            return { success: false, error: errorMsg };
+        }
+    }, []);
+
+    const updateVehicle = useCallback(async (vehicleId, vehicleData) => {
+        try {
+            const response = await apiClient.updateVehicle(vehicleId, vehicleData);
+            setVehicles(prev => prev.map(v => v._id === vehicleId ? response.data.vehicle : v));
+            return { success: true, data: response.data.vehicle };
+        } catch (error) {
+            console.error('Failed to update vehicle:', error);
+            const errorMsg = error.data?.errors ? error.data.errors.join(', ') : (error.data?.message || error.message);
+            return { success: false, error: errorMsg };
         }
     }, []);
 
@@ -214,43 +280,74 @@ export const AuthProvider = ({ children }) => {
             return { success: true };
         } catch (error) {
             console.error('Failed to set primary vehicle:', error);
+            const errorMsg = error.data?.errors ? error.data.errors.join(', ') : (error.data?.message || error.message);
+            return { success: false, error: errorMsg };
+        }
+    }, []);
+
+    // Track addresses from the user session/profile (migrated from localStorage)
+    const [addresses, setAddresses] = useState([]);
+
+    // Update addresses when user session changes
+    useEffect(() => {
+        if (sessions.consumer?.profile?.address) {
+            // Backend currently supports a single address object in profile.address.
+            // We map it to an array for the frontend components that expect multiple addresses.
+            setAddresses([{ id: 1, ...sessions.consumer.profile.address, label: 'Home', isPrimary: true }]);
+        } else {
+            setAddresses([]);
+        }
+    }, [sessions.consumer]);
+
+    const [trustedContacts, setTrustedContacts] = useState([]);
+    const [trustedContactsLoading, setTrustedContactsLoading] = useState(false);
+
+    const loadTrustedContacts = useCallback(async () => {
+        if (!sessions.consumer || !sessions.consumer.id) return;
+        try {
+            setTrustedContactsLoading(true);
+            const response = await apiClient.getTrustedContacts();
+            setTrustedContacts(response.data.contacts || []);
+        } catch (error) {
+            console.error('Failed to load trusted contacts:', error);
+        } finally {
+            setTrustedContactsLoading(false);
+        }
+    }, [sessions.consumer]);
+
+    // Load contacts on mount/login
+    useEffect(() => {
+        if (sessions.consumer?.id) {
+            loadTrustedContacts();
+        }
+    }, [sessions.consumer?.id, loadTrustedContacts]);
+
+    const addContact = useCallback(async (contactData) => {
+        try {
+            const response = await apiClient.addTrustedContact(contactData);
+            setTrustedContacts(response.data.contacts);
+            return { success: true };
+        } catch (error) {
+            console.error('Failed to add contact:', error);
             return { success: false, error: error.message };
         }
     }, []);
 
-    // Track addresses from localStorage (temporary - will be migrated to backend)
-    const [addresses, setAddresses] = useState(() => {
+    const removeContact = useCallback(async (contactId) => {
         try {
-            const saved = localStorage.getItem('carwash_addresses');
-            const initial = [
-                { id: 1, label: 'Home', address: 'HSR Layout, Sector 2, Bengaluru', isPrimary: true, userId: 'GUEST' }
-            ];
-            return saved ? JSON.parse(saved) : initial;
-        } catch { return []; }
-    });
-
-    // Track trusted contacts from localStorage
-    const [trustedContacts, setTrustedContacts] = useState(() => {
-        try {
-            const saved = localStorage.getItem('carwash_trusted_contacts');
-            return saved ? JSON.parse(saved) : [
-                { id: 1, name: 'Aryan Pathak (Self)', phone: '9876543210', relation: 'Brother', userId: 'GUEST' }
-            ];
-        } catch { return []; }
-    });
-    // Booking management with backend integration
-    const [bookings, setBookings] = useState(() => {
-        try {
-            const saved = localStorage.getItem('carwash_bookings');
-            return saved ? JSON.parse(saved) : [];
-        } catch { return []; }
-    });
+            const response = await apiClient.removeTrustedContact(contactId);
+            setTrustedContacts(response.data.contacts);
+            return { success: true };
+        } catch (error) {
+            console.error('Failed to remove contact:', error);
+            return { success: false, error: error.message };
+        }
+    }, []);
+    // Booking management with backend integration - trust API as single source of truth
+    const [bookings, setBookings] = useState([]);
     const [bookingsLoading, setBookingsLoading] = useState(false);
 
-    // Save bookings locally whenever they change
-    useEffect(() => {
-        localStorage.setItem('carwash_bookings', JSON.stringify(bookings));
-    }, [bookings]);
+    // Bookings are now managed by backend - no localStorage sync needed
 
     // Load bookings from backend when user logs in
     useEffect(() => {
@@ -269,11 +366,6 @@ export const AuthProvider = ({ children }) => {
             const response = await apiClient.getBookings();
             setBookings(response.data.bookings || []);
         } catch (error) {
-            // Development fallback for bookings
-            if (import.meta.env.DEV && error.message?.includes('500')) {
-                console.warn('Backend returned 500 for bookings, using local data.');
-                return;
-            }
             // Don't show error for unauthorized requests
             if (error.response?.status !== 401) {
                 console.error('Failed to load bookings:', error);
@@ -331,26 +423,44 @@ export const AuthProvider = ({ children }) => {
         }
     }, []);
 
-    // Track user subscription
-    const [userSubscription, setUserSubscription] = useState(() => {
-        try {
-            const saved = localStorage.getItem('carwash_subscription');
-            return saved ? JSON.parse(saved) : null;
-        } catch {
-            return null;
+    const [userSubscription, setUserSubscription] = useState(null);
+
+    // Load subscription from backend when consumer logs in
+    useEffect(() => {
+        if (sessions.consumer?.token) {
+            const loadSubscription = async () => {
+                try {
+                    const response = await apiClient.getSubscription();
+                    if (response?.data?.subscription) {
+                        setUserSubscription(response.data.subscription);
+                    } else {
+                        setUserSubscription(null);
+                    }
+                } catch (error) {
+                    // 404 = no active subscription, that's fine
+                    if (error.status !== 404 && error.status !== 401) {
+                        console.error('Failed to load subscription:', error);
+                    }
+                    setUserSubscription(null);
+                }
+            };
+            loadSubscription();
+        } else {
+            setUserSubscription(null);
         }
-    });
+    }, [sessions.consumer?.token]);
+
+    const isBlackPassMember = useMemo(() => {
+        if (!userSubscription) return false;
+        const planName = userSubscription.planName || userSubscription.name || userSubscription.plan || '';
+        const isActive = userSubscription.status === 'active' || userSubscription.status === 'Active';
+        return isActive && (planName.toLowerCase().includes('black'));
+    }, [userSubscription]);
 
     // Wallet management with backend integration
     const [walletBalance, setWalletBalance] = useState(0);
     const [walletLoading, setWalletLoading] = useState(false);
 
-    // Load wallet from backend when user logs in
-    useEffect(() => {
-        if (sessions.consumer && sessions.consumer.id) {
-            loadWallet();
-        }
-    }, [sessions.consumer]);
 
     const loadWallet = useCallback(async () => {
         if (!sessions.consumer || !sessions.consumer.id) {
@@ -362,12 +472,6 @@ export const AuthProvider = ({ children }) => {
             const response = await apiClient.getWallet();
             setWalletBalance(response?.data?.wallet?.balance || 0);
         } catch (error) {
-            // Fallback for development if backend is partially failing
-            if (import.meta.env.DEV && error.message?.includes('500')) {
-                console.warn('Backend returned 500 for wallet, using fallback for dev.');
-                setWalletBalance(2450); // Dummy dev balance
-                return;
-            }
             // Don't show error for unauthorized requests
             if (error.response?.status !== 401) {
                 console.error('Failed to load wallet:', error);
@@ -376,6 +480,13 @@ export const AuthProvider = ({ children }) => {
             setWalletLoading(false);
         }
     }, [sessions.consumer]);
+
+    // Load wallet from backend when user logs in
+    useEffect(() => {
+        if (sessions.consumer?.token) {
+            loadWallet();
+        }
+    }, [sessions.consumer?.token, loadWallet]);
 
     const addToWallet = useCallback(async (amount, paymentMethod) => {
         try {
@@ -419,19 +530,14 @@ export const AuthProvider = ({ children }) => {
         }
     }, []);
 
-    // Persist data to localStorage
-    useEffect(() => {
-        localStorage.setItem('carwash_registered_users', JSON.stringify(registeredUsers));
-    }, [registeredUsers]);
-
     // Bookings are now managed by backend - no localStorage needed
 
     useEffect(() => {
-        localStorage.setItem('carwash_trusted_contacts', JSON.stringify(trustedContacts));
+        // localStorage sync removed - now backend persisted
     }, [trustedContacts]);
 
     useEffect(() => {
-        localStorage.setItem('carwash_subscription', JSON.stringify(userSubscription));
+        // localStorage sync removed — subscription is now backend-persisted only
     }, [userSubscription]);
 
     // Wallet is now managed by backend - no localStorage needed
@@ -439,13 +545,7 @@ export const AuthProvider = ({ children }) => {
     // Cross-tab synchronization
     useEffect(() => {
         const handleStorageChange = (e) => {
-            if (e.key === 'carwash_bookings' && e.newValue) {
-                setBookings(JSON.parse(e.newValue));
-            }
-            if (e.key === 'carwash_registered_users' && e.newValue) {
-                setRegisteredUsers(JSON.parse(e.newValue));
-            }
-            if (SESSION_KEYS[e.key] || Object.values(SESSION_KEYS).includes(e.key) || e.key === 'carwash_registered_users') {
+            if (SESSION_KEYS[e.key] || Object.values(SESSION_KEYS).includes(e.key)) {
                 const newSessions = {};
                 for (const [role, key] of Object.entries(SESSION_KEYS)) {
                     const raw = localStorage.getItem(key);
@@ -459,305 +559,362 @@ export const AuthProvider = ({ children }) => {
         return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
-    // Effect to sync logged-in session data with master registeredUsers list
+
+
+    // Socket.io Integration
     useEffect(() => {
-        Object.entries(sessions).forEach(([role, sessionUser]) => {
-            if (sessionUser && sessionUser.id) {
-                const masterUser = (registeredUsers[role] || []).find(u => u.id === sessionUser.id);
-                if (masterUser) {
-                    const hasChanges = Object.keys(masterUser).some(key => masterUser[key] !== sessionUser[key]);
-                    if (hasChanges) {
-                        const updatedSession = { ...sessionUser, ...masterUser };
-                        localStorage.setItem(SESSION_KEYS[role], JSON.stringify(updatedSession));
-                        setSessions(prev => ({ ...prev, [role]: updatedSession }));
-                    }
+        const userId = sessions.consumer?.id || sessions.captain?.id || sessions.vendor?.id || sessions.admin?.id || sessions.staff?.id;
+
+        if (userId) {
+            socketService.connect();
+            socketService.joinUserRoom(userId);
+
+            // Admins join broadcase room for real-time alerts
+            if (sessions.admin?.id) {
+                socketService.joinAdminRoom();
+            }
+
+            // Rejoin rooms for current active bookings
+            bookings.forEach(b => {
+                const activeStatuses = [
+                    'pending', 'confirmed', 'accepted', 'assigned', 'pickup-assigned', 
+                    'en_route', 'arrived', 'at-studio', 'in_progress', 'washing', 
+                    'quality-check', 'ready-for-delivery'
+                ];
+                if (activeStatuses.includes(b.status)) {
+                    socketService.joinBookingRoom(b._id);
                 }
-            }
-        });
-    }, [registeredUsers, sessions]);
-
-    const isLoggedIn = useCallback((role) => !!sessions[role], [sessions]);
-
-    const login = useCallback((role, userData) => {
-        const data = { ...userData, loggedInAt: Date.now() };
-        localStorage.setItem(SESSION_KEYS[role], JSON.stringify(data));
-        setSessions(prev => ({ ...prev, [role]: data }));
-        return true;
-    }, []);
-
-    const logout = useCallback((role) => {
-        localStorage.removeItem(SESSION_KEYS[role]);
-        setSessions(prev => ({ ...prev, [role]: null }));
-    }, []);
-
-    const getUser = useCallback((role) => sessions[role], [sessions]);
-
-    // Validate mock or registered credentials
-    const validateCredentials = useCallback((role, creds) => {
-        const users = registeredUsers[role] || [];
-        const inputEmail = (creds.email || '').toLowerCase().trim();
-        const inputPhone = (creds.phone || '').trim();
-        const inputPassword = (creds.password || '').trim();
-
-        const registeredUser = users.find(u => {
-            if (u.email && u.email.toLowerCase().trim() === inputEmail) return u.password === inputPassword;
-            if (u.phone && u.phone.trim() === inputPhone) return u.password === inputPassword;
-            return false;
-        });
-
-        if (registeredUser) return registeredUser;
-
-        const mock = MOCK_CREDENTIALS[role];
-        if (mock) {
-            const mockEmailMatch = mock.email && (inputEmail === mock.email.toLowerCase() || (role === 'admin' && inputEmail === 'admin'));
-            const mockPhoneMatch = mock.phone && inputPhone === mock.phone;
-            const mockPassMatch = inputPassword === mock.password;
-
-            if ((mockEmailMatch || mockPhoneMatch) && mockPassMatch) {
-                return { ...mock, role, name: role.charAt(0).toUpperCase() + role.slice(1) };
-            }
+            });
+        } else {
+            socketService.disconnect();
         }
 
-        return null;
-    }, [registeredUsers]);
+        const handleBookingUpdate = async (data) => {
+            console.log('Real-time booking update received:', data);
+            
+            // Show toast notification for important status changes
+            const statusLabels = {
+                'confirmed': 'Booking confirmed!',
+                'pickup-assigned': 'Driver assigned for pickup!',
+                'en_route': 'Captain is on the way!',
+                'arrived': 'Captain has arrived at your location!',
+                'at-studio': 'Vehicle reached the Studio Hub!',
+                'in_progress': 'Wash has started!',
+                'quality-check': 'Quality inspection in progress!',
+                'ready-for-delivery': 'Wash complete! Ready for delivery.',
+                'completed': 'Service completed! Your vehicle is ready.',
+                'cancelled': 'Booking has been cancelled.'
+            };
+            
+            if (statusLabels[data.status]) {
+                const { toast } = await import('react-hot-toast');
+                toast.success(statusLabels[data.status], {
+                    icon: '🚗',
+                    style: { borderRadius: '12px', background: '#000', color: '#fff', fontSize: '12px', fontWeight: 'bold' }
+                });
+            }
 
-    const register = useCallback((role, userData) => {
-        setRegisteredUsers(prev => ({
-            ...prev,
-            [role]: [...(prev[role] || []), userData]
-        }));
-        return true;
-    }, []);
+            // Update Consumer Bookings
+            setBookings(prev => prev.map(b => {
+                if (b._id === data.bookingId) {
+                    return {
+                        ...b,
+                        status: data.status,
+                        tracking: data.tracking || b.tracking,
+                        provider: data.staff ? { ...b.provider, id: { ...b.provider?.id, ...data.staff } } : (data.provider || b.provider)
+                    };
+                }
+                return b;
+            }));
+        };
 
-    // Captain API-based authentication methods
-    const captainSendOTP = useCallback(async (phone, userData = null) => {
+        const handleCaptainVerified = async (data) => {
+            console.log('Real-time captain verified received:', data);
+            const { toast } = await import('react-hot-toast');
+            toast.success(data.message || 'Your account has been verified!', {
+                icon: '✅',
+                style: { borderRadius: '12px', background: '#000', color: '#fff', fontSize: '12px', fontWeight: 'bold' }
+            });
+            
+            // Update context seamlessly
+            setSessions(prev => {
+                if (prev.captain) {
+                    const updatedCaptain = { ...prev.captain, isVerified: true };
+                    localStorage.setItem('auth_captain', JSON.stringify(updatedCaptain));
+                    return { ...prev, captain: updatedCaptain };
+                }
+                return prev;
+            });
+        };
+
+        const handleNewCaptainNotification = async (data) => {
+            console.log('Real-time new captain notification received:', data);
+            const { toast } = await import('react-hot-toast');
+            toast(data.notification?.title || 'New Notification', {
+                icon: '🔔',
+                style: { borderRadius: '12px', background: '#000', color: '#fff', fontSize: '12px', fontWeight: 'bold' }
+            });
+        };
+
+        const handleAdminNotification = async (data) => {
+            console.log('Real-time admin notification received:', data);
+            const { toast } = await import('react-hot-toast');
+            
+            // Special styling for high priority or SOS alerts
+            const isSOS = data.priority === 'high' || data.type === 'SOS';
+            
+            toast.error(data.title, {
+                icon: isSOS ? '🚨' : '🛡️',
+                duration: isSOS ? 10000 : 5000,
+                style: { 
+                    borderRadius: '16px', 
+                    background: isSOS ? '#ef4444' : '#000', 
+                    color: '#fff', 
+                    fontSize: '12px', 
+                    fontWeight: '900',
+                    border: isSOS ? '2px solid white' : 'none',
+                    boxShadow: isSOS ? '0 0 20px rgba(239, 68, 68, 0.5)' : 'none'
+                }
+            });
+            
+            // Refresh dashboard or bookings if needed by emitting a local event or re-fetching
+            // For now, the toast is enough for high visibility
+        };
+
+        socketService.on('booking_status_updated', handleBookingUpdate);
+        socketService.on('captain_verified', handleCaptainVerified);
+        socketService.on('new_captain_notification', handleNewCaptainNotification);
+        socketService.on('admin_notification', handleAdminNotification);
+
+        return () => {
+            socketService.off('booking_status_updated', handleBookingUpdate);
+            socketService.off('captain_verified', handleCaptainVerified);
+            socketService.off('new_captain_notification', handleNewCaptainNotification);
+            socketService.off('admin_notification', handleAdminNotification);
+        };
+    }, [sessions, bookings]);
+
+
+
+
+
+
+    const adminLogout = useCallback(async () => {
+        adminAPI.setToken(null);
+        logout('admin');
+        return { success: true };
+    }, [logout]);
+
+    const vendorLogout = useCallback(async () => {
+        vendorAPI.setToken(null);
+        logout('vendor');
+        return { success: true };
+    }, [logout]);
+
+    const staffLogout = useCallback(async () => {
+        staffAPI.setToken(null);
+        logout('staff');
+        return { success: true };
+    }, [logout]);
+    
+    // Legacy support placeholders
+    const validateCredentials = () => null;
+    const register = () => true;
+
+
+    // Admin API-based methods
+    const adminLogin = useCallback(async (email, password) => {
         try {
-            const response = await captainAPI.sendOTP(phone, userData);
-            return { success: true, data: response.data };
-        } catch (error) {
-            console.error('Captain Send OTP error:', error);
-            // Development fallback for any backend error (offline, 500, etc)
-            console.log('Simulating Captain OTP send (1234) due to:', error.message);
-            return { success: true, data: { message: 'OTP sent (Development Mode)', otp: '1234' } };
-        }
-    }, []);
-
-    const captainVerifyOTP = useCallback(async (phone, otp, options = {}) => {
-        try {
-            const { userData = null, isSignup = false } = options;
-            const response = await captainAPI.verifyOTP(phone, otp, { isSignup, userData });
-            const { captain, token } = response.data;
+            const response = await adminAPI.login(email, password);
+            const token = response.token || response.data?.token;
+            const adminData = response.data?.admin || response.admin || response.data;
 
             if (token) {
-                apiClient.setToken(token);
+                adminAPI.setToken(token);
             }
 
-            const sessionData = {
-                id: captain._id,
-                name: captain.name,
-                email: captain.email,
-                phone: captain.phone,
-                role: 'captain',
-                ...captain
+            const userSession = {
+                id: adminData._id,
+                name: adminData.name,
+                email: adminData.email,
+                role: 'admin',
+                token,
+                ...adminData
             };
 
-            login('captain', sessionData);
-            return { success: true, data: { captain: sessionData, token } };
+            login('admin', userSession);
+            return { success: true, data: userSession };
         } catch (error) {
-            console.error('Captain Verify OTP error:', error);
-            // Universal development fallback for OTP 1234
-            if (otp === '1234') {
-                console.log('Simulating Captain verification (1234) due to:', error.message);
-                const mockCaptain = {
-                    _id: 'test-cap-' + Date.now(),
-                    name: 'Test Captain',
-                    phone: phone,
-                    role: 'captain',
-                    status: 'active'
-                };
-                login('captain', mockCaptain);
-                return { success: true, data: { captain: mockCaptain, token: 'mock-cap-token' } };
-            }
+            console.error('Admin Login error:', error);
             return { success: false, error: error.message };
         }
     }, []);
+
+    // Vendor API-based methods
+    const vendorLogin = useCallback(async (email, password) => {
+        try {
+            const response = await vendorAPI.login(email, password);
+            const token = response.token || response.data?.token;
+            const vendorData = response.data?.vendor || response.vendor || response.data;
+
+            if (token) {
+                vendorAPI.setToken(token);
+            }
+
+            const userSession = {
+                id: vendorData._id,
+                name: vendorData.name,
+                email: vendorData.email,
+                role: 'vendor',
+                token,
+                ...vendorData
+            };
+
+            login('vendor', userSession);
+            return { success: true, data: userSession };
+        } catch (error) {
+            console.error('Vendor Login error:', error);
+            return { success: false, error: error.message };
+        }
+    }, [login]);
+
+    const vendorSignup = useCallback(async (userData) => {
+        try {
+            const response = await vendorAPI.signup(userData);
+            const token = response.token || response.data?.token;
+            const vendorData = response.data?.vendor || response.vendor || response.data;
+
+            if (token) {
+                vendorAPI.setToken(token);
+            }
+
+            const userSession = {
+                id: vendorData._id,
+                name: vendorData.name,
+                email: vendorData.email,
+                role: 'vendor',
+                token,
+                ...vendorData
+            };
+
+            login('vendor', userSession);
+            return { success: true, data: userSession };
+        } catch (error) {
+            console.error('Vendor Signup error:', error);
+            return { success: false, error: error.message };
+        }
+    }, [login]);
+
+    const vendorGetProfile = useCallback(async () => {
+        try {
+            const response = await vendorAPI.getProfile();
+            const vendorData = response.data?.vendor || response.vendor || response.data;
+
+            setSessions(prev => {
+                const currentSession = prev.vendor;
+                if (currentSession) {
+                    const updatedSession = { ...currentSession, ...vendorData };
+                    localStorage.setItem(SESSION_KEYS.vendor, JSON.stringify(updatedSession));
+                    return { ...prev, vendor: updatedSession };
+                }
+                return prev;
+            });
+
+            return { success: true, data: vendorData };
+        } catch (error) {
+            console.error('Vendor Get Profile error:', error);
+            return { success: false, error: error.message };
+        }
+    }, []);
+
+    // Captain API-based methods
+    const captainSignup = useCallback(async (userData) => {
+        try {
+            const response = await captainAPI.signup(userData);
+            const token = response.token || response.data?.token;
+            const captainData = response.data?.captain || response.captain || response.data;
+
+            if (token) {
+                captainAPI.setToken(token);
+            }
+
+            const userSession = {
+                id: captainData._id,
+                name: captainData.name,
+                email: captainData.email,
+                phone: captainData.phone,
+                role: 'captain',
+                token,
+                ...captainData
+            };
+
+            login('captain', userSession);
+            return { success: true, data: userSession };
+        } catch (error) {
+            console.error('Captain Signup error:', error);
+            return { success: false, error: error.message };
+        }
+    }, [login]);
 
     const captainLogin = useCallback(async (phone, password) => {
         try {
             const response = await captainAPI.login(phone, password);
-            const { captain, token } = response.data;
+            const token = response.token || response.data?.token;
+            const captainData = response.data?.captain || response.captain || response.data;
 
             if (token) {
-                apiClient.setToken(token);
+                captainAPI.setToken(token);
             }
 
-            const sessionData = {
-                id: captain._id,
-                name: captain.name,
-                email: captain.email,
-                phone: captain.phone,
+            const userSession = {
+                id: captainData._id,
+                name: captainData.name,
+                email: captainData.email,
+                phone: captainData.phone,
                 role: 'captain',
-                ...captain
+                token,
+                ...captainData
             };
 
-            login('captain', sessionData);
-            return { success: true, data: { captain: sessionData, token } };
+            login('captain', userSession);
+            return { success: true, data: userSession };
         } catch (error) {
             console.error('Captain Login error:', error);
             return { success: false, error: error.message };
         }
-    }, []);
+    }, [login]);
 
-    const captainLogout = useCallback(async () => {
+    // Staff API-based methods
+    const staffLogin = useCallback(async (email, password) => {
         try {
-            await captainAPI.logout();
-            apiClient.setToken(null);
-            logout('captain');
-            return { success: true };
-        } catch (error) {
-            console.error('Captain Logout error:', error);
-            return { success: false, error: error.message };
-        }
-    }, []);
+            const response = await staffAPI.login(email, password);
+            const token = response.token || response.data?.token;
+            const user = response?.data?.user || response?.user || response;
 
-    const captainGetProfile = useCallback(async () => {
-        try {
-            const response = await captainAPI.getProfile();
-            return { success: true, data: response.data };
-        } catch (error) {
-            console.error('Captain Get Profile error:', error);
-            return { success: false, error: error.message };
-        }
-    }, []);
-
-    const captainUpdateProfile = useCallback(async (profileData) => {
-        try {
-            const response = await captainAPI.updateProfile(profileData);
-            return { success: true, data: response.data };
-        } catch (error) {
-            console.error('Captain Update Profile error:', error);
-            return { success: false, error: error.message };
-        }
-    }, []);
-
-    // API-based authentication methods
-    const sendOTP = useCallback(async (identifier, type = 'phone', userData = null) => {
-        try {
-            const response = await authAPI.sendOTP(identifier, type, userData);
-            return { success: true, data: response.data };
-        } catch (error) {
-            console.error('Send OTP error:', error);
-            // Development fallback for any backend error (offline, 500, etc)
-            console.log('Simulating Consumer OTP send (1234) due to:', error.message);
-            return { success: true, data: { message: 'OTP sent (Development Mode)', otp: '1234' } };
-        }
-    }, []);
-
-    // Login = verify only (no data stored). Signup = verify + userData stored on backend.
-    const verifyOTP = useCallback(async (identifier, otp, type = 'phone', options = {}) => {
-        try {
-            const { isSignup = false, userData: signupUserData = null } = options;
-            const response = await authAPI.verifyOTP(identifier, otp, type, { isSignup, userData: signupUserData });
-            const { consumer, token } = response.data;
-
-            if (token) {
-                apiClient.setToken(token);
+            if (!user || !user._id) {
+                return { success: false, error: 'Invalid server response' };
             }
 
             const userSession = {
-                id: consumer._id,
-                name: consumer.name,
-                email: consumer.email,
-                phone: consumer.phone,
-                role: 'consumer',
-                ...consumer
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: 'staff',
+                vendorId: user.profile?.vendorId || null,
+                token,
+                ...user
             };
 
-            login('consumer', userSession);
-            return { success: true, data: { consumer: userSession, token } };
+            login('staff', userSession);
+            return { success: true, data: userSession };
         } catch (error) {
-            console.error('Verify OTP error:', error);
-            // Universal development fallback for OTP 1234
-            if (otp === '1234') {
-                console.log('Simulating Consumer verification (1234) due to:', error.message);
-                const mockUser = {
-                    _id: 'dev-user-' + Date.now(),
-                    id: 'dev-user-' + Date.now(),
-                    name: 'Developer Mode',
-                    email: type === 'email' ? identifier : `dev@clean2wash.in`,
-                    phone: type === 'phone' ? identifier : '1234567890',
-                    role: 'consumer'
-                };
-
-                login('consumer', mockUser);
-                return { success: true, data: { consumer: mockUser, token: 'dev-mock-token' } };
-            }
+            console.error('Staff Login error:', error);
             return { success: false, error: error.message };
         }
     }, []);
 
-    const apiLogin = useCallback(async (identifier, password) => {
-        try {
-            const response = await authAPI.login(identifier, password);
-            const { consumer, token } = response.data;
 
-            if (token) {
-                apiClient.setToken(token);
-            }
 
-            const userSession = {
-                id: consumer._id,
-                name: consumer.name,
-                email: consumer.email,
-                phone: consumer.phone,
-                role: 'consumer',
-                ...consumer
-            };
-
-            login('consumer', userSession);
-            return { success: true, data: { consumer: userSession, token } };
-        } catch (error) {
-            console.error('Login error:', error);
-            return { success: false, error: error.message };
-        }
-    }, []);
-
-    const apiSignup = useCallback(async (userData) => {
-        try {
-            const response = await authAPI.signup(userData);
-            const { consumer, token } = response.data;
-
-            if (token) {
-                apiClient.setToken(token);
-            }
-
-            const userSession = {
-                id: consumer._id,
-                name: consumer.name,
-                email: consumer.email,
-                phone: consumer.phone,
-                role: 'consumer',
-                ...consumer
-            };
-
-            login('consumer', userSession);
-            register('consumer', userSession);
-            return { success: true, data: { consumer: userSession, token } };
-        } catch (error) {
-            console.error('Signup error:', error);
-            return { success: false, error: error.message };
-        }
-    }, [register]);
-
-    const apiLogout = useCallback(async (role) => {
-        try {
-            await authAPI.logout();
-        } catch (error) {
-            console.error('Logout error:', error);
-        }
-        apiClient.setToken(null);
-        logout(role);
-    }, [logout]);
 
     const updateBalance = useCallback((amountToAdd) => {
         setWalletBalance(prev => prev + amountToAdd);
@@ -776,9 +933,32 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
 
-    const addAddress = useCallback((a) => setAddresses(prev => [...prev, a]), []);
-    const removeAddress = useCallback((id) => setAddresses(prev => prev.filter(a => a.id !== id)), []);
-    const setPrimaryAddress = useCallback((id) => setAddresses(prev => prev.map(a => ({ ...a, isPrimary: a.id === id }))), []);
+    const addAddress = useCallback(async (addressData) => {
+        try {
+            // Note: Since backend currently only supports one address in consumer.profile.address,
+            // adding an address will update the 'primary' address. The UI may need an array backend eventually.
+            const response = await authAPI.updateAddress(addressData);
+            if (response.data && response.data.address) {
+                setAddresses([{ id: 1, ...response.data.address, label: 'Home', isPrimary: true }]);
+                return { success: true, data: response.data.address };
+            }
+        } catch (error) {
+            console.error('Failed to add address:', error);
+            // Fallback for UI if error
+            setAddresses(prev => [...prev, { ...addressData, id: Date.now() }]);
+            return { success: false, error: error.message };
+        }
+    }, []);
+
+    const removeAddress = useCallback((id) => {
+        // Since backend only supports one address currently, removal isn't fully supported without making it null.
+        // We'll just remove it from local state for now.
+        setAddresses(prev => prev.filter(a => a.id !== id));
+    }, []);
+
+    const setPrimaryAddress = useCallback((id) => {
+        setAddresses(prev => prev.map(a => ({ ...a, isPrimary: a.id === id })));
+    }, []);
 
     const addTrustedContact = useCallback((contact) => setTrustedContacts(prev => [...prev, { ...contact, id: Date.now() }]), []);
     const removeTrustedContact = useCallback((id) => setTrustedContacts(prev => prev.filter(c => c.id !== id)), []);
@@ -793,18 +973,34 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const deleteUser = useCallback((role, userId) => {
-        setRegisteredUsers(prev => ({
-            ...prev,
-            [role]: prev[role].filter(u => u.id !== userId)
-        }));
+        // Replaced by backend user management
+        console.warn('deleteUser deprecated');
     }, []);
 
-    const updateUser = useCallback((role, userId, updatedData) => {
-        setRegisteredUsers(prev => ({
-            ...prev,
-            [role]: prev[role].map(u => u.id === userId ? { ...u, ...updatedData } : u)
-        }));
+    const [stats, setStats] = useState(null);
+    const [statsLoading, setStatsLoading] = useState(false);
 
+    const loadStats = useCallback(async () => {
+        if (!sessions.consumer) return;
+        try {
+            setStatsLoading(true);
+            const response = await apiClient.getStats();
+            setStats(response.data.stats);
+        } catch (error) {
+            console.error('Failed to load stats:', error);
+        } finally {
+            setStatsLoading(false);
+        }
+    }, [sessions.consumer]);
+
+    useEffect(() => {
+        if (sessions.consumer?.token) {
+            loadStats();
+        }
+    }, [sessions.consumer?.token, loadStats]);
+
+
+    const updateUser = useCallback((role, userId, updatedData) => {
         setSessions(prev => {
             const currentSession = prev[role];
             if (currentSession && currentSession.id === userId) {
@@ -816,6 +1012,23 @@ export const AuthProvider = ({ children }) => {
         });
     }, []);
 
+    // Global unauthorized handler
+    useEffect(() => {
+        console.log('AuthContext: Attaching auth:unauthorized listener');
+        const handleUnauthorized = () => {
+            console.error('AuthContext: auth:unauthorized event caught! Logging out...');
+            Object.keys(SESSION_KEYS).forEach(role => logout(role));
+            // Optional: redirect to login
+            window.location.href = '/login';
+        };
+
+        window.addEventListener('auth:unauthorized', handleUnauthorized);
+        return () => {
+            console.log('AuthContext: Removing auth:unauthorized listener');
+            window.removeEventListener('auth:unauthorized', handleUnauthorized);
+        };
+    }, [logout]);
+
     return (
         <AuthContext.Provider value={{
             isLoggedIn,
@@ -826,14 +1039,25 @@ export const AuthProvider = ({ children }) => {
             register,
             deleteUser,
             updateUser,
+            sessions,
+            setSessions,
+            user: sessions.consumer,
+            stats,
+            statsLoading,
+            loadStats,
             bookings,
             addBooking,
             updateBookingStatus,
             assignStaffToBooking,
             vehicles,
+            vehiclesLoading,
             addVehicle,
+            updateVehicle,
             removeVehicle,
             setPrimaryVehicle,
+            globalCatalog,
+            catalogLoading,
+            loadGlobalCatalog,
             addresses,
             addAddress,
             removeAddress,
@@ -843,6 +1067,8 @@ export const AuthProvider = ({ children }) => {
             removeTrustedContact,
             userSubscription,
             walletBalance,
+            updateBalance,
+            loadWallet,
             addToWallet,
             notifications,
             markNotificationRead,
@@ -851,26 +1077,24 @@ export const AuthProvider = ({ children }) => {
             getRazorpayKey,
             createPaymentOrder,
             verifyPayment,
-            // Captain-specific
-            captainJobs,
-            captainJobsLoading,
-            captainEarnings,
-            captainEarningsLoading,
-            loadCaptainJobs,
-            loadCaptainEarnings,
-            acceptJob,
-            updateJobStatus,
-            // API methods
+
+            adminLogin,
+            adminLogout,
+            vendorLogin,
+            vendorLogout,
+            vendorSignup,
+            vendorGetProfile,
+            captainSignup,
+            captainLogin,
+            staffLogin,
+            staffLogout,
             sendOTP,
             verifyOTP,
             apiLogin,
             apiSignup,
-            captainSendOTP,
-            captainVerifyOTP,
-            captainLogin,
-            captainLogout,
-            captainGetProfile,
-            captainUpdateProfile
+            apiLogout,
+            setUserSubscription,
+            isBlackPassMember
         }}>
             {children}
         </AuthContext.Provider>

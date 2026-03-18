@@ -8,30 +8,33 @@ import {
 } from 'lucide-react';
 import CaptainLayout from '../components/CaptainLayout';
 import { useAuth } from '../../../context/AuthContext';
+import { useCaptain } from '../../../context/CaptainContext';
 import { useTheme } from '../../../context/ThemeContext';
 
 const CaptainProfile = () => {
     const navigate = useNavigate();
     const { isDarkMode } = useTheme();
-    const { getUser, logout, captainJobs, captainEarnings } = useAuth();
-    const user = getUser('captain') || { name: 'Captain User', id: 'CPT-DEFAULT' };
+    const { sessions } = useAuth();
+    const { captainJobs, captainEarnings, captainLogout } = useCaptain();
+    const user = sessions.captain || { name: 'Captain User', id: 'CPT-DEFAULT' };
 
     const myJobs = captainJobs.filter(job => job.status === 'completed');
     const totalEarned = captainEarnings.totalEarned || 0;
 
     const DYNAMIC_STATS = [
-        { label: 'Rating', val: user.rating || '4.9', icon: Star, color: 'text-yellow-400' },
+        { label: 'Rating', val: (captainEarnings.rating || user.rating || 5.0).toFixed(1), icon: Star, color: 'text-yellow-400' },
         { label: 'Jobs', val: myJobs.length, icon: CheckCircle2, color: 'text-green-500' },
-        { label: 'Revenue', val: `₹${totalEarned}`, icon: Wallet, color: 'text-brand' }
+        { label: 'Revenue', val: `₹${totalEarned.toLocaleString()}`, icon: Wallet, color: 'text-brand' }
     ];
 
     const menuItems = [
         {
             group: 'Account',
             items: [
-                { label: 'Personal Information', sub: 'Name, Email, Vehicle details', icon: User, route: '/captain/profile/edit' },
-                { label: 'Wallet & Payouts', sub: `Current Balance: ₹${totalEarned}`, icon: Wallet, route: '/captain/earnings' },
-                { label: 'Performance', sub: 'Your ratings and stats', icon: Award, route: '/captain/earnings' },
+                { label: 'Personal Information', sub: user.isVerified ? '✅ Identity Verified' : '⚠️ Verification Pending', icon: User, route: '/captain/profile/personal' },
+                { label: 'Wallet & Payouts', sub: `Current Balance: ₹${(captainEarnings.balance || 0).toLocaleString()}`, icon: Wallet, route: '/captain/earnings' },
+                { label: 'Portfolio', sub: 'Showcase your best washes', icon: Camera, route: '/captain/portfolio' },
+                { label: 'History', sub: 'Your past washes', icon: History, route: '/captain/history' },
             ]
         },
         {
@@ -49,8 +52,8 @@ const CaptainProfile = () => {
                     sub: 'Exit your current session',
                     icon: LogOut,
                     danger: true,
-                    onClick: () => {
-                        logout();
+                    onClick: async () => {
+                        await captainLogout();
                         navigate('/captain/login');
                     }
                 }
@@ -66,7 +69,12 @@ const CaptainProfile = () => {
                     <div className="relative z-10 flex flex-col items-center">
                         <div className="relative mb-4">
                             <div className={`w-24 h-24 rounded-3xl overflow-hidden border-4 shadow-2xl transition-all ${isDarkMode ? 'border-white/10 shadow-black/50' : 'border-white shadow-soft'}`}>
-                                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80" alt="Profile" className="w-full h-full object-cover" />
+                                <img src={user.profile?.avatar || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80"} alt="Profile" className="w-full h-full object-cover" />
+                                {user.isVerified && (
+                                    <div className="absolute -top-1 -right-1 bg-green-500 text-white rounded-full p-1 border-2 border-white shadow-lg z-10">
+                                        <CheckCircle2 size={12} strokeWidth={3} />
+                                    </div>
+                                )}
                             </div>
                             <button className={`absolute -bottom-2 -right-2 w-9 h-9 bg-brand text-white rounded-xl flex items-center justify-center shadow-lg border-2 transition-colors ${isDarkMode ? 'border-[#0F172A]' : 'border-gray-50'}`}>
                                 <Camera size={16} strokeWidth={2.5} />
@@ -75,7 +83,7 @@ const CaptainProfile = () => {
                         <h2 className={`text-2xl font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>{user.name}</h2>
                         <div className="flex items-center gap-2 mt-1 opacity-60">
                             <MapPin size={12} className="text-brand" />
-                            <span className={`${isDarkMode ? 'text-white' : 'text-content-subtle'} text-[10px] font-black uppercase tracking-[0.2em]`}>{user.city || 'Bengaluru'} | ID: {user.id}</span>
+                            <span className={`${isDarkMode ? 'text-white' : 'text-content-subtle'} text-[10px] font-black uppercase tracking-[0.2em]`}>{user.profile?.city || 'Bengaluru'} | ID: {user.id || user._id}</span>
                         </div>
 
                         <div className="mt-6 flex gap-3 w-full max-w-xs">

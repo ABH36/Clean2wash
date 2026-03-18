@@ -3,32 +3,34 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronLeft, Phone, MessageSquare, ShieldCheck, MapPin,
     CheckCircle2, Navigation, Star, Clock, Zap, Info,
-    AlertTriangle, Droplets, Trash2, Truck, ChevronRight
+    AlertTriangle, Droplets, Trash2, Truck, ChevronRight, ShieldAlert
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import MobileLayout from '../components/layout/MobileLayout';
 import { useAuth } from '../../../context/AuthContext';
+import { toast } from 'react-hot-toast';
 
 const CAPTAIN_STEPS = [
-    { id: 'CREATED', label: 'Booking Created', desc: 'Wash requested successfully', Icon: Zap, activeColor: 'text-violet-500', activeBg: 'bg-violet-50', activeBorder: 'border-violet-200' },
-    { id: 'ASSIGNED', label: 'Captain Assigned', desc: 'Expert captain on the job', Icon: ShieldCheck, activeColor: 'text-blue-500', activeBg: 'bg-blue-50', activeBorder: 'border-blue-200' },
-    { id: 'CAPTAIN_EN_ROUTE', label: 'En Route', desc: 'Captain is heading your way', Icon: Navigation, activeColor: 'text-blue-600', activeBg: 'bg-blue-100', activeBorder: 'border-blue-300' },
-    { id: 'ARRIVED', label: 'Arrived', desc: 'Captain reached your location', Icon: MapPin, activeColor: 'text-brand', activeBg: 'bg-brand/10', activeBorder: 'border-brand/20' },
-    { id: 'BEFORE_PHOTO_DONE', label: 'Inspection Done', desc: 'Vehicle condition documented', Icon: CheckCircle2, activeColor: 'text-orange-500', activeBg: 'bg-orange-50', activeBorder: 'border-orange-200' },
-    { id: 'IN_PROGRESS', label: 'Wash in Progress', desc: 'Deep cleaning in action', Icon: Droplets, activeColor: 'text-sky-500', activeBg: 'bg-sky-50', activeBorder: 'border-sky-200' },
-    { id: 'AFTER_PHOTO_DONE', label: 'Final Inspection', desc: 'Quality check completed', Icon: CheckCircle2, activeColor: 'text-emerald-500', activeBg: 'bg-emerald-50', activeBorder: 'border-emerald-200' },
-    { id: 'COMPLETED', label: 'Completed', desc: 'Spotless! Enjoy your ride', Icon: CheckCircle2, activeColor: 'text-green-600', activeBg: 'bg-green-50', activeBorder: 'border-green-200' },
+    { id: 'pending', label: 'Booking Created', desc: 'Wash requested successfully', Icon: Zap, activeColor: 'text-violet-500', activeBg: 'bg-violet-50', activeBorder: 'border-violet-200' },
+    { id: 'assigned', label: 'Captain Assigned', desc: 'Expert captain on the job', Icon: ShieldCheck, activeColor: 'text-blue-500', activeBg: 'bg-blue-50', activeBorder: 'border-blue-200' },
+    { id: 'en_route', label: 'En Route', desc: 'Captain is heading your way', Icon: Navigation, activeColor: 'text-blue-600', activeBg: 'bg-blue-100', activeBorder: 'border-blue-300' },
+    { id: 'arrived', label: 'Arrived', desc: 'Captain reached your location', Icon: MapPin, activeColor: 'text-brand', activeBg: 'bg-brand/10', activeBorder: 'border-brand/20' },
+    { id: 'before_photo', label: 'Inspection Done', desc: 'Vehicle condition documented', Icon: CheckCircle2, activeColor: 'text-orange-500', activeBg: 'bg-orange-50', activeBorder: 'border-orange-200' },
+    { id: 'in_progress', label: 'Wash in Progress', desc: 'Deep cleaning in action', Icon: Droplets, activeColor: 'text-sky-500', activeBg: 'bg-sky-50', activeBorder: 'border-sky-200' },
+    { id: 'after_photo', label: 'Final Inspection', desc: 'Quality check completed', Icon: CheckCircle2, activeColor: 'text-emerald-500', activeBg: 'bg-emerald-50', activeBorder: 'border-emerald-200' },
+    { id: 'completed', label: 'Completed', desc: 'Spotless! Enjoy your ride', Icon: CheckCircle2, activeColor: 'text-green-600', activeBg: 'bg-green-50', activeBorder: 'border-green-200' },
 ];
 
 const VENDOR_STEPS = [
-    { id: 'CREATED', label: 'Studio Request', desc: 'Awaiting studio confirmation', Icon: Zap },
-    { id: 'ASSIGNED', label: 'Studio Confirmed', desc: 'Premium studio assigned', Icon: ShieldCheck },
-    { id: 'CAPTAIN_EN_ROUTE', label: 'Pickup En Route', desc: 'Driver is coming for pickup', Icon: Navigation },
-    { id: 'ARRIVED', label: 'At Your Door', desc: 'Vehicle handover in progress', Icon: MapPin },
-    { id: 'BEFORE_PHOTO_DONE', label: 'Condition Noted', desc: 'Pre-wash photos captured', Icon: CheckCircle2 },
-    { id: 'AT_STUDIO', label: 'At Studio', desc: 'Deep cleaning at facility', Icon: Droplets },
-    { id: 'AFTER_PHOTO_DONE', label: 'Ready for Drop', desc: 'Post-wash photos captured', Icon: CheckCircle2 },
-    { id: 'COMPLETED', label: 'Delivered', desc: 'Returned in pristine condition', Icon: CheckCircle2 },
+    { id: 'pending', label: 'Studio Request', desc: 'Awaiting studio confirmation', Icon: Zap, activeColor: 'text-violet-500', activeBg: 'bg-violet-50', activeBorder: 'border-violet-200' },
+    { id: 'accepted', label: 'Studio Confirmed', desc: 'Premium studio assigned', Icon: ShieldCheck, activeColor: 'text-blue-500', activeBg: 'bg-blue-50', activeBorder: 'border-blue-200' },
+    { id: 'pickup-assigned', label: 'Pickup assigned', desc: 'Driver is coming for pickup', Icon: Navigation, activeColor: 'text-blue-600', activeBg: 'bg-blue-100', activeBorder: 'border-blue-300' },
+    { id: 'arrived', label: 'At Your Door', desc: 'Vehicle handover in progress', Icon: MapPin, activeColor: 'text-brand', activeBg: 'bg-brand/10', activeBorder: 'border-brand/20' },
+    { id: 'at-studio', label: 'At Studio', desc: 'Vehicle reached detailing hub', Icon: Truck, activeColor: 'text-orange-500', activeBg: 'bg-orange-50', activeBorder: 'border-orange-200' },
+    { id: 'in_progress', label: 'Wash in Progress', desc: 'Deep cleaning in action', Icon: Droplets, activeColor: 'text-sky-500', activeBg: 'bg-sky-50', activeBorder: 'border-sky-200' },
+    { id: 'quality-check', label: 'Quality Check', desc: 'Luxury finishing & audit', Icon: CheckCircle2, activeColor: 'text-emerald-500', activeBg: 'bg-emerald-50', activeBorder: 'border-emerald-200' },
+    { id: 'ready-for-delivery', label: 'Ready for Home', desc: 'Wash done, awaiting driver', Icon: ShieldCheck, activeColor: 'text-green-600', activeBg: 'bg-green-50', activeBorder: 'border-green-200' },
+    { id: 'completed', label: 'Delivered', desc: 'Returned in pristine condition', Icon: CheckCircle2, activeColor: 'text-green-600', activeBg: 'bg-green-50', activeBorder: 'border-green-200' },
 ];
 
 const BookingStatus = () => {
@@ -41,7 +43,7 @@ const BookingStatus = () => {
     const STEPS = type === 'vendor' ? VENDOR_STEPS : CAPTAIN_STEPS;
 
     // Find live booking
-    const liveBooking = bookings.find(b => b.id === bookingId) || { id: 'CarWash-8821', serviceName: 'Eco Doorstep Wash', price: '₹473', status: 'CREATED' };
+    const liveBooking = bookings.find(b => (b.bookingId === bookingId || b._id === bookingId || b.id === bookingId)) || { id: 'CarWash-8821', serviceName: 'Eco Doorstep Wash', price: '₹473', status: 'CREATED' };
 
     const [step, setStep] = useState(0);
 
@@ -53,18 +55,35 @@ const BookingStatus = () => {
     }, [liveBooking.status, type, STEPS]);
 
     // Find performer details (Captain or Staff)
-    const { registeredUsers } = useAuth();
-    const performer = liveBooking.performerId
-        ? [...(registeredUsers.captain || []), ...(registeredUsers.staff || [])].find(u => u.id === liveBooking.performerId)
-        : null;
+    const performer = liveBooking.provider?.id;
 
     const performerName = performer?.name || (type === 'vendor' ? 'Service Hub' : 'Matching…');
 
     const handleCancel = () => {
-        if (window.confirm('Are you sure you want to cancel this booking?')) {
-            updateBookingStatus(bookingId, 'cancelled');
-            navigate('/');
-        }
+        toast((t) => (
+            <div className="flex flex-col gap-3">
+                <p className="text-xs font-bold text-content uppercase tracking-tight">Are you sure you want to cancel this booking?</p>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => {
+                            toast.dismiss(t.id);
+                            updateBookingStatus(bookingId, 'cancelled');
+                            navigate('/');
+                            toast.success('Booking cancelled');
+                        }}
+                        className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase"
+                    >
+                        Cancel Booking
+                    </button>
+                    <button
+                        onClick={() => toast.dismiss(t.id)}
+                        className="bg-gray-100 text-content px-3 py-1.5 rounded-lg text-[10px] font-black uppercase"
+                    >
+                        Keep Booking
+                    </button>
+                </div>
+            </div>
+        ), { duration: 5000 });
     };
 
     if (liveBooking.status === 'cancelled') {
@@ -127,10 +146,10 @@ const BookingStatus = () => {
                         </div>
                     </motion.div>
 
-                    {/* Destination */}
+                    {/* Destination / Hub */}
                     <div className="absolute bottom-8 right-8 z-10">
                         <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-lg border border-gray-100">
-                            <MapPin size={16} className="text-content" fill="currentColor" />
+                            {type === 'vendor' ? <Truck size={16} className="text-brand" /> : <MapPin size={16} className="text-content" fill="currentColor" />}
                         </div>
                     </div>
 
@@ -140,7 +159,7 @@ const BookingStatus = () => {
                         <div>
                             <p className="text-[7px] font-black uppercase tracking-widest text-content-subtle leading-none">ETA</p>
                             <p className="text-sm font-black text-content leading-none mt-0.5">
-                                {step === 0 ? '—' : step === 1 ? '12 min' : 'Arrived'}
+                                {step === 0 ? '—' : (step === 1 || step === 2) ? '12 min' : 'Arrived'}
                             </p>
                         </div>
                     </div>
@@ -152,7 +171,9 @@ const BookingStatus = () => {
                             <div className="flex-1 h-px bg-gradient-to-r from-brand to-blue-400" />
                             <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                         </div>
-                        <span className="text-[8px] font-bold text-content-subtle ml-1">HSR Layout → Koramangala</span>
+                        <span className="text-[8px] font-bold text-content-subtle ml-1">
+                            {type === 'vendor' ? 'Home → Studio Hub → Home' : (liveBooking.address?.city ? `Live at ${liveBooking.address?.city}` : 'Your Location')}
+                        </span>
                     </div>
                 </div>
 
@@ -178,12 +199,12 @@ const BookingStatus = () => {
                                     <span className="text-[9px] font-black text-content-subtle uppercase tracking-widest ml-1">Pre-Wash / Before</span>
                                     <div className="aspect-[3/4] rounded-xl bg-gray-50 border border-gray-100 overflow-hidden relative group">
                                         <img
-                                            src={liveBooking.beforePhotos?.[0] || "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=400&q=80"}
+                                            src={liveBooking.serviceImages?.before?.[0] || liveBooking.beforePhotos?.[0] || "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=400&q=80"}
                                             className="w-full h-full object-cover grayscale-[0.5] group-hover:grayscale-0 transition-all"
                                             alt="Before Wash"
                                         />
                                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 p-2">
-                                            <p className="text-[7px] font-black text-white uppercase tracking-widest">Captured at {liveBooking.beforeTime || '10:42 AM'}</p>
+                                            <p className="text-[7px] font-black text-white uppercase tracking-widest">Captured at {liveBooking.serviceImages?.before?.[0] ? new Date(liveBooking.updatedAt).toLocaleTimeString() : '10:42 AM'}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -195,12 +216,12 @@ const BookingStatus = () => {
                                         {step >= 6 ? (
                                             <>
                                                 <img
-                                                    src={liveBooking.afterPhotos?.[0] || "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&q=80"}
+                                                    src={liveBooking.serviceImages?.after?.[0] || liveBooking.afterPhotos?.[0] || "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&q=80"}
                                                     className="w-full h-full object-cover"
                                                     alt="After Wash"
                                                 />
                                                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 p-2">
-                                                    <p className="text-[7px] font-black text-white uppercase tracking-widest">Captured at {liveBooking.afterTime || '11:15 AM'}</p>
+                                                    <p className="text-[7px] font-black text-white uppercase tracking-widest">Captured at {liveBooking.serviceImages?.after?.[0] ? new Date(liveBooking.updatedAt).toLocaleTimeString() : '11:15 AM'}</p>
                                                 </div>
                                             </>
                                         ) : (
@@ -306,7 +327,7 @@ const BookingStatus = () => {
                                 <div className="flex items-center gap-3">
                                     <div className="relative">
                                         <div className="w-14 h-14 rounded-xl overflow-hidden border-2 border-white/10">
-                                            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80" alt="Rahul" className="w-full h-full object-cover" />
+                                            <img src={performer?.photo || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80"} alt={performerName} className="w-full h-full object-cover" />
                                         </div>
                                         <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-400 rounded-full border-2 border-content" />
                                     </div>
@@ -316,9 +337,9 @@ const BookingStatus = () => {
                                         <div className="flex items-center gap-2 mt-1.5">
                                             <div className="flex items-center gap-1 bg-accent-yellow px-2 py-0.5 rounded-lg">
                                                 <Star size={9} fill="currentColor" className="text-black" />
-                                                <span className="text-[9px] font-black text-black">4.9</span>
+                                                <span className="text-[9px] font-black text-black">{performer?.rating || '4.9'}</span>
                                             </div>
-                                            <span className="text-white/30 text-[9px] font-bold">2,540 washes</span>
+                                            <span className="text-white/30 text-[9px] font-bold">Verified</span>
                                         </div>
                                     </div>
                                 </div>
@@ -338,7 +359,7 @@ const BookingStatus = () => {
                                 <div>
                                     <p className="text-[8px] font-black text-white/40 uppercase tracking-widest mb-2">Handover PIN</p>
                                     <div className="flex items-center gap-2">
-                                        {['4', '8', '8', '2'].map((d, i) => (
+                                        {(liveBooking.securityPin || '----').split('').map((d, i) => (
                                             <div key={i} className="w-9 h-10 bg-white/10 rounded-lg border border-white/10 flex items-center justify-center">
                                                 <span className="text-white font-black text-base">{d}</span>
                                             </div>
@@ -362,9 +383,9 @@ const BookingStatus = () => {
 
                 <div className="grid grid-cols-2 gap-3">
                     {[
-                        { label: 'Service', value: liveBooking.serviceName },
-                        { label: 'Paid', value: liveBooking.price },
-                        { label: 'Vehicle', value: liveBooking.vehicle || 'Honda City · Silver' },
+                        { label: 'Service', value: liveBooking.service?.name || liveBooking.serviceName || 'Car Wash' },
+                        { label: 'Paid', value: `₹${liveBooking.pricing?.totalAmount || liveBooking.amount || liveBooking.price || '0'}` },
+                        { label: 'Vehicle', value: liveBooking.vehicle?.name || liveBooking.vehicleInfo?.name || liveBooking.vehicle || 'Honda City' },
                         { label: 'Duration', value: '~45 minutes' },
                     ].map((d) => (
                         <div key={d.label} className="bg-white rounded-xl border border-gray-100 shadow-soft px-4 py-3">
@@ -414,6 +435,13 @@ const BookingStatus = () => {
                         >
                             <MessageSquare size={18} className="text-brand" fill="currentColor" /> Need Help?
                         </motion.button>
+                        <motion.button
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() => navigate(`/sos?id=${bookingId}`)}
+                            className="w-14 h-14 bg-red-600 text-white rounded-2xl font-black text-sm flex items-center justify-center shadow-lg shadow-red-200"
+                        >
+                            <ShieldAlert size={20} />
+                        </motion.button>
                         {(liveBooking.status === 'pending' || liveBooking.status === 'confirmed') && (
                             <motion.button
                                 whileTap={{ scale: 0.97 }}
@@ -426,6 +454,17 @@ const BookingStatus = () => {
                     </div>
                 )}
             </div>
+
+            {/* Floating SOS for quick access if header is scrolled */}
+            <motion.button
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                onClick={() => navigate(`/sos?id=${bookingId}`)}
+                className="fixed bottom-32 right-6 w-14 h-14 bg-red-600 text-white rounded-full shadow-2xl flex items-center justify-center z-[100] border-4 border-white active:scale-90 transition-transform"
+            >
+                <div className="absolute inset-0 bg-red-600 rounded-full animate-ping opacity-25" />
+                <ShieldAlert size={24} strokeWidth={2.5} />
+            </motion.button>
 
         </MobileLayout>
     );

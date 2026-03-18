@@ -1,13 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     Plus, Search, Power, Edit3,
     Trash2, ChevronRight, LayoutGrid, List,
     Sparkles, ShieldCheck, Zap, X, Check,
-    Clock, Tag, AlertTriangle
+    Clock, Tag, AlertTriangle, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import VendorLayout from '../components/VendorLayout';
-import { useAuth } from '../../../context/AuthContext';
+import { vendorAPI } from '../../../utils/vendorApi';
 
 const ICON_MAP = {
     'Cleaning': Sparkles,
@@ -28,9 +28,9 @@ const COLOR_MAP = {
 const CATEGORIES = ['Cleaning', 'Detailing', 'Protection', 'Maintenance', 'Enhancement'];
 
 const VendorServices = () => {
-    const { getUser, updateUser } = useAuth();
-    const vendor = getUser('vendor') || {};
-    const services = vendor.services || [];
+    const [services, setServices] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
 
     const [viewMode, setViewMode] = useState('grid');
     const [searchQuery, setSearchQuery] = useState('');
@@ -41,7 +41,24 @@ const VendorServices = () => {
     const [editTarget, setEditTarget] = useState(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(null); // id of service to delete
 
-    const [form, setForm] = useState({ name: '', price: '', duration: '1 hour', category: 'Cleaning', active: true });
+    const [form, setForm] = useState({ name: '', price: '', time: '1 hour', category: 'Cleaning', type: 'Standard', description: '', isActive: true });
+
+    useEffect(() => {
+        fetchServices();
+    }, []);
+
+    const fetchServices = async () => {
+        try {
+            const res = await vendorAPI.getServices();
+            if (res.status === 'success') {
+                setServices(res.data.services);
+            }
+        } catch (err) {
+            console.error('Failed to fetch services', err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const filteredServices = useMemo(() => {
         return services.filter(s => {
@@ -57,35 +74,55 @@ const VendorServices = () => {
             setForm(target);
         } else {
             setEditTarget(null);
-            setForm({ name: '', price: '', duration: '1 hour', category: 'Cleaning', active: true });
+            setForm({ name: '', price: '', time: '1 hour', category: 'Cleaning', type: 'Standard', description: '', isActive: true });
         }
         setDrawerOpen(true);
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!form.name || !form.price) return;
+        setSaving(true);
 
-        let updatedServices;
-        if (editTarget) {
-            updatedServices = services.map(s => s.id === editTarget.id ? { ...form } : s);
-        } else {
-            const newService = { ...form, id: 'SRV-' + Math.random().toString(36).substr(2, 5).toUpperCase() };
-            updatedServices = [...services, newService];
+        try {
+            let res;
+            if (editTarget) {
+                res = await vendorAPI.updateService(editTarget._id, form);
+            } else {
+                res = await vendorAPI.createService(form);
+            }
+
+            if (res.status === 'success') {
+                fetchServices();
+                setDrawerOpen(false);
+            }
+        } catch (err) {
+            console.error('Failed to save service', err);
+        } finally {
+            setSaving(false);
         }
-
-        updateUser('vendor', vendor.id, { services: updatedServices });
-        setDrawerOpen(false);
     };
 
-    const handleDelete = (id) => {
-        const updatedServices = services.filter(s => s.id !== id);
-        updateUser('vendor', vendor.id, { services: updatedServices });
-        setShowDeleteConfirm(null);
+    const handleDelete = async (id) => {
+        try {
+            const res = await vendorAPI.deleteService(id);
+            if (res.status === 'success') {
+                setServices(prev => prev.filter(s => s._id !== id));
+                setShowDeleteConfirm(null);
+            }
+        } catch (err) {
+            console.error('Failed to delete service', err);
+        }
     };
 
-    const handleToggleActive = (id) => {
-        const updatedServices = services.map(s => s.id === id ? { ...s, active: !s.active } : s);
-        updateUser('vendor', vendor.id, { services: updatedServices });
+    const handleToggleActive = async (service) => {
+        try {
+            const res = await vendorAPI.updateService(service._id, { isActive: !service.isActive });
+            if (res.status === 'success') {
+                setServices(prev => prev.map(s => s._id === service._id ? { ...s, isActive: !service.isActive } : s));
+            }
+        } catch (err) {
+            console.error('Failed to toggle service status', err);
+        }
     };
 
     const ServiceCard = ({ s, i }) => {
@@ -95,6 +132,7 @@ const VendorServices = () => {
         return (
             <motion.div
                 layout
+                key={s._id}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className={`bg-surface rounded-[2.5rem] border border-gray-100/10 shadow-soft overflow-hidden group hover:border-brand/20 transition-all ${viewMode === 'list' ? 'flex items-center p-4' : 'p-8 space-y-6'}`}
@@ -107,9 +145,9 @@ const VendorServices = () => {
                     <div className={`${viewMode === 'list' ? 'flex-1' : 'space-y-1'}`}>
                         <div className="flex items-center gap-2">
                             <h3 className="text-lg font-black text-content tracking-tight">{s.name}</h3>
-                            {!s.active && <span className="text-[8px] font-black bg-background border border-gray-100/10 text-content-muted px-2 py-0.5 rounded uppercase tracking-widest">Paused</span>}
+                            {!s.isActive && <span className="text-[8px] font-black bg-background border border-gray-100/10 text-content-muted px-2 py-0.5 rounded uppercase tracking-widest">Paused</span>}
                         </div>
-                        <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest italic">{s.category} · {s.duration}</p>
+                        <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest italic">{s.category} · {s.type} · {s.time}</p>
                     </div>
 
                     {viewMode === 'list' && (
@@ -129,13 +167,13 @@ const VendorServices = () => {
                             <Edit3 size={18} />
                         </button>
                         <button
-                            onClick={() => handleToggleActive(s.id)}
-                            className={`w-10 h-10 rounded-xl border border-gray-100/10 flex items-center justify-center transition-all ${s.active ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}
+                            onClick={() => handleToggleActive(s)}
+                            className={`w-10 h-10 rounded-xl border border-gray-100/10 flex items-center justify-center transition-all ${s.isActive ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}
                         >
                             <Power size={18} />
                         </button>
                         <button
-                            onClick={() => setShowDeleteConfirm(s.id)}
+                            onClick={() => setShowDeleteConfirm(s._id)}
                             className="w-10 h-10 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
                         >
                             <Trash2 size={18} />
@@ -192,9 +230,13 @@ const VendorServices = () => {
 
                 {/* Services Area */}
                 <AnimatePresence mode="popLayout">
-                    {filteredServices.length > 0 ? (
+                    {loading ? (
+                        <div className="py-20 flex justify-center">
+                            <Loader2 className="w-10 h-10 text-brand animate-spin" />
+                        </div>
+                    ) : filteredServices.length > 0 ? (
                         <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-4"}>
-                            {filteredServices.map((s, i) => <ServiceCard key={s.id} s={s} i={i} />)}
+                            {filteredServices.map((s, i) => <ServiceCard key={s._id} s={s} i={i} />)}
                         </div>
                     ) : (
                         <motion.div
@@ -279,13 +321,36 @@ const VendorServices = () => {
                                 </div>
 
                                 <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest px-4 italic mb-2 block">Service Type</label>
+                                    <select
+                                        value={form.type}
+                                        onChange={e => setForm({ ...form, type: e.target.value })}
+                                        className="w-full h-14 bg-background border border-gray-100/10 rounded-2xl px-6 text-sm font-bold text-content outline-none focus:border-brand transition-all appearance-none"
+                                    >
+                                        {['Standard', 'Premium', 'Elite', 'Waterless', 'Steam', 'Chemical', 'Pro', 'Wash'].map(t => (
+                                            <option key={t} value={t} className="bg-surface text-content">{t}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest px-4 italic mb-2 block">Description</label>
+                                    <textarea
+                                        placeholder="Describe the tactical advantages of this service..."
+                                        value={form.description}
+                                        onChange={e => setForm({ ...form, description: e.target.value })}
+                                        className="w-full h-32 bg-background border border-gray-100/10 rounded-2xl p-6 text-sm font-bold text-content outline-none focus:border-brand transition-all resize-none"
+                                    />
+                                </div>
+
+                                <div className="space-y-1.5">
                                     <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest px-4 italic mb-2 block">Time Estimate</label>
                                     <div className="grid grid-cols-3 gap-2">
                                         {['30 mins', '1 hour', '2 hours', '4 hours', '1 day'].map(d => (
                                             <button
                                                 key={d}
-                                                onClick={() => setForm({ ...form, duration: d })}
-                                                className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${form.duration === d ? 'bg-brand/10 border-brand text-brand shadow-sm' : 'bg-background border-gray-100/10 text-content-muted'}`}
+                                                onClick={() => setForm({ ...form, time: d })}
+                                                className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${form.time === d ? 'bg-brand/10 border-brand text-brand shadow-sm' : 'bg-background border-gray-100/10 text-content-muted'}`}
                                             >
                                                 {d}
                                             </button>
@@ -297,10 +362,10 @@ const VendorServices = () => {
                             <div className="p-8 border-t border-gray-100/10 bg-background/50 backdrop-blur">
                                 <button
                                     onClick={handleSave}
-                                    className="w-full h-16 bg-content text-surface rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-content/20 hover:bg-brand transition-all flex items-center justify-center gap-3"
+                                    disabled={saving}
+                                    className="w-full h-16 bg-content text-surface rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-content/20 hover:bg-brand transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                                 >
-                                    <Check size={18} strokeWidth={3} />
-                                    {editTarget ? 'Update Registry' : 'Deploy Service'}
+                                    {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Check size={18} strokeWidth={3} /> {editTarget ? 'Update Registry' : 'Deploy Service'}</>}
                                 </button>
                             </div>
                         </motion.aside>
@@ -339,4 +404,3 @@ const VendorServices = () => {
 };
 
 export default VendorServices;
-

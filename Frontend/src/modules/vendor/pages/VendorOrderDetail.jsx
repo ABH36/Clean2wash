@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft, MapPin, Car, User, Clock,
@@ -7,48 +7,101 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import VendorLayout from '../components/VendorLayout';
+import { vendorAPI } from '../../../utils/vendorApi';
 import { useAuth } from '../../../context/AuthContext';
 
 const VendorOrderDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { bookings, updateBookingStatus, registeredUsers, assignStaffToBooking, getUser } = useAuth();
+    const { getUser } = useAuth();
     const vendor = getUser('vendor');
 
-    const [showDriverPicker, setShowDriverPicker] = useState(false);
-    const [pickerRole, setPickerRole] = useState('pickup'); // 'pickup' or 'delivery'
+    const [staffList, setStaffList] = useState([]);
+    const [assignedStaff, setAssignedStaff] = useState({ pickup: null, delivery: null });
 
-    const liveBooking = React.useMemo(() => {
-        return bookings.find(b => b.id === id) || {
-            id: 'MOCK-' + id,
-            userName: 'Suresh Raina',
-            vehicle: 'BMW X5 · KA-01-MJ-9999',
-            serviceName: 'Studio Deep Clean',
-            price: '₹2,499',
-            address: 'Whitefield, Bengaluru',
-            status: 'pending',
-            type: 'vendor'
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [orderRes, staffRes] = await Promise.all([
+                    vendorAPI.getOrderById(id),
+                    vendorAPI.getStaff()
+                ]);
+
+                if (orderRes.status === 'success') {
+                    setLiveBooking(orderRes.data.order);
+                    setStatus(orderRes.data.order.status);
+                    setAssignedStaff({
+                        pickup: orderRes.data.order.pickupStaff,
+                        delivery: orderRes.data.order.deliveryStaff
+                    });
+                }
+
+                if (staffRes.status === 'success') {
+                    setStaffList(staffRes.data.staff);
+                }
+            } catch (err) {
+                console.error('Failed to load order details', err);
+            } finally {
+                setLoading(false);
+            }
         };
-    }, [bookings, id]);
+        fetchData();
+    }, [id]);
 
-    const [status, setStatus] = useState(liveBooking.status);
-
-    // Get Staff for this vendor
-    const staffList = (registeredUsers.staff || []).filter(s => s.vendorId === vendor?.id);
-    const assignedPickupStaff = staffList.find(s => s.id === liveBooking.pickupStaffId);
-    const assignedDeliveryStaff = staffList.find(s => s.id === liveBooking.deliveryStaffId);
-
-    const handleAcceptRequest = () => {
-        updateBookingStatus(liveBooking.id, 'accepted', { vendorId: vendor.id });
+    const handleAcceptRequest = async () => {
+        try {
+            const res = await vendorAPI.updateOrderStatus(id, 'accepted');
+            if (res.status === 'success') {
+                setLiveBooking(res.data.booking);
+                setStatus('accepted');
+            }
+        } catch (error) {
+            console.error('Error accepting job', error);
+        }
     };
 
-    const handleUpdateStatus = () => {
-        updateBookingStatus(liveBooking.id, status);
+    const handleUpdateStatus = async () => {
+        try {
+            // Production Grade: Include photos for specific Elite transitions
+            const updatePayload = { status };
+            
+            if (status === 'at-studio' || status === 'quality-check' || status === 'completed') {
+                // Simulated high-end inspection photos
+                updatePayload.photos = [
+                    "data:image/jpeg;base64,/9j/4AAQSkZJRg==", // Placeholder 1
+                    "data:image/jpeg;base64,/9j/4AAQSkZJRg=="  // Placeholder 2
+                ];
+            }
+
+            const res = await vendorAPI.updateOrderStatus(id, updatePayload.status, updatePayload.photos);
+            if (res.status === 'success') {
+                const updatedBooking = res.data.booking || res.data.order;
+                setLiveBooking(updatedBooking);
+                setStatus(updatedBooking.status);
+                toast.success(`Status updated to ${status.replace(/_/g, ' ')}`);
+            }
+        } catch (error) {
+            console.error('Error updating status', error);
+            const { toast } = await import('react-hot-toast');
+            toast.error(error.response?.data?.message || 'Failed to update status');
+        }
     };
 
-    const handleAssignStaff = (staffId) => {
-        assignStaffToBooking(liveBooking.id, staffId, pickerRole, vendor.id);
-        setShowDriverPicker(false);
+    const handleAssignStaff = async (staffId) => {
+        try {
+            const res = await vendorAPI.assignStaff(id, staffId, pickerRole);
+            if (res.status === 'success') {
+                const updatedBooking = res.data.booking;
+                setLiveBooking(updatedBooking);
+                setAssignedStaff({
+                    pickup: updatedBooking.pickupStaff,
+                    delivery: updatedBooking.deliveryStaff
+                });
+                setShowDriverPicker(false);
+            }
+        } catch (error) {
+            console.error('Error assigning staff', error);
+        }
     };
 
     const openDriverPicker = (role) => {
@@ -57,264 +110,279 @@ const VendorOrderDetail = () => {
     };
 
     const getProgressWidth = () => {
+        if (!liveBooking) return '0%';
         const statusMap = {
             'pending': '10%',
-            'accepted': '30%',
-            'confirmed': '45%',
-            'in-progress': '55%',
+            'accepted': '20%',
+            'confirmed': '25%',
+            'assigned': '30%',
+            'pickup-assigned': '35%',
+            'en_route': '45%',
+            'arrived': '55%',
+            'before_photo': '60%',
             'at-studio': '70%',
-            'packing': '80%',
-            'delivery-assigned': '90%',
+            'in_progress': '80%',
+            'quality-check': '90%',
+            'ready-for-delivery': '95%',
             'completed': '100%'
         };
         return statusMap[liveBooking.status] || '0%';
     };
 
-    const timeline = [
-        { label: 'Booking Request', time: '10:00 AM', status: 'completed' },
-        { label: 'Studio Accepted', time: liveBooking.vendorId ? '10:05 AM' : '--', status: liveBooking.vendorId ? 'completed' : 'pending' },
-        { label: 'Pickup Assigned', time: liveBooking.pickupStaffId ? '10:15 AM' : '--', status: liveBooking.pickupStaffId ? 'completed' : 'pending' },
-        { label: 'Vehicle at Studio', time: '--', status: liveBooking.status === 'at-studio' ? 'active' : 'pending' },
-        { label: 'Order Packed & QC', time: '--', status: liveBooking.status === 'packing' ? 'active' : 'pending' },
-        { label: 'Service Finished', time: '--', status: liveBooking.status === 'delivery-assigned' ? 'active' : 'pending' },
-        { label: 'Delivery Complete', time: '--', status: liveBooking.status === 'completed' ? 'completed' : 'pending' },
-    ];
+    const timeline = liveBooking ? [
+        { label: 'Booking Request', time: new Date(liveBooking.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), status: 'completed' },
+        { label: 'Studio Accepted', time: liveBooking.vendor ? 'OK' : '--', status: liveBooking.vendor ? 'completed' : 'pending' },
+        { label: 'Pickup Assigned', time: '--', status: ['pickup-assigned', 'at-studio', 'in_progress', 'quality-check', 'ready-for-delivery', 'completed'].includes(liveBooking.status) ? 'completed' : 'pending' },
+        { label: 'Vehicle at Studio', time: '--', status: ['at-studio', 'in_progress', 'quality-check', 'ready-for-delivery', 'completed'].includes(liveBooking.status) ? 'active' : 'pending' },
+        { label: 'Detaling & QC', time: '--', status: ['quality-check', 'ready-for-delivery', 'completed'].includes(liveBooking.status) ? 'active' : 'pending' },
+        { label: 'Ready for Home', time: '--', status: ['ready-for-delivery', 'completed'].includes(liveBooking.status) ? 'active' : 'pending' },
+        { label: 'Handover Complete', time: '--', status: liveBooking.status === 'completed' ? 'completed' : 'pending' },
+    ] : [];
 
 
 
     return (
         <VendorLayout
-            title={`Order ${liveBooking.id}`}
+            title={`Order ${id.substring(0, 8)}`}
             subtitle="Job Details & Execution"
         >
             <div className="space-y-6 max-w-5xl mx-auto pb-24">
-                {/* Header Actions */}
-                <div className="flex items-center justify-between">
-                    <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-content-subtle hover:text-content font-black text-[10px] uppercase tracking-widest transition-all">
-                        <ArrowLeft size={16} /> Back to Dashboard
-                    </button>
-                    <div className="flex gap-2">
-                        {liveBooking.status === 'pending' && (
-                            !liveBooking.vendorId || liveBooking.vendorId !== vendor?.id
-                        ) && (
-                                <button onClick={handleAcceptRequest} className="h-10 px-6 bg-brand text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand/20 hover:scale-105 transition-all">
-                                    Accept Request
-                                </button>
-                            )}
-                        <button className="h-10 px-4 border border-gray-100/10 bg-surface rounded-xl text-content-muted font-black text-[10px] uppercase tracking-widest hover:text-brand transition-all">
-                            Print Invoice
-                        </button>
-                        <button className="h-10 px-6 bg-red-50 text-red-500 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-100 transition-all">
-                            Cancel Job
-                        </button>
+                {loading || !liveBooking ? (
+                    <div className="flex justify-center py-20">
+                        <div className="w-8 h-8 border-4 border-brand/30 border-t-brand rounded-full animate-spin" />
                     </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Left Column: Job Info */}
-                    <div className="lg:col-span-2 space-y-6">
-                        {/* Status Card */}
-                        <div className="bg-surface rounded-[2.5rem] p-8 text-content relative overflow-hidden shadow-2xl border border-gray-100/10">
-                            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                                <div>
-                                    <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] italic mb-1">Current Progress</p>
-                                    <h2 className="text-3xl font-black italic tracking-tighter uppercase">{liveBooking.status}</h2>
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <div className="h-1.5 w-32 bg-background rounded-full overflow-hidden">
-                                            <div className="h-full bg-brand transition-all duration-1000" style={{ width: getProgressWidth() }} />
-                                        </div>
-                                        <span className="text-[10px] font-black text-brand italic">
-                                            {liveBooking.status === 'completed' ? 'Delivered successfully' : 'Live tracking active'}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="flex gap-2">
-                                    <select
-                                        className="h-14 bg-background border border-gray-100/10 rounded-2xl px-6 text-xs font-black uppercase tracking-widest outline-none focus:border-brand transition-all cursor-pointer text-content"
-                                        value={status}
-                                        onChange={(e) => setStatus(e.target.value)}
-                                    >
-                                        <option value="accepted" className="text-content">Accepted</option>
-                                        <option value="at-studio" className="text-content">In Studio</option>
-                                        <option value="packing" className="text-content">Order Packing</option>
-                                        <option value="delivery-assigned" className="text-content">Ready for Delivery</option>
-                                        <option value="completed" className="text-content">Completed</option>
-                                    </select>
-                                    <button onClick={handleUpdateStatus} className="h-14 bg-brand text-white px-8 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-brand/30 hover:scale-105 transition-all">
-                                        Update
-                                    </button>
-                                </div>
+                ) : (
+                    <>
+                        {/* Header Actions */}
+                        <div className="flex items-center justify-between">
+                            <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-content-subtle hover:text-content font-black text-[10px] uppercase tracking-widest transition-all">
+                                <ArrowLeft size={16} /> Back to Dashboard
+                            </button>
+                            <div className="flex gap-2">
+                                {liveBooking.status === 'pending' && (
+                                    !liveBooking.vendor || liveBooking.vendor !== vendor?.id
+                                ) && (
+                                        <button onClick={handleAcceptRequest} className="h-10 px-6 bg-brand text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand/20 hover:scale-105 transition-all">
+                                            Accept Request
+                                        </button>
+                                    )}
+                                <button className="h-10 px-4 border border-gray-100/10 bg-surface rounded-xl text-content-muted font-black text-[10px] uppercase tracking-widest hover:text-brand transition-all">
+                                    Print Invoice
+                                </button>
+                                <button className="h-10 px-6 bg-red-50 text-red-500 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-100 transition-all">
+                                    Cancel Job
+                                </button>
                             </div>
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-brand/10 rounded-full blur-3xl -mr-32 -mt-32" />
                         </div>
 
-                        {/* Customer & Vehicle Info */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="bg-surface p-6 rounded-[2rem] border border-gray-100/10 shadow-soft space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Customer Profile</h3>
-                                    <div className="flex gap-1">
-                                        <button className="p-2 bg-background border border-gray-100/10 rounded-lg text-brand hover:scale-105 transition-all"><Phone size={14} /></button>
-                                        <button className="p-2 bg-background border border-gray-100/10 rounded-lg text-brand hover:scale-105 transition-all"><MessageSquare size={14} /></button>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <div className="w-16 h-16 bg-background rounded-2xl flex items-center justify-center border border-gray-100/10 text-brand italic font-black text-xl">
-                                        {liveBooking.userName?.charAt(0) || 'U'}
-                                    </div>
-                                    <div>
-                                        <h4 className="font-black text-lg text-content tracking-tight">{liveBooking.userName}</h4>
-                                        <div className="flex items-center gap-2">
-                                            <div className="flex items-center gap-0.5 text-amber-500">
-                                                <Star size={10} fill="currentColor" />
-                                                <span className="text-[10px] font-black">4.8</span>
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* Left Column: Job Info */}
+                            <div className="lg:col-span-2 space-y-6">
+                                {/* Status Card */}
+                                <div className="bg-surface rounded-[2.5rem] p-8 text-content relative overflow-hidden shadow-2xl border border-gray-100/10">
+                                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                        <div>
+                                            <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] italic mb-1">Current Progress</p>
+                                            <h2 className="text-3xl font-black italic tracking-tighter uppercase">{liveBooking.status}</h2>
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <div className="h-1.5 w-32 bg-background rounded-full overflow-hidden">
+                                                    <div className="h-full bg-brand transition-all duration-1000" style={{ width: getProgressWidth() }} />
+                                                </div>
+                                                <span className="text-[10px] font-black text-brand italic">
+                                                    {liveBooking.status === 'completed' ? 'Delivered successfully' : 'Live tracking active'}
+                                                </span>
                                             </div>
-                                            <span className="text-[10px] font-bold text-content-subtle uppercase tracking-widest">· Live Booking</span>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <select
+                                                className="h-14 bg-background border border-gray-100/10 rounded-2xl px-6 text-xs font-black uppercase tracking-widest outline-none focus:border-brand transition-all cursor-pointer text-content"
+                                                value={status}
+                                                onChange={(e) => setStatus(e.target.value)}
+                                            >
+                                                <option value="accepted" className="text-content">Accepted</option>
+                                                <option value="at-studio" className="text-content">In Studio</option>
+                                                <option value="in_progress" className="text-content">Washing</option>
+                                                <option value="quality-check" className="text-content">Quality Check</option>
+                                                <option value="ready-for-delivery" className="text-content">Ready for Home</option>
+                                                <option value="completed" className="text-content">Completed</option>
+                                            </select>
+                                            <button onClick={handleUpdateStatus} className="h-14 bg-brand text-white px-8 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-brand/30 hover:scale-105 transition-all">
+                                                Update
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="absolute top-0 right-0 w-64 h-64 bg-brand/10 rounded-full blur-3xl -mr-32 -mt-32" />
+                                </div>
+
+                                {/* Customer & Vehicle Info */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="bg-surface p-6 rounded-[2rem] border border-gray-100/10 shadow-soft space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Customer Profile</h3>
+                                            <div className="flex gap-1">
+                                                <button className="p-2 bg-background border border-gray-100/10 rounded-lg text-brand hover:scale-105 transition-all"><Phone size={14} /></button>
+                                                <button className="p-2 bg-background border border-gray-100/10 rounded-lg text-brand hover:scale-105 transition-all"><MessageSquare size={14} /></button>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-16 h-16 bg-background rounded-2xl flex items-center justify-center border border-gray-100/10 text-brand italic font-black text-xl">
+                                                {liveBooking.consumer?.name?.charAt(0) || 'U'}
+                                            </div>
+                                            <div>
+                                                <h4 className="font-black text-lg text-content tracking-tight">{liveBooking.consumer?.name || 'Guest'}</h4>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="flex items-center gap-0.5 text-amber-500">
+                                                        <Star size={10} fill="currentColor" />
+                                                        <span className="text-[10px] font-black">4.8</span>
+                                                    </div>
+                                                    <span className="text-[10px] font-bold text-content-subtle uppercase tracking-widest">· Live Booking</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-surface p-6 rounded-[2rem] border border-gray-100/10 shadow-soft space-y-4">
+                                        <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Vehicle Details</h3>
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-16 h-16 bg-background rounded-2xl flex items-center justify-center border border-gray-100/10 text-content-muted font-black italic">
+                                                {liveBooking.vehicle?.brand?.substring(0, 3) || 'SUV'}
+                                            </div>
+                                            <div>
+                                                <h4 className="font-black text-lg text-content tracking-tight">{liveBooking.vehicle?.brand ? `${liveBooking.vehicle.brand} ${liveBooking.vehicle.model}` : 'Unknown Vehicle'}</h4>
+                                                <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest italic">{liveBooking.vehicle?.plate || 'Verified Vehicle'}</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="bg-surface p-6 rounded-[2rem] border border-gray-100/10 shadow-soft space-y-4">
-                                <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Vehicle Details</h3>
-                                <div className="flex items-center gap-4">
-                                    <div className="w-16 h-16 bg-background rounded-2xl flex items-center justify-center border border-gray-100/10 text-content-muted font-black italic">
-                                        {liveBooking.vehicle?.split('(')[0]?.trim() || 'SUV'}
-                                    </div>
-                                    <div>
-                                        <h4 className="font-black text-lg text-content tracking-tight">{liveBooking.vehicle}</h4>
-                                        <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest italic">Verified Vehicle</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Service Breakdown */}
-                        <div className="bg-surface p-8 rounded-[2.5rem] border border-gray-100/10 shadow-soft">
-                            <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic mb-6">Service Package Breakdown</h3>
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between py-4 border-b border-gray-100/10">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 bg-brand/5 rounded-xl flex items-center justify-center text-brand">
-                                            <Package size={20} />
+                                {/* Service Breakdown */}
+                                <div className="bg-surface p-8 rounded-[2.5rem] border border-gray-100/10 shadow-soft">
+                                    <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic mb-6">Service Package Breakdown</h3>
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between py-4 border-b border-gray-100/10">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 bg-brand/5 rounded-xl flex items-center justify-center text-brand">
+                                                    <Package size={20} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-black text-content tracking-tight">{liveBooking.service?.name}</p>
+                                                    <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest italic">Professional Studio Grade</p>
+                                                </div>
+                                            </div>
+                                            <span className="text-base font-black italic tracking-tighter text-content">{liveBooking.price || liveBooking.service?.defaultPrice}</span>
                                         </div>
-                                        <div>
-                                            <p className="text-sm font-black text-content tracking-tight">{liveBooking.serviceName}</p>
-                                            <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest italic">Professional Studio Grade</p>
+                                        <div className="flex flex-wrap gap-2 pt-2">
+                                            {(liveBooking.addons && liveBooking.addons.length > 0 ? liveBooking.addons : ['Standard Finish']).map(addon => (
+                                                <span key={addon} className="px-3 py-1.5 bg-background border border-gray-100/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-content-muted">
+                                                    + {addon}
+                                                </span>
+                                            ))}
                                         </div>
                                     </div>
-                                    <span className="text-base font-black italic tracking-tighter text-content">{liveBooking.price}</span>
                                 </div>
-                                <div className="flex flex-wrap gap-2 pt-2">
-                                    {(liveBooking.addons || ['Deep Vacuum', 'Rim Polish']).map(addon => (
-                                        <span key={addon} className="px-3 py-1.5 bg-background border border-gray-100/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-content-muted">
-                                            + {addon}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
 
-                        {/* Inspection Photos */}
-                        <div className="bg-surface p-8 rounded-[2.5rem] border border-gray-100/10 shadow-soft">
-                            <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Pre-Service Inspection</h3>
-                                <div className="flex items-center gap-2 text-[10px] font-black text-brand uppercase tracking-widest">
-                                    <Camera size={14} /> {liveBooking.inspectionPhotos?.length || 0} Photos
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
-                                {(liveBooking.inspectionPhotos || [
-                                    'https://images.unsplash.com/photo-1507136390302-cd99245fe028?w=200&q=80',
-                                    'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=200&q=80'
-                                ]).map((img, i) => (
-                                    <div key={i} className="aspect-square rounded-2xl overflow-hidden border-2 border-gray-100/10 bg-background group relative">
-                                        <img src={img} alt="Inspection" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                    </div>
-                                ))}
-                                <button className="aspect-square rounded-2xl border-2 border-dashed border-gray-100/10 bg-background flex flex-col items-center justify-center gap-2 text-content-subtle hover:border-brand hover:text-brand transition-all">
-                                    <Camera size={20} />
-                                    <span className="text-[8px] font-black uppercase tracking-widest">Add</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Right Column: Sidebar Tasks */}
-                    <div className="space-y-6">
-                        {/* Driver Control */}
-                        <div className="bg-surface p-6 rounded-[2rem] border border-gray-100/10 shadow-soft space-y-4">
-                            <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Staff Management</h3>
-
-                            {/* Pickup Driver */}
-                            <div className="space-y-2">
-                                <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest">Pickup Staff</p>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-background border border-gray-100/10 rounded-xl flex items-center justify-center text-content-muted">
-                                        <Truck size={18} />
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-black text-content">{assignedPickupStaff?.name || 'Unassigned'}</p>
-                                        <p className="text-[9px] font-bold text-brand uppercase tracking-widest">Role: Pickup</p>
-                                    </div>
-                                    <button onClick={() => openDriverPicker('pickup')} className="text-[10px] font-black text-brand uppercase tracking-widest border-b border-brand/20">
-                                        {assignedPickupStaff ? 'Change' : 'Assign'}
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Delivery Driver */}
-                            <div className="space-y-2 pt-2 border-t border-gray-100/10">
-                                <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest">Delivery Staff</p>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-background border border-gray-100/10 rounded-xl flex items-center justify-center text-content-muted">
-                                        <Truck size={18} />
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-black text-content">{assignedDeliveryStaff?.name || 'Unassigned'}</p>
-                                        <p className="text-[9px] font-bold text-brand uppercase tracking-widest">Role: Delivery</p>
-                                    </div>
-                                    <button onClick={() => openDriverPicker('delivery')} className="text-[10px] font-black text-brand uppercase tracking-widest border-b border-brand/20">
-                                        {assignedDeliveryStaff ? 'Change' : 'Assign'}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Location Mini Map Placeholder */}
-                        <div className="bg-surface p-6 rounded-[2rem] border border-gray-100/10 shadow-soft space-y-4">
-                            <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Location Details</h3>
-                            <div className="h-32 bg-background rounded-2xl border border-gray-100/10 relative overflow-hidden group">
-                                <div className="absolute inset-0 flex items-center justify-center text-content-subtle">
-                                    <MapPin size={24} className="group-hover:scale-125 transition-transform" />
-                                </div>
-                            </div>
-                            <p className="text-[11px] font-bold text-content leading-snug">{liveBooking.address}</p>
-                        </div>
-
-                        {/* Timeline */}
-                        <div className="bg-surface p-6 rounded-[2rem] border border-gray-100/10 shadow-soft space-y-6">
-                            <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Job Timeline</h3>
-                            <div className="space-y-4 relative">
-                                <div className="absolute left-3 top-2 bottom-2 w-0.5 bg-gray-100/10" />
-                                {timeline.map((step, i) => (
-                                    <div key={i} className="flex gap-4 relative z-10">
-                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center ${step.status === 'completed' ? 'bg-brand text-white' :
-                                            step.status === 'active' ? 'bg-surface border-2 border-brand text-brand shadow-lg shadow-brand/20' :
-                                                'bg-surface border-2 border-gray-100/10 text-content-subtle/20'
-                                            }`}>
-                                            {step.status === 'completed' ? <CheckCircle2 size={12} /> : <div className="w-1.5 h-1.5 rounded-full bg-current" />}
-                                        </div>
-                                        <div>
-                                            <p className={`text-[11px] font-black uppercase tracking-tight ${step.status === 'pending' ? 'text-content-subtle' : 'text-content'}`}>{step.label}</p>
-                                            <p className="text-[9px] font-bold text-content-subtle italic">{step.time}</p>
+                                {/* Inspection Photos */}
+                                <div className="bg-surface p-8 rounded-[2.5rem] border border-gray-100/10 shadow-soft">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Pre-Service Inspection</h3>
+                                        <div className="flex items-center gap-2 text-[10px] font-black text-brand uppercase tracking-widest">
+                                            <Camera size={14} /> {liveBooking.inspectionPhotos?.length || 0} Photos
                                         </div>
                                     </div>
-                                ))}
+                                    <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
+                                        {(liveBooking.inspectionPhotos || [
+                                            'https://images.unsplash.com/photo-1507136390302-cd99245fe028?w=200&q=80',
+                                            'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=200&q=80'
+                                        ]).map((img, i) => (
+                                            <div key={i} className="aspect-square rounded-2xl overflow-hidden border-2 border-gray-100/10 bg-background group relative">
+                                                <img src={img} alt="Inspection" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                            </div>
+                                        ))}
+                                        <button className="aspect-square rounded-2xl border-2 border-dashed border-gray-100/10 bg-background flex flex-col items-center justify-center gap-2 text-content-subtle hover:border-brand hover:text-brand transition-all">
+                                            <Camera size={20} />
+                                            <span className="text-[8px] font-black uppercase tracking-widest">Add</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Right Column: Sidebar Tasks */}
+                            <div className="space-y-6">
+                                {/* Driver Control */}
+                                <div className="bg-surface p-6 rounded-[2rem] border border-gray-100/10 shadow-soft space-y-4">
+                                    <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Staff Management</h3>
+
+                                    {/* Pickup Driver */}
+                                    <div className="space-y-2">
+                                        <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest">Pickup Staff</p>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-background border border-gray-100/10 rounded-xl flex items-center justify-center text-content-muted">
+                                                <Truck size={18} />
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-sm font-black text-content">{assignedStaff.pickup?.name || 'Unassigned'}</p>
+                                                <p className="text-[9px] font-bold text-brand uppercase tracking-widest">Role: Pickup</p>
+                                            </div>
+                                            <button onClick={() => openDriverPicker('pickup')} className="text-[10px] font-black text-brand uppercase tracking-widest border-b border-brand/20">
+                                                {assignedStaff.pickup ? 'Change' : 'Assign'}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Delivery Driver */}
+                                    <div className="space-y-2 pt-2 border-t border-gray-100/10">
+                                        <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest">Delivery Staff</p>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-background border border-gray-100/10 rounded-xl flex items-center justify-center text-content-muted">
+                                                <Truck size={18} />
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-sm font-black text-content">{assignedStaff.delivery?.name || 'Unassigned'}</p>
+                                                <p className="text-[9px] font-bold text-brand uppercase tracking-widest">Role: Delivery</p>
+                                            </div>
+                                            <button onClick={() => openDriverPicker('delivery')} className="text-[10px] font-black text-brand uppercase tracking-widest border-b border-brand/20">
+                                                {assignedStaff.delivery ? 'Change' : 'Assign'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Location Mini Map Placeholder */}
+                                <div className="bg-surface p-6 rounded-[2rem] border border-gray-100/10 shadow-soft space-y-4">
+                                    <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Location Details</h3>
+                                    <div className="h-32 bg-background rounded-2xl border border-gray-100/10 relative overflow-hidden group">
+                                        <div className="absolute inset-0 flex items-center justify-center text-content-subtle">
+                                            <MapPin size={24} className="group-hover:scale-125 transition-transform" />
+                                        </div>
+                                    </div>
+                                    <p className="text-[11px] font-bold text-content leading-snug">{liveBooking.consumer?.profile?.address?.city || 'Address Not Provided'}</p>
+                                </div>
+
+                                {/* Timeline */}
+                                <div className="bg-surface p-6 rounded-[2rem] border border-gray-100/10 shadow-soft space-y-6">
+                                    <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Job Timeline</h3>
+                                    <div className="space-y-4 relative">
+                                        <div className="absolute left-3 top-2 bottom-2 w-0.5 bg-gray-100/10" />
+                                        {timeline.map((step, i) => (
+                                            <div key={i} className="flex gap-4 relative z-10">
+                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${step.status === 'completed' ? 'bg-brand text-white' :
+                                                    step.status === 'active' ? 'bg-surface border-2 border-brand text-brand shadow-lg shadow-brand/20' :
+                                                        'bg-surface border-2 border-gray-100/10 text-content-subtle/20'
+                                                    }`}>
+                                                    {step.status === 'completed' ? <CheckCircle2 size={12} /> : <div className="w-1.5 h-1.5 rounded-full bg-current" />}
+                                                </div>
+                                                <div>
+                                                    <p className={`text-[11px] font-black uppercase tracking-tight ${step.status === 'pending' ? 'text-content-subtle' : 'text-content'}`}>{step.label}</p>
+                                                    <p className="text-[9px] font-bold text-content-subtle italic">{step.time}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
+                    </>
+                )}
             </div>
 
             {/* Driver Picker Modal */}

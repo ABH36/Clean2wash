@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 import {
     ChevronLeft, ShoppingBag, Trash2, Plus, Minus, ArrowRight,
     Tag, ShieldCheck, Truck, RotateCcw, Check, ArrowLeft,
-    Clock, Zap, CreditCard, Gift, Shield
+    Clock, Zap, CreditCard, Gift, Shield, Crown
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import MobileLayout from '../components/layout/MobileLayout';
@@ -12,7 +13,8 @@ import { useAuth } from '../../../context/AuthContext';
 
 const CartPage = () => {
     const navigate = useNavigate();
-    const { cartItems, updateQty, removeFromCart, clearCart, cartTotal } = useCart();
+    const { cartItems, updateQty, removeFromCart, clearCart, cartTotal, discountedTotal } = useCart();
+    const { isBlackPassMember } = useAuth();
     const { getUser, addBooking } = useAuth();
     const user = getUser('consumer');
     const [coupon, setCoupon] = useState('');
@@ -23,13 +25,14 @@ const CartPage = () => {
     const discount = couponApplied ? Math.round(cartTotal * 0.1) : 0;
     const standardDeliveryFee = cartTotal > 999 ? 0 : 49;
     const expressFee = deliverySpeed === 'express' ? 49 : 0;
-    const finalTotal = cartTotal - discount + standardDeliveryFee + expressFee;
+    const finalTotal = discountedTotal - discount + standardDeliveryFee + expressFee;
+    const blackSavings = isBlackPassMember ? (cartTotal - discountedTotal) : 0;
 
     const handleApplyCoupon = () => {
         if (coupon.toUpperCase() === 'CARWASH10') {
             setCouponApplied(true);
         } else {
-            alert('Invalid coupon code. Try CARWASH10');
+            toast.error('Invalid coupon code. Try CARWASH10');
         }
     };
 
@@ -216,8 +219,16 @@ const CartPage = () => {
                         <div className="bg-white rounded-xl border border-gray-100 p-3.5 shadow-sm space-y-2.5">
                             <div className="flex justify-between items-center text-[9px] font-bold text-content-subtle uppercase tracking-widest">
                                 <span>Subtotal</span>
-                                <span className="text-content font-black">₹{cartTotal.toLocaleString()}</span>
+                                <span className={`${isBlackPassMember ? 'line-through opacity-50' : 'text-content font-black'}`}>₹{cartTotal.toLocaleString()}</span>
                             </div>
+                            {isBlackPassMember && (
+                                <div className="flex justify-between items-center text-[9px] font-black text-brand uppercase tracking-widest">
+                                    <span className="flex items-center gap-1">
+                                        <Crown size={10} fill="currentColor" /> Black Membership Benefit
+                                    </span>
+                                    <span>-₹{blackSavings.toLocaleString()}</span>
+                                </div>
+                            )}
                             {discount > 0 && (
                                 <div className="flex justify-between items-center text-[9px] font-bold text-brand uppercase tracking-widest">
                                     <span>Savings</span>

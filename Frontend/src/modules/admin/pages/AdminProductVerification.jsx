@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
     Check, X, Search, Filter, ShoppingBag,
     ExternalLink, Eye, AlertCircle, TrendingUp,
@@ -8,54 +8,68 @@ import { motion, AnimatePresence } from 'framer-motion';
 import AdminLayout from '../components/AdminLayout';
 import { useAuth } from '../../../context/AuthContext';
 
+import { adminAPI } from '../../../utils/adminApi';
+import { toast } from 'react-hot-toast';
+
 const AdminProductVerification = () => {
-    const { registeredUsers = {}, updateUser } = useAuth();
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState('Pending'); // Pending, Approved, Rejected, All
     const [selectedProduct, setSelectedProduct] = useState(null);
+    const [processingId, setProcessingId] = useState(null);
 
-    // Flatten all vendor products into a single list with vendor info
-    const allProducts = useMemo(() => {
-        const products = [];
-        (registeredUsers?.vendor || []).forEach(vendor => {
-            if (vendor.products) {
-                vendor.products.forEach(product => {
-                    products.push({
-                        ...product,
-                        vendorId: vendor.id,
-                        vendorName: vendor.studioName || vendor.name,
-                        vendorEmail: vendor.email
-                    });
-                });
+    useEffect(() => {
+        fetchProducts();
+    }, [filterStatus]);
+
+    const fetchProducts = async () => {
+        try {
+            setLoading(true);
+            const response = await adminAPI.getProducts({ status: filterStatus });
+            if (response.status === 'success') {
+                setProducts(response.data.products);
             }
-        });
-        return products;
-    }, [registeredUsers?.vendor]);
-
-    const filtered = allProducts.filter(p => {
-        const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p.vendorName.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesStatus = filterStatus === 'All' || p.status === filterStatus;
-        return matchesSearch && matchesStatus;
-    });
-
-    const handleAction = (product, newStatus) => {
-        const vendor = (registeredUsers?.vendor || []).find(v => v.id === product.vendorId);
-        if (!vendor) return;
-
-        const updatedProducts = vendor.products.map(p =>
-            p.id === product.id ? { ...p, status: newStatus } : p
-        );
-
-        updateUser('vendor', vendor.id, { products: updatedProducts });
-        setSelectedProduct(null);
+        } catch (error) {
+            console.error('Failed to fetch products:', error);
+        } finally {
+            setLoading(false);
+        }
     };
 
+
+
+    const filtered = products.filter(p => {
+        const vendorName = p.vendor?.profile?.studioName || p.vendor?.name || 'Unknown Vendor';
+        const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            vendorName.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesSearch;
+    });
+
+    const handleAction = async (product, newStatus) => {
+        try {
+            setProcessingId(product._id || product.id);
+            await adminAPI.verifyProduct({
+                productId: product._id || product.id,
+                status: newStatus
+            });
+            await fetchProducts();
+            setSelectedProduct(null);
+            toast.success(`Product ${newStatus.toLowerCase()} successfully`);
+        } catch (error) {
+            toast.error('Moderation failed: ' + error.message);
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    // We might need a separate call for stats if we want total across all statuses
+    // For now, let's just use what's loaded if filterStatus is 'All', otherwise show partial
     const stats = {
-        pending: allProducts.filter(p => p.status === 'Pending').length,
-        approved: allProducts.filter(p => p.status === 'Approved').length,
-        rejected: allProducts.filter(p => p.status === 'Rejected').length,
-        total: allProducts.length
+        pending: products.filter(p => p.status === 'Pending').length,
+        approved: products.filter(p => p.status === 'Approved').length,
+        rejected: products.filter(p => p.status === 'Rejected').length,
+        total: products.length
     };
 
     return (
@@ -79,7 +93,7 @@ const AdminProductVerification = () => {
                                 </div>
                             </div>
                             <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-none mb-1">{s.label}</p>
-                            <h3 className={`text-2xl font-black ${s.color} italic tracking-tighter`}>{s.val}</h3>
+                            <h3 className={`text-2xl font-black ${s.color} tracking-tighter`}>{s.val}</h3>
                         </div>
                     ))}
                 </div>
@@ -114,14 +128,14 @@ const AdminProductVerification = () => {
                 {filtered.length === 0 ? (
                     <div className="bg-surface rounded-3xl border border-dashed border-gray-100/20 p-20 flex flex-col items-center gap-4 text-center">
                         <ShoppingBag size={48} className="text-gray-100/10" />
-                        <h3 className="text-lg font-black text-content uppercase tracking-tight italic">Clearance Complete</h3>
+                        <h3 className="text-lg font-black text-content uppercase tracking-tight">Clearance Complete</h3>
                         <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest">No pending items found in this sector</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {filtered.map((item, i) => (
                             <motion.div
-                                key={item.id}
+                                key={item._id}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: i * 0.05 }}
@@ -151,33 +165,44 @@ const AdminProductVerification = () => {
                                         <div className="flex items-center gap-2 mb-1">
                                             <span className="text-[8px] font-black text-brand uppercase tracking-[0.2em]">{item.category}</span>
                                             <div className="w-1 h-1 bg-gray-100/20 rounded-full" />
-                                            <span className="text-[8px] font-black text-content-subtle uppercase tracking-[0.2em]">{item.id}</span>
+                                            <span className="text-[8px] font-black text-content-subtle uppercase tracking-[0.2em]">{item._id}</span>
                                         </div>
-                                        <h4 className="text-sm font-black text-content italic uppercase tracking-tight leading-tight line-clamp-1">{item.name}</h4>
+                                        <h4 className="text-sm font-black text-content uppercase tracking-tight leading-tight line-clamp-1">{item.name}</h4>
                                     </div>
 
                                     <div className="flex items-center gap-3 p-3 bg-background border border-gray-100/10 rounded-2xl mb-5">
                                         <div className="w-8 h-8 rounded-lg bg-brand/10 flex items-center justify-center text-brand font-black text-[10px]">
-                                            {item.vendorName[0]}
+                                            {(item.vendor?.profile?.studioName || item.vendor?.name || 'U')[0]}
                                         </div>
                                         <div className="overflow-hidden">
-                                            <p className="text-[9px] font-black text-content uppercase tracking-tight leading-none mb-1 truncate">{item.vendorName}</p>
-                                            <p className="text-[7px] font-bold text-content-subtle uppercase tracking-widest truncate">{item.vendorEmail}</p>
+                                            <p className="text-[9px] font-black text-content uppercase tracking-tight leading-none mb-1 truncate">
+                                                {item.vendor?.profile?.studioName || item.vendor?.name || 'Unknown Vendor'}
+                                            </p>
+                                            <p className="text-[7px] font-bold text-content-subtle uppercase tracking-widest truncate">
+                                                {item.vendor?.email || 'No Email'}
+                                            </p>
                                         </div>
                                     </div>
 
                                     <div className="flex items-center gap-2 mt-auto">
                                         <button
+                                            disabled={processingId === item._id}
                                             onClick={() => handleAction(item, 'Rejected')}
-                                            className="flex-1 h-10 bg-red-50 text-red-600 rounded-xl text-[9px] font-black uppercase tracking-widest border border-red-100 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                                            className="flex-1 h-10 bg-red-50 text-red-600 rounded-xl text-[9px] font-black uppercase tracking-widest border border-red-100 hover:bg-red-500 hover:text-white transition-all shadow-sm disabled:opacity-50"
                                         >
                                             Refuse
                                         </button>
                                         <button
+                                            disabled={processingId === item._id}
                                             onClick={() => handleAction(item, 'Approved')}
-                                            className="flex-[2] h-10 bg-green-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-green-500/20 hover:bg-green-600 transition-all flex items-center justify-center gap-2"
+                                            className="flex-[2] h-10 bg-green-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-green-500/20 hover:bg-green-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                                         >
-                                            <Check size={14} strokeWidth={3} /> Verify Item
+                                            {processingId === item._id ? (
+                                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                            ) : (
+                                                <Check size={14} strokeWidth={3} />
+                                            )}
+                                            Verify Item
                                         </button>
                                     </div>
                                 </div>
@@ -209,7 +234,7 @@ const AdminProductVerification = () => {
                                             <div className="w-full h-full flex flex-col items-center justify-center gap-4 bg-black/40">
                                                 <Play size={48} className="text-white fill-white animate-pulse" />
                                                 <p className="text-[10px] font-black text-white uppercase tracking-widest">Video Stream Loaded</p>
-                                                <p className="text-[8px] font-bold text-white/40 italic">{selectedProduct.video}</p>
+                                                <p className="text-[8px] font-bold text-white/40">{selectedProduct.video}</p>
                                             </div>
                                         ) : (
                                             <img src={selectedProduct.image} alt="" className="w-full h-full object-cover" />
@@ -224,20 +249,20 @@ const AdminProductVerification = () => {
                                             <div className="flex items-center gap-3 mb-2">
                                                 <span className="text-[10px] text-brand font-black uppercase tracking-widest">{selectedProduct.category}</span>
                                                 <div className="w-1.5 h-1.5 rounded-full bg-brand/20" />
-                                                <span className="text-[10px] text-content-subtle font-black uppercase tracking-widest">{selectedProduct.id}</span>
+                                                <span className="text-[10px] text-content-subtle font-black uppercase tracking-widest">{selectedProduct._id}</span>
                                             </div>
-                                            <h2 className="text-3xl font-[1000] text-content italic uppercase tracking-tighter leading-none mb-4">{selectedProduct.name}</h2>
+                                            <h2 className="text-3xl font-[1000] text-content uppercase tracking-tighter leading-none mb-4">{selectedProduct.name}</h2>
                                             <p className="text-sm font-bold text-content-subtle leading-loose">{selectedProduct.description}</p>
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-6">
                                             <div className="bg-background p-4 rounded-3xl border border-gray-100/10">
                                                 <p className="text-[9px] font-black text-content-subtle uppercase tracking-widest mb-1.5">MRP Integration</p>
-                                                <p className="text-xl font-black text-content italic">₹{selectedProduct.price}</p>
+                                                <p className="text-xl font-black text-content">₹{selectedProduct.price}</p>
                                             </div>
                                             <div className="bg-background p-4 rounded-3xl border border-gray-100/10">
                                                 <p className="text-[9px] font-black text-brand uppercase tracking-widest mb-1.5">Platform Valuation</p>
-                                                <p className="text-xl font-black text-brand italic">₹{selectedProduct.salePrice}</p>
+                                                <p className="text-xl font-black text-brand">₹{selectedProduct.salePrice}</p>
                                             </div>
                                         </div>
 
@@ -255,16 +280,24 @@ const AdminProductVerification = () => {
 
                                         <div className="flex items-center gap-3">
                                             <button
+                                                disabled={processingId === selectedProduct._id}
                                                 onClick={() => handleAction(selectedProduct, 'Rejected')}
-                                                className="flex-1 h-14 bg-red-500/10 text-red-600 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-red-500/20 hover:bg-red-500 hover:text-white transition-all shadow-lg"
+                                                className="flex-1 h-14 bg-red-500/10 text-red-600 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-red-500/20 hover:bg-red-500 hover:text-white transition-all shadow-lg disabled:opacity-50"
                                             >
                                                 Reject Entry
                                             </button>
                                             <button
+                                                disabled={processingId === selectedProduct._id}
                                                 onClick={() => handleAction(selectedProduct, 'Approved')}
-                                                className="flex-[2] h-14 bg-brand text-white rounded-2xl text-[11px] font-[1000] uppercase tracking-widest shadow-2xl shadow-brand/30 flex items-center justify-center gap-3"
+                                                className="flex-[2] h-14 bg-brand text-white rounded-2xl text-[11px] font-[1000] uppercase tracking-widest shadow-2xl shadow-brand/30 flex items-center justify-center gap-3 disabled:opacity-50"
                                             >
-                                                <Check size={20} strokeWidth={3} /> Approve protocol
+                                                {processingId === selectedProduct._id ? (
+                                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                ) : (
+                                                    <>
+                                                        <Check size={20} strokeWidth={3} /> Approve protocol
+                                                    </>
+                                                )}
                                             </button>
                                         </div>
                                     </div>

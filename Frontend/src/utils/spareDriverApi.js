@@ -1,9 +1,9 @@
-const API_BASE_URL = '/api/sparedrivers';
+const API_BASE_URL = import.meta.env.VITE_SPAREDRIVERS_API_URL || '/api/sparedrivers';
 
 class SpareDriverApiClient {
     constructor(baseURL = API_BASE_URL) {
         this.baseURL = baseURL;
-        this.token = localStorage.getItem('chauffeur_token');
+        this.token = localStorage.getItem('chauffeur_token') || null;
     }
 
     setToken(token) {
@@ -44,7 +44,8 @@ class SpareDriverApiClient {
             method: 'POST',
             body: JSON.stringify(driverData),
         });
-        if (data?.token) this.setToken(data.token);
+        const token = data.token || data.data?.token;
+        if (token) this.setToken(token);
         return data;
     }
 
@@ -60,9 +61,19 @@ class SpareDriverApiClient {
         return this.request('/profile');
     }
 
+    async getBookings() {
+        return this.request('/bookings');
+    }
+
+    async acceptBooking(id) {
+        return this.request(`/bookings/${id}/accept`, {
+            method: 'PATCH'
+        });
+    }
+
     // ── Admin methods (uses admin JWT stored as consumer token) ──
     adminRequest(endpoint, options = {}) {
-        const adminToken = localStorage.getItem('carwash_token'); // admin token
+        const adminToken = localStorage.getItem('auth_admin_token'); // admin token
         const url = `${this.baseURL}${endpoint}`;
         return fetch(url, {
             headers: {

@@ -17,19 +17,24 @@ import {
 } from 'lucide-react';
 import CaptainLayout from '../components/CaptainLayout';
 
+import { useAuth } from '../../../context/AuthContext';
+import { useCaptain } from '../../../context/CaptainContext';
 import { useTheme } from '../../../context/ThemeContext';
 
 const CaptainSettings = () => {
     const navigate = useNavigate();
     const { isDarkMode } = useTheme();
+    const { sessions } = useAuth();
+    const { captainLogout } = useCaptain();
+    const user = sessions.captain || { name: 'Captain', id: '---' };
 
     const SETTINGS_GROUPS = [
         {
             title: 'Mission Configuration',
             items: [
                 { icon: <Bell />, label: 'Job Alerts', sub: 'Instant wash notifications', toggle: true },
-                { icon: <Globe />, label: 'Active Region', sub: 'Koramangala, Bengaluru', arrow: true },
-                { icon: <Smartphone />, label: 'Device Binding', sub: 'iPhone 15 Pro Max', status: 'Secured' }
+                { icon: <Globe />, label: 'Active Region', sub: user.profile?.city || user.city || 'Setting City...', arrow: true },
+                { icon: <Smartphone />, label: 'Device Binding', sub: 'Secured Device', status: 'Secured' }
             ]
         },
         {
@@ -58,14 +63,18 @@ const CaptainSettings = () => {
                 <div className="px-4 space-y-8 mt-6">
                     {/* Profile Summary */}
                     <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/40' : 'bg-white border-gray-100 shadow-soft'} border rounded-[2.5rem] p-6 flex items-center gap-4 transition-all hover:border-brand/30`}>
-                        <div className={`w-16 h-16 rounded-3xl overflow-hidden border-2 transition-colors ${isDarkMode ? 'border-brand/20' : 'border-brand/10 shadow-sm'}`}>
-                            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80" alt="Avatar" className="w-full h-full object-cover" />
+                        <div className={`w-16 h-16 rounded-3xl overflow-hidden border-2 transition-colors flex items-center justify-center bg-brand/5 ${isDarkMode ? 'border-brand/20' : 'border-brand/10 shadow-sm'}`}>
+                            {user.profile?.avatar || user.photo ? (
+                                <img src={user.profile?.avatar || user.photo} alt="Avatar" className="w-full h-full object-cover" />
+                            ) : (
+                                <User size={24} className="text-brand/30" />
+                            )}
                         </div>
                         <div>
-                            <h3 className={`font-black italic text-lg uppercase leading-none mb-1 ${isDarkMode ? 'text-white' : 'text-content'}`}>Rahul Sharma</h3>
-                            <p className={`${isDarkMode ? 'text-white/40' : 'text-content-subtle'} text-[10px] font-black uppercase tracking-widest leading-none`}>ID: CPT-9981-HS</p>
+                            <h3 className={`font-black italic text-lg uppercase leading-none mb-1 ${isDarkMode ? 'text-white' : 'text-content'}`}>{user.name}</h3>
+                            <p className={`${isDarkMode ? 'text-white/40' : 'text-content-subtle'} text-[10px] font-black uppercase tracking-widest leading-none`}>ID: {user.id || user._id}</p>
                         </div>
-                        <button className="ml-auto w-10 h-10 bg-brand text-white rounded-xl flex items-center justify-center shadow-lg shadow-brand/20 hover:brightness-110 active:scale-95 transition-all">
+                        <button onClick={() => navigate('/captain/profile')} className="ml-auto w-10 h-10 bg-brand text-white rounded-xl flex items-center justify-center shadow-lg shadow-brand/20 hover:brightness-110 active:scale-95 transition-all">
                             <User size={18} />
                         </button>
                     </div>
@@ -114,7 +123,10 @@ const CaptainSettings = () => {
                     <div className="space-y-4 pt-4">
                         <motion.button
                             whileTap={{ scale: 0.98 }}
-                            onClick={() => navigate('/captain/login')}
+                            onClick={async () => {
+                                await captainLogout();
+                                navigate('/captain/login');
+                            }}
                             className={`w-full flex items-center justify-center gap-3 py-5 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] italic border transition-all ${isDarkMode
                                     ? 'bg-red-500/10 border-red-500/10 text-red-500 hover:bg-red-500 hover:text-white shadow-2xl shadow-red-500/10'
                                     : 'bg-red-50 border-red-100 text-red-600 hover:bg-red-600 hover:text-white shadow-soft shadow-red-500/5'

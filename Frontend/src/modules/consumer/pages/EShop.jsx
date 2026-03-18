@@ -1,26 +1,41 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
     Search, Menu, ShoppingCart, Heart, User, Home,
     ChevronRight, Zap, RefreshCw, Truck, ArrowLeft,
-    Star, Plus, ShoppingBag, Youtube, Mail, Bell, X, Check
+    Star, Plus, ShoppingBag, Youtube, Mail, Bell, X, Check, Crown
 } from 'lucide-react';
 import MobileLayout from '../components/layout/MobileLayout';
-import { useCart, SHOP_PRODUCTS } from '../../../context/CartContext';
+import { useCart } from '../../../context/CartContext';
 import { useWishlist } from '../../../context/WishlistContext';
 import { useAuth } from '../../../context/AuthContext';
+import { productAPI } from '../../../utils/api';
 
 const EShop = () => {
     const navigate = useNavigate();
     const { addToCart, isInCart, cartCount } = useCart();
     const { toggleWishlist, isInWishlist } = useWishlist();
-    const { registeredUsers = {} } = useAuth();
-    const [activeTab, setActiveTab] = useState('shop');
+    const { isBlackPassMember } = useAuth();
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearching, setIsSearching] = useState(false);
     const [activeCategory, setActiveCategory] = useState('All');
     const [toast, setToast] = useState(null);
+    const [fromBooking, setFromBooking] = useState(false);
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const from = params.get('from');
+        if (from === 'booking' || from === 'studio-wash') {
+            setFromBooking(from);
+        }
+    }, []);
+
+    // Dynamic State
+    const [products, setProducts] = useState([]);
+    const [metadata, setMetadata] = useState({ categories: [], banners: [], settings: null });
+    const [loading, setLoading] = useState(true);
+    const [metadataLoading, setMetadataLoading] = useState(true);
 
     const showToast = (name) => {
         setToast(name);
@@ -31,29 +46,46 @@ const EShop = () => {
         { title: 'Vehicle Accessories', key: 'Accessories', image: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=800&q=80' },
         { title: 'Safety & Protection', key: 'Electronics', image: 'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=800&q=80' },
         { title: 'Car & Bike Care Kit', key: 'Cleaning', image: 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=800&q=80' },
+        { title: 'Appearance & Style', key: 'Enhancement', image: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&q=80' },
     ];
 
-    const allAvailableProducts = useMemo(() => {
-        const vendorApproved = [];
-        (registeredUsers?.vendor || []).forEach(v => {
-            if (v.products) {
-                v.products.filter(p => p.status === 'Approved').forEach(p => {
-                    vendorApproved.push(p);
-                });
+    useEffect(() => {
+        const fetchMetadata = async () => {
+            try {
+                const res = await productAPI.getEshopMetadata();
+                if (res.status === 'success') {
+                    setMetadata(res.data);
+                }
+            } catch (err) {
+                console.error("Failed to fetch E-Shop metadata:", err);
+            } finally {
+                setMetadataLoading(false);
             }
-        });
-        return [...SHOP_PRODUCTS, ...vendorApproved];
-    }, [registeredUsers?.vendor]);
+        };
+        fetchMetadata();
+    }, []);
 
-    const filteredProducts = useMemo(() => {
-        let list = [...allAvailableProducts];
-        if (activeCategory !== 'All') list = list.filter(p => p.category === activeCategory);
-        if (searchQuery.trim()) {
-            const q = searchQuery.toLowerCase();
-            list = list.filter(p => p.name.toLowerCase().includes(q) || (p.description && p.description.toLowerCase().includes(q)));
-        }
-        return list;
-    }, [activeCategory, searchQuery, allAvailableProducts]);
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                setLoading(true);
+                const res = await productAPI.getProducts({
+                    category: activeCategory === 'All' ? undefined : activeCategory,
+                    search: searchQuery
+                });
+                if (res.status === 'success') {
+                    setProducts(res.data.products);
+                }
+            } catch (err) {
+                console.error("Failed to fetch products:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        const timeoutId = setTimeout(fetchProducts, searchQuery ? 500 : 0);
+        return () => clearTimeout(timeoutId);
+    }, [activeCategory, searchQuery]);
 
     const handleAddToCart = (product) => {
         addToCart(product);
@@ -113,8 +145,47 @@ const EShop = () => {
                 </header>
 
                 <div className="space-y-6">
-                    {/* ── FLASH SALE BANNER ── */}
-                    {!searchQuery && activeCategory === 'All' && (
+                    {/* ── DYNAMIC BANNERS ── */}
+                    {!searchQuery && activeCategory === 'All' && metadata.banners?.length > 0 && (
+                        <div className="px-5 pt-4">
+                            {metadata.banners.map((banner, idx) => (
+                                <div key={banner.id || idx} className={`rounded-xl p-6 relative overflow-hidden flex items-center justify-between min-h-[160px] ${banner.theme === 'dark' ? 'bg-content text-white' : 'bg-[#FFF9E5]'}`}>
+                                    <div className="relative z-10 space-y-1">
+                                        <h3 className="text-[28px] font-[1000] leading-none tracking-tighter uppercase whitespace-pre-line">
+                                            {banner.title}
+                                        </h3>
+                                        <button
+                                            onClick={() => navigate(banner.path)}
+                                            className={`mt-3 px-4 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest shadow-lg ${banner.theme === 'dark' ? 'bg-brand text-white' : 'bg-content text-white'}`}
+                                        >
+                                            {banner.cta}
+                                        </button>
+                                    </div>
+
+                                    <div className="relative z-10 text-right">
+                                        <p className={`text-[12px] font-black uppercase tracking-widest leading-tight mb-2 ${banner.theme === 'dark' ? 'text-white/60' : 'text-content'}`}>
+                                            {banner.subtitle}
+                                        </p>
+                                        <div className={`border-l-2 pl-4 ${banner.theme === 'dark' ? 'border-white/10' : 'border-content/10'}`}>
+                                            <p className={`text-[10px] font-black uppercase tracking-widest ${banner.theme === 'dark' ? 'text-white/40' : 'text-content-subtle'}`}>Special</p>
+                                            <h4 className="text-4xl font-[1000] leading-none">Offer</h4>
+                                        </div>
+                                    </div>
+                                    {banner.image && (
+                                        <div className="absolute inset-0 z-0">
+                                            <img src={banner.image} className="w-full h-full object-cover opacity-20" alt="" />
+                                        </div>
+                                    )}
+                                    <div className="absolute right-0 bottom-0 opacity-10">
+                                        <ShoppingBag size={120} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Fallback Banner if no metadata banners */}
+                    {!searchQuery && activeCategory === 'All' && (!metadata.banners || metadata.banners.length === 0) && !metadataLoading && (
                         <div className="px-5 pt-4">
                             <div className="bg-[#FFF9E5] rounded-xl p-6 relative overflow-hidden flex items-center justify-between min-h-[160px]">
                                 <div className="relative z-10 space-y-1">
@@ -165,7 +236,7 @@ const EShop = () => {
                         </div>
 
                         <div className="flex gap-4 px-5 overflow-x-auto no-scrollbar pb-2">
-                            {CATEGORIES_DATA.map((cat, i) => (
+                            {(metadata.categories?.length > 0 ? metadata.categories : CATEGORIES_DATA).map((cat, i) => (
                                 <motion.div
                                     whileTap={{ scale: 0.98 }}
                                     key={i}
@@ -193,81 +264,96 @@ const EShop = () => {
                                     <div className="inline-block bg-green-50 px-2 py-0.5 rounded text-[8px] font-black text-green-700 uppercase tracking-widest mb-1.5">{activeCategory} Picks</div>
                                     <h2 className="text-base font-[1000] text-content uppercase tracking-tight">Our Premium Collection</h2>
                                 </div>
-                                <p className="text-[10px] font-black text-content-subtle">{filteredProducts.length} items</p>
+                                <p className="text-[10px] font-black text-content-subtle">{products.length} items</p>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                {filteredProducts.map((prod, i) => {
-                                    const discounted = Math.round(((prod.price - prod.salePrice) / prod.price) * 100);
-                                    const inCart = isInCart(prod.id);
-                                    const inWishlist = isInWishlist(prod.id);
+                            {loading ? (
+                                <div className="grid grid-cols-2 gap-4">
+                                    {[...Array(4)].map((_, i) => (
+                                        <div key={i} className="bg-gray-50 border border-gray-100 rounded-xl p-3 h-[240px] animate-pulse" />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-2 gap-4">
+                                    {products.map((prod, i) => {
+                                        const discounted = Math.round(((prod.price - prod.salePrice) / prod.price) * 100);
+                                        const pId = prod._id || prod.id;
+                                        const inCart = isInCart(pId);
+                                        const inWishlist = isInWishlist(pId);
 
-                                    return (
-                                        <motion.div
-                                            key={prod.id}
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: i * 0.05 }}
-                                            className="bg-white border border-gray-100 rounded-xl p-3 shadow-sm group relative"
-                                        >
-                                            <div
-                                                className="relative aspect-square rounded-lg overflow-hidden bg-gray-50 mb-3 cursor-pointer"
-                                                onClick={() => navigate(`/e-shop/product/${prod.id}`)}
+                                        return (
+                                            <motion.div
+                                                key={pId}
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: i * 0.05 }}
+                                                className="bg-white border border-gray-100 rounded-xl p-3 shadow-sm group relative"
                                             >
-                                                <img src={prod.image} className="w-full h-full object-contain mix-blend-multiply" alt={prod.name} />
-                                                <div className="absolute top-2 left-2 bg-white/95 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-black text-content border border-gray-100 flex items-center gap-0.5">
-                                                    <Zap size={8} className="text-orange-500" fill="currentColor" /> {discounted}% OFF
-                                                </div>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        toggleWishlist(prod);
-                                                    }}
-                                                    className="absolute top-2 right-2 p-1.5 bg-white/80 backdrop-blur-sm rounded-lg shadow-sm active:scale-95 transition-all"
+                                                <div
+                                                    className="relative aspect-square rounded-lg overflow-hidden bg-gray-50 mb-3 cursor-pointer"
+                                                    onClick={() => navigate(`/e-shop/product/${pId}`)}
                                                 >
-                                                    <Heart size={14} className={`${inWishlist ? 'text-brand fill-brand' : 'text-content-subtle'}`} />
-                                                </button>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <h4
-                                                    className="text-[11px] font-[1000] text-content uppercase tracking-tight leading-tight line-clamp-2 min-h-[28px] cursor-pointer"
-                                                    onClick={() => navigate(`/e-shop/product/${prod.id}`)}
-                                                >
-                                                    {prod.name}
-                                                </h4>
-                                                <div className="flex items-center gap-1">
-                                                    {[...Array(5)].map((_, starI) => (
-                                                        <Star key={starI} size={8} className={starI < Math.floor(prod.rating) ? 'text-amber-400' : 'text-gray-200'} fill="currentColor" />
-                                                    ))}
-                                                    <span className="text-[8px] font-bold text-content-subtle">{prod.rating}</span>
-                                                </div>
-                                                <div className="flex items-baseline gap-1.5 mt-2">
-                                                    <span className="text-sm font-[1000] text-content">Rs. {prod.salePrice.toLocaleString()}</span>
-                                                    <span className="text-[9px] font-bold text-content-subtle line-through opacity-50">₹{prod.price.toLocaleString()}</span>
-                                                </div>
-
-                                                {prod.inStock ? (
+                                                    <img src={prod.image} className="w-full h-full object-contain mix-blend-multiply" alt={prod.name} />
+                                                    <div className="absolute top-2 left-2 bg-white/95 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-black text-content border border-gray-100 flex items-center gap-0.5">
+                                                        <Zap size={8} className="text-orange-500" fill="currentColor" /> {discounted}% OFF
+                                                    </div>
                                                     <button
-                                                        onClick={() => inCart ? navigate('/cart') : handleAddToCart(prod)}
-                                                        className={`w-full mt-3 py-2.5 rounded-lg font-black text-[9px] uppercase tracking-widest transition-all ${inCart
-                                                            ? 'bg-green-500/10 border border-green-500/30 text-green-600 flex items-center justify-center gap-1'
-                                                            : 'border-2 border-brand text-brand hover:bg-brand hover:text-white'
-                                                            }`}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            toggleWishlist(prod);
+                                                        }}
+                                                        className="absolute top-2 right-2 p-1.5 bg-white/80 backdrop-blur-sm rounded-lg shadow-sm active:scale-95 transition-all"
                                                     >
-                                                        {inCart ? <><Check size={10} strokeWidth={3} /> In Cart</> : 'ADD TO CART'}
+                                                        <Heart size={14} className={`${inWishlist ? 'text-brand fill-brand' : 'text-content-subtle'}`} />
                                                     </button>
-                                                ) : (
-                                                    <button disabled className="w-full mt-3 py-2.5 bg-gray-50 border border-gray-100 text-gray-300 rounded-lg font-black text-[9px] uppercase tracking-widest cursor-not-allowed">
-                                                        OUT OF STOCK
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </motion.div>
-                                    );
-                                })}
-                            </div>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <h4
+                                                        className="text-[11px] font-[1000] text-content uppercase tracking-tight leading-tight line-clamp-2 min-h-[28px] cursor-pointer"
+                                                        onClick={() => navigate(`/e-shop/product/${pId}`)}
+                                                    >
+                                                        {prod.name}
+                                                    </h4>
+                                                    <div className="flex items-center gap-1">
+                                                        {[...Array(5)].map((_, starI) => (
+                                                            <Star key={starI} size={8} className={starI < Math.floor(prod.rating) ? 'text-amber-400' : 'text-gray-200'} fill="currentColor" />
+                                                        ))}
+                                                        <span className="text-[8px] font-bold text-content-subtle">{prod.rating}</span>
+                                                    </div>
+                                                    <div className="flex items-baseline gap-1.5 mt-2">
+                                                        <span className={`text-sm font-[1000] ${isBlackPassMember ? 'text-brand' : 'text-content'}`}>Rs. {(isBlackPassMember ? (prod.salePrice * 0.7) : prod.salePrice)?.toLocaleString()}</span>
+                                                        <span className="text-[9px] font-bold text-content-subtle line-through opacity-50">₹{prod.price?.toLocaleString()}</span>
+                                                        {isBlackPassMember && (
+                                                            <div className="ml-1 px-1 py-0.5 bg-black rounded flex items-center gap-0.5 scale-[0.7] origin-left">
+                                                                <Crown size={8} className="text-brand" fill="currentColor" />
+                                                                <span className="text-[8px] font-black text-brand uppercase">Black</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
 
-                            {filteredProducts.length === 0 && (
+                                                    {(prod.stock > 0 || prod.inStock) ? (
+                                                        <button
+                                                            onClick={() => inCart ? navigate('/cart') : handleAddToCart(prod)}
+                                                            className={`w-full mt-3 py-2.5 rounded-lg font-black text-[9px] uppercase tracking-widest transition-all ${inCart
+                                                                ? 'bg-green-500/10 border border-green-500/30 text-green-600 flex items-center justify-center gap-1'
+                                                                : 'border-2 border-brand text-brand hover:bg-brand hover:text-white'
+                                                                }`}
+                                                        >
+                                                            {inCart ? <><Check size={10} strokeWidth={3} /> In Cart</> : 'ADD TO CART'}
+                                                        </button>
+                                                    ) : (
+                                                        <button disabled className="w-full mt-3 py-2.5 bg-gray-50 border border-gray-100 text-gray-300 rounded-lg font-black text-[9px] uppercase tracking-widest cursor-not-allowed">
+                                                            OUT OF STOCK
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </motion.div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {products.length === 0 && !loading && (
                                 <div className="text-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
                                     <ShoppingBag size={40} className="mx-auto text-gray-300 mb-3" />
                                     <p className="text-xs font-black text-content-subtle uppercase tracking-widest">No Products Found</p>
@@ -282,20 +368,34 @@ const EShop = () => {
                         <div className="px-5 pb-10 space-y-4">
                             <div className="bg-blue-50/50 border border-blue-100 p-6 rounded-xl space-y-4">
                                 <div className="space-y-1">
-                                    <h3 className="text-base font-[1000] text-content uppercase tracking-tight leading-tight">Subscribe to our<br />Newsletter</h3>
-                                    <p className="text-[9px] font-bold text-content-subtle uppercase trekking-tight leading-relaxed">Get weekly deals, valuable health information and more.</p>
+                                    <h3 className="text-base font-[1000] text-content uppercase tracking-tight leading-tight">
+                                        {metadata.settings?.newsletter?.title || "Subscribe to our Newsletter"}
+                                    </h3>
+                                    <p className="text-[9px] font-bold text-content-subtle uppercase trekking-tight leading-relaxed">
+                                        {metadata.settings?.newsletter?.desc || "Get weekly deals, valuable health information and more."}
+                                    </p>
                                 </div>
-                                <button className="px-5 py-2.5 border-2 border-content/10 text-content rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-content hover:text-white transition-all flex items-center gap-2">
+                                <button
+                                    onClick={() => metadata.settings?.newsletter?.link && window.open(metadata.settings.newsletter.link, '_blank')}
+                                    className="px-5 py-2.5 border-2 border-content/10 text-content rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-content hover:text-white transition-all flex items-center gap-2"
+                                >
                                     <Mail size={14} /> SIGN UP
                                 </button>
                             </div>
 
                             <div className="bg-green-50/50 border border-green-100 p-6 rounded-xl space-y-4">
                                 <div className="space-y-1">
-                                    <h3 className="text-base font-[1000] text-content uppercase tracking-tight leading-tight">Join Our YouTube<br />Community</h3>
-                                    <p className="text-[9px] font-bold text-content-subtle uppercase trekking-tight leading-relaxed">Get weekly deals, valuable health information and more.</p>
+                                    <h3 className="text-base font-[1000] text-content uppercase tracking-tight leading-tight">
+                                        {metadata.settings?.youtube?.title || "Join Our YouTube Community"}
+                                    </h3>
+                                    <p className="text-[9px] font-bold text-content-subtle uppercase trekking-tight leading-relaxed">
+                                        {metadata.settings?.youtube?.desc || "Watch premium car care tutorials and live sessions."}
+                                    </p>
                                 </div>
-                                <button className="px-5 py-2.5 border-2 border-content/10 text-content rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-content hover:text-white transition-all flex items-center gap-2">
+                                <button
+                                    onClick={() => metadata.settings?.youtube?.link && window.open(metadata.settings.youtube.link, '_blank')}
+                                    className="px-5 py-2.5 border-2 border-content/10 text-content rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-content hover:text-white transition-all flex items-center gap-2"
+                                >
                                     <Youtube size={14} /> SUBSCRIBE NOW
                                 </button>
                             </div>
@@ -318,6 +418,28 @@ const EShop = () => {
                             <p className="text-[11px] font-black uppercase tracking-tight">
                                 Added <span className="text-brand">"{toast.substring(0, 15)}..."</span> to cart
                             </p>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Back to Booking Float */}
+                <AnimatePresence>
+                    {fromBooking && (
+                        <motion.div
+                            initial={{ y: 100, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            className="fixed bottom-24 left-0 right-0 px-5 z-[70]"
+                        >
+                            <button
+                                onClick={() => navigate(fromBooking === 'studio-wash' ? '/full-wash-booking?back=shop' : '/instant-wash?back=shop')}
+                                className="w-full bg-black text-white py-4 rounded-2xl font-[1000] uppercase tracking-[0.2em] shadow-2xl shadow-black/20 flex items-center justify-center gap-3 active:scale-[0.98] transition-all border border-white/10"
+                            >
+                                <ArrowLeft size={18} strokeWidth={3} />
+                                Back to {fromBooking === 'studio-wash' ? 'Studio Wash' : 'Booking'}
+                                <div className="w-6 h-6 bg-brand text-black rounded-lg flex items-center justify-center text-[10px]">
+                                    {cartCount}
+                                </div>
+                            </button>
                         </motion.div>
                     )}
                 </AnimatePresence>

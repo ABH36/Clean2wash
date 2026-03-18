@@ -86,11 +86,26 @@ const VEHICLE_TYPES = [
     { id: 'hatchback', label: 'Hatch', multiplier: 1.0 },
     { id: 'sedan', label: 'Sedan', multiplier: 1.2 },
     { id: 'suv', label: 'SUV', multiplier: 1.5 },
-    { id: 'luxury', label: 'Luxury', multiplier: 2.0 },
     { id: 'muv', label: 'MUV', multiplier: 1.4 },
+    { id: 'compact suv', label: 'Compact SUV', multiplier: 1.4 },
+    { id: 'luxury sedan', label: 'Luxury Sedan', multiplier: 2.0 },
+    { id: 'luxury suv', label: 'Luxury SUV', multiplier: 2.2 },
+    { id: 'coupe', label: 'Coupe', multiplier: 1.8 },
+    { id: 'convertible', label: 'Convertible', multiplier: 2.0 },
+    { id: 'sports car', label: 'Sports Car', multiplier: 2.5 },
+    { id: 'supercar', label: 'Super Car', multiplier: 3.0 },
+    { id: 'ev', label: 'EV', multiplier: 1.2 },
+    { id: 'mini truck', label: 'Mini Truck', multiplier: 1.8 },
+    { id: 'truck', label: 'Truck', multiplier: 2.5 },
+    { id: 'van', label: 'Van', multiplier: 1.8 },
+    { id: 'tractor', label: 'Tractor', multiplier: 2.0 },
+    { id: 'vintage', label: 'Vintage', multiplier: 2.5 },
     { id: 'bike', label: 'Bike', multiplier: 0.6 },
     { id: 'scooter', label: 'Scooter', multiplier: 0.5 },
     { id: 'superbike', label: 'Super Bike', multiplier: 0.9 },
+    // Legacy support
+    { id: 'luxury', label: 'Luxury', multiplier: 2.0 },
+    { id: 'mpv', label: 'MUV', multiplier: 1.4 },
 ];
 
 /* ─── ServiceCard ──────────────────────────────────────────────────────────── */

@@ -8,15 +8,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import VendorLayout from '../components/VendorLayout';
 import { useAuth } from '../../../context/AuthContext';
-
-// ─── Initial Seed Data ────────────────────────────────────────────────────────
-const INITIAL_INVENTORY = [
-    { id: 'INV-001', name: 'Premium Eco Soap', category: 'Cleaning', stock: 12, unit: 'Liters', status: 'Healthy', threshold: 5 },
-    { id: 'INV-002', name: 'Carnauba Wax', category: 'Detailing', stock: 2, unit: 'Tubs', status: 'Low Stock', threshold: 10 },
-    { id: 'INV-003', name: 'Microfiber Towels', category: 'Tools', stock: 45, unit: 'Units', status: 'Healthy', threshold: 20 },
-    { id: 'INV-004', name: 'Tire Shine Spray', category: 'Cleaning', stock: 0, unit: 'Bottles', status: 'Out of Stock', threshold: 15 },
-    { id: 'INV-005', name: 'Interior Leather Care', category: 'Detailing', stock: 8, unit: 'Bottles', status: 'Healthy', threshold: 10 },
-];
+import { vendorAPI } from '../../../utils/vendorApi';
 
 const CATEGORIES = ['Cleaning', 'Detailing', 'Tools', 'Maintenance'];
 const UNITS = ['Liters', 'Tubs', 'Units', 'Bottles', 'Kgs', 'Packs'];
@@ -97,9 +89,11 @@ const SupplyDrawer = ({ open, onClose, initial, onSave }) => {
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Supply Name</label>
                                 <input
-                                    type="text" placeholder="e.g. Ultra Foam Shampoo"
-                                    value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-                                    className={`w-full h-11 bg-background border ${errors.name ? 'border-red-400' : 'border-gray-100/10'} rounded-xl px-4 text-[12px] font-bold outline-none focus:border-brand transition-all text-content`}
+                                    type="text"
+                                    placeholder="e.g. Premium Wax"
+                                    value={form.name}
+                                    onChange={e => setForm({ ...form, name: e.target.value })}
+                                    className={`w-full h-12 bg-background border rounded-xl px-4 text-sm font-bold text-content outline-none focus:border-brand transition-all ${errors.name ? 'border-red-500/50' : 'border-gray-100/10'}`}
                                 />
                             </div>
 
@@ -107,54 +101,62 @@ const SupplyDrawer = ({ open, onClose, initial, onSave }) => {
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Category</label>
                                     <select
-                                        value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}
-                                        className="w-full h-11 bg-background border border-gray-100/10 rounded-xl px-4 text-[12px] font-bold outline-none cursor-pointer text-content"
+                                        value={form.category}
+                                        onChange={e => setForm({ ...form, category: e.target.value })}
+                                        className="w-full h-12 bg-background border border-gray-100/10 rounded-xl px-4 text-xs font-bold text-content outline-none focus:border-brand cursor-pointer"
                                     >
-                                        {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                                        {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                                     </select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Unit Type</label>
+                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Unit</label>
                                     <select
-                                        value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })}
-                                        className="w-full h-11 bg-background border border-gray-100/10 rounded-xl px-4 text-[12px] font-bold outline-none cursor-pointer text-content"
+                                        value={form.unit}
+                                        onChange={e => setForm({ ...form, unit: e.target.value })}
+                                        className="w-full h-12 bg-background border border-gray-100/10 rounded-xl px-4 text-xs font-bold text-content outline-none focus:border-brand cursor-pointer"
                                     >
-                                        {UNITS.map(u => <option key={u}>{u}</option>)}
+                                        {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                                     </select>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest focus:text-brand">Initial Stock</label>
+                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Stock Level</label>
                                     <input
-                                        type="number" placeholder="0"
-                                        value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })}
-                                        className={`w-full h-11 bg-background border ${errors.stock ? 'border-red-400' : 'border-gray-100/10'} rounded-xl px-4 text-[12px] font-bold outline-none text-content`}
+                                        type="number"
+                                        placeholder="0"
+                                        value={form.stock}
+                                        onChange={e => setForm({ ...form, stock: e.target.value })}
+                                        className={`w-full h-12 bg-background border rounded-xl px-4 text-sm font-bold text-content outline-none focus:border-brand transition-all ${errors.stock ? 'border-red-500/50' : 'border-gray-100/10'}`}
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Warning Point</label>
+                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Alert Threshold</label>
                                     <input
-                                        type="number" placeholder="5"
-                                        value={form.threshold} onChange={e => setForm({ ...form, threshold: e.target.value })}
-                                        className={`w-full h-11 bg-background border ${errors.threshold ? 'border-red-400' : 'border-gray-100/10'} rounded-xl px-4 text-[12px] font-bold outline-none text-content`}
+                                        type="number"
+                                        placeholder="5"
+                                        value={form.threshold}
+                                        onChange={e => setForm({ ...form, threshold: e.target.value })}
+                                        className={`w-full h-12 bg-background border rounded-xl px-4 text-sm font-bold text-content outline-none focus:border-brand transition-all ${errors.threshold ? 'border-red-500/50' : 'border-gray-100/10'}`}
                                     />
                                 </div>
                             </div>
 
-                            <div className="pt-4">
-                                <p className="text-[9px] font-bold text-content-subtle leading-relaxed italic">
-                                    * Warning point will trigger a "Low Stock" alert when inventory falls below this number.
+                            <div className="p-4 bg-blue-500/5 rounded-2xl border border-blue-500/10 space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <Zap size={14} className="text-blue-500" />
+                                    <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Tactical Note</p>
+                                </div>
+                                <p className="text-[9px] font-bold text-content-subtle uppercase leading-relaxed">
+                                    Setting an accurate threshold ensures your studio never runs out of critical supplies during high-demand service windows.
                                 </p>
                             </div>
                         </form>
 
                         <div className="p-6 border-t border-gray-100/10 flex gap-3">
-                            <button onClick={onClose} className="flex-1 h-11 border border-gray-100/10 rounded-xl text-[10px] font-black uppercase text-content-subtle hover:bg-background transition-all">Cancel</button>
-                            <button onClick={handleSubmit} className="flex-[2] h-11 bg-brand text-white rounded-xl text-[10px] font-black uppercase shadow-lg shadow-brand/20">
-                                {initial ? 'Update Supply' : 'Add Supply Item'}
-                            </button>
+                            <button onClick={onClose} className="flex-1 h-12 border border-gray-100/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-content-subtle hover:bg-background transition-all">Cancel</button>
+                            <button onClick={handleSubmit} className="flex-[2] h-12 bg-brand text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-brand/20">Commit Changes</button>
                         </div>
                     </motion.div>
                 </>
@@ -163,218 +165,278 @@ const SupplyDrawer = ({ open, onClose, initial, onSave }) => {
     );
 };
 
-// ─── Main Inventory Component ───────────────────────────────────────────────────
+// ─── Main Inventory View ───────────────────────────────────────────────────────
 const VendorInventory = () => {
-    const { getUser, updateUser } = useAuth();
+    const { getUser } = useAuth();
     const vendor = getUser('vendor') || {};
-    const inventory = vendor.inventory || INITIAL_INVENTORY;
 
-    const [activeTab, setActiveTab] = useState('All Items');
+    const [inventory, setInventory] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [activeCategory, setActiveCategory] = useState('All');
     const [drawerOpen, setDrawerOpen] = useState(false);
-    const [editTarget, setEditTarget] = useState(null);
+    const [editingItem, setEditingItem] = useState(null);
     const [toast, setToast] = useState(null);
+
+    const fetchInventory = async () => {
+        try {
+            const res = await vendorAPI.getProfile();
+            if (res.status === 'success') {
+                setInventory(res.data.vendor.profile?.inventory || []);
+            }
+        } catch (err) {
+            console.error("Failed to fetch inventory", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchInventory();
+    }, []);
 
     const showToast = (msg, type = 'success') => {
         setToast({ msg, type });
         setTimeout(() => setToast(null), 3000);
     };
 
-    // ── CRUD Handlers ──
-    const handleSave = (item) => {
-        let updatedInventory;
-        if (editTarget) {
-            updatedInventory = inventory.map(p => p.id === item.id ? item : p);
-            showToast('Supply updated successfully');
-        } else {
-            updatedInventory = [item, ...inventory];
-            showToast('New supply logged');
+    const handleSave = async (item) => {
+        try {
+            let newInventory;
+            if (editingItem) {
+                newInventory = inventory.map(i => i.id === item.id ? item : i);
+            } else {
+                newInventory = [...inventory, item];
+            }
+
+            const res = await vendorAPI.updateProfile({ 'profile.inventory': newInventory });
+            if (res.status === 'success') {
+                setInventory(newInventory);
+                setDrawerOpen(false);
+                setEditingItem(null);
+                showToast(editingItem ? 'Supply Updated' : 'Supply Added');
+            }
+        } catch (err) {
+            showToast('Failed to save changes', 'error');
         }
-        updateUser('vendor', vendor.id, { inventory: updatedInventory });
-        setDrawerOpen(false);
-        setEditTarget(null);
     };
 
-    const handleRefill = (id) => {
-        const updatedInventory = inventory.map(p => p.id === id ? {
-            ...p,
-            stock: p.stock + 10,
-            status: 'Healthy'
-        } : p);
-        updateUser('vendor', vendor.id, { inventory: updatedInventory });
-        showToast('Inventory Refilled +10');
+    const handleDelete = async (id) => {
+        try {
+            const newInventory = inventory.filter(i => i.id !== id);
+            const res = await vendorAPI.updateProfile({ 'profile.inventory': newInventory });
+            if (res.status === 'success') {
+                setInventory(newInventory);
+                showToast('Supply Removed', 'error');
+            }
+        } catch (err) {
+            showToast('Failed to remove supply', 'error');
+        }
     };
 
-    const handleDelete = (id) => {
-        const updatedInventory = inventory.filter(p => p.id !== id);
-        updateUser('vendor', vendor.id, { inventory: updatedInventory });
-        showToast('Supply removed from inventory', 'error');
+    const handleRefill = async (id) => {
+        try {
+            const item = inventory.find(i => i.id === id);
+            if (!item) return;
+
+            const newStock = item.stock + 10;
+            const updatedItem = {
+                ...item,
+                stock: newStock,
+                status: newStock === 0 ? 'Out of Stock' : newStock < item.threshold ? 'Low Stock' : 'Healthy'
+            };
+
+            const newInventory = inventory.map(i => i.id === id ? updatedItem : i);
+            const res = await vendorAPI.updateProfile({ 'profile.inventory': newInventory });
+            if (res.status === 'success') {
+                setInventory(newInventory);
+                showToast(`Refilled +10 ${item.unit}`);
+            }
+        } catch (err) {
+            showToast('Refill failed', 'error');
+        }
     };
 
-    const filtered = inventory.filter(p =>
-        (activeTab === 'All Items' || p.category === activeTab) &&
-        p.name.toLowerCase().includes(searchQuery.toLowerCase())
+    const filtered = inventory.filter(i =>
+        (activeCategory === 'All' || i.category === activeCategory) &&
+        i.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const stats = [
-        { label: 'Inventory Items', val: inventory.length, icon: Package, color: 'text-blue-500' },
-        { label: 'Low Alert', val: inventory.filter(i => i.stock > 0 && i.stock < i.threshold).length, icon: AlertTriangle, color: 'text-amber-500' },
-        { label: 'Stock Value', val: `₹${(inventory.length * 1500).toLocaleString()}`, icon: BarChart3, color: 'text-green-500' },
-    ];
+    const stats = {
+        total: inventory.length,
+        outOfStock: inventory.filter(i => i.stock === 0).length,
+        lowStock: inventory.filter(i => i.stock > 0 && i.stock < i.threshold).length,
+        healthy: inventory.filter(i => i.stock >= i.threshold).length
+    };
 
     return (
-        <VendorLayout title="Supplies & Inventory" subtitle="Track Studio Resources">
-
+        <VendorLayout title="Supply Web" subtitle="Logistics & resource management for your studio">
             <AnimatePresence>{toast && <Toast msg={toast.msg} type={toast.type} />}</AnimatePresence>
 
             <SupplyDrawer
                 open={drawerOpen}
-                onClose={() => { setDrawerOpen(false); setEditTarget(null); }}
-                initial={editTarget}
+                onClose={() => { setDrawerOpen(false); setEditingItem(null); }}
+                initial={editingItem}
                 onSave={handleSave}
             />
 
             <div className="space-y-8">
-                {/* Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {stats.map(s => (
-                        <div key={s.label} className="bg-surface p-6 rounded-[2.5rem] border border-gray-100/10 shadow-soft flex items-center justify-between group overflow-hidden relative">
-                            <div className="relative z-10">
-                                <p className="text-[9px] font-black text-content-subtle uppercase tracking-[0.2em] mb-1.5 italic font-bold">{s.label}</p>
-                                <h2 className={`text-2xl font-black ${s.color} tracking-tighter italic`}>{s.val}</h2>
+                {/* Metrics */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {[
+                        { label: 'Total items', val: stats.total, icon: Package, color: 'text-content' },
+                        { label: 'Healthy', val: stats.healthy, icon: ShieldCheck, color: 'text-green-500' },
+                        { label: 'Low Stock', val: stats.lowStock, icon: AlertTriangle, color: 'text-amber-500' },
+                        { label: 'Exhausted', val: stats.outOfStock, icon: Droplets, color: 'text-red-500' },
+                    ].map(s => (
+                        <div key={s.label} className="bg-surface p-6 rounded-[2rem] border border-gray-100/10 shadow-soft flex items-center justify-between transition-all hover:scale-105">
+                            <div>
+                                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-none mb-2">{s.label}</p>
+                                <h3 className={`text-2xl font-black ${s.color}`}>{String(s.val).padStart(2, '0')}</h3>
                             </div>
-                            <div className="w-12 h-12 bg-background rounded-2xl flex items-center justify-center text-content-muted group-hover:bg-brand/5 group-hover:text-brand transition-all relative z-10 border border-gray-100/10">
-                                <s.icon size={22} />
+                            <div className="w-12 h-12 bg-background border border-gray-100/10 rounded-2xl flex items-center justify-center text-content-muted">
+                                <s.icon size={20} strokeWidth={2.5} />
                             </div>
-                            <div className={`absolute -right-2 -bottom-2 w-16 h-16 ${s.color.replace('text-', 'bg-')} opacity-5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700`} />
                         </div>
                     ))}
                 </div>
 
-                {/* Filters */}
-                <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-surface p-4 rounded-3xl border border-gray-100/10 shadow-soft">
-                    <div className="flex gap-1.5 bg-background p-1.5 rounded-2xl w-full md:w-auto border border-gray-100/10">
-                        {['All Items', 'Cleaning', 'Tools', 'Detailing'].map(t => (
-                            <button key={t} onClick={() => setActiveTab(t)}
-                                className={`flex-1 md:flex-none px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === t ? 'bg-surface text-brand shadow-sm' : 'text-content-subtle hover:text-content'}`}>
-                                {t}
+                {/* Controls */}
+                <div className="flex flex-col md:flex-row gap-4 justify-between bg-surface p-4 rounded-3xl border border-gray-100/10 shadow-soft">
+                    <div className="flex gap-2 bg-background p-1.5 rounded-2xl border border-gray-100/10 overflow-x-auto no-scrollbar">
+                        {['All', ...CATEGORIES].map(c => (
+                            <button
+                                key={c}
+                                onClick={() => setActiveCategory(c)}
+                                className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeCategory === c ? 'bg-surface text-brand shadow-sm border border-gray-100/10' : 'text-content-subtle hover:text-content'}`}
+                            >
+                                {c}
                             </button>
                         ))}
                     </div>
-                    <div className="flex items-center gap-2.5 w-full md:w-auto">
-                        <div className="relative flex-1 md:w-56">
-                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-subtle" size={14} />
+
+                    <div className="flex items-center gap-4">
+                        <div className="relative">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-content-subtle" size={16} />
                             <input
-                                type="text" placeholder="Search stock..."
-                                value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                                className="w-full h-11 bg-background border border-gray-100/10 rounded-2xl pl-10 pr-4 text-[11px] font-bold text-content outline-none focus:ring-2 ring-brand/20 transition-all font-bold italic"
+                                type="text"
+                                placeholder="Locate supply..."
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                className="w-64 h-12 bg-background border border-gray-100/10 rounded-2xl pl-12 pr-6 text-[11px] font-black text-content italic outline-none focus:border-brand transition-all"
                             />
                         </div>
-                        <motion.button
-                            whileTap={{ scale: 0.97 }}
-                            onClick={() => { setEditTarget(null); setDrawerOpen(true); }}
-                            className="h-11 px-6 bg-brand text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand/20 flex items-center gap-2 hover:-translate-y-0.5 transition-all"
+                        <button
+                            onClick={() => setDrawerOpen(true)}
+                            className="px-8 h-12 bg-brand text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-brand/20 flex items-center gap-2 hover:scale-105 transition-all"
                         >
-                            <Plus size={16} strokeWidth={3} /> Add
-                        </motion.button>
+                            <Plus size={18} strokeWidth={3} /> Log New Supply
+                        </button>
                     </div>
                 </div>
 
-                {/* Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filtered.map((item, i) => (
-                        <motion.div
-                            key={item.id}
-                            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                            className="bg-surface p-7 rounded-[3rem] border border-gray-100/10 shadow-soft space-y-6 relative overflow-hidden group hover:border-brand/20 transition-all"
-                        >
-                            <div className="flex justify-between items-start">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-black text-brand uppercase tracking-[0.2em] italic">{item.category}</span>
-                                        <span className="text-[8px] font-bold text-content-subtle tracking-widest uppercase opacity-40">{item.id}</span>
-                                    </div>
-                                    <h3 className="text-lg font-black text-content tracking-tight">{item.name}</h3>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button onClick={() => { setEditTarget(item); setDrawerOpen(true); }} className="p-2.5 rounded-xl bg-background text-content-muted hover:bg-brand/10 hover:text-brand transition-all border border-gray-100/10"><Edit2 size={13} /></button>
-                                    <button onClick={() => handleDelete(item.id)} className="p-2.5 rounded-xl bg-background text-content-muted hover:bg-red-500/10 hover:text-red-500 transition-all border border-gray-100/10"><Trash2 size={13} /></button>
-                                </div>
+                {/* Inventory List */}
+                <div className="bg-surface rounded-[2.5rem] border border-gray-100/10 overflow-hidden shadow-soft">
+                    <div className="p-8 border-b border-gray-100/10 flex items-center justify-between">
+                        <h3 className="text-xl font-black text-content italic uppercase tracking-tighter">Tactical <span className="text-brand">Stock</span></h3>
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2 text-[10px] font-black text-content-subtle uppercase">
+                                <span className="w-2 h-2 rounded-full bg-green-500" /> Healthy
+                                <span className="w-2 h-2 rounded-full bg-amber-500 ml-4" /> Low
+                                <span className="w-2 h-2 rounded-full bg-red-500 ml-4" /> Exhausted
                             </div>
-
-                            <div className="flex items-end justify-between">
-                                <div className="space-y-1">
-                                    <p className="text-[9px] font-black text-content-subtle uppercase tracking-[0.25em] italic opacity-50">Usage Tracking</p>
-                                    <p className="text-3xl font-black italic tracking-tighter text-content">
-                                        {item.stock} <span className="text-[10px] text-content-subtle uppercase tracking-widest font-black leading-none italic">{item.unit}</span>
-                                    </p>
-                                </div>
-                                <motion.button
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => handleRefill(item.id)}
-                                    className="h-11 px-5 bg-content text-white rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-content/20"
-                                >
-                                    <RefreshCw size={12} className="group-hover:rotate-180 transition-transform duration-500" /> Refill
-                                </motion.button>
-                            </div>
-
-                            <div className="space-y-3">
-                                <div className="flex justify-between text-[9px] font-black uppercase tracking-widest italic">
-                                    <span className="text-content-subtle opacity-60">Inventory Health</span>
-                                    <span className={item.stock === 0 ? 'text-red-500' : item.stock < item.threshold ? 'text-amber-500' : 'text-green-500'}>
-                                        {item.status}
-                                    </span>
-                                </div>
-                                <div className="h-2 w-full bg-background rounded-full overflow-hidden p-[1px] border border-gray-100/5">
-                                    <motion.div
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${Math.min((item.stock / 50) * 100, 100)}%` }}
-                                        className={`h-full rounded-full ${item.stock === 0 ? 'bg-red-500' : item.stock < item.threshold ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)]' : 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)]'}`}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className={`absolute -right-4 -bottom-4 w-28 h-28 bg-brand opacity-[0.03] rounded-full blur-3xl group-hover:opacity-[0.08] transition-opacity duration-700 pointer-events-none`} />
-                        </motion.div>
-                    ))}
-                </div>
-
-                {/* Consumer Insights */}
-                <div className="bg-[#0f1117] rounded-[3.5rem] p-10 text-white relative overflow-hidden shadow-2xl">
-                    <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-10">
-                        <div className="space-y-4 max-w-md">
-                            <div className="w-12 h-12 bg-brand/20 border border-brand/30 rounded-2xl flex items-center justify-center">
-                                <TrendingUp className="text-brand" size={24} />
-                            </div>
-                            <h2 className="text-4xl font-black italic tracking-tighter leading-none">Smart Supply<br />Analytics</h2>
-                            <p className="text-[13px] font-bold text-white/40 leading-relaxed italic">Soap consumption is up by 12% this week. We recommend scheduling a bulk refill by Monday to avoid peak hour shortages.</p>
-                            <button className="flex items-center gap-2 text-brand text-[11px] font-black uppercase tracking-widest border-b-2 border-brand/30 pb-1 mt-2">
-                                Export Full Report <ArrowUpRight size={14} />
-                            </button>
-                        </div>
-                        <div className="flex-1 w-full lg:w-auto grid grid-cols-7 items-end gap-3 h-48 px-4">
-                            {[40, 70, 45, 90, 65, 80, 50].map((h, i) => (
-                                <div key={i} className="group relative flex-1">
-                                    <motion.div
-                                        initial={{ height: 0 }} animate={{ height: `${h}%` }}
-                                        transition={{ delay: i * 0.1, duration: 1 }}
-                                        className="bg-brand/20 hover:bg-brand rounded-t-xl transition-all relative overflow-hidden group cursor-pointer"
-                                    >
-                                        <motion.div
-                                            initial={{ y: '100%' }} animate={{ y: '0%' }}
-                                            transition={{ delay: i * 0.15, duration: 1 }}
-                                            className="absolute inset-0 bg-brand/30"
-                                        />
-                                    </motion.div>
-                                    <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[8px] font-black text-white/20 uppercase tracking-widest">
-                                        Day {i + 1}
-                                    </div>
-                                </div>
-                            ))}
                         </div>
                     </div>
-                    {/* Background decoration */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-brand/5 rounded-full blur-[120px] pointer-events-none" />
+
+                    {loading ? (
+                        <div className="py-20 flex justify-center">
+                            <div className="w-10 h-10 border-4 border-brand/20 border-t-brand rounded-full animate-spin" />
+                        </div>
+                    ) : filtered.length === 0 ? (
+                        <div className="py-20 flex flex-col items-center gap-4 text-center">
+                            <Droplets size={40} className="text-content-subtle/10" />
+                            <div>
+                                <p className="text-base font-black text-content italic uppercase">Registry Empty</p>
+                                <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-1">No supplies found matching your criteria</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-gray-100/5">
+                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Item Identity</th>
+                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest italic text-center">In-Stock</th>
+                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Inventory Health</th>
+                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest italic text-right">Strategic Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filtered.map(i => (
+                                        <motion.tr
+                                            layout
+                                            key={i.id}
+                                            className="border-b border-gray-100/5 group hover:bg-background/40 transition-all font-black"
+                                        >
+                                            <td className="px-8 py-6">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 bg-background border border-gray-100/10 rounded-xl flex items-center justify-center text-content-muted">
+                                                        <Droplets size={18} />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-black text-content tracking-tight">{i.name}</p>
+                                                        <p className="text-[9px] font-bold text-brand uppercase tracking-widest italic">{i.category}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-6 text-center">
+                                                <p className="text-base font-black italic tracking-tighter text-content">{i.stock} <span className="text-[10px] uppercase font-black not-italic opacity-40">{i.unit}</span></p>
+                                                <div className="w-20 mx-auto h-1.5 bg-background border border-gray-100/10 rounded-full mt-2 overflow-hidden">
+                                                    <motion.div
+                                                        initial={{ width: 0 }}
+                                                        animate={{ width: `${Math.min((i.stock / (i.threshold * 2)) * 100, 100)}%` }}
+                                                        className={`h-full ${i.status === 'Healthy' ? 'bg-green-500' : i.status === 'Low Stock' ? 'bg-amber-500' : 'bg-red-500'}`}
+                                                    />
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[9px] font-black uppercase tracking-widest
+                                                    ${i.status === 'Healthy' ? 'bg-green-500/10 border-green-500/20 text-green-500' :
+                                                        i.status === 'Low Stock' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' :
+                                                            'bg-red-500/10 border-red-500/20 text-red-500'}`}>
+                                                    <div className={`w-1.5 h-1.5 rounded-full ${i.status === 'Healthy' ? 'bg-green-500' : i.status === 'Low Stock' ? 'bg-amber-500' : 'bg-red-500'}`} />
+                                                    {i.status}
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <div className="flex items-center justify-end gap-3 translate-x-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all">
+                                                    <button
+                                                        onClick={() => handleRefill(i.id)}
+                                                        className="p-2.5 bg-background border border-gray-100/10 rounded-xl text-content-muted hover:text-brand hover:border-brand/40 transition-all font-bold"
+                                                        title="Quick Refill (+10)"
+                                                    >
+                                                        <RefreshCw size={15} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => { setEditingItem(i); setDrawerOpen(true); }}
+                                                        className="p-2.5 bg-background border border-gray-100/10 rounded-xl text-content-muted hover:text-blue-500 hover:border-blue-500/40 transition-all font-bold"
+                                                    >
+                                                        <Edit2 size={15} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(i.id)}
+                                                        className="p-2.5 bg-background border border-gray-100/10 rounded-xl text-content-muted hover:text-red-500 hover:border-red-500/40 transition-all font-bold"
+                                                    >
+                                                        <Trash2 size={15} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </motion.tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
             </div>
         </VendorLayout>

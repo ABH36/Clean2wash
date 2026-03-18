@@ -1,30 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     UserPlus, Search, Phone, User,
     ShieldCheck, Star, Trash2, Filter,
-    CheckCircle2, Clock, MapPin, Zap
+    CheckCircle2, Clock, MapPin, Zap, AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import VendorLayout from '../components/VendorLayout';
 import { useAuth } from '../../../context/AuthContext';
+import { vendorAPI } from '../../../utils/vendorApi';
 
 const VendorStaff = () => {
-    const { getUser, register, registeredUsers, updateUser } = useAuth();
-    const vendor = getUser('vendor') || {};
+    const { getUser } = useAuth();
 
-    // Get staff members associated with this vendor
-    const staffList = (registeredUsers.staff || []).filter(s => s.vendorId === vendor?.id);
-
+    const [staffList, setStaffList] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [searchPhone, setSearchPhone] = useState('');
     const [isSearching, setIsSearching] = useState(false);
     const [searchResult, setSearchResult] = useState(null);
     const [error, setError] = useState('');
     const [showSuccess, setShowSuccess] = useState(false);
+    const [onboardForm, setOnboardForm] = useState({ name: '', phone: '', password: '' });
+    const [isOnboarding, setIsOnboarding] = useState(false);
 
-    const handleSearchStaff = (e) => {
+    const fetchStaff = async () => {
+        try {
+            const res = await vendorAPI.getStaff();
+            if (res.status === 'success') {
+                setStaffList(res.data.staff);
+            }
+        } catch (err) {
+            console.error("Failed to fetch staff", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchStaff();
+    }, []);
+
+    const handleSearchStaff = async (e) => {
         e.preventDefault();
         setError('');
         setSearchResult(null);
+        setIsOnboarding(false);
 
         if (searchPhone.length < 10) {
             setError('Please enter a valid 10-digit mobile number');
@@ -33,68 +52,83 @@ const VendorStaff = () => {
 
         setIsSearching(true);
 
-        // Simulate search delay
-        setTimeout(() => {
-            // Check if user already exists as staff for this vendor
-            const alreadyExists = staffList.find(s => s.phone === searchPhone);
-            if (alreadyExists) {
+        try {
+            // Check if already in list
+            if (staffList.find(s => s.phone === searchPhone)) {
                 setError('This staff member is already in your team.');
                 setIsSearching(false);
                 return;
             }
 
-            // Check if user exists in 'captain' or 'staff' overall registry
-            const existingCaptain = (registeredUsers.captain || []).find(c => c.phone === searchPhone);
-            const existingStaff = (registeredUsers.staff || []).find(s => s.phone === searchPhone && !s.vendorId);
-
-            const foundUser = existingCaptain || existingStaff;
-
-            if (foundUser) {
-                setSearchResult(foundUser);
-            } else {
-                // If not found, we offer to "invite" or "create" a new entry
-                setSearchResult({
-                    name: 'New Personnel',
-                    phone: searchPhone,
-                    isNew: true
-                });
+            const res = await vendorAPI.searchStaff(searchPhone);
+            if (res.status === 'success') {
+                setSearchResult(res.data.staff);
             }
+        } catch (err) {
+            if (err.status === 404) {
+                // Not found - trigger onboarding flow
+                setIsOnboarding(true);
+                setOnboardForm({ ...onboardForm, phone: searchPhone });
+            } else {
+                setError(err.data?.message || 'Failed to query registry.');
+            }
+        } finally {
             setIsSearching(false);
-        }, 800);
+        }
     };
 
-    const handleAddStaff = () => {
+    const handleLinkStaff = async () => {
         if (!searchResult) return;
 
-        if (searchResult.isNew) {
-            // Register as new staff
-            const newStaff = {
-                id: 'STF-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
-                name: 'Agent ' + searchPhone.slice(-4),
-                phone: searchPhone,
-                role: 'staff',
-                vendorId: vendor.id,
-                status: 'active',
-                joinedAt: new Date().toISOString(),
-                rating: 5.0,
-                completedJobs: 0
-            };
-            register('staff', newStaff);
-        } else {
-            // Link existing user to this vendor
-            const role = registeredUsers.captain?.find(c => c.id === searchResult.id) ? 'captain' : 'staff';
-            updateUser(role, searchResult.id, { vendorId: vendor.id });
+        setIsSearching(true);
+        try {
+            const res = await vendorAPI.linkStaff(searchResult.phone);
+            if (res.status === 'success') {
+                setShowSuccess(true);
+                setSearchResult(null);
+                setSearchPhone('');
+                fetchStaff();
+                setTimeout(() => setShowSuccess(false), 3000);
+            }
+        } catch (err) {
+            setError(err.data?.message || 'Failed to link personnel.');
+        } finally {
+            setIsSearching(false);
         }
-
-        setShowSuccess(true);
-        setSearchResult(null);
-        setSearchPhone('');
-        setTimeout(() => setShowSuccess(false), 3000);
     };
 
-    const handleRemoveStaff = (id) => {
-        // Disconnect staff from vendor (don't delete user, just remove vendorId)
-        updateUser('staff', id, { vendorId: null });
+    const handleCreateStaff = async (e) => {
+        e.preventDefault();
+        if (!onboardForm.name) {
+            setError('Please enter a name for the new agent');
+            return;
+        }
+
+        setIsSearching(true);
+        try {
+            const res = await vendorAPI.createStaff(onboardForm);
+            if (res.status === 'success') {
+                setShowSuccess(true);
+                setIsOnboarding(false);
+                setSearchPhone('');
+                setOnboardForm({ name: '', phone: '', password: '' });
+                fetchStaff();
+                setTimeout(() => setShowSuccess(false), 3000);
+            }
+        } catch (err) {
+            setError(err.data?.message || 'Failed to onboard personnel.');
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
+    const handleUnlinkStaff = async (id) => {
+        try {
+            await vendorAPI.unlinkStaff(id);
+            fetchStaff();
+        } catch (err) {
+            console.error("Failed to unlink staff", err);
+        }
     };
 
     return (
@@ -133,16 +167,17 @@ const VendorStaff = () => {
                         </form>
 
                         {error && (
-                            <motion.p
+                            <motion.div
                                 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-                                className="mt-3 text-red-500 text-[10px] font-black uppercase tracking-widest bg-red-500/10 border border-red-500/20 px-4 py-2 rounded-xl inline-block"
+                                className="mt-3 bg-red-500/10 border border-red-500/20 px-4 py-2 rounded-xl flex items-center gap-2"
                             >
-                                {error}
-                            </motion.p>
+                                <AlertTriangle size={14} className="text-red-500" />
+                                <span className="text-red-500 text-[10px] font-black uppercase tracking-widest">{error}</span>
+                            </motion.div>
                         )}
                     </div>
 
-                    {/* Search Output */}
+                    {/* Search Output / Onboarding Form */}
                     <AnimatePresence>
                         {searchResult && (
                             <motion.div
@@ -157,10 +192,10 @@ const VendorStaff = () => {
                                     </div>
                                     <div>
                                         <h3 className="text-base font-black text-content tracking-tight">{searchResult.name}</h3>
-                                        <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest font-mono">Registry ID: {searchResult.id || 'N/A'}</p>
+                                        <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest font-mono">Phone: {searchResult.phone}</p>
                                         <div className="flex items-center gap-2 mt-1">
-                                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded border ${searchResult.isNew ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' : 'bg-green-500/10 border-green-500/20 text-green-500'}`}>
-                                                {searchResult.isNew ? 'Ready for Onboarding' : 'Existing System Agent'}
+                                            <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded border bg-green-500/10 border-green-500/20 text-green-500">
+                                                Registered Staff Member
                                             </span>
                                         </div>
                                     </div>
@@ -173,11 +208,64 @@ const VendorStaff = () => {
                                         Cancel
                                     </button>
                                     <button
-                                        onClick={handleAddStaff}
+                                        onClick={handleLinkStaff}
+                                        disabled={isSearching}
                                         className="h-12 px-8 bg-brand text-white rounded-xl font-black uppercase text-[10px] tracking-[0.1em] shadow-lg shadow-brand/20 flex items-center gap-2 hover:scale-105 transition-all"
                                     >
-                                        <CheckCircle2 size={16} /> Link to My Studio
+                                        {isSearching ? <Loader2 size={16} className="animate-spin" /> : <><CheckCircle2 size={16} /> Link to My Studio</>}
                                     </button>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {isOnboarding && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                className="mt-10 p-8 bg-background border border-brand/20 rounded-[2rem]"
+                            >
+                                <div className="flex flex-col md:flex-row gap-8 items-center">
+                                    <div className="w-20 h-20 bg-brand/5 rounded-[2rem] flex items-center justify-center text-brand shrink-0">
+                                        <UserPlus size={32} />
+                                    </div>
+                                    <div className="flex-1 space-y-4 w-full">
+                                        <div>
+                                            <h3 className="text-lg font-black text-content tracking-tight italic uppercase">Personnel <span className="text-brand">Not Found</span></h3>
+                                            <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest">Register this agent directly to your studio registry</p>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <input
+                                                type="text"
+                                                placeholder="Full Name"
+                                                value={onboardForm.name}
+                                                onChange={e => setOnboardForm({ ...onboardForm, name: e.target.value })}
+                                                className="h-14 bg-surface border border-gray-100/10 rounded-xl px-4 text-[13px] font-bold text-content outline-none focus:border-brand transition-all"
+                                            />
+                                            <input
+                                                type="password"
+                                                placeholder="Assign PIN (Optional, default 1234)"
+                                                value={onboardForm.password}
+                                                onChange={e => setOnboardForm({ ...onboardForm, password: e.target.value })}
+                                                className="h-14 bg-surface border border-gray-100/10 rounded-xl px-4 text-[13px] font-bold text-content outline-none focus:border-brand transition-all"
+                                            />
+                                        </div>
+                                        <div className="flex gap-4">
+                                            <button
+                                                onClick={handleCreateStaff}
+                                                disabled={isSearching}
+                                                className="h-12 px-8 bg-brand text-white rounded-xl font-black uppercase text-[10px] tracking-[0.1em] shadow-lg shadow-brand/20 flex items-center gap-2 hover:scale-105 transition-all"
+                                            >
+                                                {isSearching ? <Loader2 size={16} className="animate-spin" /> : <><Zap size={16} /> Quick Onboard</>}
+                                            </button>
+                                            <button
+                                                onClick={() => setIsOnboarding(false)}
+                                                className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-content-subtle hover:text-content"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </motion.div>
                         )}
@@ -210,12 +298,16 @@ const VendorStaff = () => {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {staffList.map((staff, idx) => (
+                        {loading ? (
+                            <div className="col-span-full flex justify-center py-10">
+                                <div className="w-8 h-8 border-4 border-brand/30 border-t-brand rounded-full animate-spin" />
+                            </div>
+                        ) : staffList.map((staff, idx) => (
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: idx * 0.05 }}
-                                key={staff.id}
+                                key={staff._id}
                                 className="bg-surface rounded-[2.5rem] border border-gray-100/10 p-8 shadow-soft space-y-6 group hover:border-brand/20 transition-all"
                             >
                                 <div className="flex items-center justify-between">
@@ -225,12 +317,12 @@ const VendorStaff = () => {
                                             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-surface animate-pulse" />
                                         </div>
                                         <div>
-                                            <h4 className="text-sm font-black text-content tracking-tight">{staff.name}</h4>
+                                            <h4 className="text-sm font-black text-content tracking-tight">{staff.name || 'Agent'}</h4>
                                             <p className="text-[9px] font-bold text-content-subtle uppercase tracking-widest font-mono">{staff.phone}</p>
                                         </div>
                                     </div>
                                     <button
-                                        onClick={() => handleRemoveStaff(staff.id)}
+                                        onClick={() => handleUnlinkStaff(staff._id)}
                                         className="w-8 h-8 rounded-lg flex items-center justify-center text-content-subtle hover:bg-red-500/10 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
                                     >
                                         <Trash2 size={16} />
@@ -261,7 +353,6 @@ const VendorStaff = () => {
                                     </div>
                                     <button
                                         className="h-10 px-5 bg-background border border-gray-100/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:border-brand hover:text-brand transition-all flex items-center gap-2"
-                                        onClick={() => alert('Assigning to jobs functionality can be extended from Fleet & Drivers section.')}
                                     >
                                         <Zap size={12} /> Assign Duty
                                     </button>
@@ -269,7 +360,7 @@ const VendorStaff = () => {
                             </motion.div>
                         ))}
 
-                        {staffList.length === 0 && (
+                        {!loading && staffList.length === 0 && (
                             <div className="col-span-full py-20 flex flex-col items-center gap-4 text-center bg-surface/50 border border-dashed border-gray-100/20 rounded-[3rem]">
                                 <UserPlus size={40} className="text-content-subtle/10" />
                                 <div>

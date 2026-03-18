@@ -20,6 +20,14 @@ const Signup = () => {
 
     const handleContinue = async () => {
         if (formData.phone.length < 10 || !formData.email) return;
+        
+        // Simple email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.email)) {
+            setError('Please enter a valid email address.');
+            return;
+        }
+
         setError('');
         setLoading(true);
         const res = await sendOTP(formData.phone, 'phone', userData);
@@ -29,7 +37,8 @@ const Signup = () => {
                 state: {
                     type: 'phone',
                     identifier: formData.phone,
-                    userData
+                    userData,
+                    devOtp: res.data?.otp
                 }
             });
         } else {
@@ -101,7 +110,10 @@ const Signup = () => {
                                     maxLength={10}
                                     placeholder="Number"
                                     value={formData.phone}
-                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })}
+                                    onChange={(e) => {
+                                        const val = e.target.value.replace(/\D/g, '');
+                                        if (val.length <= 10) setFormData({ ...formData, phone: val });
+                                    }}
                                     className="w-full bg-white border border-gray-100 rounded-xl pl-11 pr-4 py-4 font-bold text-content text-base outline-none focus:border-brand/40 shadow-sm transition-all placeholder:text-gray-100 tracking-widest font-mono"
                                 />
                             </div>

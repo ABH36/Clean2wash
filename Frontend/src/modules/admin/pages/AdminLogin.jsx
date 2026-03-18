@@ -14,25 +14,25 @@ import {
 
 const AdminLogin = () => {
     const navigate = useNavigate();
-    const { login, validateCredentials } = useAuth();
+    const { adminLogin } = useAuth();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
-        const user = validateCredentials('admin', { email, password });
-        if (!user) {
-            setError('Invalid System ID or Passcode. Try: admin@CarWash.in / admin123');
-            return;
-        }
         setLoading(true);
-        setTimeout(() => {
-            login('admin', user);
+
+        const result = await adminLogin(email, password);
+
+        if (result.success) {
             navigate('/admin');
-        }, 1200);
+        } else {
+            setError(result.error || 'Invalid System ID or Passcode. Try: admin@CarWash.in / admin123');
+            setLoading(false);
+        }
     };
 
     return (
@@ -54,7 +54,7 @@ const AdminLogin = () => {
                     <div className="w-20 h-20 bg-brand text-white rounded-3xl flex items-center justify-center shadow-[0_0_50px_rgba(var(--brand-rgb),0.3)] mb-8 animate-pulse">
                         <Cpu size={40} />
                     </div>
-                    <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none">CarWash <br /><span className="text-brand">Infrastructure</span></h1>
+                    <h1 className="text-4xl font-black text-white tracking-tighter uppercase leading-none">CarWash <br /><span className="text-brand">Infrastructure</span></h1>
                     <div className="flex items-center gap-2 mt-4 bg-white/5 px-4 py-1.5 rounded-full border border-white/10">
                         <Terminal size={12} className="text-brand" />
                         <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Authorized Access Only</p>
@@ -66,7 +66,7 @@ const AdminLogin = () => {
                     <form onSubmit={handleLogin} className="space-y-8">
                         <div className="space-y-5">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-white/40 uppercase tracking-widest italic flex items-center gap-2 px-1">
+                                <label className="text-[10px] font-black text-white/40 uppercase tracking-widest flex items-center gap-2 px-1">
                                     System ID
                                 </label>
                                 <div className="relative">
@@ -82,7 +82,7 @@ const AdminLogin = () => {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-white/40 uppercase tracking-widest italic flex items-center gap-2 px-1">
+                                <label className="text-[10px] font-black text-white/40 uppercase tracking-widest flex items-center gap-2 px-1">
                                     Cipher Key
                                 </label>
                                 <div className="relative">

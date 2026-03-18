@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Search, ShoppingCart, Star, ChevronLeft, Filter, X,
@@ -6,8 +6,9 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import MobileLayout from '../components/layout/MobileLayout';
-import { useCart, SHOP_PRODUCTS } from '../../../context/CartContext';
+import { useCart } from '../../../context/CartContext';
 import { useAuth } from '../../../context/AuthContext';
+import { productAPI } from '../../../utils/api';
 
 const CATEGORIES = ['All', 'Electronics', 'Accessories', 'Cleaning'];
 const SORT_OPTIONS = [
@@ -20,12 +21,34 @@ const SORT_OPTIONS = [
 const ShopPage = () => {
     const navigate = useNavigate();
     const { addToCart, isInCart, cartCount } = useCart();
-    const { registeredUsers } = useAuth();
+    const { registeredUsers = {} } = useAuth();
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState('featured');
     const [showSort, setShowSort] = useState(false);
     const [toast, setToast] = useState(null);
+
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                setLoading(true);
+                const res = await productAPI.getProducts({
+                    category: activeCategory === 'All' ? undefined : activeCategory,
+                    search: searchQuery
+                });
+                if (res.status === 'success') {
+                    setProducts(res.data.products);
+                }
+            } catch (err) {
+                console.error("Failed to fetch products:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProducts();
+    }, [activeCategory, searchQuery]);
 
     const showToast = (name) => {
         setToast(name);
@@ -37,25 +60,8 @@ const ShopPage = () => {
         showToast(product.name);
     };
 
-    const allAvailableProducts = useMemo(() => {
-        const vendorApproved = [];
-        (registeredUsers.vendor || []).forEach(v => {
-            if (v.products) {
-                v.products.filter(p => p.status === 'Approved').forEach(p => {
-                    vendorApproved.push(p);
-                });
-            }
-        });
-        return [...SHOP_PRODUCTS, ...vendorApproved];
-    }, [registeredUsers.vendor]);
-
     const filteredProducts = useMemo(() => {
-        let list = [...allAvailableProducts];
-        if (activeCategory !== 'All') list = list.filter(p => p.category === activeCategory);
-        if (searchQuery.trim()) {
-            const q = searchQuery.toLowerCase();
-            list = list.filter(p => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q));
-        }
+        let list = [...products];
         switch (sortBy) {
             case 'price_asc': list.sort((a, b) => a.salePrice - b.salePrice); break;
             case 'price_desc': list.sort((a, b) => b.salePrice - a.salePrice); break;
@@ -63,7 +69,15 @@ const ShopPage = () => {
             default: break;
         }
         return list;
-    }, [activeCategory, searchQuery, sortBy, allAvailableProducts]);
+    }, [products, sortBy]);
+
+    if (loading) return (
+        <MobileLayout>
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="w-10 h-10 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+            </div>
+        </MobileLayout>
+    );
 
     return (
         <MobileLayout>
@@ -189,16 +203,19 @@ const ShopPage = () => {
                         </motion.div>
                     ) : (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-2 gap-3">
-                            {filteredProducts.map((product, i) => (
-                                <ProductCard
-                                    key={product.id}
-                                    product={product}
-                                    index={i}
-                                    inCart={isInCart(product.id)}
-                                    onAddToCart={() => handleAddToCart(product)}
-                                    onViewCart={() => navigate('/cart')}
-                                />
-                            ))}
+                            {filteredProducts.map((product, i) => {
+                                const pId = product._id || product.id;
+                                return (
+                                    <ProductCard
+                                        key={pId}
+                                        product={product}
+                                        index={i}
+                                        inCart={isInCart(pId)}
+                                        onAddToCart={() => handleAddToCart(product)}
+                                        onViewCart={() => navigate('/cart')}
+                                    />
+                                );
+                            })}
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -244,6 +261,8 @@ const ShopPage = () => {
 };
 
 const ProductCard = ({ product, index, inCart, onAddToCart, onViewCart }) => {
+    const navigate = useNavigate();
+    const pId = product._id || product.id;
     const discount = Math.round(((product.price - product.salePrice) / product.price) * 100);
 
     return (
@@ -256,7 +275,7 @@ const ProductCard = ({ product, index, inCart, onAddToCart, onViewCart }) => {
             <div className="p-2.5">
                 <div
                     className="relative aspect-square rounded-2xl overflow-hidden bg-[#f8fafc] cursor-pointer"
-                    onClick={() => navigate(`/e-shop/product/${product.id}`)}
+                    onClick={() => navigate(`/e-shop/product/${pId}`)}
                 >
                     <img src={product.image} alt={product.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
@@ -287,14 +306,14 @@ const ProductCard = ({ product, index, inCart, onAddToCart, onViewCart }) => {
                 <p className="text-[8px] font-black text-brand uppercase tracking-[0.2em] mb-0.5 opacity-80">{product.category}</p>
                 <h3
                     className="text-[13px] font-bold text-[#0f172a] leading-tight mb-2 line-clamp-2 min-h-[34px] group-hover:text-brand transition-colors font-sans cursor-pointer"
-                    onClick={() => navigate(`/e-shop/product/${product.id}`)}
+                    onClick={() => navigate(`/e-shop/product/${pId}`)}
                 >
                     {product.name}
                 </h3>
 
                 <div className="flex items-baseline gap-1.5 mb-4">
-                    <span className="text-lg font-black text-[#0f172a] tracking-tight">₹{product.salePrice.toLocaleString()}</span>
-                    <span className="text-[10px] text-gray-400 line-through font-bold opacity-50">₹{product.price.toLocaleString()}</span>
+                    <span className="text-lg font-black text-[#0f172a] tracking-tight">₹{product.salePrice?.toLocaleString()}</span>
+                    <span className="text-[10px] text-gray-400 line-through font-bold opacity-50">₹{product.price?.toLocaleString()}</span>
                 </div>
 
                 {/* Refined Action Button */}

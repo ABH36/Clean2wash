@@ -1,0 +1,16 @@
+{
+  "short_name": "CarWash",
+  "name": "Clean-2-Wash",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#FF6B00",
+  "background_color": "#ffffff"
+}

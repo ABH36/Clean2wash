@@ -17,12 +17,25 @@ const SafetyContacts = () => {
         setTimeout(() => setToast(null), 2000);
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!form.name || !form.phone) return;
-        addContact(form);
-        setForm({ name: '', phone: '', relation: '' });
-        setShowAdd(false);
-        showToast('Contact added to Safety Net');
+        const res = await addContact(form);
+        if (res.success) {
+            setForm({ name: '', phone: '', relation: '' });
+            setShowAdd(false);
+            showToast('Contact added to Safety Net');
+        } else {
+            showToast(res.error || 'Failed to add contact', 'error');
+        }
+    };
+
+    const handleRemove = async (id) => {
+        const res = await removeContact(id);
+        if (res.success) {
+            showToast('Contact removed');
+        } else {
+            showToast(res.error || 'Failed to remove contact', 'error');
+        }
     };
 
     return (
@@ -87,7 +100,7 @@ const SafetyContacts = () => {
                                         <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-1.5">{contact.phone} • {contact.relation}</p>
                                     </div>
                                     <button
-                                        onClick={() => removeContact(contact.id)}
+                                        onClick={() => handleRemove(contact._id || contact.id)}
                                         className="w-9 h-9 bg-red-50 text-red-400 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
                                     >
                                         <Trash2 size={16} />

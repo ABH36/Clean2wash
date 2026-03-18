@@ -13,25 +13,25 @@ import {
 } from 'lucide-react';
 const VendorLogin = () => {
     const navigate = useNavigate();
-    const { login, validateCredentials } = useAuth();
+    const { vendorLogin } = useAuth();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
-        const user = validateCredentials('vendor', { email, password });
-        if (!user) {
-            setError('Invalid credentials. Try: vendor@CarWash.in / vendor123');
-            return;
-        }
         setLoading(true);
-        setTimeout(() => {
-            login('vendor', user);
+
+        const result = await vendorLogin(email, password);
+
+        if (result.success) {
             navigate('/vendor');
-        }, 1200);
+        } else {
+            setError(result.error || 'Invalid credentials. Try: vendor@CarWash.in / vendor123');
+            setLoading(false);
+        }
     };
 
     return (

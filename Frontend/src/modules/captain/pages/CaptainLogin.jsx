@@ -1,73 +1,79 @@
-import React, { useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ShieldCheck, Phone, Zap, Star, ArrowRight, Camera, CheckCircle2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { useNavigate, Link } from 'react-router-dom';
+import { ChevronLeft, Zap, Phone, Lock, ArrowRight, ShieldCheck, Star } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
-
-import { useTheme } from '../../../context/ThemeContext';
+import { useCaptain } from '../../../context/CaptainContext';
+import { toast } from 'react-hot-toast';
 
 const CaptainLogin = () => {
     const navigate = useNavigate();
-    const { isDarkMode } = useTheme();
-    const { captainSendOTP, captainVerifyOTP } = useAuth();
-    const [phase, setPhase] = useState('phone');
+    const { captainLogin } = useAuth();
+    const { captainSendOTP } = useCaptain();
     const [phone, setPhone] = useState('');
-    const [otp, setOtp] = useState(['', '', '', '']);
+    const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
-    const otpRefs = useRef([]);
+    const [otpLoading, setOtpLoading] = useState(false);
 
-    const handleSendOtp = async () => {
-        if (phone.length === 10) {
-            setLoading(true);
-            const result = await captainSendOTP(phone, { name: `Captain_${phone.slice(-4)}`, city: '', experience: '', vehicleType: '', plate: '', kit: '' });
-            setLoading(false);
-            
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        
+        if (!phone || !password) {
+            return toast.error('Please enter phone and password');
+        }
+
+        setLoading(true);
+        try {
+            const result = await captainLogin(phone.replace(/\D/g, ''), password);
             if (result.success) {
-                setPhase('otp');
+                toast.success('Welcome back, Captain!');
+                navigate('/captain');
             } else {
-                console.error('OTP send failed:', result.error);
+                toast.error(result.error || 'Invalid credentials');
             }
+        } catch (error) {
+            toast.error('Login failed, try again');
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleOtpChange = (value, index) => {
-        const newOtp = [...otp];
-        newOtp[index] = value;
-        setOtp(newOtp);
-        if (value && index < 3) {
-            otpRefs.current[index + 1]?.focus();
+    const handleRequestOTP = async () => {
+        if (!phone || phone.length !== 10) {
+            return toast.error('Enter a valid 10-digit phone number');
+        }
+        setOtpLoading(true);
+        try {
+            const result = await captainSendOTP(phone);
+            if (result.success) {
+                toast.success('OTP sent successfully!');
+                navigate('/captain/otp-verify', { 
+                    state: { 
+                        phone, 
+                        type: 'login',
+                        devOtp: result.data?.otp 
+                    } 
+                });
+            } else {
+                toast.error(result.error || 'Failed to send OTP');
+            }
+        } catch (error) {
+            toast.error('Something went wrong');
+        } finally {
+            setOtpLoading(false);
         }
     };
 
-    const handleVerify = async () => {
-        if (otp.join('').length === 4) {
-            setLoading(true);
-            try {
-                // Verify OTP
-                const result = await captainVerifyOTP(phone, otp.join(''));
-                
-                if (result.success) {
-                    navigate('/captain');
-                } else {
-                    console.error('OTP verification failed:', result.error);
-                }
-            } catch (err) {
-                console.error('Verification error:', err);
-            } finally {
-                setLoading(false);
-            }
-        }
-    };
     return (
-        <div className={`min-h-screen ${isDarkMode ? 'bg-[#0F172A]' : 'bg-[#F8FAFC]'} flex flex-col font-sans overflow-hidden transition-colors duration-500`}>
-            {/* ── Visual Header ── */}
+        <div className="min-h-screen bg-background flex flex-col font-sans overflow-hidden">
+            {/* Visual Header */}
             <div className="relative h-72 flex-shrink-0">
                 <img
                     src="https://images.unsplash.com/photo-1605152276897-4f618f831968?w=800&q=80"
                     alt="Captain"
-                    className={`w-full h-full object-cover grayscale-[0.5] ${isDarkMode ? 'brightness-[0.3]' : 'brightness-[0.6]'}`}
+                    className="w-full h-full object-cover grayscale-[0.5] brightness-[0.4]"
                 />
-                <div className={`absolute inset-0 bg-gradient-to-t ${isDarkMode ? 'from-[#0F172A] via-[#0F172A]/40' : 'from-[#F8FAFC] via-[#F8FAFC]/40'} to-transparent`} />
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
 
                 <div className="absolute inset-x-0 bottom-0 p-6">
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
@@ -77,142 +83,115 @@ const CaptainLogin = () => {
                             </div>
                             <span className="text-brand text-[10px] font-black uppercase tracking-[0.2em]">Captain Partner App</span>
                         </div>
-                        <h1 className={`${isDarkMode ? 'text-white' : 'text-content'} text-3xl font-black tracking-tighter leading-tight italic`}>
-                            {phase === 'phone' ? 'Start Earning.\nWash Smarter.' :
-                                phase === 'otp' ? 'Verify Your\nIdentity.' : 'Join the\nElite Force.'}
+                        <h1 className="text-white text-3xl font-black tracking-tighter leading-tight italic">
+                            Welcome Back.<br />Ready to Earn?
                         </h1>
-                        <p className={`${isDarkMode ? 'text-white/40' : 'text-content-subtle'} text-[11px] font-bold uppercase tracking-widest`}>Earn up to ₹45k/month with flexible hours</p>
+                        <p className="text-white/40 text-[11px] font-bold uppercase tracking-widest mt-1">Sign in to view new requests</p>
                     </motion.div>
                 </div>
 
-                {phase !== 'phone' && (
-                    <button onClick={() => setPhase('phone')} className={`absolute top-12 left-6 w-10 h-10 rounded-2xl flex items-center justify-center backdrop-blur-md border transition-all ${isDarkMode ? 'bg-white/10 border-white/10 text-white' : 'bg-white/50 border-gray-100 text-content shadow-sm'}`}>
-                        <ChevronLeft size={20} strokeWidth={3} />
-                    </button>
-                )}
+                <Link to="/" className="absolute top-12 left-6 w-10 h-10 rounded-2xl flex items-center justify-center backdrop-blur-md border bg-white/10 border-white/10 text-white transition-all hover:bg-white/20">
+                    <ChevronLeft size={20} strokeWidth={3} />
+                </Link>
             </div>
 
-            {/* ── Interaction Area ── */}
-            <div className={`flex-1 relative px-6 pt-6 pb-12 flex flex-col transition-colors ${isDarkMode ? 'bg-[#0F172A]' : 'bg-[#F8FAFC]'}`}>
-                <AnimatePresence mode="wait">
-                    {phase === 'phone' && (
-                        <motion.div key="phone"
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            className="flex flex-col flex-1"
-                        >
-                            <p className={`${isDarkMode ? 'text-white/60' : 'text-content-subtle'} font-bold text-sm mb-6`}>Enter your mobile to sign in or register</p>
+            {/* Form Area */}
+            <div className="flex-1 relative px-6 pt-6 pb-12 flex flex-col bg-background">
+                <motion.div 
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="flex flex-col flex-1"
+                >
+                    <form onSubmit={handleLogin} className="space-y-4">
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic flex items-center gap-2 px-1">
+                                <Phone size={14} /> Registered Phone
+                            </label>
+                            <input
+                                type="tel"
+                                maxLength={10}
+                                placeholder="10 Digit Mobile Number"
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                                className="w-full h-14 bg-background border border-gray-100/10 rounded-2xl px-6 text-sm font-black text-content outline-none focus:border-brand transition-all placeholder:text-gray-300 dark:placeholder:text-white/10"
+                            />
+                        </div>
 
-                            <div className="flex gap-3 mb-6">
-                                <div className={`${isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-100 text-content shadow-sm'} rounded-2xl px-4 flex items-center gap-2 flex-shrink-0 border transition-all`}>
-                                    <span className="text-lg">🇮🇳</span>
-                                    <span className="font-black text-sm">+91</span>
-                                </div>
-                                <input
-                                    type="tel"
-                                    maxLength={10}
-                                    placeholder="Enter Phone Number"
-                                    value={phone}
-                                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                                    className={`flex-1 rounded-2xl px-5 py-4 font-black text-lg outline-none border transition-all ${isDarkMode
-                                        ? 'bg-white/5 border-white/10 text-white focus:border-brand/40 placeholder:text-white/10'
-                                        : 'bg-white border-gray-100 text-content focus:border-brand/40 shadow-sm placeholder:text-gray-300'}`}
-                                />
-                                <motion.button
-                                    disabled={phone.length < 10 || loading}
-                                    whileTap={{ scale: 0.97 }}
-                                    onClick={handleSendOtp}
-                                    className={`w-full h-14 rounded-2xl font-black text-base flex items-center justify-center gap-3 transition-all ${phone.length === 10
-                                        ? 'bg-brand text-white shadow-xl shadow-brand/20'
-                                        : isDarkMode ? 'bg-white/5 text-white/10 pointer-events-none' : 'bg-gray-100 text-gray-300 pointer-events-none'
-                                    }`}
-                                >
-                                    {loading ? (
-                                        <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                                    ) : (
-                                        <>Get OTP <ArrowRight size={18} strokeWidth={3} /></>
-                                    )}
-                                </motion.button>
-                            </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic flex items-center gap-2 px-1">
+                                <Lock size={14} /> Password / PIN
+                            </label>
+                            <input
+                                type="password"
+                                placeholder="Enter secure PIN"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full h-14 bg-background border border-gray-100/10 rounded-2xl px-6 text-sm font-black text-content outline-none focus:border-brand transition-all placeholder:text-gray-300 dark:placeholder:text-white/10"
+                            />
+                        </div>
 
-                            <div className="mt-auto grid grid-cols-2 gap-4 pt-10">
-                                <div className={`${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white border-gray-100 shadow-sm'} p-4 rounded-2xl border transition-all`}>
-                                    <Star size={16} className="text-yellow-400 mb-2" fill="currentColor" />
-                                    <p className={`text-sm font-black italic tracking-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>4.9/5</p>
-                                    <p className={`${isDarkMode ? 'text-white/30' : 'text-content-subtle'} text-[9px] font-black uppercase tracking-widest leading-none mt-1`}>Captain Rating</p>
-                                </div>
-                                <div className={`${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white border-gray-100 shadow-sm'} p-4 rounded-2xl border transition-all`}>
-                                    <ShieldCheck size={16} className="text-blue-400 mb-2" />
-                                    <p className={`text-sm font-black italic tracking-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>₹5L</p>
-                                    <p className={`${isDarkMode ? 'text-white/30' : 'text-content-subtle'} text-[9px] font-black uppercase tracking-widest leading-none mt-1`}>Accident Cover</p>
-                                </div>
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {phase === 'otp' && (
-                        <motion.div key="otp"
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            className="flex flex-col flex-1"
-                        >
-                            <p className={`${isDarkMode ? 'text-white/60' : 'text-content-subtle'} font-bold text-sm mb-2`}>
-                                We sent a 4-digit code to
-                            </p>
-                            <div className="flex items-center gap-2 mb-8">
-                                <span className={`${isDarkMode ? 'text-white' : 'text-content'} font-black text-lg italic tracking-tight`}>+91 {phone}</span>
-                                <button onClick={() => setPhase('phone')} className="text-brand text-[10px] font-black uppercase tracking-widest border-b border-brand/30">Change</button>
-                            </div>
-
-                            <div className="grid grid-cols-4 gap-4 mb-8">
-                                {[0, 1, 2, 3].map((i) => (
-                                    <input
-                                        key={i}
-                                        ref={(el) => (otpRefs.current[i] = el)}
-                                        type="tel"
-                                        maxLength={1}
-                                        value={otp[i]}
-                                        autoFocus={i === 0}
-                                        onChange={(e) => handleOtpChange(e.target.value, i)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Backspace' && !otp[i] && i > 0) otpRefs.current[i - 1]?.focus();
-                                        }}
-                                        className={`h-16 text-center text-2xl font-black rounded-2xl border-2 outline-none transition-all ${otp[i]
-                                            ? 'border-brand bg-brand/10 text-brand ring-4 ring-brand/10'
-                                            : isDarkMode ? 'border-white/10 bg-white/5 text-white focus:border-brand/40' : 'border-gray-100 bg-white text-content focus:border-brand/40 shadow-sm'
-                                            }`}
-                                    />
-                                ))}
-                            </div>
-
-                            <motion.button
-                                disabled={otp.join('').length < 4 || loading}
-                                whileTap={{ scale: 0.97 }}
-                                onClick={handleVerify}
-                                className={`w-full h-14 rounded-2xl font-black text-base flex items-center justify-center gap-3 transition-all ${otp.join('').length === 4
+                        <motion.button
+                            type="submit"
+                            disabled={!phone || !password || loading || otpLoading}
+                            whileTap={{ scale: 0.97 }}
+                            className={`w-full h-14 rounded-2xl font-black text-base flex items-center justify-center gap-3 transition-all mt-6 ${
+                                phone && password
                                     ? 'bg-brand text-white shadow-xl shadow-brand/20'
-                                    : isDarkMode ? 'bg-white/5 text-white/10 pointer-events-none' : 'bg-gray-100 text-gray-300 pointer-events-none'
-                                    }`}
-                            >
-                                {loading ? (
-                                    <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                                ) : 'Verify & Sign In'}
-                            </motion.button>
+                                    : 'bg-white/5 text-white/10 border border-white/5 pointer-events-none'
+                            }`}
+                        >
+                            {loading ? (
+                                <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                            ) : (
+                                <>Sign In with Password <ArrowRight size={18} strokeWidth={3} /></>
+                            )}
+                        </motion.button>
 
-                            <button className="mt-6 text-[11px] font-black text-brand uppercase tracking-widest text-center">Resend code in 0:24</button>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
+                        <div className="flex items-center gap-4 my-4">
+                            <div className="h-px flex-1 bg-white/5" />
+                            <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">OR</span>
+                            <div className="h-px flex-1 bg-white/5" />
+                        </div>
 
-            {/* Footer Note */}
-            <div className="px-8 pb-10 text-center">
-                <p className={`${isDarkMode ? 'text-white/20' : 'text-content-subtle/50'} text-[10px] font-black uppercase tracking-widest leading-relaxed`}>
-                    By continuing, you agree to become a CarWash Partner and accept our
-                    <span className={isDarkMode ? 'text-white/40' : 'text-content'}> Partner Terms</span> & <span className={isDarkMode ? 'text-white/40' : 'text-content'}>Payout Policies</span>.
-                </p>
+                        <motion.button
+                            type="button"
+                            onClick={handleRequestOTP}
+                            disabled={phone.length !== 10 || loading || otpLoading}
+                            whileTap={{ scale: 0.97 }}
+                            className={`w-full h-14 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 transition-all border ${
+                                phone.length === 10
+                                    ? 'border-brand text-brand bg-brand/5 hover:bg-brand hover:text-white'
+                                    : 'border-white/5 text-white/10 pointer-events-none'
+                            }`}
+                        >
+                            {otpLoading ? (
+                                <div className="w-4 h-4 border-2 border-brand/50 border-t-brand rounded-full animate-spin" />
+                            ) : (
+                                <>Login via Secure OTP <Zap size={14} fill="currentColor" /></>
+                            )}
+                        </motion.button>
+                    </form>
+
+                    <div className="mt-8 text-center border-t border-gray-100/10 pt-8">
+                        <p className="text-[11px] font-bold text-content-subtle uppercase tracking-widest">
+                            New to CarWash?{' '}
+                            <Link to="/captain/signup" className="text-brand font-black italic">JOIN FLEET</Link>
+                        </p>
+                    </div>
+
+                    <div className="mt-auto grid grid-cols-2 gap-4 pt-10">
+                        <div className="bg-white/5 border border-white/5 p-4 rounded-2xl transition-all">
+                            <Star size={16} className="text-yellow-400 mb-2" fill="currentColor" />
+                            <p className="text-sm font-black italic tracking-tight text-white">4.9/5 Avg</p>
+                            <p className="text-white/30 text-[9px] font-black uppercase tracking-widest leading-none mt-1">Provider Rating</p>
+                        </div>
+                        <div className="bg-white/5 border border-white/5 p-4 rounded-2xl transition-all">
+                            <ShieldCheck size={16} className="text-blue-400 mb-2" />
+                            <p className="text-sm font-black italic tracking-tight text-white">Verified</p>
+                            <p className="text-white/30 text-[9px] font-black uppercase tracking-widest leading-none mt-1">Partners Hub</p>
+                        </div>
+                    </div>
+                </motion.div>
             </div>
         </div>
     );

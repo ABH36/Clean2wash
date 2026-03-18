@@ -15,7 +15,7 @@ const OrderDetails = () => {
 
     // Find the specific order
     const order = useMemo(() => {
-        return bookings.find(b => b.id === id);
+        return bookings.find(b => b.id === id || b._id === id || b.bookingId === id);
     }, [bookings, id]);
 
     if (!order) {
@@ -53,7 +53,7 @@ const OrderDetails = () => {
                         </button>
                         <div>
                             <h1 className="text-lg font-black tracking-tight text-content leading-none">Order Status</h1>
-                            <p className="text-[9px] text-brand font-black uppercase tracking-widest mt-0.5">#{order.id}</p>
+                            <p className="text-[9px] text-brand font-black uppercase tracking-widest mt-0.5">#{order.bookingId || order.id || order._id}</p>
                         </div>
                     </div>
                     <button className="flex items-center gap-1.5 bg-gray-50 border border-gray-100 px-3 py-2 rounded-xl text-content-muted text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all">
@@ -119,18 +119,29 @@ const OrderDetails = () => {
                         <p className="text-[9px] font-black uppercase tracking-widest text-content-subtle">Order Summary</p>
                     </div>
                     <div className="p-4 space-y-3">
-                        {order.items?.map((item, idx) => (
+                        {order.items?.length > 0 ? order.items.map((item, idx) => (
                             <div key={idx} className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-100 overflow-hidden">
-                                    <img src={item.image} className="w-8 h-8 object-contain" alt="" />
+                                    <img src={item.image || "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=100&q=80"} className="w-8 h-8 object-contain" alt="" />
                                 </div>
                                 <div className="flex-1">
-                                    <p className="text-[10px] font-black text-content uppercase tracking-tight leading-none">{item.name}</p>
-                                    <p className="text-[8px] font-bold text-content-subtle uppercase tracking-widest mt-1">Qty: {item.qty} · ₹{item.salePrice.toLocaleString()}</p>
+                                    <p className="text-[10px] font-black text-content uppercase tracking-tight leading-none">{item.name || item.serviceName || order.service?.name}</p>
+                                    <p className="text-[8px] font-bold text-content-subtle uppercase tracking-widest mt-1">Qty: {item.qty || 1} · ₹{(item.salePrice || item.price || 0).toLocaleString()}</p>
                                 </div>
-                                <p className="text-[11px] font-black text-content">₹{(item.salePrice * item.qty).toLocaleString()}</p>
+                                <p className="text-[11px] font-black text-content">₹{((item.salePrice || item.price || 0) * (item.qty || 1)).toLocaleString()}</p>
                             </div>
-                        ))}
+                        )) : (
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-100 overflow-hidden">
+                                    <ShoppingBag size={18} className="text-content-subtle" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-[10px] font-black text-content uppercase tracking-tight leading-none">{order.service?.name || order.serviceName || 'Car Service'}</p>
+                                    <p className="text-[8px] font-bold text-content-subtle uppercase tracking-widest mt-1">Qty: 1</p>
+                                </div>
+                                <p className="text-[11px] font-black text-content">₹{(order.pricing?.totalAmount || order.amount || order.price || 0).toLocaleString()}</p>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -138,7 +149,7 @@ const OrderDetails = () => {
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-soft p-5 space-y-3">
                     <div className="flex justify-between items-center text-[10px] font-bold text-content-subtle uppercase tracking-widest">
                         <span>Total Payable</span>
-                        <span className="text-content font-black text-base">{order.price}</span>
+                        <span className="text-content font-black text-base">₹{(order.pricing?.totalAmount || order.amount || order.price || 0).toLocaleString()}</span>
                     </div>
                     <div className="pt-2 border-t border-gray-50 flex items-center gap-2">
                         <ShieldCheck size={14} className="text-green-600" />

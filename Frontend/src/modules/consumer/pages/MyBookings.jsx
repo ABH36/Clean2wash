@@ -25,52 +25,82 @@ const BOOKINGS = {
 
 const MyBookings = () => {
     const navigate = useNavigate();
-    const { bookings, user, registeredUsers } = useAuth();
+    const { bookings, user } = useAuth();
     const [activeTab, setActiveTab] = useState('Active');
 
     // Filter and Map Bookings
-    const userBookings = bookings.filter(b => b.userId === user?.id || b.userId === 'GUEST');
+    const userBookings = bookings.filter(b => b.consumer === user?.id || b.consumer?.id === user?.id || b.userId === user?.id);
+
+    const activeStatuses = ['pending', 'confirmed', 'assigned', 'en_route', 'arrived', 'before_photo', 'in_progress', 'after_photo', 'pickup-assigned', 'at-studio', 'quality-check', 'ready-for-delivery'];
+
+    const getDisplayStatus = (status) => {
+        const mapping = {
+            'pending': 'Searching',
+            'confirmed': 'Found Captain',
+            'assigned': 'Confirmed',
+            'en_route': 'En Route',
+            'arrived': 'Arrived',
+            'before_photo': 'Inspecting',
+            'in_progress': 'Washing',
+            'after_photo': 'Finishing',
+            'completed': 'Completed',
+            'cancelled': 'Cancelled',
+            'pickup-assigned': 'Pickup',
+            'at-studio': 'At Studio',
+            'quality-check': 'Audit',
+            'ready-for-delivery': 'Delivering'
+        };
+        return mapping[status] || status;
+    };
+
+    const getStatusColor = (status) => {
+        if (status === 'completed') return 'text-green-600 bg-green-50';
+        if (status === 'cancelled') return 'text-red-600 bg-red-50';
+        if (['pending', 'confirmed'].includes(status)) return 'text-violet-600 bg-violet-50';
+        return 'text-blue-600 bg-blue-50';
+    };
 
     const mappedBookings = {
-        Active: userBookings.filter(b => ['pending', 'confirmed', 'in-progress', 'scheduled'].includes(b.status)).map(b => {
-            const performer = b.performerId ? [...(registeredUsers.captain || []), ...(registeredUsers.staff || [])].find(u => u.id === b.performerId) : null;
-            const isDriver = b.type === 'sparedrivers' || b.category === 'Chauffeur';
-
+        Active: userBookings.filter(b => activeStatuses.includes(b.status)).map(b => {
+            const isVendor = b.service?.type === 'vendor' || b.type === 'vendor';
             return {
-                id: b.id || b._id,
-                service: b.serviceName || b.service?.name || 'Cleaning Service',
-                captain: b.driver?.name || performer?.name || 'Searching…',
-                captainImg: b.driver?.img || null,
-                carImg: b.vehicleImg || (isDriver ? 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800&q=80' : 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80'),
-                status: b.status === 'pending' ? 'Matching' : b.status === 'confirmed' ? 'En Route' : b.status === 'in-progress' ? 'In Progress' : 'Scheduled',
-                statusColor: b.status === 'pending' ? 'text-violet-600 bg-violet-50' : b.status === 'scheduled' ? 'text-emerald-600 bg-emerald-50' : 'text-blue-600 bg-blue-50',
-                eta: b.status === 'scheduled' ? (b.service?.scheduledAt || b.date || 'Soon') : (b.status === 'confirmed' ? '12 min' : (b.status === 'in-progress' ? 'Washing' : '—')),
-                amount: b.price || b.amount || '—',
-                date: b.date || new Date(b.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                type: b.type
+                id: b._id || b.id,
+                bookingId: b.bookingId || b.id,
+                service: b.service?.name || b.serviceName || 'Car Wash',
+                captain: b.provider?.id?.name || b.provider?.name || (isVendor ? 'Service Studio' : 'Searching…'),
+                captainImg: b.provider?.id?.photo || b.provider?.photo || null,
+                carImg: b.vehicle?.image || b.vehicleImg || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80',
+                status: getDisplayStatus(b.status),
+                statusColor: getStatusColor(b.status),
+                eta: b.status === 'en_route' ? '12 min' : (b.status === 'in_progress' ? 'Washing' : '—'),
+                amount: `₹${b.pricing?.totalAmount || b.amount || b.price}`,
+                date: b.createdAt ? new Date(b.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today',
+                type: b.service?.type || b.type || 'captain'
             };
         }),
-        Past: userBookings.filter(b => b.status === 'completed' || b.status === 'finished').map(b => ({
-            id: b.id || b._id,
-            service: b.serviceName || b.service?.name,
-            captain: b.driver?.name || 'Rahul Sharma',
-            captainImg: b.driver?.img || null,
-            carImg: b.vehicleImg || 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=400&q=80',
+        Past: userBookings.filter(b => b.status === 'completed').map(b => ({
+            id: b._id || b.id,
+            bookingId: b.bookingId || b.id,
+            service: b.service?.name || b.serviceName,
+            captain: b.provider?.id?.name || 'Rahul Sharma',
+            captainImg: b.provider?.id?.photo || null,
+            carImg: b.vehicle?.image || b.vehicleImg || 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=400&q=80',
             status: 'Completed',
             statusColor: 'text-green-600 bg-green-50',
-            rating: b.rating || 4.9,
-            rated: b.rated !== undefined ? b.rated : true,
-            amount: b.price || b.amount,
-            date: b.date || new Date(b.timestamp).toLocaleDateString()
+            rating: b.feedback?.rating || 0,
+            rated: !!b.feedback?.rating,
+            amount: `₹${b.pricing?.totalAmount || b.amount || b.price}`,
+            date: b.createdAt ? new Date(b.createdAt).toLocaleDateString() : 'Recently'
         })),
-        Cancelled: userBookings.filter(b => ['cancelled', 'rejected'].includes(b.status)).map(b => ({
-            id: b.id || b._id,
-            service: b.serviceName || b.service?.name,
+        Cancelled: userBookings.filter(b => b.status === 'cancelled').map(b => ({
+            id: b._id || b.id,
+            bookingId: b.bookingId || b.id,
+            service: b.service?.name || b.serviceName,
             status: 'Cancelled',
             statusColor: 'text-red-600 bg-red-50',
-            amount: b.price || b.amount,
-            date: b.date || new Date(b.timestamp).toLocaleDateString(),
-            carImg: b.vehicleImg || 'https://images.unsplash.com/photo-1611455600759-99abfc83e9c4?w=400&q=80'
+            amount: `₹${b.pricing?.totalAmount || b.amount || b.price}`,
+            date: b.createdAt ? new Date(b.createdAt).toLocaleDateString() : 'Recently',
+            carImg: b.vehicle?.image || b.vehicleImg || 'https://images.unsplash.com/photo-1611455600759-99abfc83e9c4?w=400&q=80'
         }))
     };
 

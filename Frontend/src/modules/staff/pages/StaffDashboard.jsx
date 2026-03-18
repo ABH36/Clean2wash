@@ -18,44 +18,65 @@ import {
 import StaffLayout from '../components/StaffLayout';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
+import { staffAPI } from '../../../utils/staffApi';
 
 const StaffDashboard = () => {
     const navigate = useNavigate();
     const { isDarkMode } = useTheme();
-    const { bookings, updateBookingStatus, getUser } = useAuth();
+    const { getUser } = useAuth();
     const user = getUser('staff') || { name: 'Staff Member', id: 'STF-DEFAULT' };
-    const [activeTab, setActiveTab] = useState('assigned'); // 'assigned' | 'ongoing' | 'completed'
+    const [activeTab, setActiveTab] = useState('assigned');
+    const [tasks, setTasks] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    // Filter vendor bookings for the dashboard (where this staff is assigned)
-    const staffBookings = bookings.filter(b =>
-        b.type === 'vendor' &&
-        (b.pickupStaffId === user.id || b.deliveryStaffId === user.id)
-    );
-
-    // Map local structure to context bookings
-    const mappedTasks = staffBookings.map(b => {
-        const isPickup = b.pickupStaffId === user.id;
-        const isDelivery = b.deliveryStaffId === user.id;
-
-        return {
-            id: b.id,
-            type: isPickup ? 'Pickup' : 'Delivery',
-            customer: b.userName,
-            address: b.address,
-            time: b.slot || 'ASAP',
-            vehicle: b.vehicle,
-            status: (b.status === 'confirmed' || b.status === 'delivery-assigned') ? 'assigned' :
-                (['in-progress', 'at-studio'].includes(b.status)) ? 'ongoing' :
-                    (b.status === 'completed') ? 'completed' : 'other',
-            urgent: false
+    useEffect(() => {
+        const fetchTasks = async () => {
+            try {
+                const res = await staffAPI.getTasks();
+                if (res.status === 'success') {
+                    setTasks(res.data.tasks);
+                }
+            } catch (err) {
+                console.error('Failed to load staff tasks', err);
+            } finally {
+                setLoading(false);
+            }
         };
+        fetchTasks();
+    }, []);
+
+    // Map db tasks to display structure
+    const mappedTasks = tasks.map(b => ({
+        id: b._id || b.id,
+        type: 'Pickup', // Based on context — future: determine from assignment type
+        customer: b.consumer?.name || 'Guest',
+        address: b.consumer?.profile?.address?.city || '--',
+        time: b.scheduledAt ? new Date(b.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'ASAP',
+        vehicle: b.vehicle?.brand ? `${b.vehicle.brand} ${b.vehicle.model}` : 'Unknown',
+        status: ['completed', 'cancelled'].includes(b.status) ? b.status :
+            ['in_progress', 'en_route', 'at_studio'].includes(b.status) ? 'ongoing' : 'assigned',
+        urgent: false
+    }));
+
+    const filteredTasks = mappedTasks.filter(t => {
+        if (activeTab === 'assigned') return t.status === 'assigned';
+        if (activeTab === 'ongoing') return t.status === 'ongoing';
+        if (activeTab === 'completed') return t.status === 'completed';
+        return true;
     });
 
-    const filteredTasks = mappedTasks.filter(t => t.status === activeTab);
-
-    const handleAccept = (taskId) => {
-        // In a real app, this would update the status to 'in-progress' or similar
-        updateBookingStatus(taskId, 'in-progress');
+    const handleAccept = async (taskId) => {
+        try {
+            // Update booking status on acceptance via real API
+            const res = await staffAPI.updateTaskStatus(taskId, 'in_progress');
+            if (res.status === 'success') {
+                setTasks(prev => prev.map(t => (t._id === taskId || t.id === taskId) ? { ...t, status: 'in_progress' } : t));
+                // Optional: navigate to details after acceptance
+                navigate(`/staff/task/${taskId}`);
+            }
+        } catch (err) {
+            console.error('Failed to accept task', err);
+        }
     };
 
     return (

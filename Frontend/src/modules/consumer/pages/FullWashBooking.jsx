@@ -7,11 +7,15 @@ import {
     Phone, MessageSquare, Droplets, Camera,
     AlertTriangle, History, Search, X, ChevronLeft,
     CreditCard, LayoutGrid, Check, Info, ChevronRight,
-    Plus, Minus, Gift, Bike, Crown, Play, Calendar, Home, Loader2, Radar, Image
+    Plus, Minus, Gift, Bike, Crown, Play, Calendar, Home, Loader2, Radar, Image, Warehouse, CheckCircle
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
+import { useCart } from '../../../context/CartContext';
+import { serviceAPI, productAPI, vehicleAPI } from '../../../utils/api';
+import { socketService } from '../../../utils/socket';
 import MobileLayout from '../components/layout/MobileLayout';
+import { toast } from 'react-hot-toast';
 
 const PHASES = {
     IDLE: 'IDLE',
@@ -26,97 +30,31 @@ const PHASES = {
 
 /* â”€â”€â”€ Static Data (from ServiceSelection) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
-const HARDCODED_SERVICES = [
-    {
-        id: 'basic',
-        tag: 'Bucket Wash',
-        title: 'Bucket Wash - Basic',
-        subtitle: 'Traditional hand wash with care',
-        image: 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=600&q=80',
-        price: '299',
-        monthlyPlans: [
-            { id: 'm1', name: '2 Wash/Month', washes: 2, total: 458, perWash: 229 },
-            { id: 'm2', name: '4 Times/Month', washes: 4, total: 756, perWash: 189 },
-            { id: 'm3', name: '8 Times/Month', washes: 8, total: 1352, perWash: 169 },
-            { id: 'm4', name: '12 Times/Month', washes: 12, total: 1948, perWash: 162 },
-        ],
-        original: '₹598',
-        duration: '~40 min',
-        features: ['External Hand Wash', 'Tyre Cleaning', 'Glass Polish', 'Basic Interior Cleaning', 'Microfiber Dry', 'Dash Dusting'],
-        badge: 'Budget Choice',
-        rating: 4.8,
-        reviews: 7540,
-        addons: [
-            { id: 'a1', name: 'Exterior Polish', price: 199 },
-            { id: 'a2', name: 'Interior Cleaning', price: 149 },
-            { id: 'a3', name: 'Tyre Dressing', price: 99 },
-            { id: 'a4', name: 'Glass Coating', price: 129 },
-            { id: 'a5', name: 'Microfiber Wash', price: 49 },
-            { id: 'a6', name: 'Dashboard Polish', price: 179 },
-        ],
-    },
-    {
-        id: 'premium',
-        tag: 'Pressure Wash',
-        title: 'Pressure Wash - Premium',
-        subtitle: 'High pressure wash for deep clean',
-        image: 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=600&q=80',
-        price: '469',
-        monthlyPlans: [
-            { id: 'p1', name: 'Starter Pass', washes: 4, price: 1499, tag: 'Best for Occasional' },
-            { id: 'p2', name: 'Popular Pass', washes: 12, price: 3999, tag: 'Most Selected' },
-            { id: 'p3', name: 'Platinum Pass', washes: 26, price: 6999, tag: 'Daily Care' },
-        ],
-        original: '₹938',
-        duration: '~60 min',
-        features: ['High Pressure Exterior', 'Underbody Wash', 'Foam Cleaning', 'Premium Interior Vacuum', 'Clay Bar Treatment', 'Tire Shine'],
-        badge: 'Best Seller',
-        rating: 4.9,
-        reviews: 12540,
-        addons: [
-            { id: 'p1', name: 'Wax Coating', price: 299 },
-            { id: 'p2', name: 'Engine Cleaning', price: 399 },
-            { id: 'p3', name: 'Upholstery Cleaning', price: 499 },
-            { id: 'p4', name: 'Odour Removal', price: 199 },
-            { id: 'p5', name: 'Rain Repellent', price: 149 },
-            { id: 'p6', name: 'Headlight Polish', price: 299 },
-        ],
-    },
-    {
-        id: 'deep',
-        tag: '360 Cleaning',
-        title: '360 Deep Cleaning',
-        subtitle: 'Complete showroom-like transformation',
-        image: 'https://images.unsplash.com/photo-1614028674026-a65e31bfd27c?w=600&q=80',
-        price: '1269',
-        monthlyPlans: [
-            { id: 'd1', name: 'Starter Pass', washes: 4, price: 3999, tag: 'Best for Occasional' },
-            { id: 'd2', name: 'Popular Pass', washes: 12, price: 9999, tag: 'Most Selected' },
-            { id: 'd3', name: 'Platinum Pass', washes: 26, price: 18999, tag: 'Daily Care' },
-        ],
-        original: '₹2538',
-        duration: '~120 min',
-        features: ['Full Interior Detailing', 'Paint Protection', 'Engine Bay Wash', 'Leather Conditioning'],
-        badge: 'Premium Plus',
-        rating: 4.9,
-        reviews: 3250,
-        addons: [
-            { id: 'd1', name: 'Ceramic Coating', price: 1499 },
-            { id: 'd2', name: 'Leather Polish', price: 599 },
-            { id: 'd3', name: 'Mat Cleaning', price: 199 },
-        ],
-    }
-];
-
+// Hardcoded services removed. Will fetch dynamically from DB.
 const VEHICLE_TYPES = [
     { id: 'hatchback', label: 'Hatch', multiplier: 1.0 },
     { id: 'sedan', label: 'Sedan', multiplier: 1.2 },
     { id: 'suv', label: 'SUV', multiplier: 1.5 },
-    { id: 'luxury', label: 'Luxury', multiplier: 2.0 },
     { id: 'muv', label: 'MUV', multiplier: 1.4 },
+    { id: 'compact suv', label: 'Compact SUV', multiplier: 1.4 },
+    { id: 'luxury sedan', label: 'Luxury Sedan', multiplier: 2.0 },
+    { id: 'luxury suv', label: 'Luxury SUV', multiplier: 2.2 },
+    { id: 'coupe', label: 'Coupe', multiplier: 1.8 },
+    { id: 'convertible', label: 'Convertible', multiplier: 2.0 },
+    { id: 'sports car', label: 'Sports Car', multiplier: 2.5 },
+    { id: 'supercar', label: 'Super Car', multiplier: 3.0 },
+    { id: 'ev', label: 'EV', multiplier: 1.2 },
+    { id: 'mini truck', label: 'Mini Truck', multiplier: 1.8 },
+    { id: 'truck', label: 'Truck', multiplier: 2.5 },
+    { id: 'van', label: 'Van', multiplier: 1.8 },
+    { id: 'tractor', label: 'Tractor', multiplier: 2.0 },
+    { id: 'vintage', label: 'Vintage', multiplier: 2.5 },
     { id: 'bike', label: 'Bike', multiplier: 0.6 },
     { id: 'scooter', label: 'Scooter', multiplier: 0.5 },
     { id: 'superbike', label: 'Super Bike', multiplier: 0.9 },
+    // Legacy support
+    { id: 'luxury', label: 'Luxury', multiplier: 2.0 },
+    { id: 'mpv', label: 'MUV', multiplier: 1.4 },
 ];
 
 const FALLBACK_IMAGES = [
@@ -127,12 +65,11 @@ const FALLBACK_IMAGES = [
 ];
 
 const JOB_STATES = [
-    { id: 'ASSIGNED', label: 'Captain Found', icon: ShieldCheck, color: 'text-blue-500' },
-    { id: 'EN_ROUTE', label: 'En Route', icon: Navigation, color: 'text-blue-600' },
-    { id: 'ARRIVED', label: 'Arrived', icon: MapPin, color: 'text-brand' },
-    { id: 'BEFORE_PHOTO', label: 'Before Photos', icon: Camera, color: 'text-orange-500' },
-    { id: 'WASHING', label: 'Washing', icon: Droplets, color: 'text-sky-500' },
-    { id: 'AFTER_PHOTO', label: 'After Photos', icon: Camera, color: 'text-emerald-500' },
+    { id: 'CONFIRMED', label: 'Booking Confirmed', icon: CheckCircle2, color: 'text-emerald-500' },
+    { id: 'EN_ROUTE', label: 'Captain En Route', icon: Navigation, color: 'text-blue-500' },
+    { id: 'WASHING', label: 'Wash In Progress', icon: Droplets, color: 'text-sky-500' },
+    { id: 'QUALITY_CHECK', label: 'Quality Check', icon: ShieldCheck, color: 'text-brand' },
+    { id: 'COMPLETED', label: 'Completed', icon: CheckCircle, color: 'text-green-600' },
 ];
 
 const pkgAddonImages = {
@@ -151,12 +88,14 @@ const pkgAddonImages = {
 
 const FullWashBooking = () => {
     const navigate = useNavigate();
-    const { vehicles, addresses, addBooking, updateBookingStatus, bookings, userSubscription, setUserSubscription, getRazorpayKey, createPaymentOrder, verifyPayment } = useAuth();
+    const location = useLocation();
+    const { user, vehicles, addresses, addBooking, updateBookingStatus, bookings, userSubscription, setUserSubscription, getRazorpayKey, createPaymentOrder, verifyPayment } = useAuth();
+    const { cartItems: shopCart, removeFromCart, clearCart, addToCart } = useCart();
 
     const [phase, setPhase] = useState(PHASES.SERVICE_SELECTION);
     const [selectedVehicle, setSelectedVehicle] = useState(vehicles.find(v => v.isPrimary) || vehicles[0]);
-    const [selectedVehicleType, setSelectedVehicleType] = useState('sedan');
-    const [activeServiceId, setActiveServiceId] = useState('eco');
+    const [selectedVehicleType, setSelectedVehicleType] = useState(vehicles.find(v => v.isPrimary)?.type?.toLowerCase() || vehicles[0]?.type?.toLowerCase() || 'sedan');
+    const [activeServiceId, setActiveServiceId] = useState(null);
     const [activeBookingId, setActiveBookingId] = useState(null);
     const [jobStateIndex, setJobStateIndex] = useState(0);
     const [serviceAddons, setServiceAddons] = useState({});
@@ -165,10 +104,125 @@ const FullWashBooking = () => {
     const [showAddServices, setShowAddServices] = useState(false);
     const [showServiceCoverage, setShowServiceCoverage] = useState(false);
     const [cart, setCart] = useState([]);
-    const [selectedDate, setSelectedDate] = useState('Feb 27');
+    const [selectedDate, setSelectedDate] = useState('');
     const [paymentMethod, setPaymentMethod] = useState(null);
     const [selectedSlot, setSelectedSlot] = useState(null);
+    const [selectedLocation, setSelectedLocation] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
+
+    // Sync vehicle type when vehicle changes
+    useEffect(() => {
+        if (selectedVehicle?.type) {
+            setSelectedVehicleType(selectedVehicle.type.toLowerCase());
+        }
+    }, [selectedVehicle]);
+
+    // Dynamic Dates Generation
+    const dates = useMemo(() => {
+        const result = [];
+        const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+        const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+        for (let i = 0; i < 7; i++) {
+            const date = new Date();
+            date.setDate(date.getDate() + i);
+            result.push({
+                month: months[date.getMonth()],
+                day: date.getDate().toString(),
+                weekday: days[date.getDay()],
+                trend: i < 3 ? 'up' : null
+            });
+        }
+        return result;
+    }, []);
+
+    useEffect(() => {
+        if (dates.length > 0 && !selectedDate) {
+            setSelectedDate(`${dates[0].month} ${dates[0].day}`);
+        }
+    }, [dates]);
+
+    // Dynamic Services State
+    const [dynamicServices, setDynamicServices] = useState([]);
+    const [loadingServices, setLoadingServices] = useState(true);
+    const [passConfig, setPassConfig] = useState(null);
+    const [subscriptionPlans, setSubscriptionPlans] = useState([]);
+    const [selectedSubscription, setSelectedSubscription] = useState(null);
+    const [suggestedProducts, setSuggestedProducts] = useState([]);
+    const [loadingProducts, setLoadingProducts] = useState(false);
+
+    const [expandedCategory, setExpandedCategory] = useState(null);
+
+    const categories = useMemo(() => {
+        const uniqueCats = [...new Set(dynamicServices.map(s => s.category))];
+        return uniqueCats.filter(Boolean);
+    }, [dynamicServices]);
+
+    useEffect(() => {
+        if (categories.length > 0 && !expandedCategory) {
+            setExpandedCategory(categories[0]);
+        }
+    }, [categories]);
+
+    useEffect(() => {
+        const fetchInitialData = async () => {
+            try {
+                setLoadingServices(true);
+                // Fetch both services, home data (for config), and subscription plans
+                const [servicesRes, homeRes, plansRes, prodRes] = await Promise.all([
+                    serviceAPI.getServices(),
+                    serviceAPI.getHomeData(),
+                    serviceAPI.getPlans ? serviceAPI.getPlans() : Promise.resolve({ status: 'success', data: [] }),
+                    productAPI.getProducts ? productAPI.getProducts({ limit: 4 }) : Promise.resolve({ status: 'success', data: { products: [] } })
+                ]);
+
+                console.log('Services Response:', servicesRes);
+                console.log('Home Data Response:', homeRes);
+                console.log('Plans Response:', plansRes);
+
+                if (servicesRes.status === 'success' || Array.isArray(servicesRes.data)) {
+                    const allServices = (servicesRes.data.services || servicesRes.data || []);
+                    // Strictly filter for Studio Wash services (Studio/Vendor related)
+                    const filtered = allServices.filter(s => {
+                        const cat = (s.category || s.metadata?.category || '').toLowerCase();
+                        const provider = (s.provider || s.metadata?.provider || '').toLowerCase();
+                        const title = (s.title || '').toLowerCase();
+                        
+                        return (cat === 'studio' || provider === 'vendor' || cat.includes('detailing')) && 
+                               !cat.includes('apartment') && 
+                               !cat.includes('spare driver') &&
+                               !title.includes('spare driver');
+                    });
+                    
+                    setDynamicServices(filtered);
+                    if (filtered[0]) {
+                        setActiveServiceId(filtered[0].id || filtered[0]._id);
+                    }
+                }
+
+                if (homeRes.status === 'success' && homeRes.data?.stats) {
+                    const config = homeRes.data.stats.find(s => s.key === 'WASH_PASS_CONFIG');
+                    if (config) {
+                        setPassConfig(config.metadata);
+                    }
+                }
+
+                if (plansRes.status === 'success' || Array.isArray(plansRes.data)) {
+                    setSubscriptionPlans(plansRes.data.plans || plansRes.data || []);
+                }
+
+                if (prodRes.status === 'success' || prodRes.data?.products) {
+                    setSuggestedProducts(prodRes.data?.products || []);
+                }
+            } catch (err) {
+                console.error("Failed to fetch initial data", err);
+            } finally {
+                setLoadingServices(false);
+            }
+        };
+
+        fetchInitialData();
+    }, []);
 
     // Check if subscription can be used
     const canUseSubscription = useMemo(() => {
@@ -180,8 +234,36 @@ const FullWashBooking = () => {
         if (!canUseSubscription) setUseSubscription(false);
     }, [canUseSubscription]);
 
-    const activeBooking = bookings.find(b => b.id === activeBookingId);
-    const activeService = HARDCODED_SERVICES.find(s => s.id === activeServiceId);
+    // Socket Integration for Live Tracking
+    useEffect(() => {
+        if (!activeBookingId) return;
+
+        const handleUpdate = (data) => {
+            if (data.bookingId === activeBookingId) {
+                console.log('Studio Booking Update:', data);
+                // Map DB status to 5-Phase UI State
+                let uiStatusId = '';
+                const dbStatus = data.status.toLowerCase();
+                if(['pending', 'confirmed', 'accepted'].includes(dbStatus)) uiStatusId = 'CONFIRMED';
+                else if(['assigned', 'pickup-assigned', 'en_route', 'arrived'].includes(dbStatus)) uiStatusId = 'EN_ROUTE';
+                else if(['before_photo', 'at-studio', 'washing', 'in_progress', 'after_photo'].includes(dbStatus)) uiStatusId = 'WASHING';
+                else if(['quality-check'].includes(dbStatus)) uiStatusId = 'QUALITY_CHECK';
+                else if(['ready-for-delivery', 'delivery-assigned', 'completed'].includes(dbStatus)) uiStatusId = 'COMPLETED';
+
+                const stateIdx = JOB_STATES.findIndex(s => s.id === uiStatusId);
+                if (stateIdx !== -1) {
+                    setJobStateIndex(stateIdx);
+                }
+            }
+        };
+
+        socketService.on('booking_status_updated', handleUpdate);
+        return () => socketService.off('booking_status_updated', handleUpdate);
+    }, [activeBookingId]);
+
+    // Active Items
+    const activeBooking = bookings.find(b => b.id === activeBookingId || b._id === activeBookingId);
+    const activeService = dynamicServices.find(s => s.id === activeServiceId) || dynamicServices[0];
 
     // Price helpers from ServiceSelection
     const getPrice = (priceStr) => {
@@ -198,58 +280,36 @@ const FullWashBooking = () => {
                 .map(a => a.id);
             setServiceAddons(prev => ({ ...prev, [activeServiceId]: initialAddons }));
         }
-    }, [activeServiceId]);
+    }, [activeServiceId, activeService]);
+    
+    // Combined Pricing Logic (Unified for UI & Payment)
+    const { totalCartPrice, discount, applyBlackDiscount, totalDuration, isBlackMember } = useMemo(() => {
+        const bookingItemsTotal = (cart || []).reduce((sum, item) => sum + item.price, 0);
+        const shopProductsTotal = (shopCart || []).reduce((sum, item) => sum + ((item.salePrice || item.price) * (item.qty || 1)), 0);
+        const subscriptionPrice = selectedSubscription ? parseInt(selectedSubscription.price) || parseInt(selectedSubscription.total) : 0;
+        
+        let subtotal = bookingItemsTotal + shopProductsTotal + subscriptionPrice;
+        
+        // Black Pass Discount (30% if user is Black member or buying Black Pass)
+        const isBlackMember = userSubscription?.planType === 'black' && userSubscription?.status === 'Active';
+        const isBuyingBlack = selectedSubscription?.type === 'black' || 
+                             (selectedSubscription?.title?.toLowerCase().includes('black')) ||
+                             (selectedSubscription?.name?.toLowerCase().includes('black'));
+        
+        const applyBlackDiscount = isBlackMember || isBuyingBlack;
+        const discount = applyBlackDiscount ? Math.round(subtotal * 0.3) : 0;
+        const totalDuration = cart.reduce((sum, item) => sum + (item.duration || 120), 0);
 
-    // Simulated Flow Logic
-    useEffect(() => {
-        if (phase === PHASES.FINDING) {
-            const timer = setTimeout(() => {
-                const addons = activeService.addons || [];
-                const selectedAddons = serviceAddons[activeServiceId] || [];
-                const addonTotal = addons
-                    .filter(a => selectedAddons.includes(a.id) && !a.included)
-                    .reduce((sum, a) => sum + a.price, 0);
-                const basePrice = getPrice(activeService.price);
-                const totalPrice = basePrice + addonTotal;
+        return {
+            totalCartPrice: subtotal - discount,
+            discount,
+            applyBlackDiscount,
+            totalDuration,
+            isBlackMember
+        };
+    }, [cart, shopCart, selectedSubscription, userSubscription]);
 
-                if (useSubscription) {
-                    setUserSubscription({
-                        ...userSubscription,
-                        washesLeft: userSubscription.washesLeft - 1
-                    });
-                }
-
-                const newBooking = addBooking({
-                    serviceName: activeService.title,
-                    vehicle: `${selectedVehicle.brand} ${selectedVehicle.model}`,
-                    vehicleImg: selectedVehicle.img,
-                    price: useSubscription ? '₹0 (Pass Used)' : `₹${totalPrice}`,
-                    type: 'instant',
-                    status: 'ASSIGNED',
-                    timestamp: new Date().toISOString(),
-                    location: addresses.find(a => a.isPrimary)?.address || 'Current Location',
-                    provider: 'vendor',
-                    addons: selectedAddons,
-                    vehicleType: selectedVehicleType,
-                    isPassUsed: useSubscription
-                });
-                setActiveBookingId(newBooking.id);
-                setPhase(PHASES.LIVE_TRACK);
-            }, 8000);
-            return () => clearTimeout(timer);
-        }
-    }, [phase, activeServiceId, serviceAddons, selectedVehicleType]);
-
-    useEffect(() => {
-        if (phase === PHASES.LIVE_TRACK && jobStateIndex < JOB_STATES.length - 1) {
-            const delays = [2000, 5000, 4000, 6000, 8000, 5000];
-            const timer = setTimeout(() => {
-                setJobStateIndex(prev => prev + 1);
-                updateBookingStatus(activeBookingId, JOB_STATES[jobStateIndex + 1].id);
-            }, delays[jobStateIndex]);
-            return () => clearTimeout(timer);
-        }
-    }, [phase, jobStateIndex]);
+    // Removed Simulated Flow Logic in favor of real API and Socket updates
 
     const handleStartSearch = () => {
         setPhase(PHASES.SERVICE_SELECTION);
@@ -272,10 +332,15 @@ const FullWashBooking = () => {
             vehicleId: selectedVehicle?.id,
             vehicleName: selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model}` : "Your Car",
             vehicleImg: selectedVehicle?.img || 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=600&q=80',
+            duration: activeService.estimatedTime || 120,
             type: 'standard'
         };
 
-        setCart(prev => [...prev, newItem]);
+        setCart(prev => {
+            const isDuplicate = prev.some(it => it.serviceId === newItem.serviceId && it.vehicleId === newItem.vehicleId);
+            if (isDuplicate) return prev;
+            return [...prev, newItem];
+        });
         setPhase(PHASES.CART);
     };
 
@@ -290,7 +355,11 @@ const FullWashBooking = () => {
             vehicleImg: selectedVehicle?.img || 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=600&q=80',
             type: 'monthly'
         };
-        setCart(prev => [...prev, newItem]);
+        setCart(prev => {
+            const isDuplicate = prev.some(it => it.planId === newItem.planId && it.vehicleId === newItem.vehicleId);
+            if (isDuplicate) return prev;
+            return [...prev, newItem];
+        });
         setPhase(PHASES.CART);
     };
 
@@ -307,6 +376,17 @@ const FullWashBooking = () => {
         }));
     };
 
+    const sanitizeUrl = (url) => {
+        if (!url) return 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=600&q=80';
+        if (url.startsWith('http')) return url;
+        if (url.startsWith('assets')) return `/${url}`;
+        return url;
+    };
+
+    const handleImageError = (e) => {
+        e.target.src = 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=600&q=80';
+    };
+
     const renderHeader = () => {
         if (phase === PHASES.LIVE_TRACK) return null;
         return (
@@ -319,22 +399,13 @@ const FullWashBooking = () => {
                         <ChevronLeft size={22} strokeWidth={2.5} />
                     </button>
                     <h1 className="text-[16px] font-[1000] text-black tracking-tight uppercase" style={{ fontFamily: 'Inter, sans-serif' }}>
-                        Studio & Detailing
+                        CAR WASH & CARE
                     </h1>
                 </div>
 
-                <div className="flex items-center gap-3 text-right">
-                    <button className="w-8 h-8 bg-gray-50/80 rounded-lg flex items-center justify-center border border-black/[0.02] active:scale-95 transition-transform">
-                        <Image size={16} className="text-black/60" />
-                    </button>
-                    <div className="flex items-center gap-2.5">
-                        <div>
-                            <h4 className="text-[13px] font-[1000] text-black leading-none">{selectedVehicle?.model || 'Baleno'}</h4>
-                            <p className="text-[9px] font-black text-black/20 mt-1 uppercase leading-none tracking-widest">{selectedVehicle?.brand || 'Maruti Suzuki'}</p>
-                        </div>
-                        <div className="w-8 h-8 bg-gray-50/80 rounded-lg flex items-center justify-center border border-black/[0.02]">
-                            <Car size={16} className="text-black/80" />
-                        </div>
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gray-50 flex items-center justify-center rounded-lg border border-black/[0.03]">
+                        <Image size={16} className="text-black/40" />
                     </div>
                 </div>
             </header>
@@ -358,7 +429,7 @@ const FullWashBooking = () => {
                             </div>
                             <h2 className="text-[36px] font-[1000] text-black leading-[0.8] uppercase tracking-tighter mb-4" style={{ fontFamily: 'Inter, sans-serif' }}>
                                 WASH IN<br />
-                                <span className="text-brand">30 MINS</span>
+                                <span className="text-brand">{activeService?.estimatedTime || 120} MINS</span>
                             </h2>
                             <p className="text-black/40 text-[10px] font-bold uppercase tracking-[0.1em] max-w-[170px] leading-relaxed">
                                 Experience studio-grade detailing <br />delivered to your exact location.
@@ -421,7 +492,7 @@ const FullWashBooking = () => {
                 <section className="px-5">
                     <div className="grid grid-cols-2 gap-4">
                         {[
-                            { title: 'Response', desc: '< MINS', icon: Timer, color: 'text-brand' },
+                            { title: 'Response', desc: `< ${activeService?.estimatedTime || 120} MINS`, icon: Timer, color: 'text-brand' },
                             { title: 'Quality', desc: 'STUDIO GRADE', icon: ShieldCheck, color: 'text-emerald-500' }
                         ].map((spec, i) => (
                             <div key={i} className="bg-white rounded-2xl p-4 border border-black/[0.03] shadow-sm flex flex-col gap-3">
@@ -450,221 +521,238 @@ const FullWashBooking = () => {
 
         return (
             <div className="bg-gray-100 min-h-screen pb-20">
-                {/* Promo Bar */}
-                <div className="bg-[#F3DCCB] border-b border-[#DBC4B5]/40 py-2 px-6 flex items-center justify-center gap-2">
+                <div className="bg-[#FFFCE8] border-b border-yellow-100 py-2 px-6 flex items-center justify-center gap-2">
                     <p className="text-black/80 text-[11px] font-bold text-center">
-                        Save upto <span className="text-brand font-black">40%</span> on every service with <span className="text-black font-[1000]">clean2wash BLACK</span>
+                        {passConfig?.marketingLine || 'Save up to 40% on every service'} with <span className="text-black font-[1000]">{passConfig?.title || 'clean2wash BLACK'}</span>
                     </p>
                     <div className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
                 </div>
 
-                {/* Selected Vehicle Context */}
+                {/* Selected Vehicle Context (Premium Redesign) */}
                 <div className="px-5 pt-4 pb-2">
-                    <div className="bg-white rounded-[1.25rem] p-3 flex items-center justify-between border border-black/[0.04] shadow-sm">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center border border-black/[0.02]">
-                                <Car size={18} className="text-black/80" />
+                    <div className="bg-white rounded-[1.25rem] p-4 flex items-center justify-between border border-black/[0.04] shadow-[0_10px_40px_rgba(0,0,0,0.04)]">
+                        {selectedVehicle ? (
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center border border-black/[0.02] shadow-inner">
+                                    <Car size={20} className="text-black/80" />
+                                </div>
+                                <div>
+                                    <h4 className="text-[14px] font-[1000] text-black tracking-tight leading-none mb-1.5 uppercase italic">{selectedVehicle.brand}</h4>
+                                    <p className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] leading-none">{selectedVehicle.model} • {selectedVehicle.type}</p>
+                                </div>
                             </div>
-                            <div>
-                                <h4 className="text-[12px] font-[1000] text-black tracking-tight leading-none mb-1 uppercase">{selectedVehicle?.model || 'Your Vehicle'}</h4>
-                                <p className="text-[8px] font-black text-black/40 uppercase tracking-widest">{selectedVehicle?.brand || 'Model'} • {selectedVehicle?.type || 'Sedan'}</p>
+                        ) : (
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center border border-orange-100/30 shadow-inner">
+                                    <Car size={20} className="text-brand/40" />
+                                </div>
+                                <div>
+                                    <h4 className="text-[14px] font-[1000] text-black tracking-tight leading-none mb-1.5 uppercase italic">Select Your Asset</h4>
+                                    <p className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] leading-none">Registration Required</p>
+                                </div>
                             </div>
-                        </div>
-                        <button onClick={() => navigate('/vehicles')} className="text-[9px] font-[1000] text-brand uppercase tracking-widest bg-brand/5 px-2.5 py-1.5 rounded-lg active:scale-95 transition-transform">
-                            Change
+                        )}
+                        <button 
+                            onClick={() => navigate('/vehicles?from=full-wash')} 
+                            className="text-[10px] font-black text-brand uppercase tracking-[0.15em] border border-orange-100 px-4 py-2 rounded-xl active:scale-95 transition-all"
+                        >
+                            {selectedVehicle ? 'CHANGE' : 'SELECT'}
                         </button>
                     </div>
                 </div>
 
-                {/* Wash Packages List */}
+                {/* Wash Packages List (Grouped) */}
                 <div className="px-4 py-2 space-y-4">
-                    {HARDCODED_SERVICES.map((pkg) => {
-                        const isExpanded = activeServiceId === pkg.id;
-                        const pkgBasePrice = getPrice(pkg.price);
+                    {console.log('Current dynamicServices:', dynamicServices)}
+                    {loadingServices ? (
+                        <div className="flex items-center justify-center p-12">
+                            <Loader2 size={32} className="text-brand animate-spin" />
+                        </div>
+                    ) : (
+                        categories.map((cat) => {
+                            const servicesInCat = dynamicServices.filter(s => s.category === cat);
+                            const isCatExpanded = expandedCategory === cat;
 
-                        // Fake images for the diagonal split to match reference
-                        const splitImages = [
-                            pkg.image,
-                            'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=600&q=80',
-                            'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=600&q=80'
-                        ];
-
-                        return (
-                            <motion.div
-                                key={pkg.id}
-                                layout
-                                className={`bg-white rounded-[2rem] border overflow-hidden transition-all duration-300 ${isExpanded ? 'border-brand/40 shadow-xl' : 'border-black/[0.03] shadow-[0_10px_30px_rgba(0,0,0,0.03)]'}`}
-                            >
-                                {/* Card Title Bar */}
-                                <div
-                                    onClick={() => setActiveServiceId(isExpanded ? null : pkg.id)}
-                                    className={`px-6 py-2 flex items-center justify-between cursor-pointer ${isExpanded ? 'bg-[#222222] text-white' : 'bg-[#F3DCCB] text-black border-b border-[#DBC4B5]/40'}`}
-                                >
-                                    <h3 className="text-[13px] font-[1000] tracking-tight">{pkg.title}</h3>
-                                    <ChevronDown size={16} className={`transition-transform duration-300 ${isExpanded ? 'rotate-180 text-brand' : 'opacity-40'}`} />
-                                </div>
-
-                                {/* Diagonal Image Split Section */}
-                                <div className="relative h-[80px] flex overflow-hidden">
-                                    <div className="flex-1 relative">
-                                        <img src={splitImages[0]} className="w-full h-full object-cover" />
-                                        <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
-                                    </div>
-                                    <div className="absolute left-[35%] top-0 bottom-0 w-[40%] skew-x-[-15deg] border-x-4 border-white overflow-hidden shadow-2xl z-10">
-                                        <img src={splitImages[1]} className="w-full h-full object-cover skew-x-[15deg] scale-125" />
-                                    </div>
-                                    <div className="flex-1 relative">
-                                        <img src={splitImages[2]} className="w-full h-full object-cover" />
-                                    </div>
-                                </div>
-
-
-
-                                {/* Rating & Price Stats */}
-                                <div className="px-6 py-2 flex items-center justify-between">
-                                    <div className="flex flex-col">
-                                        <div className="flex items-center gap-2">
-                                            <Star size={16} fill="#F29F05" className="text-brand" />
-                                            <span className="text-[14px] font-[1000] text-black leading-none">{pkg.rating}</span>
-                                            <div className="w-1 h-1 bg-black/10 rounded-full mx-1" />
-                                            <span className="text-[12px] font-bold text-black/30">2,530 Ratings</span>
-                                        </div>
-                                    </div>
-
-                                    <button
-                                        onClick={() => {
-                                            setActiveServiceId(pkg.id);
-                                            setShowServiceCoverage(true);
-                                        }}
-                                        className="bg-[#F3DCCB] backdrop-blur-sm border border-[#DBC4B5]/40 px-6 py-2.5 rounded-2xl flex flex-col items-center gap-0.5 shadow-sm active:scale-95 transition-transform"
+                            return (
+                                <div key={cat} className="space-y-4">
+                                    <div
+                                        onClick={() => setExpandedCategory(isCatExpanded ? null : cat)}
+                                        className={`px-6 py-4 rounded-[1.5rem] flex items-center justify-between cursor-pointer transition-all ${isCatExpanded ? 'bg-[#222222] text-white' : 'bg-[#EBD3C1] text-black shadow-sm'}`}
                                     >
-                                        <span className="text-[10px] font-bold text-black/60 uppercase leading-none">Starting</span>
-                                        <span className="text-[18px] font-black text-black leading-none">₹{pkgBasePrice}</span>
-                                    </button>
-                                </div>
+                                        <h3 className="text-[14px] font-[1000] tracking-tight uppercase italic">{cat}</h3>
+                                        <ChevronDown size={18} className={`transition-transform duration-300 ${isCatExpanded ? 'rotate-180 text-brand' : 'opacity-40'}`} />
+                                    </div>
 
-                                {/* Card Footer Promotion */}
-                                <div className="bg-brand/10 px-6 py-3 border-t border-black/[0.03] flex items-center justify-center">
-                                    <p className="text-[11px] font-bold text-black/60">
-                                        Save upto <span className="font-black text-black">40%</span> on service with <span className="font-[1000] text-black">clean2wash BLACK</span>
-                                    </p>
-                                </div>
+                                    <AnimatePresence>
+                                        {isCatExpanded && servicesInCat.map((pkg) => {
+                                            const isPkgActive = activeServiceId === pkg.id;
+                                            const pkgBasePrice = getPrice(pkg.price);
+                                            const splitImages = [
+                                                pkg.image || '/assets/carwash/6.png',
+                                                '/assets/carwash/7.png',
+                                                '/assets/carwash/8.png'
+                                            ];
 
-                                {/* Expandable Details (Keep original logic but style cleanly) */}
-                                <AnimatePresence>
-                                    {isExpanded && (
-                                        <motion.div
-                                            initial={{ height: 0, opacity: 0 }}
-                                            animate={{ height: 'auto', opacity: 1 }}
-                                            exit={{ height: 0, opacity: 0 }}
-                                            className="border-t border-black/[0.06] bg-white"
-                                        >
-                                            <div className="p-4 pt-1.5 space-y-2">
-                                                <div className="flex items-start gap-4">
-                                                    {/* Left Column: Labels + Addons List */}
-                                                    <div className="flex-1 space-y-1.5">
-                                                        <div className="flex flex-col gap-0.5 mb-1">
-                                                            <h4 className="text-[11px] font-black text-black uppercase tracking-tight leading-none">Personalize Wash</h4>
-                                                            <button
-                                                                onClick={() => setShowServiceCoverage(true)}
-                                                                className="text-brand text-[9px] font-black uppercase tracking-[0.2em] text-left hover:opacity-80 transition-opacity"
-                                                            >
-                                                                 View Details
-                                                            </button>
+                                            return (
+                                                <motion.div
+                                                    key={pkg.id}
+                                                    initial={{ opacity: 0, height: 0 }}
+                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                    exit={{ opacity: 0, height: 0 }}
+                                                    className="bg-white rounded-[2.5rem] border border-black/[0.03] overflow-hidden shadow-[0_15px_50px_rgba(0,0,0,0.05)]"
+                                                >
+                                                    {/* Diagonal Image Split Section */}
+                                                    <div className="relative h-[110px] flex overflow-hidden">
+                                                        <div className="flex-1 relative">
+                                                            <img src={splitImages[0]} className="w-full h-full object-cover" />
+                                                            <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-transparent" />
                                                         </div>
-                                                        <div className="space-y-0.5">
-                                                            {pkg.addons?.map(addon => {
-                                                                const checked = (serviceAddons[pkg.id] || []).includes(addon.id);
-                                                                return (
-                                                                    <div key={addon.id} className="flex items-center gap-2 group py-0.5">
-                                                                        <button
-                                                                            onClick={(e) => { e.stopPropagation(); toggleAddon(addon.id); }}
-                                                                            className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all flex-shrink-0 ${checked ? 'bg-black border-black text-white' : 'border-gray-200 text-gray-300'}`}
-                                                                        >
-                                                                            {checked ? <Check size={10} strokeWidth={4} /> : <Plus size={10} strokeWidth={4} />}
-                                                                        </button>
-
-                                                                        <div className="flex items-center gap-2.5 flex-1 overflow-hidden">
-                                                                            <span className="text-[12px] font-[1000] text-black flex-shrink-0">₹{addon.price}</span>
-                                                                            <span className="text-[12px] font-bold text-black/80 truncate">{addon.name}</span>
-                                                                        </div>
-                                                                    </div>
-                                                                );
-                                                            })}
+                                                        <div className="absolute left-[35%] top-0 bottom-0 w-[40%] skew-x-[-15deg] border-x-[6px] border-white overflow-hidden shadow-2xl z-10 bg-white">
+                                                            <img src={splitImages[1]} className="w-full h-full object-cover skew-x-[15deg] scale-150" />
                                                         </div>
-
-                                                        {/* Pro Tip */}
-                                                        <div className="bg-brand/5 rounded-lg p-2 mt-1 border border-brand/10">
-                                                            <div className="flex items-start gap-2">
-                                                                <Info size={10} className="text-brand mt-0.5" />
-                                                                <p className="text-[9px] font-bold text-black/60 leading-tight">
-                                                                    <span className="text-black">Pro Tip:</span> Add Interior Cleaning to remove deep-seated dust and allergens.
-                                                                </p>
+                                                        <div className="flex-1 relative group">
+                                                            <img src={splitImages[2]} className="w-full h-full object-cover" />
+                                                            <div className="absolute top-4 right-4 bg-black/80 px-2 py-1 rounded text-white text-[10px] font-black italic shadow-lg">
+                                                                {selectedVehicle?.brand || 'BMW'}
+                                                                <div className="flex gap-0.5 mt-0.5">
+                                                                    {[1, 2, 3].map(i => <div key={i} className="w-1.5 h-1 bg-brand" />)}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
 
-                                                    {/* Right: Vertical Integrated Promo (Fixed & Clean) */}
-                                                    <div className="w-[115px] min-h-[240px] flex-shrink-0 bg-[#FAF1E8] rounded-[1.5rem] border border-[#E9DCCF]/50 p-3.5 flex flex-col items-center justify-between shadow-[0_6px_20px_rgba(0,0,0,0.04)] overflow-hidden">
-                                                        <div className="w-full h-28 rounded-2xl overflow-hidden shadow-sm border border-white flex-shrink-0">
-                                                            <img
-                                                                src="/car_wash_value_promo.png"
-                                                                className="w-full h-full object-cover"
-                                                                alt="Value"
-                                                            />
+                                                    {/* Rating & Price Stats */}
+                                                    <div className="px-6 py-5 flex items-center justify-between border-b border-black/[0.02]">
+                                                        <div className="flex items-center gap-3">
+                                                            <Star size={20} fill="#F29F05" className="text-brand" />
+                                                            <span className="text-[16px] font-[1000] text-black leading-none">{pkg.rating}</span>
+                                                            <div className="w-1.5 h-1.5 bg-black/10 rounded-full" />
+                                                            <span className="text-[13px] font-bold text-black/30 tracking-tight">2,530 Ratings</span>
                                                         </div>
-                                                        <div className="text-center flex-1 flex flex-col justify-center gap-3 mt-5">
-                                                            <h5 className="text-[#2D9944] font-[1000] text-[10px] leading-tight uppercase tracking-tight">
-                                                                Service at <br />
-                                                                <span className="text-[22px] leading-none">₹20</span> <br />
-                                                                <span className="text-[7px] block -mt-0.5 font-black opacity-30">/ wash</span>
-                                                            </h5>
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); setShowDemoVideo(true); }}
-                                                                className="flex flex-col items-center gap-2 group w-full"
-                                                            >
-                                                                <div className="w-7 h-7 bg-[#FF4B91] rounded-full flex items-center justify-center shadow-md shadow-pink-500/30 group-hover:scale-110 transition-transform">
-                                                                    <Play size={12} fill="currentColor" className="text-white ml-0.5" />
+
+                                                        <div className="bg-[#FAF1E8] px-6 py-2.5 rounded-[1.5rem] border border-[#EBE0D5] text-center shadow-sm">
+                                                            <p className="text-[9px] font-black text-black/40 uppercase tracking-widest leading-none mb-1">Starting</p>
+                                                            <span className="text-[22px] font-[1000] text-black leading-none">₹{pkgBasePrice}</span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* BLACK Pass Upsell */}
+                                                    <div className="bg-brand/5 px-6 py-3 border-b border-black/[0.02] flex items-center justify-center">
+                                                        <p className="text-[10px] font-bold text-black/40 uppercase tracking-tight">
+                                                            {passConfig?.marketingLine || 'Save up to 40% on every service'} with <span className="font-[1000] text-black">{passConfig?.title || 'clean2wash BLACK'}</span>
+                                                        </p>
+                                                    </div>
+
+                                                    {/* Package Content */}
+                                                    <div className="p-6 pt-5 space-y-6">
+                                                        <div className="flex items-start gap-5">
+                                                            <div className="flex-1 space-y-4">
+                                                                <div>
+                                                                    <h4 className="text-[13px] font-[1000] text-black uppercase tracking-widest leading-none mb-1">Personalize Wash</h4>
+                                                                    <button onClick={() => setShowServiceCoverage(true)} className="text-brand text-[10px] font-black uppercase tracking-[0.2em] border-b border-brand/20">View Details</button>
                                                                 </div>
-                                                                <span className="text-[8px] font-black text-black/30 uppercase tracking-[0.2em] border-b border-black/5 group-hover:border-black/20 transition-all whitespace-nowrap">Learn More</span>
-                                                            </button>
+
+                                                                <div className="bg-orange-50/50 rounded-2xl p-4 border border-orange-100/30">
+                                                                    <div className="flex items-start gap-3">
+                                                                        <div className="w-1.5 h-1.5 rounded-full bg-brand mt-1.5" />
+                                                                        <p className="text-[11px] font-bold text-black/60 leading-relaxed">
+                                                                            <span className="text-black font-black uppercase tracking-tight">Pro Tip:</span> Add Interior Cleaning to remove deep-seated dust and allergens.
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Right Promo Card */}
+                                                            <div className="w-[125px] flex-shrink-0 bg-[#FAF1E8] rounded-[2rem] border border-[#E9DCCF]/50 p-4 flex flex-col items-center gap-4 shadow-sm relative overflow-hidden group">
+                                                                <img src="/assets/carwash/6.png" className="w-16 h-16 object-cover rounded-2xl shadow-md border-2 border-white group-hover:scale-110 transition-transform" />
+                                                                <div className="text-center">
+                                                                    <p className="text-[#2D9944] font-black text-[10px] uppercase leading-tight">Service at</p>
+                                                                    <p className="text-[#2D9944] font-[1000] text-[24px] leading-none">₹20</p>
+                                                                    <p className="text-[7px] font-black text-black/30 uppercase tracking-widest leading-none mt-1">/ Wash</p>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => setShowDemoVideo(true)}
+                                                                    className="w-10 h-10 bg-[#FF4B91] rounded-full flex items-center justify-center shadow-lg shadow-pink-200 active:scale-90 transition-transform"
+                                                                >
+                                                                    <Play size={14} fill="white" className="text-white ml-0.5" />
+                                                                </button>
+                                                                <span className="text-[8px] font-bold text-black/40 uppercase tracking-[0.2em]">Learn More</span>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Main Action Button */}
+                                                        <button
+                                                            onClick={() => {
+                                                                setActiveServiceId(pkg.id || pkg._id);
+                                                                if (selectedVehicle) {
+                                                                    setShowServiceCoverage(true);
+                                                                } else {
+                                                                    navigate('/vehicles?from=full-wash');
+                                                                }
+                                                            }}
+                                                            className={`w-full h-16 rounded-[1.5rem] font-[1000] text-[15px] uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all ${
+                                                                selectedVehicle 
+                                                                ? 'bg-[#1A1A1A] text-white' 
+                                                                : 'bg-gray-100 text-black/30 shadow-none'
+                                                            }`}
+                                                        >
+                                                            {selectedVehicle ? 'Select Vehicle & Book' : 'Select Vehicle to Book'}
+                                                        </button>
+
+                                                        {/* Trust Badges */}
+                                                        <div className="flex items-center justify-between px-2 opacity-30">
+                                                            <div className="flex items-center gap-2">
+                                                                <ShieldCheck size={12} />
+                                                                <span className="text-[9px] font-black uppercase tracking-widest">Sanitized</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <CheckCircle2 size={12} />
+                                                                <span className="text-[9px] font-black uppercase tracking-widest">Verified</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <Timer size={12} />
+                                                                <span className="text-[9px] font-black uppercase tracking-widest">On-Time</span>
+                                                            </div>
                                                         </div>
                                                     </div>
+                                                </motion.div>
+                                            );
+                                        })}
+                                    </AnimatePresence>
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+
+                {/* Vehicle Protocol Selector (New) */}
+                <div className="px-5 pt-8 pb-12">
+                    <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.3em] mb-4 text-center">Vehicle Protocol</p>
+                    <div className="flex items-center gap-3">
+                        {['Hatch', 'Sedan', 'SUV'].map((type) => {
+                            const isActive = selectedVehicleType === type.toLowerCase();
+                            return (
+                                <button
+                                    key={type}
+                                    onClick={() => setSelectedVehicleType(type.toLowerCase())}
+                                    className={`flex-1 group relative ${isActive ? 'scale-105' : 'opacity-40'}`}
+                                >
+                                    <div className={`bg-white rounded-2xl p-5 border transition-all ${isActive ? 'border-brand shadow-xl ring-4 ring-brand/5' : 'border-black/[0.05]'}`}>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h4 className={`text-[11px] font-[1000] uppercase tracking-tight ${isActive ? 'text-black' : 'text-gray-400'}`}>{type}</h4>
+                                            {isActive && (
+                                                <div className="w-5 h-5 bg-brand rounded-full flex items-center justify-center text-white shadow-sm">
+                                                    <Check size={12} strokeWidth={4} />
                                                 </div>
-
-                                                <button
-                                                    onClick={() => {
-                                                        setActiveServiceId(pkg.id);
-                                                        setShowServiceCoverage(true);
-                                                    }}
-                                                    className="w-full bg-[#1A1A1A] text-white py-3.5 rounded-xl font-black text-[12px] uppercase tracking-[0.15em] shadow-lg active:scale-95 transition-transform mt-2"
-                                                >
-                                                    Select Vehicle & Book
-                                                </button>
-
-                                                {/* Safety & Hygiene Highlight */}
-                                                <div className="flex items-center justify-center gap-5 py-2 border-t border-black/[0.03] opacity-30 group-hover:opacity-50 transition-opacity">
-                                                    <div className="flex items-center gap-1">
-                                                        <ShieldCheck size={10} className="text-black" />
-                                                        <span className="text-[8px] font-black uppercase tracking-widest">Sanitized</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1">
-                                                        <CheckCircle2 size={10} className="text-black" />
-                                                        <span className="text-[8px] font-black uppercase tracking-widest">Verified</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1">
-                                                        <Timer size={10} className="text-black" />
-                                                        <span className="text-[8px] font-black uppercase tracking-widest">On-Time</span>
-                                                    </div>
-                                                </div>
-
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </motion.div>
-                        );
-                    })}
+                                            )}
+                                        </div>
+                                        <p className="text-[8px] font-black text-gray-300 uppercase tracking-widest leading-none mb-4">Protocol</p>
+                                        <div className={`h-[2.5px] w-12 rounded-full transition-all ${isActive ? 'bg-brand' : 'bg-gray-100'}`} />
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
 
 
@@ -693,7 +781,7 @@ const FullWashBooking = () => {
                                         <div className="w-9 h-9 rounded-xl bg-black text-brand flex items-center justify-center font-black shadow-lg text-[14px]">H</div>
                                         <div>
                                             <div className="flex items-center gap-1.5">
-                                                <span className="text-[13px] font-[1000] text-black tracking-tight uppercase">clean2wash BLACK</span>
+                                                <span className="text-[13px] font-[1000] text-black tracking-tight uppercase">{passConfig?.title || 'clean2wash BLACK'}</span>
                                                 <div className="w-4 h-4 rounded-full bg-black/5 flex items-center justify-center">
                                                     <Info size={10} className="text-black/40" />
                                                 </div>
@@ -703,8 +791,8 @@ const FullWashBooking = () => {
                                     </div>
                                     <div className="flex items-center gap-3 relative z-10">
                                         <div className="text-right">
-                                            <p className="text-[14px] font-black text-black leading-none tracking-tight">₹499</p>
-                                            <p className="text-[10px] font-bold text-black/20 line-through">₹1200</p>
+                                            <p className="text-[14px] font-black text-black leading-none tracking-tight">₹{passConfig?.price || '499'}</p>
+                                            <p className="text-[10px] font-bold text-black/20 line-through">₹{passConfig?.comparativePrice || '1200'}</p>
                                         </div>
                                         <button className="bg-brand text-black px-4 py-1.5 rounded-lg text-[10px] font-[1000] uppercase shadow-sm active:scale-95 transition-all">Add</button>
                                     </div>
@@ -778,30 +866,40 @@ const FullWashBooking = () => {
                                             </div>
                                         </div>
 
-                                        {/* Table Rows (Improved visual rhythm) */}
+                                        {/* Table Rows (Dynamic from Metadata) */}
                                         <div className="divide-y divide-black/[0.02] bg-white">
-                                            {[
-                                                { in: 'Exterior Ceramic Wash', out: 'Interior Deep Clean' },
-                                                { in: 'Tyre Premium Polish', out: 'Leather Conditioning' },
-                                                { in: 'Glass Streakless Wipe', out: 'Engine Bay Wash' },
-                                                { in: 'Microfiber Drying', out: 'Dashboard Polish' },
-                                                { in: '-', out: 'Upholstery Shampoo' }
-                                            ].map((row, i) => (
-                                                <div key={i} className="flex min-h-[44px]">
-                                                    <div className="flex-1 py-2.5 px-4 border-r border-black/[0.02] flex items-center gap-2.5">
-                                                        {row.in !== '-' ? (
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                                                        ) : (
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-black/5 shrink-0" />
-                                                        )}
-                                                        <span className={`text-[10px] font-bold leading-none tracking-tight uppercase ${row.in !== '-' ? 'text-black/80' : 'text-black/10'}`}>{row.in}</span>
+                                            {(() => {
+                                                const inclusions = activeService?.metadata?.inclusions || [];
+                                                const exclusions = activeService?.metadata?.exclusions || [];
+                                                const maxRows = Math.max(inclusions.length, exclusions.length);
+                                                const rows = [];
+                                                for (let i = 0; i < maxRows; i++) {
+                                                    rows.push({
+                                                        in: inclusions[i] || '-',
+                                                        out: exclusions[i] || '-'
+                                                    });
+                                                }
+                                                return rows.map((row, i) => (
+                                                    <div key={i} className="flex min-h-[44px]">
+                                                        <div className="flex-1 py-2.5 px-4 border-r border-black/[0.02] flex items-center gap-2.5">
+                                                            {row.in !== '-' ? (
+                                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                                            ) : (
+                                                                <div className="w-1.5 h-1.5 rounded-full bg-black/5 shrink-0" />
+                                                            )}
+                                                            <span className={`text-[10px] font-bold leading-none tracking-tight uppercase ${row.in !== '-' ? 'text-black/80' : 'text-black/10'}`}>{row.in}</span>
+                                                        </div>
+                                                        <div className="flex-1 py-2.5 px-4 flex items-center gap-2.5">
+                                                            {row.out !== '-' ? (
+                                                                <div className="w-1 h-1 rounded-full bg-black/10 shrink-0" />
+                                                            ) : (
+                                                                <div className="w-1 h-1 rounded-full bg-black/5 shrink-0" />
+                                                            )}
+                                                            <span className={`text-[10px] font-bold leading-none tracking-tight uppercase ${row.out !== '-' ? 'text-black/30' : 'text-black/10'}`}>{row.out}</span>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex-1 py-2.5 px-4 flex items-center gap-2.5">
-                                                        <div className="w-1 h-1 rounded-full bg-black/10 shrink-0" />
-                                                        <span className="text-[10px] font-bold text-black/30 leading-none tracking-tight uppercase">{row.out}</span>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                ));
+                                            })()}
                                         </div>
                                     </div>
 
@@ -829,7 +927,7 @@ const FullWashBooking = () => {
                                                     vehicleName: `${selectedVehicle?.brand} ${selectedVehicle?.model}`,
                                                     price: totalPrice,
                                                     vehicleImg: selectedVehicle?.img,
-                                                    included: ['Normal Interior Cleaning']
+                                                    included: activeService?.metadata?.inclusions || []
                                                 };
                                                 setCart([...cart, newCartItem]);
                                                 setShowServiceCoverage(false);
@@ -1057,11 +1155,11 @@ const FullWashBooking = () => {
                     className="w-1/2 h-full bg-brand shadow-[0_0_15px_rgba(242,159,5,0.8)]"
                 />
             </div>
-            
+
             {/* Fallback Option */}
-            <motion.div 
-                initial={{ opacity: 0, y: 10 }} 
-                animate={{ opacity: 1, y: 0 }} 
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 3, duration: 0.8 }}
                 className="absolute bottom-10 left-5 right-5"
             >
@@ -1071,13 +1169,13 @@ const FullWashBooking = () => {
                         <p className="text-[10px] font-black uppercase tracking-[0.2em]">Taking too long?</p>
                     </div>
                     <p className="text-[9px] font-bold text-white/40 mb-1 leading-relaxed">If no captains are available nearby right now, you can switch to scheduling it instead.</p>
-                    <button 
+                    <button
                         onClick={() => navigate('/full-wash-booking')}
                         className="w-full bg-brand text-black h-12 rounded-xl font-[1000] text-[11px] uppercase tracking-widest shadow-xl shadow-brand/20 active:scale-95 transition-all"
                     >
                         Schedule Wash For Later
                     </button>
-                    <button 
+                    <button
                         onClick={() => { setPhase(PHASES.SERVICE_SELECTION); }}
                         className="text-[9px] font-black text-white/30 uppercase tracking-widest mt-1 hover:text-white transition-colors"
                     >
@@ -1135,7 +1233,9 @@ const FullWashBooking = () => {
                         </motion.div>
 
                         <div className="absolute top-full mt-4 left-1/2 -translate-x-1/2 whitespace-nowrap">
-                            <span className="text-[10px] font-black text-brand uppercase tracking-[0.3em] font-outfit shadow-black shadow-lg">Studio En Route</span>
+                            <span className="text-[10px] font-black text-brand uppercase tracking-[0.3em] font-outfit shadow-black shadow-lg">
+                                {JOB_STATES[jobStateIndex]?.label || 'Studio En Route'}
+                            </span>
                         </div>
                     </div>
 
@@ -1172,12 +1272,12 @@ const FullWashBooking = () => {
                                 <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse shadow-[0_0_12px_rgba(242,159,5,0.8)]" />
                                 <div className="flex flex-col items-start leading-none">
                                     <span className="text-[10px] font-black text-white uppercase tracking-widest">{isCompleted ? 'Completed' : 'Wash in Progress'}</span>
-                                    {!isCompleted && <span className="text-[8px] font-bold text-white/40 uppercase mt-0.5 tracking-tighter">Arriving in 13m</span>}
+                                    {!isCompleted && <span className="text-[8px] font-bold text-white/40 uppercase mt-0.5 tracking-tighter">Arriving Soon</span>}
                                 </div>
                             </div>
                             <div className="w-px h-4 bg-white/10" />
                             <div className="flex flex-col items-end leading-none">
-                                <span className="text-[10px] font-black text-brand uppercase">{activeBooking?.status.replace('_', ' ')}</span>
+                                <span className="text-[10px] font-black text-brand uppercase">{activeBooking?.status?.replace('_', ' ') || 'PROCESSED'}</span>
                             </div>
                         </motion.div>
 
@@ -1227,18 +1327,18 @@ const FullWashBooking = () => {
                                 </div>
                             </div>
                             <div className="flex-1 min-w-0">
-                                <h4 className="text-[13px] font-[1000] text-black uppercase tracking-tight leading-none mb-1">Elite Auto Studio</h4>
+                                <h4 className="text-[13px] font-[1000] text-black uppercase tracking-tight leading-none mb-1">{activeBooking?.vendorName || 'Auto Studio'}</h4>
                                 <div className="flex items-center gap-2">
                                     <div className="flex items-center bg-white px-1.5 py-0.5 rounded-full shadow-sm border border-black/[0.06]">
                                         <Star size={8} fill="#F29F05" className="text-brand mr-1" />
                                         <span className="text-[9px] font-black text-black">4.9</span>
                                     </div>
-                                    <span className="text-[8px] font-bold text-black/20 uppercase tracking-tighter">ID: CW-891</span>
+                                    <span className="text-[8px] font-bold text-black/20 uppercase tracking-tighter">ID: {activeBooking?.id || activeBooking?._id?.slice(-6) || 'CW-891'}</span>
                                 </div>
                             </div>
                             <div className="flex gap-2">
-                                <motion.button whileTap={{ scale: 0.9 }} onClick={() => alert('Calling Studio...')} className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-black border border-gray-200 shadow-sm"><Phone size={14} /></motion.button>
-                                <motion.button whileTap={{ scale: 0.9 }} onClick={() => alert('Opening Chat...')} className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-black border border-gray-200 shadow-sm"><MessageSquare size={14} /></motion.button>
+                                <motion.button whileTap={{ scale: 0.9 }} onClick={() => toast.success('Calling Studio...')} className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-black border border-gray-200 shadow-sm"><Phone size={14} /></motion.button>
+                                <motion.button whileTap={{ scale: 0.9 }} onClick={() => toast.success('Opening Chat...')} className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-black border border-gray-200 shadow-sm"><MessageSquare size={14} /></motion.button>
                             </div>
                         </div>
 
@@ -1277,7 +1377,7 @@ const FullWashBooking = () => {
                         <div className="grid grid-cols-2 gap-3">
                             <motion.button
                                 whileTap={{ scale: 0.96 }}
-                                onClick={() => alert('Emergency SOS Triggered! Support is on the way.')}
+                                onClick={() => toast.error('Emergency SOS Triggered! Support is on the way.', { duration: 6000 })}
                                 className="flex items-center justify-center gap-3 bg-red-50 text-red-600 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-100"
                             >
                                 <AlertTriangle size={12} />
@@ -1285,7 +1385,7 @@ const FullWashBooking = () => {
                             </motion.button>
                             <motion.button
                                 whileTap={{ scale: 0.96 }}
-                                onClick={() => alert('Security PIN: 4821')}
+                                onClick={() => toast.success('Security PIN: 4821', { duration: 8000 })}
                                 className="bg-black text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-black/20"
                             >
                                 Security PIN
@@ -1310,8 +1410,8 @@ const FullWashBooking = () => {
     };
 
     const renderCart = () => {
-        const totalCartPrice = cart.reduce((sum, item) => sum + item.price, 0);
-        const totalDuration = cart.length * 18;
+        const primaryAddress = selectedLocation || addresses.find(a => a.isPrimary) || addresses[0];
+        // Pricing handled by unified useMemo at top
 
         return (
             <div className="min-h-screen bg-[#F8F9FB] pb-32">
@@ -1345,7 +1445,7 @@ const FullWashBooking = () => {
                                         <div className="flex items-center gap-2">
                                             <div className="flex items-center gap-1">
                                                 <Clock size={9} className="text-black/30" />
-                                                <span className="text-[7.5px] font-bold text-black/40 uppercase tracking-tighter">18 Mins</span>
+                                                <span className="text-[7.5px] font-bold text-black/40 uppercase tracking-tighter">{item.duration || 120} Mins</span>
                                             </div>
                                             <div className="w-1 h-1 rounded-full bg-black/5" />
                                             <span className="text-[7.5px] font-black text-emerald-600 uppercase tracking-widest">Instant Wash Mode</span>
@@ -1359,7 +1459,7 @@ const FullWashBooking = () => {
                                             ₹{item.price}
                                         </div>
                                         <div className="inline-flex items-center gap-1 px-1 py-0.5 bg-emerald-50 rounded text-[6.5px] font-black text-emerald-600 uppercase tracking-tighter border border-emerald-100/30">
-                                            <Zap size={7} fill="currentColor" /> SAVED ₹49
+                                            <Zap size={7} fill="currentColor" /> SAVED ₹{Math.round(item.price * 0.1)}
                                         </div>
                                     </div>
                                     <button
@@ -1371,11 +1471,46 @@ const FullWashBooking = () => {
                                 </div>
                             </div>
                         ))}
+
+                        {/* Shop Products in Cart */}
+                        {shopCart.length > 0 && (
+                            <>
+                                <div className="flex items-center justify-between px-1 pt-2">
+                                    <h3 className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em]">E-Shop Products</h3>
+                                </div>
+                                {shopCart.map(item => (
+                                    <div key={item._id} className="bg-white rounded-2xl p-3.5 shadow-sm relative border border-black/[0.03] flex items-center justify-between group transition-all hover:border-brand/30">
+                                        <div className="flex items-center gap-3.5">
+                                            <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center border border-black/[0.05] shadow-sm overflow-hidden flex-shrink-0">
+                                                <img src={item.image} className="w-full h-full object-cover" />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-[11.5px] font-[1000] text-black leading-none uppercase tracking-tight mb-1.5">
+                                                    {item.name}
+                                                </h4>
+                                                <p className="text-[9px] font-bold text-black/40 uppercase tracking-widest">Qty: {item.qty || 1}</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-[17px] font-[1000] text-black tracking-tight leading-none mb-2">
+                                                ₹{(item.salePrice || item.price) * (item.qty || 1)}
+                                            </div>
+                                            <button
+                                                onClick={() => removeFromCart(item._id)}
+                                                className="text-[8px] font-black text-red-500 uppercase tracking-widest py-1 px-2 bg-red-50 rounded-lg"
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </>
+                        )}
                     </div>
 
                     {/* Add Another Promo (High-End CTA) */}
                     <button
-                        onClick={() => setPhase(PHASES.SERVICE_SELECTION)}
+                        onClick={() => navigate('/e-shop?from=studio-wash')}
                         className="w-full bg-white border border-black/[0.03] rounded-2xl p-3.5 flex items-center justify-between group active:scale-[0.98] transition-all relative overflow-hidden shadow-sm hover:bg-gray-50"
                     >
                         <div className="absolute top-0 right-0 w-24 h-24 bg-brand/5 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-brand/10 transition-colors" />
@@ -1431,68 +1566,161 @@ const FullWashBooking = () => {
                         </div>
                     </div>
 
-                    {/* Monthly Packages (Premium Grid) */}
+                    {/* Monthly Packages (Dynamic Premium Grid) */}
                     <div className="space-y-4 pt-2">
                         <div className="flex items-center justify-between px-1">
                             <h3 className="text-[10px] font-black text-black/30 uppercase tracking-[0.2em]">Monthly Subscription</h3>
-                            <span className="text-emerald-600 text-[8px] font-black uppercase tracking-widest bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100 shadow-sm">Upto 50% Savings</span>
+                            {isBlackMember ? (
+                                <span className="text-emerald-600 text-[8px] font-black uppercase tracking-widest bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100 shadow-sm animate-pulse">Benefits Activated</span>
+                            ) : (
+                                <span className="text-emerald-600 text-[8px] font-black uppercase tracking-widest bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100 shadow-sm">Upto 50% Savings</span>
+                            )}
                         </div>
 
                         <div className="grid grid-cols-1 gap-2.5">
-                            {[
-                                { title: '2 Wash/Month', total: '458', perWash: '229', color: 'bg-white' },
-                                { title: '4 Times/Month', total: '756', perWash: '189', color: 'bg-white' },
-                                { title: '8 Times/Month', total: '1352', perWash: '169', color: 'bg-white' }
-                            ].map((pkg, i) => (
-                                <div key={i} className={`${pkg.color} rounded-2xl border border-black/[0.03] p-3.5 shadow-sm flex items-center justify-between relative overflow-hidden group hover:border-brand/40 transition-all duration-300`}>
-                                    <div className="absolute top-0 right-0 w-24 h-24 bg-brand/5 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-150 duration-700" />
-                                    <div className="absolute top-0 left-0 bg-[#F3DCCB] text-black px-3 py-1 text-[7.5px] font-[1000] rounded-br-xl uppercase tracking-widest shadow-sm">
-                                        Total ₹{pkg.total}
-                                    </div>
+                            {(subscriptionPlans.length > 0 ? subscriptionPlans : [
+                                { title: '2 Wash/Month', price: '458', perWash: '229', color: 'bg-white' },
+                                { title: '4 Times/Month', price: '756', perWash: '189', color: 'bg-white' },
+                                { title: '8 Times/Month', price: '1352', perWash: '169', color: 'bg-white' }
+                            ]).map((pkg, i) => {
+                                const isSelected = selectedSubscription?._id === pkg._id || selectedSubscription?.id === pkg.id;
+                                return (
+                                    <div key={pkg._id || pkg.id || i}
+                                        onClick={() => setSelectedSubscription(isSelected ? null : pkg)}
+                                        className={`rounded-2xl border transition-all duration-300 p-3.5 shadow-sm flex items-center justify-between relative overflow-hidden group cursor-pointer ${isSelected ? 'border-brand ring-1 ring-brand bg-brand/5' : 'bg-white border-black/[0.03] hover:border-brand/40'}`}>
+                                        <div className="absolute top-0 right-0 w-24 h-24 bg-brand/5 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-150 duration-700" />
+                                        <div className="absolute top-0 left-0 bg-[#F3DCCB] text-black px-3 py-1 text-[7.5px] font-[1000] rounded-br-xl uppercase tracking-widest shadow-sm">
+                                            Total ₹{pkg.price}
+                                        </div>
 
-                                    <div className="pt-4 flex-1">
-                                        <h4 className="text-[12px] font-black text-black tracking-tight uppercase leading-none mb-1.5 group-hover:text-brand transition-colors">{pkg.title}</h4>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[15px] font-[1000] text-emerald-600 leading-none tracking-tighter">₹{pkg.perWash}/WASH</span>
-                                            <div className="w-1 h-1 rounded-full bg-black/5" />
-                                            <span className="text-[9px] font-bold text-black/10 line-through tracking-tighter">WAS ₹{parseInt(pkg.perWash) * 2}</span>
+                                        <div className="pt-4 flex-1">
+                                            <h4 className="text-[12px] font-black text-black tracking-tight uppercase leading-none mb-1.5 group-hover:text-brand transition-colors">{pkg.title || pkg.name}</h4>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[15px] font-[1000] text-emerald-600 leading-none tracking-tighter">₹{Math.round(pkg.price / (pkg.washesCount || 2))}/WASH</span>
+                                                <div className="w-1 h-1 rounded-full bg-black/5" />
+                                                <span className="text-[9px] font-bold text-black/10 line-through tracking-tighter">WAS ₹{Math.round(pkg.price * 1.5)}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'border-brand bg-brand text-white' : 'border-black/10 bg-gray-50'}`}>
+                                            {isSelected && <Check size={14} strokeWidth={4} />}
                                         </div>
                                     </div>
+                                );
+                            })}
+                        </div>
+                    </div>
 
-                                    <button
-                                        onClick={() => handleSelectMonthly(pkg)}
-                                        className="bg-[#F3DCCB] text-black px-5 py-2.5 rounded-xl text-[10px] font-[1000] uppercase tracking-widest shadow-md active:scale-95 transition-all relative z-10 hover:bg-black hover:text-white"
-                                    >
-                                        Select
-                                    </button>
+                    {/* Delivery Address (Premium Integration - Aligned with Instant Wash) */}
+                    <div className="bg-white rounded-3xl p-5 border border-black/[0.03] shadow-sm relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-gray-50 rounded-full -mr-16 -mt-16 blur-3xl" />
+                        <div className="flex items-center justify-between mb-5 relative z-10">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-black flex items-center justify-center text-white shadow-lg shadow-black/10">
+                                    <MapPin size={18} strokeWidth={2.5} />
                                 </div>
-                            ))}
+                                <div>
+                                    <h4 className="text-[12px] font-black text-black uppercase tracking-widest leading-none">Service Address</h4>
+                                    <p className="text-[7.5px] font-black text-black/20 uppercase tracking-[0.2em] mt-1.5 font-outfit">Precision Pin Verified</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => navigate('/addresses?from=full-wash')}
+                                className="bg-brand/10 text-brand px-4 py-2 rounded-xl text-[9.5px] font-black uppercase tracking-widest hover:bg-brand hover:text-white transition-all active:scale-95 shadow-sm border border-brand/20"
+                            >
+                                {primaryAddress ? 'Change' : 'Add'}
+                            </button>
                         </div>
+                        {(() => {
+                            const activeAddr = selectedLocation || addresses.find(a => a.isPrimary) || addresses[0];
+                            return activeAddr ? (
+                                <div className="flex items-center gap-4 bg-gray-50/50 p-4 rounded-2xl border border-black/[0.02] relative z-10">
+                                    <div className="w-12 h-12 rounded-2xl bg-white border border-black/[0.05] flex items-center justify-center text-black/40 shadow-sm flex-shrink-0">
+                                        {activeAddr.label?.toLowerCase() === 'home' ? <Home size={22} strokeWidth={2.5} /> : <MapPin size={22} strokeWidth={2.5} />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-1.5 mb-1">
+                                            <h5 className="text-[11px] font-[1000] text-black uppercase tracking-tight truncate">{activeAddr.label || 'Home'}</h5>
+                                        </div>
+                                        <p className="text-[10px] font-bold text-black/30 truncate leading-tight font-outfit">
+                                            {activeAddr.street || activeAddr.full || activeAddr.address || 'Pinned Location'}
+                                        </p>
+                                    </div>
+                                    <div className="w-6 h-6 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center">
+                                        <CheckCircle2 size={12} strokeWidth={3} />
+                                    </div>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={() => navigate('/addresses?from=full-wash')}
+                                    className="w-full py-8 border-2 border-dashed border-black/[0.05] rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-black/20 hover:bg-gray-50 hover:border-brand/20 transition-all group flex flex-col items-center justify-center gap-2"
+                                >
+                                    <Plus size={20} className="text-black/10 group-hover:text-brand transition-colors" strokeWidth={3} />
+                                    Add Service Address
+                                </button>
+                            );
+                        })()}
                     </div>
 
-                    {/* Delivery Address (Premium Integration) */}
-                    <div className="bg-white rounded-2xl p-3.5 border border-black/[0.05] shadow-sm mt-1">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                                <MapPin size={11} className="text-black/30" />
-                                <h4 className="text-[9px] font-black text-black/30 uppercase tracking-[0.2em] leading-none">Service Address</h4>
-                            </div>
-                            <button className="text-brand text-[9px] font-black uppercase tracking-widest hover:bg-brand/5 px-2 py-1 rounded-lg transition-colors">Change</button>
-                        </div>
-                        <div className="flex items-center gap-3.5">
-                            <div className="w-9 h-9 rounded-xl bg-black flex items-center justify-center text-white shadow-lg shadow-black/10">
-                                <Home size={16} />
-                            </div>
-                            <div className="leading-tight">
-                                <h5 className="text-[13px] font-black text-black uppercase">Home</h5>
-                                <p className="text-[10px] font-bold text-black/30 truncate max-w-[180px]">Homejggkfy, Sector 45, Gurugram</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <p className="text-center text-[9px] font-bold text-black/15 uppercase tracking-[0.2em] pt-4">
+                    <p className="text-center text-[9px] font-bold text-black/15 uppercase tracking-[0.2em] pt-4 leading-none">
                         Quality guaranteed — cancel anytime
                     </p>
+
+                    {/* E-Shop Recommendations (Matching Parity) */}
+                    <div className="pt-8 pb-4">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em]">Craft Care Essentials</h3>
+                            <button onClick={() => navigate('/eshop')} className="text-[8px] font-black text-brand uppercase tracking-widest flex items-center gap-1">
+                                View Store <ArrowRight size={8} />
+                            </button>
+                        </div>
+                        <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+                            {suggestedProducts.length > 0 ? suggestedProducts.map(product => (
+                                <motion.div
+                                    key={product._id}
+                                    whileTap={{ scale: 0.98 }}
+                                    className="min-w-[170px] bg-white rounded-3xl p-2.5 border border-black/[0.03] shadow-sm flex flex-col gap-3 group transition-all hover:border-brand/20"
+                                >
+                                    <div className="w-full aspect-square bg-gray-50 rounded-2xl overflow-hidden relative">
+                                        <img
+                                            src={sanitizeUrl(product.image)}
+                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                            alt={product.name}
+                                            onError={handleImageError}
+                                        />
+                                        <div className="absolute top-2 right-2 px-2 py-1 bg-white/90 backdrop-blur-md rounded-lg text-[8px] font-black text-emerald-600 uppercase tracking-tighter">
+                                            Premium
+                                        </div>
+                                    </div>
+                                    <div className="px-1.5 pb-1">
+                                        <h4 className="text-[10.5px] font-black text-black line-clamp-1 uppercase tracking-tight mb-1.5 group-hover:text-brand transition-colors">{product.name}</h4>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex flex-col">
+                                                <span className="text-[13px] font-[1000] text-black">₹{product.salePrice}</span>
+                                                <span className="text-[7.5px] font-bold text-black/20 line-through">₹{product.price}</span>
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    addToCart(product);
+                                                    toast.success(`${product.name} added to cart!`);
+                                                }}
+                                                className="w-8 h-8 bg-black text-white rounded-xl flex items-center justify-center active:scale-90 transition-all hover:bg-brand hover:shadow-lg hover:shadow-brand/20"
+                                            >
+                                                <Plus size={14} strokeWidth={3} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )) : (
+                                <div className="w-full py-12 text-center bg-white rounded-3xl border border-black/[0.03] border-dashed">
+                                    <div className="flex flex-col items-center gap-2 opacity-20">
+                                        <Loader2 size={24} className="animate-spin" />
+                                        <p className="text-[9px] font-black uppercase tracking-widest">Curating relevant products...</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Cart Footer (Ultra Modern) */}
@@ -1500,25 +1728,34 @@ const FullWashBooking = () => {
                     <div className="flex items-center justify-between max-w-lg mx-auto gap-3 transition-all">
                         <div className="flex-1">
                             <p className="text-[6.5px] font-black text-black/20 uppercase tracking-[0.25em] mb-0.5 leading-none">Final Estimate</p>
-                            <div className="flex items-baseline gap-1.5">
-                                <span className="text-[22px] font-[1000] text-black tracking-tighter leading-none">₹{totalCartPrice}</span>
-                                <span className="px-1 py-0.5 bg-black/[0.03] text-black/40 text-[7px] font-black rounded text-center uppercase tracking-tighter leading-none">In Cart</span>
+                            <div className="flex flex-col">
+                                <div className="flex items-baseline gap-1.5">
+                                    <span className="text-[22px] font-[1000] text-black tracking-tighter leading-none">₹{totalCartPrice}</span>
+                                    {discount > 0 && <span className="text-[10px] font-black text-emerald-600">(-₹{discount})</span>}
+                                </div>
+                                {applyBlackDiscount && (
+                                    <span className="text-[7px] font-black text-brand uppercase tracking-tighter">BLACK PASS 30% DISCOUNT APPLIED</span>
+                                )}
                             </div>
                             <div className="flex items-center gap-2 mt-1">
                                 <div className="flex items-center gap-1">
                                     <Clock size={9} className="text-brand" strokeWidth={3} />
                                     <span className="text-[7.5px] font-black text-black/40 uppercase tracking-widest leading-none">{totalDuration} Mins</span>
                                 </div>
-                                <div className="w-0.5 h-0.5 rounded-full bg-black/5" />
-                                <span className="text-[7.5px] font-black text-emerald-600 uppercase tracking-widest leading-none">Home Delivery</span>
                             </div>
                         </div>
                         <button
-                            onClick={() => setPhase(PHASES.SELECT_SLOT)}
-                            className="flex-1 max-w-[145px] bg-black text-white flex items-center justify-center gap-2 h-12 rounded-xl font-[1000] text-[12px] uppercase tracking-widest active:scale-[0.97] transition-all shadow-lg shadow-black/5 group relative overflow-hidden"
+                            onClick={() => {
+                                if (!primaryAddress) {
+                                    toast.error('Please add/select a primary address first');
+                                    return;
+                                }
+                                setPhase(PHASES.SELECT_SLOT);
+                            }}
+                            className={`flex-1 max-w-[145px] flex items-center justify-center gap-2 h-12 rounded-xl font-[1000] text-[12px] uppercase tracking-widest active:scale-[0.97] transition-all shadow-lg group relative overflow-hidden ${!primaryAddress ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-black text-white shadow-black/5'}`}
                         >
                             <div className="absolute inset-0 bg-brand/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <span className="relative z-10">Next Step</span>
+                            <span className="relative z-10">{!primaryAddress ? 'Select Address' : 'Next Step'}</span>
                             <ArrowRight size={14} className="relative z-10 group-hover:translate-x-1 transition-transform duration-300" strokeWidth={3} />
                         </button>
                     </div>
@@ -1528,18 +1765,10 @@ const FullWashBooking = () => {
     };
 
     const renderSelectSlot = () => {
-        const totalCartPrice = cart.reduce((sum, item) => sum + item.price, 0);
-        const totalDurationMins = cart.length * 39;
-        const hours = Math.floor(totalDurationMins / 60);
-        const mins = totalDurationMins % 60;
+        const hours = Math.floor(totalDuration / 60);
+        const mins = totalDuration % 60;
 
-        const dates = [
-            { month: 'FEB', day: '27', weekday: 'FRI', trend: 'down' },
-            { month: 'FEB', day: '28', weekday: 'SAT', trend: 'up' },
-            { month: 'MAR', day: '1', weekday: 'SUN', trend: 'up' },
-            { month: 'MAR', day: '2', weekday: 'MON', trend: 'down' },
-            { month: 'MAR', day: '3', weekday: 'TUE', trend: null },
-        ];
+        // Dynamic dates used instead of hardcoded FEB/MAR ones
 
         return (
             <div className="min-h-screen bg-[#F8F9FB] pb-32">
@@ -1554,8 +1783,11 @@ const FullWashBooking = () => {
                 {/* Location Subheader */}
                 <div className="px-6 py-4 flex items-center gap-2">
                     <MapPin size={16} fill="currentColor" className="text-black" />
-                    <p className="text-[13px] font-medium text-black">
-                        Service at - <span className="text-black/40">Homejggkfy</span>
+                    <p className="text-[11px] font-[1000] text-black uppercase tracking-tight">
+                        Service at - <span className="text-black/30">{(() => {
+                            const a = selectedLocation || addresses.find(x => x.isPrimary) || addresses[0];
+                            return a ? (a.full || a.address || a.street || a.address?.street || a.label || 'Your Address') : 'Address not saved';
+                        })()}</span>
                     </p>
                 </div>
 
@@ -1792,105 +2024,106 @@ const FullWashBooking = () => {
                             onClick={async () => {
                                 if (!paymentMethod || isProcessing) return;
                                 setIsProcessing(true);
-                                
+
                                 try {
-                                    // Calculate total amount
-                                    const servicePrice = getPrice(activeService?.price || '299');
-                                    const addonsPrice = (serviceAddons[activeServiceId] || []).reduce((total, addonId) => {
-                                        const addon = activeService.addons?.find(a => a.id === addonId);
-                                        return total + (addon?.price || 0);
-                                    }, 0);
-                                    const totalAmount = servicePrice + addonsPrice;
-                                    
                                     // Get Razorpay key
                                     const { data: { key_id } } = await getRazorpayKey();
-                                    
+
                                     // Create payment order
                                     const { data: { order_id, amount, currency } } = await createPaymentOrder(
-                                        totalAmount * 100, // Convert to paise
+                                        totalCartPrice, 
                                         'INR',
                                         `receipt_${Date.now()}`
                                     );
-                                    
-                                    // Initialize Razorpay
+
+                                    // Initialize Razorpay options
                                     const options = {
                                         key: key_id,
                                         amount: amount,
                                         currency: currency,
                                         name: 'Clean2Wash',
-                                        description: `${activeService?.title || 'Car Wash Service'}`,
+                                        description: `Studio Wash Booking - ${cart.length} Services`,
+                                        image: 'https://cdn-icons-png.flaticon.com/512/3003/3003984.png',
                                         order_id: order_id,
                                         handler: async function (response) {
-                                            // Verify payment
-                                            const verificationResult = await verifyPayment(
-                                                response.razorpay_order_id,
-                                                response.razorpay_payment_id,
-                                                response.razorpay_signature
-                                            );
-                                            
-                                            if (verificationResult.success) {
-                                                // Payment successful - create booking
-                                                const result = await addBooking({
-                                                    service: {
-                                                        name: activeService?.title || 'Full Wash Booking',
-                                                        type: 'vendor',
-                                                        category: 'Studio',
-                                                        basePrice: servicePrice,
-                                                        duration: activeService?.duration || '120 min'
-                                                    },
-                                                    vehicle: selectedVehicle,
-                                                    addons: serviceAddons[activeServiceId] || [],
-                                                    totalAmount: totalAmount,
-                                                    paymentMethod: paymentMethod,
-                                                    paymentId: response.razorpay_payment_id,
-                                                    orderId: response.razorpay_order_id,
-                                                    status: 'pending',
-                                                    address: addresses.find(a => a.isPrimary) || addresses[0],
-                                                    scheduledTime: selectedDate && selectedSlot ? `${selectedDate} ${selectedSlot}` : null,
-                                                    createdAt: new Date().toISOString()
-                                                });
-                                                
-                                                if (result.success) {
-                                                    setActiveBookingId(result.data.id);
-                                                    // Redirect to booking confirmation page
-                                                    navigate('/booking-confirmation', {
-                                                        state: {
-                                                            bookingId: result.data.id,
-                                                            provider: 'vendor',
-                                                            service: activeService?.title || 'Full Wash Booking',
-                                                            vehicle: selectedVehicle,
-                                                            totalAmount: totalAmount
-                                                        }
+                                            try {
+                                                // Verify payment
+                                                const verificationResult = await verifyPayment(
+                                                    response.razorpay_order_id,
+                                                    response.razorpay_payment_id,
+                                                    response.razorpay_signature
+                                                );
+
+                                                if (verificationResult.success) {
+                                                    // Payment successful - create booking with full payload
+                                                    const result = await addBooking({
+                                                        services: cart.map(item => ({
+                                                            id: item.serviceId,
+                                                            name: item.serviceName,
+                                                            price: item.price,
+                                                            vehicleId: item.vehicleId,
+                                                            addons: item.addons || []
+                                                        })),
+                                                        products: shopCart.map(item => ({
+                                                            id: item._id,
+                                                            name: item.name,
+                                                            price: item.salePrice || item.price,
+                                                            qty: item.qty || 1
+                                                        })),
+                                                        subscription: selectedSubscription ? {
+                                                            id: selectedSubscription._id || selectedSubscription.id,
+                                                            name: selectedSubscription.title || selectedSubscription.name,
+                                                            price: selectedSubscription.price || selectedSubscription.total
+                                                        } : null,
+                                                        vehicle: selectedVehicle,
+                                                        totalAmount: totalCartPrice,
+                                                        paymentMethod: paymentMethod,
+                                                        paymentId: response.razorpay_payment_id,
+                                                        orderId: response.razorpay_order_id,
+                                                        status: 'pending',
+                                                        address: selectedLocation || addresses.find(a => a.isPrimary) || addresses[0],
+                                                        scheduledTime: selectedDate && selectedSlot ? `${selectedDate} ${selectedSlot}` : null,
+                                                        createdAt: new Date().toISOString()
                                                     });
+
+                                                    if (result.success) {
+                                                        setActiveBookingId(result.data.id || result.data._id);
+                                                        // SUCCESS: Redirect or switch phase
+                                                        toast.success('Booking Successful!');
+                                                        // Redirect to tracking or success view
+                                                        setPhase(PHASES.LIVE_TRACK);
+                                                    } else {
+                                                        toast.error('Booking creation failed. Please contact support.');
+                                                    }
                                                 } else {
-                                                    alert('Booking creation failed. Please try again.');
+                                                    toast.error('Payment verification failed.');
                                                 }
-                                            } else {
-                                                alert('Payment verification failed. Please contact support.');
+                                            } catch (err) {
+                                                console.error('Verification error:', err);
+                                                toast.error('Verification failed.');
+                                            } finally {
+                                                setIsProcessing(false);
                                             }
-                                            setIsProcessing(false);
                                         },
                                         prefill: {
-                                            name: 'Customer',
-                                            email: 'customer@carwash.in',
-                                            contact: '9999999999'
+                                            name: user?.name || 'Customer',
+                                            email: user?.email || 'customer@carwash.in',
+                                            contact: user?.phone || '9999999999'
                                         },
-                                        theme: {
-                                            color: '#1A1A1A'
-                                        },
+                                        theme: { color: '#F29F05' },
                                         modal: {
-                                            ondismiss: function() {
+                                            ondismiss: function () {
                                                 setIsProcessing(false);
                                             }
                                         }
                                     };
-                                    
+
                                     const rzp = new window.Razorpay(options);
                                     rzp.open();
-                                    
+
                                 } catch (error) {
                                     console.error('Payment error:', error);
-                                    alert('Payment failed. Please try again.');
+                                    toast.error('Payment system error. Please try again.');
                                     setIsProcessing(false);
                                 }
                             }}
@@ -1926,7 +2159,7 @@ const FullWashBooking = () => {
                     <motion.div
                         key={v.id}
                         whileTap={{ scale: 0.98 }}
-                        onClick={() => { setSelectedVehicle(v); setPhase(PHASES.IDLE); }}
+                        onClick={() => { setSelectedVehicle(v); setPhase(PHASES.SERVICE_SELECTION); }}
                         className={`p-4 rounded-2xl border-2 transition-all ${selectedVehicle?.id === v.id ? 'bg-[#FFF6E9] border-brand shadow-lg' : 'bg-white border-black/[0.03] opacity-60 hover:opacity-100'}`}
                     >
                         <div className="flex items-center gap-4">

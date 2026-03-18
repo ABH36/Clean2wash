@@ -210,7 +210,7 @@ const SpareDriverBooking = () => {
                         <Loader2 className="w-8 h-8 text-brand animate-spin" />
                         <p className="text-[10px] font-black text-black/20 uppercase tracking-widest">Loading Premium Drivers...</p>
                     </div>
-                ) : services.map((type) => (
+                ) : (services.length > 0 ? services : SERVICE_TYPES).map((type) => (
                     <motion.button
                         key={type.id}
                         whileTap={{ scale: 0.98 }}

@@ -52,12 +52,12 @@ app.use(helmet());
 
 // Rate limiting
 const limiter = rateLimit({
-    windowMs: 1 * 60 * 1000, 
-    max: process.env.NODE_ENV === 'development' ? 100000 : (parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000), 
+    windowMs: 1 * 60 * 1000,
+    max: process.env.NODE_ENV === 'development' ? 100000 : (parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000),
     message: {
         error: 'Too many requests from this IP, please try again later.'
     },
-    standardHeaders: true, 
+    standardHeaders: true,
     legacyHeaders: false,
     skip: (req) => process.env.NODE_ENV === 'development' && (req.ip === '::1' || req.ip === '127.0.0.1' || req.ip.includes('localhost')),
     handler: (req, res, next, options) => {

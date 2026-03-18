@@ -14,6 +14,33 @@ import MobileLayout from '../components/layout/MobileLayout';
 import PremiumBadge from '../components/membership/PremiumBadge';
 import BlackPassModal from '../components/membership/BlackPassModal';
 
+const CountdownTimer = ({ targetTime }) => {
+    const [timeLeft, setTimeLeft] = useState('');
+    useEffect(() => {
+        if (!targetTime || !targetTime.timeSlot?.start) return;
+        const calculateTime = () => {
+            const now = new Date();
+            const dateStr = new Date(targetTime.date).toDateString();
+            const timeStr = targetTime.timeSlot.start;
+            const fullDateStr = `${dateStr} ${timeStr}`;
+            const target = new Date(fullDateStr);
+            const diff = target - now;
+            if (diff <= 0) { setTimeLeft('Starts soon!'); return; }
+            const h = Math.floor(diff / (1000 * 60 * 60));
+            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((diff % (1000 * 60)) / 1000);
+            let res = '';
+            if (h > 0) res += `${h}h `;
+            res += `${m}m ${s}s`;
+            setTimeLeft(res);
+        };
+        calculateTime();
+        const interval = setInterval(calculateTime, 1000);
+        return () => clearInterval(interval);
+    }, [targetTime]);
+    return <span>{timeLeft}</span>;
+};
+
 const Home = () => {
     const navigate = useNavigate();
     const [showSOS, setShowSOS] = useState(false);
@@ -659,16 +686,33 @@ const Home = () => {
                                     </div>
                                 </div>
 
-                                <div className="relative z-10 bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-4">
-                                    <div className="flex-1">
-                                        <p className="text-[10px] text-brand font-black uppercase tracking-widest mb-1">Service</p>
-                                        <p className="text-[14px] font-black leading-tight tracking-snug">{activeBooking.service?.name || activeBooking.serviceName || 'Car Wash'}</p>
+                                <div className="relative z-10 bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col gap-3">
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex-1">
+                                            <p className="text-[10px] text-brand font-black uppercase tracking-widest mb-1">Service</p>
+                                            <p className="text-[14px] font-black leading-tight tracking-snug">{activeBooking.service?.name || activeBooking.serviceName || 'Car Wash'}</p>
+                                        </div>
+                                        <div className="w-px h-8 bg-white/10" />
+                                        <div className="flex-1">
+                                            <p className="text-[10px] text-brand font-black uppercase tracking-widest mb-1">Status</p>
+                                            <p className="text-[14px] font-black leading-tight tracking-snug text-green-400 capitalize">{(activeBooking.status || '').replace('_', ' ')}</p>
+                                        </div>
                                     </div>
-                                    <div className="w-px h-8 bg-white/10" />
-                                    <div className="flex-1">
-                                        <p className="text-[10px] text-brand font-black uppercase tracking-widest mb-1">Status</p>
-                                        <p className="text-[14px] font-black leading-tight tracking-snug text-green-400 capitalize">{(activeBooking.status || '').replace('_', ' ')}</p>
-                                    </div>
+
+                                    {activeBooking.schedule?.type === 'scheduled' && activeBooking.status === 'confirmed' && (
+                                        <div className="border-t border-white/5 pt-3 flex items-center justify-between">
+                                            <div className="flex items-center gap-2 text-white/40">
+                                                <Calendar size={12} />
+                                                <span className="text-[9px] font-black uppercase tracking-widest">{new Date(activeBooking.schedule.date).toLocaleDateString()} @ {activeBooking.schedule.timeSlot?.start}</span>
+                                            </div>
+                                            <div className="bg-brand/20 px-2 py-1 rounded-lg flex items-center gap-1.5 border border-brand/30">
+                                                <Clock size={10} className="text-brand" />
+                                                <span className="text-[10px] font-black tabular-nums text-white">
+                                                    <CountdownTimer targetTime={activeBooking.schedule} />
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </motion.section>

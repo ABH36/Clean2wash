@@ -10,7 +10,7 @@ import {
     Check, Info, ChevronRight, Edit3, Settings, Stars,
     Plus, Minus, Gift, Bike, Crown, Play, Calendar, Home, Loader2, Radar, Image, Wallet, ExternalLink, CreditCard, LayoutGrid, CheckCircle, ChevronUp, MinusCircle
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { useCart } from '../../../context/CartContext';
 import { serviceAPI, vehicleAPI, walletAPI, paymentAPI, subscriptionAPI, productAPI } from '../../../utils/api';
@@ -96,6 +96,7 @@ const InstantWash = () => {
         isBlackPassMember, globalCatalog, loadGlobalCatalog, catalogLoading, 
         addVehicle, vehiclesLoading 
     } = useAuth();
+    const [searchParams] = useSearchParams();
     const user = getUser('consumer');
     const { cartItems: cart, setCartItems: setCart } = useCart();
 
@@ -146,7 +147,14 @@ const InstantWash = () => {
         if (saved) return JSON.parse(saved);
         return vehicles.find(v => v.isPrimary) || vehicles[0];
     });
-    const [selectedVehicleType, setSelectedVehicleType] = useState('sedan');
+    const [selectedVehicleType, setSelectedVehicleType] = useState(() => selectedVehicle?.type?.toLowerCase() || 'sedan');
+
+    useEffect(() => {
+        if (selectedVehicle?.type) {
+            setSelectedVehicleType(selectedVehicle.type.toLowerCase());
+        }
+    }, [selectedVehicle]);
+
     const [activeServiceId, setActiveServiceId] = useState('eco');
     const [activeBookingId, setActiveBookingId] = useState(null);
     const [jobStateIndex, setJobStateIndex] = useState(0);
@@ -246,7 +254,7 @@ const InstantWash = () => {
         } else if (typeof prices === 'number') {
             basePrice = prices;
         } else if (prices) {
-            const type = (selectedVehicle?.type || selectedVehicleType || 'sedan').toLowerCase();
+            const type = (selectedVehicleType || selectedVehicle?.type || 'sedan').toLowerCase();
             basePrice = prices[type] || prices['sedan'] || 0;
         }
 
@@ -291,7 +299,9 @@ const InstantWash = () => {
         if (model?.sessionTime > 0) return model.sessionTime;
         
         // Dynamic Calculation: Service Base + Asset Complexity Multiplier
-        const base = service?.duration || 30;
+        // Ensuring base is parsed correctly from strings like "30 min"
+        const baseContent = String(service?.duration || '30');
+        const base = parseInt(baseContent.replace(/[^\d]/g, '')) || 30;
         const multiplier = model?.difficulty === 'Hard' ? 2 : (model?.difficulty === 'Medium' ? 1.5 : 1);
         return Math.floor(base * multiplier);
     }, []);
@@ -390,8 +400,7 @@ const InstantWash = () => {
         if (!promotions) return [];
         return promotions.filter(p =>
             p.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p.subtitle?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p.type?.toLowerCase().includes(searchQuery.toLowerCase())
+            p.subtitle?.toLowerCase().includes(searchQuery.toLowerCase())
         );
     }, [promotions, searchQuery]);
 
@@ -402,8 +411,8 @@ const InstantWash = () => {
                 p.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 p.description?.toLowerCase().includes(searchQuery.toLowerCase());
             
-            // Only show plans relevant to Instant Wash (matching category or explicitly allowed)
-            const isInstantPlan = (p.category === 'Express' || p.category === 'Instant Wash' || p.applicableServices?.includes('all'));
+            // Only show plans relevant to Instant Wash (Daily/Express)
+            const isInstantPlan = (p.category === 'Express' || p.category === 'Instant Wash' || p.category === 'Doorstep');
             
             return matchesSearch && isInstantPlan;
         });
@@ -558,7 +567,14 @@ const InstantWash = () => {
         };
         fetchStaticData();
     }, []);
-    // 2. Real-time Tracking (Socket.IO)
+    // 2. Auto-apply Coupon from URL
+    useEffect(() => {
+        const urlCoupon = searchParams.get('coupon');
+        if (urlCoupon && !appliedCoupon) {
+            handleApplyCoupon(urlCoupon);
+        }
+    }, [searchParams, dynamicServices, phase]); 
+    // 3. Real-time Tracking (Socket.IO)
     useEffect(() => {
         if (!activeBookingId) return;
 
@@ -887,6 +903,12 @@ const InstantWash = () => {
     const handleApplyCoupon = async (specificCode) => {
         const codeToApply = (specificCode || couponCode || '').trim().toUpperCase();
         if (!codeToApply) return;
+
+        // Frontend Anti-Stacking Alert
+        if (isBlackPassMember) {
+            setCouponError("Premium member benefits are active. Non-stacking policy: Additional coupons cannot be combined with subscription discounts.");
+            return;
+        }
         try {
             const activeServiceName = effectiveItems.find(i => i.serviceId)?.serviceName || 'Instant Wash';
             const res = await serviceAPI.validateCoupon(codeToApply, totalCartPrice, activeServiceName);
@@ -963,7 +985,7 @@ const InstantWash = () => {
                         </h1>
                         <p className="text-[9px] font-black text-black/30 uppercase tracking-[0.15em] mt-1.5 flex items-center gap-2">
                              Protocol Ready for <span className="text-black font-black">{user?.name || 'Authorized User'}</span>
-                             <div className="w-1 h-1 rounded-full bg-black/10" />
+                             <span className="w-1 h-1 rounded-full bg-black/10" />
                              {new Date().toLocaleDateString('en-US', { weekday: 'long' })}
                         </p>
                     </div>
@@ -1272,6 +1294,37 @@ const InstantWash = () => {
                              );
                         })
                     )}
+
+                    
+                {/* Vehicle Protocol Selector (New) */}
+                <div className="px-5 pb-8">
+                    <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.3em] mb-4 text-center">Vehicle Protocol</p>
+                    <div className="flex items-center gap-3">
+                        {['Hatch', 'Sedan', 'SUV'].map((type) => {
+                            const isActive = selectedVehicleType === type.toLowerCase();
+                            return (
+                                <button
+                                    key={type}
+                                    onClick={() => setSelectedVehicleType(type.toLowerCase())}
+                                    className={`flex-1 group relative ${isActive ? 'scale-105' : 'opacity-40'}`}
+                                >
+                                    <div className={`bg-white rounded-2xl p-5 border transition-all ${isActive ? 'border-brand shadow-xl ring-4 ring-brand/5' : 'border-black/[0.05]'}`}>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h4 className={`text-[11px] font-[1000] uppercase tracking-tight ${isActive ? 'text-black' : 'text-gray-400'}`}>{type}</h4>
+                                            {isActive && (
+                                                <div className="w-5 h-5 bg-brand rounded-full flex items-center justify-center text-white shadow-sm">
+                                                    <Check size={12} strokeWidth={4} />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <p className="text-[8px] font-black text-gray-300 uppercase tracking-widest leading-none mb-4">Protocol</p>
+                                        <div className={`h-[2.5px] w-12 rounded-full transition-all ${isActive ? 'bg-brand' : 'bg-gray-100'}`} />
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
 
                     {/* Dynamic FAQ Section */}
                     {dynamicServices.some(s => s.faqs?.length > 0) && (
@@ -1785,14 +1838,9 @@ const InstantWash = () => {
         const userCoords = selectedLocation?.coordinates || { lat: 12.9716, lng: 77.5946 };
         const currentMessage = SEARCH_MESSAGES[Math.floor((60 - findingTime) / 10) % SEARCH_MESSAGES.length] || SEARCH_MESSAGES[0];
 
-        // Mock captains around the user (10km spread ~0.08 latitude change)
-        const mockCaptains = [
-            { id: 1, lat: userCoords.lat + 0.045, lng: userCoords.lng + 0.032, type: 'bike' },
-            { id: 2, lat: userCoords.lat - 0.051, lng: userCoords.lng + 0.021, type: 'bike' },
-            { id: 3, lat: userCoords.lat + 0.032, lng: userCoords.lng - 0.045, type: 'bike' },
-            { id: 4, lat: userCoords.lat - 0.025, lng: userCoords.lng - 0.038, type: 'bike' },
-            { id: 5, lat: userCoords.lat + 0.062, lng: userCoords.lng - 0.015, type: 'bike' },
-        ];
+        // Real captain position — from socket locationUpdate after booking accepted
+        // captainPos is updated via socket in parent useEffect
+        const hasCaptain = activeBooking?.provider?.id && captainPos && captainPos.lat !== 30;
 
         const userIcon = L.divIcon({
             className: 'custom-user-pin',
@@ -1870,14 +1918,13 @@ const InstantWash = () => {
                              )}
                         </Pane>
 
-                        {/* Mock Captains Search Area */}
-                        {findingTime > 0 && mockCaptains.map(cap => (
-                            <Marker 
-                                key={cap.id}
-                                position={[cap.lat, cap.lng]} 
+                        {/* Real captain marker — only shown after captain is assigned */}
+                        {hasCaptain && (
+                            <Marker
+                                position={[captainPos.lat, captainPos.lng]}
                                 icon={captainIcon}
                             />
-                        ))}
+                        )}
 
                         {/* Scanner Effect */}
                         {findingTime > 0 && (
@@ -2448,7 +2495,22 @@ const InstantWash = () => {
 
                     {/* Manual Coupon Input (Added) */}
                     <div className="mt-8 space-y-3 px-1">
-                        <label className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em] italic ml-1">Voucher Authorization</label>
+                        <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em] italic ml-1">Voucher Authorization</label>
+                            {isBlackPassMember && (
+                                <motion.div 
+                                    initial={{ opacity: 0, x: 10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    className="flex items-center gap-1.5 bg-brand/[0.03] px-3 py-1.5 rounded-full border border-brand/10"
+                                >
+                                    <Crown size={10} className="text-brand" />
+                                    <span className="text-brand text-[7px] font-black uppercase tracking-widest">Premium Active</span>
+                                </motion.div>
+                            )}
+                        </div>
+                        {isBlackPassMember && (
+                             <p className="text-[8px] font-bold text-brand uppercase tracking-widest ml-1 mb-2 opacity-60">Membership privileges override standard coupons for maximum value.</p>
+                        )}
                         <div className="relative group">
                             <input
                                 type="text"

@@ -258,6 +258,14 @@ exports.createBooking = async (req, res) => {
             });
 
             if (coupon) {
+                // Secondary Security Check: Ensure user hasn't exploited this protocol already
+                if (req.user.usedPromotions && req.user.usedPromotions.includes(coupon._id)) {
+                    return res.status(400).json({
+                        status: 'fail',
+                        message: 'This coupon code has already been consumed by your account.'
+                    });
+                }
+
                 if (coupon.reductionType === 'PERCENT') {
                     discountAmount = Math.round((totalAmountBeforeDiscount * coupon.val) / 100);
                 } else {
@@ -313,7 +321,7 @@ exports.createBooking = async (req, res) => {
         });
 
         // Backend Sanitization & Enum Mapping
-        const validCategories = ['Doorstep', 'Studio', 'Add-ons', 'Prestige', 'Chauffeur'];
+        const validCategories = ['Doorstep', 'Studio', 'Studio Detailing', 'Add-ons', 'Prestige', 'Chauffeur'];
         const validServiceTypes = ['captain', 'vendor', 'sparedriver'];
         const validPaymentMethods = ['cash', 'online', 'wallet', 'subscription'];
         const validLocationTypes = ['home', 'office', 'other', 'studio'];
@@ -360,6 +368,21 @@ exports.createBooking = async (req, res) => {
         } else if (paymentMethod === 'wallet' && walletTransactionId) {
             paymentStatus = 'paid';
         } else if (paymentMethod === 'subscription') {
+            const Subscription = require('../../../models/Subscription');
+            const activeSub = await Subscription.getActiveSubscription(req.user.id);
+            if (!activeSub) {
+                return res.status(400).json({
+                    status: 'fail',
+                    message: 'No active subscription found for your account.'
+                });
+            }
+            if (activeSub.getAvailableCredits() <= 0) {
+                return res.status(400).json({
+                    status: 'fail',
+                    message: 'Insufficient subscription credits. Please renew or pay online.'
+                });
+            }
+            await activeSub.useCredits(1);
             paymentStatus = 'paid';
         }
 
@@ -398,6 +421,13 @@ exports.createBooking = async (req, res) => {
             },
             status: 'pending'
         });
+        
+        // Finalize Protocol: Record used promotion to prevent re-use
+        if (appliedCouponRecord?.id) {
+            await User.findByIdAndUpdate(req.user.id, {
+                $addToSet: { usedPromotions: appliedCouponRecord.id }
+            });
+        }
 
         // Populate booking details
         const populatedBooking = await Booking.findById(newBooking._id)
@@ -412,8 +442,9 @@ exports.createBooking = async (req, res) => {
             priority: 'medium',
         });
         
-        // Broadcast to nearby online captains via Socket.io
-        try {
+        // Broadcast to nearby online captains via Socket.io (Only for Captain bookings)
+        if (sanitizedServiceType === 'captain') {
+            try {
             const io = socketService.getIO();
             const broadcastPayload = {
                 bookingId: newBooking._id,
@@ -475,6 +506,32 @@ exports.createBooking = async (req, res) => {
             console.error('Socket broadcast failed:', socketErr.message);
             // Non-blocking error, booking is already created
         }
+        } else if (sanitizedServiceType === 'vendor') {
+            // STUDIO WASH: Dispatch to Vendors
+            try {
+                const io = socketService.getIO();
+                const broadcastPayload = {
+                    bookingId: newBooking._id,
+                    serviceName: service.name || service.title,
+                    location: bookingLocation,
+                    vehicle: {
+                        brand: vehicle.brand,
+                        model: vehicle.model,
+                        plate: vehicle.plate
+                    },
+                    pricing: {
+                        total: totalAmount
+                    },
+                    timestamp: new Date()
+                };
+
+                // Emit globally to all connected vendors
+                io.emit('new_studio_booking', broadcastPayload);
+                console.log(`Studio Wash broadcast dispatched to vendors for booking: ${newBooking._id}`);
+            } catch (socketErr) {
+                console.error('Studio broadcast failed:', socketErr.message);
+            }
+        } // End of service type broadcast check.
 
         res.status(201).json({
             status: 'success',
@@ -511,7 +568,7 @@ exports.updateBooking = async (req, res) => {
 
         const booking = await Booking.findOne({
             _id: req.params.id,
-            consumer: req.consumer.id,
+            consumer: req.user.id,
             isActive: true
         });
 
@@ -565,7 +622,7 @@ exports.cancelBooking = async (req, res) => {
 
         const booking = await Booking.findOne({
             _id: req.params.id,
-            consumer: req.consumer.id,
+            consumer: req.user.id,
             isActive: true
         });
 
@@ -628,7 +685,7 @@ exports.submitFeedback = async (req, res) => {
 
         const booking = await Booking.findOne({
             _id: req.params.id,
-            consumer: req.consumer.id,
+            consumer: req.user.id,
             status: 'completed',
             isActive: true
         });
@@ -689,7 +746,7 @@ exports.reportIssue = async (req, res) => {
 
         const booking = await Booking.findOne({
             _id: req.params.id,
-            consumer: req.consumer.id,
+            consumer: req.user.id,
             isActive: true
         });
 
@@ -722,7 +779,7 @@ exports.reportIssue = async (req, res) => {
                 metaData: {
                     bookingId: booking._id,
                     issueType: type,
-                    consumerId: req.consumer.id
+                    consumerId: req.user.id
                 }
             });
         } catch (notifyErr) {
@@ -749,11 +806,11 @@ exports.reportIssue = async (req, res) => {
 // Get booking statistics
 exports.getBookingStats = async (req, res) => {
     try {
-        const stats = await Booking.getConsumerStats(req.consumer.id);
+        const stats = await Booking.getConsumerStats(req.user.id);
 
         // Get upcoming bookings count
         const upcomingCount = await Booking.countDocuments({
-            consumer: req.consumer.id,
+            consumer: req.user.id,
             status: { $in: ['pending', 'confirmed', 'assigned'] },
             isActive: true
         });
@@ -782,7 +839,7 @@ exports.getUpcomingBookings = async (req, res) => {
         const { limit = 5 } = req.query;
 
         const bookings = await Booking.getUpcomingBookings(
-            req.consumer.id,
+            req.user.id,
             parseInt(limit)
         );
 
@@ -809,13 +866,13 @@ exports.getBookingHistory = async (req, res) => {
         const { page = 1, limit = 10 } = req.query;
 
         const bookings = await Booking.getBookingHistory(
-            req.consumer.id,
+            req.user.id,
             parseInt(page),
             parseInt(limit)
         );
 
         const total = await Booking.countDocuments({
-            consumer: req.consumer.id,
+            consumer: req.user.id,
             status: { $in: ['completed', 'cancelled', 'refunded'] },
             isActive: true
         });

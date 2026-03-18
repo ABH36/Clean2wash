@@ -16,6 +16,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useCaptain } from '../../../context/CaptainContext';
 import { useTheme } from '../../../context/ThemeContext';
 import { toast } from 'react-hot-toast';
+import { socketService } from '../../../utils/socket';
 
 // Fix Leaflet default icon
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -86,6 +87,45 @@ const CITY_COORDINATES = {
     'Kochi': [9.9312, 76.2673],
 };
 
+const CountdownTimer = ({ targetTime }) => {
+    const [timeLeft, setTimeLeft] = useState('');
+
+    useEffect(() => {
+        if (!targetTime || !targetTime.timeSlot?.start) return;
+
+        const calculateTime = () => {
+            const now = new Date();
+            const dateStr = new Date(targetTime.date).toDateString();
+            const timeStr = targetTime.timeSlot.start; // e.g. "09:00 AM"
+
+            const fullDateStr = `${dateStr} ${timeStr}`;
+            const target = new Date(fullDateStr);
+
+            const diff = target - now;
+
+            if (diff <= 0) {
+                setTimeLeft('Time to start!');
+                return;
+            }
+
+            const h = Math.floor(diff / (1000 * 60 * 60));
+            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+            let res = '';
+            if (h > 0) res += `${h}h `;
+            res += `${m}m ${s}s`;
+            setTimeLeft(res);
+        };
+
+        calculateTime();
+        const interval = setInterval(calculateTime, 1000);
+        return () => clearInterval(interval);
+    }, [targetTime]);
+
+    return <span>{timeLeft}</span>;
+};
+
 const CaptainHome = () => {
     const navigate = useNavigate();
     const { isDarkMode, toggleDarkMode } = useTheme();
@@ -133,6 +173,28 @@ const CaptainHome = () => {
     const [positionReady, setPositionReady] = useState(false);
     const [recenter, setRecenter] = useState(false);
     const [currentRegion, setCurrentRegion] = useState('Fetching region...');
+
+    // Haversine formula — calculate real distance in km between two lat/lng points
+    const calcDistance = useCallback((lat1, lng1, lat2, lng2) => {
+        if (!lat1 || !lng1 || !lat2 || !lng2) return null;
+        const R = 6371; // Earth radius in km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLng = (lng2 - lng1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLng / 2) ** 2;
+        const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return dist < 1 ? `${Math.round(dist * 1000)}m` : `${dist.toFixed(1)}km`;
+    }, []);
+
+    // Get real distance from captain's current GPS to job location
+    const getJobDistance = useCallback((job) => {
+        const jobLat = job.location?.coordinates?.[1] || job.location?.address?.coordinates?.lat;
+        const jobLng = job.location?.coordinates?.[0] || job.location?.address?.coordinates?.lng;
+        if (!jobLat || !jobLng) return null;
+        const [capLat, capLng] = captainPosition;
+        return calcDistance(capLat, capLng, jobLat, jobLng);
+    }, [captainPosition, calcDistance]);
 
     // Alert & Timeout State
     const [timeLeft, setTimeLeft] = useState(30);
@@ -294,6 +356,62 @@ const CaptainHome = () => {
         if (h < 17) return 'Good afternoon';
         return 'Good evening';
     };
+
+    // --- Scheduled Job Socket Listeners ---
+    useEffect(() => {
+        const captainId = user?.id;
+        if (!captainId) return;
+
+        // 30-minute pre-alert from booking monitor
+        const handleScheduledReminder = (data) => {
+            toast(
+                (t) => (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <strong style={{ fontSize: 13 }}>⏰ Scheduled Wash Reminder</strong>
+                        <span style={{ fontSize: 11, opacity: 0.8 }}>Your job starts in ~30 minutes. Get ready!</span>
+                        <button
+                            onClick={() => { navigate(`/captain/job?id=${data.bookingId}`); toast.dismiss(t.id); }}
+                            style={{ background: '#F29F05', color: '#000', border: 'none', borderRadius: 8, padding: '4px 10px', fontWeight: 900, fontSize: 11, cursor: 'pointer', marginTop: 4 }}
+                        >
+                            View Job →
+                        </button>
+                    </div>
+                ),
+                { duration: 15000, icon: '📅' }
+            );
+        };
+
+        // Time-arrived alert — captain must go NOW
+        const handleScheduledJobStarting = (data) => {
+            // Play alert beep
+            playBeep();
+            if ('vibrate' in navigator) navigator.vibrate([300, 100, 300, 100, 300]);
+
+            toast(
+                (t) => (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <strong style={{ fontSize: 14 }}>🚀 Time to Go! Scheduled Wash</strong>
+                        <span style={{ fontSize: 11, opacity: 0.8 }}>Your scheduled booking time has arrived. Head to the customer now!</span>
+                        <button
+                            onClick={() => { navigate(`/captain/job?id=${data.bookingId}`); toast.dismiss(t.id); }}
+                            style={{ background: '#000', color: '#F29F05', border: 'none', borderRadius: 8, padding: '6px 14px', fontWeight: 900, fontSize: 12, cursor: 'pointer', marginTop: 4 }}
+                        >
+                            Open Job Details ⚡
+                        </button>
+                    </div>
+                ),
+                { duration: 30000, icon: '⚡' }
+            );
+        };
+
+        socketService.on('scheduled_reminder', handleScheduledReminder);
+        socketService.on('scheduled_job_starting', handleScheduledJobStarting);
+
+        return () => {
+            socketService.off('scheduled_reminder', handleScheduledReminder);
+            socketService.off('scheduled_job_starting', handleScheduledJobStarting);
+        };
+    }, [user?.id, navigate, playBeep]);
 
     // Map job locations (jobs with location data)
     const jobsWithLocation = pendingRequests.filter(j => j.location?.coordinates?.length === 2);
@@ -486,17 +604,36 @@ const CaptainHome = () => {
                 {/* ── Active Job Card ── */}
                 {activeJob && (
                     <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-                        className={`rounded-2xl border p-4 transition-all duration-500 flex items-center gap-4 cursor-pointer hover:brightness-105 active:scale-[0.98] ${isDarkMode ? 'bg-brand border-white/10' : 'bg-[#0F172A] border-white/5 text-white'} shadow-xl`}
+                        className={`rounded-2xl border p-4 transition-all duration-500 flex flex-col gap-4 cursor-pointer hover:brightness-105 active:scale-[0.98] ${isDarkMode ? 'bg-brand border-white/10' : 'bg-[#0F172A] border-white/5 text-white'} shadow-xl`}
                         onClick={() => navigate(`/captain/job?id=${activeJob.id}`)}>
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDarkMode ? 'bg-white/20' : 'bg-brand/20'}`}>
-                            <Zap size={24} className={isDarkMode ? 'text-white' : 'text-brand'} />
+                        <div className="flex items-center gap-4">
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDarkMode ? 'bg-white/20' : 'bg-brand/20'}`}>
+                                <Zap size={24} className={isDarkMode ? 'text-white' : 'text-brand'} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-white/40 text-[9px] font-black uppercase tracking-widest mb-1">
+                                    {activeJob.schedule?.type === 'scheduled' ? 'Scheduled Mission' : 'Active Mission'}
+                                </p>
+                                <h3 className="text-white font-black text-lg tracking-tight leading-none truncate">{activeJob.serviceName}</h3>
+                                <p className="text-white/60 text-[10px] font-bold mt-1.5">{activeJob.address}</p>
+                            </div>
+                            <ChevronRight size={18} className="text-white/20" />
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-white/40 text-[9px] font-black uppercase tracking-widest mb-1">Active Mission</p>
-                            <h3 className="text-white font-black text-lg tracking-tight leading-none truncate">{activeJob.serviceName}</h3>
-                            <p className="text-white/60 text-[10px] font-bold mt-1.5">{activeJob.address}</p>
-                        </div>
-                        <ChevronRight size={18} className="text-white/20" />
+
+                        {activeJob.schedule?.type === 'scheduled' && activeJob.status === 'confirmed' && (
+                            <div className="bg-white/10 rounded-xl p-3 flex items-center justify-between border border-white/10">
+                                <div className="flex items-center gap-2">
+                                    <Clock size={14} className="text-white/40" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Starts at {activeJob.schedule.timeSlot?.start}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded-lg">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                                    <span className="text-[11px] font-black tabular-nums text-white">
+                                        <CountdownTimer targetTime={activeJob.schedule} />
+                                    </span>
+                                </div>
+                            </div>
+                        )}
                     </motion.div>
                 )}
 
@@ -536,7 +673,9 @@ const CaptainHome = () => {
                                                     <span className="text-brand font-black text-[9px] uppercase tracking-tighter">Instant Wash</span>
                                                 </div>
                                                 <div className="px-2 py-0.5 bg-black/5 rounded-md">
-                                                    <span className="text-black/40 font-black text-[9px] uppercase tracking-tighter italic">2.4km away</span>
+                                                    <span className="text-black/40 font-black text-[9px] uppercase tracking-tighter italic">
+                                                        {getJobDistance(pendingRequests[0]) || 'Nearby'}
+                                                    </span>
                                                 </div>
                                             </div>
                                             <h3 className="text-2xl font-[1000] text-black tracking-tighter leading-none mb-2">
@@ -646,8 +785,15 @@ const CaptainHome = () => {
                                         <span className={`text-[8px] font-black ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>· {job.userName}</span>
                                     </div>
                                     <div className="flex items-center gap-2 mt-0.5">
-                                        <span className={`text-[9px] font-bold ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>{job.timestamp || 'Today'}</span>
-                                        <span className="flex text-amber-400 text-[10px]">{'★★★★★'}</span>
+                                        <span className={`text-[9px] font-bold ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>
+                                            {job.timestamp ? new Date(job.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Today'}
+                                        </span>
+                                        <span className="flex text-amber-400 text-[10px]">
+                                            {job.feedback?.rating
+                                                ? '★'.repeat(Math.round(job.feedback.rating)) + '☆'.repeat(5 - Math.round(job.feedback.rating))
+                                                : '★★★★★'
+                                            }
+                                        </span>
                                     </div>
                                 </div>
                                 <p className="font-black text-sm text-green-500">{job.price}</p>

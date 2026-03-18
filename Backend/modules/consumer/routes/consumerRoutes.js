@@ -28,7 +28,7 @@ router.post('/auth/logout', authController.logout);
 router.get('/services', serviceController.getServices);
 router.get('/services/banners', serviceController.getBanners);
 router.get('/services/categories', serviceController.getServiceCategories);
-router.get('/services/home', serviceController.getHomeData);
+router.get('/services/home', authMiddleware.optionalProtect, serviceController.getHomeData);
 router.get('/services/apartment-flow', serviceController.getApartmentFlowData);
 router.get('/services/instant-config', serviceController.getInstantWashConfig);
 router.get('/services/search', serviceController.search);
@@ -36,8 +36,8 @@ router.get('/services/stats', serviceController.getPlatformStats);
 
 router.get('/portfolio', authMiddleware.optionalProtect, serviceController.getPortfolio);
 router.patch('/portfolio/:id/like', serviceController.likePortfolioItem);
-router.get('/services/promotions', serviceController.getPromotionalCards);
-router.post('/services/promotions/validate-coupon', serviceController.validateCoupon);
+router.get('/services/promotions', authMiddleware.optionalProtect, serviceController.getPromotionalCards);
+router.post('/services/promotions/validate-coupon', authMiddleware.protect, serviceController.validateCoupon);
 router.get('/hubs', serviceController.getHubs);
 router.get('/services/vehicle-models', serviceController.getVehicleModels);
 

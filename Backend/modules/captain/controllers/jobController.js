@@ -23,6 +23,7 @@ const formatBookingForCaptain = (b) => {
         price: `₹${b.pricing?.totalAmount || 0}`,
         status: b.status,
         type: b.service?.type || 'captain',
+        schedule: b.schedule,
         timestamp: b.createdAt,
         landmark: b.location?.landmark
     };

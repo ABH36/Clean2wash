@@ -7,6 +7,9 @@ const SubscriptionPlan = require('../../../models/SubscriptionPlan');
 const Promotion = require('../../../models/Promotion');
 const VehicleModel = require('../../../models/VehicleModel');
 const Product = require('../../../models/Product');
+const Setting = require('../../../models/Setting');
+const Service = require('../../../models/Service');
+const Subscription = require('../../../models/Subscription');
 
 const normalizeToken = (value = '') => String(value)
     .toLowerCase()
@@ -173,13 +176,14 @@ exports.getServices = async (req, res) => {
             tag: v.type || '',
             title: v.name,
             subtitle: v.description || '',
-            image: '', // Needs a default or mapping
+            image: v.image || v.thumbnail || '', // Use stored image if available
             price: `₹${v.price}`,
             original: '',
             duration: v.time,
             features: v.detailedCoverage || [],
             badge: '',
-            provider: 'captain', // Default for these variants
+            // DYNAMIC PROVIDER: If category is Studio-related, it's a vendor service
+            provider: (v.category === 'Studio' || v.category === 'Studio Detailing' || v.category === 'Detailing') ? 'vendor' : 'captain',
             isHardcoded: false,
             rating: 4.8,
             reviews: 120,
@@ -558,26 +562,28 @@ exports.getPortfolio = async (req, res) => {
 // Get promotional cards for home page
 exports.getPromotionalCards = async (req, res) => {
     try {
-        const Promotion = require('../../../models/Promotion');
         const dbPromotions = await Promotion.find({
             type: { $in: ['Referrals', 'Offers', 'Expansion'] },
             status: 'Active',
             isActive: true
         }).sort({ createdAt: -1 });
 
-        const cards = dbPromotions.map(doc => ({
-            id: doc._id,
-            type: doc.type,
-            title: doc.title || doc.name,
-            subtitle: doc.subtitle || doc.userGets,
-            image: doc.image || '',
-            cta: doc.cta || 'Explore',
-            path: doc.path || '/',
-            theme: doc.theme || 'dark',
-            badge: doc.val || 'NEW',
-            val: doc.val || '', // Needed for gradient values in Expansion cards
-            applicableServices: doc.applicableServices || []
-        }));
+        const usedPromoIds = req.user?.usedPromotions?.map(id => id.toString()) || [];
+        const cards = dbPromotions
+            .filter(doc => !usedPromoIds.includes(doc._id.toString()))
+            .map(doc => ({
+                id: doc._id,
+                type: doc.type,
+                title: doc.title || doc.name,
+                subtitle: doc.subtitle || doc.userGets,
+                image: doc.image || '',
+                cta: doc.cta || 'Explore',
+                path: doc.path || '/',
+                theme: doc.theme || 'dark',
+                badge: doc.val || 'NEW',
+                val: doc.val || '', // Needed for gradient values in Expansion cards
+                applicableServices: doc.applicableServices || []
+            }));
 
         res.status(200).json({
             status: 'success',
@@ -1069,6 +1075,16 @@ exports.validateCoupon = async (req, res) => {
     try {
         const { code, amount, serviceType } = req.body;
 
+        // Anti-Stacking Check: If user has active Black Pass, prevent stacking
+        const activeSub = await Subscription.findOne({ user: req.user.id, status: 'active', endDate: { $gt: new Date() } });
+        
+        if (activeSub && (activeSub.benefits.includes('discount_30_percent') || activeSub.benefits.includes('discount_20_percent'))) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'Premium membership benefits are active. Non-stacking policy: Additional coupons cannot be combined with subscription discounts.'
+            });
+        }
+
         if (!code) {
             return res.status(400).json({
                 status: 'fail',
@@ -1087,6 +1103,14 @@ exports.validateCoupon = async (req, res) => {
             return res.status(404).json({
                 status: 'fail',
                 message: 'Invalid or expired coupon code'
+            });
+        }
+
+        // Check if user already used this coupon
+        if (req.user?.usedPromotions && req.user.usedPromotions.includes(coupon._id)) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'You have already used this coupon protocol once.'
             });
         }
 
@@ -1156,6 +1180,7 @@ exports.getHomeData = async (req, res) => {
         }).sort({ createdAt: -1 });
 
         const fetchPassConfig = Setting.findOne({ key: 'WASH_PASS_CONFIG' });
+        const fetchStats = MasterData.find({ type: 'PLATFORM_STAT', isActive: true }).sort({ sortOrder: 1 });
 
         const [dbBanners, dbServices, dbCategories, dbPromotions, dbStats, passConfig] = await Promise.all([
             fetchBanners,
@@ -1195,18 +1220,21 @@ exports.getHomeData = async (req, res) => {
             metadata: doc.metadata || {}
         }));
 
-        const cards = dbPromotions.map(doc => ({
-            id: doc._id,
-            type: doc.type,
-            title: doc.title || doc.name,
-            subtitle: doc.subtitle || doc.userGets,
-            image: doc.image || '',
-            cta: doc.cta || 'Explore',
-            path: doc.path || '/',
-            theme: doc.theme || 'dark',
-            badge: doc.val || 'NEW',
-            val: doc.val || ''
-        }));
+        const usedPromoIds = req.user?.usedPromotions?.map(id => id.toString()) || [];
+        const cards = dbPromotions
+            .filter(doc => !usedPromoIds.includes(doc._id.toString()))
+            .map(doc => ({
+                id: doc._id,
+                type: doc.type,
+                title: doc.title || doc.name,
+                subtitle: doc.subtitle || doc.userGets,
+                image: doc.image || '',
+                cta: doc.cta || 'Explore',
+                path: doc.path || '/',
+                theme: doc.theme || 'dark',
+                badge: doc.val || 'NEW',
+                val: doc.val || ''
+            }));
 
         const stats = dbStats.map(doc => ({
             label: doc.title,
@@ -1296,9 +1324,8 @@ exports.likePortfolioItem = async (req, res) => {
 // --- Instant Wash Consumer Config ---
 exports.getInstantWashConfig = async (req, res) => {
     try {
-        const Setting = require('../../../models/Setting');
         const [services, plans, settings, passSetting] = await Promise.all([
-            require('../../../models/Service').find({ category: { $in: ['Cleaning', 'Doorstep', 'Wash', 'Express'] }, isActive: true }),
+            Service.find({ category: { $in: ['Cleaning', 'Doorstep', 'Wash', 'Express'] }, isActive: true }),
             SubscriptionPlan.find({ isActive: true, status: 'Live' }),
             Setting.find({ key: { $in: ['combo_discount_pct', 'multi_asset_discount_pct', 'studio_base_multiplier'] } }),
             Setting.findOne({ key: 'WASH_PASS_CONFIG' })

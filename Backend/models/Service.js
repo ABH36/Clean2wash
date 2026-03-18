@@ -8,7 +8,7 @@ const serviceSchema = new mongoose.Schema({
     },
     category: {
         type: String,
-        enum: ['Doorstep', 'Studio', 'Add-ons', 'Cleaning', 'Detailing', 'Protection', 'Maintenance', 'Enhancement', 'Express'],
+        enum: ['Doorstep', 'Studio', 'Studio Detailing', 'Add-ons', 'Cleaning', 'Detailing', 'Protection', 'Maintenance', 'Enhancement', 'Express'],
         default: 'Cleaning'
     },
     type: {

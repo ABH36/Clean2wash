@@ -163,6 +163,10 @@ const userSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    usedPromotions: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Promotion'
+    }],
     lastLogin: Date,
     loginCount: {
         type: Number,

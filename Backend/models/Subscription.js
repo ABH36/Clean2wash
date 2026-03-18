@@ -67,6 +67,14 @@ const subscriptionSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    maxVehicles: {
+        type: Number,
+        default: 1
+    },
+    rollover: {
+        type: Number,
+        default: 0
+    },
     price: {
         amount: {
             type: Number,

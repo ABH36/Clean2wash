@@ -35,6 +35,19 @@ const subscriptionPlanSchema = new mongoose.Schema({
         type: [String],
         default: []
     },
+    credits: {
+        type: Number,
+        required: [true, 'Please specify the number of washes/credits'],
+        default: 0
+    },
+    maxVehicles: {
+        type: Number,
+        default: 1
+    },
+    rollover: {
+        type: Number,
+        default: 0
+    },
     isActive: {
         type: Boolean,
         default: true

@@ -19,7 +19,9 @@ import {
     ChevronLeft,
     ChevronRight,
     Gift,
-    Crown
+    Crown,
+    Stars,
+    MessageSquare
 } from 'lucide-react';
 
 const CATEGORIES = ['All', 'Express', 'Doorstep', 'Studio', 'Add-ons'];

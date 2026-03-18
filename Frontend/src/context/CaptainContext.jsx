@@ -367,10 +367,18 @@ export const CaptainProvider = ({ children }) => {
         };
     }, [sessions.captain?.isOnline]);
 
-    // Socket listeners for Captain
+    // Socket: Connect + Join captain's personal room so targeted broadcasts work
     useEffect(() => {
         const userId = sessions.captain?.id;
         if (!userId) return;
+
+        // 1. Connect socket if not already connected
+        socketService.connect();
+
+        // 2. Join captain's own room — backend uses io.to(captain._id).emit()
+        //    Without this, targeted new_booking_broadcast won't reach this captain
+        socketService.joinUserRoom(userId);
+        console.log('[CaptainContext] Socket connected & joined room:', userId);
 
         const handleBookingUpdate = (data) => {
             setCaptainJobs(prev => prev.map(job => {
@@ -416,8 +424,10 @@ export const CaptainProvider = ({ children }) => {
         return () => {
             socketService.off('booking_status_updated', handleBookingUpdate);
             socketService.off('new_booking_broadcast', handleNewBroadcast);
+            // Note: Don't disconnect here — socket stays alive for the session
         };
     }, [sessions.captain?.id, sessions.captain?.isOnline]);
+
 
     return (
         <CaptainContext.Provider value={{

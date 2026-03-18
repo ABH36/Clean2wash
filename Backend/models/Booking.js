@@ -31,7 +31,7 @@ const bookingSchema = new mongoose.Schema({
         category: {
             type: String,
             required: [true, 'Service category is required'],
-            enum: ['Doorstep', 'Studio', 'Add-ons', 'Prestige', 'Chauffeur']
+            enum: ['Doorstep', 'Studio', 'Studio Detailing', 'Add-ons', 'Prestige', 'Chauffeur']
         },
         type: {
             type: String,
@@ -198,7 +198,7 @@ const bookingSchema = new mongoose.Schema({
     issues: [{
         type: {
             type: String,
-            enum: ['damage', 'delay', 'quality', 'behavior', 'other']
+            enum: ['damage', 'delay', 'quality', 'behavior', 'other', 'SOS']
         },
         description: String,
         photo: String,
@@ -236,6 +236,11 @@ const bookingSchema = new mongoose.Schema({
     securityPin: {
         type: String,
         default: () => Math.floor(1000 + Math.random() * 9000).toString()
+    },
+    // Prevents booking monitor from sending duplicate scheduled time alerts
+    scheduledAlertSent: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true,

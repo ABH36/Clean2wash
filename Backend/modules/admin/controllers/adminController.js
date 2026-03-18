@@ -170,6 +170,7 @@ exports.getPendingBookings = async (req, res) => {
         })
             .populate('consumer', 'name phone email profile')
             .populate('vehicle', 'brand model type plate')
+            .populate('provider.id')
             .sort({ createdAt: -1 });
 
         const mappedBookings = bookings.map(b => ({
@@ -429,6 +430,7 @@ exports.getAllBookings = async (req, res) => {
         const bookings = await Booking.find()
             .populate('consumer', 'name phone email profile')
             .populate('vehicle', 'brand model type plate')
+            .populate('provider.id')
             .sort({ createdAt: -1 });
 
         const mappedBookings = bookings.map(b => ({

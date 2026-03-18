@@ -22,7 +22,7 @@ const AdminSubscriptions = () => {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingPlan, setEditingPlan] = useState(null);
-    const [formData, setFormData] = useState({ name: '', price: '', interval: 'Monthly', status: 'Live', features: '', accent: 'brand', applicableServices: [] });
+    const [formData, setFormData] = useState({ name: '', price: '', interval: 'Monthly', status: 'Live', features: '', accent: 'brand', applicableServices: [], credits: 0 });
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, id: null });
 
     // Global Pass Config States
@@ -74,13 +74,13 @@ const AdminSubscriptions = () => {
 
     const handleOpenAdd = () => {
         setEditingPlan(null);
-        setFormData({ name: '', price: '', interval: 'Monthly', status: 'Live', features: '', accent: 'brand', applicableServices: [] });
+        setFormData({ name: '', price: '', interval: 'Monthly', status: 'Live', features: '', accent: 'brand', applicableServices: [], credits: 0 });
         setIsModalOpen(true);
     };
 
     const handleOpenEdit = (plan) => {
         setEditingPlan(plan);
-        setFormData({ ...plan, features: plan.features.join('\n'), applicableServices: plan.applicableServices || [] });
+        setFormData({ ...plan, features: plan.features.join('\n'), applicableServices: plan.applicableServices || [], credits: plan.credits || 0 });
         setIsModalOpen(true);
     };
 
@@ -293,6 +293,10 @@ const AdminSubscriptions = () => {
                                                 <option>Quarterly</option>
                                                 <option>Annual</option>
                                             </select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Wash Credits (Monthly)</label>
+                                            <input required type="number" placeholder="4" className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold outline-none focus:border-brand transition-all" value={formData.credits || 0} onChange={e => setFormData({ ...formData, credits: parseInt(e.target.value) || 0 })} />
                                         </div>
                                         <div className="col-span-2 space-y-1.5">
                                             <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Encapsulated Features (One per line)</label>

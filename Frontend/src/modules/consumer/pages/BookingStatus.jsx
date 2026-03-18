@@ -10,6 +10,33 @@ import MobileLayout from '../components/layout/MobileLayout';
 import { useAuth } from '../../../context/AuthContext';
 import { toast } from 'react-hot-toast';
 
+const CountdownTimer = ({ targetTime }) => {
+    const [timeLeft, setTimeLeft] = useState('');
+    useEffect(() => {
+        if (!targetTime || !targetTime.timeSlot?.start) return;
+        const calculateTime = () => {
+            const now = new Date();
+            const dateStr = new Date(targetTime.date).toDateString();
+            const timeStr = targetTime.timeSlot.start;
+            const fullDateStr = `${dateStr} ${timeStr}`;
+            const target = new Date(fullDateStr);
+            const diff = target - now;
+            if (diff <= 0) { setTimeLeft('Now!'); return; }
+            const h = Math.floor(diff / (1000 * 60 * 60));
+            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((diff % (1000 * 60)) / 1000);
+            let res = '';
+            if (h > 0) res += `${h}h `;
+            res += `${m}m ${s}s`;
+            setTimeLeft(res);
+        };
+        calculateTime();
+        const interval = setInterval(calculateTime, 1000);
+        return () => clearInterval(interval);
+    }, [targetTime]);
+    return <span>{timeLeft}</span>;
+};
+
 const CAPTAIN_STEPS = [
     { id: 'pending', label: 'Booking Created', desc: 'Wash requested successfully', Icon: Zap, activeColor: 'text-violet-500', activeBg: 'bg-violet-50', activeBorder: 'border-violet-200' },
     { id: 'assigned', label: 'Captain Assigned', desc: 'Expert captain on the job', Icon: ShieldCheck, activeColor: 'text-blue-500', activeBg: 'bg-blue-50', activeBorder: 'border-blue-200' },
@@ -153,14 +180,25 @@ const BookingStatus = () => {
                         </div>
                     </div>
 
-                    {/* ETA */}
+                    {/* ETA / Timer */}
                     <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm rounded-xl px-3 py-2 flex items-center gap-2 shadow-md">
                         <Clock size={13} className="text-brand" strokeWidth={2.5} />
                         <div>
-                            <p className="text-[7px] font-black uppercase tracking-widest text-content-subtle leading-none">ETA</p>
-                            <p className="text-sm font-black text-content leading-none mt-0.5">
-                                {step === 0 ? '—' : (step === 1 || step === 2) ? '12 min' : 'Arrived'}
-                            </p>
+                            {liveBooking.schedule?.type === 'scheduled' && liveBooking.status === 'confirmed' ? (
+                                <>
+                                    <p className="text-[7px] font-black uppercase tracking-widest text-content-subtle leading-none">Starts in</p>
+                                    <p className="text-sm font-black text-content leading-none mt-0.5 tabular-nums">
+                                        <CountdownTimer targetTime={liveBooking.schedule} />
+                                    </p>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="text-[7px] font-black uppercase tracking-widest text-content-subtle leading-none">ETA</p>
+                                    <p className="text-sm font-black text-content leading-none mt-0.5">
+                                        {step === 0 ? '—' : (step === 1 || step === 2) ? '12 min' : 'Arrived'}
+                                    </p>
+                                </>
+                            )}
                         </div>
                     </div>
 

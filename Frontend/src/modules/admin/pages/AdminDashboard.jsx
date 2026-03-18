@@ -12,7 +12,9 @@ import {
     ChevronRight,
     Car,
     AlertCircle,
-    CheckCircle2
+    CheckCircle2,
+    ExternalLink,
+    ShieldAlert
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';

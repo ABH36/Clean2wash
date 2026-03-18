@@ -88,14 +88,17 @@ const AdminPromotions = () => {
         setLoading(true);
 
         try {
-            const finalData = { ...formData, type: activeTab };
+            const finalData = { 
+                ...formData, 
+                type: activeTab,
+                applicableServices: [] // Force Global
+            };
             if (activeTab === 'Coupons' || activeTab === 'Offers') {
                 finalData.reductionType = formData.type;
-                // Note: reductionType in model, but UI uses 'type' dropdown.
             }
 
             if (editingPromo) {
-                await adminAPI.updatePromotion(editingPromo._id, finalData);
+                await adminAPI.updatePromotion(editingPromo._id || editingPromo.id, finalData);
             } else {
                 await adminAPI.createPromotion(finalData);
             }
@@ -417,51 +420,21 @@ const AdminPromotions = () => {
                                                 />
                                             </div>
                                         )}
-
-                                        {/* Applicable Services Section */}
-                                        <div className="md:col-span-2 space-y-4 font-sans border-t border-gray-100 pt-8 mt-4">
-                                            <div className="flex flex-col">
-                                                <label className="text-[10px] font-black text-brand uppercase tracking-[0.2em] ml-1 mb-1">Assign to Services</label>
-                                                <p className="text-[9px] font-bold text-content-subtle uppercase tracking-widest ml-1 mb-4">Leave empty to apply system-wide</p>
-                                            </div>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                {['Instant Wash', 'Studio Wash', 'Apartment Wash', 'Spare Driver'].map(service => (
-                                                    <button
-                                                        key={service}
-                                                        type="button"
-                                                        onClick={() => {
-                                                            const current = formData.applicableServices || [];
-                                                            const next = current.includes(service)
-                                                                ? current.filter(s => s !== service)
-                                                                : [...current, service];
-                                                            setFormData({ ...formData, applicableServices: next });
-                                                        }}
-                                                        className={`flex items-center gap-4 px-5 py-4 rounded-2xl border transition-all active:scale-[0.98] ${(formData.applicableServices || []).includes(service)
-                                                                ? 'bg-brand/5 border-brand text-brand shadow-sm shadow-brand/5'
-                                                                : 'bg-gray-50 border-gray-100 text-content-subtle hover:border-brand/30'
-                                                            }`}
-                                                    >
-                                                        <div className={`w-6 h-6 rounded-xl border-2 flex items-center justify-center transition-all flex-shrink-0 ${(formData.applicableServices || []).includes(service)
-                                                                ? 'bg-brand border-brand text-white'
-                                                                : 'border-gray-200 bg-white group-hover:border-brand/30'
-                                                            }`}>
-                                                            {(formData.applicableServices || []).includes(service) && <Check size={14} strokeWidth={4} />}
-                                                        </div>
-                                                        <span className="text-[11px] font-[1000] uppercase tracking-tight">{service}</span>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
                                     </div>
 
-                                    <div className="pt-4">
+                                    <div className="pt-8 mt-4 border-t border-gray-100">
+                                        <div className="flex flex-col mb-8">
+                                            <label className="text-[10px] font-black text-brand uppercase tracking-[0.2em] ml-1 mb-1">Global Campaign Execution</label>
+                                            <p className="text-[9px] font-bold text-content-subtle uppercase tracking-widest ml-1">This protocol will be synchronized globally across all network nodes. Specific service logic is now managed via the Service Catalog.</p>
+                                        </div>
+
                                         <button
                                             disabled={loading}
+                                            type="submit"
                                             className="w-full bg-content text-white py-5 rounded-[2rem] font-black text-[10px] uppercase tracking-[0.25em] shadow-2xl shadow-content/20 flex items-center justify-center gap-3 hover:bg-brand transition-all disabled:opacity-50"
                                         >
                                             {loading ? 'Initializing Protocol...' : (
-                                                <>{editingPromo ? 'Update Synchronization' : 'Commit Protocol'} <CheckCircle2 size={18} /></>
+                                                <>{editingPromo ? 'Update Synchronization' : 'Commit Global Protocol'} <CheckCircle2 size={18} /></>
                                             )}
                                         </button>
                                     </div>

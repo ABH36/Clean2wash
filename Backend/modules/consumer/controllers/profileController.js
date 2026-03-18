@@ -820,9 +820,9 @@ exports.createSubscription = async (req, res) => {
         const endDate = new Date(startDate);
         endDate.setMonth(endDate.getMonth() + durationMonths);
 
-        const featureText = Array.isArray(planObj.features) ? planObj.features.join(' ') : '';
-        const washesMatch = featureText.match(/(\d+)\s*(wash|washes|credit|credits)/i);
-        const monthlyCredits = washesMatch ? Number(washesMatch[1]) : 0;
+        const monthlyCredits = planObj.credits || 0;
+        const maxVehicles = planObj.maxVehicles || 1;
+        const rollover = planObj.rollover || 0;
 
         const planBenefits = [];
         (planObj.features || []).forEach((feature) => {
@@ -861,6 +861,8 @@ exports.createSubscription = async (req, res) => {
             autoRenew,
             benefits: [...new Set(planBenefits)],
             monthlyCredits,
+            maxVehicles,
+            rollover,
             price: {
                 amount: planObj.price,
                 currency: 'INR',

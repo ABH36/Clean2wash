@@ -128,6 +128,10 @@ server.listen(PORT, () => {
     console.log(`🚗 SpareDriver API: http://localhost:${PORT}/api/sparedrivers`.cyan.bold);
     console.log(`🏥 Health Check: http://localhost:${PORT}/api/health`.green.bold);
     console.log(`📡 Socket.io initialized on port ${PORT}`.magenta.bold);
+    
+    // Start Background Monitor for Scheduled Bookings
+    const startBookingMonitor = require('./utils/bookingMonitor');
+    startBookingMonitor();
 });
 
 module.exports = { app, server };

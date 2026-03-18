@@ -1,21 +1,34 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 import {
     Zap, Clock, CheckCircle2, ShieldCheck,
     ArrowRight, MapPin, ChevronDown, Car,
     Timer, Rocket, Star, Shield, Navigation,
     Phone, MessageSquare, Droplets, Camera,
     AlertTriangle, History, Search, X, ChevronLeft,
-    CreditCard, LayoutGrid, Check, Info, ChevronRight,
-    Plus, Minus, Gift, Bike, Crown, Play, Calendar, Home, Loader2, Radar, Image, Warehouse, CheckCircle
+    Check, Info, ChevronRight, Edit3, Settings, Stars,
+    Plus, Minus, Gift, Bike, Crown, Play, Calendar, Home, Loader2, Radar, Image, Wallet, ExternalLink, CreditCard, LayoutGrid, CheckCircle, ChevronUp, MinusCircle
 } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { useCart } from '../../../context/CartContext';
-import { serviceAPI, productAPI, vehicleAPI } from '../../../utils/api';
+import { serviceAPI, vehicleAPI, walletAPI, paymentAPI, subscriptionAPI, productAPI } from '../../../utils/api';
+import apiClient from '../../../utils/api';
 import { socketService } from '../../../utils/socket';
 import MobileLayout from '../components/layout/MobileLayout';
-import { toast } from 'react-hot-toast';
+import AddressSelector from '../components/AddressSelector';
+import { MapContainer, TileLayer, Marker, useMap, Pane } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Leaflet Icon Fix for Vite
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
 
 const PHASES = {
     IDLE: 'IDLE',
@@ -28,34 +41,10 @@ const PHASES = {
     PAYMENT: 'PAYMENT',
 };
 
-/* â”€â”€â”€ Static Data (from ServiceSelection) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€ Static Data (from ServiceSelection) Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€Ã¢â‚¬â€ */
 
 // Hardcoded services removed. Will fetch dynamically from DB.
-const VEHICLE_TYPES = [
-    { id: 'hatchback', label: 'Hatch', multiplier: 1.0 },
-    { id: 'sedan', label: 'Sedan', multiplier: 1.2 },
-    { id: 'suv', label: 'SUV', multiplier: 1.5 },
-    { id: 'muv', label: 'MUV', multiplier: 1.4 },
-    { id: 'compact suv', label: 'Compact SUV', multiplier: 1.4 },
-    { id: 'luxury sedan', label: 'Luxury Sedan', multiplier: 2.0 },
-    { id: 'luxury suv', label: 'Luxury SUV', multiplier: 2.2 },
-    { id: 'coupe', label: 'Coupe', multiplier: 1.8 },
-    { id: 'convertible', label: 'Convertible', multiplier: 2.0 },
-    { id: 'sports car', label: 'Sports Car', multiplier: 2.5 },
-    { id: 'supercar', label: 'Super Car', multiplier: 3.0 },
-    { id: 'ev', label: 'EV', multiplier: 1.2 },
-    { id: 'mini truck', label: 'Mini Truck', multiplier: 1.8 },
-    { id: 'truck', label: 'Truck', multiplier: 2.5 },
-    { id: 'van', label: 'Van', multiplier: 1.8 },
-    { id: 'tractor', label: 'Tractor', multiplier: 2.0 },
-    { id: 'vintage', label: 'Vintage', multiplier: 2.5 },
-    { id: 'bike', label: 'Bike', multiplier: 0.6 },
-    { id: 'scooter', label: 'Scooter', multiplier: 0.5 },
-    { id: 'superbike', label: 'Super Bike', multiplier: 0.9 },
-    // Legacy support
-    { id: 'luxury', label: 'Luxury', multiplier: 2.0 },
-    { id: 'mpv', label: 'MUV', multiplier: 1.4 },
-];
+// VEHICLE_TYPES will be fetched dynamically from DB
 
 const FALLBACK_IMAGES = [
     'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=600&q=80',
@@ -64,12 +53,25 @@ const FALLBACK_IMAGES = [
     'https://images.unsplash.com/photo-1605164599901-aba17e7c003a?w=600&q=80',
 ];
 
+const handleImageError = (e) => {
+    e.target.onerror = null; // Prevent infinite loop
+    e.target.src = FALLBACK_IMAGES[0];
+};
+
+const sanitizeUrl = (url) => {
+    if (!url) return FALLBACK_IMAGES[0];
+    if (typeof url === 'string' && (url.includes('localhost:') || url.includes('127.0.0.1:'))) {
+        return FALLBACK_IMAGES[0];
+    }
+    return url;
+};
+
 const JOB_STATES = [
     { id: 'CONFIRMED', label: 'Booking Confirmed', icon: CheckCircle2, color: 'text-emerald-500' },
-    { id: 'EN_ROUTE', label: 'Captain En Route', icon: Navigation, color: 'text-blue-500' },
-    { id: 'WASHING', label: 'Wash In Progress', icon: Droplets, color: 'text-sky-500' },
-    { id: 'QUALITY_CHECK', label: 'Quality Check', icon: ShieldCheck, color: 'text-brand' },
-    { id: 'COMPLETED', label: 'Completed', icon: CheckCircle, color: 'text-green-600' },
+    { id: 'EN_ROUTE', label: 'Expert En Route', icon: Navigation, color: 'text-blue-500' },
+    { id: 'WASHING', label: 'Detailing In Progress', icon: Droplets, color: 'text-sky-500' },
+    { id: 'QUALITY_CHECK', label: 'Final Gloss Check', icon: ShieldCheck, color: 'text-brand' },
+    { id: 'COMPLETED', label: 'Service Completed', icon: CheckCircle, color: 'text-green-600' },
 ];
 
 const pkgAddonImages = {
@@ -83,308 +85,846 @@ const pkgAddonImages = {
     'p4': 'https://images.unsplash.com/photo-1494905998402-395d579af36f?w=400&q=80',
     'd1': 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=400&q=80',
     'd2': 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=400&q=80',
-    'd3': 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=400&q=80',
-};
+    };
 
 const FullWashBooking = () => {
     const navigate = useNavigate();
-    const location = useLocation();
-    const { user, vehicles, addresses, addBooking, updateBookingStatus, bookings, userSubscription, setUserSubscription, getRazorpayKey, createPaymentOrder, verifyPayment } = useAuth();
-    const { cartItems: shopCart, removeFromCart, clearCart, addToCart } = useCart();
+    const { 
+        vehicles, addresses, addBooking, updateBookingStatus, bookings, 
+        userSubscription, setUserSubscription, getRazorpayKey, createPaymentOrder, 
+        verifyPayment, getUser, walletBalance, updateBalance, loadWallet, 
+        isBlackPassMember, globalCatalog, loadGlobalCatalog, catalogLoading, 
+        addVehicle, vehiclesLoading 
+    } = useAuth();
+    const [searchParams] = useSearchParams();
+    const user = getUser('consumer');
+    const { cartItems: cart, setCartItems: setCart } = useCart();
 
-    const [phase, setPhase] = useState(PHASES.SERVICE_SELECTION);
-    const [selectedVehicle, setSelectedVehicle] = useState(vehicles.find(v => v.isPrimary) || vehicles[0]);
-    const [selectedVehicleType, setSelectedVehicleType] = useState(vehicles.find(v => v.isPrimary)?.type?.toLowerCase() || vehicles[0]?.type?.toLowerCase() || 'sedan');
-    const [activeServiceId, setActiveServiceId] = useState(null);
-    const [activeBookingId, setActiveBookingId] = useState(null);
-    const [jobStateIndex, setJobStateIndex] = useState(0);
-    const [serviceAddons, setServiceAddons] = useState({});
-    const [useSubscription, setUseSubscription] = useState(false);
-    const [showDemoVideo, setShowDemoVideo] = useState(false);
-    const [showAddServices, setShowAddServices] = useState(false);
-    const [showServiceCoverage, setShowServiceCoverage] = useState(false);
-    const [cart, setCart] = useState([]);
-    const [selectedDate, setSelectedDate] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState(null);
-    const [selectedSlot, setSelectedSlot] = useState(null);
-    const [selectedLocation, setSelectedLocation] = useState(null);
-    const [isProcessing, setIsProcessing] = useState(false);
+    // --- Core UI & Persistence States ---
+    const [phase, setPhase] = useState(() => {
+        const saved = sessionStorage.getItem('iw_phase');
+        return saved || PHASES.SERVICE_SELECTION;
+    });
 
-    // Sync vehicle type when vehicle changes
+    // --- Phase History Management ---
+    const [phaseHistory, setPhaseHistory] = useState([]);
+    
+    const navigateToPhase = useCallback((newPhase) => {
+        setPhaseHistory(prev => [...prev, phase]);
+        setPhase(newPhase);
+    }, [phase]);
+
+    const handleBack = useCallback(() => {
+        // Explicit phase transitions for robust back navigation (handles page refreshes)
+        if (phase === PHASES.CART) {
+            setPhase(PHASES.SERVICE_SELECTION);
+            return;
+        }
+        if (phase === PHASES.SELECT_SLOT) {
+            setPhase(PHASES.CART);
+            return;
+        }
+        if (phase === PHASES.PAYMENT) {
+            setPhase(PHASES.SELECT_SLOT);
+            return;
+        }
+
+        if (phaseHistory.length > 0) {
+            const prevPhase = phaseHistory[phaseHistory.length - 1];
+            setPhaseHistory(prev => prev.slice(0, -1));
+            setPhase(prevPhase);
+        } else {
+            // If on main service selection or any other root phase with no history, go home
+            if (phase === PHASES.SERVICE_SELECTION || phase === PHASES.SELECT_VEHICLE) {
+                navigate('/');
+            } else {
+                setPhase(PHASES.SERVICE_SELECTION);
+            }
+        }
+    }, [phase, phaseHistory, navigate]);
+    const [selectedVehicle, setSelectedVehicle] = useState(() => {
+        const saved = sessionStorage.getItem('iw_vehicle');
+        if (saved) return JSON.parse(saved);
+        return vehicles.find(v => v.isPrimary) || vehicles[0];
+    });
+    const [selectedVehicleType, setSelectedVehicleType] = useState(() => selectedVehicle?.type?.toLowerCase() || 'sedan');
+
     useEffect(() => {
         if (selectedVehicle?.type) {
             setSelectedVehicleType(selectedVehicle.type.toLowerCase());
         }
     }, [selectedVehicle]);
 
-    // Dynamic Dates Generation
-    const dates = useMemo(() => {
-        const result = [];
-        const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-        const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    const [activeServiceId, setActiveServiceId] = useState('eco');
+    const [activeBookingId, setActiveBookingId] = useState(null);
+    const [jobStateIndex, setJobStateIndex] = useState(0);
+    const [activeBooking, setActiveBooking] = useState(null);
+    const [showDemoVideo, setShowDemoVideo] = useState(false);
+    const [showAddServices, setShowAddServices] = useState(false);
+    const [showServiceCoverage, setShowServiceCoverage] = useState(false);
+    const [showAddressSelector, setShowAddressSelector] = useState(false);
+    const [expandedServiceId, setExpandedServiceId] = useState(null);
+    const [loadingServices, setLoadingServices] = useState(true);
+    const [lastWalletLoad, setLastWalletLoad] = useState(0);
 
-        for (let i = 0; i < 7; i++) {
-            const date = new Date();
-            date.setDate(date.getDate() + i);
-            result.push({
-                month: months[date.getMonth()],
-                day: date.getDate().toString(),
-                weekday: days[date.getDay()],
-                trend: i < 3 ? 'up' : null
-            });
+    // Refresh wallet balance when entering Payment phase
+    useEffect(() => {
+        if (phase === PHASES.PAYMENT && Date.now() - lastWalletLoad > 30000) { // Throttle 30s
+            loadWallet();
+            setLastWalletLoad(Date.now());
         }
-        return result;
+    }, [phase, loadWallet, lastWalletLoad]);
+    const [showAddVehicleModal, setShowAddVehicleModal] = useState(false);
+    const [activeVideoUrl, setActiveVideoUrl] = useState('');
+    const [videoPlaying, setVideoPlaying] = useState(false);
+
+    // --- Dynamic Data States ---
+    const [dynamicServices, setDynamicServices] = useState([]);
+    const [vehicleTypes, setVehicleTypes] = useState([]);
+    const [loadingVehicles, setLoadingVehicles] = useState(true);
+    const [subscriptionPlans, setSubscriptionPlans] = useState([]);
+    const [loadingPlans, setLoadingPlans] = useState(true);
+    const [allVehicleModels, setAllVehicleModels] = useState([]);
+    const [promotions, setPromotions] = useState([]);
+    const [loadingPromotions, setLoadingPromotions] = useState(true);
+    const [suggestedProducts, setSuggestedProducts] = useState([]);
+    const [loadingProducts, setLoadingProducts] = useState(true);
+    const [passConfig, setPassConfig] = useState(null);
+    const [globalSettings, setGlobalSettings] = useState({
+        combo_discount_pct: 20,
+        multi_asset_discount_pct: 20
+    });
+
+    // --- Booking & Cart States ---
+    const [serviceAddons, setServiceAddons] = useState(() => {
+        const saved = sessionStorage.getItem('iw_addons');
+        return saved ? JSON.parse(saved) : {};
+    });
+    const [useSubscription, setUseSubscription] = useState(false);
+    const [selectedLocation, setSelectedLocation] = useState(() => {
+        const saved = sessionStorage.getItem('iw_location');
+        return saved ? JSON.parse(saved) : null;
+    });
+    const [bookingType, setBookingType] = useState(() => {
+        const saved = sessionStorage.getItem('iw_booking_type');
+        return saved || 'instant';
+    });
+    const [selectedDate, setSelectedDate] = useState(() => {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        return d.toISOString();
+    });
+    const [paymentMethod, setPaymentMethod] = useState(null);
+    const [selectedSlot, setSelectedSlot] = useState(null);
+    const [couponCode, setCouponCode] = useState('');
+    const [appliedCoupon, setAppliedCoupon] = useState(null);
+    const [couponError, setCouponError] = useState('');
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [loadingConfig, setLoadingConfig] = useState(true);
+
+    // --- Tracking & Assets States ---
+    const [findingTime, setFindingTime] = useState(0);
+    const [searchRetry, setSearchRetry] = useState(0);
+    const [captainPos, setCaptainPos] = useState({ lat: 30, lng: 50 });
+    const [selectedGlobalModel, setSelectedGlobalModel] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [plateNumber, setPlateNumber] = useState('');
+    const [vehicleColor, setVehicleColor] = useState('');
+    const [isAddingVehicle, setIsAddingVehicle] = useState(false);
+    const [banners, setBanners] = useState([]);
+    const [loadingBanners, setLoadingBanners] = useState(false);
+
+    // --- Helper Functions (Defined before memos/effects that use them) ---
+    // --- Core Context Memos & State Dependencies ---
+    const matchedModel = useMemo(() => {
+        if (!selectedVehicle || allVehicleModels.length === 0) return null;
+        return allVehicleModels.find(m =>
+            m.brand?.toLowerCase() === selectedVehicle.brand?.toLowerCase() &&
+            m.model?.toLowerCase() === selectedVehicle.model?.toLowerCase()
+        );
+    }, [selectedVehicle, allVehicleModels]);
+
+    const getPrice = useCallback((prices, id) => {
+        // 1. Calculate Standard Base Price for this Service
+        const dynamicService = dynamicServices.find(s => s.id === id || s._id === id);
+        let basePrice = 0;
+        
+        if (dynamicService?.adjustedPrice) {
+            basePrice = dynamicService.adjustedPrice;
+        } else if (typeof prices === 'number') {
+            basePrice = prices;
+        } else if (prices) {
+            const type = (selectedVehicleType || selectedVehicle?.type || 'sedan').toLowerCase();
+            basePrice = prices[type] || prices['sedan'] || 0;
+        }
+
+        // 2. Asset Specific Intelligence Check
+        // If the admin has set a "Specific Valuation" (Base Price) for this car model,
+        // we calculate a "Luxury Factor" based on the first Express service as reference.
+        if (matchedModel?.basePrice > 0 && dynamicServices.length > 0) {
+            const referenceService = dynamicServices.find(s => s.category === 'Studio Detailing') || dynamicServices[0];
+            const refPrices = referenceService.price;
+            if (refPrices && typeof refPrices === 'object') {
+                const type = (selectedVehicle?.type || selectedVehicleType || 'sedan').toLowerCase();
+                const standardRefPrice = refPrices[type] || refPrices['sedan'] || 399; // Fallback to 399 if unknown
+                
+                // Calculate the multiplier (Factor)
+                const assetFactor = matchedModel.basePrice / standardRefPrice;
+                
+                // If the service is the reference service itself, just use the set basePrice
+                if (id === referenceService.id || id === referenceService._id) {
+                    basePrice = matchedModel.basePrice;
+                } else {
+                    // For other services, apply the luxury asset factor to keep logic dynamic
+                    basePrice = basePrice * assetFactor;
+                }
+            } else {
+                // If no reference mapping, fall back to simple override for the main wash
+                if (id === referenceService.id || id === referenceService._id) {
+                    basePrice = matchedModel.basePrice;
+                }
+            }
+        }
+
+        // 3. Auto-apply Black Pass discount
+        if (isBlackPassMember && passConfig?.discount) {
+            basePrice = basePrice * (1 - passConfig.discount);
+        }
+
+        return Math.floor(basePrice);
+    }, [selectedVehicle, selectedVehicleType, dynamicServices, isBlackPassMember, passConfig, matchedModel]);
+
+    const getEstimatedTime = useCallback((service, model) => {
+        // High priority: Specific Session Time for this asset from Admin Catalog
+        if (model?.sessionTime > 0) return model.sessionTime;
+        
+        // Dynamic Calculation: Service Base + Asset Complexity Multiplier
+        // Ensuring base is parsed correctly from strings like "30 min"
+        const baseContent = String(service?.duration || '30');
+        const base = parseInt(baseContent.replace(/[^\d]/g, '')) || 30;
+        const multiplier = model?.difficulty === 'Hard' ? 2 : (model?.difficulty === 'Medium' ? 1.5 : 1);
+        return Math.floor(base * multiplier);
     }, []);
 
-    useEffect(() => {
-        if (dates.length > 0 && !selectedDate) {
-            setSelectedDate(`${dates[0].month} ${dates[0].day}`);
+    const canUseSubscription = useCallback((serviceId) => {
+        if (!isBlackPassMember || !userSubscription) return false;
+        const plan = subscriptionPlans.find(p => p.id === userSubscription.planId || p._id === userSubscription.planId);
+        if (!plan) return false;
+        return plan.applicableServices?.includes(serviceId) || plan.applicableServices?.includes('all');
+    }, [isBlackPassMember, userSubscription, subscriptionPlans]);
+
+    const activeService = useMemo(() => {
+        if (!dynamicServices || dynamicServices.length === 0) return null;
+        const found = dynamicServices.find(s => s.id === activeServiceId || s._id === activeServiceId);
+        return found || dynamicServices[0];
+    }, [dynamicServices, activeServiceId]);
+
+    const activeServicePrice = useMemo(() => {
+        if (!activeService) return 0;
+        return getPrice(activeService.price, activeService.id || activeService._id);
+    }, [activeService, getPrice]);
+
+    const activeServiceDuration = useMemo(() => {
+        if (!activeService) return 30;
+        return getEstimatedTime(activeService, matchedModel);
+    }, [activeService, matchedModel, getEstimatedTime]);
+
+    const handleBookingSuccess = useCallback((booking) => {
+        const newBookingId = booking._id || booking.id;
+        setActiveBookingId(newBookingId);
+        setActiveBooking(booking);
+        addBooking(booking);
+
+        // Persist active booking for session recovery
+        sessionStorage.setItem('iw_active_booking_id', newBookingId);
+
+        // Success state + cart cleanup
+        setPhase(PHASES.FINDING);
+        setCart([]);
+        localStorage.removeItem('clean2wash_cart');
+        toast.success("Booking successful!");
+
+        try {
+            socketService.connect();
+            if (user?.id) socketService.joinUserRoom(user.id);
+            socketService.joinBookingRoom(newBookingId);
+        } catch (err) {
+            console.error('Socket join failed:', err);
         }
-    }, [dates]);
+    }, [addBooking, user?.id, setCart]);
 
-    // Dynamic Services State
-    const [dynamicServices, setDynamicServices] = useState([]);
-    const [loadingServices, setLoadingServices] = useState(true);
-    const [passConfig, setPassConfig] = useState(null);
-    const [subscriptionPlans, setSubscriptionPlans] = useState([]);
-    const [selectedSubscription, setSelectedSubscription] = useState(null);
-    const [suggestedProducts, setSuggestedProducts] = useState([]);
-    const [loadingProducts, setLoadingProducts] = useState(false);
-
-    const [expandedCategory, setExpandedCategory] = useState(null);
+    // --- Phase Recovery & UI Logic ---
+    const displayModel = useMemo(() => selectedVehicle?.model || 'Select Vehicle', [selectedVehicle]);
+    const displayBrand = useMemo(() => selectedVehicle?.brand || 'CLEAN-2-WASH', [selectedVehicle]);
+    const isMatched = useMemo(() => !!matchedModel, [matchedModel]);
 
     const categories = useMemo(() => {
+        if (!dynamicServices || dynamicServices.length === 0) return [];
         const uniqueCats = [...new Set(dynamicServices.map(s => s.category))];
         return uniqueCats.filter(Boolean);
     }, [dynamicServices]);
 
     useEffect(() => {
-        if (categories.length > 0 && !expandedCategory) {
-            setExpandedCategory(categories[0]);
+        if (dynamicServices.length > 0 && !expandedServiceId) {
+            setExpandedServiceId(dynamicServices[0].id || dynamicServices[0]._id);
         }
-    }, [categories]);
+    }, [dynamicServices, expandedServiceId]);
 
+    const effectiveItems = useMemo(() => {
+        const items = [...cart];
+        
+        // Ensure the active service is included if not in cart (fallback)
+        if (activeService && !items.some(it => it.serviceId === (activeService.id || activeService._id))) {
+            // But only if we are in a phase that implies a selection has been made
+            if ([PHASES.CART, PHASES.SELECT_SLOT].includes(phase)) {
+                // If cart is empty, we should probably add it back or it was cleared?
+                // For now, let's rely on cart being the source of truth if NOT empty
+            }
+        }
+        
+        if (activeBooking) {
+            const bookings = Array.isArray(activeBooking) ? activeBooking : [activeBooking];
+            bookings.forEach(b => {
+                const alreadyIn = items.some(it => (it.id === b.id || it._id === b._id));
+                if (!alreadyIn) items.push(b);
+            });
+        }
+        return items;
+    }, [activeBooking, cart, activeService, phase]);
+
+    const totalCartPrice = useMemo(() => effectiveItems.reduce((sum, item) => sum + Number(item.price || item.salePrice || 0), 0), [effectiveItems]);
+    const totalCartDuration = useMemo(() => effectiveItems.reduce((sum, item) => sum + (item.duration || 0), 0), [effectiveItems]);
+    const discountAmount = useMemo(() => appliedCoupon?.discountAmount || 0, [appliedCoupon]);
+
+    const filteredPromotions = useMemo(() => {
+        if (!promotions) return [];
+        return promotions.filter(p =>
+            p.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.subtitle?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.type?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [promotions, searchQuery]);
+
+    const filteredSubscriptionPlans = useMemo(() => {
+        if (!subscriptionPlans) return [];
+        return subscriptionPlans.filter(p => {
+            const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                p.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                p.description?.toLowerCase().includes(searchQuery.toLowerCase());
+            
+            // Only show plans strictly relevant to Studio Detailing
+            const isStudioPlan = (p.category === 'Studio Detailing');
+            
+            return matchesSearch && isStudioPlan;
+        });
+    }, [subscriptionPlans, searchQuery]);
+
+    const blackPassPlan = useMemo(() => 
+        subscriptionPlans?.find(p => (p.name || p.title || '').toLowerCase().includes('black')),
+        [subscriptionPlans]
+    );
+    const finalPrice = useMemo(() => {
+        const servicesAndSubs = effectiveItems.filter(item => item.type !== 'product' && item.type !== 'item');
+        const productItems = effectiveItems.filter(item => item.type === 'product' || item.type === 'item');
+        
+        // Subscription check
+        const hasActiveCredits = userSubscription && (userSubscription.monthlyCredits > (userSubscription.usedCredits || 0));
+
+        // 1. Calculate Base Totals
+        let baseServiceTotal = servicesAndSubs.reduce((sum, item) => {
+            if (hasActiveCredits && item.type === 'service' && !item.isAddon) {
+                return sum + 0;
+            }
+            return sum + Number(item.price || 0);
+        }, 0);
+
+        let baseProductTotal = productItems.reduce((sum, item) => sum + Number(item.price || item.salePrice || 0), 0);
+
+        // 2. Dynamic Combo Discount (Multi-asset/Multi-service)
+        const washCount = servicesAndSubs.filter(item => item.type === 'service').length;
+        let comboDiscount = 0;
+        if (washCount > 1) {
+            const washesTotal = servicesAndSubs.filter(item => item.type === 'service').reduce((s, i) => s + (i.price || 0), 0);
+            comboDiscount = Math.round(washesTotal * (globalSettings.combo_discount_pct / 200)); 
+        }
+
+        // 3. Global Black Pass Benefits
+        const hasBlackPassInCart = effectiveItems.some(item =>
+            item.type === 'subscription' && (item.serviceName?.toLowerCase().includes('black') || item.name?.toLowerCase().includes('black'))
+        );
+        const shouldApplyGlobalPass = hasBlackPassInCart || isBlackPassMember;
+        const passDiscountRate = passConfig?.discount || 0.3;
+
+        if (shouldApplyGlobalPass) {
+            const discountedServiceTotal = servicesAndSubs.reduce((sum, item) => {
+                const itemPrice = Number(item.price || 0);
+                if (item.type === 'subscription') return sum + itemPrice;
+                if (item.isSubscribedWash || hasActiveCredits) return sum + 0;
+                return sum + (itemPrice * (1 - passDiscountRate));
+            }, 0);
+
+            const discountedProductTotal = productItems.reduce((sum, item) => {
+                const itemPrice = Number(item.price || item.salePrice || 0);
+                return sum + (itemPrice * (1 - passDiscountRate));
+            }, 0);
+
+            return Math.max(0, Math.round(discountedServiceTotal + discountedProductTotal - comboDiscount));
+        }
+
+        return Math.max(0, Math.round(baseServiceTotal + baseProductTotal - comboDiscount));
+    }, [effectiveItems, isBlackPassMember, passConfig, userSubscription, globalSettings]);
+
+    // --- Side Effects ---
+    
+    // 1. Core Services Fetching (Depends on Vehicle Type for dynamic multiplier)
     useEffect(() => {
-        const fetchInitialData = async () => {
+        const fetchServices = async () => {
             try {
                 setLoadingServices(true);
-                // Fetch both services, home data (for config), and subscription plans
-                const [servicesRes, homeRes, plansRes, prodRes] = await Promise.all([
-                    serviceAPI.getServices(),
-                    serviceAPI.getHomeData(),
-                    serviceAPI.getPlans ? serviceAPI.getPlans() : Promise.resolve({ status: 'success', data: [] }),
-                    productAPI.getProducts ? productAPI.getProducts({ limit: 4 }) : Promise.resolve({ status: 'success', data: { products: [] } })
-                ]);
-
-                console.log('Services Response:', servicesRes);
-                console.log('Home Data Response:', homeRes);
-                console.log('Plans Response:', plansRes);
-
-                if (servicesRes.status === 'success' || Array.isArray(servicesRes.data)) {
-                    const allServices = (servicesRes.data.services || servicesRes.data || []);
-                    // Strictly filter for Studio Wash services (Studio/Vendor related)
-                    const filtered = allServices.filter(s => {
-                        const cat = (s.category || s.metadata?.category || '').toLowerCase();
-                        const provider = (s.provider || s.metadata?.provider || '').toLowerCase();
-                        const title = (s.title || '').toLowerCase();
-                        
-                        return (cat === 'studio' || provider === 'vendor' || cat.includes('detailing')) && 
-                               !cat.includes('apartment') && 
-                               !cat.includes('spare driver') &&
-                               !title.includes('spare driver');
-                    });
-                    
+                const vType = selectedVehicle?.type || selectedVehicleType || 'sedan';
+                const servRes = await serviceAPI.getServices({ type: 'vendor', vehicleType: vType });
+                
+                if (servRes.status === 'success') {
+                    const allServices = servRes.data.services || [];
+                    const filtered = allServices.filter(s => 
+                        s.category === 'Studio Detailing'
+                    );
                     setDynamicServices(filtered);
-                    if (filtered[0]) {
+                    
+                    if (filtered[0] && !activeServiceId) {
                         setActiveServiceId(filtered[0].id || filtered[0]._id);
                     }
                 }
-
-                if (homeRes.status === 'success' && homeRes.data?.stats) {
-                    const config = homeRes.data.stats.find(s => s.key === 'WASH_PASS_CONFIG');
-                    if (config) {
-                        setPassConfig(config.metadata);
-                    }
-                }
-
-                if (plansRes.status === 'success' || Array.isArray(plansRes.data)) {
-                    setSubscriptionPlans(plansRes.data.plans || plansRes.data || []);
-                }
-
-                if (prodRes.status === 'success' || prodRes.data?.products) {
-                    setSuggestedProducts(prodRes.data?.products || []);
-                }
             } catch (err) {
-                console.error("Failed to fetch initial data", err);
+                console.error("InstantWash: Service fetch failed", err);
             } finally {
                 setLoadingServices(false);
             }
         };
+        fetchServices();
+    }, [selectedVehicle?.type, selectedVehicleType, activeServiceId]);
 
-        fetchInitialData();
-    }, []);
-
-    // Check if subscription can be used
-    const canUseSubscription = useMemo(() => {
-        if (!userSubscription || userSubscription.status !== 'Active' || userSubscription.washesLeft <= 0) return false;
-        return (userSubscription.vehicleIds || []).includes(selectedVehicle?.id);
-    }, [userSubscription, selectedVehicle]);
-
+    // 2. Initial Static Data Fetching
     useEffect(() => {
-        if (!canUseSubscription) setUseSubscription(false);
-    }, [canUseSubscription]);
+        const fetchStaticData = async () => {
+            try {
+                setLoadingVehicles(true);
+                setLoadingPlans(true);
+                setLoadingPromotions(true);
+                setLoadingProducts(true);
+                setLoadingBanners(true);
 
-    // Socket Integration for Live Tracking
+                const [vTypeRes, vModelRes, planRes, promoRes, prodRes, bannerRes, homeRes] = await Promise.all([
+                    vehicleAPI.getVehicleTypes(),
+                    vehicleAPI.getVehicleModels(),
+                    serviceAPI.getPlans(),
+                    serviceAPI.getPromotions(),
+                    productAPI.getProducts({ limit: 8 }),
+                    serviceAPI.getBanners({ category: 'Instant Wash' }),
+                    serviceAPI.getHomeData()
+                ]);
+
+                if (vTypeRes.status === 'success') {
+                    setVehicleTypes(vTypeRes.data.vehicleTypes);
+                    if (!selectedVehicleType) {
+                        setSelectedVehicleType(vTypeRes.data.vehicleTypes[0]?.type?.toLowerCase() || 'sedan');
+                    }
+                }
+                if (vModelRes.status === 'success') setAllVehicleModels(vModelRes.data.vehicleModels);
+                if (planRes.status === 'success') setSubscriptionPlans(planRes.data.plans);
+                if (promoRes.status === 'success') setPromotions(promoRes.data.cards);
+                if (prodRes.status === 'success') setSuggestedProducts(prodRes.data.products);
+                if (bannerRes && bannerRes.status === 'success') setBanners(bannerRes.data.banners || []);
+
+                if (homeRes && homeRes.status === 'success' && homeRes.data?.stats) {
+                    const passConf = homeRes.data.stats.find(s => s.key === 'WASH_PASS_CONFIG');
+                    if (passConf) setPassConfig(passConf.metadata);
+                }
+
+                // Fetch Dynamic Instant Wash Config
+                try {
+                    const configRes = await serviceAPI.getInstantWashConfig();
+                    if (configRes.status === 'success') {
+                        setGlobalSettings(configRes.data.settings || {});
+                        if (configRes.data.plans) setSubscriptionPlans(configRes.data.plans);
+                        if (configRes.data.passConfig) setPassConfig(configRes.data.passConfig);
+                    }
+                } catch (configErr) {
+                    console.error("InstantWash: Config fetch failed", configErr);
+                }
+
+                loadGlobalCatalog();
+
+            } catch (err) {
+                console.error("InstantWash: Static data fetch failed", err);
+            } finally {
+                setLoadingVehicles(false);
+                setLoadingPlans(false);
+                setLoadingPromotions(false);
+                setLoadingProducts(false);
+                setLoadingBanners(false);
+                setLoadingConfig(false);
+            }
+        };
+        fetchStaticData();
+    }, []);
+    // 2. Auto-apply Coupon from URL
+    useEffect(() => {
+        const urlCoupon = searchParams.get('coupon');
+        if (urlCoupon && !appliedCoupon) {
+            handleApplyCoupon(urlCoupon);
+        }
+    }, [searchParams, dynamicServices, phase]); 
+    // 3. Real-time Tracking (Socket.IO)
     useEffect(() => {
         if (!activeBookingId) return;
 
-        const handleUpdate = (data) => {
-            if (data.bookingId === activeBookingId) {
-                console.log('Studio Booking Update:', data);
+        socketService.connect();
+        socketService.joinBookingRoom(activeBookingId);
+        if (user?.id) socketService.joinUserRoom(user.id);
+
+        const handleStatusUpdate = (data) => {
+            console.log('Clean-2-Wash: Socket Status Update:', data);
+            
+            // Normalize status from data.status or data if directly passed
+            const newStatus = data.status;
+            
+            if (newStatus) {
+                // If backend sent the full booking (or updated parts), merge it
+                if (data.booking) {
+                    setActiveBooking(data.booking);
+                } else {
+                    // Manual merge of status and provider info if present
+                    setActiveBooking(prev => ({ 
+                        ...prev, 
+                        status: newStatus,
+                        provider: data.captain ? { ...prev?.provider, ...data.captain } : prev?.provider,
+                        securityPin: data.securityPin || prev?.securityPin
+                    }));
+                }
+                
+                updateBookingStatus(activeBookingId, newStatus);
+                
                 // Map DB status to 5-Phase UI State
                 let uiStatusId = '';
-                const dbStatus = data.status.toLowerCase();
-                if(['pending', 'confirmed', 'accepted'].includes(dbStatus)) uiStatusId = 'CONFIRMED';
+                const dbStatus = newStatus.toLowerCase();
+                
+                if(['pending', 'confirmed', 'accepted'].includes(dbStatus)) {
+                    uiStatusId = 'CONFIRMED';
+                    // Auto-transition to tracking once confirmed
+                    if (phase === PHASES.FINDING) setPhase(PHASES.LIVE_TRACK);
+                }
                 else if(['assigned', 'pickup-assigned', 'en_route', 'arrived'].includes(dbStatus)) uiStatusId = 'EN_ROUTE';
                 else if(['before_photo', 'at-studio', 'washing', 'in_progress', 'after_photo'].includes(dbStatus)) uiStatusId = 'WASHING';
                 else if(['quality-check'].includes(dbStatus)) uiStatusId = 'QUALITY_CHECK';
                 else if(['ready-for-delivery', 'delivery-assigned', 'completed'].includes(dbStatus)) uiStatusId = 'COMPLETED';
 
-                const stateIdx = JOB_STATES.findIndex(s => s.id === uiStatusId);
-                if (stateIdx !== -1) {
-                    setJobStateIndex(stateIdx);
+                const idx = JOB_STATES.findIndex(s => s.id === uiStatusId);
+                if (idx !== -1) setJobStateIndex(idx);
+
+                if (['completed', 'cancelled'].includes(newStatus)) {
+                    toast.success(`Booking ${newStatus}!`);
+                    if (newStatus === 'completed') {
+                        setTimeout(() => {
+                            setPhase(PHASES.SERVICE_SELECTION);
+                            setActiveBookingId(null);
+                        }, 5000);
+                    } else {
+                        setPhase(PHASES.SERVICE_SELECTION);
+                        setActiveBookingId(null);
+                    }
                 }
             }
         };
 
-        socketService.on('booking_status_updated', handleUpdate);
-        return () => socketService.off('booking_status_updated', handleUpdate);
+        socketService.on('booking_status_updated', handleStatusUpdate);
+        socketService.on('locationUpdate', (data) => {
+            if (data.lat && data.lng) setCaptainPos({ lat: parseFloat(data.lat), lng: parseFloat(data.lng) });
+        });
+
+        return () => {
+            socketService.off('booking_status_updated', handleStatusUpdate);
+            socketService.off('locationUpdate');
+            socketService.disconnect();
+        };
+    }, [activeBookingId, user?.id, updateBookingStatus]);
+
+    // 3. Finding Phase Fallback Timer
+    useEffect(() => {
+        let timer;
+        if (phase === PHASES.FINDING) {
+            setFindingTime(60);
+            timer = setInterval(() => {
+                setFindingTime(prev => {
+                    if (prev <= 1) {
+                        clearInterval(timer);
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        } else {
+            setFindingTime(0);
+        }
+        return () => clearInterval(timer);
+    }, [phase, searchRetry]);
+
+    // 4. Persistence & Session Recovery
+    useEffect(() => {
+        sessionStorage.setItem('iw_phase', phase);
+        if (selectedVehicle) sessionStorage.setItem('iw_vehicle', JSON.stringify(selectedVehicle));
+        if (selectedLocation) sessionStorage.setItem('iw_location', JSON.stringify(selectedLocation));
+        sessionStorage.setItem('iw_addons', JSON.stringify(serviceAddons));
+        sessionStorage.setItem('iw_booking_type', bookingType);
+        if (activeBookingId) sessionStorage.setItem('iw_active_booking_id', activeBookingId);
+    }, [phase, selectedVehicle, selectedLocation, serviceAddons, bookingType, activeBookingId]);
+
+    useEffect(() => {
+        const recoverSession = async () => {
+            const savedId = sessionStorage.getItem('iw_active_booking_id');
+            if (savedId && !activeBookingId) {
+                console.log('Clean-2-Wash: Attempting session recovery for:', savedId);
+                try {
+                    const res = await apiClient.getBooking(savedId);
+                    if (res?.status === 'success' && res?.data?.booking) {
+                        const b = res.data.booking;
+                        setActiveBookingId(savedId);
+                        setActiveBooking(b);
+                        if (['pending'].includes(b.status)) setPhase(PHASES.FINDING);
+                        else if (['confirmed', 'en_route', 'at-studio', 'in_progress'].includes(b.status)) setPhase(PHASES.LIVE_TRACK);
+                    }
+                } catch (err) {
+                    console.error('Session recovery failed:', err);
+                }
+            }
+        };
+        recoverSession();
     }, [activeBookingId]);
 
-    // Active Items
-    const activeBooking = bookings.find(b => b.id === activeBookingId || b._id === activeBookingId);
-    const activeService = dynamicServices.find(s => s.id === activeServiceId) || dynamicServices[0];
-
-    // Price helpers from ServiceSelection
-    const getPrice = (priceStr) => {
-        const base = parseInt(String(priceStr).replace(/[^\d]/g, ''));
-        const multiplier = VEHICLE_TYPES.find(v => v.id === selectedVehicleType)?.multiplier || 1;
-        return Math.round(base * multiplier);
-    };
-
-    // Initialize service addons
-    useEffect(() => {
-        if (activeService) {
-            const initialAddons = (activeService.addons || [])
-                .filter(a => a.included)
-                .map(a => a.id);
-            setServiceAddons(prev => ({ ...prev, [activeServiceId]: initialAddons }));
+    // --- Action Handlers ---
+    const handleInstantWash = () => {
+        if (!selectedVehicle) {
+            setShowAddVehicleModal(true);
+            return;
         }
-    }, [activeServiceId, activeService]);
-    
-    // Combined Pricing Logic (Unified for UI & Payment)
-    const { totalCartPrice, discount, applyBlackDiscount, totalDuration, isBlackMember } = useMemo(() => {
-        const bookingItemsTotal = (cart || []).reduce((sum, item) => sum + item.price, 0);
-        const shopProductsTotal = (shopCart || []).reduce((sum, item) => sum + ((item.salePrice || item.price) * (item.qty || 1)), 0);
-        const subscriptionPrice = selectedSubscription ? parseInt(selectedSubscription.price) || parseInt(selectedSubscription.total) : 0;
-        
-        let subtotal = bookingItemsTotal + shopProductsTotal + subscriptionPrice;
-        
-        // Black Pass Discount (30% if user is Black member or buying Black Pass)
-        const isBlackMember = userSubscription?.planType === 'black' && userSubscription?.status === 'Active';
-        const isBuyingBlack = selectedSubscription?.type === 'black' || 
-                             (selectedSubscription?.title?.toLowerCase().includes('black')) ||
-                             (selectedSubscription?.name?.toLowerCase().includes('black'));
-        
-        const applyBlackDiscount = isBlackMember || isBuyingBlack;
-        const discount = applyBlackDiscount ? Math.round(subtotal * 0.3) : 0;
-        const totalDuration = cart.reduce((sum, item) => sum + (item.duration || 120), 0);
 
-        return {
-            totalCartPrice: subtotal - discount,
-            discount,
-            applyBlackDiscount,
-            totalDuration,
-            isBlackMember
-        };
-    }, [cart, shopCart, selectedSubscription, userSubscription]);
-
-    // Removed Simulated Flow Logic in favor of real API and Socket updates
-
-    const handleStartSearch = () => {
-        setPhase(PHASES.SERVICE_SELECTION);
-    };
-
-    const handleProceedToBooking = () => {
-        const addons = activeService.addons || [];
-        const selectedAddons = serviceAddons[activeServiceId] || [];
-        const addonTotal = addons
-            .filter(a => selectedAddons.includes(a.id) && !a.included)
+        const basePrice = getPrice(activeService.price, activeService.id);
+        const selectedAddonIds = serviceAddons[activeServiceId] || [];
+        const addonsPrice = (activeService.addons || [])
+            .filter(a => selectedAddonIds.includes(a.id) && !a.included)
             .reduce((sum, a) => sum + a.price, 0);
-        const basePrice = getPrice(activeService.price);
-        const totalPrice = basePrice + addonTotal;
 
         const newItem = {
             id: Date.now(),
             serviceId: activeServiceId,
             serviceName: activeService.title,
-            price: totalPrice,
-            vehicleId: selectedVehicle?.id,
-            vehicleName: selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model}` : "Your Car",
-            vehicleImg: selectedVehicle?.img || 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=600&q=80',
-            duration: activeService.estimatedTime || 120,
-            type: 'standard'
+            price: basePrice + addonsPrice,
+            duration: getEstimatedTime(activeService, matchedModel),
+            vehicleId: selectedVehicle?.id || selectedVehicle?._id,
+            vehicleName: `${selectedVehicle.brand} ${selectedVehicle.model}`,
+            vehicleImg: selectedVehicle.img,
+            type: 'standard',
+            addons: selectedAddonIds
         };
 
-        setCart(prev => {
-            const isDuplicate = prev.some(it => it.serviceId === newItem.serviceId && it.vehicleId === newItem.vehicleId);
-            if (isDuplicate) return prev;
-            return [...prev, newItem];
-        });
+        setCart(prev => [...prev, newItem]);
         setPhase(PHASES.CART);
     };
+    
+    const renderAddVehicleModal = () => {
+        const filteredCatalog = (globalCatalog || []).filter(item =>
+            item.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.model.toLowerCase().includes(searchQuery.toLowerCase())
+        );
 
-    const handleSelectMonthly = (plan) => {
-        const newItem = {
-            id: Date.now(),
-            planId: plan.id || 'monthly',
-            serviceName: plan.title,
-            price: parseInt(plan.total),
-            vehicleId: selectedVehicle?.id,
-            vehicleName: selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model}` : "Your Car",
-            vehicleImg: selectedVehicle?.img || 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=600&q=80',
-            type: 'monthly'
-        };
-        setCart(prev => {
-            const isDuplicate = prev.some(it => it.planId === newItem.planId && it.vehicleId === newItem.vehicleId);
-            if (isDuplicate) return prev;
-            return [...prev, newItem];
-        });
-        setPhase(PHASES.CART);
+        return (
+            <AnimatePresence>
+                {showAddVehicleModal && (
+                    <div className="fixed inset-0 z-[200] flex items-end justify-center">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowAddVehicleModal(false)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            className="relative w-full max-w-lg bg-[#F8FAFC] rounded-t-[3rem] p-6 flex flex-col max-h-[90vh] shadow-2xl overflow-hidden"
+                        >
+                            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6 shrink-0 active:scale-90 transition-transform cursor-pointer" onClick={() => setShowAddVehicleModal(false)} />
+
+                            {!selectedGlobalModel ? (
+                                <>
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h3 className="text-[20px] font-black text-black uppercase tracking-tight">Select Global Model</h3>
+                                        <div className="flex items-center gap-2 bg-brand/10 px-3 py-1 rounded-full">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
+                                            <span className="text-[9px] font-black text-brand uppercase tracking-widest">Admin Catalog</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="relative mb-6">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                        <input
+                                            type="text"
+                                            placeholder="Search brand or model (e.g. BMW, Baleno)"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="w-full bg-white border border-gray-100 rounded-2xl py-4 pl-12 pr-4 text-[13px] font-bold shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/20 transition-all"
+                                        />
+                                    </div>
+
+                                    <div className="flex-1 overflow-y-auto space-y-3 pr-1 -mr-1 custom-scrollbar pb-10">
+                                        {filteredCatalog.length > 0 ? (
+                                            filteredCatalog.map((item) => (
+                                                <motion.div
+                                                    key={item._id}
+                                                    whileTap={{ scale: 0.98 }}
+                                                    onClick={() => setSelectedGlobalModel(item)}
+                                                    className="bg-white p-3 rounded-2xl border border-gray-100 flex items-center gap-4 hover:border-brand shadow-sm transition-all"
+                                                >
+                                                    <div className="w-16 h-16 bg-gray-50 rounded-xl overflow-hidden shadow-inner flex-shrink-0">
+                                                        <img
+                                                            src={sanitizeUrl(item.image)}
+                                                            className="w-full h-full object-cover"
+                                                            alt={item.model}
+                                                            onError={handleImageError}
+                                                        />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <h4 className="text-[14px] font-black text-black leading-tight uppercase italic">{item.brand} {item.model}</h4>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <span className="text-[8px] font-black text-black/30 uppercase tracking-widest">{item.type}</span>
+                                                            <div className="w-1 h-1 rounded-full bg-brand" />
+                                                            <span className="text-[8px] font-black text-brand uppercase tracking-widest italic">{item.difficulty} Protocol</span>
+                                                        </div>
+                                                    </div>
+                                                    <ChevronRight size={18} className="text-gray-300" />
+                                                </motion.div>
+                                            ))
+                                        ) : (
+                                            <div className="py-20 text-center">
+                                                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                    <Search size={24} className="text-gray-300" />
+                                                </div>
+                                                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Model not found in Studio Catalog</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="flex flex-col h-full animate-in slide-in-from-right duration-300">
+                                    <button
+                                        onClick={() => setSelectedGlobalModel(null)}
+                                        className="flex items-center gap-2 text-gray-400 mb-6 hover:text-black transition-colors"
+                                    >
+                                        <ChevronLeft size={20} />
+                                        <span className="text-[11px] font-black uppercase tracking-widest">Back to catalog</span>
+                                    </button>
+
+                                    <div className="bg-white border-2 border-brand rounded-[2.5rem] p-6 mb-8 relative overflow-hidden shadow-xl shadow-brand/5">
+                                        <div className="absolute top-0 right-0 w-32 h-full bg-brand/5 skew-x-[-20deg]" />
+                                        <div className="relative z-10 flex items-center gap-6">
+                                            <div className="w-24 h-24 bg-black rounded-2xl overflow-hidden shadow-2xl border border-brand/20">
+                                                <img
+                                                    src={sanitizeUrl(selectedGlobalModel.image)}
+                                                    className="w-full h-full object-cover"
+                                                    alt={selectedGlobalModel.model}
+                                                    onError={handleImageError}
+                                                />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-[22px] font-black text-black leading-none uppercase italic tracking-tight">{selectedGlobalModel.brand}</h3>
+                                                <h4 className="text-[18px] font-black text-brand leading-none uppercase italic mt-1">{selectedGlobalModel.model}</h4>
+                                                <div className="inline-flex items-center gap-2 bg-black text-white px-2.5 py-1 rounded-lg mt-3">
+                                                    <LayoutGrid size={12} className="text-brand" />
+                                                    <span className="text-[9px] font-black uppercase tracking-widest">{selectedGlobalModel.type} Protocol</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] ml-2 mb-2 block">Registration Plate</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Enter Plate Number (e.g. DL10CZ4567)"
+                                                value={plateNumber}
+                                                onChange={(e) => setPlateNumber(e.target.value)}
+                                                className="w-full bg-white border border-gray-100 rounded-[1.4rem] py-4 px-6 text-[15px] font-[1000] tracking-wider uppercase shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/20 transition-all placeholder:text-gray-200"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] ml-2 mb-2 block">Body Color</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Vehicle Color (e.g. Black, Pearl White)"
+                                                value={vehicleColor}
+                                                onChange={(e) => setVehicleColor(e.target.value)}
+                                                className="w-full bg-white border border-gray-100 rounded-[1.4rem] py-4 px-6 text-[13px] font-bold shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/20 transition-all"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-auto pt-10 pb-4">
+                                        <button
+                                            onClick={handleRegisterVehicle}
+                                            disabled={isAddingVehicle || !plateNumber || !vehicleColor}
+                                            className={`w-full h-16 rounded-[1.6rem] font-black text-[13px] uppercase tracking-[0.25em] flex items-center justify-center gap-4 shadow-2xl transition-all active:scale-95 ${isAddingVehicle || !plateNumber || !vehicleColor
+                                                ? 'bg-gray-100 text-gray-300'
+                                                : 'bg-[#1A1A1A] text-white shadow-black/20'
+                                                }`}
+                                        >
+                                            {isAddingVehicle ? (
+                                                <>
+                                                    <Loader2 className="animate-spin" size={20} />
+                                                    <span>Registering...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span>Activate Protocol</span>
+                                                    <ShieldCheck size={20} className="text-brand" />
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+        );
     };
 
-    const toggleAddon = (addonId) => {
-        const currentAddons = serviceAddons[activeServiceId] || [];
-        const addon = activeService.addons?.find(a => a.id === addonId);
-        if (addon?.included) return;
+    const handleApplyCoupon = async (specificCode) => {
+        const codeToApply = (specificCode || couponCode || '').trim().toUpperCase();
+        if (!codeToApply) return;
 
-        setServiceAddons(prev => ({
-            ...prev,
-            [activeServiceId]: currentAddons.includes(addonId)
-                ? currentAddons.filter(id => id !== addonId)
-                : [...currentAddons, addonId]
-        }));
-    };
-
-    const sanitizeUrl = (url) => {
-        if (!url) return 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=600&q=80';
-        if (url.startsWith('http')) return url;
-        if (url.startsWith('assets')) return `/${url}`;
-        return url;
-    };
-
-    const handleImageError = (e) => {
-        e.target.src = 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=600&q=80';
+        // Frontend Anti-Stacking Alert
+        if (isBlackPassMember) {
+            setCouponError("Premium member benefits are active. Non-stacking policy: Additional coupons cannot be combined with subscription discounts.");
+            return;
+        }
+        try {
+            const activeServiceName = effectiveItems.find(i => i.serviceId)?.serviceName || 'Instant Wash';
+            const res = await serviceAPI.validateCoupon(codeToApply, totalCartPrice, activeServiceName);
+            if (res.status === 'success') {
+                setAppliedCoupon(res.data.coupon);
+                setCouponCode(res.data.coupon.code);
+                setCouponError('');
+            } else {
+                setCouponError(res.message || 'Invalid coupon code');
+                setAppliedCoupon(null);
+            }
+        } catch (err) {
+            setCouponError(err.message || 'Error validating coupon');
+            setAppliedCoupon(null);
+        }
     };
 
     const renderHeader = () => {
@@ -393,340 +933,372 @@ const FullWashBooking = () => {
             <header className="px-5 pt-5 pb-3 flex items-center justify-between bg-white border-b border-black/[0.04] sticky top-0 z-[100]">
                 <div className="flex items-center gap-3">
                     <button
-                        onClick={() => navigate('/')}
+                        onClick={handleBack}
                         className="p-1 -ml-1 text-black"
                     >
                         <ChevronLeft size={22} strokeWidth={2.5} />
                     </button>
-                    <h1 className="text-[16px] font-[1000] text-black tracking-tight uppercase" style={{ fontFamily: 'Inter, sans-serif' }}>
-                        CAR WASH & CARE
+                    <h1 className="text-[14px] font-[1000] text-black tracking-tight uppercase" style={{ fontFamily: 'Inter, sans-serif' }}>
+                        Studio Detailing Experience
                     </h1>
                 </div>
 
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gray-50 flex items-center justify-center rounded-lg border border-black/[0.03]">
-                        <Image size={16} className="text-black/40" />
-                    </div>
+                <div className="flex items-center gap-2">
+                    <button 
+                        onClick={() => navigate('/addresses?from=studio-wash')}
+                        className="w-9 h-9 bg-gray-50/80 rounded-xl flex items-center justify-center border border-black/[0.02] active:scale-95 transition-transform"
+                    >
+                        <MapPin size={16} className="text-black/60" />
+                    </button>
+                    <button 
+                        onClick={() => navigate('/wallet')}
+                        className="w-9 h-9 bg-gray-50/80 rounded-xl flex items-center justify-center border border-black/[0.02] active:scale-95 transition-transform"
+                    >
+                        <Wallet size={16} className="text-black/60" />
+                    </button>
+                    <button 
+                        onClick={() => navigateToPhase(PHASES.SELECT_VEHICLE)}
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all duration-500 ${phase === PHASES.LIVE_TRACK || phase === PHASES.FINDING ? 'bg-black border-[#00FF66]/30 shadow-[0_0_10px_rgba(0,255,102,0.15)]' : 'bg-gray-50/80 border-black/[0.02]'}`}
+                    >
+                        <Car size={16} className={phase === PHASES.LIVE_TRACK || phase === PHASES.FINDING ? 'text-[#00FF66]' : 'text-black/80'} />
+                    </button>
                 </div>
             </header>
         );
     };
 
-    const renderIdle = () => {
-        return (
-            <div className="space-y-6 pt-6 pb-12">
-                {/* Theme Hero Section */}
-                <section className="px-5">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}
-                        className="bg-white rounded-[2.5rem] p-6 relative overflow-hidden min-h-[130px] shadow-[0_20px_50px_rgba(242,159,5,0.15)] border border-brand/20"
-                    >
-                        <div className="absolute top-[-20%] right-[-20%] w-60 h-60 bg-brand/30 rounded-full blur-[80px]" />
-                        <div className="relative z-10">
-                            <div className="inline-flex items-center bg-brand/20 backdrop-blur-md border border-brand/10 px-3 py-1 rounded-lg mb-4">
-                                <Zap size={10} fill="currentColor" className="text-brand mr-2" />
-                                <span className="text-[9px] font-black text-brand uppercase tracking-[0.2em] leading-none">Instant Deployment</span>
-                            </div>
-                            <h2 className="text-[36px] font-[1000] text-black leading-[0.8] uppercase tracking-tighter mb-4" style={{ fontFamily: 'Inter, sans-serif' }}>
-                                WASH IN<br />
-                                <span className="text-brand">{activeService?.estimatedTime || 120} MINS</span>
-                            </h2>
-                            <p className="text-black/40 text-[10px] font-bold uppercase tracking-[0.1em] max-w-[170px] leading-relaxed">
-                                Experience studio-grade detailing <br />delivered to your exact location.
-                            </p>
-                        </div>
-
-                        <div className="absolute bottom-[-10%] right-[-10%] w-[65%] h-auto drop-shadow-[0_20px_40px_rgba(242,159,5,0.4)] pointer-events-none">
-                            <img src="/assets/carwash/6.png" className="w-full h-auto object-contain" />
-                        </div>
-                    </motion.div>
-                </section>
-
-                {/* Premium Vehicle Status */}
-                <section className="px-5">
-                    <div className="bg-white rounded-[2rem] border border-black/[0.06] p-4 flex items-center gap-4 shadow-sm">
-                        <div className="w-14 h-14 bg-[#FDF8EE] rounded-xl flex items-center justify-center border border-orange-100/50 shadow-inner overflow-hidden">
-                            <img src={selectedVehicle?.img} className="w-full h-full object-cover" />
-                        </div>
-                        <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-0.5">
-                                <h4 className="text-[15px] font-[1000] text-black leading-none">{selectedVehicle?.brand} {selectedVehicle?.model}</h4>
-                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                            </div>
-                            <p className="text-[10px] font-bold text-black/20 uppercase tracking-widest leading-none">{selectedVehicle?.plate || 'Active Session'}</p>
-                        </div>
-                        <button
-                            onClick={() => setPhase(PHASES.SELECT_VEHICLE)}
-                            className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-black/40 hover:text-brand transition-colors"
-                        >
-                            <Settings size={18} />
-                        </button>
-                    </div>
-                </section>
-
-                {/* Quick Pricing Brief */}
-                <section className="px-5">
-                    <div className="bg-[#F3DCCB] rounded-[2rem] p-6 border border-[#DBC4B5]/40 relative overflow-hidden shadow-sm">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full -mr-10 -mt-10 blur-2xl" />
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-2xl font-[1000] text-black leading-none">Starting Subscription</h3>
-                            <h3 className="text-2xl font-[1000] text-black leading-none">₹{getPrice(activeService?.price || '299')} <span className="text-[11px] font-bold text-black/40 NOT-italic ml-1">per session</span></h3>
-                            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg shadow-brand/10">
-                                <Stars size={22} className="text-brand" fill="currentColor" />
-                            </div>
-                        </div>
-                        <motion.button
-                            whileTap={{ scale: 0.96 }}
-                            onClick={() => {
-                                setPhase(PHASES.FINDING);
-                            }}
-                            className="w-full bg-[#1A1A1A] text-white h-14 rounded-2xl font-black text-[12px] uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-xl active:scale-95 transition-transform"
-                        >
-                            Confirm Service Protocol
-                            <ChevronRight size={18} strokeWidth={3} />
-                        </motion.button>
-                    </div>
-                </section>
-
-                {/* Specs Grid */}
-                <section className="px-5">
-                    <div className="grid grid-cols-2 gap-4">
-                        {[
-                            { title: 'Response', desc: `< ${activeService?.estimatedTime || 120} MINS`, icon: Timer, color: 'text-brand' },
-                            { title: 'Quality', desc: 'STUDIO GRADE', icon: ShieldCheck, color: 'text-emerald-500' }
-                        ].map((spec, i) => (
-                            <div key={i} className="bg-white rounded-2xl p-4 border border-black/[0.03] shadow-sm flex flex-col gap-3">
-                                <div className={`w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center ${spec.color}`}>
-                                    <spec.icon size={18} />
-                                </div>
-                                <div>
-                                    <p className="text-[8px] font-black text-black/20 uppercase tracking-widest">{spec.title}</p>
-                                    <p className="text-[11px] font-black text-black mt-0.5">{spec.desc}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-            </div>
-        );
-    };
-
     const renderServiceSelection = () => {
         const currentAddons = serviceAddons[activeServiceId] || [];
-        const basePrice = getPrice(activeService?.price || 299);
+        const basePrice = getPrice(activeService?.price, activeService?.id);
         const addonTotal = (activeService?.addons || [])
             .filter(a => currentAddons.includes(a.id) && !a.included)
-            .reduce((sum, a) => sum + a.price, 0);
+            .reduce((sum, a) => sum + (a.price || 0), 0);
         const totalPrice = basePrice + addonTotal;
 
         return (
-            <div className="bg-gray-100 min-h-screen pb-20">
-                <div className="bg-[#FFFCE8] border-b border-yellow-100 py-2 px-6 flex items-center justify-center gap-2">
-                    <p className="text-black/80 text-[11px] font-bold text-center">
-                        {passConfig?.marketingLine || 'Save up to 40% on every service'} with <span className="text-black font-[1000]">{passConfig?.title || 'clean2wash BLACK'}</span>
-                    </p>
-                    <div className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
+            <div className="bg-gray-100 min-h-screen pb-20 font-outfit">
+                {/* Personalized Header Section */}
+                <div className="px-5 pt-8 pb-4 flex items-center justify-between">
+                    <div>
+                        <p className="text-[10px] font-black text-brand uppercase tracking-[0.2em] mb-1">Station 01 / LIVE</p>
+                        <h1 className="text-[28px] font-[1000] text-black leading-none uppercase italic tracking-tighter">
+                            Instant Wash
+                        </h1>
+                        <p className="text-[9px] font-black text-black/30 uppercase tracking-[0.15em] mt-1.5 flex items-center gap-2">
+                             Protocol Ready for <span className="text-black font-black">{user?.name || 'Authorized User'}</span>
+                             <span className="w-1 h-1 rounded-full bg-black/10" />
+                             {new Date().toLocaleDateString('en-US', { weekday: 'long' })}
+                        </p>
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-white border border-black/[0.03] shadow-sm flex items-center justify-center">
+                        <Stars size={20} className="text-brand" />
+                    </div>
+                </div>
+
+                {/* Live Status Pulse */}
+                <div className="px-5 pb-4">
+                    <div className="flex items-center justify-between bg-white/50 backdrop-blur-md rounded-2xl px-4 py-3 border border-black/[0.02] shadow-inner">
+                        <div className="flex items-center gap-3">
+                            <div className="relative flex h-2.5 w-2.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                            </div>
+                            <span className="text-[10px] font-black text-black uppercase tracking-widest italic">Live Ops Status</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Radar size={12} className="text-emerald-500 animate-pulse" />
+                            <span className="text-[9px] font-[1000] text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full uppercase tracking-tighter">4 Professional Studios Online</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Dynamic Banner Section */}
+                <div className="px-5 pt-2">
+                    {banners && banners.length > 0 ? (
+                        <div className="relative h-40 rounded-[2rem] overflow-hidden shadow-lg border border-white">
+                            <img src={sanitizeUrl(banners[0].image)} className="w-full h-full object-cover" alt="Offers" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-6">
+                                <h3 className="text-white text-lg font-black uppercase italic leading-none">{banners[0].title || "Luxury Protocol"}</h3>
+                                <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest mt-1">{banners[0].subtitle || "Exclusive Studio Grade Experience"}</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="relative h-40 rounded-[2rem] overflow-hidden shadow-lg bg-black group">
+                            <img 
+                                src="https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=800&q=80" 
+                                className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700" 
+                                alt="Standard Banner" 
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-tr from-brand/20 to-transparent" />
+                            <div className="absolute inset-0 flex flex-col justify-end p-6">
+                                <span className="w-8 h-1 bg-brand mb-3" />
+                                <h3 className="text-white text-xl font-[1000] uppercase italic leading-none tracking-tighter">PREMIUM STUDIO WASH</h3>
+                                <p className="text-white/60 text-[9px] font-black uppercase tracking-[0.3em] mt-2">Zero Wait Time Policy</p>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Selected Vehicle Context (Premium Redesign) */}
-                <div className="px-5 pt-4 pb-2">
-                    <div className="bg-white rounded-[1.25rem] p-4 flex items-center justify-between border border-black/[0.04] shadow-[0_10px_40px_rgba(0,0,0,0.04)]">
+                <div className="px-5 pt-6 pb-2">
+                    <div className="bg-white rounded-[1.5rem] p-5 flex items-center justify-between border border-black/[0.03] shadow-[0_20px_50px_rgba(0,0,0,0.06)] relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-brand/10 transition-colors" />
+
                         {selectedVehicle ? (
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center border border-black/[0.02] shadow-inner">
-                                    <Car size={20} className="text-black/80" />
+                            <div className="flex items-center gap-5 relative z-10">
+                                <div className="w-16 h-16 bg-gray-50 rounded-[1.25rem] flex items-center justify-center border border-black/[0.02] shadow-inner overflow-hidden">
+                                    {selectedVehicle.img ? (
+                                        <img src={sanitizeUrl(selectedVehicle.img)} className="w-full h-full object-cover grayscale-[0.5] group-hover:grayscale-0 transition-all duration-500" alt={selectedVehicle.model} />
+                                    ) : (
+                                        <Car size={32} className="text-black/80" />
+                                    )}
                                 </div>
                                 <div>
-                                    <h4 className="text-[14px] font-[1000] text-black tracking-tight leading-none mb-1.5 uppercase italic">{selectedVehicle.brand}</h4>
-                                    <p className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] leading-none">{selectedVehicle.model} • {selectedVehicle.type}</p>
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                        <h4 className="text-[15px] font-[1000] text-black tracking-tight leading-none uppercase italic">
+                                            {matchedModel ? `${matchedModel.brand} ${matchedModel.model}` : `${selectedVehicle.brand} ${selectedVehicle.model}`}
+                                        </h4>
+                                        {matchedModel && (
+                                            <div className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-md flex items-center gap-1 border border-emerald-100/50">
+                                                <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                                                <span className="text-[7px] font-black uppercase tracking-widest">Protocol Sync</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <p className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] leading-none">
+                                        {matchedModel ? `${matchedModel.type} • ${matchedModel.difficulty} Difficulty` : 'Awaiting Studio Asset Sync'}
+                                    </p>
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center border border-orange-100/30 shadow-inner">
-                                    <Car size={20} className="text-brand/40" />
+                            <div className="flex items-center gap-4 relative z-10 opacity-40 grayscale">
+                                <div className="w-16 h-16 bg-gray-50 rounded-[1.25rem] flex items-center justify-center border border-black/[0.02] shadow-inner">
+                                    <Car size={32} className="text-black/80" />
                                 </div>
                                 <div>
-                                    <h4 className="text-[14px] font-[1000] text-black tracking-tight leading-none mb-1.5 uppercase italic">Select Your Asset</h4>
-                                    <p className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] leading-none">Registration Required</p>
+                                    <h4 className="text-[15px] font-[1000] text-black tracking-tight leading-none mb-1.5 uppercase italic">Select Asset</h4>
+                                    <p className="text-[9px] font-black text-black/10 uppercase tracking-[0.2em] leading-none">Vehicle Protocol Required</p>
                                 </div>
                             </div>
                         )}
                         <button 
-                            onClick={() => navigate('/vehicles?from=full-wash')} 
-                            className="text-[10px] font-black text-brand uppercase tracking-[0.15em] border border-orange-100 px-4 py-2 rounded-xl active:scale-95 transition-all"
+                            onClick={() => navigate('/vehicles?from=studio-wash')} 
+                            className="text-[10px] font-black text-brand uppercase tracking-[0.15em] border border-orange-100 bg-orange-50/30 px-5 py-3 rounded-2xl active:scale-95 transition-all shadow-sm hover:bg-brand hover:text-white relative z-10"
                         >
                             {selectedVehicle ? 'CHANGE' : 'SELECT'}
                         </button>
                     </div>
                 </div>
 
-                {/* Wash Packages List (Grouped) */}
+                {/* Wash Packages List (Individual Service Accordions) */}
                 <div className="px-4 py-2 space-y-4">
-                    {console.log('Current dynamicServices:', dynamicServices)}
-                    {loadingServices ? (
+                    {loadingServices && dynamicServices.length === 0 ? (
                         <div className="flex items-center justify-center p-12">
                             <Loader2 size={32} className="text-brand animate-spin" />
                         </div>
                     ) : (
-                        categories.map((cat) => {
-                            const servicesInCat = dynamicServices.filter(s => s.category === cat);
-                            const isCatExpanded = expandedCategory === cat;
+                        dynamicServices.filter(s => s.category === 'Studio Detailing').map((pkg) => {
+                             const pkgId = pkg.id || pkg._id;
+                             const isServiceExpanded = expandedServiceId === pkgId;
+                             const pkgBasePrice = getPrice(pkg.price, pkgId);
+                             const splitImages = [
+                                 sanitizeUrl(pkg.image),
+                                 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=400&q=80',
+                                 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=400&q=80'
+                             ];
 
-                            return (
-                                <div key={cat} className="space-y-4">
-                                    <div
-                                        onClick={() => setExpandedCategory(isCatExpanded ? null : cat)}
-                                        className={`px-6 py-4 rounded-[1.5rem] flex items-center justify-between cursor-pointer transition-all ${isCatExpanded ? 'bg-[#222222] text-white' : 'bg-[#EBD3C1] text-black shadow-sm'}`}
-                                    >
-                                        <h3 className="text-[14px] font-[1000] tracking-tight uppercase italic">{cat}</h3>
-                                        <ChevronDown size={18} className={`transition-transform duration-300 ${isCatExpanded ? 'rotate-180 text-brand' : 'opacity-40'}`} />
+                             return (
+                                 <div key={pkgId} className="space-y-4">
+                                     <div
+                                         onClick={() => setExpandedServiceId(isServiceExpanded ? null : pkgId)}
+                                         className={`px-6 py-4 rounded-[1.5rem] flex items-center justify-between cursor-pointer transition-all ${isServiceExpanded ? 'bg-[#222222] text-white' : 'bg-white text-black border border-black/[0.03] shadow-sm'}`}
+                                     >
+                                         <h3 className="text-[14px] font-[1000] tracking-tight uppercase italic">{pkg.title}</h3>
+                                        <ChevronDown size={18} className={`transition-transform duration-300 ${isServiceExpanded ? 'rotate-180 text-brand' : 'opacity-40'}`} />
                                     </div>
 
                                     <AnimatePresence>
-                                        {isCatExpanded && servicesInCat.map((pkg) => {
-                                            const isPkgActive = activeServiceId === pkg.id;
-                                            const pkgBasePrice = getPrice(pkg.price);
-                                            const splitImages = [
-                                                pkg.image || '/assets/carwash/6.png',
-                                                '/assets/carwash/7.png',
-                                                '/assets/carwash/8.png'
-                                            ];
-
-                                            return (
-                                                <motion.div
-                                                    key={pkg.id}
-                                                    initial={{ opacity: 0, height: 0 }}
-                                                    animate={{ opacity: 1, height: 'auto' }}
-                                                    exit={{ opacity: 0, height: 0 }}
-                                                    className="bg-white rounded-[2.5rem] border border-black/[0.03] overflow-hidden shadow-[0_15px_50px_rgba(0,0,0,0.05)]"
-                                                >
-                                                    {/* Diagonal Image Split Section */}
-                                                    <div className="relative h-[110px] flex overflow-hidden">
-                                                        <div className="flex-1 relative">
-                                                            <img src={splitImages[0]} className="w-full h-full object-cover" />
-                                                            <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-transparent" />
-                                                        </div>
-                                                        <div className="absolute left-[35%] top-0 bottom-0 w-[40%] skew-x-[-15deg] border-x-[6px] border-white overflow-hidden shadow-2xl z-10 bg-white">
-                                                            <img src={splitImages[1]} className="w-full h-full object-cover skew-x-[15deg] scale-150" />
-                                                        </div>
-                                                        <div className="flex-1 relative group">
-                                                            <img src={splitImages[2]} className="w-full h-full object-cover" />
-                                                            <div className="absolute top-4 right-4 bg-black/80 px-2 py-1 rounded text-white text-[10px] font-black italic shadow-lg">
-                                                                {selectedVehicle?.brand || 'BMW'}
-                                                                <div className="flex gap-0.5 mt-0.5">
-                                                                    {[1, 2, 3].map(i => <div key={i} className="w-1.5 h-1 bg-brand" />)}
-                                                                </div>
+                                        {isServiceExpanded && (
+                                            <motion.div
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto' }}
+                                                exit={{ opacity: 0, height: 0 }}
+                                                className="bg-white rounded-[2.5rem] border border-black/[0.03] overflow-hidden shadow-[0_15px_50px_rgba(0,0,0,0.05)] mb-4"
+                                            >
+                                                {/* Diagonal Image Split Section */}
+                                                <div className="relative h-[110px] flex overflow-hidden">
+                                                    <div className="flex-1 relative">
+                                                        <img src={splitImages[0]} className="w-full h-full object-cover" alt="" />
+                                                        <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-transparent" />
+                                                    </div>
+                                                    <div className="absolute left-[35%] top-0 bottom-0 w-[40%] skew-x-[-15deg] border-x-[6px] border-white overflow-hidden shadow-2xl z-10 bg-white">
+                                                        <img src={splitImages[1]} className="w-full h-full object-cover skew-x-[15deg] scale-150" alt="" />
+                                                    </div>
+                                                    <div className="flex-1 relative group">
+                                                        <img src={splitImages[2]} className="w-full h-full object-cover" alt="" />
+                                                        <div className="absolute top-4 right-4 bg-black/80 px-2 py-1 rounded text-white text-[10px] font-black italic shadow-lg">
+                                                            {selectedVehicle?.brand || 'BMW'}
+                                                            <div className="flex gap-0.5 mt-0.5">
+                                                                {[1, 2, 3].map(i => <div key={i} className="w-1.5 h-1 bg-brand" />)}
                                                             </div>
                                                         </div>
                                                     </div>
+                                                </div>
 
-                                                    {/* Rating & Price Stats */}
-                                                    <div className="px-6 py-5 flex items-center justify-between border-b border-black/[0.02]">
-                                                        <div className="flex items-center gap-3">
-                                                            <Star size={20} fill="#F29F05" className="text-brand" />
-                                                            <span className="text-[16px] font-[1000] text-black leading-none">{pkg.rating}</span>
-                                                            <div className="w-1.5 h-1.5 bg-black/10 rounded-full" />
-                                                            <span className="text-[13px] font-bold text-black/30 tracking-tight">2,530 Ratings</span>
-                                                        </div>
-
-                                                        <div className="bg-[#FAF1E8] px-6 py-2.5 rounded-[1.5rem] border border-[#EBE0D5] text-center shadow-sm">
-                                                            <p className="text-[9px] font-black text-black/40 uppercase tracking-widest leading-none mb-1">Starting</p>
-                                                            <span className="text-[22px] font-[1000] text-black leading-none">₹{pkgBasePrice}</span>
-                                                        </div>
+                                                {/* Rating & Price Stats */}
+                                                <div className="px-6 py-5 flex items-center justify-between border-b border-black/[0.02]">
+                                                    <div className="flex items-center gap-3">
+                                                        <Star size={20} fill="#F29F05" className="text-brand" />
+                                                        <span className="text-[16px] font-[1000] text-black leading-none">{pkg.rating || "4.9"}</span>
+                                                        <div className="w-1.5 h-1.5 bg-black/10 rounded-full" />
+                                                        <span className="text-[13px] font-bold text-black/30 tracking-tight">2,530 Ratings</span>
+                                                        {pkg.tag && (
+                                                            <span className="ml-2 px-2 py-0.5 bg-black text-white text-[7px] font-black rounded uppercase tracking-widest">{pkg.tag}</span>
+                                                        )}
                                                     </div>
 
-                                                    {/* BLACK Pass Upsell */}
-                                                    <div className="bg-brand/5 px-6 py-3 border-b border-black/[0.02] flex items-center justify-center">
-                                                        <p className="text-[10px] font-bold text-black/40 uppercase tracking-tight">
-                                                            {passConfig?.marketingLine || 'Save up to 40% on every service'} with <span className="font-[1000] text-black">{passConfig?.title || 'clean2wash BLACK'}</span>
-                                                        </p>
+                                                    <div className="bg-[#FAF1E8] px-6 py-2.5 rounded-[1.5rem] border border-[#EBE0D5] text-center shadow-sm">
+                                                        <p className="text-[9px] font-black text-black/40 uppercase tracking-widest leading-none mb-1">Starting</p>
+                                                        <span className="text-[22px] font-[1000] text-black leading-none">₹{pkgBasePrice}</span>
                                                     </div>
+                                                </div>
 
-                                                    {/* Package Content */}
-                                                    <div className="p-6 pt-5 space-y-6">
-                                                        <div className="flex items-start gap-5">
-                                                            <div className="flex-1 space-y-4">
-                                                                <div>
-                                                                    <h4 className="text-[13px] font-[1000] text-black uppercase tracking-widest leading-none mb-1">Personalize Wash</h4>
-                                                                    <button onClick={() => setShowServiceCoverage(true)} className="text-brand text-[10px] font-black uppercase tracking-[0.2em] border-b border-brand/20">View Details</button>
-                                                                </div>
+                                                {/* BLACK Pass Upsell */}
+                                                <div className="bg-brand/5 px-6 py-3 border-b border-black/[0.02] flex items-center justify-center">
+                                                    <p className="text-[10px] font-bold text-black/40 uppercase tracking-tight">
+                                                        {passConfig?.marketingLine || "Save up to 40% on every service"} with <span className="font-[1000] text-black">{passConfig?.title || 'clean2wash BLACK'}</span>
+                                                    </p>
+                                                </div>
 
-                                                                <div className="bg-orange-50/50 rounded-2xl p-4 border border-orange-100/30">
-                                                                    <div className="flex items-start gap-3">
-                                                                        <div className="w-1.5 h-1.5 rounded-full bg-brand mt-1.5" />
-                                                                        <p className="text-[11px] font-bold text-black/60 leading-relaxed">
-                                                                            <span className="text-black font-black uppercase tracking-tight">Pro Tip:</span> Add Interior Cleaning to remove deep-seated dust and allergens.
-                                                                        </p>
-                                                                    </div>
+                                                {/* Package Content */}
+                                                <div className="p-6 pt-5 space-y-6">
+                                                    {pkg.features && pkg.features.length > 0 && (
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {pkg.features.slice(0, 3).map((feat, i) => (
+                                                                <div key={i} className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-full border border-black/[0.02]">
+                                                                    <div className="w-1 h-1 rounded-full bg-brand" />
+                                                                    <span className="text-[9px] font-black text-black/60 uppercase tracking-tight">{feat.text}</span>
                                                                 </div>
-                                                            </div>
+                                                            ))}
+                                                            {pkg.features.length > 3 && <span className="text-[9px] font-black text-brand self-center ml-1">+{pkg.features.length - 3} MORE</span>}
+                                                        </div>
+                                                    )}
 
-                                                            {/* Right Promo Card */}
-                                                            <div className="w-[125px] flex-shrink-0 bg-[#FAF1E8] rounded-[2rem] border border-[#E9DCCF]/50 p-4 flex flex-col items-center gap-4 shadow-sm relative overflow-hidden group">
-                                                                <img src="/assets/carwash/6.png" className="w-16 h-16 object-cover rounded-2xl shadow-md border-2 border-white group-hover:scale-110 transition-transform" />
-                                                                <div className="text-center">
-                                                                    <p className="text-[#2D9944] font-black text-[10px] uppercase leading-tight">Service at</p>
-                                                                    <p className="text-[#2D9944] font-[1000] text-[24px] leading-none">₹20</p>
-                                                                    <p className="text-[7px] font-black text-black/30 uppercase tracking-widest leading-none mt-1">/ Wash</p>
-                                                                </div>
+                                                    <div className="flex items-start gap-5">
+                                                        <div className="flex-1 space-y-4">
+                                                            <div>
+                                                                <h4 className="text-[13px] font-[1000] text-black uppercase tracking-widest leading-none mb-1">Personalize Wash</h4>
                                                                 <button
-                                                                    onClick={() => setShowDemoVideo(true)}
-                                                                    className="w-10 h-10 bg-[#FF4B91] rounded-full flex items-center justify-center shadow-lg shadow-pink-200 active:scale-90 transition-transform"
+                                                                    onClick={() => {
+                                                                        setActiveServiceId(pkgId);
+                                                                        setShowServiceCoverage(true);
+                                                                    }}
+                                                                    className="text-brand text-[10px] font-black uppercase tracking-[0.2em] border-b border-brand/20"
                                                                 >
-                                                                    <Play size={14} fill="white" className="text-white ml-0.5" />
+                                                                    View Details
                                                                 </button>
-                                                                <span className="text-[8px] font-bold text-black/40 uppercase tracking-[0.2em]">Learn More</span>
+                                                            </div>
+
+                                                            <div className="bg-orange-50/50 rounded-2xl p-4 border border-orange-100/30">
+                                                                <div className="flex items-start gap-3">
+                                                                    <div className="w-1.5 h-1.5 rounded-full bg-brand mt-1.5" />
+                                                                    <p className="text-[11px] font-bold text-black/60 leading-relaxed">
+                                                                        <span className="text-black font-black uppercase tracking-tight">Pro Tip:</span> {pkg.adminNote || 'Add Interior Cleaning to remove deep-seated dust and allergens.'}
+                                                                    </p>
+                                                                </div>
                                                             </div>
                                                         </div>
 
-                                                        {/* Main Action Button */}
-                                                        <button
-                                                            onClick={() => {
-                                                                setActiveServiceId(pkg.id || pkg._id);
-                                                                if (selectedVehicle) {
-                                                                    setShowServiceCoverage(true);
-                                                                } else {
-                                                                    navigate('/vehicles?from=full-wash');
-                                                                }
-                                                            }}
-                                                            className={`w-full h-16 rounded-[1.5rem] font-[1000] text-[15px] uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all ${
-                                                                selectedVehicle 
-                                                                ? 'bg-[#1A1A1A] text-white' 
-                                                                : 'bg-gray-100 text-black/30 shadow-none'
-                                                            }`}
-                                                        >
-                                                            {selectedVehicle ? 'Select Vehicle & Book' : 'Select Vehicle to Book'}
-                                                        </button>
-
-                                                        {/* Trust Badges */}
-                                                        <div className="flex items-center justify-between px-2 opacity-30">
-                                                            <div className="flex items-center gap-2">
-                                                                <ShieldCheck size={12} />
-                                                                <span className="text-[9px] font-black uppercase tracking-widest">Sanitized</span>
+                                                        {/* Right Promo Card */}
+                                                        <div className="w-[125px] flex-shrink-0 bg-[#FAF1E8] rounded-[2rem] border border-[#E9DCCF]/50 p-4 flex flex-col items-center gap-4 shadow-sm relative overflow-hidden group">
+                                                            <img 
+                                                                src={sanitizeUrl(pkg.image)} 
+                                                                className="w-16 h-16 object-cover rounded-2xl shadow-md border-2 border-white group-hover:scale-110 transition-transform" 
+                                                                alt={pkg.title}
+                                                                onError={(e) => e.target.src = FALLBACK_IMAGES[0]}
+                                                            />
+                                                            <div className="text-center">
+                                                                <p className="text-[#2D9944] font-black text-[10px] uppercase leading-tight">Service at</p>
+                                                                <p className="text-[#2D9944] font-[1000] text-[24px] leading-none">₹20</p>
+                                                                <p className="text-[7px] font-black text-black/30 uppercase tracking-widest leading-none mt-1">/ Wash</p>
                                                             </div>
-                                                            <div className="flex items-center gap-2">
-                                                                <CheckCircle2 size={12} />
-                                                                <span className="text-[9px] font-black uppercase tracking-widest">Verified</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-2">
-                                                                <Timer size={12} />
-                                                                <span className="text-[9px] font-black uppercase tracking-widest">On-Time</span>
-                                                            </div>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    if (pkg.videoUrl) {
+                                                                        setActiveVideoUrl(pkg.videoUrl);
+                                                                        setVideoPlaying(true);
+                                                                    } else {
+                                                                        setShowDemoVideo(true);
+                                                                    }
+                                                                }}
+                                                                className="w-10 h-10 bg-[#FF4B91] rounded-full flex items-center justify-center shadow-lg shadow-pink-200 active:scale-90 transition-transform"
+                                                            >
+                                                                <Play size={14} fill="white" className="text-white ml-0.5" />
+                                                            </button>
+                                                            <span className="text-[8px] font-bold text-black/40 uppercase tracking-[0.2em]">Learn More</span>
                                                         </div>
                                                     </div>
-                                                </motion.div>
-                                            );
-                                        })}
+
+                                                    {/* Main CTA */}
+                                                    <motion.button
+                                                        whileTap={{ scale: 0.98 }}
+                                                        onClick={() => {
+                                                            if (!selectedVehicle) {
+                                                                hotToast.error('Register your vehicle in Garaj first!');
+                                                                setTimeout(() => navigate('/vehicles?from=instant-wash'), 1000);
+                                                                return;
+                                                            }
+                                                            setActiveServiceId(pkgId);
+                                                            setShowServiceCoverage(true);
+                                                        }}
+                                                        className={`w-full py-5 rounded-[1.5rem] flex items-center justify-center gap-4 group/btn relative overflow-hidden transition-all ${
+                                                            selectedVehicle 
+                                                            ? 'bg-[#1A1A1A] text-white active:scale-95 shadow-xl shadow-black/10' 
+                                                            : 'bg-brand text-white shadow-xl shadow-brand/20'
+                                                        }`}
+                                                    >
+                                                        {selectedVehicle ? (
+                                                            <>
+                                                                <div className="absolute inset-0 bg-brand opacity-0 group-hover/btn:opacity-10 transition-opacity" />
+                                                                <Zap size={18} className="text-brand" fill="currentColor" />
+                                                                <span className="text-[14px] font-[1000] uppercase italic tracking-[0.1em]">Select Asset & Book</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Car size={18} className="animate-bounce" />
+                                                                <span className="text-[14px] font-[1000] uppercase italic tracking-[0.1em]">Register Vehicle to Book</span>
+                                                            </>
+                                                        )}
+                                                    </motion.button>
+                                                </div>
+
+                                                {/* Footer Stats (Mini) */}
+                                                <div className="px-6 py-4 bg-gray-50 flex items-center justify-center gap-8 border-t border-black/[0.02]">
+                                                    <div className="flex items-center gap-2">
+                                                        <Shield size={12} className="text-black/20" />
+                                                        <span className="text-[8px] font-black text-black/30 uppercase tracking-widest">Sanitized</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <CheckCircle size={12} className="text-black/20" />
+                                                        <span className="text-[8px] font-black text-black/30 uppercase tracking-widest">Verified</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Clock size={12} className="text-black/20" />
+                                                        <span className="text-[8px] font-black text-black/30 uppercase tracking-widest">On-Time</span>
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        )}
                                     </AnimatePresence>
                                 </div>
-                            );
+                             );
                         })
                     )}
-                </div>
 
+                    
                 {/* Vehicle Protocol Selector (New) */}
-                <div className="px-5 pt-8 pb-12">
+                <div className="px-5 pb-8">
                     <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.3em] mb-4 text-center">Vehicle Protocol</p>
                     <div className="flex items-center gap-3">
                         {['Hatch', 'Sedan', 'SUV'].map((type) => {
@@ -755,11 +1327,73 @@ const FullWashBooking = () => {
                     </div>
                 </div>
 
+                    {/* Dynamic FAQ Section */}
+                    {dynamicServices.some(s => s.faqs?.length > 0) && (
+                        <div className="px-1 py-8 space-y-6">
+                            <div className="flex items-center justify-between px-4">
+                                <h3 className="text-[12px] font-[1000] text-black uppercase tracking-[0.2em] italic">Protocol Intelligence</h3>
+                                <div className="flex gap-1">
+                                    <div className="w-1 h-1 rounded-full bg-brand" />
+                                    <div className="w-3 h-1 rounded-full bg-brand/20" />
+                                </div>
+                            </div>
 
-                {/* Service Coverage Details Modal (Exactly as image) */}
-                < AnimatePresence >
-                    {showServiceCoverage && (
-                        <div className="fixed inset-0 z-[120] flex items-end justify-center">
+                            <div className="space-y-3">
+                                {dynamicServices.flatMap(s => s.faqs || []).slice(0, 4).map((faq, i) => (
+                                    <details key={i} className="group bg-white rounded-3xl border border-black/[0.02] overflow-hidden shadow-sm transition-all duration-300 open:shadow-md">
+                                        <summary className="list-none px-6 py-5 flex items-center justify-between cursor-pointer active:bg-gray-50 transition-colors">
+                                            <span className="text-[12px] font-black text-black uppercase tracking-tight">{faq.question}</span>
+                                            <ChevronDown size={16} className="text-black/20 group-open:rotate-180 transition-transform" />
+                                        </summary>
+                                        <div className="px-6 pb-6 pt-2">
+                                            <div className="h-px w-full bg-black/[0.02] mb-4" />
+                                            <p className="text-[11px] font-bold text-black/40 leading-relaxed uppercase tracking-tighter">
+                                                {faq.answer}
+                                            </p>
+                                        </div>
+                                    </details>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Dynamic 'Why Us' Section */}
+                    {/* ... (as existing) ... */}
+                    <div className="px-1 py-8 space-y-6">
+                        <div className="text-center space-y-1">
+                            <h3 className="text-[11px] font-[1000] text-black uppercase tracking-[0.3em] leading-none mb-2">The Studio Standard</h3>
+                            <div className="flex items-center justify-center gap-4">
+                                <div className="h-px w-8 bg-black/10" />
+                                <Stars size={14} className="text-brand" />
+                                <div className="h-px w-8 bg-black/10" />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            {[
+                                { icon: Shield, label: "Studio Grade", sub: "Premium Protocol" },
+                                { icon: Timer, label: "30 Min Avg", sub: "Execution Speed" },
+                                { icon: Zap, label: "Live Track", sub: "Real-time Ops" },
+                                { icon: CreditCard, label: "Secure Pay", sub: "Protocol Ensured" }
+                            ].map((item, i) => (
+                                <div key={i} className="bg-white rounded-3xl p-5 border border-black/[0.02] shadow-sm flex flex-col items-center text-center gap-3">
+                                    <div className="w-10 h-10 bg-gray-50 rounded-2xl flex items-center justify-center">
+                                        <item.icon size={18} className="text-black/80" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[11px] font-black text-black uppercase leading-none tracking-tight mb-1">{item.label}</p>
+                                        <p className="text-[8px] font-bold text-black/30 uppercase tracking-widest">{item.sub}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Service Coverage Details Modal */}
+                <AnimatePresence>
+                    {showServiceCoverage && activeService && (
+                        <div className="fixed inset-0 z-[1000] flex items-end justify-center">
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
@@ -772,484 +1406,706 @@ const FullWashBooking = () => {
                                 animate={{ y: 0 }}
                                 exit={{ y: '100%' }}
                                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                                className="relative w-full max-w-lg bg-white rounded-t-[2.5rem] flex flex-col max-h-[95vh] shadow-2xl overflow-hidden"
-                            >
-                                {/* BLACK Pass Upsell (Premium Refinement) */}
-                                <div className="bg-[#FFFCE8] px-6 py-4 flex items-center justify-between border-b border-yellow-100 relative overflow-hidden group">
-                                    <div className="absolute top-0 right-0 w-32 h-full bg-yellow-400/5 skew-x-[-20deg] group-hover:bg-yellow-400/10 transition-colors" />
-                                    <div className="flex items-center gap-3 relative z-10">
-                                        <div className="w-9 h-9 rounded-xl bg-black text-brand flex items-center justify-center font-black shadow-lg text-[14px]">H</div>
-                                        <div>
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="text-[13px] font-[1000] text-black tracking-tight uppercase">{passConfig?.title || 'clean2wash BLACK'}</span>
-                                                <div className="w-4 h-4 rounded-full bg-black/5 flex items-center justify-center">
-                                                    <Info size={10} className="text-black/40" />
-                                                </div>
-                                            </div>
-                                            <p className="text-[10px] font-bold text-black/40 uppercase tracking-widest leading-none mt-1">12 Months Priority Access</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3 relative z-10">
-                                        <div className="text-right">
-                                            <p className="text-[14px] font-black text-black leading-none tracking-tight">₹{passConfig?.price || '499'}</p>
-                                            <p className="text-[10px] font-bold text-black/20 line-through">₹{passConfig?.comparativePrice || '1200'}</p>
-                                        </div>
-                                        <button className="bg-brand text-black px-4 py-1.5 rounded-lg text-[10px] font-[1000] uppercase shadow-sm active:scale-95 transition-all">Add</button>
-                                    </div>
-                                    <button
-                                        onClick={() => setShowServiceCoverage(false)}
-                                        className="absolute -top-12 right-4 w-11 h-11 rounded-full bg-white text-black flex items-center justify-center shadow-2xl border border-black/[0.03]"
-                                    >
-                                        <X size={22} strokeWidth={3} />
-                                    </button>
-                                </div>
-
-                                {/* Modal Header Content (Professional Layout) */}
-                                <div className="px-6 pt-6 pb-4">
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="flex-1">
-                                            <h2 className="text-[18px] font-[1000] text-black leading-tight tracking-tight uppercase">
-                                                {activeService?.title}
-                                            </h2>
-                                            <div className="flex items-center gap-2 mt-1.5">
-                                                <span className="px-1.5 py-0.5 bg-black/[0.04] text-black/40 text-[8px] font-black rounded uppercase tracking-widest">{activeService?.tag}</span>
-                                                <div className="w-1 h-1 rounded-full bg-brand" />
-                                                <span className="text-[9px] font-black text-brand uppercase tracking-widest">Premium Care</span>
-                                            </div>
-                                        </div>
-                                        <div className="bg-white px-2.5 py-1.5 rounded-xl border border-black/[0.06] text-center shadow-sm">
-                                            <div className="flex items-center justify-center gap-1 mb-0.5">
-                                                <span className="text-[14px] font-[1000] text-black leading-none">{activeService?.rating || '3.9'}</span>
-                                                <Star size={12} fill="#FFD100" strokeWidth={0} className="text-[#FFD100]" />
-                                            </div>
-                                            <p className="text-[7px] font-black text-black/20 uppercase tracking-tighter leading-none">Verified</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-6 pt-2">
-                                        <div>
-                                            <p className="text-[8px] font-black text-black/20 uppercase tracking-widest mb-1 leading-none">Total Fee</p>
-                                            <span className="text-[22px] font-[1000] text-black leading-none tracking-tight">₹{totalPrice}</span>
-                                        </div>
-                                        <div className="h-8 w-px bg-black/[0.06]" />
-                                        <div>
-                                            <p className="text-[8px] font-black text-black/20 uppercase tracking-widest mb-1 leading-none">Session Time</p>
-                                            <div className="flex items-center gap-1.5 text-black font-[1000] text-[14px] leading-none">
-                                                <Clock size={14} strokeWidth={3} className="text-brand" />
-                                                <span>18 MINS</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Service Coverage Section Header */}
-                                <div className="px-6 py-3 flex items-center justify-between mt-1">
-                                    <h3 className="text-[11px] font-[1000] text-black uppercase tracking-widest leading-none">Detailed Coverage</h3>
-                                    <button className="text-brand font-black text-[10px] uppercase tracking-[0.2em] leading-none">Explore All</button>
-                                </div>
-
-                                {/* Comparison Table (Premium Re-styled) */}
-                                <div className="flex-1 overflow-y-auto px-5 pb-6">
-                                    <div className="border border-black/[0.05] rounded-2xl overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.02)] bg-white">
-                                        {/* Table Header (Refined) */}
-                                        <div className="flex bg-gray-50/50 border-b border-black/[0.04]">
-                                            <div className="flex-1 py-3 px-4 flex items-center gap-2 border-r border-black/[0.04]">
-                                                <div className="w-4 h-4 rounded bg-emerald-500/10 flex items-center justify-center text-emerald-600">
-                                                    <CheckCircle2 size={10} strokeWidth={3} />
-                                                </div>
-                                                <span className="text-[9px] font-black text-emerald-800 uppercase tracking-widest">Included</span>
-                                            </div>
-                                            <div className="flex-1 py-3 px-4 flex items-center gap-2">
-                                                <div className="w-4 h-4 rounded bg-black/[0.04] flex items-center justify-center text-black/20">
-                                                    <Info size={10} strokeWidth={3} />
-                                                </div>
-                                                <span className="text-[9px] font-black text-black/40 uppercase tracking-widest">Exclusions</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Table Rows (Dynamic from Metadata) */}
-                                        <div className="divide-y divide-black/[0.02] bg-white">
-                                            {(() => {
-                                                const inclusions = activeService?.metadata?.inclusions || [];
-                                                const exclusions = activeService?.metadata?.exclusions || [];
-                                                const maxRows = Math.max(inclusions.length, exclusions.length);
-                                                const rows = [];
-                                                for (let i = 0; i < maxRows; i++) {
-                                                    rows.push({
-                                                        in: inclusions[i] || '-',
-                                                        out: exclusions[i] || '-'
-                                                    });
-                                                }
-                                                return rows.map((row, i) => (
-                                                    <div key={i} className="flex min-h-[44px]">
-                                                        <div className="flex-1 py-2.5 px-4 border-r border-black/[0.02] flex items-center gap-2.5">
-                                                            {row.in !== '-' ? (
-                                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                                                            ) : (
-                                                                <div className="w-1.5 h-1.5 rounded-full bg-black/5 shrink-0" />
-                                                            )}
-                                                            <span className={`text-[10px] font-bold leading-none tracking-tight uppercase ${row.in !== '-' ? 'text-black/80' : 'text-black/10'}`}>{row.in}</span>
-                                                        </div>
-                                                        <div className="flex-1 py-2.5 px-4 flex items-center gap-2.5">
-                                                            {row.out !== '-' ? (
-                                                                <div className="w-1 h-1 rounded-full bg-black/10 shrink-0" />
-                                                            ) : (
-                                                                <div className="w-1 h-1 rounded-full bg-black/5 shrink-0" />
-                                                            )}
-                                                            <span className={`text-[10px] font-bold leading-none tracking-tight uppercase ${row.out !== '-' ? 'text-black/30' : 'text-black/10'}`}>{row.out}</span>
-                                                        </div>
-                                                    </div>
-                                                ));
-                                            })()}
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-4 px-2 flex items-center gap-3 bg-brand/5 p-4 rounded-2xl border border-brand/10">
-                                        <ShieldCheck size={18} className="text-brand shrink-0" />
-                                        <p className="text-[10px] font-bold text-black/60 uppercase tracking-widest leading-relaxed">Studio grade service guarantee included with every booking.</p>
-                                    </div>
-                                </div>
-
-                                {/* Modal Footer (More Compact) */}
-                                <div className="px-6 py-4 bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.02)] border-t border-black/[0.03]">
-                                    <div className="flex items-center justify-between max-w-lg mx-auto">
-                                        <div>
-                                            <p className="text-[7px] font-[1000] text-black/20 uppercase tracking-[0.25em] mb-1">Value Amount</p>
-                                            <div className="text-[20px] font-[1000] text-black leading-none tracking-tight">
-                                                ₹{totalPrice}
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => {
-                                                const newCartItem = {
-                                                    id: Date.now(),
-                                                    serviceId: activeServiceId,
-                                                    serviceName: `(${activeService?.tag}) ${activeService?.title} Only`,
-                                                    vehicleName: `${selectedVehicle?.brand} ${selectedVehicle?.model}`,
-                                                    price: totalPrice,
-                                                    vehicleImg: selectedVehicle?.img,
-                                                    included: activeService?.metadata?.inclusions || []
-                                                };
-                                                setCart([...cart, newCartItem]);
-                                                setShowServiceCoverage(false);
-                                                setPhase(PHASES.CART);
-                                            }}
-                                            className="bg-black text-white flex items-center justify-center gap-3 px-7 py-3.5 rounded-xl font-[1000] text-[12px] uppercase tracking-widest shadow-xl shadow-black/5 active:scale-95 transition-all group"
-                                        >
-                                            Add to Cart
-                                            <ChevronRight size={16} strokeWidth={4} className="group-hover:translate-x-1 transition-transform" />
-                                        </button>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        </div>
-                    )}
-                </AnimatePresence >
-
-                {/* Video Demo Modal */}
-                < AnimatePresence >
-                    {showDemoVideo && (
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-5">
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                onClick={() => setShowDemoVideo(false)}
-                                className="absolute inset-0 bg-black/95 backdrop-blur-sm"
-                            />
-                            <motion.div
-                                initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                                animate={{ scale: 1, opacity: 1, y: 0 }}
-                                exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                                className="relative w-full max-w-lg aspect-video bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10"
-                            >
-                                <button
-                                    onClick={() => setShowDemoVideo(false)}
-                                    className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center backdrop-blur-md border border-white/10"
-                                >
-                                    <X size={20} />
-                                </button>
-
-                                <video
-                                    autoPlay
-                                    controls
-                                    className="w-full h-full object-cover"
-                                    src="https://assets.mixkit.io/videos/preview/mixkit-hand-washing-a-car-with-a-sponge-and-foam-1582-large.mp4"
-                                />
-
-                                <div className="absolute bottom-6 left-6 right-6">
-                                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10">
-                                        <p className="text-white text-[12px] font-black uppercase tracking-widest">clean2wash PRO DEMO</p>
-                                        <p className="text-white/60 text-[10px] font-bold mt-1">See how our professional captains transform your vehicle.</p>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        </div>
-                    )}
-                </AnimatePresence >
-
-                {/* Add Services Bottom Sheet Modal */}
-                < AnimatePresence >
-                    {showAddServices && (
-                        <div className="fixed inset-0 z-[110] flex items-end justify-center">
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                onClick={() => setShowAddServices(false)}
-                                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                            />
-                            <motion.div
-                                initial={{ y: '100%' }}
-                                animate={{ y: 0 }}
-                                exit={{ y: '100%' }}
-                                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                                className="relative w-full max-w-lg bg-[#F1F6FA] rounded-t-[2.5rem] flex flex-col max-h-[90vh] shadow-2xl overflow-hidden"
+                                className="relative w-full max-w-lg bg-white rounded-t-[2.5rem] flex flex-col max-h-[95vh] shadow-2xl overflow-hidden font-outfit"
                             >
                                 {/* Modal Header */}
-                                <div className="px-6 py-5 flex items-center justify-between border-b border-white/50 bg-white/20 backdrop-blur-md sticky top-0 z-20">
-                                    <h3 className="text-[18px] font-black text-black">Add Services</h3>
-                                    <button
-                                        onClick={() => setShowAddServices(false)}
-                                        className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center shadow-md active:scale-90 transition-transform"
-                                    >
-                                        <X size={20} strokeWidth={3} />
-                                    </button>
+                                <div className="relative pt-2 pb-6">
+                                    {/* Premium Offer Banner */}
+                                    {activeService.offers?.length > 0 && (
+                                        <div className="overflow-hidden bg-[#1A1A1A] relative h-10 flex items-center mb-6">
+                                            <motion.div 
+                                                animate={{ x: [0, -500] }}
+                                                transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+                                                className="flex whitespace-nowrap gap-10"
+                                            >
+                                                {[1, 2, 3].map(n => (
+                                                    <div key={n} className="flex gap-10">
+                                                        {activeService.offers.map((offer, idx) => (
+                                                            <div key={idx} className="flex items-center gap-3">
+                                                                <Star size={10} className="text-brand" fill="currentColor" />
+                                                                <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] italic">
+                                                                    {offer.text} {offer.code && <span className="text-brand ml-2">[{offer.code}]</span>}
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ))}
+                                            </motion.div>
+                                            <div className="absolute top-0 bottom-0 left-0 w-12 bg-gradient-to-r from-[#1A1A1A] to-transparent z-10" />
+                                            <div className="absolute top-0 bottom-0 right-0 w-12 bg-gradient-to-l from-[#1A1A1A] to-transparent z-10" />
+                                        </div>
+                                    )}
+
+                                    <div className="px-6 relative">
+                                        <button
+                                            onClick={() => setShowServiceCoverage(false)}
+                                            className="absolute -top-1 right-6 w-10 h-10 rounded-full bg-black/5 hover:bg-black/10 flex items-center justify-center text-black/40 transition-all z-20"
+                                        >
+                                            <X size={18} strokeWidth={3} />
+                                        </button>
+
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <div className="bg-black text-white px-2.5 py-1 rounded-lg flex items-center gap-1.5">
+                                                <Zap size={10} className="text-brand" fill="currentColor" />
+                                                <span className="text-[9px] font-black uppercase tracking-widest">{activeService.tag || 'PREMIUM'}</span>
+                                            </div>
+                                            <div className="h-4 w-px bg-black/10" />
+                                            <span className="text-[9px] font-[1000] text-black/40 uppercase tracking-widest">Protocol Sync Locked</span>
+                                        </div>
+                                        
+                                        <h2 className="text-[34px] font-[1000] text-black leading-[0.9] uppercase italic tracking-tighter mb-6 relative">
+                                            {activeService.title}
+                                            <motion.div 
+                                                initial={{ width: 0 }}
+                                                animate={{ width: 48 }}
+                                                className="absolute -bottom-2 left-0 h-1 bg-brand" 
+                                            />
+                                        </h2>
+
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="bg-gray-50/80 backdrop-blur-sm rounded-3xl p-5 border border-black/[0.02] flex flex-col justify-between h-28">
+                                                <p className="text-[8px] font-black text-black/30 uppercase tracking-[0.15em] leading-none mb-1">Execution Protocol</p>
+                                                <div className="flex items-baseline gap-1">
+                                                    <span className="text-[28px] font-[1000] text-black leading-none">{activeServiceDuration}</span>
+                                                    <span className="text-[12px] font-black text-black/40 uppercase tracking-tighter">Mins</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                                    <span className="text-[7px] font-black text-black/30 uppercase tracking-widest">
+                                                        {matchedModel?.difficulty ? `${matchedModel.difficulty} Protocol` : 'Studio Calibrated'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="bg-brand/5 backdrop-blur-sm rounded-3xl p-5 border border-brand/10 flex flex-col justify-between h-28">
+                                                <p className="text-[8px] font-black text-black/30 uppercase tracking-[0.15em] leading-none mb-1">Session Valuation</p>
+                                                <div className="flex items-baseline gap-1">
+                                                    <span className="text-[28px] font-[1000] text-black leading-none">₹{activeServicePrice}</span>
+                                                    <span className="text-[10px] font-black text-brand uppercase tracking-tighter">Total</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <ShieldCheck size={10} className="text-brand" />
+                                                    <span className="text-[7px] font-black text-black/30 uppercase tracking-widest">Secured Node</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                {/* Modal Body (Scrollable) */}
-                                <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
-                                    {(activeService?.addons || []).map((addon) => {
-                                        const isSelected = (serviceAddons[activeServiceId] || []).includes(addon.id);
-                                        return (
-                                            <div key={addon.id} className="bg-white rounded-[1.25rem] p-3 flex items-center gap-3 shadow-soft border border-black/[0.03]/50">
-                                                <div className="w-20 h-20 rounded-xl overflow-hidden shadow-sm flex-shrink-0">
-                                                    <img
-                                                        src={pkgAddonImages[addon.id] || "https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=400&q=80"}
-                                                        className="w-full h-full object-cover"
-                                                    />
+                                {/* Detailed Coverage Content */}
+                                <div className="flex-1 overflow-y-auto px-6 pb-28 no-scrollbar space-y-8">
+                                    {/* Vehicle Catalog Intelligence Integration */}
+                                    {matchedModel && (
+                                        <div className="mt-4 space-y-6">
+                                            <div className="flex items-center justify-between px-1">
+                                                <div className="flex items-center gap-2">
+                                                    <Car size={14} className="text-brand" />
+                                                    <h3 className="text-[11px] font-black text-black uppercase tracking-[0.15em] italic">Vehicle Intelligence</h3>
                                                 </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <h4 className="text-[13px] font-black text-black leading-tight mb-0.5">{addon.name}</h4>
-                                                    <div className="flex items-center gap-1.5 text-black/40 font-bold text-[11px]">
-                                                        <span>₹{addon.price}</span>
-                                                        <div className="w-1 h-1 bg-black/5 rounded-full" />
-                                                        <span>10 mins</span>
+                                                <div className="flex items-center gap-2 bg-black/5 px-2 py-1 rounded-lg">
+                                                    <LayoutGrid size={10} className="text-black/40" />
+                                                    <span className="text-[8px] font-[1000] text-black/60 uppercase tracking-widest">{matchedModel.brand} Protocol</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Brand & Model Designation Card */}
+                                            <div className="bg-black text-white p-6 rounded-[2.5rem] relative overflow-hidden shadow-2xl shadow-black/20 group">
+                                                <div className="absolute right-[-10%] top-[-20%] w-48 h-48 bg-brand/10 rounded-full blur-3xl group-hover:bg-brand/20 transition-all duration-700" />
+                                                <div className="relative z-10 flex items-center gap-6">
+                                                    <div className="w-20 h-20 rounded-2xl overflow-hidden border border-white/10 shadow-inner shrink-0 scale-95 group-hover:scale-100 transition-transform duration-500">
+                                                        <img 
+                                                            src={sanitizeUrl(matchedModel.image)} 
+                                                            className="w-full h-full object-cover" 
+                                                            alt={matchedModel.model}
+                                                            onError={handleImageError}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-1 italic">Asset Identification</p>
+                                                        <h4 className="text-[20px] font-[1000] uppercase italic leading-none tracking-tight">
+                                                            {matchedModel.brand} <span className="text-brand">{matchedModel.model}</span>
+                                                        </h4>
+                                                        <div className="flex items-center gap-3 mt-3">
+                                                            <div className="flex items-center gap-1 bg-white/10 px-2 py-1 rounded-md">
+                                                                <Stars size={10} className="text-brand" />
+                                                                <span className="text-[8px] font-black uppercase tracking-widest">{matchedModel.type}</span>
+                                                            </div>
+                                                            <div className="h-3 w-px bg-white/10" />
+                                                            <span className="text-[8px] font-black text-white/30 uppercase tracking-widest">ID: {matchedModel._id?.slice(-8).toUpperCase()}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <button
-                                                    onClick={() => toggleAddon(addon.id)}
-                                                    className={`px-5 py-2 rounded-xl font-black text-[13px] shadow-sm transition-all active:scale-95 ${isSelected
-                                                        ? 'bg-emerald-500 text-white'
-                                                        : 'bg-brand text-black'
-                                                        }`}
-                                                >
-                                                    {isSelected ? <Check size={16} strokeWidth={4} /> : 'Add'}
-                                                </button>
                                             </div>
-                                        );
-                                    })}
+
+                                            {/* Complexity & Offer Matrix */}
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div className="bg-gray-50 p-5 rounded-[2rem] border border-black/[0.02]">
+                                                    <p className="text-[8px] font-black text-black/30 uppercase tracking-widest mb-3">Complexity Index</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`w-2 h-2 rounded-full ${matchedModel.difficulty === 'Hard' ? 'bg-red-500' : matchedModel.difficulty === 'Medium' ? 'bg-orange-500' : 'bg-emerald-500'}`} />
+                                                        <span className="text-[14px] font-[1000] text-black uppercase italic">{matchedModel.difficulty || 'Standard'}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="bg-gray-50 p-5 rounded-[2rem] border border-black/[0.02]">
+                                                    <p className="text-[8px] font-black text-black/30 uppercase tracking-widest mb-3">Prep Protocol</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <Timer size={14} className="text-black/40" />
+                                                        <span className="text-[14px] font-[1000] text-black uppercase italic">{matchedModel.protocolSteps?.length || 0} Steps</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Identify Highlights */}
+                                            {matchedModel.features?.length > 0 && (
+                                                <div className="space-y-3">
+                                                    <h4 className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] px-1 italic">Identity Highlights</h4>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {matchedModel.features.map((feat, idx) => (
+                                                            <div key={idx} className="bg-[#FAF1E8] border border-[#E9DCCF] px-4 py-2 rounded-2xl flex items-center gap-2">
+                                                                <CheckCircle2 size={12} className="text-brand" />
+                                                                <span className="text-[10px] font-black text-black uppercase tracking-tighter italic">{feat}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Offer Protocols & Coupons */}
+                                            {(matchedModel.offers?.length > 0 || matchedModel.coupons?.length > 0) && (
+                                                <div className="bg-brand/5 border border-brand/10 rounded-[2.5rem] p-6 space-y-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <Gift size={16} className="text-brand" />
+                                                        <h4 className="text-[12px] font-[1000] text-black uppercase tracking-widest italic leading-none">Offer Protocols</h4>
+                                                    </div>
+                                                    <div className="space-y-3">
+                                                        {matchedModel.offers?.map((offer, idx) => (
+                                                            <div key={idx} className="flex items-center justify-between bg-white p-3 rounded-2xl border border-brand/5">
+                                                                <div>
+                                                                    <p className="text-[11px] font-[1000] text-black uppercase italic tracking-tight">{offer.title || 'Launch Offer'}</p>
+                                                                    <p className="text-[8px] font-bold text-black/30 uppercase tracking-widest">{offer.description || 'Dynamic Discount Applied'}</p>
+                                                                </div>
+                                                                <div className="bg-emerald-500 text-white px-3 py-1 rounded-xl text-[10px] font-black italic">
+                                                                    -{offer.discountPercentage || 10}%
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                        {matchedModel.coupons?.map((coupon, idx) => (
+                                                            <div key={idx} className="flex items-center justify-between bg-black text-white p-4 rounded-3xl group active:scale-95 transition-all">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="w-8 h-8 rounded-xl bg-brand/20 flex items-center justify-center border border-brand/20">
+                                                                        <Zap size={14} className="text-brand" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-[13px] font-[1000] uppercase italic tracking-widest">{coupon}</p>
+                                                                        <p className="text-[7px] font-bold text-white/30 uppercase tracking-[0.2em] mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">Asset Specific Coupon</p>
+                                                                    </div>
+                                                                </div>
+                                                                <button 
+                                                                    onClick={() => {
+                                                                        setCouponCode(coupon);
+                                                                        toast.success("Coupon Protocol Loaded");
+                                                                    }}
+                                                                    className="bg-brand text-white text-[9px] font-black px-4 py-2 rounded-xl uppercase tracking-widest hover:bg-white hover:text-black transition-all"
+                                                                >
+                                                                    ADD
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Model Prep Protocol Steps */}
+                                            {matchedModel.protocolSteps?.length > 0 && (
+                                                <div className="space-y-4">
+                                                    <div className="flex items-center gap-2 px-1">
+                                                        <Shield size={14} className="text-emerald-500" />
+                                                        <h3 className="text-[11px] font-black text-black uppercase tracking-[0.15em] italic">Model Prep Protocol</h3>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 gap-2">
+                                                        {matchedModel.protocolSteps.map((step, idx) => (
+                                                            <div key={idx} className="bg-white border border-black/[0.03] p-4 rounded-3xl flex items-center gap-4 group">
+                                                                <div className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-[10px] font-black">
+                                                                    {idx + 1}
+                                                                </div>
+                                                                <p className="text-[11px] font-[1000] text-black uppercase italic tracking-tight">{step}</p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    <div className="mt-4 space-y-4">
+                                        <div className="flex items-center justify-between px-1">
+                                            <div className="flex items-center gap-2">
+                                                <Radar size={14} className="text-brand" />
+                                                <h3 className="text-[11px] font-black text-black uppercase tracking-[0.15em] italic">Scope of Maintenance</h3>
+                                            </div>
+                                            <span className="text-[8px] font-black text-black/20 uppercase tracking-widest">V.2.4 Analytics</span>
+                                        </div>
+
+                                        <div className="border border-black/[0.04] rounded-[2rem] overflow-hidden bg-gray-50/20 backdrop-blur-xl">
+                                            <div className="flex bg-white/40 border-b border-black/[0.04]">
+                                                <div className="flex-1 py-4 px-6 flex items-center justify-center gap-2 border-r border-black/[0.04] bg-emerald-50/30">
+                                                    <CheckCircle2 size={12} className="text-emerald-500" />
+                                                    <span className="text-[9px] font-black text-emerald-700 uppercase tracking-[0.1em]">Verified Additions</span>
+                                                </div>
+                                                <div className="flex-1 py-4 px-6 flex items-center justify-center gap-2 bg-gray-50/50">
+                                                    <MinusCircle size={12} className="text-black/30" />
+                                                    <span className="text-[9px] font-black text-black/40 uppercase tracking-[0.1em]">Protocol Limits</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="divide-y divide-black/[0.02]">
+                                                {(() => {
+                                                    const inclusions = activeService.detailedCoverage?.length > 0 ? activeService.detailedCoverage : (activeService.metadata?.inclusions || ['Body Wash', 'Vacuum', 'Tyre Polish', 'Glass Wipe']);
+                                                    const exclusions = activeService.exclusions?.length > 0 ? activeService.exclusions : (activeService.metadata?.exclusions || ['Engine Bay', 'Pet Hair', 'Deep Wax']);
+                                                    const maxRows = Math.max(inclusions.length, exclusions.length);
+                                                    const rows = [];
+                                                    for (let i = 0; i < maxRows; i++) {
+                                                        rows.push({ in: inclusions[i] || '-', out: exclusions[i] || '-' });
+                                                    }
+                                                    return rows.map((row, i) => (
+                                                        <div key={i} className="flex min-h-[50px] transition-all hover:bg-white group">
+                                                            <div className="flex-1 py-3 px-6 border-r border-black/[0.03] flex items-center gap-3">
+                                                                {row.in !== '-' ? (
+                                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                                                                ) : (
+                                                                    <div className="w-1.5 h-1.5 rounded-full bg-black/5" />
+                                                                )}
+                                                                <span className={`text-[12px] font-[1000] uppercase tracking-tight italic ${row.in !== '-' ? 'text-black' : 'text-black/10'}`}>{row.in}</span>
+                                                            </div>
+                                                            <div className="flex-1 py-3 px-6 flex items-center gap-3">
+                                                                {row.out !== '-' ? (
+                                                                    <div className="w-1 h-1 rounded-full bg-black/10" />
+                                                                ) : (
+                                                                    <div className="w-1 h-1 rounded-full bg-black/5" />
+                                                                )}
+                                                                <span className={`text-[10px] font-bold uppercase tracking-tight ${row.out !== '-' ? 'text-black/40' : 'text-black/10'}`}>{row.out}</span>
+                                                            </div>
+                                                        </div>
+                                                    ));
+                                                })()}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Studio Execution Pipeline */}
+                                    {activeService.protocolSteps && activeService.protocolSteps.length > 0 && (
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-2 px-1">
+                                                <Zap size={14} className="text-brand" fill="currentColor" />
+                                                <h3 className="text-[11px] font-black text-black uppercase tracking-[0.15em] italic">Execution Pipeline</h3>
+                                            </div>
+                                            <div className="space-y-3">
+                                                {activeService.protocolSteps.map((step, idx) => (
+                                                    <motion.div 
+                                                        key={idx}
+                                                        initial={{ x: -20, opacity: 0 }}
+                                                        whileInView={{ x: 0, opacity: 1 }}
+                                                        viewport={{ once: true }}
+                                                        transition={{ delay: idx * 0.1 }}
+                                                        className="flex items-center gap-4 bg-gray-50/50 p-4 rounded-3xl border border-black/[0.02] hover:border-brand/20 transition-all hover:bg-white"
+                                                    >
+                                                        <div className="w-8 h-8 rounded-2xl bg-black text-white flex items-center justify-center text-[10px] font-[1000] shadow-lg shadow-black/20 shrink-0">
+                                                            {idx + 1}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <p className="text-[12px] font-[1000] text-black uppercase tracking-tight italic leading-none truncate">{step}</p>
+                                                            <p className="text-[8px] font-bold text-black/20 uppercase tracking-widest mt-1">Verified Phase {idx + 1}</p>
+                                                        </div>
+                                                        <Check size={12} className="text-brand" strokeWidth={3} />
+                                                    </motion.div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Security & Support Note */}
+                                    <div className="bg-emerald-50 p-5 rounded-[2rem] border border-emerald-100 flex items-start gap-4">
+                                        <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-sm shrink-0">
+                                            <ShieldCheck size={20} className="text-emerald-500" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[12px] font-[1000] text-emerald-900 uppercase tracking-tight leading-none mb-1.5 italic">Studio Grade Warranty</p>
+                                            <p className="text-[9px] font-bold text-emerald-700/60 leading-relaxed uppercase tracking-widest">
+                                                This protocol includes 100% paint safety assurance and premium chemical usage.
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {/* Modal Footer */}
-                                <div className="px-6 py-6 bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.04)] border-t border-black/[0.03]">
-                                    <div className="flex items-center justify-between">
-                                        <div className="text-[20px] font-black text-black">
-                                            ₹ {totalPrice}
-                                        </div>
-                                        <button
-                                            onClick={() => {
-                                                setShowAddServices(false);
-                                                setShowServiceCoverage(true);
-                                            }}
-                                            className="bg-[#1A1A1A] text-white flex items-center justify-center gap-3 px-10 py-5 rounded-[1.5rem] font-black text-[15px] uppercase shadow-xl active:scale-95 transition-transform"
-                                        >
-                                            Continue
-                                            <ChevronRight size={20} strokeWidth={3} />
-                                        </button>
-                                    </div>
+                                <div className="absolute bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-xl border-t border-black/[0.03] animate-in slide-in-from-bottom duration-500">
+                                    <motion.button
+                                        whileTap={{ scale: 0.98 }}
+                                        disabled={!selectedVehicle}
+                                        onClick={() => {
+                                            if (!selectedVehicle) return;
+                                            const newItem = {
+                                                id: Date.now(),
+                                                serviceId: activeService.id || activeService._id,
+                                                serviceName: activeService.title,
+                                                price: activeServicePrice,
+                                                vehicleId: selectedVehicle?.id,
+                                                vehicleName: selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model}` : "Premium Asset",
+                                                vehicleImg: selectedVehicle?.img || FALLBACK_IMAGES[0],
+                                                duration: activeServiceDuration,
+                                                type: 'service'
+                                            };
+                                            setCart(prev => {
+                                                const isDuplicate = prev.some(it => it.serviceId === newItem.serviceId && it.vehicleId === newItem.vehicleId);
+                                                if (isDuplicate) return prev;
+                                                return [...prev, newItem];
+                                            });
+                                            setShowServiceCoverage(false);
+                                            navigateToPhase(PHASES.CART);
+                                        }}
+                                        className={`w-full py-5 rounded-[2rem] font-[1000] text-[15px] uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-4 group relative overflow-hidden ${
+                                            !selectedVehicle 
+                                            ? 'bg-gray-100 text-black/10 cursor-not-allowed' 
+                                            : 'bg-[#1A1A1A] text-white active:scale-95 shadow-black/20'
+                                        }`}
+                                    >
+                                        <div className="absolute inset-0 bg-brand opacity-0 group-hover:opacity-10 transition-opacity" />
+                                        <Zap size={18} className={selectedVehicle ? "text-brand" : "text-black/5"} fill="currentColor" />
+                                        <span>Execute Booking</span>
+                                        <ChevronRight size={18} strokeWidth={4} className="group-hover:translate-x-1 transition-transform" />
+                                    </motion.button>
                                 </div>
                             </motion.div>
                         </div>
                     )}
-                </AnimatePresence >
+                </AnimatePresence>
 
-
-                {/* Vehicle Type Selection (KEPT AS IS AS REQUESTED) */}
-                < section className="px-5 pb-20" >
-                    <div className="bg-white rounded-xl border border-black/[0.03] p-3.5 shadow-sm">
-                        <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-[9px] font-black text-black/40 uppercase tracking-widest">Vehicle Type</h3>
-                        </div>
-                        <div className="flex gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
-                            {VEHICLE_TYPES.map(v => (
-                                <button key={v.id}
-                                    onClick={() => setSelectedVehicleType(v.id)}
-                                    className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all ${selectedVehicleType === v.id
-                                        ? 'bg-brand text-white border-brand shadow-sm shadow-brand/20'
-                                        : 'bg-white border-black/[0.06] text-black/30'
-                                        }`}>
-                                    {(v.id === 'bike' || v.id === 'scooter') ? (
-                                        <Bike size={11} strokeWidth={selectedVehicleType === v.id ? 3 : 2} />
-                                    ) : (
-                                        <Car size={11} strokeWidth={selectedVehicleType === v.id ? 3 : 2} />
-                                    )}
-                                    <span className="text-[9px] font-black uppercase tracking-tight">{v.label}</span>
+                {/* Video Player Modal */}
+                <AnimatePresence>
+                    {(videoPlaying || showDemoVideo) && (
+                        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                onClick={() => { setVideoPlaying(false); setShowDemoVideo(false); }}
+                                className="absolute inset-0 bg-black/95 backdrop-blur-xl"
+                            />
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
+                                className="relative w-full max-w-4xl aspect-video bg-black rounded-[2rem] overflow-hidden shadow-2xl border border-white/10"
+                            >
+                                <button
+                                    onClick={() => { setVideoPlaying(false); setShowDemoVideo(false); }}
+                                    className="absolute top-6 right-6 z-50 w-12 h-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/20 transition-all border border-white/10"
+                                >
+                                    <X size={24} />
                                 </button>
-                            ))}
+                                
+                                {activeVideoUrl || showDemoVideo ? (
+                                    <iframe
+                                        src={activeVideoUrl || "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"}
+                                        className="w-full h-full"
+                                        title="Service Preview"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                        allowFullScreen
+                                    />
+                                ) : (
+                                    <div className="w-full h-full flex flex-col items-center justify-center gap-4">
+                                        <div className="w-20 h-20 rounded-full bg-brand/20 flex items-center justify-center animate-pulse">
+                                            <Play size={40} className="text-brand ml-2" />
+                                        </div>
+                                        <p className="text-white/40 text-xs font-black uppercase tracking-widest">Protocol Stream Unavailable</p>
+                                    </div>
+                                )}
+                            </motion.div>
                         </div>
-                    </div>
-                </section >
-            </div >
+                    )}
+                </AnimatePresence>
+            </div>
         );
     };
 
-    const renderFinding = () => (
-        <div className="flex flex-col items-center justify-center min-h-screen px-8 text-center bg-[#0C0C0C] relative overflow-hidden">
-            {/* Background Animations */}
-            <div className="absolute inset-0 opacity-20">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] border border-brand/20 rounded-full animate-pulse" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-brand/10 rounded-full animate-pulse delay-75" />
-            </div>
+    const SEARCH_MESSAGES = [
+        "Connecting to Bangalore Grid...",
+        "Identifying nearby detailing experts...",
+        "Optimizing technician proximity...",
+        "Black Pass Priority Enabled...",
+        "Securing premium service slot..."
+    ];
 
-            <div className="relative w-72 h-72 mb-16 flex items-center justify-center">
-                <motion.div
-                    animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 8, ease: "linear" }}
-                    className="absolute inset-0 border-2 border-dashed border-brand/30 rounded-full"
-                />
-                <motion.div
-                    animate={{ rotate: -360 }} transition={{ repeat: Infinity, duration: 12, ease: "linear" }}
-                    className="absolute inset-10 border border-brand/20 rounded-full"
-                />
+    const renderFinding = () => {
+        const userCoords = selectedLocation?.coordinates || { lat: 12.9716, lng: 77.5946 };
+        const currentMessage = SEARCH_MESSAGES[Math.floor((60 - findingTime) / 10) % SEARCH_MESSAGES.length] || SEARCH_MESSAGES[0];
 
-                <div className="relative z-10 w-28 h-28 bg-brand rounded-[2.5rem] flex items-center justify-center shadow-[0_0_50px_rgba(242,159,5,0.4)]">
-                    <Radar size={44} className="text-white animate-pulse" strokeWidth={2.5} />
+        // Real captain position — from socket locationUpdate after booking accepted
+        // captainPos is updated via socket in parent useEffect
+        const hasCaptain = activeBooking?.provider?.id && captainPos && captainPos.lat !== 30;
+
+        const userIcon = L.divIcon({
+            className: 'custom-user-pin',
+            html: `
+                <div class="relative">
+                    <div class="absolute -inset-4 bg-brand/30 rounded-full animate-ping"></div>
+                    <div class="absolute -inset-2 bg-brand/50 rounded-full animate-pulse"></div>
+                    <div class="relative w-4 h-4 bg-white rounded-full border-2 border-brand shadow-xl"></div>
                 </div>
+            `,
+            iconSize: [16, 16],
+            iconAnchor: [8, 8]
+        });
 
-                {/* Satellite Beams */}
-                {[0, 120, 240].map((angle, i) => (
-                    <motion.div
-                        key={i}
-                        animate={{ opacity: [0.1, 0.4, 0.1], scale: [1, 1.2, 1] }}
-                        transition={{ repeat: Infinity, duration: 3, delay: i * 1 }}
-                        className="absolute w-1 h-32 bg-gradient-to-t from-brand to-transparent origin-bottom"
-                        style={{ rotate: `${angle}deg`, top: '-20%' }}
-                    />
-                ))}
-            </div>
-
-            <div className="space-y-4">
-                <h2 className="text-[22px] font-[1000] text-white uppercase tracking-tighter">Securing Studio Bay...</h2>
-                <div className="flex flex-col gap-1">
-                    <p className="text-[10px] font-black text-brand uppercase tracking-[0.4em]">Establishing Vendor Link</p>
-                    <p className="text-[9px] font-bold text-white/30 uppercase tracking-widest max-w-[280px] leading-relaxed mx-auto">
-                        Sector: Bangalore South-04 | Grid-Status: Optimal
-                    </p>
+        const expertIcon = L.divIcon({
+            className: 'custom-expert-pin',
+            html: `
+                <div class="w-8 h-8 bg-white rounded-xl flex items-center justify-center border-2 border-brand shadow-xl">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+                    </svg>
                 </div>
-            </div>
-
-            <div className="mt-16 w-48 h-1 bg-white/5 rounded-full overflow-hidden">
-                <motion.div
-                    initial={{ x: '-100%' }}
-                    animate={{ x: '100%' }}
-                    transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-                    className="w-1/2 h-full bg-brand shadow-[0_0_15px_rgba(242,159,5,0.8)]"
-                />
-            </div>
-
-            {/* Fallback Option */}
-            <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 3, duration: 0.8 }}
-                className="absolute bottom-10 left-5 right-5"
-            >
-                <div className="bg-white/5 p-4 rounded-2xl border border-white/10 flex flex-col gap-3">
-                    <div className="flex items-center gap-2 justify-center text-white/50">
-                        <AlertTriangle size={14} />
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em]">Taking too long?</p>
-                    </div>
-                    <p className="text-[9px] font-bold text-white/40 mb-1 leading-relaxed">If no captains are available nearby right now, you can switch to scheduling it instead.</p>
-                    <button
-                        onClick={() => navigate('/full-wash-booking')}
-                        className="w-full bg-brand text-black h-12 rounded-xl font-[1000] text-[11px] uppercase tracking-widest shadow-xl shadow-brand/20 active:scale-95 transition-all"
-                    >
-                        Schedule Wash For Later
-                    </button>
-                    <button
-                        onClick={() => { setPhase(PHASES.SERVICE_SELECTION); }}
-                        className="text-[9px] font-black text-white/30 uppercase tracking-widest mt-1 hover:text-white transition-colors"
-                    >
-                        Cancel Search
-                    </button>
-                </div>
-            </motion.div>
-        </div>
-    );
-
-    const renderLiveTrack = () => {
-        const currentJobState = JOB_STATES[jobStateIndex];
-        const isCompleted = jobStateIndex === JOB_STATES.length - 1;
+            `,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
+        });
 
         return (
-            <div className="fixed inset-0 bg-[#0a0a0a] z-[100] flex flex-col overflow-hidden font-outfit">
-                {/* Professional Map Background */}
-                <div className="absolute inset-0 z-0 bg-[#0a0a0a]">
-                    {/* Dark City Map Visual */}
-                    <img
-                        src="https://images.unsplash.com/photo-1524661135-423995f22d0b?w=1200&q=80"
-                        className="w-full h-full object-cover opacity-30 grayscale contrast-125"
-                        alt="Tracking Map"
-                    />
+            <div className="flex flex-col min-h-screen bg-[#F8F9FB] relative overflow-hidden font-outfit">
+                {/* Map Layer - Rapido Style (Light Navigation) */}
+                <div className="absolute inset-0 z-0">
+                    <MapContainer
+                        center={[userCoords.lat, userCoords.lng]}
+                        zoom={15} 
+                        style={{ height: '100%', width: '100%' }}
+                        zoomControl={false}
+                        attributionControl={false}
+                    >
+                        <TileLayer
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
+                        
+                        {/* 🌊 Pulsing Concentric Waves (10km scale) */}
+                        <Pane name="waves" style={{ zIndex: 300 }}>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                {[0, 1, 2].map(i => (
+                                    <motion.div
+                                        key={i}
+                                        initial={{ scale: 0.1, opacity: 0.6 }}
+                                        animate={{ scale: [1, 4], opacity: [0.6, 0] }}
+                                        transition={{ repeat: Infinity, duration: 4, delay: i * 1.3, ease: "easeOut" }}
+                                        className={`absolute w-64 h-64 rounded-full border-2 ${isBlackPassMember ? 'border-brand/30 bg-brand/5' : 'border-black/5'}`}
+                                        style={{ left: '50%', top: '50%', marginLeft: '-8rem', marginTop: '-8rem' }}
+                                    />
+                                ))}
+                            </div>
+                        </Pane>
+                        
+                        {/* User Location Pulse */}
+                        <Marker position={[userCoords.lat, userCoords.lng]} icon={userIcon} />
 
-                    {/* Dark Overlay for better contrast */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/20 to-black/80" />
+                        {/* Search Area Badge (Floating over user) */}
+                        <Pane name="badges" style={{ zIndex: 600 }}>
+                             {isBlackPassMember && (
+                                <div className="absolute top-[40%] left-1/2 -translate-x-1/2 -translate-y-[60px] pointer-events-none">
+                                    <motion.div 
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        className="bg-brand text-black px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-2xl border border-white/20"
+                                    >
+                                        <Crown size={12} fill="currentColor" strokeWidth={3} />
+                                        <span className="text-[9px] font-[1000] uppercase tracking-widest italic">Black Priority active</span>
+                                    </motion.div>
+                                </div>
+                             )}
+                        </Pane>
 
-                    {/* Subtle Grid Overlay */}
-                    <div className="absolute inset-0 opacity-10"
-                        style={{
-                            backgroundImage: `linear-gradient(#F29F05 1px, transparent 1px), linear-gradient(90deg, #F29F05 1px, transparent 1px)`,
-                            backgroundSize: '40px 40px'
-                        }}
-                    />
-
-                    {/* Radar Pulse Elements */}
-                    <div className="absolute top-[30%] left-1/2 -translate-x-1/2 -translate-y-1/2">
-                        {[1, 2, 3].map((i) => (
-                            <motion.div
-                                key={i}
-                                initial={{ scale: 0.5, opacity: 0 }}
-                                animate={{ scale: [0.5, 2.5], opacity: [0.3, 0] }}
-                                transition={{ repeat: Infinity, duration: 4, delay: i * 1.3, ease: "easeOut" }}
-                                className="absolute w-64 h-64 border border-brand/30 rounded-full"
+                        {/* Real Expert marker — only shown after expert is assigned */}
+                        {hasCaptain && (
+                            <Marker
+                                position={[captainPos.lat, captainPos.lng]}
+                                icon={expertIcon}
                             />
-                        ))}
+                        )}
 
-                        <motion.div
-                            animate={{ scale: [1, 1.1, 1] }}
-                            transition={{ repeat: Infinity, duration: 2 }}
-                            className="relative z-10 w-12 h-12 bg-brand rounded-2xl border-2 border-white/20 shadow-[0_0_30px_rgba(242,159,5,0.4)] flex items-center justify-center"
-                        >
-                            <Zap size={20} className="text-white" fill="currentColor" />
+                        {/* Scanner Effect */}
+                        {findingTime > 0 && (
+                            <Pane name="scanner" style={{ zIndex: 400 }}>
+                                <div className="absolute inset-0 pointer-events-none">
+                                    <div className="w-full h-full bg-gradient-to-b from-brand/10 via-transparent to-transparent animate-[scan_3s_infinite_linear]" />
+                                </div>
+                            </Pane>
+                        )}
+                    </MapContainer>
+                </div>
+
+                {/* Top Status - Floating Pill (Maximizes Map View) */}
+                <div className="absolute top-8 left-1/2 -translate-x-1/2 z-[1000] w-full px-5">
+                    <motion.div 
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-black/80 backdrop-blur-2xl border border-white/10 rounded-2xl px-4 py-2.5 flex items-center justify-between shadow-2xl"
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="relative">
+                                <Radar size={18} className="text-brand animate-pulse" />
+                                {isBlackPassMember && (
+                                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-brand rounded-full animate-ping" />
+                                )}
+                            </div>
+                            <div className="flex flex-col">
+                                <h2 className="text-[11px] font-black text-white uppercase tracking-tighter">
+                                    {findingTime > 0 ? currentMessage : 'No Specialist Found'}
+                                </h2>
+                                <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest leading-none">
+                                    Searching within 10km grid
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="w-px h-6 bg-white/10" />
+                            <div className="flex flex-col items-end">
+                                <span className="text-[12px] font-[1000] text-brand tabular-nums">
+                                    {findingTime}s
+                                </span>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+
+                {/* Bottom Sheet - Compact & Premium (Rapido Style) */}
+                <div className="mt-auto relative z-10 p-5 mb-4">
+                    <motion.div
+                        initial={{ opacity: 0, y: 50 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-white rounded-[2.5rem] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-black/5"
+                    >
+                        {/* Pull Bar */}
+                        <div className="w-10 h-1 bg-gray-100 rounded-full mx-auto -mt-2 mb-5" />
+
+                        <div className="flex items-center justify-between mb-5">
+                            <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isBlackPassMember ? 'bg-brand text-black' : 'bg-black text-white'}`}>
+                                    <Zap size={18} fill="currentColor" />
+                                </div>
+                                <div>
+                                    <h3 className="text-[13px] font-[1000] text-black uppercase tracking-tight leading-none mb-1">
+                                        {isBlackPassMember ? 'VIP Priority Search' : 'Network Optimization'}
+                                    </h3>
+                                    <p className="text-[9px] font-bold text-black/30 uppercase tracking-widest leading-none">
+                                        Connecting to Elite Detailers
+                                    </p>
+                                </div>
+                            </div>
+                             {isBlackPassMember && (
+                                <div className="px-2 py-1 bg-brand text-black text-[7px] font-black rounded-lg animate-pulse uppercase">Member Benefit</div>
+                             )}
+                        </div>
+
+                        <div className="flex flex-col gap-3">
+                            <button
+                                onClick={() => {
+                                    if (findingTime === 0) {
+                                        setSearchRetry(prev => prev + 1);
+                                    } else {
+                                        setPhase(PHASES.SERVICE_SELECTION);
+                                        setActiveBookingId(null);
+                                    }
+                                }}
+                                className={`w-full h-14 rounded-2xl font-black text-[11px] uppercase tracking-[0.25em] flex items-center justify-center gap-3 transition-all active:scale-95 ${
+                                    findingTime === 0 
+                                    ? 'bg-brand text-black shadow-xl shadow-brand/20' 
+                                    : 'bg-black text-white shadow-xl shadow-black/10'
+                                }`}
+                            >
+                                {findingTime === 0 ? (
+                                    <>
+                                        <Rocket size={16} fill="currentColor" />
+                                        Force Retry
+                                    </>
+                                ) : (
+                                    <>
+                                        <X size={16} />
+                                        Cancel Search
+                                    </>
+                                )}
+                            </button>
+                            
+                            {findingTime > 0 && (
+                                <p className="text-[8px] font-black text-black/20 text-center uppercase tracking-widest mt-1">
+                                    High demand in your area • Optimizing dispatch
+                                </p>
+                            )}
+                        </div>
+                    </motion.div>
+                </div>
+
+                <style dangerouslySetInnerHTML={{ __html: `
+                    @keyframes scan {
+                        from { transform: translateY(-100%); }
+                        to { transform: translateY(100%); }
+                    }
+                    .custom-user-pin, .custom-captain-pin {
+                        background: none !important;
+                        border: none !important;
+                    }
+                `}} />
+            </div>
+        );
+    };
+
+    const renderLiveTrack = () => {
+        const userCoords = selectedLocation?.coordinates || { lat: 12.9716, lng: 77.5946 };
+        // If captainPos is not set yet, mock it somewhere nearby initially
+        const currentCaptainCoords = (captainPos.lat && captainPos.lng) 
+            ? [captainPos.lat, captainPos.lng] 
+            : [userCoords.lat + 0.015, userCoords.lng + 0.01];
+
+        const isCompleted = activeBooking?.status === 'completed';
+
+        const expertIcon = L.divIcon({
+            className: 'custom-expert-tracking',
+            html: `
+                <div class="relative">
+                    <div class="absolute -inset-6 bg-indigo-500/20 rounded-full animate-pulse"></div>
+                    <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border-2 border-indigo-600 shadow-[0_10px_30px_rgba(99,102,241,0.4)]">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="3">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+                        </svg>
+                    </div>
+                </div>
+            `,
+            iconSize: [48, 48],
+            iconAnchor: [24, 24]
+        });
+
+        const userPin = L.divIcon({
+            className: 'user-pin-tracking',
+            html: `<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg"></div>`,
+            iconSize: [16, 16],
+            iconAnchor: [8, 8]
+        });
+
+        return (
+            <div className="fixed inset-0 bg-[#F8F9FB] z-[100] flex flex-col overflow-hidden font-outfit">
+                {/* Navigational Map Layer (Rapido Style) */}
+                <div className="absolute inset-0 z-0">
+                    <MapContainer
+                        center={[userCoords.lat, userCoords.lng]}
+                        zoom={15}
+                        style={{ height: '100%', width: '100%' }}
+                        zoomControl={false}
+                        attributionControl={false}
+                    >
+                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                        
+                        <Marker position={[userCoords.lat, userCoords.lng]} icon={userPin} />
+                        
+                        <motion.div key="captain-marker">
+                            <Marker position={currentCaptainCoords} icon={expertIcon} />
                         </motion.div>
 
-                        <div className="absolute top-full mt-4 left-1/2 -translate-x-1/2 whitespace-nowrap">
-                            <span className="text-[10px] font-black text-brand uppercase tracking-[0.3em] font-outfit shadow-black shadow-lg">
-                                {JOB_STATES[jobStateIndex]?.label || 'Studio En Route'}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Path Decorations */}
-                    <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-10">
-                        <defs>
-                            <linearGradient id="pathGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stopColor="transparent" />
-                                <stop offset="50%" stopColor="#F29F05" />
-                                <stop offset="100%" stopColor="transparent" />
-                            </linearGradient>
-                        </defs>
-                        <path d="M 0 450 Q 200 350 400 450" stroke="url(#pathGradient)" strokeWidth="2" fill="transparent" strokeDasharray="5 5" />
-                    </svg>
+                        <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-white/20 via-transparent to-black/10" />
+                    </MapContainer>
                 </div>
 
                 {/* Top Status - Rapido Style (Dynamic Island) */}
@@ -1266,18 +2122,28 @@ const FullWashBooking = () => {
                         <motion.div
                             initial={{ scale: 0.8, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            className="bg-black/90 backdrop-blur-2xl px-5 py-2.5 rounded-2xl border border-white/10 flex items-center gap-4 shadow-[0_20px_40px_rgba(0,0,0,0.6)]"
+                            className="bg-white px-4 py-2.5 rounded-2xl border border-black/5 flex items-center gap-4 shadow-[0_10px_30px_rgba(0,0,0,0.1)]"
                         >
                             <div className="flex items-center gap-2.5">
-                                <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse shadow-[0_0_12px_rgba(242,159,5,0.8)]" />
+                                <div className="w-2 h-2 rounded-full bg-brand animate-ping shadow-[0_0_12px_rgba(242,159,5,0.8)]" />
                                 <div className="flex flex-col items-start leading-none">
-                                    <span className="text-[10px] font-black text-white uppercase tracking-widest">{isCompleted ? 'Completed' : 'Wash in Progress'}</span>
-                                    {!isCompleted && <span className="text-[8px] font-bold text-white/40 uppercase mt-0.5 tracking-tighter">Arriving Soon</span>}
+                                    <span className="text-[10px] font-black text-black uppercase tracking-widest">
+                                        {isCompleted ? 'Service Complete' : 
+                                         activeBooking?.status === 'at-studio' ? 'Asset at Sanctuary' :
+                                         activeBooking?.status === 'in_progress' ? 'Detailing Active' :
+                                         'Specialist Coordinating'}
+                                    </span>
+                                    {!isCompleted && <span className="text-[8px] font-bold text-black/30 uppercase mt-0.5 tracking-tighter italic">Studio Tracking Protocol Active</span>}
                                 </div>
                             </div>
-                            <div className="w-px h-4 bg-white/10" />
+                            <div className="w-px h-4 bg-black/5" />
                             <div className="flex flex-col items-end leading-none">
-                                <span className="text-[10px] font-black text-brand uppercase">{activeBooking?.status?.replace('_', ' ') || 'PROCESSED'}</span>
+                                <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-brand text-black rounded-xl border border-brand/20 shadow-lg">
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-[6px] font-black uppercase tracking-tighter leading-none opacity-50">START PIN</span>
+                                        <span className="text-[13px] font-[1000] tracking-[0.1em] leading-none mt-0.5">{activeBooking?.securityPin || '5310'}</span>
+                                    </div>
+                                </div>
                             </div>
                         </motion.div>
 
@@ -1299,47 +2165,54 @@ const FullWashBooking = () => {
                         <div className="flex items-center justify-between py-1">
                             <div className="flex items-center gap-3">
                                 <div className="w-14 h-14 bg-[#FFF6E9] rounded-xl flex items-center justify-center border border-orange-100/50 overflow-hidden shadow-inner">
-                                    <img src={selectedVehicle?.img} className="w-full h-full object-cover" />
+                                    <img
+                                        src={sanitizeUrl(selectedVehicle?.image || selectedVehicle?.img || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80')}
+                                        className="w-full h-full object-cover"
+                                        onError={handleImageError}
+                                    />
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2 mb-0.5">
-                                        <h3 className="text-[15px] font-[1000] text-black uppercase tracking-tighter leading-none">{activeBooking?.serviceName}</h3>
-                                        <span className="px-1.5 py-0.5 bg-brand/10 text-brand text-[6px] font-black rounded-full uppercase tracking-widest">Fastest</span>
+                                        <h3 className="text-[15px] font-[1000] text-black uppercase tracking-tighter leading-none">{activeBooking?.service?.name}</h3>
+                                        <span className="px-1.5 py-0.5 bg-indigo-600 text-white text-[6px] font-black rounded-full uppercase tracking-widest">Sanctuary Sync</span>
                                     </div>
-                                    <p className="text-[9px] font-bold text-black/30 uppercase tracking-widest leading-none">Estimate: 11:40 AM</p>
+                                    <p className="text-[9px] font-bold text-black/30 uppercase tracking-widest leading-none">{activeBooking?.bookingId || activeBookingId?.toString().slice(-8).toUpperCase()}</p>
                                 </div>
                             </div>
                             <div className="text-right">
-                                <h4 className="text-[15px] font-[1000] text-black">{activeBooking?.price}</h4>
+                                <h4 className="text-[15px] font-[1000] text-black">₹{activeBooking?.pricing?.totalAmount || activeBooking?.price}</h4>
                             </div>
                         </div>
 
-                        {/* Vendor Status Timeline */}
+                        {/* Specialist Status Timeline */}
                         <div className="bg-gray-50 rounded-xl p-3 flex items-center gap-3 border border-black/[0.06]/50">
                             <div className="relative">
                                 <img
-                                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80"
-                                    className="w-10 h-10 rounded-lg object-cover border-2 border-white shadow-sm grayscale"
-                                    alt="Vendor"
+                                    src={sanitizeUrl(activeBooking?.provider?.photo || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80")}
+                                    className="w-10 h-10 rounded-lg object-cover border-2 border-white shadow-sm"
+                                    alt="Specialist"
+                                    onError={handleImageError}
                                 />
                                 <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
                                     <Check size={7} className="text-white" strokeWidth={4} />
                                 </div>
                             </div>
                             <div className="flex-1 min-w-0">
-                                <h4 className="text-[13px] font-[1000] text-black uppercase tracking-tight leading-none mb-1">{activeBooking?.vendorName || 'Auto Studio'}</h4>
+                                <h4 className="text-[13px] font-[1000] text-black uppercase tracking-tight leading-none mb-1">{activeBooking?.provider?.name || 'Finding Specialist...'}</h4>
                                 <div className="flex items-center gap-2">
                                     <div className="flex items-center bg-white px-1.5 py-0.5 rounded-full shadow-sm border border-black/[0.06]">
                                         <Star size={8} fill="#F29F05" className="text-brand mr-1" />
-                                        <span className="text-[9px] font-black text-black">4.9</span>
+                                        <span className="text-[9px] font-black text-black">{activeBooking?.provider?.rating || '5.0'}</span>
                                     </div>
-                                    <span className="text-[8px] font-bold text-black/20 uppercase tracking-tighter">ID: {activeBooking?.id || activeBooking?._id?.slice(-6) || 'CW-891'}</span>
+                                    {activeBooking?.provider?.id && (
+                                        <span className="text-[8px] font-bold text-black/20 uppercase tracking-tighter">ID: {activeBooking.provider.id.toString().slice(-6).toUpperCase()}</span>
+                                    )}
                                 </div>
                             </div>
-                            <div className="flex gap-2">
-                                <motion.button whileTap={{ scale: 0.9 }} onClick={() => toast.success('Calling Studio...')} className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-black border border-gray-200 shadow-sm"><Phone size={14} /></motion.button>
-                                <motion.button whileTap={{ scale: 0.9 }} onClick={() => toast.success('Opening Chat...')} className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-black border border-gray-200 shadow-sm"><MessageSquare size={14} /></motion.button>
-                            </div>
+                             <div className="flex gap-2">
+                                 <motion.button whileTap={{ scale: 0.9 }} onClick={() => toast.success(`Calling Specialist...`)} className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-black border border-gray-200 shadow-sm"><Phone size={14} /></motion.button>
+                                 <motion.button whileTap={{ scale: 0.9 }} onClick={() => toast('Chat feature coming soon!')} className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-black border border-gray-200 shadow-sm"><MessageSquare size={14} /></motion.button>
+                             </div>
                         </div>
 
                         {/* Status List (Vertical Steps - Full Visibility) */}
@@ -1376,20 +2249,29 @@ const FullWashBooking = () => {
                         {/* Navigation Actions */}
                         <div className="grid grid-cols-2 gap-3">
                             <motion.button
-                                whileTap={{ scale: 0.96 }}
-                                onClick={() => toast.error('Emergency SOS Triggered! Support is on the way.', { duration: 6000 })}
-                                className="flex items-center justify-center gap-3 bg-red-50 text-red-600 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-100"
-                            >
-                                <AlertTriangle size={12} />
-                                SOS Help
-                            </motion.button>
-                            <motion.button
-                                whileTap={{ scale: 0.96 }}
-                                onClick={() => toast.success('Security PIN: 4821', { duration: 8000 })}
-                                className="bg-black text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-black/20"
-                            >
-                                Security PIN
-                            </motion.button>
+                                 whileTap={{ scale: 0.96 }}
+                                 onClick={() => toast.error('Emergency SOS Triggered! Support is on the way.', { duration: 5000 })}
+                                 className="flex items-center justify-center gap-3 bg-red-50 text-red-600 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-100"
+                             >
+                                 <AlertTriangle size={12} />
+                                 SOS Help
+                             </motion.button>
+                             <motion.button
+                                 whileTap={{ scale: 0.96 }}
+                                 onClick={() => {
+                                     const pin = activeBooking?.securityPin || '----';
+                                     toast.success(`SERVICE PIN: ${pin}`, { 
+                                         icon: 'Ã°Å¸â€Â',
+                                         description: 'Provide this to the detailing specialist to start the session.',
+                                         duration: 6000
+                                     });
+                                 }}
+                                 className="bg-black text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-black/20 flex flex-col items-center justify-center gap-1 group overflow-hidden relative"
+                             >
+                                 <div className="absolute inset-0 bg-brand/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                                 <span className="relative z-10">Security PIN</span>
+                                 <span className="relative z-10 text-[12px] text-brand">{activeBooking?.securityPin || '----'}</span>
+                             </motion.button>
                         </div>
 
                         {/* Bottom Sticky Button */}
@@ -1410,107 +2292,346 @@ const FullWashBooking = () => {
     };
 
     const renderCart = () => {
-        const primaryAddress = selectedLocation || addresses.find(a => a.isPrimary) || addresses[0];
-        // Pricing handled by unified useMemo at top
+        const totalCartPrice = cart.reduce((sum, item) => sum + (item.price || 0), 0);
+        const totalDuration = activeBooking?.duration || 18;
 
         return (
             <div className="min-h-screen bg-[#F8F9FB] pb-32">
                 {/* Cart Header */}
                 <div className="bg-white/80 backdrop-blur-md px-4 py-3 flex items-center gap-3 border-b border-black/[0.03] sticky top-0 z-50">
-                    <button onClick={() => setPhase(PHASES.SERVICE_SELECTION)} className="w-8 h-8 flex items-center justify-center bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                    <button onClick={handleBack} className="w-8 h-8 flex items-center justify-center bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
                         <ChevronLeft size={16} strokeWidth={2.5} />
                     </button>
                     <h2 className="text-[14px] font-black text-black uppercase tracking-tight">Booking Summary</h2>
                 </div>
 
                 <div className="p-4 space-y-4">
-                    {/* Cart Items (Premium Modern) */}
+                    {/* Selected Service Assets (Premium Modern) */}
                     <div className="space-y-3">
                         <div className="flex items-center justify-between px-1">
                             <h3 className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em]">Selected Assets</h3>
                         </div>
-                        {cart.map(item => (
-                            <div key={item.id} className="bg-white rounded-2xl p-3.5 shadow-sm relative border border-black/[0.03] flex items-center justify-between group transition-all hover:border-brand/30">
-                                <div className="flex items-center gap-3.5">
-                                    <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center border border-black/[0.05] shadow-sm overflow-hidden flex-shrink-0">
-                                        <img src={item.vehicleImg} className="w-full h-full object-cover" />
-                                    </div>
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-0.5">
-                                            <p className="text-[7.5px] font-black text-black/20 uppercase tracking-widest leading-none">{item.vehicleName}</p>
-                                        </div>
-                                        <h4 className="text-[11.5px] font-[1000] text-black leading-none uppercase tracking-tight mb-1.5">
-                                            {item.serviceName}
-                                        </h4>
-                                        <div className="flex items-center gap-2">
-                                            <div className="flex items-center gap-1">
-                                                <Clock size={9} className="text-black/30" />
-                                                <span className="text-[7.5px] font-bold text-black/40 uppercase tracking-tighter">{item.duration || 120} Mins</span>
-                                            </div>
-                                            <div className="w-1 h-1 rounded-full bg-black/5" />
-                                            <span className="text-[7.5px] font-black text-emerald-600 uppercase tracking-widest">Instant Wash Mode</span>
-                                        </div>
-                                    </div>
-                                </div>
+                        {effectiveItems.filter(it => it.type !== 'product').map((item, idx) => {
+                            const isProduct = item.type === 'product';
+                            const isAddon = item.type === 'addon';
+                            const isSubscription = item.type === 'subscription';
 
-                                <div className="text-right flex flex-col items-end gap-1.5">
-                                    <div className="flex flex-col items-end">
+                            let itemIcon = selectedVehicle?.img;
+                            if (isProduct) itemIcon = item.image;
+                            if (isSubscription) itemIcon = '/assets/icons/black_pass.png';
+                            if (isAddon) itemIcon = '/assets/icons/upgrade.png';
+
+                            let typeTag = 'Instant Wash';
+                            let tagColor = 'text-emerald-600';
+                            let isSubscribedWash = false;
+
+                            if (isProduct) { typeTag = 'E-Shop'; tagColor = 'text-brand'; }
+                            if (isSubscription) { typeTag = 'Membership'; tagColor = 'text-amber-500'; }
+                            if (isAddon) { typeTag = 'Upgrade'; tagColor = 'text-blue-500'; }
+
+                            // Dynamic Subscription Coverage Logic
+                            if (!isProduct && !isSubscription && !isAddon && userSubscription) {
+                                const usedCount = userSubscription.usedCredits || 0;
+                                const totalCount = userSubscription.monthlyCredits || 0;
+                                if (usedCount < totalCount) {
+                                    isSubscribedWash = true;
+                                    typeTag = 'Free with Pass';
+                                    tagColor = 'text-brand font-black';
+                                    item.isSubscribedWash = true; // Inject for finalPrice
+                                }
+                            }
+
+                            return (
+                                <div key={item.id || item._id || idx} className="bg-white rounded-2xl p-3.5 shadow-sm relative border border-black/[0.03] flex items-center justify-between group transition-all hover:border-brand/30">
+                                    <div className="flex items-center gap-3.5">
+                                        <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center border border-black/[0.05] shadow-sm overflow-hidden flex-shrink-0">
+                                            {isSubscription || isAddon ? (
+                                                <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                                                    {isSubscription ? <Crown size={24} className="text-amber-500" /> : <Zap size={24} className="text-blue-500" />}
+                                                </div>
+                                            ) : (
+                                                <img
+                                                    src={sanitizeUrl(itemIcon)}
+                                                    className="w-full h-full object-cover"
+                                                    alt={item.serviceName}
+                                                    onError={handleImageError}
+                                                />
+                                            )}
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-0.5">
+                                                <p className="text-[7.5px] font-black text-black/20 uppercase tracking-widest leading-none">
+                                                    {isProduct ? 'Product' : (isSubscription ? 'Plan' : (isAddon ? 'Upgrade' : (selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model}` : (selectedVehicleType ? selectedVehicleType : 'Vehicle'))))}
+                                                </p>
+                                            </div>
+                                            <h4 className="text-[11.5px] font-[1000] text-black leading-none uppercase tracking-tight mb-1.5">
+                                                {item.serviceName}
+                                            </h4>
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-1">
+                                                    <Clock size={9} className="text-black/30" />
+                                                    <span className="text-[7.5px] font-bold text-black/40 uppercase tracking-tighter">
+                                                        {isProduct || isSubscription ? 'Instant' : (item.duration || matchedModel?.sessionTime || 18) + ' Mins'}
+                                                    </span>
+                                                </div>
+                                                <div className="w-1 h-1 rounded-full bg-black/5" />
+                                                <span className={`text-[7.5px] font-black uppercase tracking-widest ${tagColor}`}>
+                                                    {typeTag}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="text-right flex flex-col items-end gap-1.5">
                                         <div className="text-[17px] font-[1000] text-black tracking-tight leading-none mb-1">
-                                            ₹{item.price}
+                                            ₹{isSubscribedWash ? 0 : item.price}
                                         </div>
-                                        <div className="inline-flex items-center gap-1 px-1 py-0.5 bg-emerald-50 rounded text-[6.5px] font-black text-emerald-600 uppercase tracking-tighter border border-emerald-100/30">
-                                            <Zap size={7} fill="currentColor" /> SAVED ₹{Math.round(item.price * 0.1)}
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => setCart(cart.filter(i => i.id !== item.id))}
-                                        className="text-[8px] font-black text-red-500 uppercase tracking-widest py-1 px-2 bg-red-50 rounded-lg hover:bg-red-500 hover:text-white transition-all active:scale-90"
-                                    >
-                                        Remove
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-
-                        {/* Shop Products in Cart */}
-                        {shopCart.length > 0 && (
-                            <>
-                                <div className="flex items-center justify-between px-1 pt-2">
-                                    <h3 className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em]">E-Shop Products</h3>
-                                </div>
-                                {shopCart.map(item => (
-                                    <div key={item._id} className="bg-white rounded-2xl p-3.5 shadow-sm relative border border-black/[0.03] flex items-center justify-between group transition-all hover:border-brand/30">
-                                        <div className="flex items-center gap-3.5">
-                                            <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center border border-black/[0.05] shadow-sm overflow-hidden flex-shrink-0">
-                                                <img src={item.image} className="w-full h-full object-cover" />
+                                        {isSubscribedWash ? (
+                                            <div className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-brand/10 rounded text-[6.5px] font-black text-brand uppercase tracking-tighter border border-brand/20">
+                                                <Crown size={7} fill="currentColor" /> 1 CREDIT USED
                                             </div>
-                                            <div>
-                                                <h4 className="text-[11.5px] font-[1000] text-black leading-none uppercase tracking-tight mb-1.5">
-                                                    {item.name}
-                                                </h4>
-                                                <p className="text-[9px] font-bold text-black/40 uppercase tracking-widest">Qty: {item.qty || 1}</p>
+                                        ) : (!isProduct && !isSubscription && !isAddon && (
+                                            <div className="inline-flex items-center gap-1 px-1 py-0.5 bg-emerald-50 rounded text-[6.5px] font-black text-emerald-600 uppercase tracking-tighter border border-emerald-100/30">
+                                                <Zap size={7} fill="currentColor" /> SAVED ₹49
                                             </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <div className="text-[17px] font-[1000] text-black tracking-tight leading-none mb-2">
-                                                ₹{(item.salePrice || item.price) * (item.qty || 1)}
-                                            </div>
+                                        ))}
+                                        {(isProduct || isSubscription || isAddon) && (
                                             <button
-                                                onClick={() => removeFromCart(item._id)}
-                                                className="text-[8px] font-black text-red-500 uppercase tracking-widest py-1 px-2 bg-red-50 rounded-lg"
+                                                onClick={() => setCart(cart.filter(i => (i.id || i._id) !== (item.id || item._id)))}
+                                                className="text-[8px] font-black text-red-500 uppercase tracking-widest py-1 px-2 bg-red-50 rounded-lg hover:bg-red-500 hover:text-white transition-all"
                                             >
                                                 Remove
                                             </button>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+
+                        {/* Active Subscription Summary (Dynamically shown if exists) */}
+                        {userSubscription && (
+                            <motion.div 
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="bg-black text-white rounded-2xl p-4 shadow-xl border border-brand/30 relative overflow-hidden group"
+                            >
+                                <div className="absolute top-0 right-0 w-32 h-full bg-brand/[0.05] skew-x-[-20deg]" />
+                                <div className="flex items-center justify-between relative z-10">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-brand rounded-xl flex items-center justify-center shadow-lg shadow-brand/20 flex-shrink-0">
+                                            <Crown size={20} className="text-black" fill="currentColor" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-[11px] font-black uppercase tracking-widest">{userSubscription.planName || userSubscription.plan || 'Active Pass'}</h4>
+                                            <p className="text-[9px] font-bold text-brand uppercase tracking-tighter mt-1">
+                                                {(userSubscription.monthlyCredits || 0) - (userSubscription.usedCredits || 0)} Washes Remaining
+                                            </p>
                                         </div>
                                     </div>
-                                ))}
-                            </>
+                                    <div className="flex items-center gap-2">
+                                        <div className="text-right">
+                                            <div className="text-[12px] font-black uppercase italic text-white/40 leading-none">Status</div>
+                                            <div className="text-[10px] font-black text-[#00FF66] uppercase tracking-widest mt-1">Active</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="mt-4 bg-white/5 rounded-xl p-3 border border-white/5">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Plan Usage Timeline</span>
+                                        <span className="text-[8px] font-black text-brand uppercase tracking-widest italic">{userSubscription.usedCredits || 0} / {userSubscription.monthlyCredits || 0} Used</span>
+                                    </div>
+                                    <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                        <motion.div 
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${((userSubscription.usedCredits || 0) / (userSubscription.monthlyCredits || 1)) * 100}%` }}
+                                            className="h-full bg-brand"
+                                        />
+                                    </div>
+                                </div>
+                            </motion.div>
                         )}
                     </div>
 
-                    {/* Add Another Promo (High-End CTA) */}
+                    {/* Dynamic Promotions & Coupons Section (Added) */}
+                    {filteredPromotions.filter(p => p.type === 'Coupons').length > 0 && (
+                        <div className="mt-6 space-y-4">
+                            <div className="flex items-center justify-between px-1">
+                                <h3 className="text-[10px] font-black text-black/30 uppercase tracking-[0.2em]">Available Protocols</h3>
+                                <div className="flex items-center gap-1.5 bg-brand/5 px-2 py-1 rounded-full border border-brand/10">
+                                    <Gift size={10} className="text-brand" />
+                                    <span className="text-brand text-[7px] font-[1000] uppercase tracking-widest">Rewards Node</span>
+                                </div>
+                            </div>
+                            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 snap-x snap-mandatory">
+                                {filteredPromotions.filter(p => p.type === 'Coupons').map((promo, idx) => (
+                                    <motion.button
+                                        key={promo.id || idx}
+                                        onClick={() => promo.badge ? handleApplyCoupon(promo.badge) : null}
+                                        whileTap={{ scale: 0.95 }}
+                                        className={`flex-shrink-0 w-64 p-4 rounded-[2rem] border transition-all relative overflow-hidden snap-center ${appliedCoupon?.code === promo.badge
+                                            ? 'bg-black border-black text-white shadow-lg shadow-black/20'
+                                            : 'bg-white border-black/[0.04] text-black shadow-sm hover:border-brand/30'
+                                            }`}
+                                    >
+                                        <div className="relative z-10 flex items-start gap-3 text-left">
+                                            <div className={`w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0 ${appliedCoupon?.code === promo.badge ? 'bg-white/20' : 'bg-brand/5 text-brand'
+                                                }`}>
+                                                {promo.type === 'Coupons' ? <Percent size={18} /> : <Zap size={18} />}
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`text-[12px] font-black uppercase italic ${appliedCoupon?.code === promo.badge ? 'text-white' : 'text-black'}`}>
+                                                        {promo.badge || 'PROMO'}
+                                                    </span>
+                                                    {appliedCoupon?.code === promo.badge && <Check size={12} className="text-brand" />}
+                                                </div>
+                                                <h4 className={`text-[9px] font-bold uppercase tracking-tight mt-0.5 opacity-80 line-clamp-1 ${appliedCoupon?.code === promo.badge ? 'text-white' : 'text-black/40'}`}>
+                                                    {promo.title}
+                                                </h4>
+                                                <p className={`text-[8px] font-black uppercase tracking-widest mt-2 ${appliedCoupon?.code === promo.badge ? 'text-brand' : 'text-brand/60'}`}>
+                                                    {promo.subtitle}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-current opacity-[0.03] rounded-full" />
+                                    </motion.button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Manual Coupon Input (Added) */}
+                    <div className="mt-8 space-y-3 px-1">
+                        <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em] italic ml-1">Voucher Authorization</label>
+                            {isBlackPassMember && (
+                                <motion.div 
+                                    initial={{ opacity: 0, x: 10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    className="flex items-center gap-1.5 bg-brand/[0.03] px-3 py-1.5 rounded-full border border-brand/10"
+                                >
+                                    <Crown size={10} className="text-brand" />
+                                    <span className="text-brand text-[7px] font-black uppercase tracking-widest">Premium Active</span>
+                                </motion.div>
+                            )}
+                        </div>
+                        {isBlackPassMember && (
+                             <p className="text-[8px] font-bold text-brand uppercase tracking-widest ml-1 mb-2 opacity-60">Membership privileges override standard coupons for maximum value.</p>
+                        )}
+                        <div className="relative group">
+                            <input
+                                type="text"
+                                placeholder="Enter Promotional Code"
+                                className="w-full bg-white border border-black/[0.04] px-5 py-4 rounded-2xl text-[13px] font-[1000] text-black outline-none focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all uppercase placeholder:text-black/10 shadow-sm"
+                                value={couponCode}
+                                onChange={e => setCouponCode(e.target.value)}
+                            />
+                            <button
+                                onClick={() => handleApplyCoupon()}
+                                className="absolute right-2 top-2 bottom-2 px-5 bg-black text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-brand transition-all active:scale-95 shadow-lg"
+                            >
+                                Apply
+                            </button>
+                        </div>
+                        {couponError && (
+                            <motion.p
+                                initial={{ opacity: 0, y: -5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="text-[9px] font-black text-red-500 uppercase italic ml-1 flex items-center gap-1"
+                            >
+                                <X size={10} strokeWidth={3} /> {couponError}
+                            </motion.p>
+                        )}
+                        {appliedCoupon && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="flex items-center justify-between bg-emerald-50 border border-emerald-100 px-4 py-3 rounded-xl shadow-sm"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-lg bg-emerald-500 flex items-center justify-center text-white">
+                                        <Check size={14} strokeWidth={3} />
+                                    </div>
+                                    <span className="text-[10px] font-black text-emerald-600 uppercase italic leading-none">Protocol {appliedCoupon.code} Authorized</span>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        setAppliedCoupon(null);
+                                        setCouponCode('');
+                                    }}
+                                    className="text-[9px] font-black text-emerald-600/50 uppercase italic hover:text-red-500 transition-colors"
+                                >
+                                    Remove
+                                </button>
+                            </motion.div>
+                        )}
+                    </div>
+
+                    {/* Express Upgrades (Service Addons) */}
+                    {activeService?.addons?.length > 0 && (
+                        <div className="space-y-4 pt-2">
+                            <div className="flex items-center justify-between px-1">
+                                <h3 className="text-[10px] font-black text-black/30 uppercase tracking-[0.2em]">Express Upgrades</h3>
+                                <div className="flex items-center gap-1.5 bg-brand/5 px-2 py-1 rounded-full border border-brand/10">
+                                    <Stars size={8} className="text-brand" />
+                                    <span className="text-brand text-[7px] font-[1000] uppercase tracking-widest">PRO CHOICE</span>
+                                </div>
+                            </div>
+                            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+                                {activeService.addons
+                                    .filter(addon => !addon.included)
+                                    .map((addon, i) => {
+                                        const isAdded = cart.some(item => (item.id === addon.id || item.serviceId === addon.id) && item.type === 'addon');
+                                        return (
+                                            <motion.button
+                                                key={addon.id || i}
+                                                whileTap={{ scale: 0.95 }}
+                                                onClick={() => {
+                                                    if (isAdded) {
+                                                        setCart(cart.filter(item => !(item.type === 'addon' && (item.id === addon.id || item.serviceId === addon.id))));
+                                                    } else {
+                                                        const addonItem = {
+                                                            id: addon.id || Date.now() + Math.random(),
+                                                            serviceId: addon.id,
+                                                            serviceName: addon.name,
+                                                            price: getPrice(addon.price, addon.id),
+                                                            duration: addon.duration || 10,
+                                                            type: 'addon',
+                                                            vehicleName: 'Express Upgrade',
+                                                            image: '/assets/icons/upgrade.png'
+                                                        };
+                                                        setCart(prev => [...prev, addonItem]);
+                                                    }
+                                                }}
+                                                className={`min-w-[125px] p-3 rounded-[1.5rem] border transition-all duration-300 flex flex-col items-center gap-2 relative overflow-hidden ${isAdded
+                                                    ? 'bg-black border-black text-white shadow-lg'
+                                                    : 'bg-white border-black/[0.04] text-black shadow-sm'}`}
+                                            >
+                                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${isAdded ? 'bg-white/10' : 'bg-gray-50'}`}>
+                                                    <Zap size={18} className={isAdded ? 'text-brand' : 'text-black/40'} />
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className={`text-[9px] font-black uppercase tracking-tight leading-none mb-0.5 ${isAdded ? 'text-white' : 'text-black'}`}>
+                                                        {addon.name}
+                                                    </p>
+                                                    <p className={`text-[11px] font-[1000] ${isAdded ? 'text-white' : 'text-emerald-600'}`}>
+                                                        ₹{getPrice(addon.price, addon.id)}
+                                                    </p>
+                                                </div>
+                                                {isAdded && (
+                                                    <div className="absolute top-1 right-1">
+                                                        <CheckCircle2 size={10} className="text-brand" fill="white" />
+                                                    </div>
+                                                )}
+                                            </motion.button>
+                                        );
+                                    })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Add Another Asset (High-End CTA) */}
                     <button
-                        onClick={() => navigate('/e-shop?from=studio-wash')}
+                        onClick={() => navigate('/e-shop?from=booking')}
                         className="w-full bg-white border border-black/[0.03] rounded-2xl p-3.5 flex items-center justify-between group active:scale-[0.98] transition-all relative overflow-hidden shadow-sm hover:bg-gray-50"
                     >
                         <div className="absolute top-0 right-0 w-24 h-24 bg-brand/5 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-brand/10 transition-colors" />
@@ -1521,73 +2642,137 @@ const FullWashBooking = () => {
                             <div className="text-left">
                                 <span className="block text-[12px] font-black text-black uppercase tracking-widest">Add Another Asset</span>
                                 <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className="text-[7.5px] font-bold text-emerald-600 uppercase tracking-tight leading-none">Auto-apply 20% Discount</span>
+                                    <span className="text-[7.5px] font-bold text-emerald-600 uppercase tracking-tight leading-none">Auto-apply {globalSettings.multi_asset_discount_pct || 20}% Discount</span>
                                 </div>
                             </div>
                         </div>
                         <div className="w-7 h-7 rounded-xl bg-gray-50 flex items-center justify-center shadow-sm relative z-10 group-hover:bg-brand transition-colors">
-                            <ChevronRight size={12} className="text-black/30 group-hover:text-black transition-colors" strokeWidth={3} />
+                            <ArrowRight size={12} className="text-black/30 group-hover:text-black transition-colors" strokeWidth={3} />
                         </div>
                     </button>
 
-                    {/* Car & Bike Combo Card (Premium Transition) */}
-                    <div className="bg-[#FAF1E8]/60 rounded-3xl p-3.5 pt-9 relative overflow-hidden border border-[#E9DCCF] mt-1 group hover:bg-[#FAF1E8] transition-colors duration-500 shadow-sm">
-                        <div className="absolute top-0 left-0 bg-[#1A1A1A] text-white px-3 py-1.5 text-[8.5px] font-black rounded-br-2xl uppercase tracking-widest">
-                            <span className="text-[#2D9944]">20% OFF</span> ON COMBO
-                        </div>
+                    {/* Car & Bike Combo Card (From Studio Wash) */}
+                    {(() => {
+                        const bikeService = dynamicServices.find(s => s.id?.toLowerCase().includes('bike') || s.title?.toLowerCase().includes('bike'));
+                        const carService = activeService;
 
-                        <div className="flex items-center justify-between mb-5">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-sm border border-black/[0.05]">
-                                    <Bike size={18} className="text-black/80" />
+                        const bikePrice = bikeService ? getPrice(bikeService.price, bikeService.id) : 199;
+                        const carPrice = carService ? getPrice(carService.price, carService.id) : 399;
+                        const combinedTotal = bikePrice + carPrice;
+                        const comboPrice = Math.round(combinedTotal * 0.8);
+                        const blackPassPlan = subscriptionPlans.find(p => p.name?.toLowerCase().includes('black') || p.title?.toLowerCase().includes('black'));
+                        const blackPrice = blackPassPlan ? Math.round(comboPrice * 0.7) : 312;
+
+                        return (
+                            <div className="bg-[#FAF1E8]/60 rounded-3xl p-3.5 pt-9 relative overflow-hidden border border-[#E9DCCF] mt-1 group hover:bg-[#FAF1E8] transition-colors duration-500 shadow-sm">
+                                <div className="absolute top-0 left-0 bg-[#1A1A1A] text-white px-3 py-1.5 text-[8.5px] font-black rounded-br-2xl uppercase tracking-widest">
+                                    <span className="text-[#2D9944]">{globalSettings.combo_discount_pct || 20}% OFF</span> ON COMBO
                                 </div>
-                                <Plus size={12} className="text-black/10" strokeWidth={3} />
-                                <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-sm border border-black/[0.05]">
-                                    <Car size={18} className="text-black/80" />
+
+                                <div className="flex items-center justify-between mb-5">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-sm border border-black/[0.05]">
+                                            <Bike size={18} className="text-black/80" />
+                                        </div>
+                                        <Plus size={12} className="text-black/10" strokeWidth={3} />
+                                        <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-sm border border-black/[0.05]">
+                                            <Car size={18} className="text-black/80" />
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[8px] font-black text-black/20 uppercase tracking-widest mb-1 leading-none">Combo Price</p>
+                                        <div className="flex items-center gap-1.5 justify-end">
+                                            <span className="text-[20px] font-[1000] text-black leading-none tracking-tight">₹{comboPrice}</span>
+                                            <span className="text-[10px] font-black text-black/10 line-through">₹{combinedTotal}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => {
+                                            const comboMult = 1 - ((globalSettings.combo_discount_pct || 20) / 100);
+                                            const bikeItem = {
+                                                id: Date.now(),
+                                                serviceId: bikeService?.id || 'bike_wash',
+                                                serviceName: bikeService?.title || 'Bike Express Wash',
+                                                price: Math.round(bikePrice * comboMult),
+                                                duration: bikeService?.duration || 15,
+                                                type: 'service',
+                                                vehicleName: 'Motorbike'
+                                            };
+                                            const carItem = {
+                                                id: Date.now() + 1,
+                                                serviceId: carService?.id || 'car_wash',
+                                                serviceName: carService?.title || 'Car Premium Wash',
+                                                price: Math.round(carPrice * comboMult),
+                                                duration: carService?.duration || 25,
+                                                type: 'service',
+                                                vehicleName: selectedVehicle?.model || 'Car'
+                                            };
+                                            setCart(prev => [...prev, bikeItem, carItem]);
+                                            toast.success(`Combo added to cart! (${globalSettings.combo_discount_pct || 20}% Discount applied)`);
+                                        }}
+                                        className="flex-1 bg-white border border-black/[0.06] text-black py-2.5 rounded-xl font-[1000] text-[10px] uppercase tracking-widest shadow-sm active:scale-[0.98] transition-all hover:bg-black hover:text-white hover:border-black"
+                                    >
+                                        Book Combo
+                                    </button>
+                                    {!isBlackPassMember && (
+                                        <button
+                                            onClick={() => {
+                                                if (!blackPassPlan) {
+                                                    toast.error('Black Pass plan not found. Please select from Monthly Subscriptions.');
+                                                    return;
+                                                }
+                                                const subscriptionItem = {
+                                                    id: Date.now(),
+                                                    serviceId: blackPassPlan.id || blackPassPlan._id,
+                                                    serviceName: blackPassPlan.name || blackPassPlan.title,
+                                                    price: blackPassPlan.price,
+                                                    type: 'subscription',
+                                                    vehicleName: 'Digital Membership'
+                                                };
+                                                setCart(prev => [...prev, subscriptionItem]);
+                                                toast.success(`${blackPassPlan.name} added to cart!`);
+                                            }}
+                                            className="flex-[1.8] bg-[#1A1A1A] text-white py-2.5 rounded-xl font-black text-[10px] uppercase tracking-[0.1em] flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-xl shadow-black/10 group-hover:bg-black"
+                                        >
+                                            ₹{blackPrice} WITH <span className="text-brand">BLACK</span>
+                                            <ChevronRight size={12} strokeWidth={3} className="text-brand/50" />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
-                            <div className="text-right">
-                                <p className="text-[8px] font-black text-black/20 uppercase tracking-widest mb-1 leading-none">Combo Price</p>
-                                <div className="flex items-center gap-1.5 justify-end">
-                                    <span className="text-[20px] font-[1000] text-black leading-none tracking-tight">₹446</span>
-                                    <span className="text-[10px] font-black text-black/10 line-through">₹558</span>
-                                </div>
-                            </div>
-                        </div>
+                        );
+                    })()}
 
-                        <div className="flex gap-2">
-                            <button className="flex-1 bg-white border border-black/[0.06] text-black py-2.5 rounded-xl font-[1000] text-[10px] uppercase tracking-widest shadow-sm active:scale-[0.98] transition-all hover:bg-black hover:text-white hover:border-black">
-                                Book Combo
-                            </button>
-                            <button className="flex-[1.8] bg-[#1A1A1A] text-white py-2.5 rounded-xl font-black text-[10px] uppercase tracking-[0.1em] flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-xl shadow-black/10 group-hover:bg-black">
-                                ₹312 WITH <span className="text-brand">BLACK</span>
-                                <ChevronRight size={12} strokeWidth={3} className="text-brand/50" />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Monthly Packages (Dynamic Premium Grid) */}
+                    {/* Monthly Packages (Dynamic Mapping) */}
                     <div className="space-y-4 pt-2">
                         <div className="flex items-center justify-between px-1">
                             <h3 className="text-[10px] font-black text-black/30 uppercase tracking-[0.2em]">Monthly Subscription</h3>
-                            {isBlackMember ? (
-                                <span className="text-emerald-600 text-[8px] font-black uppercase tracking-widest bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100 shadow-sm animate-pulse">Benefits Activated</span>
-                            ) : (
-                                <span className="text-emerald-600 text-[8px] font-black uppercase tracking-widest bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100 shadow-sm">Upto 50% Savings</span>
-                            )}
+                            <span className="text-emerald-600 text-[8px] font-black uppercase tracking-widest bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100 shadow-sm">Upto 50% Savings</span>
                         </div>
 
                         <div className="grid grid-cols-1 gap-2.5">
-                            {(subscriptionPlans.length > 0 ? subscriptionPlans : [
-                                { title: '2 Wash/Month', price: '458', perWash: '229', color: 'bg-white' },
-                                { title: '4 Times/Month', price: '756', perWash: '189', color: 'bg-white' },
-                                { title: '8 Times/Month', price: '1352', perWash: '169', color: 'bg-white' }
+                            {(filteredSubscriptionPlans.length > 0 ? filteredSubscriptionPlans.filter(p => {
+                                // Filter out already owned plan or Black Pass if isBlackPassMember
+                                const isOwned = userSubscription?.planId === (p.id || p._id);
+                                const isBlackPass = p.name?.toLowerCase().includes('black') || p.title?.toLowerCase().includes('black');
+                                return !isOwned && (!isBlackPass || !isBlackPassMember);
+                            }) : [
+                                { title: '2 Wash/Month', price: 458, description: '229 per wash' },
+                                { title: '4 Times/Month', price: 756, description: '189 per wash' },
+                                { title: '8 Times/Month', price: 1352, description: '169 per wash' }
                             ]).map((pkg, i) => {
-                                const isSelected = selectedSubscription?._id === pkg._id || selectedSubscription?.id === pkg.id;
+                                const perWash = pkg.perWash || Math.round((pkg.price || 499) / (parseInt(pkg.title) || 2));
+                                const pkgId = pkg.id || pkg._id;
+                                const pkgName = pkg.name || pkg.title;
+                                const isAdded = effectiveItems.some(i => 
+                                    i.type === 'subscription' && (pkgId ? i.serviceId === pkgId : (i.name === pkgName && pkgName !== undefined))
+                                );
+
                                 return (
-                                    <div key={pkg._id || pkg.id || i}
-                                        onClick={() => setSelectedSubscription(isSelected ? null : pkg)}
-                                        className={`rounded-2xl border transition-all duration-300 p-3.5 shadow-sm flex items-center justify-between relative overflow-hidden group cursor-pointer ${isSelected ? 'border-brand ring-1 ring-brand bg-brand/5' : 'bg-white border-black/[0.03] hover:border-brand/40'}`}>
+                                    <div key={pkg.id || i} className={`bg-white rounded-2xl border p-3.5 shadow-sm flex items-center justify-between relative overflow-hidden group transition-all duration-300 ${isAdded ? 'border-brand ring-1 ring-brand/20' : 'border-black/[0.03] hover:border-brand/40'}`}>
                                         <div className="absolute top-0 right-0 w-24 h-24 bg-brand/5 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-150 duration-700" />
                                         <div className="absolute top-0 left-0 bg-[#F3DCCB] text-black px-3 py-1 text-[7.5px] font-[1000] rounded-br-xl uppercase tracking-widest shadow-sm">
                                             Total ₹{pkg.price}
@@ -1596,22 +2781,46 @@ const FullWashBooking = () => {
                                         <div className="pt-4 flex-1">
                                             <h4 className="text-[12px] font-black text-black tracking-tight uppercase leading-none mb-1.5 group-hover:text-brand transition-colors">{pkg.title || pkg.name}</h4>
                                             <div className="flex items-center gap-2">
-                                                <span className="text-[15px] font-[1000] text-emerald-600 leading-none tracking-tighter">₹{Math.round(pkg.price / (pkg.washesCount || 2))}/WASH</span>
+                                                <span className="text-[15px] font-[1000] text-emerald-600 leading-none tracking-tighter">₹{perWash}/WASH</span>
                                                 <div className="w-1 h-1 rounded-full bg-black/5" />
-                                                <span className="text-[9px] font-bold text-black/10 line-through tracking-tighter">WAS ₹{Math.round(pkg.price * 1.5)}</span>
+                                                <span className="text-[9px] font-bold text-black/10 line-through tracking-tighter">WAS ₹{perWash * 2}</span>
                                             </div>
                                         </div>
 
-                                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'border-brand bg-brand text-white' : 'border-black/10 bg-gray-50'}`}>
-                                            {isSelected && <Check size={14} strokeWidth={4} />}
-                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                if (isAdded) {
+                                                    setCart(prev => prev.filter(item => {
+                                                        if (item.type !== 'subscription') return true;
+                                                        const pkgId = pkg.id || pkg._id;
+                                                        const pkgName = pkg.name || pkg.title;
+                                                        if (pkgId && item.serviceId) return item.serviceId !== pkgId;
+                                                        return item.name !== pkgName;
+                                                    }));
+                                                } else {
+                                                    const subscriptionItem = {
+                                                        id: pkg.id || pkg._id || Date.now(),
+                                                        serviceId: pkg.id || pkg._id,
+                                                        serviceName: pkg.name || pkg.title,
+                                                        name: pkg.name || pkg.title,
+                                                        price: pkg.price,
+                                                        type: 'subscription',
+                                                        vehicleName: 'Monthly Pass'
+                                                    };
+                                                    setCart(prev => [...prev, subscriptionItem]);
+                                                }
+                                            }}
+                                            className={`px-5 py-2.5 rounded-xl text-[10px] font-[1000] uppercase tracking-widest shadow-md active:scale-95 transition-all relative z-10 ${isAdded ? 'bg-black text-white' : 'bg-[#F3DCCB] text-black hover:bg-black hover:text-white'}`}
+                                        >
+                                            {isAdded ? 'Added' : 'Select'}
+                                        </button>
                                     </div>
                                 );
                             })}
                         </div>
                     </div>
 
-                    {/* Delivery Address (Premium Integration - Aligned with Instant Wash) */}
+                    {/* Delivery Address (Premium Integration) */}
                     <div className="bg-white rounded-3xl p-5 border border-black/[0.03] shadow-sm relative overflow-hidden group">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-gray-50 rounded-full -mr-16 -mt-16 blur-3xl" />
                         <div className="flex items-center justify-between mb-5 relative z-10">
@@ -1625,10 +2834,10 @@ const FullWashBooking = () => {
                                 </div>
                             </div>
                             <button
-                                onClick={() => navigate('/addresses?from=full-wash')}
+                                onClick={() => navigate('/addresses?from=instant-wash')}
                                 className="bg-brand/10 text-brand px-4 py-2 rounded-xl text-[9.5px] font-black uppercase tracking-widest hover:bg-brand hover:text-white transition-all active:scale-95 shadow-sm border border-brand/20"
                             >
-                                {primaryAddress ? 'Change' : 'Add'}
+                                Change
                             </button>
                         </div>
                         {(() => {
@@ -1652,7 +2861,7 @@ const FullWashBooking = () => {
                                 </div>
                             ) : (
                                 <button
-                                    onClick={() => navigate('/addresses?from=full-wash')}
+                                    onClick={() => navigate('/addresses?from=instant-wash')}
                                     className="w-full py-8 border-2 border-dashed border-black/[0.05] rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-black/20 hover:bg-gray-50 hover:border-brand/20 transition-all group flex flex-col items-center justify-center gap-2"
                                 >
                                     <Plus size={20} className="text-black/10 group-hover:text-brand transition-colors" strokeWidth={3} />
@@ -1662,16 +2871,15 @@ const FullWashBooking = () => {
                         })()}
                     </div>
 
-                    <p className="text-center text-[9px] font-bold text-black/15 uppercase tracking-[0.2em] pt-4 leading-none">
-                        Quality guaranteed — cancel anytime
-                    </p>
-
-                    {/* E-Shop Recommendations (Matching Parity) */}
-                    <div className="pt-8 pb-4">
+                    {/* Recommendation Section (E-shop Integration) */}
+                    <div className="pt-2 pb-6">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em]">Craft Care Essentials</h3>
-                            <button onClick={() => navigate('/eshop')} className="text-[8px] font-black text-brand uppercase tracking-widest flex items-center gap-1">
-                                View Store <ArrowRight size={8} />
+                            <div className="flex flex-col">
+                                <h3 className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em]">Craft Care Essentials</h3>
+                                <p className="text-[7.5px] font-black text-brand uppercase tracking-tighter mt-1">Exclusive Add-ons for later use</p>
+                            </div>
+                            <button onClick={() => navigate('/e-shop')} className="bg-black text-white px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 active:scale-95 transition-all">
+                                View Store <ArrowRight size={8} strokeWidth={3} />
                             </button>
                         </div>
                         <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
@@ -1679,84 +2887,93 @@ const FullWashBooking = () => {
                                 <motion.div
                                     key={product._id}
                                     whileTap={{ scale: 0.98 }}
-                                    className="min-w-[170px] bg-white rounded-3xl p-2.5 border border-black/[0.03] shadow-sm flex flex-col gap-3 group transition-all hover:border-brand/20"
+                                    className="min-w-[160px] bg-white rounded-2xl p-2 border border-black/[0.03] shadow-sm flex flex-col gap-2"
                                 >
-                                    <div className="w-full aspect-square bg-gray-50 rounded-2xl overflow-hidden relative">
+                                    <div className="w-full aspect-square bg-gray-50 rounded-xl overflow-hidden">
                                         <img
                                             src={sanitizeUrl(product.image)}
-                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                            className="w-full h-full object-cover"
                                             alt={product.name}
                                             onError={handleImageError}
                                         />
-                                        <div className="absolute top-2 right-2 px-2 py-1 bg-white/90 backdrop-blur-md rounded-lg text-[8px] font-black text-emerald-600 uppercase tracking-tighter">
-                                            Premium
-                                        </div>
                                     </div>
-                                    <div className="px-1.5 pb-1">
-                                        <h4 className="text-[10.5px] font-black text-black line-clamp-1 uppercase tracking-tight mb-1.5 group-hover:text-brand transition-colors">{product.name}</h4>
+                                    <div className="px-1">
+                                        <h4 className="text-[10px] font-black text-black line-clamp-1 uppercase tracking-tighter mb-1">{product.name}</h4>
                                         <div className="flex items-center justify-between">
                                             <div className="flex flex-col">
-                                                <span className="text-[13px] font-[1000] text-black">₹{product.salePrice}</span>
-                                                <span className="text-[7.5px] font-bold text-black/20 line-through">₹{product.price}</span>
+                                                <span className={`text-[12px] font-[1000] ${isBlackPassMember ? 'text-brand' : 'text-black'}`}>
+                                                    ₹{isBlackPassMember ? Math.round(product.salePrice * (1 - (passConfig?.discount || 0.3))) : product.salePrice}
+                                                </span>
+                                                {isBlackPassMember && (
+                                                    <span className="text-[7px] font-black text-black/20 line-through uppercase tracking-tighter">₹{product.salePrice}</span>
+                                                )}
                                             </div>
                                             <button
                                                 onClick={() => {
-                                                    addToCart(product);
-                                                    toast.success(`${product.name} added to cart!`);
+                                                    const productPrice = isBlackPassMember ? Math.round(product.salePrice * (1 - (passConfig?.discount || 0.3))) : product.salePrice;
+                                                    const productItem = {
+                                                        id: product._id || Date.now() + Math.random(),
+                                                        serviceName: product.name,
+                                                        price: productPrice,
+                                                        vehicleId: selectedVehicle?.id,
+                                                        vehicleName: "E-shop Item",
+                                                        image: product.image,
+                                                        type: 'product'
+                                                    };
+                                                    setCart(prev => [...prev, productItem]);
+                                                    toast.success(`${product.name} added to your purchases!`);
                                                 }}
-                                                className="w-8 h-8 bg-black text-white rounded-xl flex items-center justify-center active:scale-90 transition-all hover:bg-brand hover:shadow-lg hover:shadow-brand/20"
+                                                className="w-6 h-6 bg-black text-white rounded-lg flex items-center justify-center active:scale-95 transition-transform"
                                             >
-                                                <Plus size={14} strokeWidth={3} />
+                                                <Plus size={12} strokeWidth={3} />
                                             </button>
                                         </div>
                                     </div>
                                 </motion.div>
                             )) : (
-                                <div className="w-full py-12 text-center bg-white rounded-3xl border border-black/[0.03] border-dashed">
-                                    <div className="flex flex-col items-center gap-2 opacity-20">
-                                        <Loader2 size={24} className="animate-spin" />
-                                        <p className="text-[9px] font-black uppercase tracking-widest">Curating relevant products...</p>
-                                    </div>
+                                <div className="w-full py-8 text-center bg-white rounded-2xl border border-black/[0.03] border-dashed">
+                                    <p className="text-[9px] font-black text-black/10 uppercase tracking-widest">Curating relevant products...</p>
                                 </div>
                             )}
                         </div>
                     </div>
                 </div>
 
-                {/* Cart Footer (Ultra Modern) */}
+                {/* Cart Footer (Ultra Modern - Matching Studio Wash) */}
                 <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-black/[0.04] px-4 py-2.5 pb-5 z-50 shadow-[0_-12px_35px_rgba(0,0,0,0.02)]">
                     <div className="flex items-center justify-between max-w-lg mx-auto gap-3 transition-all">
                         <div className="flex-1">
                             <p className="text-[6.5px] font-black text-black/20 uppercase tracking-[0.25em] mb-0.5 leading-none">Final Estimate</p>
-                            <div className="flex flex-col">
-                                <div className="flex items-baseline gap-1.5">
-                                    <span className="text-[22px] font-[1000] text-black tracking-tighter leading-none">₹{totalCartPrice}</span>
-                                    {discount > 0 && <span className="text-[10px] font-black text-emerald-600">(-₹{discount})</span>}
-                                </div>
-                                {applyBlackDiscount && (
-                                    <span className="text-[7px] font-black text-brand uppercase tracking-tighter">BLACK PASS 30% DISCOUNT APPLIED</span>
-                                )}
+                            <div className="flex items-baseline gap-1.5">
+                                <span className="text-[22px] font-[1000] text-black tracking-tighter leading-none">₹{finalPrice}</span>
+                                <span className="px-1 py-0.5 bg-black/[0.03] text-black/40 text-[7px] font-black rounded text-center uppercase tracking-tighter leading-none">Instant</span>
                             </div>
                             <div className="flex items-center gap-2 mt-1">
                                 <div className="flex items-center gap-1">
                                     <Clock size={9} className="text-brand" strokeWidth={3} />
-                                    <span className="text-[7.5px] font-black text-black/40 uppercase tracking-widest leading-none">{totalDuration} Mins</span>
+                                    <span className="text-[7.5px] font-black text-black/40 uppercase tracking-widest leading-none">
+                                        {totalCartDuration || 18} Mins
+                                    </span>
                                 </div>
+                                <div className="w-0.5 h-0.5 rounded-full bg-black/5" />
+                                <span className="text-[7.5px] font-black text-emerald-600 uppercase tracking-widest leading-none">Doorstep</span>
                             </div>
                         </div>
                         <button
                             onClick={() => {
-                                if (!primaryAddress) {
-                                    toast.error('Please add/select a primary address first');
+                                const activeAddr = selectedLocation || addresses.find(a => a.isPrimary) || addresses[0];
+                                if (!activeAddr) {
+                                    navigate('/addresses?from=instant-wash');
+                                    toast.error('Please select a service address');
                                     return;
                                 }
-                                setPhase(PHASES.SELECT_SLOT);
+                                navigateToPhase(PHASES.SELECT_SLOT);
                             }}
-                            className={`flex-1 max-w-[145px] flex items-center justify-center gap-2 h-12 rounded-xl font-[1000] text-[12px] uppercase tracking-widest active:scale-[0.97] transition-all shadow-lg group relative overflow-hidden ${!primaryAddress ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-black text-white shadow-black/5'}`}
+                            className={`flex-1 max-w-[145px] flex items-center justify-center gap-2 h-12 rounded-xl font-[1000] text-[12px] uppercase tracking-widest active:scale-[0.97] transition-all shadow-lg group relative overflow-hidden bg-black text-white shadow-black/5 hover:bg-brand hover:text-black`}
                         >
                             <div className="absolute inset-0 bg-brand/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <span className="relative z-10">{!primaryAddress ? 'Select Address' : 'Next Step'}</span>
-                            <ArrowRight size={14} className="relative z-10 group-hover:translate-x-1 transition-transform duration-300" strokeWidth={3} />
+                            <span className="relative z-10">{(selectedLocation || addresses.find(a => a.isPrimary) || addresses[0]) ? 'Next Step' : 'Set Address'}</span>
+                            <ChevronRight size={14} className="relative z-10 group-hover:translate-x-1 transition-transform duration-300" strokeWidth={3} />
                         </button>
                     </div>
                 </div>
@@ -1765,134 +2982,198 @@ const FullWashBooking = () => {
     };
 
     const renderSelectSlot = () => {
-        const hours = Math.floor(totalDuration / 60);
-        const mins = totalDuration % 60;
+        const totalDurationMins = totalCartDuration;
+        const hours = Math.floor(totalDurationMins / 60);
+        const mins = totalDurationMins % 60;
 
-        // Dynamic dates used instead of hardcoded FEB/MAR ones
+        // Dynamically generate next 5 days from today
+        const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+        const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+        const dates = Array.from({ length: 5 }, (_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() + i);
+            d.setHours(0, 0, 0, 0); // Normalize to start of day
+            return {
+                month: MONTHS[d.getMonth()],
+                day: String(d.getDate()),
+                weekday: WEEKDAYS[d.getDay()],
+                trend: i === 0 ? 'down' : i < 3 ? 'up' : null,
+                key: `${MONTHS[d.getMonth()]} ${d.getDate()}`,
+                fullDate: d.toISOString() // Store ISO string for backend
+            };
+        });
+
+        // Set default date to today if not set
+        const effectiveDateFull = selectedDate || dates[0].fullDate;
+        const effectiveDateKey = dates.find(d => d.fullDate === effectiveDateFull)?.key || dates[0].key;
 
         return (
             <div className="min-h-screen bg-[#F8F9FB] pb-32">
                 {/* Header */}
                 <div className="px-5 py-3 flex items-center gap-3 bg-white border-b border-black/[0.04] sticky top-0 z-50">
-                    <button onClick={() => setPhase(PHASES.CART)} className="w-8 h-8 flex items-center justify-center bg-gray-50 rounded-xl">
+                    <button onClick={handleBack} className="w-8 h-8 flex items-center justify-center bg-gray-50 rounded-xl">
                         <ChevronLeft size={18} />
                     </button>
                     <h2 className="text-[14px] font-[1000] text-black uppercase tracking-tight">Select Slot</h2>
                 </div>
 
                 {/* Location Subheader */}
-                <div className="px-6 py-4 flex items-center gap-2">
-                    <MapPin size={16} fill="currentColor" className="text-black" />
-                    <p className="text-[11px] font-[1000] text-black uppercase tracking-tight">
-                        Service at - <span className="text-black/30">{(() => {
-                            const a = selectedLocation || addresses.find(x => x.isPrimary) || addresses[0];
-                            return a ? (a.full || a.address || a.street || a.address?.street || a.label || 'Your Address') : 'Address not saved';
-                        })()}</span>
-                    </p>
+                <div className="px-6 py-4 flex items-center justify-between gap-2 bg-white/50 border-b border-black/[0.02]">
+                    <div className="flex items-center gap-2">
+                        <MapPin size={16} fill="currentColor" className="text-black" />
+                        <p className="text-[11px] font-[1000] text-black uppercase tracking-tight">
+                            Service at - <span className="text-black/30">{(() => {
+                                const a = selectedLocation || addresses.find(x => x.isPrimary) || addresses[0];
+                                return a ? (a.full || a.address || a.street || a.address?.street || a.label || 'Your Address') : 'Address not saved';
+                            })()}</span>
+                        </p>
+                    </div>
                 </div>
 
-                <div className="px-4">
-                    <div className="bg-white rounded-2xl border border-black/[0.06] p-4 shadow-sm">
-                        <h3 className="text-[14px] font-black text-black mb-5">Select the Date for your Service</h3>
+                <div className="p-4 space-y-4">
+                    {/* Booking Mode Selector */}
+                    <div className="bg-white rounded-2xl border border-black/[0.06] p-1.5 flex gap-1.5 shadow-sm overflow-hidden">
+                        <button
+                            onClick={() => setBookingType('instant')}
+                            className={`flex-1 flex items-center justify-center gap-2.5 py-4 rounded-xl transition-all relative group ${bookingType === 'instant' ? 'bg-black text-white shadow-xl shadow-black/10' : 'bg-transparent text-black/40 hover:bg-gray-50'}`}
+                        >
+                            {bookingType === 'instant' && <motion.div layoutId="modebg" className="absolute inset-0 bg-black rounded-xl -z-10" />}
+                            <Zap size={16} className={bookingType === 'instant' ? 'text-brand' : 'text-black/20'} fill="currentColor" />
+                            <span className="text-[12px] font-black uppercase tracking-widest">Instant Match</span>
+                        </button>
+                        <button
+                            onClick={() => setBookingType('schedule')}
+                            className={`flex-1 flex items-center justify-center gap-2.5 py-4 rounded-xl transition-all relative group ${bookingType === 'schedule' ? 'bg-black text-white shadow-xl shadow-black/10' : 'bg-transparent text-black/40 hover:bg-gray-50'}`}
+                        >
+                            {bookingType === 'schedule' && <motion.div layoutId="modebg" className="absolute inset-0 bg-black rounded-xl -z-10" />}
+                            <Calendar size={16} className={bookingType === 'schedule' ? 'text-brand' : 'text-black/20'} />
+                            <span className="text-[12px] font-black uppercase tracking-widest">Schedule</span>
+                        </button>
+                    </div>
 
-                        {/* Date Picker */}
-                        <div className="flex justify-between mb-8 overflow-x-auto no-scrollbar gap-4">
-                            {dates.map((d, i) => {
-                                const isSelected = selectedDate === `${d.month} ${d.day}`;
-                                return (
-                                    <div key={i} className="flex flex-col items-center gap-2 flex-shrink-0">
-                                        <div className="relative">
-                                            {d.trend && (
-                                                <div className={`absolute -top-1.5 -right-1.5 w-5 h-5 rounded-md flex items-center justify-center shadow-sm ${d.trend === 'up' ? 'bg-[#FFD700]' : 'bg-[#DCFCE7]'
-                                                    }`}>
-                                                    <Zap size={10} className={d.trend === 'up' ? 'text-black' : 'text-emerald-600'} />
+                    <div className={`transition-all duration-500 relative ${bookingType === 'instant' ? 'opacity-40 grayscale pointer-events-none' : 'opacity-100'}`}>
+                        {bookingType === 'instant' && (
+                            <div className="absolute inset-0 z-50 flex items-center justify-center">
+                                <div className="bg-black text-white px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl flex items-center gap-2">
+                                    <Shield size={12} className="text-brand" />
+                                    Choose 'Schedule' to unlock
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="bg-white rounded-3xl border border-black/[0.06] p-5 shadow-sm space-y-8">
+                            <div>
+                                <h3 className="text-[14px] font-black text-black mb-5 uppercase tracking-tight">Select Service Date</h3>
+                                {/* Date Picker */}
+                                <div className="flex justify-between mb-2 overflow-x-auto no-scrollbar gap-4 pb-2">
+                                    {dates.map((d, i) => {
+                                        const isSelected = effectiveDateFull === d.fullDate;
+                                        return (
+                                            <div key={i} className="flex flex-col items-center gap-2 flex-shrink-0">
+                                                <div className="relative">
+                                                    {d.trend && (
+                                                        <div className={`absolute -top-1.5 -right-1.5 w-5 h-5 rounded-md flex items-center justify-center shadow-md z-10 ${d.trend === 'up' ? 'bg-[#FFD700]' : 'bg-emerald-500'}`}>
+                                                            <Zap size={10} className={d.trend === 'up' ? 'text-black' : 'text-white'} fill="currentColor" />
+                                                        </div>
+                                                    )}
+                                                    <button
+                                                        onClick={() => setSelectedDate(d.fullDate)}
+                                                        className={`w-[58px] py-4 rounded-2xl flex flex-col items-center transition-all duration-300 border ${isSelected ? 'bg-black text-white border-black shadow-xl scale-105' : 'bg-white text-black/40 border-black/[0.05] hover:border-black/10'}`}
+                                                    >
+                                                        <span className="text-[8px] font-[1000] mb-1.5 uppercase tracking-widest leading-none">{d.month}</span>
+                                                        <span className="text-[18px] font-[1000] mb-1 leading-none">{d.day}</span>
+                                                        <span className="text-[8px] font-black uppercase tracking-tighter leading-none opacity-40">{d.weekday}</span>
+                                                    </button>
                                                 </div>
-                                            )}
-                                            <button
-                                                onClick={() => setSelectedDate(`${d.month} ${d.day}`)}
-                                                className={`w-[52px] py-3 rounded-xl flex flex-col items-center transition-all ${isSelected ? 'bg-[#1A1A1A] text-white' : 'bg-transparent text-black/40'
-                                                    }`}
-                                            >
-                                                <span className="text-[9px] font-black mb-1 uppercase">{d.month}</span>
-                                                <span className="text-[16px] font-black mb-1">{d.day}</span>
-                                                <span className="text-[9px] font-black uppercase">{d.weekday}</span>
-                                            </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div className="border-t border-black/[0.03] pt-8">
+                                <h3 className="text-[14px] font-black text-black uppercase tracking-tight">Select Start Time</h3>
+                                <div className="flex items-center gap-1.5 mt-1.5 mb-6">
+                                    <Clock size={11} className="text-black/30" />
+                                    <p className="text-[10px] font-bold text-black/40 uppercase tracking-tighter">
+                                        Duration: <span className="text-black">{hours}H {mins}M</span>
+                                    </p>
+                                </div>
+
+                                <div className="space-y-10">
+                                    {/* Morning Slots */}
+                                    <div>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h4 className="text-[11px] font-black text-black uppercase tracking-[0.15em] flex items-center gap-2">
+                                                <div className="w-1 h-3 bg-brand rounded-full" />
+                                                Morning Slots
+                                            </h4>
+                                            <span className="text-[8px] font-black text-black/20 uppercase tracking-widest">08:00 - 12:00</span>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-3">
+                                            {['08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM'].map(slot => (
+                                                <button
+                                                    key={slot}
+                                                    onClick={() => setSelectedSlot(slot)}
+                                                    className={`py-3.5 rounded-xl text-[12px] font-black transition-all border ${selectedSlot === slot
+                                                        ? 'bg-black text-white border-black shadow-lg scale-[0.98]'
+                                                        : 'bg-white text-black/50 border-black/[0.06] hover:border-black/20'
+                                                        }`}
+                                                >
+                                                    {slot}
+                                                </button>
+                                            ))}
                                         </div>
                                     </div>
-                                );
-                            })}
-                        </div>
 
-                        <div className="border-t border-black/[0.03] pt-5">
-                            <h3 className="text-[14px] font-black text-black">Select the start time for your service</h3>
-                            <p className="text-[11px] font-bold text-black/20 mt-1">
-                                Your service will take approximately {totalDurationMins} minutes
-                            </p>
-
-                            <div className="mt-6 space-y-8">
-                                {/* Morning Slots */}
-                                <div>
-                                    <h4 className="text-[13px] font-black text-black flex items-center gap-2 mb-4">
-                                        <div className="w-1 h-3 bg-brand rounded-full" />
-                                        Morning <span className="text-black/30 font-bold ml-1">(08:00 AM - 12:00 PM)</span>
-                                    </h4>
-                                    <div className="grid grid-cols-3 gap-3">
-                                        {['08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM'].map(slot => (
-                                            <button
-                                                key={slot}
-                                                onClick={() => setSelectedSlot(slot)}
-                                                className={`py-3 rounded-[1rem] text-[12px] font-black transition-all border ${selectedSlot === slot
-                                                    ? 'bg-brand text-white border-brand shadow-lg'
-                                                    : 'bg-white text-black/40 border-black/[0.06] hover:border-brand/20'
-                                                    }`}
-                                            >
-                                                {slot}
-                                            </button>
-                                        ))}
+                                    {/* Afternoon Slots */}
+                                    <div>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h4 className="text-[11px] font-black text-black uppercase tracking-[0.15em] flex items-center gap-2">
+                                                <div className="w-1 h-3 bg-orange-400 rounded-full" />
+                                                Afternoon
+                                            </h4>
+                                            <span className="text-[8px] font-black text-black/20 uppercase tracking-widest">12:00 - 16:00</span>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-3">
+                                            {['12:00 PM', '01:00 PM', '02:00 PM', '03:00 PM'].map(slot => (
+                                                <button
+                                                    key={slot}
+                                                    onClick={() => setSelectedSlot(slot)}
+                                                    className={`py-3.5 rounded-xl text-[12px] font-black transition-all border ${selectedSlot === slot
+                                                        ? 'bg-black text-white border-black shadow-lg scale-[0.98]'
+                                                        : 'bg-white text-black/50 border-black/[0.06] hover:border-black/20'
+                                                        }`}
+                                                >
+                                                    {slot}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
 
-                                {/* Afternoon Slots */}
-                                <div>
-                                    <h4 className="text-[13px] font-black text-black flex items-center gap-2 mb-4">
-                                        <div className="w-1 h-3 bg-orange-400 rounded-full" />
-                                        Afternoon <span className="text-black/30 font-bold ml-1">(12:00 PM - 04:00 PM)</span>
-                                    </h4>
-                                    <div className="grid grid-cols-3 gap-3">
-                                        {['12:00 PM', '01:00 PM', '02:00 PM', '03:00 PM'].map(slot => (
-                                            <button
-                                                key={slot}
-                                                onClick={() => setSelectedSlot(slot)}
-                                                className={`py-3 rounded-[1rem] text-[12px] font-black transition-all border ${selectedSlot === slot
-                                                    ? 'bg-brand text-white border-brand shadow-lg'
-                                                    : 'bg-white text-black/40 border-black/[0.06] hover:border-brand/20'
-                                                    }`}
-                                            >
-                                                {slot}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Evening Slots */}
-                                <div>
-                                    <h4 className="text-[13px] font-black text-black flex items-center gap-2 mb-4">
-                                        <div className="w-1 h-3 bg-indigo-400 rounded-full" />
-                                        Evening <span className="text-black/30 font-bold ml-1">(04:00 PM - 08:00 PM)</span>
-                                    </h4>
-                                    <div className="grid grid-cols-3 gap-3">
-                                        {['04:00 PM', '05:00 PM', '06:00 PM', '07:00 PM', '08:00 PM'].map(slot => (
-                                            <button
-                                                key={slot}
-                                                onClick={() => setSelectedSlot(slot)}
-                                                className={`py-3 rounded-[1rem] text-[12px] font-black transition-all border ${selectedSlot === slot
-                                                    ? 'bg-brand text-white border-brand shadow-lg'
-                                                    : 'bg-white text-black/40 border-black/[0.06] hover:border-brand/20'
-                                                    }`}
-                                            >
-                                                {slot}
-                                            </button>
-                                        ))}
+                                    {/* Evening Slots */}
+                                    <div>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h4 className="text-[11px] font-black text-black uppercase tracking-[0.15em] flex items-center gap-2">
+                                                <div className="w-1 h-3 bg-indigo-500 rounded-full" />
+                                                Evening
+                                            </h4>
+                                            <span className="text-[8px] font-black text-black/20 uppercase tracking-widest">16:00 - 20:00</span>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-3">
+                                            {['04:00 PM', '05:00 PM', '06:00 PM', '07:00 PM', '08:00 PM'].map(slot => (
+                                                <button
+                                                    key={slot}
+                                                    onClick={() => setSelectedSlot(slot)}
+                                                    className={`py-3.5 rounded-xl text-[12px] font-black transition-all border ${selectedSlot === slot
+                                                        ? 'bg-black text-white border-black shadow-lg scale-[0.98]'
+                                                        : 'bg-white text-black/50 border-black/[0.06] hover:border-black/20'
+                                                        }`}
+                                                >
+                                                    {slot}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1900,40 +3181,54 @@ const FullWashBooking = () => {
                     </div>
 
                     {/* Terms Banner */}
-                    <div className="mt-6 bg-gray-200 rounded-xl p-3.5 flex items-start gap-3">
-                        <Info size={14} className="text-black mt-0.5" />
-                        <p className="text-[11px] font-bold text-black leading-tight">
-                            By proceeding further you agree to our service Terms and Conditions
-                        </p>
+                    <div className="px-5 mt-2">
+                        <div className="bg-[#1A1A1A] rounded-2xl p-4 flex items-start gap-3 shadow-xl">
+                            <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
+                                <Shield size={16} className="text-brand" />
+                            </div>
+                            <p className="text-[10px] font-bold text-white/60 leading-normal">
+                                Strict 0-Cancellation Policy within 1 hour of service. <span className="text-white">Read full terms.</span>
+                            </p>
+                        </div>
                     </div>
                 </div>
 
-                {/* Footer (Dual Action - Compact & Professional) */}
-                <div className="fixed bottom-0 left-0 right-0 bg-white shadow-[0_-12px_35px_rgba(0,0,0,0.03)] border-t border-black/[0.03] p-3 pb-5 z-50">
-                    <div className="flex items-center justify-between max-w-lg mx-auto w-full gap-3">
+                {/* Footer (Dual Action - Premium) */}
+                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-black/[0.04] px-5 py-5 pb-9 z-50 shadow-[0_-15px_40px_rgba(0,0,0,0.03)]">
+                    <div className="flex items-center justify-between max-w-lg mx-auto gap-4">
                         <div className="flex-1">
-                            <div className="text-[20px] font-[1000] text-[#0066FF] tracking-tighter leading-none mb-0.5">
-                                ₹{totalCartPrice + 500}
+                            <p className="text-[8px] font-black text-black/20 uppercase tracking-[0.2em] mb-1">Booking Mode</p>
+                            <div className="flex items-center gap-2">
+                                {bookingType === 'instant' ? (
+                                    <>
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                        <span className="text-[16px] font-[1000] text-black uppercase tracking-tighter">Instant Match</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="w-2 h-2 rounded-full bg-brand" />
+                                        <span className="text-[16px] font-[1000] text-black uppercase tracking-tighter">{selectedSlot || 'Select Slot'}</span>
+                                    </>
+                                )}
                             </div>
-                            <p className="text-[9px] font-[1000] text-black/20 uppercase tracking-[0.2em] leading-none">
-                                {hours} hr {mins} mins
-                            </p>
                         </div>
-                        <div className="flex items-center gap-1.5 flex-[1.4]">
-                            <button
-                                onClick={() => setPhase(PHASES.PAYMENT)}
-                                className="flex-1 bg-brand text-black h-10 rounded-lg font-[1000] text-[10px] uppercase tracking-widest shadow-md shadow-brand/10 active:scale-95 transition-all flex items-center justify-center gap-1.5 border border-black/5"
-                            >
-                                <Zap size={12} fill="currentColor" />
-                                Instant
-                            </button>
-                            <button
-                                onClick={() => setPhase(PHASES.PAYMENT)}
-                                className="flex-[1.1] bg-[#1A1A1A] text-white h-10 rounded-lg font-[1000] text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center"
-                            >
-                                Checkout
-                            </button>
-                        </div>
+
+                        <button
+                            onClick={() => {
+                                 if (bookingType === 'schedule' && !selectedSlot) {
+                                     toast.error('Please select a time slot or choose Instant Match');
+                                     return;
+                                 }
+                                setPhase(PHASES.PAYMENT);
+                            }}
+                            className={`flex-[1.5] h-14 rounded-2xl font-[1000] text-[13px] uppercase tracking-[0.15em] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-2xl relative overflow-hidden group ${(bookingType === 'instant' || selectedSlot)
+                                ? 'bg-black text-white shadow-black/20'
+                                : 'bg-gray-100 text-black/20 pointer-events-none border border-black/[0.03]'
+                                }`}
+                        >
+                            <span className="relative z-10 italic">{bookingType === 'instant' ? 'Instant Booking' : 'Confirm & Schedule'}</span>
+                            <ArrowRight size={18} strokeWidth={3} className="relative z-10 group-hover:translate-x-1.5 transition-transform" />
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1941,15 +3236,17 @@ const FullWashBooking = () => {
     };
 
     const renderPayment = () => {
-        const totalCartPrice = cart.reduce((sum, item) => sum + item.price, 0) + 500;
-
         const paymentOptions = [
+            { id: 'wallet', name: 'Clean2Wash Wallet', icon: <Wallet size={20} strokeWidth={2.5} />, balance: walletBalance },
             { id: 'googlepay', name: 'Google Pay', icon: 'https://cdn-icons-png.flaticon.com/512/6124/6124998.png' },
             { id: 'phonepe', name: 'PhonePe', icon: 'https://img.icons8.com/color/480/phonepe.png' },
             { id: 'paytm', name: 'Paytm', icon: 'https://img.icons8.com/color/480/paytm.png' },
             { id: 'card', name: 'Credit/Debit Card', icon: <CreditCard size={20} strokeWidth={2.5} /> },
             { id: 'netbanking', name: 'Net Banking', icon: <LayoutGrid size={20} strokeWidth={2.5} /> },
         ];
+
+        const discountPct = (passConfig?.discount || 0.3) * 100;
+        const passPrice = blackPassPlan?.price || passConfig?.price || 499;
 
         return (
             <div className="min-h-screen bg-[#F8F9FB] pb-32 font-outfit">
@@ -1973,6 +3270,33 @@ const FullWashBooking = () => {
                         </div>
                     </div>
 
+                    {/* Smart Conversion / FOMO Card (Added) */}
+                    {!isBlackPassMember && (
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => navigate('/subscription')}
+                            className="bg-black rounded-[2.2rem] p-5 border border-brand/30 shadow-2xl relative overflow-hidden group cursor-pointer"
+                        >
+                            <div className="absolute top-0 right-0 w-32 h-full bg-brand/[0.05] skew-x-[-20deg]" />
+                            <div className="flex items-center gap-4 relative z-10">
+                                <div className="w-12 h-12 bg-brand rounded-2xl flex items-center justify-center shadow-lg shadow-brand/20">
+                                    <Crown size={24} className="text-black" fill="currentColor" />
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="text-brand font-[1000] text-[14px] uppercase tracking-tight leading-none mb-1.5">Save ₹{Math.round(finalPrice * (discountPct/100))} Right Now!</h3>
+                                    <p className="text-white/40 text-[8px] font-black uppercase tracking-widest leading-relaxed">
+                                        Join {blackPassPlan?.name || 'Black Pass'} for ₹{passPrice} and unlock {discountPct}% OFF on this booking instantly.
+                                    </p>
+                                </div>
+                                <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-brand">
+                                    <ChevronRight size={18} strokeWidth={3} />
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+
                     <h3 className="text-[9px] font-black text-black/20 uppercase tracking-[0.25em] px-1">Select Payment Method</h3>
 
                     {/* Online Payment Options - Compacted */}
@@ -1992,8 +3316,18 @@ const FullWashBooking = () => {
                                             <div className="text-black/60">{opt.icon}</div>
                                         )}
                                     </div>
-                                    <span className="text-[14px] font-[1000] text-black tracking-tight leading-none">{opt.name}</span>
+                                    <div className="flex flex-col">
+                                        <span className="text-[14px] font-[1000] text-black tracking-tight leading-none">{opt.name}</span>
+                                        {opt.id === 'wallet' && (
+                                            <span className={`text-[9px] font-bold mt-1 uppercase tracking-widest ${opt.balance < finalPrice ? 'text-red-500' : 'text-emerald-600'}`}>
+                                                Balance: ₹{opt.balance}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
+                                <span className={`px-2 py-1 ${isBlackPassMember ? 'bg-gradient-to-r from-brand to-amber-400 text-black shadow-lg shadow-brand/20' : 'bg-brand text-white'} text-[9px] font-black rounded-lg uppercase tracking-tighter italic flex items-center gap-1.5 border border-white/20 transition-all hover:scale-105 active:scale-95`}>
+                                    {isBlackPassMember ? <><Crown size={10} fill="currentColor" /> Black Member Elite</> : 'Verified Plus'}
+                                </span>
                                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${paymentMethod === opt.id ? 'border-brand bg-brand animate-in zoom-in-50' : 'border-black/[0.1]'
                                     }`}>
                                     {paymentMethod === opt.id && <Check size={10} className="text-white" strokeWidth={5} />}
@@ -2011,14 +3345,22 @@ const FullWashBooking = () => {
                     </div>
                 </div>
 
-                {/* Refined Footer (Ultra Compact) */}
-                <div className="fixed bottom-0 left-0 right-0 bg-white shadow-[0_-12px_35px_rgba(0,0,0,0.03)] border-t border-black/[0.03] p-3 pb-5 z-50">
-                    <div className="flex items-center justify-between max-w-lg mx-auto w-full gap-3">
+                {/* Refined Footer (Ultra Modern) */}
+                <div className="fixed bottom-0 left-0 right-0 bg-white shadow-[0_-15px_40px_rgba(0,0,0,0.03)] border-t border-black/[0.04] p-4 pb-8 z-50">
+                    <div className="flex items-center justify-between max-w-lg mx-auto w-full gap-4">
                         <div className="flex-1">
-                            <div className="text-[20px] font-[1000] text-[#0066FF] tracking-tighter leading-none mb-0.5">
-                                ₹{totalCartPrice}
+                            <div className="flex items-center gap-1.5 mb-1">
+                                <span className="text-[11px] font-black text-black uppercase tracking-widest leading-none">Total</span>
+                                <div className="px-1.5 py-0.5 bg-emerald-50 rounded text-[7px] font-black text-emerald-600 uppercase tracking-tighter border border-emerald-100/30">
+                                    Final Price
+                                </div>
                             </div>
-                            <p className="text-[9px] font-[1000] text-black/20 uppercase tracking-[0.2em] leading-none">Incl. GST & Fees</p>
+                            <div className="flex items-baseline gap-1.5">
+                                <div className="text-[28px] font-[1000] text-black tracking-tighter leading-none">
+                                    ₹{finalPrice}
+                                </div>
+                                <span className="text-[10px] font-bold text-black/20 uppercase tracking-tighter">all incl.</span>
+                            </div>
                         </div>
                         <button
                             onClick={async () => {
@@ -2026,106 +3368,210 @@ const FullWashBooking = () => {
                                 setIsProcessing(true);
 
                                 try {
-                                    // Get Razorpay key
-                                    const { data: { key_id } } = await getRazorpayKey();
+                                    const activeAddr = selectedLocation || addresses.find(a => a.isPrimary) || addresses[0];
+                                    const addonObjects = (serviceAddons[activeServiceId] || [])
+                                        .map(addonId => {
+                                            const a = activeService?.addons?.find(x => x.id === addonId && !x.included);
+                                            return a ? { id: a.id, name: a.name, price: a.price } : null;
+                                        }).filter(Boolean);
 
-                                    // Create payment order
-                                    const { data: { order_id, amount, currency } } = await createPaymentOrder(
-                                        totalCartPrice, 
-                                        'INR',
-                                        `receipt_${Date.now()}`
-                                    );
+                                    const firstService = effectiveItems.find(i => i.serviceId && i.type !== 'subscription' && i.type !== 'monthly');
+                                    
+                                    // Map category to a value accepted by Booking model enum
+                                    const validCategories = ['Doorstep', 'Studio', 'Studio Detailing', 'Add-ons', 'Prestige', 'Chauffeur'];
+                                    const rawCategory = activeService?.category || firstService?.category || 'Studio Detailing';
+                                    const category = validCategories.includes(rawCategory) ? rawCategory : 
+                                                    (rawCategory === 'Express' ? 'Studio Detailing' : 'Studio Detailing');
 
-                                    // Initialize Razorpay options
-                                    const options = {
-                                        key: key_id,
-                                        amount: amount,
-                                        currency: currency,
-                                        name: 'Clean2Wash',
-                                        description: `Studio Wash Booking - ${cart.length} Services`,
-                                        image: 'https://cdn-icons-png.flaticon.com/512/3003/3003984.png',
-                                        order_id: order_id,
-                                        handler: async function (response) {
-                                            try {
-                                                // Verify payment
-                                                const verificationResult = await verifyPayment(
-                                                    response.razorpay_order_id,
-                                                    response.razorpay_payment_id,
-                                                    response.razorpay_signature
-                                                );
+                                    // Map location type to a value accepted by Booking model enum
+                                    const validLocationTypes = ['home', 'office', 'other', 'studio'];
+                                    const rawLocationType = activeAddr?.label?.toLowerCase() || 'home';
+                                    const locationType = validLocationTypes.includes(rawLocationType) ? rawLocationType : 
+                                                         (rawLocationType === 'work' ? 'office' : 'other');
 
-                                                if (verificationResult.success) {
-                                                    // Payment successful - create booking with full payload
-                                                    const result = await addBooking({
-                                                        services: cart.map(item => ({
-                                                            id: item.serviceId,
-                                                            name: item.serviceName,
-                                                            price: item.price,
-                                                            vehicleId: item.vehicleId,
-                                                            addons: item.addons || []
-                                                        })),
-                                                        products: shopCart.map(item => ({
-                                                            id: item._id,
-                                                            name: item.name,
-                                                            price: item.salePrice || item.price,
-                                                            qty: item.qty || 1
-                                                        })),
-                                                        subscription: selectedSubscription ? {
-                                                            id: selectedSubscription._id || selectedSubscription.id,
-                                                            name: selectedSubscription.title || selectedSubscription.name,
-                                                            price: selectedSubscription.price || selectedSubscription.total
-                                                        } : null,
-                                                        vehicle: selectedVehicle,
-                                                        totalAmount: totalCartPrice,
-                                                        paymentMethod: paymentMethod,
-                                                        paymentId: response.razorpay_payment_id,
-                                                        orderId: response.razorpay_order_id,
-                                                        status: 'pending',
-                                                        address: selectedLocation || addresses.find(a => a.isPrimary) || addresses[0],
-                                                        scheduledTime: selectedDate && selectedSlot ? `${selectedDate} ${selectedSlot}` : null,
-                                                        createdAt: new Date().toISOString()
-                                                    });
+                                    // Map payment method to a value accepted by Booking model enum
+                                    const validPaymentMethods = ['cash', 'online', 'wallet', 'subscription'];
+                                    const mappedPaymentMethod = validPaymentMethods.includes(paymentMethod) ? paymentMethod : 'online';
 
-                                                    if (result.success) {
-                                                        setActiveBookingId(result.data.id || result.data._id);
-                                                        // SUCCESS: Redirect or switch phase
-                                                        toast.success('Booking Successful!');
-                                                        // Redirect to tracking or success view
-                                                        setPhase(PHASES.LIVE_TRACK);
-                                                    } else {
-                                                        toast.error('Booking creation failed. Please contact support.');
-                                                    }
-                                                } else {
-                                                    toast.error('Payment verification failed.');
-                                                }
-                                            } catch (err) {
-                                                console.error('Verification error:', err);
-                                                toast.error('Verification failed.');
-                                            } finally {
-                                                setIsProcessing(false);
+                                    const bookingPayload = {
+                                        vehicleId: selectedVehicle?._id || selectedVehicle?.id,
+                                        products: effectiveItems.filter(i => !i.serviceId).map(i => ({ id: i._id, quantity: 1 })),
+                                        services: effectiveItems.filter(i => i.serviceId && i.type !== 'subscription' && i.type !== 'monthly').map(i => ({
+                                            id: i.serviceId,
+                                            addons: i.addons || []
+                                        })),
+                                        service: firstService ? {
+                                            id: firstService.serviceId,
+                                            name: firstService.serviceName,
+                                            type: 'vendor',
+                                            category: category,
+                                            basePrice: Number(firstService.price || 0),
+                                            duration: firstService.duration || '40 min'
+                                        } : undefined,
+                                        addons: addonObjects,
+                                        schedule: bookingType === 'instant'
+                                            ? { type: 'instant', date: new Date().toISOString() }
+                                            : { 
+                                                type: 'scheduled', 
+                                                date: selectedDate, 
+                                                timeSlot: selectedSlot ? { start: selectedSlot, end: '' } : null 
+                                            },
+                                        location: activeAddr ? {
+                                            type: locationType,
+                                            address: {
+                                                street: activeAddr.street || activeAddr.full || activeAddr.address,
+                                                city: activeAddr.city || user?.profile?.city || 'Bengaluru',
+                                                state: activeAddr.state || user?.profile?.state || 'Karnataka',
+                                                pincode: activeAddr.pincode,
+                                                coordinates: (activeAddr.coordinates || activeAddr.coords) ? {
+                                                    lat: Number((activeAddr.coordinates || activeAddr.coords).lat),
+                                                    lng: Number((activeAddr.coordinates || activeAddr.coords).lng)
+                                                } : undefined
                                             }
-                                        },
-                                        prefill: {
-                                            name: user?.name || 'Customer',
-                                            email: user?.email || 'customer@carwash.in',
-                                            contact: user?.phone || '9999999999'
-                                        },
-                                        theme: { color: '#F29F05' },
-                                        modal: {
-                                            ondismiss: function () {
-                                                setIsProcessing(false);
-                                            }
-                                        }
+                                        } : undefined,
+                                        paymentMethod: mappedPaymentMethod,
+                                        couponCode: appliedCoupon?.code
                                     };
 
-                                    const rzp = new window.Razorpay(options);
-                                    rzp.open();
+                                    if (paymentMethod === 'wallet') {
+                                     if (walletBalance < finalPrice) {
+                                         toast.error(`Insufficient wallet balance. You need ₹${finalPrice - walletBalance} more.`);
+                                         setIsProcessing(false);
+                                         return;
+                                     }
 
-                                } catch (error) {
-                                    console.error('Payment error:', error);
-                                    toast.error('Payment system error. Please try again.');
-                                    setIsProcessing(false);
-                                }
+                                        const res = await apiClient.createBooking(bookingPayload);
+                                        if (res?.status === 'success' && res?.data?.booking) {
+                                            handleBookingSuccess(res.data.booking);
+                                            await loadWallet(); // Sync wallet balance from server instead of manual local calculation
+                                            
+                                            // Process subscriptions if any
+                                            const subscriptionItems = effectiveItems.filter(i => i.type === 'monthly' || i.type === 'subscription');
+                                            for (const sub of subscriptionItems) {
+                                                try {
+                                                    const subRes = await subscriptionAPI.createSubscription({
+                                                        planId: sub.serviceId || sub.planId,
+                                                        paymentMethod: 'wallet'
+                                                    });
+                                                    if (subRes?.status === 'success' && (subRes?.data?.subscription || subRes?.subscription)) {
+                                                        setUserSubscription(subRes.data?.subscription || subRes.subscription);
+                                                    }
+                                                } catch (subErr) {
+                                                    console.error('Wallet sub activation error:', subErr);
+                                                }
+                                            }
+                                        } else {
+                                            throw new Error(res?.message || 'Wallet payment failed');
+                                        }
+                                    } else {
+                                        const keyRes = await getRazorpayKey();
+                                        // 2. Create Razorpay Order - Backend handles multiplication by 100
+                                        const orderRes = await createPaymentOrder(finalPrice);
+
+                                        if (!keyRes?.data?.key_id || !orderRes?.data?.order_id) {
+                                            throw new Error('Payment gateway configuration is invalid. Please try again.');
+                                        }
+
+                                        const { key_id } = keyRes.data;
+                                        const { order_id, amount: orderAmount, currency } = orderRes.data;
+
+                                        if (!window.Razorpay) {
+                                            const script = document.createElement('script');
+                                            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+                                            script.async = true;
+                                            document.body.appendChild(script);
+                                            await new Promise((resolve, reject) => {
+                                                script.onload = resolve;
+                                                script.onerror = () => reject(new Error('Razorpay SDK failed to load'));
+                                            });
+                                        }
+
+                                        const options = {
+                                            key: key_id,
+                                            amount: orderAmount,
+                                            currency: currency,
+                                            name: 'Clean-2-Wash',
+                                            description: `${activeService?.title || 'Car Wash Service'}`,
+                                            image: 'https://cdn-icons-png.flaticon.com/512/3003/3003984.png', // Public URL to avoid localhost loopback CORS issues
+                                            order_id: order_id,
+                                            handler: async function (response) {
+                                                try {
+                                                    setIsProcessing(true);
+                                                    const verificationResult = await verifyPayment(
+                                                        response.razorpay_order_id,
+                                                        response.razorpay_payment_id,
+                                                        response.razorpay_signature
+                                                    );
+
+                                                    if (verificationResult.success) {
+                                                        // 1. Process standard service bookings
+                                                        const serviceItems = effectiveItems.filter(i => i.serviceId && i.type !== 'subscription');
+                                                        if (serviceItems.length > 0) {
+                                                            const res = await apiClient.createBooking({
+                                                                ...bookingPayload,
+                                                                paymentId: response.razorpay_payment_id,
+                                                                orderId: response.razorpay_order_id
+                                                            });
+
+                                                            if (res?.status === 'success' && res?.data?.booking) {
+                                                                handleBookingSuccess(res.data.booking);
+                                                            } else {
+                                                                console.error('Booking creation failed after payment:', res);
+                                                            }
+                                                        }
+
+                                                        // 2. Process subscription purchases
+                                                        const subscriptionItems = effectiveItems.filter(i => i.type === 'monthly' || i.type === 'subscription');
+                                                        for (const sub of subscriptionItems) {
+                                                            try {
+                                                                const subRes = await subscriptionAPI.createSubscription({
+                                                                    planId: sub.serviceId || sub.planId,
+                                                                    paymentId: response.razorpay_payment_id,
+                                                                    orderId: response.razorpay_order_id
+                                                                });
+                                                                // Refresh local user subscription state
+                                                                if (subRes?.status === 'success' && (subRes?.data?.subscription || subRes?.subscription)) {
+                                                                    setUserSubscription(subRes.data?.subscription || subRes.subscription);
+                                                                }
+                                                            } catch (subErr) {
+                                                                console.error('Failed to activate subscription:', subErr);
+                                                            }
+                                                        }
+
+                                                         // If it was just a subscription (no service), go to profile/home
+                                                         if (serviceItems.length === 0 && subscriptionItems.length > 0) {
+                                                             toast.success('Subscription activated successfully!');
+                                                             setCart([]);
+                                                             navigate('/');
+                                                         }
+                                                     } else {
+                                                         toast.error('Payment verification failed.');
+                                                     }
+                                                 } catch (err) {
+                                                     console.error('Hander error:', err);
+                                                     toast.error('Error processing payment response.');
+                                                 } finally {
+                                                    setIsProcessing(false);
+                                                }
+                                            },
+                                            prefill: {
+                                                name: user?.name || '',
+                                                email: user?.email || '',
+                                                contact: user?.phone || ''
+                                            },
+                                            theme: { color: '#FF6B00' },
+                                            modal: {
+                                                ondismiss: () => setIsProcessing(false)
+                                            }
+                                        };
+                                        const rzp = new window.Razorpay(options);
+                                        rzp.open();
+                                    }
+                                 } catch (error) {
+                                     console.error('Payment error:', error);
+                                     toast.error(error.message || 'Payment failed. Please try again.');
+                                     setIsProcessing(false);
+                                 }
                             }}
                             disabled={!paymentMethod || isProcessing}
                             className={`flex-1 max-w-[200px] h-11 rounded-xl font-[1000] text-[12px] uppercase tracking-widest transition-all flex items-center justify-center gap-2.5 shadow-xl ${!paymentMethod || isProcessing
@@ -2164,7 +3610,11 @@ const FullWashBooking = () => {
                     >
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 bg-white rounded-xl p-2 border border-orange-50 shadow-inner">
-                                <img src={v.img} className="w-full h-full object-contain" />
+                                <img
+                                    src={sanitizeUrl(v.img)}
+                                    className="w-full h-full object-contain"
+                                    onError={handleImageError}
+                                />
                             </div>
                             <div className="flex-1">
                                 <h4 className="text-[15px] font-black text-black uppercase tracking-tighter leading-none">{v.brand} {v.model}</h4>
@@ -2180,11 +3630,11 @@ const FullWashBooking = () => {
                 ))}
             </div>
             <button
-                onClick={() => navigate('/add-vehicle')}
+                onClick={() => setShowAddVehicleModal(true)}
                 className="w-full border-2 border-dashed border-black/[0.06] rounded-2xl p-6 text-black/30 font-black uppercase text-[10px] tracking-[0.3em] bg-gray-50/50 hover:bg-gray-50 hover:border-gray-200 transition-all flex flex-col items-center gap-2"
             >
                 <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm border border-black/[0.03]">
-                    <X size={20} className="rotate-45 text-black/40" />
+                    <Plus size={20} className="text-black/40" />
                 </div>
                 Register New Craft Asset
             </button>
@@ -2198,11 +3648,6 @@ const FullWashBooking = () => {
                 {phase !== PHASES.CART && phase !== PHASES.SELECT_SLOT && phase !== PHASES.LIVE_TRACK && phase !== PHASES.PAYMENT && renderHeader()}
 
                 <AnimatePresence mode="wait">
-                    {phase === PHASES.IDLE && (
-                        <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                            {renderIdle()}
-                        </motion.div>
-                    )}
                     {phase === PHASES.SELECT_VEHICLE && (
                         <motion.div key="select" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                             {renderVehicleSelect()}
@@ -2277,6 +3722,10 @@ const FullWashBooking = () => {
                     )}
                 </AnimatePresence>
 
+
+
+                {renderAddVehicleModal()}
+
                 {/* Live tracking uses fullscreen overlay, nav bar hidden */}
             </div>
         </MobileLayout>
@@ -2284,3 +3733,4 @@ const FullWashBooking = () => {
 };
 
 export default FullWashBooking;
+

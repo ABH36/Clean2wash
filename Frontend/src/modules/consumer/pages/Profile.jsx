@@ -7,7 +7,7 @@ import {
     ArrowLeft, ShieldCheck, Heart, Settings,
     LogOut, MoreHorizontal, Wallet, Shield,
     Bell, CreditCard, HelpCircle, Activity,
-    Clock, X
+    Clock, X, Package
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import MobileLayout from '../components/layout/MobileLayout';
@@ -58,6 +58,7 @@ const Profile = () => {
             title: 'Activity & Rewards',
             items: [
                 { label: 'My Bookings', icon: Car, path: '/bookings', color: 'blue' },
+                { label: 'My Orders', icon: Package, path: '/orders', color: 'orange' },
                 { label: 'Wallet & Rewards', icon: Wallet, path: '/wallet', color: 'purple' },
                 { label: 'Refer & Earn', icon: Gift, path: '/refer', color: 'brand' },
             ]
@@ -213,7 +214,7 @@ const Profile = () => {
                             </div>
                             <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-1">{user?.phone || '+91 98765 43210'}</p>
                             <div className="mt-2 flex items-center gap-2">
-                                 <span className={`px-2 py-1 ${isBlackPassMember ? 'bg-gradient-to-r from-brand to-amber-400 text-black shadow-lg shadow-brand/20' : 'bg-brand text-white'} text-[9px] font-black rounded-lg uppercase tracking-tighter italic flex items-center gap-1.5 border border-white/20 transition-all hover:scale-105 active:scale-95`}>
+                                <span className={`px-2 py-1 ${isBlackPassMember ? 'bg-gradient-to-r from-brand to-amber-400 text-black shadow-lg shadow-brand/20' : 'bg-brand text-white'} text-[9px] font-black rounded-lg uppercase tracking-tighter italic flex items-center gap-1.5 border border-white/20 transition-all hover:scale-105 active:scale-95`}>
                                     {isBlackPassMember ? <><Crown size={10} fill="currentColor" /> Black Member Elite</> : 'Verified Plus'}
                                 </span>
                                 <button
@@ -323,7 +324,7 @@ const Profile = () => {
                                     Black Pass Elite
                                 </h3>
                                 <p className="text-brand/50 text-[10px] font-black uppercase tracking-widest mt-1 mb-6">Unlimited Benefits Activated</p>
-                                
+
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="bg-white/5 border border-white/5 p-3 rounded-xl flex items-center gap-3">
                                         <div className="w-8 h-8 bg-brand/20 rounded-lg flex items-center justify-center">

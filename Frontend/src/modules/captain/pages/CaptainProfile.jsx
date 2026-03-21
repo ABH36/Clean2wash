@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import CaptainLayout from '../components/CaptainLayout';
 import { useAuth } from '../../../context/AuthContext';
-import { useCaptain } from '../../../context/CaptainContext';
+import { useCaptain } from '../../../hooks/useCaptain';
 import { useTheme } from '../../../context/ThemeContext';
 
 const CaptainProfile = () => {

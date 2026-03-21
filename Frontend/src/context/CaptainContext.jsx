@@ -2,17 +2,43 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { captainAPI } from '../utils/captainApi';
 import { useAuth } from './AuthContext';
 import { socketService } from '../utils/socket';
-
-const CaptainContext = createContext(null);
+import CaptainContext from './CaptainContextBase';
 
 export const CaptainProvider = ({ children }) => {
     const { sessions, setSessions, login, logout } = useAuth();
-    
+
     // Captain-specific state
     const [captainJobs, setCaptainJobs] = useState([]);
     const [captainJobsLoading, setCaptainJobsLoading] = useState(false);
     const [captainEarnings, setCaptainEarnings] = useState({ balance: 0, totalEarned: 0, jobs: [] });
     const [captainEarningsLoading, setCaptainEarningsLoading] = useState(false);
+    const [availableProductMissions, setAvailableProductMissions] = useState([]);
+    const [productMissionsLoading, setProductMissionsLoading] = useState(false);
+
+    // Phase 7: Offline Resilience (Hydrate from localStorage)
+    useEffect(() => {
+        try {
+            const cachedJobs = localStorage.getItem('cleanup_captain_jobs');
+            const cachedEarnings = localStorage.getItem('cleanup_captain_earnings');
+            if (cachedJobs) setCaptainJobs(JSON.parse(cachedJobs));
+            if (cachedEarnings) setCaptainEarnings(JSON.parse(cachedEarnings));
+        } catch (e) {
+            console.error('Failed to parse captain cache:', e);
+        }
+    }, []);
+
+    // Phase 7: Persist State Changes to Local Cache
+    useEffect(() => {
+        if (captainJobs.length > 0) {
+            localStorage.setItem('cleanup_captain_jobs', JSON.stringify(captainJobs));
+        }
+    }, [captainJobs]);
+
+    useEffect(() => {
+        if (captainEarnings.totalEarned > 0) {
+            localStorage.setItem('cleanup_captain_earnings', JSON.stringify(captainEarnings));
+        }
+    }, [captainEarnings]);
 
     const loadCaptainDashboard = useCallback(async () => {
         if (!sessions.captain) return;
@@ -36,18 +62,18 @@ export const CaptainProvider = ({ children }) => {
             // Consolidate all jobs into a single list
             const allJobs = [];
             if (activeJob) allJobs.push(activeJob);
-            
+
             // Only include pending jobs if captain is online
             if (captain.isOnline && pendingJobs) {
                 allJobs.push(...pendingJobs);
             }
-            
+
             if (recentCompleted) {
                 recentCompleted.forEach(rj => {
                     if (!allJobs.find(j => (j.id === rj.id || j._id === rj._id))) allJobs.push(rj);
                 });
             }
-            
+
             // Map jobs to standardized format for UI if needed (keeping existing mapping logic)
             const mappedJobs = allJobs.map(job => ({
                 ...job,
@@ -66,9 +92,9 @@ export const CaptainProvider = ({ children }) => {
             if (sessions.captain) {
                 setSessions(prev => ({
                     ...prev,
-                    captain: { 
-                        ...prev.captain, 
-                        rating: stats.rating, 
+                    captain: {
+                        ...prev.captain,
+                        rating: stats.rating,
                         isOnline: captain.isOnline,
                         isVerified: captain.isVerified || false,
                         location: captain.location
@@ -82,6 +108,46 @@ export const CaptainProvider = ({ children }) => {
             setCaptainEarningsLoading(false);
         }
     }, [sessions.captain?.id, setSessions]); // Use .id or .token to keep reference stable during attribute updates
+
+    const loadAvailableProductMissions = useCallback(async () => {
+        if (!sessions.captain || !sessions.captain.isOnline) return;
+        try {
+            setProductMissionsLoading(true);
+            const response = await captainAPI.getAvailableProductMissions();
+            setAvailableProductMissions(response.data.missions || []);
+        } catch (error) {
+            console.error('Failed to load available product missions:', error);
+        } finally {
+            setProductMissionsLoading(false);
+        }
+    }, [sessions.captain?.isOnline]);
+
+    const acceptProductMission = useCallback(async (orderId, itemId) => {
+        try {
+            const response = await captainAPI.acceptProductMission(orderId, itemId);
+            // Remove from available ones
+            setAvailableProductMissions(prev => prev.filter(m => !(m.orderId === orderId && m._id === itemId)));
+            // Refresh jobs to show it as active if needed, or redirect
+            await loadCaptainDashboard();
+            return { success: true, data: response.data };
+        } catch (error) {
+            console.error('Failed to accept product mission:', error);
+            return { success: false, error: error.message };
+        }
+    }, [loadCaptainDashboard]);
+
+    const acceptProductBatch = useCallback(async (batchItems) => {
+        try {
+            const response = await captainAPI.acceptProductBatch(batchItems);
+            const itemIds = batchItems.map(bi => bi.itemId);
+            setAvailableProductMissions(prev => prev.filter(m => !itemIds.includes(m.itemId)));
+            await loadCaptainDashboard();
+            return { success: true, data: response.data };
+        } catch (error) {
+            console.error('Failed to accept product batch:', error);
+            return { success: false, error: error.message };
+        }
+    }, [loadCaptainDashboard]);
 
     const loadCaptainJobs = useCallback(async () => {
         if (!sessions.captain) return;
@@ -154,6 +220,19 @@ export const CaptainProvider = ({ children }) => {
         }
     }, []);
 
+    const commitToScheduledJob = useCallback(async (jobId) => {
+        try {
+            const response = await captainAPI.commitToScheduledJob(jobId);
+            setCaptainJobs(prev => prev.map(job =>
+                (job.id === jobId || job._id === jobId) ? { ...job, isDoorstepCommitted: true } : job
+            ));
+            return { success: true, data: response?.data };
+        } catch (error) {
+            console.error('Failed to commit to job:', error);
+            return { success: false, error: error.message };
+        }
+    }, []);
+
     const updateJobStatus = useCallback(async (jobId, status, extraData = {}) => {
         try {
             const response = await captainAPI.updateJobStatus(jobId, status, extraData);
@@ -174,7 +253,7 @@ export const CaptainProvider = ({ children }) => {
                 ...prev,
                 captain: prev.captain ? { ...prev.captain, isOnline } : prev.captain
             }));
-            
+
             // If going online, refresh dashboard to catch existing requests
             if (isOnline) {
                 loadCaptainDashboard();
@@ -330,9 +409,9 @@ export const CaptainProvider = ({ children }) => {
     // Live Location Tracking
     useEffect(() => {
         let watchId = null;
-        
+
         const isOnline = sessions.captain?.isOnline;
-        
+
         if (isOnline) {
             console.log("Captain is online, starting background location tracking...");
             if ('geolocation' in navigator) {
@@ -344,20 +423,24 @@ export const CaptainProvider = ({ children }) => {
                         });
                     },
                     (error) => {
-                        console.error('Geolocation Error:', error);
+                        if (error.code === 3) {
+                            console.warn('Geolocation Timeout: Device taking too long to fix location. Retrying...');
+                        } else {
+                            console.error('Geolocation Error:', error.message);
+                        }
                     },
-                    { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+                    { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
                 );
             } else {
                 console.warn('Geolocation is not supported by your browser.');
             }
         } else {
-             // Not strictly necessary to log offline explicitly since component mounts/unmounts
-             if (watchId !== null) {
-                 navigator.geolocation.clearWatch(watchId);
-                 watchId = null;
-             }
-             console.log("Captain is offline, stopped tracking location.");
+            // Not strictly necessary to log offline explicitly since component mounts/unmounts
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+            console.log("Captain is offline, stopped tracking location.");
         }
 
         return () => {
@@ -372,13 +455,10 @@ export const CaptainProvider = ({ children }) => {
         const userId = sessions.captain?.id;
         if (!userId) return;
 
-        // 1. Connect socket if not already connected
-        socketService.connect();
-
-        // 2. Join captain's own room — backend uses io.to(captain._id).emit()
-        //    Without this, targeted new_booking_broadcast won't reach this captain
-        socketService.joinUserRoom(userId);
-        console.log('[CaptainContext] Socket connected & joined room:', userId);
+        // 1. Join captain's own room is now handled automatically by backend upon authentication
+        // 2. Join specialized booking rooms if needed, but for general broadcasts 
+        //    the user room (auto-joined) is sufficient.
+        console.log('[CaptainContext] Socket system active for:', userId);
 
         const handleBookingUpdate = (data) => {
             setCaptainJobs(prev => prev.map(job => {
@@ -402,7 +482,7 @@ export const CaptainProvider = ({ children }) => {
             setCaptainJobs(prev => {
                 const alreadyExists = prev.find(j => j.id === data.bookingId || j._id === data.bookingId);
                 if (alreadyExists) return prev;
-                
+
                 const newJob = {
                     ...data,
                     id: data.bookingId,
@@ -421,9 +501,45 @@ export const CaptainProvider = ({ children }) => {
 
         socketService.on('new_booking_broadcast', handleNewBroadcast);
 
+        // Instant Wash: Remove job if someone else accepted it (Broadcast Closure)
+        const handleBroadcastTaken = (data) => {
+            setCaptainJobs(prev => prev.filter(j => (j.id !== data.bookingId && j._id !== data.bookingId)));
+        };
+
+        socketService.on('broadcast_taken', handleBroadcastTaken);
+
+        // Doorstep Scheduled: Commitment Prompt
+        const handleCommitmentRequest = (data) => {
+            // Re-load dashboard to get the latest commitment state
+            loadCaptainDashboard();
+        };
+
+        socketService.on('doorstep_commitment_request', handleCommitmentRequest);
+
+        // Phase 33: Product Gig Broadcasts
+        const handleNewProductBroadcast = (data) => {
+            if (!sessions.captain?.isOnline) return;
+            setAvailableProductMissions(prev => {
+                const alreadyExists = prev.find(m => m.orderId === data.orderId && m._id === data.itemId);
+                if (alreadyExists) return prev;
+                return [data, ...prev];
+            });
+        };
+
+        const handleProductMissionClaimed = (data) => {
+            setAvailableProductMissions(prev => prev.filter(m => !(m.orderId === data.orderId && m._id === data.itemId)));
+        };
+
+        socketService.on('new_product_broadcast', handleNewProductBroadcast);
+        socketService.on('product_mission_claimed', handleProductMissionClaimed);
+
         return () => {
             socketService.off('booking_status_updated', handleBookingUpdate);
             socketService.off('new_booking_broadcast', handleNewBroadcast);
+            socketService.off('broadcast_taken', handleBroadcastTaken);
+            socketService.off('doorstep_commitment_request', handleCommitmentRequest);
+            socketService.off('new_product_broadcast', handleNewProductBroadcast);
+            socketService.off('product_mission_claimed', handleProductMissionClaimed);
             // Note: Don't disconnect here — socket stays alive for the session
         };
     }, [sessions.captain?.id, sessions.captain?.isOnline]);
@@ -440,6 +556,7 @@ export const CaptainProvider = ({ children }) => {
             loadCaptainDashboard,
             acceptJob,
             declineJob,
+            commitToScheduledJob,
             updateJobStatus,
             toggleOnline,
             updateLocation,
@@ -449,17 +566,15 @@ export const CaptainProvider = ({ children }) => {
             captainVerifyOTP,
             captainLogin,
             captainLogout,
-            withdrawEarnings
+            withdrawEarnings,
+            availableProductMissions,
+            productMissionsLoading,
+            loadAvailableProductMissions,
+            acceptProductMission,
+            acceptProductBatch,
+            updateProductMissionStatus: (orderId, itemId, status, metadata) => captainAPI.updateProductMissionStatus(orderId, itemId, status, metadata)
         }}>
             {children}
         </CaptainContext.Provider>
     );
-};
-
-export const useCaptain = () => {
-    const context = useContext(CaptainContext);
-    if (!context) {
-        throw new Error('useCaptain must be used within a CaptainProvider');
-    }
-    return context;
 };

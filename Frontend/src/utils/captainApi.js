@@ -158,6 +158,12 @@ class ApiClient {
         });
     }
 
+    async commitToScheduledJob(jobId) {
+        return this.request(`/jobs/${jobId}/commit`, {
+            method: 'POST',
+        });
+    }
+
     async updateJobStatus(jobId, status, extraData = {}) {
         return this.request(`/jobs/${jobId}/status`, {
             method: 'PATCH',
@@ -219,6 +225,30 @@ class ApiClient {
             method: 'DELETE'
         });
     }
+
+    async getAvailableProductMissions() {
+        return this.request('/product-missions/available');
+    }
+
+    async acceptProductMission(orderId, itemId) {
+        return this.request(`/product-missions/${orderId}/items/${itemId}/accept`, {
+            method: 'POST'
+        });
+    }
+
+    async acceptProductBatch(batchItems) {
+        return this.request('/product-missions/accept-batch', {
+            method: 'POST',
+            body: JSON.stringify({ batchItems })
+        });
+    }
+
+    async updateProductMissionStatus(orderId, itemId, status, metadata = {}) {
+        return this.request(`/product-missions/${orderId}/items/${itemId}/status`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status, ...metadata })
+        });
+    }
 }
 
 // Create and export singleton instance
@@ -241,6 +271,7 @@ export const captainAPI = {
     getMyJob: (id) => apiClient.getMyJob(id),
     acceptJob: (id) => apiClient.acceptJob(id),
     declineJob: (id) => apiClient.declineJob(id),
+    commitToScheduledJob: (id) => apiClient.commitToScheduledJob(id),
     updateJobStatus: (id, status, extraData) => apiClient.updateJobStatus(id, status, extraData),
     getDashboard: () => apiClient.getDashboard(),
     getEarnings: (params) => apiClient.getEarnings(params),
@@ -252,5 +283,9 @@ export const captainAPI = {
     markNotificationRead: (id) => apiClient.markNotificationRead(id),
     markAllNotificationsRead: () => apiClient.markAllNotificationsRead(),
     clearNotifications: () => apiClient.clearNotifications(),
+    getAvailableProductMissions: () => apiClient.getAvailableProductMissions(),
+    acceptProductMission: (orderId, itemId) => apiClient.acceptProductMission(orderId, itemId),
+    acceptProductBatch: (batchItems) => apiClient.acceptProductBatch(batchItems),
+    updateProductMissionStatus: (orderId, itemId, status, metadata) => apiClient.updateProductMissionStatus(orderId, itemId, status, metadata),
     setToken: (token) => apiClient.setToken(token)
 };

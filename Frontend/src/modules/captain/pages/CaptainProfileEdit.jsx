@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Camera, User, Mail, Phone, MapPin, Truck, Save, Briefcase } from 'lucide-react';
 import CaptainLayout from '../components/CaptainLayout';
 import { useAuth } from '../../../context/AuthContext';
-import { useCaptain } from '../../../context/CaptainContext';
+import { useCaptain } from '../../../hooks/useCaptain';
 import { useTheme } from '../../../context/ThemeContext';
 
 const CaptainProfileEdit = () => {
@@ -92,11 +92,10 @@ const CaptainProfileEdit = () => {
             <label className={`text-[10px] uppercase tracking-[0.2em] font-black italic ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>
                 {label}
             </label>
-            <div className={`relative flex items-center border rounded-2xl px-4 transition-all focus-within:border-brand ${
-                readOnly
+            <div className={`relative flex items-center border rounded-2xl px-4 transition-all focus-within:border-brand ${readOnly
                     ? isDarkMode ? 'bg-white/3 border-white/5' : 'bg-gray-100 border-gray-200'
                     : isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white border-gray-100 shadow-sm'
-            }`}>
+                }`}>
                 <Icon size={16} className={`${isDarkMode ? 'text-brand/40' : 'text-brand/50'} mr-3 flex-shrink-0`} />
                 <input
                     type={type}
@@ -104,11 +103,10 @@ const CaptainProfileEdit = () => {
                     onChange={onChange}
                     placeholder={placeholder}
                     readOnly={readOnly}
-                    className={`flex-1 py-4 bg-transparent outline-none text-sm font-black ${
-                        readOnly
+                    className={`flex-1 py-4 bg-transparent outline-none text-sm font-black ${readOnly
                             ? isDarkMode ? 'text-white/30 cursor-not-allowed' : 'text-gray-400 cursor-not-allowed'
                             : isDarkMode ? 'text-white' : 'text-content'
-                    } placeholder:opacity-30`}
+                        } placeholder:opacity-30`}
                 />
                 {readOnly && (
                     <span className={`text-[8px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-gray-400'}`}>Locked</span>

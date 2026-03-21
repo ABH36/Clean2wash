@@ -7,11 +7,13 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import AdminLayout from '../components/AdminLayout';
 import { useAuth } from '../../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 import { adminAPI } from '../../../utils/adminApi';
 import { toast } from 'react-hot-toast';
 
 const AdminProductVerification = () => {
+    const navigate = useNavigate();
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -73,7 +75,20 @@ const AdminProductVerification = () => {
     };
 
     return (
-        <AdminLayout title="Product Governance" subtitle="Verify and moderate vendor listing requests">
+        <AdminLayout title="Product Governance">
+            <div className="flex items-center justify-between mb-8 px-1">
+                <div>
+                    <h2 className="text-xl font-black text-content uppercase tracking-tight">Product Governance</h2>
+                    <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] mt-2">Verify and moderate vendor listing requests</p>
+                </div>
+                <button
+                    onClick={() => navigate('/admin/product-war-room')}
+                    className="flex items-center gap-2 px-6 py-3 bg-brand text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-brand/20 hover:scale-105 transition-all"
+                >
+                    <TrendingUp size={14} />
+                    Open War-Room
+                </button>
+            </div>
             <div className="space-y-6 pb-20">
                 {/* Tactical Stats Rack */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

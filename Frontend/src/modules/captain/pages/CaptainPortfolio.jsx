@@ -4,7 +4,7 @@ import { Camera, ChevronLeft, MapPin, Star, Clock, Calendar, Shield, IndianRupee
 import { useNavigate } from 'react-router-dom';
 import CaptainLayout from '../components/CaptainLayout';
 import { useAuth } from '../../../context/AuthContext';
-import { useCaptain } from '../../../context/CaptainContext';
+import { useCaptain } from '../../../hooks/useCaptain';
 import { useTheme } from '../../../context/ThemeContext';
 
 const CaptainPortfolio = () => {
@@ -14,9 +14,9 @@ const CaptainPortfolio = () => {
     const [selectedJob, setSelectedJob] = useState(null);
 
     // Filter only completed jobs that have both before and after photos in serviceImages
-    const portfolioJobs = captainJobs.filter(job => 
-        job.status === 'completed' && 
-        (job.serviceImages?.before?.length > 0 || job.beforePhoto) && 
+    const portfolioJobs = captainJobs.filter(job =>
+        job.status === 'completed' &&
+        (job.serviceImages?.before?.length > 0 || job.beforePhoto) &&
         (job.serviceImages?.after?.length > 0 || job.afterPhoto)
     ).map(job => ({
         ...job,
@@ -107,7 +107,7 @@ const CaptainPortfolio = () => {
                 <div className="px-4 py-6 space-y-6">
                     {portfolioJobs.length > 0 ? (
                         portfolioJobs.map((job) => (
-                            <motion.div 
+                            <motion.div
                                 key={job.id}
                                 layout
                                 onClick={() => setSelectedJob(selectedJob?.id === job.id ? null : job)}
@@ -141,12 +141,12 @@ const CaptainPortfolio = () => {
                                             Before
                                         </div>
                                     </div>
-                                    
+
                                     {/* Diagonal separator */}
                                     <div className={`absolute left-1/2 top-0 bottom-0 w-8 -ml-4 skew-x-[-15deg] border-x-[4px] z-10 ${isDarkMode ? 'bg-[#1E293B] border-[#1E293B]' : 'bg-white border-white'}`}>
                                         <div className="absolute inset-y-0 left-1/2 w-0.5 -ml-px bg-brand" />
                                     </div>
- 
+
                                     <div className="flex-1 relative group">
                                         <img src={job.displayAfter} alt="After" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                                         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent" />

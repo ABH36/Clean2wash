@@ -104,10 +104,17 @@ class ApiClient {
         return this.request(`/orders/${orderId}`);
     }
 
-    async updateOrderStatus(orderId, status) {
+    async updateOrderStatus(orderId, status, photos = []) {
         return this.request(`/orders/${orderId}/status`, {
             method: 'PATCH',
-            body: JSON.stringify({ status })
+            body: JSON.stringify({ status, photos })
+        });
+    }
+
+    async verifyBookingPin(orderId, pin) {
+        return this.request(`/orders/${orderId}/verify-pin`, {
+            method: 'POST',
+            body: JSON.stringify({ pin })
         });
     }
 
@@ -206,10 +213,71 @@ class ApiClient {
         });
     }
 
+    async getNotifications() {
+        return this.request('/notifications');
+    }
+
+    async markNotificationRead(id) {
+        return this.request(`/notifications/${id}/read`, {
+            method: 'PATCH'
+        });
+    }
+
+    async markAllNotificationsRead() {
+        return this.request('/notifications/read-all', {
+            method: 'PATCH'
+        });
+    }
+
+    async clearNotifications() {
+        return this.request('/notifications/clear', {
+            method: 'DELETE'
+        });
+    }
+
     async requestPayout(amount) {
         return this.request('/payout', {
             method: 'POST',
             body: JSON.stringify({ amount })
+        });
+    }
+
+    async sendOTP(phone) {
+        return this.request('/send-otp', {
+            method: 'POST',
+            body: JSON.stringify({ phone })
+        });
+    }
+
+    // Product Order & Logistics (Phase 30)
+    async getProductOrders() {
+        return this.request('/product-orders');
+    }
+
+    async assignProductAgent(orderId, itemId, agentId, agentType) {
+        return this.request(`/product-orders/${orderId}/items/${itemId}/assign`, {
+            method: 'POST',
+            body: JSON.stringify({ agentId, agentType })
+        });
+    }
+
+    async verifyProductPin(orderId, itemId, pin) {
+        return this.request(`/product-orders/${orderId}/items/${itemId}/verify-pin`, {
+            method: 'POST',
+            body: JSON.stringify({ pin })
+        });
+    }
+
+    async cancelProductItem(orderId, itemId, reason) {
+        return this.request(`/product-orders/${orderId}/items/${itemId}/cancel`, {
+            method: 'POST',
+            body: JSON.stringify({ reason })
+        });
+    }
+
+    async acknowledgeProductReturn(orderId, itemId) {
+        return this.request(`/product-orders/${orderId}/items/${itemId}/return-ack`, {
+            method: 'POST'
         });
     }
 }
@@ -222,13 +290,20 @@ export const vendorAPI = {
     setToken: (token) => apiClient.setToken(token),
     login: (email, password) => apiClient.login(email, password),
     signup: (data) => apiClient.signup(data),
+    sendOTP: (phone) => apiClient.sendOTP(phone),
     getProfile: () => apiClient.getProfile(),
     updateProfile: (data) => apiClient.updateProfile(data),
     getDashboard: () => apiClient.getDashboard(),
     getOrders: () => apiClient.getOrders(),
     getOrderById: (orderId) => apiClient.getOrderById(orderId),
-    updateOrderStatus: (orderId, status) => apiClient.updateOrderStatus(orderId, status),
+    updateOrderStatus: (orderId, status, photos = []) => apiClient.updateOrderStatus(orderId, status, photos),
+    verifyBookingPin: (orderId, pin) => apiClient.verifyBookingPin(orderId, pin),
     assignStaff: (orderId, staffId, type) => apiClient.assignStaff(orderId, staffId, type),
+    // Notifications
+    getNotifications: () => apiClient.getNotifications(),
+    markNotificationRead: (id) => apiClient.markNotificationRead(id),
+    markAllNotificationsRead: () => apiClient.markAllNotificationsRead(),
+    clearNotifications: () => apiClient.clearNotifications(),
     // Products
     getProducts: () => apiClient.getProducts(),
     createProduct: (data) => apiClient.createProduct(data),
@@ -248,5 +323,11 @@ export const vendorAPI = {
     // Customers & Reports
     getCustomers: () => apiClient.getCustomers(),
     getReports: () => apiClient.getReports(),
-    requestPayout: (amount) => apiClient.requestPayout(amount)
+    requestPayout: (amount) => apiClient.requestPayout(amount),
+    // Product Logistics (Phase 30 & 34)
+    getProductOrders: () => apiClient.getProductOrders(),
+    assignProductAgent: (orderId, itemId, agentId, agentType) => apiClient.assignProductAgent(orderId, itemId, agentId, agentType),
+    verifyProductPin: (orderId, itemId, pin) => apiClient.verifyProductPin(orderId, itemId, pin),
+    cancelProductItem: (orderId, itemId, reason) => apiClient.cancelProductItem(orderId, itemId, reason),
+    acknowledgeProductReturn: (orderId, itemId) => apiClient.acknowledgeProductReturn(orderId, itemId)
 };

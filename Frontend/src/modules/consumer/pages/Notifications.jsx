@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { 
-    ChevronLeft, 
-    Zap, 
-    Gift, 
-    ShieldCheck, 
-    Bell, 
-    RefreshCw, 
-    CreditCard, 
+import {
+    ChevronLeft,
+    Zap,
+    Gift,
+    ShieldCheck,
+    Bell,
+    RefreshCw,
+    CreditCard,
     Trash2,
     Calendar,
     Wallet,
@@ -112,7 +112,7 @@ const Notifications = () => {
     const handleClearAll = async () => {
         if (notifications.length === 0) return;
         if (!window.confirm('Are you sure you want to clear all notifications?')) return;
-        
+
         try {
             setLoading(true);
             await notificationAPI.clearAll();
@@ -132,7 +132,7 @@ const Notifications = () => {
 
         // Navigate based on type
         const { type, metaData } = notif;
-        
+
         switch (type) {
             case 'booking':
                 if (metaData?.bookingId) {
@@ -168,8 +168,8 @@ const Notifications = () => {
             {/* ── Premium Header ── */}
             <header className="px-4 pt-10 pb-4 flex items-center justify-between bg-white/80 backdrop-blur-xl sticky top-0 z-50 border-b border-gray-100/50">
                 <div className="flex items-center gap-3">
-                    <button 
-                        onClick={() => navigate(-1)} 
+                    <button
+                        onClick={() => navigate(-1)}
                         className="w-10 h-10 bg-white border border-gray-100 rounded-2xl flex items-center justify-center shadow-sm active:scale-95 transition-transform"
                     >
                         <ChevronLeft size={20} strokeWidth={2.5} className="text-content" />
@@ -181,16 +181,16 @@ const Notifications = () => {
                         </p>
                     </div>
                 </div>
-                
+
                 <div className="flex items-center gap-1">
-                    <button 
-                        onClick={fetchNotifications} 
+                    <button
+                        onClick={fetchNotifications}
                         className="p-2 text-gray-400 hover:text-brand transition-colors active:rotate-180 duration-500"
                     >
                         <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
                     </button>
                     {notifications.length > 0 && (
-                        <button 
+                        <button
                             onClick={handleClearAll}
                             className="p-2 text-gray-400 hover:text-red-500 transition-colors"
                         >
@@ -203,7 +203,7 @@ const Notifications = () => {
             <div className="px-4 pb-24 pt-4 min-h-[70vh]">
                 <AnimatePresence mode="wait">
                     {loading && notifications.length === 0 ? (
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             className="flex flex-col items-center justify-center py-20"
                         >
@@ -211,13 +211,13 @@ const Notifications = () => {
                             <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-content-subtle">Refreshing Inbox...</p>
                         </motion.div>
                     ) : notifications.length === 0 ? (
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
                             className="flex flex-col items-center justify-center py-20 text-center"
                         >
                             <div className="w-24 h-24 bg-gray-50 rounded-[40px] flex items-center justify-center mb-6 relative">
                                 <Bell size={40} className="text-gray-200" />
-                                <motion.div 
+                                <motion.div
                                     animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
                                     transition={{ duration: 2, repeat: Infinity }}
                                     className="absolute inset-0 bg-brand/10 rounded-[40px]"
@@ -227,7 +227,7 @@ const Notifications = () => {
                             <p className="text-xs font-bold text-content-subtle max-w-[200px] mt-2 leading-relaxed">
                                 No new notifications at the moment. We'll alert you for your next wash!
                             </p>
-                            <button 
+                            <button
                                 onClick={() => navigate('/services')}
                                 className="mt-8 px-8 py-3 bg-brand text-white rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-brand/20 active:scale-95 transition-transform flex items-center gap-2"
                             >
@@ -249,11 +249,11 @@ const Notifications = () => {
                                     </div>
                                     <div className="space-y-3">
                                         {newN.map((n, i) => (
-                                            <NotifCard 
-                                                key={n.id} 
-                                                notif={n} 
-                                                delay={i * 0.1} 
-                                                onClick={() => handleNotificationClick(n)} 
+                                            <NotifCard
+                                                key={n.id}
+                                                notif={n}
+                                                delay={i * 0.1}
+                                                onClick={() => handleNotificationClick(n)}
                                             />
                                         ))}
                                     </div>
@@ -265,11 +265,11 @@ const Notifications = () => {
                                     <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest px-1">History</p>
                                     <div className="space-y-3">
                                         {oldN.map((n, i) => (
-                                            <NotifCard 
-                                                key={n.id} 
-                                                notif={n} 
-                                                delay={i * 0.05} 
-                                                onClick={() => handleNotificationClick(n)} 
+                                            <NotifCard
+                                                key={n.id}
+                                                notif={n}
+                                                delay={i * 0.05}
+                                                onClick={() => handleNotificationClick(n)}
                                             />
                                         ))}
                                     </div>
@@ -299,20 +299,19 @@ const NotifCard = ({ notif: n, delay, onClick }) => {
 
     return (
         <motion.div
-            initial={{ opacity: 0, x: -10 }} 
-            animate={{ opacity: 1, x: 0 }} 
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
             transition={{ delay, duration: 0.4 }}
             onClick={onClick}
-            className={`group relative flex items-start gap-4 p-4 rounded-3xl border transition-all active:scale-[0.98] ${
-                n.isNew 
-                    ? 'bg-white border-brand/20 shadow-lg shadow-brand/5 ring-1 ring-brand/5' 
+            className={`group relative flex items-start gap-4 p-4 rounded-3xl border transition-all active:scale-[0.98] ${n.isNew
+                    ? 'bg-white border-brand/20 shadow-lg shadow-brand/5 ring-1 ring-brand/5'
                     : 'bg-gray-50/50 border-gray-100 hover:bg-white hover:border-gray-200'
-            }`}
+                }`}
         >
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${bg} shadow-inner`}>
                 {icon}
             </div>
-            
+
             <div className="flex-1 min-w-0 py-0.5">
                 <div className="flex items-center justify-between gap-2 mb-1">
                     <h3 className={`font-black text-sm tracking-tight leading-none ${n.isNew ? 'text-content' : 'text-content-subtle'}`}>
@@ -325,7 +324,7 @@ const NotifCard = ({ notif: n, delay, onClick }) => {
                 <p className={`text-[11px] leading-relaxed ${n.isNew ? 'text-content-subtle font-bold' : 'text-content-subtle/70 font-medium'}`}>
                     {n.desc}
                 </p>
-                
+
                 {n.isNew && (
                     <div className="mt-3 flex items-center gap-1.5">
                         <span className={`text-[8px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full ${bg} ${color}`}>
@@ -337,11 +336,11 @@ const NotifCard = ({ notif: n, delay, onClick }) => {
             </div>
 
             {n.isNew && (
-                <motion.div 
+                <motion.div
                     layoutId={`pulse-${n.id}`}
                     animate={{ opacity: [0.5, 1, 0.5] }}
                     transition={{ duration: 2, repeat: Infinity }}
-                    className="absolute top-4 right-4 w-2 h-2 rounded-full bg-brand" 
+                    className="absolute top-4 right-4 w-2 h-2 rounded-full bg-brand"
                 />
             )}
         </motion.div>

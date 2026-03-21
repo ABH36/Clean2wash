@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import CaptainLayout from '../components/CaptainLayout';
 import { useAuth } from '../../../context/AuthContext';
-import { useCaptain } from '../../../context/CaptainContext';
+import { useCaptain } from '../../../hooks/useCaptain';
 
 import { useTheme } from '../../../context/ThemeContext';
 
@@ -107,7 +107,7 @@ const CaptainEarnings = () => {
                 </div>
 
                 <div className="fixed bottom-10 left-6 right-6">
-                    <button 
+                    <button
                         onClick={handleWithdraw}
                         disabled={captainEarningsLoading || balance <= 0}
                         className={`w-full h-14 bg-brand text-white rounded-2xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-brand/20 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale`}>

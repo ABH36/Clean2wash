@@ -4,9 +4,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
     ChevronLeft, MapPin, Clock, CheckCircle2, Navigation,
     Star, Phone, MessageSquare, ShieldCheck, Download, RotateCcw,
-    ShoppingBag, Package, Truck, CheckCircle
+    ShoppingBag, Package, Truck, CheckCircle, Sparkles, Warehouse
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
+
+import BeforeAfterSlider from '../../../components/BeforeAfterSlider';
 
 const OrderDetails = () => {
     const navigate = useNavigate();
@@ -29,15 +31,53 @@ const OrderDetails = () => {
         );
     }
 
-    // Dynamic Timeline based on status
+    // Elite Studio Protocol Timeline
     const getTimeline = (status) => {
-        const baseTimeline = [
-            { status: 'Order Placed', time: 'Just Now', done: true, icon: <Package size={16} /> },
-            { status: 'Vendor Assigned', time: 'Pending', done: ['confirmed', 'in-progress', 'completed'].includes(status), icon: <ShieldCheck size={16} /> },
-            { status: 'Out for Delivery', time: '—', done: ['in-progress', 'completed'].includes(status), icon: <Truck size={16} /> },
-            { status: 'Completed', time: '—', done: status === 'completed', icon: <CheckCircle size={16} /> },
+        const steps = [
+            { 
+                label: 'Order Placed', 
+                done: true, 
+                icon: <Package size={16} />,
+                subtitle: 'Request received'
+            },
+            { 
+                label: 'Studio Confirmed', 
+                done: ['confirmed', 'assigned', 'pickup-assigned', 'en_route', 'at-studio', 'washing', 'quality-check', 'ready-for-delivery', 'completed'].includes(status), 
+                icon: <ShieldCheck size={16} />,
+                subtitle: 'Slot secured'
+            },
+            { 
+                label: 'Pickup Agent', 
+                done: ['pickup-assigned', 'en_route', 'at-studio', 'washing', 'quality-check', 'ready-for-delivery', 'completed'].includes(status), 
+                icon: <MapPin size={16} />,
+                subtitle: status === 'pickup-assigned' ? 'Agent assigned' : 'Protocol active'
+            },
+            { 
+                label: 'In Transit', 
+                done: ['en_route', 'at-studio', 'washing', 'quality-check', 'ready-for-delivery', 'completed'].includes(status), 
+                icon: <Truck size={16} />,
+                subtitle: status === 'en_route' ? 'Transit to Studio' : 'Handover complete'
+            },
+            { 
+                label: 'At Studio', 
+                done: ['at-studio', 'washing', 'quality-check', 'ready-for-delivery', 'completed'].includes(status), 
+                icon: <Warehouse size={16} />,
+                subtitle: status === 'washing' ? 'Deep clean active' : status === 'at-studio' ? 'Arrived at workshop' : 'Treatment lab'
+            },
+            { 
+                label: 'Quality Check', 
+                done: ['quality-check', 'ready-for-delivery', 'completed'].includes(status), 
+                icon: <Sparkles size={16} />,
+                subtitle: status === 'quality-check' ? 'Pro QC inspection' : 'Ready'
+            },
+            { 
+                label: 'Delivered', 
+                done: status === 'completed', 
+                icon: <CheckCircle2 size={16} />,
+                subtitle: 'Protocol successful'
+            }
         ];
-        return baseTimeline;
+        return steps;
     };
 
     const timeline = getTimeline(order.status);
@@ -75,15 +115,35 @@ const OrderDetails = () => {
                         <h2 className="text-lg font-black text-content tracking-tighter uppercase italic leading-none mb-1">
                             {order.status === 'pending' ? 'Waiting for Vendor' :
                                 order.status === 'confirmed' ? 'Vendor Confirmed' :
-                                    order.status === 'in-progress' ? 'Out for Delivery' : 'Delivered Success'}
+                                    order.status === 'in-progress' || order.status === 'en_route' ? 'Out for Delivery' : 'Delivered Success'}
                         </h2>
                         <p className="text-content-subtle text-[8px] font-black uppercase tracking-[0.2em] opacity-70">
                             {order.status === 'pending' ? 'Your order request has been sent to nearby vendors' :
                                 order.status === 'confirmed' ? 'A vendor has accepted your order and preparing' :
-                                    order.status === 'in-progress' ? 'Our delivery partner is on the way' : 'Your products have been safely delivered'}
+                                    order.status === 'in-progress' || order.status === 'en_route' ? 'Our delivery partner is on the way' : 'Your products have been safely delivered'}
                         </p>
                     </div>
                 </div>
+
+                {/* ── Security PIN ── */}
+                {['pickup-assigned', 'accepted', 'assigned'].includes(order.status) && order.securityPin && (
+                    <div className="bg-amber-50 rounded-2xl border-2 border-dashed border-amber-200 p-6 text-center space-y-3 shadow-amber-500/5 shadow-xl">
+                        <div className="flex items-center justify-center gap-2 text-amber-600 font-extrabold text-[10px] uppercase tracking-widest italic animate-pulse">
+                            <ShieldCheck size={16} /> Security Handover Protocol
+                        </div>
+                        <div className="flex justify-center gap-2 py-2">
+                            {String(order.securityPin).split('').map((digit, i) => (
+                                <div key={i} className="w-12 h-16 bg-white border-2 border-amber-100 rounded-xl flex items-center justify-center text-3xl font-black text-amber-600 shadow-sm font-mono">
+                                    {digit}
+                                </div>
+                            ))}
+                        </div>
+                        <p className="text-[9px] font-black text-amber-500 uppercase tracking-[0.15em] leading-relaxed">
+                            ⚠️ DO NOT SHARE UNTIL OUR STAFF ARRIVES. <br />
+                            VERIFY STAFF BEFORE CAR HANDOVER.
+                        </p>
+                    </div>
+                )}
 
                 {/* ── Timeline ── */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden">
@@ -92,26 +152,46 @@ const OrderDetails = () => {
                         <span className="text-[8px] font-black text-brand bg-brand/10 px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">Live</span>
                     </div>
                     <div className="px-5 py-5 space-y-0">
-                        {timeline.map((step, i) => (
-                            <div key={step.status} className="flex items-start gap-4 py-3 relative">
-                                {i < timeline.length - 1 && (
-                                    <div className={`absolute left-[17px] top-11 w-px h-6 ${step.done ? 'bg-brand' : 'bg-gray-100'}`} />
-                                )}
-                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border-2 transition-all duration-500 ${step.done ? 'bg-brand border-brand text-white shadow-lg shadow-brand/20' : 'bg-gray-50 border-gray-100 text-gray-300'
+                        {timeline.map((step, i) => {
+                            const isActive = step.done && (i === timeline.length - 1 || !timeline[i+1].done);
+                            return (
+                                <div key={step.label} className="flex items-start gap-4 py-3 relative">
+                                    {i < timeline.length - 1 && (
+                                        <div className={`absolute left-[17px] top-11 w-px h-6 ${step.done ? 'bg-brand' : 'bg-gray-100'}`} />
+                                    )}
+                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border-2 transition-all duration-500 ${
+                                        isActive ? 'bg-brand border-brand text-white shadow-xl shadow-brand/40 scale-110' :
+                                        step.done ? 'bg-brand/10 border-brand/20 text-brand' : 'bg-gray-50 border-gray-100 text-gray-300'
                                     }`}>
-                                    {step.icon}
-                                </div>
-                                <div className="flex-1 flex items-center justify-between pt-1">
-                                    <div>
-                                        <p className={`font-black text-xs tracking-tight transition-colors ${step.done ? 'text-content' : 'text-gray-300'}`}>{step.status}</p>
-                                        <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mt-0.5">{step.done ? (i === 0 ? 'Confirmed' : 'Processed') : 'Waiting...'}</p>
+                                        {isActive ? (
+                                            <div className="relative">
+                                                <div className="absolute inset-0 bg-white rounded-full animate-ping opacity-20" />
+                                                {step.icon}
+                                            </div>
+                                        ) : step.icon}
                                     </div>
-                                    <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest">{step.time}</p>
+                                    <div className="flex-1 flex items-center justify-between pt-1">
+                                        <div>
+                                            <p className={`font-[1000] text-xs underline-offset-4 tracking-tight transition-colors ${isActive ? 'text-brand underline italic' : step.done ? 'text-content' : 'text-gray-300'}`}>{step.label}</p>
+                                            <p className={`text-[8px] font-black uppercase tracking-widest mt-0.5 ${isActive ? 'text-brand animate-pulse' : 'text-content-subtle'}`}>{step.done ? step.subtitle : 'Coming up...'}</p>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
+
+                {/* ── Service Evidence (Photos) ── */}
+                {(order.serviceImages?.before?.length > 0 || order.serviceImages?.after?.length > 0) && (
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-soft p-5">
+                        <BeforeAfterSlider 
+                            before={order.serviceImages.before} 
+                            after={order.serviceImages.after} 
+                            title="Work Transformation"
+                        />
+                    </div>
+                )}
 
                 {/* ── Order Content ── */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden">

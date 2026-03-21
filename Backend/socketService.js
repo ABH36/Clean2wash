@@ -1,23 +1,79 @@
+const jwt = require('jsonwebtoken');
+const { createAdapter } = require('@socket.io/redis-adapter');
+const Redis = require('ioredis');
 let io;
 
 module.exports = {
     init: (httpServer) => {
+        // Dynamic CORS Logic
+        const allowedOrigins = (process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL)
+            ? (process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL).split(',')
+            : ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:5174'];
+
         io = require('socket.io')(httpServer, {
             cors: {
-                origin: ['http://localhost:5173', 'http://localhost:5174', 'http://127.0.0.1:5173', 'http://localhost:3000'],
-                methods: ['GET', 'POST'],
+                origin: allowedOrigins,
+                methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
                 credentials: true
+            },
+            pingInterval: 10000, // 10s
+            pingTimeout: 10000,  // 10s
+        });
+
+        // 🏗️ Phase 2: Scalability (Redis Adapter)
+        // If Redis is configured, use it for horizontal scaling (clustering support)
+        if (process.env.REDIS_URL || process.env.REDIS_HOST) {
+            try {
+                const redisConfig = process.env.REDIS_URL || {
+                    host: process.env.REDIS_HOST,
+                    port: process.env.REDIS_PORT || 6379,
+                    password: process.env.REDIS_PASSWORD
+                };
+
+                const pubClient = new Redis(redisConfig);
+                const subClient = pubClient.duplicate();
+
+                io.adapter(createAdapter(pubClient, subClient));
+                console.log('✅ Socket.io Redis Adapter Initialized (Ready for Clustering)'.magenta.bold);
+            } catch (err) {
+                console.error('❌ Failed to initialize Redis Adapter:', err.message);
+            }
+        }
+
+        // 🛡️ Middleware: Authenticate Socket Connection
+        io.use((socket, next) => {
+            const token = socket.handshake.auth.token || socket.handshake.headers.authorization;
+
+            if (!token) {
+                console.error(`Socket connection attempt denied: No token provided.`);
+                return next(new Error('Authentication error: No token provided'));
+            }
+
+            try {
+                // Remove 'Bearer ' if present
+                const cleanToken = token.startsWith('Bearer ') ? token.slice(7) : token;
+                const decoded = jwt.verify(cleanToken, process.env.JWT_SECRET);
+
+                // Attach user data to socket
+                socket.user = decoded;
+                next();
+            } catch (err) {
+                console.error(`Socket authentication failed: ${err.message}`);
+                return next(new Error('Authentication error: Invalid token'));
             }
         });
 
         io.on('connection', (socket) => {
-            console.log(`Socket connected: ${socket.id}`);
+            const userId = socket.user?.id || socket.user?._id;
+            const userRole = socket.user?.role;
 
-            // A user or captain can join a room matching their ID to get personal notifications
-            socket.on('join_user_room', (userId) => {
+            console.log(`Socket connected: ${socket.id} (User: ${userId}, Role: ${userRole})`);
+
+            // 🏠 Protocol: Automatically join personal room for notifications
+            if (userId) {
                 socket.join(userId);
-                console.log(`Socket ${socket.id} joined user room: ${userId}`);
-            });
+                console.log(`Socket ${socket.id} auto-joined user room: ${userId}`);
+            }
 
             // Join a booking-specific room for real-time tracking
             socket.on('join_booking_room', (bookingId) => {
@@ -27,12 +83,31 @@ module.exports = {
 
             // Join the general admin room for broadcast alerts like SOS
             socket.on('join_admin_room', () => {
-                socket.join('admin_room');
-                console.log(`Socket ${socket.id} joined admin_room`);
+                if (userRole === 'admin') {
+                    socket.join('admin_room');
+                    console.log(`Socket ${socket.id} joined admin_room`);
+                } else {
+                    console.warn(`Unauthorized join_admin_room attempt by: ${userId}`);
+                }
+            });
+
+            // 📍 Real-time GPS Telemetry Stream (Verified)
+            socket.on('update_location', (data) => {
+                const { bookingId, location } = data;
+                if (!bookingId || !location) return;
+
+                // Production Logic: Only allow 'captain' or 'staff' or 'vendor' to update location
+                if (userRole === 'captain' || userRole === 'staff' || userRole === 'vendor') {
+                    socket.to(bookingId).emit('location_updated', {
+                        bookingId,
+                        location,
+                        timestamp: new Date()
+                    });
+                }
             });
 
             socket.on('disconnect', () => {
-                console.log(`Socket disconnected: ${socket.id}`);
+                console.log(`Socket disconnected: ${socket.id} (${userId})`);
             });
         });
 

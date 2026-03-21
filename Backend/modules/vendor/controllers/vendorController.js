@@ -1,10 +1,15 @@
 const Booking = require('../../../models/Booking');
 const Product = require('../../../models/Product');
+const ProductOrder = require('../../../models/ProductOrder');
 const User = require('../../../models/User');
 const Service = require('../../../models/Service');
 const Setting = require('../../../models/Setting');
 const WalletTransaction = require('../../../models/WalletTransaction');
 const cloudinary = require('../../../utils/cloudinary');
+const { sendVendorNotification } = require('../../../utils/notificationService');
+const auditHelper = require('../../../utils/auditHelper');
+const walletHelper = require('../../../utils/walletHelper');
+const referralService = require('../../../utils/referralService');
 
 exports.getDashboard = async (req, res) => {
     try {
@@ -17,17 +22,44 @@ exports.getDashboard = async (req, res) => {
             isActive: true
         });
 
-        // 2. Aggregate Revenue from pricing.totalAmount
-        const totalRevenue = bookings
+        // 1.1 Find product orders containing this vendor's items
+        const productOrders = await ProductOrder.find({
+            'items.vendor': vendorId,
+            isActive: true
+        });
+
+        // 2. Aggregate Revenue
+        const serviceRevenue = bookings
             .filter(b => b.status === 'completed' && b.payment?.status === 'paid')
             .reduce((acc, b) => acc + (b.pricing?.totalAmount || 0), 0);
 
+        const productRevenue = productOrders.reduce((acc, order) => {
+            const vendorItems = order.items.filter(it =>
+                it.vendor.toString() === vendorId.toString() &&
+                it.status === 'delivered'
+            );
+            return acc + vendorItems.reduce((sum, it) => sum + (it.price * it.quantity), 0);
+        }, 0);
+
+        const totalRevenue = serviceRevenue + productRevenue;
+
         // 3. Operation Stats
-        const activeJobs = bookings.filter(b => ['pending', 'confirmed', 'assigned', 'pickup-assigned', 'en_route', 'at-studio', 'in_progress', 'quality-check'].includes(b.status)).length;
-        const completedJobs = bookings.filter(b => b.status === 'completed').length;
+        const activeBookings = bookings.filter(b => ['pending', 'confirmed', 'assigned', 'pickup-assigned', 'en_route', 'at-studio', 'in_progress', 'quality-check'].includes(b.status)).length;
+
+        const activeProductOrders = productOrders.filter(order => {
+            return order.items.some(it =>
+                it.vendor.toString() === vendorId.toString() &&
+                ['pending', 'processing', 'shipped', 'packing', 'accepted'].includes(it.status)
+            );
+        }).length;
+
+        const activeJobs = activeBookings + activeProductOrders;
+
+        const completedJobs = bookings.filter(b => b.status === 'completed').length +
+            productOrders.filter(o => o.items.every(it => it.vendor.toString() !== vendorId.toString() || it.status === 'delivered')).length;
 
         // 4. Staff Count
-        const staffCount = await User.countDocuments({ role: 'staff', vendorId, isActive: true });
+        const staffCount = await User.countDocuments({ role: 'staff', 'profile.vendorId': vendorId, isActive: true });
 
         // 5. Aggregate Rating
         const feedbackBookings = bookings.filter(b => b.feedback?.rating);
@@ -46,7 +78,7 @@ exports.getDashboard = async (req, res) => {
             .sort({ updatedAt: -1 })
             .limit(5);
 
-        // 7. Get Real Wallet Transactions
+        // 7. Get Wallet Transactions
         const dbTransactions = await WalletTransaction.find({ user: vendorId })
             .sort({ createdAt: -1 })
             .limit(10);
@@ -60,8 +92,6 @@ exports.getDashboard = async (req, res) => {
             method: (t.paymentMethod || 'BANK').toUpperCase()
         }));
 
-        const inventoryCount = req.user.profile?.inventory?.length || 0;
-
         res.status(200).json({
             status: 'success',
             data: {
@@ -71,9 +101,9 @@ exports.getDashboard = async (req, res) => {
                 completedJobs,
                 staffCount,
                 rating: parseFloat(avgRating),
+                inventoryCount: req.user.profile?.inventory?.length || 0,
                 recentActivity,
-                transactions,
-                inventoryCount
+                transactions
             }
         });
     } catch (error) {
@@ -142,7 +172,7 @@ exports.getOrderById = async (req, res) => {
 exports.updateOrderStatus = async (req, res) => {
     try {
         const { orderId } = req.params;
-        const { status, staffId, type } = req.body; // type: 'pickup' or 'delivery'
+        const { status, staffId, type, photos } = req.body; // type: 'pickup' or 'delivery'
         const vendorId = req.user._id;
 
         const booking = await Booking.findOne({
@@ -157,12 +187,13 @@ exports.updateOrderStatus = async (req, res) => {
 
         // --- Elite Flow Hardening: Status Transition Rules ---
         const eliteStatuses = ['at-studio', 'in_progress', 'quality-check', 'ready-for-delivery'];
-        
+
         // Basic Guard: If trying to move to an internal studio status, ensure the order is actually at the studio
         if (['in_progress', 'quality-check'].includes(status) && booking.status !== 'at-studio' && !eliteStatuses.includes(booking.status)) {
             return res.status(400).json({ status: 'error', message: 'Order must be at studio for internal updates' });
         }
 
+        const oldStatus = booking.status;
         // Specific Transition Logic
         if (booking.status === 'at-studio' && status === 'in_progress') {
             booking.status = 'in_progress';
@@ -177,47 +208,61 @@ exports.updateOrderStatus = async (req, res) => {
             booking.status = status;
         }
 
+        // Audit Log: Status Transition
+        await auditHelper.logAction({
+            userId: vendorId,
+            action: `BOOKING_STATUS_${booking.status.toUpperCase().replace(/-/g, '_')}`,
+            resource: 'Booking',
+            resourceId: booking._id,
+            oldValue: { status: oldStatus },
+            newValue: { status: booking.status },
+            req
+        });
+
         // Add timestamp for specific statuses in tracking
         if (!booking.tracking) booking.tracking = {};
-        
+
         if (status === 'in_progress') booking.tracking.washStartedAt = new Date();
         if (status === 'quality-check') booking.tracking.washCompletedAt = new Date();
         if (status === 'ready-for-delivery') booking.tracking.readyForPickupAt = new Date();
         if (status === 'completed') {
             booking.tracking.completedAt = new Date();
-            
-            // --- PAYOUT LOGIC ---
+
+            // --- PAYOUT LOGIC (Phase 4 Refactor) ---
             if (booking.pricing?.totalAmount > 0) {
-                // Fetch Platform Commission
-                let commissionRate = 15; // Default 15%
-                const commissionSetting = await Setting.findOne({ key: 'platform_commission' });
-                if (commissionSetting && commissionSetting.value) {
-                    commissionRate = parseFloat(commissionSetting.value);
-                }
+                const commissionHelper = require('../../../utils/commissionHelper');
+                const { adminCut, providerPayout, rate } = await commissionHelper.calculatePayout(booking.pricing.totalAmount, 'vendor');
 
-                const adminCut = (booking.pricing.totalAmount * commissionRate) / 100;
-                const providerPayout = booking.pricing.totalAmount - adminCut;
-
-                // Update Vendor Wallet
-                const vendor = await User.findById(vendorId);
-                if (vendor) {
-                    vendor.wallet = vendor.wallet || {};
-                    vendor.wallet.balance = (vendor.wallet.balance || 0) + providerPayout;
-                    vendor.wallet.lastUpdated = new Date();
-                    await vendor.save({ validateBeforeSave: false });
-
-                    // Log Transaction
-                    await WalletTransaction.create({
-                        user: vendor._id,
+                try {
+                    // ATOMIC WALLET TRANSFER
+                    await walletHelper.executeWalletTransaction({
+                        user: vendorId,
                         amount: providerPayout,
                         type: 'credit',
-                        status: 'completed',
                         category: 'SERVICE_BOOKING',
-                        description: `Payout for booking ${booking.bookingId || booking._id} (Commission deducted: ₹${adminCut.toFixed(2)})`,
-                        referenceId: booking._id.toString()
+                        description: `Payout for booking ${booking.bookingId || booking._id} (Commission: ₹${adminCut.toFixed(2)})`,
+                        referenceId: booking._id.toString(),
+                        referenceType: 'booking'
                     });
+
+                    // Trigger Referral Reward (Phase 4)
+                    await referralService.processReferralReward(booking.consumer, booking._id);
+
+                    // 3. Send persistent notification for Payout
+                    await sendVendorNotification(vendorId, {
+                        title: 'Payment Credited! 🪙',
+                        message: `₹${providerPayout.toFixed(0)} has been added to your workshop wallet for order #${booking.bookingId || booking._id.toString().slice(-6).toUpperCase()}.`,
+                        type: 'payout',
+                        priority: 'high',
+                        metaData: {
+                            amount: providerPayout,
+                            bookingId: booking._id
+                        }
+                    });
+                } catch (walletError) {
+                    console.error('Vendor Wallet Handshake Failure:', walletError);
                 }
-                
+
                 if (booking.payment) {
                     booking.payment.status = 'paid';
                     booking.payment.paidAt = new Date();
@@ -225,14 +270,43 @@ exports.updateOrderStatus = async (req, res) => {
             }
         }
 
+        // --- Service Images (Evidence) ---
+        if (photos && Array.isArray(photos) && photos.length > 0) {
+            const uploadedUrls = [];
+            for (const photo of photos) {
+                if (photo.startsWith('data:image')) {
+                    try {
+                        const result = await cloudinary.uploadImage(photo, `clean2wash/bookings/${orderId}`);
+                        uploadedUrls.push(result.secure_url);
+                    } catch (uploadErr) {
+                        console.error('Photo upload failed:', uploadErr);
+                    }
+                } else if (photo.startsWith('http')) {
+                    uploadedUrls.push(photo);
+                }
+            }
+
+            if (uploadedUrls.length > 0) {
+                if (!booking.serviceImages) booking.serviceImages = { before: [], after: [] };
+
+                // Logic based on status
+                if (['arrived', 'at-studio', 'in_progress'].includes(status)) {
+                    booking.serviceImages.before = [...(booking.serviceImages.before || []), ...uploadedUrls];
+                } else if (['quality-check', 'ready-for-delivery', 'completed'].includes(status)) {
+                    booking.serviceImages.after = [...(booking.serviceImages.after || []), ...uploadedUrls];
+                }
+            }
+        }
+
         await booking.save();
 
         // Emit Socket Event
-        const { socketService } = require('../../../utils/socket');
+        const socketService = require('../../../socketService');
         const io = socketService.getIO();
         io.to(booking._id.toString()).emit('booking_status_updated', {
             bookingId: booking._id,
-            status: booking.status
+            status: booking.status,
+            serviceImages: booking.serviceImages
         });
 
         res.status(200).json({
@@ -502,6 +576,137 @@ exports.unlinkStaff = async (req, res) => {
     }
 };
 
+/**
+ * Staff Payroll: Move funds from Vendor Hub balance to Staff Wallet
+ */
+exports.payoutStaff = async (req, res) => {
+    try {
+        const vendorId = req.user._id;
+        const { staffId, amount, note } = req.body;
+
+        if (!amount || amount <= 0) {
+            return res.status(400).json({ status: 'error', message: 'Valid amount is required' });
+        }
+
+        // 1. Verify Staff ownership
+        const staff = await User.findOne({ _id: staffId, 'profile.vendorId': vendorId, role: 'staff' });
+        if (!staff) {
+            return res.status(404).json({ status: 'error', message: 'Staff member not found or not linked to your studio' });
+        }
+
+        // 2. Check Vendor Balance
+        const vendor = await User.findById(vendorId);
+        if (vendor.wallet.balance < amount) {
+            return res.status(400).json({ status: 'error', message: 'Insufficient hub wallet balance' });
+        }
+
+        // 3. ATOMIC TRANSFER (Phase 4 Refactor)
+        const txnId = `PAYROLL-${Date.now()}`;
+
+        await walletHelper.executeWalletTransaction({
+            user: vendorId,
+            amount: amount,
+            type: 'debit',
+            category: 'WITHDRAWAL',
+            description: `Payroll payout to Staff: ${staff.name}. ${note || ''}`,
+            referenceId: txnId,
+            referenceType: 'payout'
+        });
+
+        await walletHelper.executeWalletTransaction({
+            user: staff._id,
+            amount: amount,
+            type: 'credit',
+            category: 'REWARD',
+            description: `Payroll received from Studio. ${note || ''}`,
+            referenceId: txnId,
+            referenceType: 'payout'
+        });
+
+        res.status(200).json({
+            status: 'success',
+            message: `Successfully paid ₹${amount} to ${staff.name}`,
+            data: {
+                newHubBalance: vendor.wallet.balance,
+                staffName: staff.name
+            }
+        });
+
+    } catch (error) {
+        console.error('Staff Payroll Error:', error);
+        res.status(500).json({ status: 'error', message: 'Process failed' });
+    }
+};
+
+/**
+ * Request Payout: Formal withdrawal request from Vendor Wallet to Bank Account
+ */
+exports.requestPayout = async (req, res) => {
+    try {
+        const vendorId = req.user._id;
+        const { amount, bankDetails } = req.body;
+
+        if (!amount || amount < 500) {
+            return res.status(400).json({ status: 'error', message: 'Minimum withdrawal is ₹500' });
+        }
+
+        const vendor = await User.findById(vendorId);
+        if (vendor.wallet.balance < amount) {
+            return res.status(400).json({ status: 'error', message: 'Insufficient balance' });
+        }
+
+        // create a pending transaction
+        const txn = await WalletTransaction.create({
+            user: vendorId,
+            amount: amount,
+            type: 'debit',
+            status: 'pending',
+            category: 'WITHDRAWAL',
+            description: `Bank Withdrawal Request. Account: ${bankDetails?.accountNumber || 'Stored Bank'}`,
+            metadata: {
+                bankDetails,
+                requestedAt: new Date()
+            }
+        });
+
+        // Deduct from balance immediately (Hold)
+        vendor.wallet.balance -= amount;
+        await vendor.save({ validateBeforeSave: false });
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Withdrawal request submitted for approval',
+            data: { transaction: txn }
+        });
+
+    } catch (error) {
+        console.error('Withdrawal Request Error:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to process request' });
+    }
+};
+
+/**
+ * Terminal Handshake: Verify PIN for Studio Handover
+ */
+exports.verifyBookingPin = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { pin } = req.body;
+
+        const booking = await Booking.findById(orderId);
+        if (!booking) return res.status(404).json({ status: 'error', message: 'Order not found' });
+
+        if (booking.security?.pin !== pin) {
+            return res.status(400).json({ status: 'error', message: 'Invalid PIN' });
+        }
+
+        res.status(200).json({ status: 'success', message: 'PIN verified' });
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: 'Verification failed' });
+    }
+};
+
+
 // --- Customer Management ---
 
 exports.getCustomers = async (req, res) => {
@@ -745,9 +950,30 @@ exports.deleteService = async (req, res) => {
 exports.assignStaff = async (req, res) => {
     try {
         const { orderId } = req.params;
-        const { staffId, type } = req.body; // type: 'pickup' or 'delivery'
+        const { staffId, type } = req.body;
 
-        const updateField = type === 'pickup' ? 'pickupStaff' : 'deliveryStaff';
+        const targetBooking = await Booking.findById(orderId);
+        if (targetBooking) {
+            const buffer = 90 * 60000;
+            const jobD = targetBooking.schedule?.date || new Date();
+            const startW = new Date(jobD.getTime() - buffer);
+            const endW = new Date(jobD.getTime() + buffer);
+
+            const q = {
+                _id: { $ne: orderId },
+                isActive: true,
+                status: { $in: ['confirmed', 'assigned', 'pickup-assigned', 'en_route', 'at-studio', 'in_progress', 'washing', 'quality-check'] },
+                $or: [{ pickupStaff: staffId }, { deliveryStaff: staffId }, { assignedStaff: staffId }],
+                'schedule.date': { $gte: startW, $lte: endW }
+            };
+
+            const conflict = await Booking.findOne(q);
+            if (conflict) {
+                return res.status(403).json({ status: 'fail', message: 'Staff overlap conflict', code: 'STAFF_OVERLAP' });
+            }
+        }
+
+        const updateField = type === 'pickup' ? 'pickupStaff' : (type === 'delivery' ? 'deliveryStaff' : 'assignedStaff');
 
         const booking = await Booking.findOneAndUpdate(
             {
@@ -763,20 +989,21 @@ exports.assignStaff = async (req, res) => {
             .populate('pickupStaff', 'name phone profile')
             .populate('deliveryStaff', 'name phone profile');
 
+
         if (!booking) {
             return res.status(404).json({
                 status: 'fail',
                 message: 'Booking not found or unauthorized'
             });
         }
-
         // Notify Consumer of assignment / status update
-        const { socketService } = require('../../../utils/socket');
+        const { socketService } = require('../../../socketService');
         const io = socketService.getIO();
-        
+
         // Auto-update status if staff is assigned for the first time
         if (type === 'pickup' && booking.status === 'accepted') {
             booking.status = 'pickup-assigned';
+            if (!booking.tracking) booking.tracking = {}; // Initialize tracking if it doesn't exist
             booking.tracking.assignedAt = new Date();
             await booking.save();
         }
@@ -791,11 +1018,23 @@ exports.assignStaff = async (req, res) => {
             }
         });
 
+        // 3. New: Direct Push to Staff Terminal
+        const { sendStaffNotification } = require('../../../utils/notificationService');
+        await sendStaffNotification(staffId, {
+            title: `New Assignment: ${type.toUpperCase()}`,
+            message: `You've been assigned for ${type} of ${booking.vehicle?.brand} (C2W-${booking._id.toString().slice(-4)})`,
+            type: 'order-assigned',
+            priority: 'urgent',
+            actionUrl: `/staff/tasks/${booking._id}`,
+            metaData: { bookingId: booking._id, type }
+        });
+
         res.status(200).json({
             status: 'success',
             data: { booking }
         });
     } catch (err) {
+        console.error('Error assigning staff:', err); // Added console.error for better logging
         res.status(400).json({
             status: 'error',
             message: err.message
@@ -808,10 +1047,16 @@ exports.assignStaff = async (req, res) => {
 exports.requestPayout = async (req, res) => {
     try {
         const { amount } = req.body;
+        const User = require('../../../models/User'); // Import User model
+        const WalletTransaction = require('../../../models/WalletTransaction'); // Import WalletTransaction model
         const vendor = await User.findById(req.user._id);
 
         if (!amount || amount <= 0) {
             return res.status(400).json({ status: 'error', message: 'Please provide a valid amount' });
+        }
+
+        if (!vendor) {
+            return res.status(404).json({ status: 'error', message: 'Vendor not found' });
         }
 
         if (vendor.wallet.balance < amount) {
@@ -847,5 +1092,177 @@ exports.requestPayout = async (req, res) => {
     } catch (error) {
         console.error('Error requesting payout:', error);
         res.status(500).json({ status: 'error', message: 'Failed to process payout request' });
+    }
+};
+
+// Verify User PIN for Security Handover
+exports.verifyBookingPin = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { pin } = req.body;
+        const vendorId = req.user._id;
+
+        const booking = await Booking.findOne({
+            _id: orderId,
+            'provider.id': vendorId,
+            'provider.type': 'vendor'
+        });
+
+        if (!booking) {
+            return res.status(404).json({ status: 'error', message: 'Order not found' });
+        }
+
+        if (booking.securityPin !== pin) {
+            return res.status(400).json({ status: 'error', message: 'Invalid Security PIN. Please ask the customer for the correct PIN.' });
+        }
+
+        // Pin matches! Move to en_route
+        booking.status = 'en_route';
+        if (!booking.tracking) booking.tracking = {};
+        booking.tracking.arrivedAt = new Date(); // Marking handover start
+
+        await booking.save();
+
+        // Notify via Socket
+        const socketService = require('../../../socketService');
+        const io = socketService.getIO();
+        io.to(booking._id.toString()).emit('booking_status_updated', {
+            bookingId: booking._id,
+            status: booking.status,
+            message: 'PIN Verified! Handover complete.'
+        });
+
+        res.status(200).json({
+            status: 'success',
+            message: 'PIN verified successfully. Car handover confirmed.',
+            data: { booking }
+        });
+    } catch (error) {
+        console.error('Error verifying PIN:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to verify PIN' });
+    }
+};
+
+// --- PRODUCT ORDER MANAGEMENT (PHASE 28) ---
+
+exports.getMyProductOrders = async (req, res) => {
+    try {
+        const vendorId = req.user._id;
+        const orders = await ProductOrder.find({
+            'items.vendor': vendorId,
+            'payment.status': 'paid',
+            isActive: true
+        })
+            .populate('consumer', 'name phone profile.city')
+            .sort({ createdAt: -1 });
+
+        // Filter items for each order to only show this vendor's items
+        const mappedOrders = orders.map(order => {
+            const orderObj = order.toObject();
+            orderObj.myItems = orderObj.items.filter(item => item.vendor.toString() === vendorId.toString());
+            return orderObj;
+        });
+
+        res.status(200).json({
+            status: 'success',
+            results: mappedOrders.length,
+            data: { orders: mappedOrders }
+        });
+    } catch (error) {
+        console.error('Error fetching vendor product orders:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to fetch product orders' });
+    }
+};
+
+exports.updateProductOrderItemStatus = async (req, res) => {
+    try {
+        const { orderId, itemId } = req.params;
+        const { status } = req.body; // packing, shipped, delivered, cancelled
+        const vendorId = req.user._id;
+
+        const order = await ProductOrder.findOne({ _id: orderId, 'items.vendor': vendorId });
+        if (!order) {
+            return res.status(404).json({ status: 'error', message: 'Order not found' });
+        }
+
+        const itemIndex = order.items.findIndex(item => item._id.toString() === itemId && item.vendor.toString() === vendorId.toString());
+        if (itemIndex === -1) {
+            return res.status(404).json({ status: 'error', message: 'Item not found in this order' });
+        }
+
+        const oldItemStatus = order.items[itemIndex].status;
+        order.items[itemIndex].status = status;
+
+        // Audit Log: Product Item Status Transition
+        await auditHelper.logAction({
+            userId: vendorId,
+            action: `PRODUCT_ITEM_STATUS_${status.toUpperCase()}`,
+            resource: 'ProductOrder',
+            resourceId: order._id,
+            oldValue: { itemId, status: oldItemStatus },
+            newValue: { itemId, status },
+            req
+        });
+
+        // --- PAYOUT LOGIC FOR PRODUCTS (PHASE 28) ---
+        if (status === 'delivered') {
+            const item = order.items[itemIndex];
+            const itemTotal = item.price * item.quantity;
+
+            if (itemTotal > 0) {
+                const commissionHelper = require('../../../utils/commissionHelper');
+                const WalletTransaction = require('../../../models/WalletTransaction');
+
+                const { adminCut, providerPayout, rate } = await commissionHelper.calculatePayout(itemTotal, 'vendor');
+
+                // Update Vendor Wallet
+                const vendor = await User.findById(vendorId);
+                if (vendor) {
+                    vendor.wallet = vendor.wallet || {};
+                    vendor.wallet.balance = (vendor.wallet.balance || 0) + providerPayout;
+                    vendor.wallet.lastUpdated = new Date();
+                    await vendor.save({ validateBeforeSave: false });
+
+                    // Log Transaction
+                    await WalletTransaction.create({
+                        user: vendor._id,
+                        amount: providerPayout,
+                        type: 'credit',
+                        status: 'completed',
+                        category: 'PRODUCT_SALE',
+                        description: `Payout for ${item.name} x ${item.quantity} in Order ${order.orderId} (Commission: ₹${adminCut.toFixed(2)})`,
+                        referenceId: order._id.toString(),
+                        referenceType: 'product_order'
+                    });
+
+                    // Notify Vendor
+                    await sendVendorNotification(vendor._id, {
+                        title: 'Product Sale Credited! 🪙',
+                        message: `₹${providerPayout.toFixed(0)} credited for "${item.name}" from Order #${order.orderId}.`,
+                        type: 'payout',
+                        priority: 'high',
+                        metaData: { amount: providerPayout, orderId: order._id }
+                    });
+                }
+            }
+        }
+
+        // If all items in the order are delivered, mark the whole order as delivered
+        const allDelivered = order.items.every(it => it.status === 'delivered');
+        if (allDelivered) {
+            order.status = 'delivered';
+            order.history.push({ status: 'delivered', note: 'All items delivered. Order complete.' });
+        }
+
+        await order.save();
+
+        res.status(200).json({
+            status: 'success',
+            message: `Item status updated to ${status}. Payout processed if delivered.`,
+            data: { order }
+        });
+    } catch (error) {
+        console.error('Error updating product order item status:', error);
+        res.status(500).json({ status: 'error', message: 'Update failed' });
     }
 };

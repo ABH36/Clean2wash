@@ -1,8 +1,9 @@
+const mongoose = require('mongoose');
 const Booking = require('../../../models/Booking');
 const Vehicle = require('../../../models/Vehicle');
 const User = require('../../../models/User');
 const Captain = require('../../../models/Captain');
-const { sendNotification } = require('../../../utils/notificationService');
+const { sendNotification, sendVendorNotification } = require('../../../utils/notificationService');
 const socketService = require('../../../socketService');
 
 /**
@@ -35,10 +36,10 @@ const cleanupExpiredBookings = async () => {
         for (const booking of allExpired) {
             const isStagnant = booking.status === 'pickup-assigned';
             booking.status = 'cancelled';
-            booking.notes.internal = isStagnant 
-                ? 'Auto-cancelled: Protocol Stall (Staff idle for >30min).' 
+            booking.notes.internal = isStagnant
+                ? 'Auto-cancelled: Protocol Stall (Staff idle for >30min).'
                 : 'Auto-cancelled: Search protocol timeout (No crew found).';
-            
+
             // Handle Refunds
             if (booking.payment.status === 'paid') {
                 if (booking.payment.method === 'wallet') {
@@ -65,7 +66,7 @@ const cleanupExpiredBookings = async () => {
             // Notify user
             await sendNotification(booking.consumer, {
                 title: isStagnant ? 'Pickup Cancelled ⚠️' : 'Search Timed Out ⏱️',
-                message: isStagnant 
+                message: isStagnant
                     ? 'Our crew was unable to reach you in time. Your booking has been cancelled and refund initiated.'
                     : 'We couldn\'t find available crew in your area. Your booking has been cancelled and refund initiated.',
                 type: 'booking',
@@ -245,7 +246,25 @@ exports.createBooking = async (req, res) => {
 
         const totalAmountBeforeDiscount = Math.round((baseAmount * vehicleMultiplier) + addonAmount);
 
-        // Coupon Logic
+        // 2a. Black Pass Synchronization (Standardization)
+        let blackPassDiscount = 0;
+        const Subscription = require('../../../models/Subscription');
+        const Setting = require('../../../models/Setting');
+
+        // Check for active "Black Pass" subscription
+        const activeSub = await Subscription.findOne({
+            user: req.user.id,
+            status: 'active',
+            endDate: { $gt: new Date() }
+        });
+
+        if (activeSub && (activeSub.plan || '').toLowerCase().includes('black')) {
+            const passConfig = await Setting.findOne({ key: 'WASH_PASS_CONFIG' });
+            const discountRate = passConfig?.value?.discount || 0.3; // Default to 30%
+            blackPassDiscount = Math.round(totalAmountBeforeDiscount * discountRate);
+        }
+
+        // 3. Coupon Logic
         let discountAmount = 0;
         let appliedCouponRecord = null;
         if (couponCode) {
@@ -281,282 +300,293 @@ exports.createBooking = async (req, res) => {
             }
         }
 
-        const totalAmount = totalAmountBeforeDiscount - discountAmount;
+        // Calculate final total
+        const totalAmount = Math.max(0, totalAmountBeforeDiscount - blackPassDiscount - discountAmount);
 
-        // Wallet Payment Flow
-        let walletTransactionId = null;
-        if (paymentMethod === 'wallet') {
-            const walletController = require('./walletController');
-            try {
-                const transaction = await walletController.deductMoney(
+        // --- ATOMIC SESSION START ---
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
+        try {
+            // Wallet Payment Flow (Atomic)
+            let walletTransactionId = null;
+            if (paymentMethod === 'wallet') {
+                const walletHelper = require('../../../utils/walletHelper');
+                const transaction = await walletHelper.executeWalletTransaction(
                     req.user.id,
                     totalAmount,
-                    'PAYMENT',
-                    `Payment for ${service.name || service.title} booking`,
-                    `TXN-WALL-${Date.now()}`
+                    'debit',
+                    {
+                        category: 'BOOKING',
+                        description: `Payment for ${service.name || service.title} booking`,
+                        referenceId: `TXN-WALL-${Date.now()}`,
+                        paymentMethod: 'wallet'
+                    },
+                    session
                 );
-                walletTransactionId = transaction.referenceId;
-            } catch (err) {
-                return res.status(400).json({
-                    status: 'fail',
-                    message: err.message || 'Insufficient wallet balance'
-                });
+                walletTransactionId = transaction.transaction.referenceId;
             }
-        }
 
-        // Prepare location/address
-        const bookingLocation = location || (address ? {
-            type: address.label?.toLowerCase() || 'home',
-            address: {
-                street: address.street,
-                city: address.city,
-                state: address.state,
-                pincode: address.pincode,
-                coordinates: address.coordinates
-            },
-            landmark: address.landmark
-        } : {
-            type: 'home',
-            address: req.user.profile?.address
-        });
-
-        // Backend Sanitization & Enum Mapping
-        const validCategories = ['Doorstep', 'Studio', 'Studio Detailing', 'Add-ons', 'Prestige', 'Chauffeur'];
-        const validServiceTypes = ['captain', 'vendor', 'sparedriver'];
-        const validPaymentMethods = ['cash', 'online', 'wallet', 'subscription'];
-        const validLocationTypes = ['home', 'office', 'other', 'studio'];
-        
-        const sanitizedCategory = validCategories.includes(service.category) ? service.category :
-        (service.category === 'Express' ? 'Doorstep' : 'Doorstep');
-        
-        const sanitizedServiceType = validServiceTypes.includes(service.type?.toLowerCase()) ? service.type.toLowerCase() : 'captain';
-        
-        const sanitizedPaymentMethod = validPaymentMethods.includes(paymentMethod) ? paymentMethod : 'online';
-        
-        if (bookingLocation && !validLocationTypes.includes(bookingLocation.type)) {
-            bookingLocation.type = bookingLocation.type === 'work' ? 'office' : 'home';
-        }
-        
-        // 3. Validation: Coordinates are required for doorstep services
-        if (sanitizedCategory === 'Doorstep' && (!bookingLocation.address?.coordinates || !bookingLocation.address?.coordinates?.lat)) {
-            return res.status(400).json({
-                status: 'fail',
-                message: 'Precise GPS coordinates are required for doorstep service. Please select a pinned location.'
+            // Prepare location/address
+            const bookingLocation = location || (address ? {
+                type: address.label?.toLowerCase() || 'home',
+                address: {
+                    street: address.street,
+                    city: address.city,
+                    state: address.state,
+                    pincode: address.pincode,
+                    coordinates: address.coordinates
+                },
+                landmark: address.landmark
+            } : {
+                type: 'home',
+                address: req.user.profile?.address
             });
-        }
 
-        // Prepare schedule
-        const bookingSchedule = {
-            type: schedule?.type || (req.body.scheduledTime ? 'scheduled' : 'instant'),
-            date: schedule?.date ? new Date(schedule.date) : (req.body.scheduledTime ? new Date(req.body.scheduledTime) : new Date()),
-            timeSlot: schedule?.timeSlot || req.body.timeSlot || null,
-            estimatedDuration: service.duration || '40 min'
-        };
+            // Backend Sanitization & Enum Mapping
+            const validCategories = ['Doorstep', 'Studio', 'Studio Detailing', 'Add-ons', 'Prestige', 'Chauffeur'];
+            const validServiceTypes = ['captain', 'vendor', 'sparedriver'];
+            const validPaymentMethods = ['cash', 'online', 'wallet', 'subscription'];
+            const validLocationTypes = ['home', 'office', 'other', 'studio'];
 
-        // Payment status enforcement
-        let paymentStatus = 'pending';
-        const transactionId = paymentId || orderId || walletTransactionId;
+            const sanitizedCategory = validCategories.includes(service.category) ? service.category :
+                (service.category === 'Express' ? 'Doorstep' : 'Doorstep');
 
-        if (sanitizedPaymentMethod === 'online') {
-            if (!transactionId) {
-                return res.status(400).json({
-                    status: 'fail',
-                    message: 'Payment verification failed. No transaction reference found.'
-                });
+            const sanitizedServiceType = validServiceTypes.includes(service.type?.toLowerCase()) ? service.type.toLowerCase() : 'captain';
+            const sanitizedPaymentMethod = validPaymentMethods.includes(paymentMethod) ? paymentMethod : 'online';
+
+            if (bookingLocation && !validLocationTypes.includes(bookingLocation.type)) {
+                bookingLocation.type = bookingLocation.type === 'work' ? 'office' : 'home';
             }
-            paymentStatus = 'paid';
-        } else if (paymentMethod === 'wallet' && walletTransactionId) {
-            paymentStatus = 'paid';
-        } else if (paymentMethod === 'subscription') {
-            const Subscription = require('../../../models/Subscription');
-            const activeSub = await Subscription.getActiveSubscription(req.user.id);
-            if (!activeSub) {
-                return res.status(400).json({
-                    status: 'fail',
-                    message: 'No active subscription found for your account.'
-                });
+
+            // 3. Validation: Coordinates are required for doorstep services
+            if (sanitizedCategory === 'Doorstep' && (!bookingLocation.address?.coordinates || !bookingLocation.address?.coordinates?.lat)) {
+                throw new Error('Precise GPS coordinates are required for doorstep service. Please select a pinned location.');
             }
-            if (activeSub.getAvailableCredits() <= 0) {
-                return res.status(400).json({
-                    status: 'fail',
-                    message: 'Insufficient subscription credits. Please renew or pay online.'
-                });
-            }
-            await activeSub.useCredits(1);
-            paymentStatus = 'paid';
-        }
 
-        // Create booking
-        const newBooking = await Booking.create({
-            consumer: req.user.id,
-            vehicle: effectiveVehicleId,
-            service: {
-                id: service.id || 'service_' + Date.now(),
-                name: service.name || service.title,
-                category: sanitizedCategory,
-                type: sanitizedServiceType,
-                duration: service.duration || '40 min',
-                basePrice: baseAmount,
-                features: service.features || []
-            },
-            pricing: {
-                baseAmount,
-                vehicleMultiplier,
-                addonAmount,
-                discountAmount,
-                totalAmount
-            },
-            addons: Array.isArray(addons) ? addons.map(a => typeof a === 'string' ? { id: a } : a) : [],
-            schedule: bookingSchedule,
-            location: bookingLocation,
-            payment: {
-                method: sanitizedPaymentMethod,
-                status: paymentStatus,
-                transactionId: transactionId,
-                coupon: appliedCouponRecord
-            },
-            provider: {
-                type: sanitizedServiceType,
-                id: null
-            },
-            status: 'pending'
-        });
-        
-        // Finalize Protocol: Record used promotion to prevent re-use
-        if (appliedCouponRecord?.id) {
-            await User.findByIdAndUpdate(req.user.id, {
-                $addToSet: { usedPromotions: appliedCouponRecord.id }
-            });
-        }
-
-        // Populate booking details
-        const populatedBooking = await Booking.findById(newBooking._id)
-            .populate('vehicle', 'brand model type plate image')
-            .populate('consumer', 'name phone');
-
-        // Send notification
-        await sendNotification(req.user.id, {
-            title: 'Order Received! 🚀',
-            message: `Your booking for ${service.name || service.title} has been placed successfully.`,
-            type: 'booking',
-            priority: 'medium',
-        });
-        
-        // Broadcast to nearby online captains via Socket.io (Only for Captain bookings)
-        if (sanitizedServiceType === 'captain') {
-            try {
-            const io = socketService.getIO();
-            const broadcastPayload = {
-                bookingId: newBooking._id,
-                serviceName: service.name || service.title,
-                location: {
-                    address: bookingLocation.address,
-                    type: bookingLocation.type,
-                    landmark: bookingLocation.landmark
-                },
-                vehicle: {
-                    brand: vehicle.brand,
-                    model: vehicle.model,
-                    plate: vehicle.plate
-                },
-                pricing: {
-                    total: totalAmount
-                },
-                timestamp: new Date()
+            // Prepare schedule
+            const bookingSchedule = {
+                type: schedule?.type || (req.body.scheduledTime ? 'scheduled' : 'instant'),
+                date: schedule?.date ? new Date(schedule.date) : (req.body.scheduledTime ? new Date(req.body.scheduledTime) : new Date()),
+                timeSlot: schedule?.timeSlot || req.body.timeSlot || null,
+                estimatedDuration: service.duration || '40 min'
             };
 
-            // Calculate matching captains if precise coordinates exist
-            if (bookingLocation.address && bookingLocation.address.coordinates && bookingLocation.address.coordinates.lat) {
-                const lng = parseFloat(bookingLocation.address.coordinates.lng);
-                const lat = parseFloat(bookingLocation.address.coordinates.lat);
+            // Payment status enforcement
+            let paymentStatus = 'pending';
+            const transactionId = paymentId || orderId || walletTransactionId;
 
-                // Find captains within 10km radius
-                const nearbyCaptains = await Captain.find({
-                    isOnline: true,
-                    isActive: true,
-                    // isVerified: true, // Relaxed for testing/development
-                    location: {
-                        $nearSphere: {
-                            $geometry: {
-                                type: 'Point',
-                                coordinates: [lng, lat]
-                            },
-                            $maxDistance: 10000 // 10km in meters
-                        }
-                    }
+            if (sanitizedPaymentMethod === 'online') {
+                if (!transactionId) throw new Error('Payment verification failed. No transaction reference found.');
+                paymentStatus = 'paid';
+            } else if (paymentMethod === 'wallet' && walletTransactionId) {
+                paymentStatus = 'paid';
+            } else if (paymentMethod === 'subscription') {
+                const Subscription = require('../../../models/Subscription');
+                const activeSub = await Subscription.getActiveSubscription(req.user.id);
+                if (!activeSub) throw new Error('No active subscription found for your account.');
+                if (activeSub.getAvailableCredits() <= 0) throw new Error('Insufficient subscription credits.');
+
+                // Use credits within the session
+                activeSub.usedCredits += 1;
+                await activeSub.save({ session });
+                paymentStatus = 'paid';
+            }
+
+            // Create booking within session
+            const [newBooking] = await Booking.create([{
+                consumer: req.user.id,
+                vehicle: effectiveVehicleId,
+                service: {
+                    id: service.id || 'service_' + Date.now(),
+                    name: service.name || service.title,
+                    category: sanitizedCategory,
+                    type: sanitizedServiceType,
+                    duration: service.duration || '40 min',
+                    basePrice: baseAmount,
+                    features: service.features || []
+                },
+                pricing: {
+                    baseAmount,
+                    vehicleMultiplier,
+                    addonAmount,
+                    discountAmount,
+                    totalAmount
+                },
+                addons: Array.isArray(addons) ? addons.map(a => typeof a === 'string' ? { id: a } : a) : [],
+                schedule: bookingSchedule,
+                location: bookingLocation,
+                payment: {
+                    method: sanitizedPaymentMethod,
+                    status: paymentStatus,
+                    transactionId: transactionId,
+                    coupon: appliedCouponRecord
+                },
+                provider: {
+                    type: sanitizedServiceType,
+                    id: null
+                },
+                status: 'pending'
+            }], { session });
+
+            // Audit Log (Atomic)
+            const auditHelper = require('../../../utils/auditHelper');
+            await auditHelper.logAction({
+                userId: req.user.id,
+                action: 'BOOKING_CREATED',
+                resource: 'Booking',
+                resourceId: newBooking._id,
+                newValue: { status: 'pending', totalAmount },
+                req
+            }, session);
+
+            // Record used promotion to prevent re-use
+            if (appliedCouponRecord?.id) {
+                await User.findByIdAndUpdate(req.user.id, {
+                    $addToSet: { usedPromotions: appliedCouponRecord.id }
+                }, { session });
+            }
+
+            // COMMIT EVERYTHING
+            await session.commitTransaction();
+
+            // --- Post-Transaction Side Effects ---
+            try {
+                // Populate booking details
+                const populatedBooking = await Booking.findById(newBooking._id)
+                    .populate('vehicle', 'brand model type plate image')
+                    .populate('consumer', 'name phone');
+
+                // Send persistent notification
+                await sendNotification(req.user.id, {
+                    title: 'Order Received! 🚀',
+                    message: `Your booking for ${service.name || service.title} has been placed successfully.`,
+                    type: 'booking',
+                    priority: 'medium',
                 });
 
-                if (nearbyCaptains.length > 0) {
-                    console.log(`Found ${nearbyCaptains.length} nearby captains. Emitting selectively.`);
-                    nearbyCaptains.forEach(captain => {
-                        io.to(captain._id.toString()).emit('new_booking_broadcast', broadcastPayload);
-                    });
-                } else {
-                    console.log(`No nearby captains found. Emitting globally as fallback.`);
-                    io.emit('new_booking_broadcast', broadcastPayload);
+                // Broadcast to nearby online captains via Socket.io (Only for Captain bookings)
+                if (sanitizedServiceType === 'captain') {
+                    try {
+                        const io = socketService.getIO();
+                        const broadcastPayload = {
+                            bookingId: newBooking._id,
+                            serviceName: service.name || service.title,
+                            location: {
+                                address: bookingLocation.address,
+                                type: bookingLocation.type,
+                                landmark: bookingLocation.landmark
+                            },
+                            vehicle: {
+                                brand: vehicle.brand,
+                                model: vehicle.model,
+                                plate: vehicle.plate
+                            },
+                            pricing: {
+                                total: totalAmount
+                            },
+                            timestamp: new Date()
+                        };
+
+                        // Calculate matching captains if precise coordinates exist
+                        if (bookingLocation.address && bookingLocation.address.coordinates && bookingLocation.address.coordinates.lat) {
+                            const lng = parseFloat(bookingLocation.address.coordinates.lng);
+                            const lat = parseFloat(bookingLocation.address.coordinates.lat);
+
+                            // Find captains within 5km radius (Elite Hardening)
+                            const nearbyCaptains = await Captain.find({
+                                isOnline: true,
+                                isActive: true,
+                                isVerified: true,
+                                location: {
+                                    $nearSphere: {
+                                        $geometry: {
+                                            type: 'Point',
+                                            coordinates: [lng, lat]
+                                        },
+                                        $maxDistance: 5000 // Tightened to 5km in meters
+                                    }
+                                }
+                            });
+
+                            if (nearbyCaptains.length > 0) {
+                                nearbyCaptains.forEach(captain => {
+                                    io.to(captain._id.toString()).emit('new_booking_broadcast', broadcastPayload);
+                                });
+                            } else {
+                                io.emit('new_booking_broadcast', broadcastPayload);
+                            }
+                        } else {
+                            io.emit('new_booking_broadcast', broadcastPayload);
+                        }
+                    } catch (socketErr) {
+                        console.error('Socket broadcast failed (non-blocking):', socketErr.message);
+                    }
+                } else if (sanitizedServiceType === 'vendor') {
+                    // STUDIO WASH: Dispatch to Vendors
+                    try {
+                        const vendors = await User.find({ role: 'vendor', isActive: true });
+                        const notificationData = {
+                            title: 'New Studio Lead! 💎',
+                            message: `A new ${service.name || service.title} booking is available for your studio.`,
+                            type: 'order-assigned',
+                            priority: 'high',
+                            metaData: {
+                                bookingId: newBooking._id,
+                                serviceName: service.name || service.title,
+                                totalAmount
+                            }
+                        };
+                        for (const vendor of vendors) {
+                            await sendVendorNotification(vendor._id, notificationData);
+                        }
+                        const io = socketService.getIO();
+                        if (io) {
+                            io.emit('new_studio_booking', {
+                                bookingId: newBooking._id,
+                                serviceName: service.name || service.title,
+                                location: bookingLocation,
+                                vehicle: { brand: vehicle.brand, model: vehicle.model, plate: vehicle.plate },
+                                pricing: { total: totalAmount },
+                                timestamp: new Date()
+                            });
+                        }
+                    } catch (vendorErr) {
+                        console.error('Vendor notification failed (non-blocking):', vendorErr.message);
+                    }
                 }
-            } else {
-                // Fallback to global broadcast if no coordinates
-                console.log(`No GPS coordinates provided. Emitting globally as fallback.`);
-                io.emit('new_booking_broadcast', broadcastPayload);
+
+                return res.status(201).json({
+                    status: 'success',
+                    message: 'Booking created successfully',
+                    data: { booking: populatedBooking }
+                });
+
+            } catch (sideEffectError) {
+                console.error('Post-transaction side-effects failed:', sideEffectError);
+                // The booking IS created, so we return 201 even if notification failed
+                return res.status(201).json({
+                    status: 'success',
+                    message: 'Booking created, but some notifications might be delayed.',
+                    data: { bookingId: newBooking._id }
+                });
             }
 
-            console.log(`Real-time broadcast dispatched for booking: ${newBooking._id}`);
-        } catch (socketErr) {
-            console.error('Socket broadcast failed:', socketErr.message);
-            // Non-blocking error, booking is already created
-        }
-        } else if (sanitizedServiceType === 'vendor') {
-            // STUDIO WASH: Dispatch to Vendors
-            try {
-                const io = socketService.getIO();
-                const broadcastPayload = {
-                    bookingId: newBooking._id,
-                    serviceName: service.name || service.title,
-                    location: bookingLocation,
-                    vehicle: {
-                        brand: vehicle.brand,
-                        model: vehicle.model,
-                        plate: vehicle.plate
-                    },
-                    pricing: {
-                        total: totalAmount
-                    },
-                    timestamp: new Date()
-                };
-
-                // Emit globally to all connected vendors
-                io.emit('new_studio_booking', broadcastPayload);
-                console.log(`Studio Wash broadcast dispatched to vendors for booking: ${newBooking._id}`);
-            } catch (socketErr) {
-                console.error('Studio broadcast failed:', socketErr.message);
-            }
-        } // End of service type broadcast check.
-
-        res.status(201).json({
-            status: 'success',
-            message: 'Booking created successfully',
-            data: {
-                booking: populatedBooking
-            }
-        });
-
-    } catch (error) {
-        console.error('Error in createBooking:', error);
-
-        // Handle validation errors
-        if (error.name === 'ValidationError') {
-            const errors = Object.values(error.errors).map(err => err.message);
+        } catch (error) {
+            await session.abortTransaction();
+            console.error('Booking Transaction Aborted:', error);
             return res.status(400).json({
                 status: 'fail',
-                message: 'Validation failed',
-                errors
+                message: error.message || 'Transaction failed. Please try again.'
             });
+        } finally {
+            session.endSession();
         }
-
-        res.status(500).json({
+    } catch (outerError) {
+        console.error('Fatal Error in createBooking:', outerError.message);
+        return res.status(500).json({
             status: 'error',
-            message: 'Failed to create booking. Please try again.'
+            message: 'A critical system error occurred while processing your booking.'
         });
     }
 };
@@ -642,9 +672,22 @@ exports.cancelBooking = async (req, res) => {
         }
 
         // Update booking status
+        const oldStatus = booking.status;
         booking.status = 'cancelled';
         booking.notes.consumer = reason || 'Cancelled by consumer';
         await booking.save();
+
+        // Audit Log: Booking Cancelled
+        const auditHelper = require('../../../utils/auditHelper');
+        await auditHelper.logAction({
+            userId: req.user.id,
+            action: 'BOOKING_CANCELLED',
+            resource: 'Booking',
+            resourceId: booking._id,
+            oldValue: { status: oldStatus },
+            newValue: { status: 'cancelled' },
+            req
+        });
 
         // Process refund if payment was made
         if (booking.payment.status === 'paid') {
@@ -768,8 +811,29 @@ exports.reportIssue = async (req, res) => {
 
         await booking.save();
 
-        // Notify Admin of new issue or SOS
+        // Notify Admin of new issue or SOS via multiple channels
         try {
+            const io = socketService.getIO();
+
+            // 1. WebSocket Broadcast to Admin Command Center
+            if (type === 'SOS') {
+                io.to('admin_room').emit('sos_alert', {
+                    bookingId: booking._id,
+                    orderId: booking.bookingId,
+                    type: 'SOS',
+                    description: description,
+                    consumer: booking.consumer?.name,
+                    timestamp: new Date()
+                });
+            } else {
+                // Regular issue alert
+                io.to('admin_room').emit('global_status_update', {
+                    type: 'new_issue',
+                    bookingId: booking._id
+                });
+            }
+
+            // 2. Persistent Notification
             const { sendAdminNotification } = require('../../../utils/notificationService');
             await sendAdminNotification({
                 title: type === 'SOS' ? '🚨 EMERGENCY SOS ALERT' : 'New Issue Reported',
@@ -863,19 +927,26 @@ exports.getUpcomingBookings = async (req, res) => {
 // Get booking history
 exports.getBookingHistory = async (req, res) => {
     try {
-        const { page = 1, limit = 10 } = req.query;
+        const { page = 1, limit = 10, category } = req.query;
+
+        const filter = {};
+        if (category) filter['service.category'] = category;
 
         const bookings = await Booking.getBookingHistory(
             req.user.id,
             parseInt(page),
-            parseInt(limit)
+            parseInt(limit),
+            filter
         );
 
-        const total = await Booking.countDocuments({
+        const countFilter = {
             consumer: req.user.id,
             status: { $in: ['completed', 'cancelled', 'refunded'] },
-            isActive: true
-        });
+            isActive: true,
+            ...filter
+        };
+
+        const total = await Booking.countDocuments(countFilter);
 
         res.status(200).json({
             status: 'success',

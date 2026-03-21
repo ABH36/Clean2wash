@@ -18,7 +18,7 @@ import {
 import CaptainLayout from '../components/CaptainLayout';
 
 import { useAuth } from '../../../context/AuthContext';
-import { useCaptain } from '../../../context/CaptainContext';
+import { useCaptain } from '../../../hooks/useCaptain';
 import { useTheme } from '../../../context/ThemeContext';
 
 const CaptainSettings = () => {
@@ -128,8 +128,8 @@ const CaptainSettings = () => {
                                 navigate('/captain/login');
                             }}
                             className={`w-full flex items-center justify-center gap-3 py-5 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] italic border transition-all ${isDarkMode
-                                    ? 'bg-red-500/10 border-red-500/10 text-red-500 hover:bg-red-500 hover:text-white shadow-2xl shadow-red-500/10'
-                                    : 'bg-red-50 border-red-100 text-red-600 hover:bg-red-600 hover:text-white shadow-soft shadow-red-500/5'
+                                ? 'bg-red-500/10 border-red-500/10 text-red-500 hover:bg-red-500 hover:text-white shadow-2xl shadow-red-500/10'
+                                : 'bg-red-50 border-red-100 text-red-600 hover:bg-red-600 hover:text-white shadow-soft shadow-red-500/5'
                                 }`}
                         >
                             <LogOut size={16} strokeWidth={2.5} /> Sign Out Session

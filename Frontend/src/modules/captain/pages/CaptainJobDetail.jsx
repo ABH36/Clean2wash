@@ -12,7 +12,7 @@ import 'leaflet/dist/leaflet.css';
 
 import CaptainLayout from '../components/CaptainLayout';
 import { useAuth } from '../../../context/AuthContext';
-import { useCaptain } from '../../../context/CaptainContext';
+import { useCaptain } from '../../../hooks/useCaptain';
 import { useTheme } from '../../../context/ThemeContext';
 
 // Fix for Leaflet marker icons in React
@@ -34,12 +34,34 @@ const CaptainJobDetail = () => {
     const { isDarkMode } = useTheme();
     const [searchParams] = useSearchParams();
     const { sessions } = useAuth();
-    const { captainJobs, updateJobStatus, acceptJob } = useCaptain();
-    
+    const { captainJobs, updateJobStatus, acceptJob, updateLocation } = useCaptain();
+
     const bookingId = searchParams.get('id');
     const [liveBooking, setLiveBooking] = useState(null);
     const [pendingRequest, setPendingRequest] = useState(null);
     const [isAccepting, setIsAccepting] = useState(false);
+
+    // Phase 7: GPS Pulse Mode (High-frequency tracking EN ROUTE)
+    useEffect(() => {
+        if (!liveBooking || liveBooking.status !== 'en_route') return;
+
+        console.log('[Phase 7] 🛰️ GPS Pulse Mode Engaged (8s intervals)');
+        const pulse = setInterval(() => {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition((position) => {
+                    const { latitude, longitude } = position.coords;
+                    updateLocation(latitude, longitude);
+                }, (err) => console.warn('Pulse geolocation error:', err), {
+                    enableHighAccuracy: true
+                });
+            }
+        }, 8000);
+
+        return () => {
+            console.log('[Phase 7] 🛰️ GPS Pulse Mode Disengaged');
+            clearInterval(pulse);
+        };
+    }, [liveBooking?.status, updateLocation]);
 
     useEffect(() => {
         let found = captainJobs.find(job => job.id === bookingId || job._id === bookingId);
@@ -220,9 +242,9 @@ const CaptainJobDetail = () => {
                     alert('Please enter the 4-digit Security PIN from the customer.');
                     return;
                 }
-                const result = await updateJobStatus(liveBooking.id, 'washing', { 
-                    photo: capturedPhoto, 
-                    securityPin: pinInput 
+                const result = await updateJobStatus(liveBooking.id, 'washing', {
+                    photo: capturedPhoto,
+                    securityPin: pinInput
                 });
                 if (result.success) {
                     setStepIdx(nextIdx);
@@ -297,11 +319,11 @@ const CaptainJobDetail = () => {
                 </div>
 
                 <div className={`relative rounded-2xl overflow-hidden border shadow-soft transition-colors ${isDarkMode ? 'border-white/5 shadow-2xl shadow-black/40' : 'border-gray-100 shadow-sm'}`} style={{ height: 280 }}>
-                    <MapContainer 
-                        center={liveBooking.location?.mapCoordinates ? [liveBooking.location.mapCoordinates.lat, liveBooking.location.mapCoordinates.lng] : 
-                               liveBooking.location?.coordinates?.lat ? [liveBooking.location.coordinates.lat, liveBooking.location.coordinates.lng] :
-                               [12.9716, 77.5946]} 
-                        zoom={15} 
+                    <MapContainer
+                        center={liveBooking.location?.mapCoordinates ? [liveBooking.location.mapCoordinates.lat, liveBooking.location.mapCoordinates.lng] :
+                            liveBooking.location?.coordinates?.lat ? [liveBooking.location.coordinates.lat, liveBooking.location.coordinates.lng] :
+                                [12.9716, 77.5946]}
+                        zoom={15}
                         style={{ height: '100%', width: '100%' }}
                         zoomControl={false}
                     >
@@ -309,15 +331,15 @@ const CaptainJobDetail = () => {
                             url={isDarkMode ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"}
                             attribution='&copy; OpenStreetMap'
                         />
-                        <Marker position={liveBooking.location?.mapCoordinates ? [liveBooking.location.mapCoordinates.lat, liveBooking.location.mapCoordinates.lng] : 
-                                      liveBooking.location?.coordinates?.lat ? [liveBooking.location.coordinates.lat, liveBooking.location.coordinates.lng] :
-                                      [12.9716, 77.5946]}>
+                        <Marker position={liveBooking.location?.mapCoordinates ? [liveBooking.location.mapCoordinates.lat, liveBooking.location.mapCoordinates.lng] :
+                            liveBooking.location?.coordinates?.lat ? [liveBooking.location.coordinates.lat, liveBooking.location.coordinates.lng] :
+                                [12.9716, 77.5946]}>
                             <Popup>
                                 <div className="text-[10px] font-bold">Customer Location</div>
                             </Popup>
                         </Marker>
                     </MapContainer>
-                    <button 
+                    <button
                         onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(liveBooking.address)}`, '_blank')}
                         className="absolute bottom-3 right-3 bg-brand text-white flex items-center gap-2 px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-md hover:brightness-110 active:scale-95 transition-all z-[1000]"
                     >
@@ -379,14 +401,14 @@ const CaptainJobDetail = () => {
                 {['Before Wash', 'After Wash'].includes(step) && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                         className={`w-full flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-8 transition-all space-y-4 ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
-                        <input 
-                            type="file" 
-                            accept="image/*" 
-                            className="hidden" 
+                        <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
                             ref={fileInputRef}
                             onChange={handleCapture}
                         />
-                        
+
                         {capturedPhoto ? (
                             <div className="relative w-full aspect-video rounded-xl overflow-hidden shadow-2xl">
                                 <img src={capturedPhoto} className="w-full h-full object-cover" alt="Captured" />
@@ -395,7 +417,7 @@ const CaptainJobDetail = () => {
                                 </button>
                             </div>
                         ) : (
-                            <div 
+                            <div
                                 onClick={() => fileInputRef.current?.click()}
                                 className="w-16 h-16 bg-brand/10 rounded-full flex items-center justify-center relative overflow-hidden group cursor-pointer"
                             >
@@ -403,7 +425,7 @@ const CaptainJobDetail = () => {
                                 <div className="absolute inset-0 bg-brand/20 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
                         )}
-                        
+
                         <div className="text-center">
                             <p className={`font-black text-sm uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>
                                 {capturedPhoto ? 'Verification Photo Ready ✅' : step === 'Before Wash' ? 'Take Mandatory Selfie + Vehicle' : 'After Wash Proof Ready'}
@@ -443,7 +465,7 @@ const CaptainJobDetail = () => {
                                         if (val) {
                                             const pinArr = pinInput.split('');
                                             // Fill gaps if any
-                                            for(let i=0; i<index; i++) if(!pinArr[i]) pinArr[i] = ' ';
+                                            for (let i = 0; i < index; i++) if (!pinArr[i]) pinArr[i] = ' ';
                                             pinArr[index] = val;
                                             setPinInput(pinArr.join(''));
                                             if (index < 3) pinRefs[index + 1].current?.focus();
@@ -463,13 +485,12 @@ const CaptainJobDetail = () => {
                                             }
                                         }
                                     }}
-                                    className={`w-14 h-16 rounded-xl text-center text-3xl font-black transition-all outline-none border-2 ${
-                                        pinInput[index] && pinInput[index] !== ' '
-                                            ? 'border-brand bg-brand/10 text-brand shadow-lg shadow-brand/10' 
-                                            : isDarkMode 
-                                                ? 'bg-black/40 border-white/10 text-white focus:border-white/30' 
-                                                : 'bg-white border-gray-200 text-content focus:border-brand shadow-sm'
-                                    }`}
+                                    className={`w-14 h-16 rounded-xl text-center text-3xl font-black transition-all outline-none border-2 ${pinInput[index] && pinInput[index] !== ' '
+                                        ? 'border-brand bg-brand/10 text-brand shadow-lg shadow-brand/10'
+                                        : isDarkMode
+                                            ? 'bg-black/40 border-white/10 text-white focus:border-white/30'
+                                            : 'bg-white border-gray-200 text-content focus:border-brand shadow-sm'
+                                        }`}
                                 />
                             ))}
                         </div>

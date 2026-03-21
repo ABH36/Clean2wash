@@ -2,99 +2,74 @@ const Booking = require('../../../models/Booking');
 const Captain = require('../../../models/Captain');
 const User = require('../../../models/User');
 const Product = require('../../../models/Product');
+const ProductOrder = require('../../../models/ProductOrder');
 const Hub = require('../../../models/Hub');
 const Setting = require('../../../models/Setting');
+const AuditLog = require('../../../models/AuditLog');
 const socketService = require('../../../socketService');
-const { sendCaptainNotification } = require('../../../utils/notificationService');
+const { sendCaptainNotification, sendVendorNotification } = require('../../../utils/notificationService');
+const WalletTransaction = require('../../../models/WalletTransaction');
 
+// Get Admin Dashboard Stats (P6)
 // Get Admin Dashboard Stats (P6)
 exports.getDashboard = async (req, res) => {
     try {
-        // 1. Core KPIs with Trends (Current vs Previous Month)
         const now = new Date();
         const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const startOfPreviousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const endOfPreviousMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
 
-        // Revenue (Current)
-        const revenueResult = await Booking.aggregate([
+        // --- 1. SERVICE METRICS ---
+        const serviceRevenueResult = await Booking.aggregate([
             { $match: { status: 'completed', isActive: true } },
             { $group: { _id: null, total: { $sum: '$pricing.totalAmount' } } }
         ]);
-        const totalRevenue = revenueResult[0]?.total || 0;
+        const serviceRevenue = serviceRevenueResult[0]?.total || 0;
 
-        // Revenue (Previous Month)
-        const prevRevenueResult = await Booking.aggregate([
-            {
-                $match: {
-                    status: 'completed',
-                    isActive: true,
-                    createdAt: { $gte: startOfPreviousMonth, $lte: endOfPreviousMonth }
-                }
-            },
-            { $group: { _id: null, total: { $sum: '$pricing.totalAmount' } } }
-        ]);
-        const prevRevenue = prevRevenueResult[0]?.total || 0;
-        const revenueTrend = prevRevenue === 0 ? 100 : Math.round(((totalRevenue - prevRevenue) / prevRevenue) * 100);
-
-        // Active Jobs
-        const activeJobsCount = await Booking.countDocuments({
+        const activeServicesCount = await Booking.countDocuments({
             status: { $nin: ['completed', 'cancelled', 'refunded'] },
             isActive: true
         });
-        const prevActiveJobs = await Booking.countDocuments({
-            status: { $nin: ['completed', 'cancelled', 'refunded'] },
-            isActive: true,
-            createdAt: { $gte: startOfPreviousMonth, $lte: endOfPreviousMonth }
-        });
-        const jobsTrend = prevActiveJobs === 0 ? 100 : Math.round(((activeJobsCount - prevActiveJobs) / prevActiveJobs) * 100);
 
-        // Total Users
+        // --- 2. PRODUCT METRICS ---
+        const productRevenueResult = await ProductOrder.aggregate([
+            { $match: { status: { $in: ['delivered', 'completed'] }, isActive: true } },
+            { $group: { _id: null, total: { $sum: '$pricing.totalAmount' } } }
+        ]);
+        const productRevenue = productRevenueResult[0]?.total || 0;
+
+        const activeProductOrders = await ProductOrder.countDocuments({
+            status: { $nin: ['delivered', 'completed', 'cancelled', 'returned'] },
+            isActive: true
+        });
+
+        const lowStockCount = await Product.countDocuments({ stock: { $lt: 5 }, status: 'Live' });
+
+        // --- 3. UNIFIED KPIs ---
+        const totalRevenue = serviceRevenue + productRevenue;
+        const totalActiveOps = activeServicesCount + activeProductOrders;
         const totalUsers = await User.countDocuments({ isActive: true });
-        const prevUsers = await User.countDocuments({
-            isActive: true,
-            createdAt: { $lt: startOfCurrentMonth }
-        });
-        const usersTrend = prevUsers === 0 ? 100 : Math.round(((totalUsers - prevUsers) / prevUsers) * 100);
 
-        // 2. Revenue Timeline (Last 12 Months)
-        const twelveMonthsAgo = new Date();
-        twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11);
-        twelveMonthsAgo.setDate(1);
-        twelveMonthsAgo.setHours(0, 0, 0, 0);
+        // --- 4. STUCK BOOKINGS DETECTION (Operational IQ) ---
+        // Definition: Active for > 120 mins without status update
+        const twoHoursAgo = new Date(now.getTime() - 120 * 60 * 1000);
+        const stuckBookings = await Booking.find({
+            status: { $in: ['assigned', 'en_route', 'arrived', 'pickup-assigned', 'in_progress'] },
+            updatedAt: { $lt: twoHoursAgo },
+            isActive: true
+        })
+            .populate('consumer', 'name phone')
+            .populate('provider.id', 'name phone')
+            .sort({ updatedAt: 1 })
+            .limit(5);
 
-        const revenueTimeline = await Booking.aggregate([
-            {
-                $match: {
-                    status: 'completed',
-                    isActive: true,
-                    createdAt: { $gte: twelveMonthsAgo }
-                }
-            },
-            {
-                $group: {
-                    _id: {
-                        year: { $year: '$createdAt' },
-                        month: { $month: '$createdAt' }
-                    },
-                    revenue: { $sum: '$pricing.totalAmount' }
-                }
-            },
-            { $sort: { '_id.year': 1, '_id.month': 1 } }
-        ]);
-
-        // 3. Ops Mix (Category Distribution)
-        const opsMix = await Booking.aggregate([
+        // --- 5. CATEGORY MIX (Ecosystem Health) ---
+        const serviceMix = await Booking.aggregate([
             { $match: { isActive: true } },
-            {
-                $group: {
-                    _id: '$service.category',
-                    count: { $sum: 1 }
-                }
-            }
+            { $group: { _id: '$service.category', count: { $sum: 1 } } }
         ]);
 
-        // 4. Recent Bookings
+        // --- 6. RECENT ACTIVITY ---
         const recentBookings = await Booking.find({ isActive: true })
             .populate('consumer', 'name phone')
             .sort({ createdAt: -1 })
@@ -105,54 +80,55 @@ exports.getDashboard = async (req, res) => {
             'issues.type': 'SOS',
             isActive: true
         })
-        .populate('consumer', 'name phone')
-        .sort({ updatedAt: -1 })
-        .limit(3);
-        
-        // Map price for frontend
+            .populate('consumer', 'name phone')
+            .sort({ updatedAt: -1 })
+            .limit(3);
+
         const mappedRecentBookings = recentBookings.map(b => ({
             ...b.toObject(),
             price: `₹${b.pricing?.totalAmount || 0}`
         }));
 
-        // 5. Top Performing Nodes (Aggregated from Bookings)
-        const topNodes = await Booking.aggregate([
-            { $match: { status: 'completed', isActive: true } },
-            {
-                $group: {
-                    _id: '$provider.id',
-                    name: { $first: '$provider.name' },
-                    count: { $sum: 1 },
-                    revenue: { $sum: '$pricing.totalAmount' }
-                }
-            },
-            { $sort: { count: -1 } },
-            { $limit: 3 }
+        // 7. Network Load
+        const onlineCaptains = await User.countDocuments({ role: 'captain', isOnline: true, isActive: true }) || 1;
+        const totalCapacity = onlineCaptains * 3;
+        const networkLoad = Math.min(Math.round((activeServicesCount / totalCapacity) * 100), 100) || 5;
+
+        // --- 8. GROWTH METRICS (Phase 4) ---
+        const totalReferredUsers = await User.countDocuments({ referredBy: { $exists: true, $ne: null }, isActive: true });
+        const rewardedReferralsResult = await WalletTransaction.aggregate([
+            { $match: { category: 'REFERRAL', type: 'credit', status: 'completed' } },
+            { $group: { _id: null, totalRewards: { $sum: '$amount' }, count: { $sum: 1 } } }
         ]);
 
-        // 6. Network Load (Active vs Capacity)
-        // Load = (Active Jobs / (Total Online Captains * JobsPerCaptain))
-        const onlineCaptains = await User.countDocuments({ role: 'captain', isOnline: true, isActive: true }) || 1;
-        const captainCapacity = 3; // Max concurrent jobs per captain (assumed)
-        const totalCapacity = onlineCaptains * captainCapacity;
-        const networkLoad = Math.min(Math.round((activeJobsCount / totalCapacity) * 100), 100) || 5;
+        const totalReferralRewards = rewardedReferralsResult[0]?.totalRewards || 0;
+        const successfulReferrals = (rewardedReferralsResult[0]?.count || 0) / 2; // Pair reward logic
+
+        const growthLoop = {
+            totalReferredUsers,
+            referralConversionRate: totalReferredUsers > 0 ? Math.round((successfulReferrals / totalReferredUsers) * 100) : 0,
+            totalReferralRewards
+        };
 
         res.status(200).json({
             status: 'success',
             data: {
                 totalRevenue,
-                revenueTrend,
-                activeJobs: activeJobsCount,
-                jobsTrend,
+                serviceRevenue,
+                productRevenue,
+                activeJobs: activeServicesCount,
+                activeProductOrders,
+                totalActiveOps,
                 totalUsers,
-                usersTrend,
-                revenueTimeline,
-                opsMix,
+                lowStockCount,
+                stuckBookings,
                 recentBookings: mappedRecentBookings,
                 criticalIssues,
-                topNodes,
                 networkLoad,
-                onlineCaptains
+                onlineCaptains,
+                serviceMix,
+                growthLoop,
+                topNodes: [] // Leaving for now or can keep previous logic
             }
         });
     } catch (error) {
@@ -389,6 +365,33 @@ exports.verifyProduct = async (req, res) => {
 
         await product.save();
 
+        if (product.vendor) {
+            const isApproved = status === 'Live' || status === 'Approved';
+            const title = isApproved ? 'Product Verified! 💎' : 'Product Rejected ⚠️';
+            const message = isApproved
+                ? `Your product "${product.name}" has been verified and is now live on the marketplace!`
+                : `Your product "${product.name}" was not approved. Please check the admin notes for more details.`;
+
+            await sendVendorNotification(product.vendor, {
+                title,
+                message,
+                type: 'verification',
+                priority: isApproved ? 'medium' : 'high',
+                metaData: {
+                    productId: product._id,
+                    status: product.status
+                }
+            });
+
+            // Socket notification
+            const io = socketService.getIO();
+            io.to(product.vendor.toString()).emit('product_status_updated', {
+                productId: product._id,
+                status: product.status,
+                message
+            });
+        }
+
         res.status(200).json({
             status: 'success',
             message: `Product ${status} successfully`,
@@ -404,7 +407,7 @@ exports.getUsers = async (req, res) => {
     try {
         const { role } = req.query;
         let users = [];
-        
+
         if (role === 'captain') {
             users = await Captain.find({}).select('-password');
         } else if (role === 'sparedriver') {
@@ -422,6 +425,54 @@ exports.getUsers = async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ status: 'error', message: 'Failed to get users' });
+    }
+};
+
+// Get all Spare Drivers
+exports.getSpareDrivers = async (req, res) => {
+    try {
+        const SpareDriver = require('../../../models/SpareDriver');
+        const drivers = await SpareDriver.find({ isActive: true })
+            .select('-password -tokens')
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            status: 'success',
+            results: drivers.length,
+            data: { drivers }
+        });
+    } catch (error) {
+        console.error('Error fetching spare drivers:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to fetch spare drivers' });
+    }
+};
+
+// Get Sparse Driver Specific Bookings
+exports.getSpareDriverBookings = async (req, res) => {
+    try {
+        const bookings = await Booking.find({
+            'service.category': 'Chauffeur',
+            isActive: true
+        })
+            .populate('consumer', 'name phone email profile')
+            .populate('vehicle', 'brand model type plate')
+            .populate('provider.id')
+            .sort({ createdAt: -1 });
+
+        const mappedBookings = bookings.map(b => ({
+            ...b.toObject(),
+            price: `₹${b.pricing?.totalAmount || 0}`,
+            serviceName: b.service?.name || 'Chauffeur Service'
+        }));
+
+        res.status(200).json({
+            status: 'success',
+            results: bookings.length,
+            data: { bookings: mappedBookings }
+        });
+    } catch (error) {
+        console.error('Error fetching chauffeur bookings:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to fetch chauffeur bookings' });
     }
 };
 
@@ -511,12 +562,12 @@ exports.updateUser = async (req, res) => {
 
         let modelType = 'User';
         let user = await User.findById(id);
-        
+
         if (!user) {
             user = await Captain.findById(id);
             if (user) modelType = 'Captain';
         }
-        
+
         if (!user) {
             const SpareDriver = require('../../../models/SpareDriver');
             user = await SpareDriver.findById(id);
@@ -543,14 +594,14 @@ exports.updateUser = async (req, res) => {
                 if (!user.profile) user.profile = {};
                 user.profile.city = updates.city;
             }
-            
+
             // Trigger Notification for Verification
             if ((modelType === 'Captain' || modelType === 'SpareDriver') && updates.isVerified === true) {
                 const io = socketService.getIO();
                 io.to(user._id.toString()).emit('captain_verified', {
                     message: 'Your account has been verified by an admin. You can now receive requests.'
                 });
-                
+
                 await sendCaptainNotification(user._id, {
                     title: 'Account Verified!',
                     message: 'Congratulations! Your account has been verified by an admin. You can now go online.',
@@ -561,7 +612,24 @@ exports.updateUser = async (req, res) => {
         } else if (user.role === 'vendor') {
             if (updates.studioName) user.profile.studioName = updates.studioName;
             if (updates.city) user.profile.city = updates.city;
-            if (updates.verificationStatus) user.profile.verificationStatus = updates.verificationStatus;
+            if (updates.verificationStatus) {
+                user.profile.verificationStatus = updates.verificationStatus;
+
+                if (updates.verificationStatus === 'verified') {
+                    // Trigger Notification for Verification
+                    const io = socketService.getIO();
+                    io.to(user._id.toString()).emit('vendor_verified', {
+                        message: 'Your studio has been verified! You can now accept bookings and list products.'
+                    });
+
+                    await sendVendorNotification(user._id, {
+                        title: 'Studio Verified! 🏆',
+                        message: 'Welcome to the elite circle! Your studio has been verified by the admin team. You can now receive service orders and sell products on our marketplace.',
+                        type: 'verification',
+                        priority: 'high'
+                    });
+                }
+            }
         } else if (user.role === 'staff') {
             if (updates.role) user.profile.role = updates.role;
         }
@@ -582,13 +650,13 @@ exports.updateUser = async (req, res) => {
 exports.deleteUser = async (req, res) => {
     try {
         const { id } = req.params;
-        
+
         let user = await User.findByIdAndUpdate(id, { isActive: false }, { new: true });
-        
+
         if (!user) {
             user = await Captain.findByIdAndUpdate(id, { isActive: false }, { new: true });
         }
-        
+
         if (!user) {
             const SpareDriver = require('../../../models/SpareDriver');
             user = await SpareDriver.findByIdAndUpdate(id, { isActive: false }, { new: true });
@@ -621,7 +689,9 @@ exports.getSettings = async (req, res) => {
                 { key: 'platform_commission', value: 15, category: 'Financial', description: 'Percentage per booking' },
                 { key: 'min_withdrawal', value: 500, category: 'Financial', description: 'Minimum amount for vendor payout' },
                 { key: 'support_email', value: 'support@clean2wash.com', category: 'General', description: 'System support contact' },
-                { key: 'firewall_mode', value: 'Neural', category: 'Security', description: 'Encryption matrix status' }
+                { key: 'firewall_mode', value: 'Neural', category: 'Security', description: 'Encryption matrix status' },
+                { key: 'maintenance_mode', value: false, category: 'Security', description: 'Enable global platform maintenance' },
+                { key: 'payout_freeze', value: false, category: 'Security', description: 'Temporarily suspend all wallet withdrawals' }
             ];
             settings = await Setting.create(defaults);
         }
@@ -639,11 +709,27 @@ exports.getSettings = async (req, res) => {
 exports.updateSetting = async (req, res) => {
     try {
         const { key, value } = req.body;
+
+        const oldSetting = await Setting.findOne({ key });
         const setting = await Setting.findOneAndUpdate(
             { key },
             { value, updatedBy: req.user._id },
             { upsert: true, new: true }
         );
+
+        // Record in Audit Log
+        await AuditLog.create({
+            userId: req.user._id,
+            action: 'UPDATE_SETTING',
+            resource: 'Setting',
+            resourceId: setting._id,
+            oldValue: oldSetting ? oldSetting.value : null,
+            newValue: value,
+            metadata: {
+                ip: req.ip,
+                userAgent: req.get('User-Agent')
+            }
+        });
 
         res.status(200).json({
             status: 'success',
@@ -651,5 +737,59 @@ exports.updateSetting = async (req, res) => {
         });
     } catch (error) {
         res.status(400).json({ status: 'error', message: 'Failed to update setting' });
+    }
+};
+
+// --- GLOBAL PRODUCT ORDER MANAGEMENT (PHASE 28) ---
+
+exports.getAllProductOrders = async (req, res) => {
+    try {
+        const { status } = req.query;
+        const query = { isActive: true };
+        if (status && status !== 'All') query.status = status;
+
+        const orders = await ProductOrder.find(query)
+            .populate('consumer', 'name email phone')
+            .populate('items.vendor', 'name profile.studioName')
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            status: 'success',
+            results: orders.length,
+            data: { orders }
+        });
+    } catch (error) {
+        console.error('Error fetching global product orders:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to fetch global product orders' });
+    }
+};
+
+exports.updateGlobalProductOrderStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, note } = req.body;
+
+        const order = await ProductOrder.findById(id);
+        if (!order) {
+            return res.status(404).json({ status: 'fail', message: 'Order not found' });
+        }
+
+        order.status = status;
+        order.history.push({
+            status,
+            timestamp: new Date(),
+            note: note || `Status updated to ${status} by Admin.`
+        });
+
+        await order.save();
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Order status updated successfully',
+            data: { order }
+        });
+    } catch (error) {
+        console.error('Error updating global order status:', error);
+        res.status(500).json({ status: 'error', message: 'Update failed' });
     }
 };

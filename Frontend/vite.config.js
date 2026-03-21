@@ -15,13 +15,23 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:5001',
+        target: 'http://127.0.0.1:5001',
         changeOrigin: true,
-        ws: true,
+        secure: false,
+        timeout: 120000,
+        proxyTimeout: 120000,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            if (err.code !== 'ECONNRESET' && err.code !== 'ECONNREFUSED') {
+              console.log('Proxy Error:', err.message);
+            }
+          });
+        },
       },
       '/socket.io': {
-        target: 'http://localhost:5001',
+        target: 'http://127.0.0.1:5001',
         changeOrigin: true,
+        secure: false,
         ws: true,
       },
     },

@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import VendorLayout from '../components/VendorLayout';
 import { useAuth } from '../../../context/AuthContext';
 import { vendorAPI } from '../../../utils/vendorApi';
+import { socketService } from '../../../utils/socket';
+import { toast } from 'react-hot-toast';
 
 const VendorHome = () => {
     const navigate = useNavigate();
@@ -20,21 +22,40 @@ const VendorHome = () => {
     });
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchDashboard = async () => {
-            try {
-                const res = await vendorAPI.getDashboard();
-                if (res.status === 'success') {
-                    setStats(res.data);
-                }
-            } catch (err) {
-                console.error("Failed to fetch vendor dashboard data", err);
-            } finally {
-                setLoading(false);
+    const fetchDashboard = async () => {
+        try {
+            const res = await vendorAPI.getDashboard();
+            if (res.status === 'success') {
+                setStats(res.data);
             }
-        };
+        } catch (err) {
+            console.error("Failed to fetch vendor dashboard data", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchDashboard();
-    }, []);
+
+        // --- Real-time Operations ---
+        if (user?.id) {
+            // Listen for new bookings to refresh dashboard stats
+            socketService.on('new_studio_booking', fetchDashboard);
+            socketService.on('new_product_order', fetchDashboard);
+
+            // Listen for status updates
+            socketService.on('booking_status_updated', fetchDashboard);
+            socketService.on('product_order_status_updated', fetchDashboard);
+        }
+
+        return () => {
+            socketService.off('new_studio_booking');
+            socketService.off('new_product_order');
+            socketService.off('booking_status_updated');
+            socketService.off('product_order_status_updated');
+        };
+    }, [user?.id]);
 
     const STATS = [
         { label: 'Active Jobs', val: stats.activeJobs?.toString().padStart(2, '0') || '00', trend: `Live`, color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -50,7 +71,7 @@ const VendorHome = () => {
         return 'bg-blue-500/10 text-blue-500';
     };
 
-    const JOBS = stats.recentActivity.map(b => ({
+    const JOBS = (stats.recentActivity || []).map(b => ({
         id: b.bookingId || b._id.substring(b._id.length - 8),
         customer: b.consumer?.name || 'Guest User',
         car: b.vehicle?.brand ? `${b.vehicle.brand} ${b.vehicle.model}` : 'Standard Vehicle',
@@ -117,7 +138,7 @@ const VendorHome = () => {
                                         <motion.div
                                             key={job.id}
                                             layoutId={job.id}
-                                            onClick={() => navigate(`/vendor/order/${job.id}`)}
+                                            onClick={() => navigate(job.isProduct ? `/vendor/product-order/${job.id}` : `/vendor/order/${job.id}`)}
                                             className="bg-surface p-5 rounded-3xl border border-gray-100/10 shadow-sm group hover:border-brand/20 transition-all cursor-pointer relative"
                                         >
                                             <div className="space-y-4">

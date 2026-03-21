@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
-import { useCaptain } from '../../../context/CaptainContext';
+import { useCaptain } from '../../../hooks/useCaptain';
 import { toast } from 'react-hot-toast';
 import {
     Briefcase,
@@ -54,7 +54,7 @@ const CaptainSignup = () => {
 
     const handleSignup = async (e) => {
         e.preventDefault();
-        
+
         // Basic validations
         if (!formData.name || !formData.phone || !formData.password || !formData.city || !formData.plate) {
             return toast.error('Please fill all required fields prominently marked');
@@ -68,13 +68,13 @@ const CaptainSignup = () => {
             const res = await captainSendOTP(formData.phone, formData);
             if (res.success) {
                 toast.success('OTP sent for verification!');
-                navigate('/captain/otp-verify', { 
-                    state: { 
-                        phone: formData.phone, 
-                        userData: formData, 
+                navigate('/captain/otp-verify', {
+                    state: {
+                        phone: formData.phone,
+                        userData: formData,
                         type: 'signup',
                         devOtp: res.data?.otp // For testing if provided by backend
-                    } 
+                    }
                 });
             } else {
                 toast.error(res.error || 'Failed to send OTP. Please try again.');
@@ -109,7 +109,7 @@ const CaptainSignup = () => {
                 {/* Card */}
                 <div className="bg-surface rounded-[3rem] p-8 lg:p-10 shadow-soft border border-gray-100/10">
                     <form onSubmit={handleSignup} className="space-y-8">
-                        
+
                         {/* Personal Details */}
                         <div>
                             <h3 className="text-[12px] font-black tracking-widest uppercase mb-4 text-brand">Personal Details</h3>
@@ -157,7 +157,7 @@ const CaptainSignup = () => {
                                     <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic flex items-center gap-2 px-1">
                                         <Briefcase size={14} /> Experience
                                     </label>
-                                    <select 
+                                    <select
                                         className="w-full h-14 bg-background border border-gray-100/10 rounded-2xl px-6 text-xs font-bold text-content outline-none focus:border-brand transition-all appearance-none"
                                         value={formData.experience}
                                         onChange={e => setFormData({ ...formData, experience: e.target.value })}
@@ -178,7 +178,7 @@ const CaptainSignup = () => {
                                     <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic flex items-center gap-2 px-1">
                                         <Car size={14} /> Vehicle
                                     </label>
-                                    <select 
+                                    <select
                                         className="w-full h-14 bg-background border border-gray-100/10 rounded-2xl px-6 text-xs font-bold text-content outline-none focus:border-brand transition-all appearance-none"
                                         value={formData.vehicleType}
                                         onChange={e => setFormData({ ...formData, vehicleType: e.target.value })}
@@ -199,7 +199,7 @@ const CaptainSignup = () => {
                                     <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic flex items-center gap-2 px-1">
                                         <Zap size={14} /> Equipment Kit
                                     </label>
-                                    <select 
+                                    <select
                                         className="w-full h-14 bg-background border border-gray-100/10 rounded-2xl px-6 text-xs font-bold text-content outline-none focus:border-brand transition-all appearance-none"
                                         value={formData.kit}
                                         onChange={e => setFormData({ ...formData, kit: e.target.value })}
@@ -215,20 +215,20 @@ const CaptainSignup = () => {
                         {/* ID Verification Section */}
                         <div className="space-y-4 pt-2">
                             <h3 className="text-[12px] font-black tracking-widest uppercase mb-2 text-brand">Identity Verification</h3>
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <FileUpload 
-                                    label="Driving License" 
+                                <FileUpload
+                                    label="Driving License"
                                     onFileChange={(e) => handleFileChange(e, 'drivingLicense')}
                                     fileData={formData.drivingLicense}
                                 />
-                                <FileUpload 
-                                    label="Aadhar Card" 
+                                <FileUpload
+                                    label="Aadhar Card"
                                     onFileChange={(e) => handleFileChange(e, 'aadharCard')}
                                     fileData={formData.aadharCard}
                                 />
-                                <FileUpload 
-                                    label="Recent Photo" 
+                                <FileUpload
+                                    label="Recent Photo"
                                     onFileChange={(e) => handleFileChange(e, 'photo')}
                                     fileData={formData.photo}
                                     icon={<Camera size={24} className="text-content-subtle group-hover:text-brand mb-2" />}

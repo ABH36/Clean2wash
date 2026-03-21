@@ -22,12 +22,12 @@ import { useTheme } from '../../../context/ThemeContext';
 const StaffProfile = () => {
     const navigate = useNavigate();
     const { isDarkMode } = useTheme();
-    const { getUser, logout, registeredUsers } = useAuth();
-    const user = getUser('staff') || { name: 'Staff Member', id: 'STF-000', hub: 'Main Hub' };
+    const { getUser, logout } = useAuth();
+    const user = getUser('staff') || {};
 
-    // Find linked vendor name
-    const linkedVendor = (registeredUsers.vendor || []).find(v => v.id === user.vendorId);
-    const vendorName = linkedVendor ? linkedVendor.name : (user.hub || 'Independent');
+    // Safely determine hub/vendor name from session data
+    // Usually, the backend populates 'vendor' or the staff has a 'hub' field
+    const vendorName = user.vendor?.name || user.hub || 'Elite Wash Hub';
 
     const handleLogout = () => {
         logout('staff');

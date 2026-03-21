@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { ChevronLeft, Zap, Phone, Lock, ArrowRight, ShieldCheck, Star } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
-import { useCaptain } from '../../../context/CaptainContext';
+import { useCaptain } from '../../../hooks/useCaptain';
 import { toast } from 'react-hot-toast';
 
 const CaptainLogin = () => {
@@ -17,7 +17,7 @@ const CaptainLogin = () => {
 
     const handleLogin = async (e) => {
         e.preventDefault();
-        
+
         if (!phone || !password) {
             return toast.error('Please enter phone and password');
         }
@@ -47,12 +47,12 @@ const CaptainLogin = () => {
             const result = await captainSendOTP(phone);
             if (result.success) {
                 toast.success('OTP sent successfully!');
-                navigate('/captain/otp-verify', { 
-                    state: { 
-                        phone, 
+                navigate('/captain/otp-verify', {
+                    state: {
+                        phone,
                         type: 'login',
-                        devOtp: result.data?.otp 
-                    } 
+                        devOtp: result.data?.otp
+                    }
                 });
             } else {
                 toast.error(result.error || 'Failed to send OTP');
@@ -97,7 +97,7 @@ const CaptainLogin = () => {
 
             {/* Form Area */}
             <div className="flex-1 relative px-6 pt-6 pb-12 flex flex-col bg-background">
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     className="flex flex-col flex-1"
@@ -134,11 +134,10 @@ const CaptainLogin = () => {
                             type="submit"
                             disabled={!phone || !password || loading || otpLoading}
                             whileTap={{ scale: 0.97 }}
-                            className={`w-full h-14 rounded-2xl font-black text-base flex items-center justify-center gap-3 transition-all mt-6 ${
-                                phone && password
+                            className={`w-full h-14 rounded-2xl font-black text-base flex items-center justify-center gap-3 transition-all mt-6 ${phone && password
                                     ? 'bg-brand text-white shadow-xl shadow-brand/20'
                                     : 'bg-white/5 text-white/10 border border-white/5 pointer-events-none'
-                            }`}
+                                }`}
                         >
                             {loading ? (
                                 <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
@@ -158,11 +157,10 @@ const CaptainLogin = () => {
                             onClick={handleRequestOTP}
                             disabled={phone.length !== 10 || loading || otpLoading}
                             whileTap={{ scale: 0.97 }}
-                            className={`w-full h-14 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 transition-all border ${
-                                phone.length === 10
+                            className={`w-full h-14 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 transition-all border ${phone.length === 10
                                     ? 'border-brand text-brand bg-brand/5 hover:bg-brand hover:text-white'
                                     : 'border-white/5 text-white/10 pointer-events-none'
-                            }`}
+                                }`}
                         >
                             {otpLoading ? (
                                 <div className="w-4 h-4 border-2 border-brand/50 border-t-brand rounded-full animate-spin" />

@@ -4,7 +4,7 @@ import { toast } from 'react-hot-toast';
 import {
     ChevronLeft, ShoppingBag, Trash2, Plus, Minus, ArrowRight,
     Tag, ShieldCheck, Truck, RotateCcw, Check, ArrowLeft,
-    Clock, Zap, CreditCard, Gift, Shield, Crown
+    Clock, Zap, CreditCard, Gift, Shield, Crown, Sparkles
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import MobileLayout from '../components/layout/MobileLayout';
@@ -15,7 +15,14 @@ const CartPage = () => {
     const navigate = useNavigate();
     const { cartItems, updateQty, removeFromCart, clearCart, cartTotal, discountedTotal } = useCart();
     const { isBlackPassMember } = useAuth();
-    const { getUser, addBooking } = useAuth();
+    const {
+        getUser,
+        addBooking,
+        addProductOrder,
+        verifyProductOrderPayment,
+        getRazorpayKey,
+        createPaymentOrder
+    } = useAuth();
     const user = getUser('consumer');
     const [coupon, setCoupon] = useState('');
     const [couponApplied, setCouponApplied] = useState(false);
@@ -36,24 +43,94 @@ const CartPage = () => {
         }
     };
 
-    const handlePlaceOrder = () => {
+    const handlePlaceOrder = async () => {
+        if (!user) {
+            toast.error('Please login to place an order');
+            navigate('/login');
+            return;
+        }
+
         setPlacing(true);
-        setTimeout(() => {
-            const newOrder = addBooking({
-                items: cartItems,
-                total: finalTotal,
-                type: 'shop_order',
-                serviceName: 'Products Delivery',
-                deliveryType: deliverySpeed === 'express' ? '1-Hour Express' : 'Standard',
-                price: `₹${finalTotal.toLocaleString()}`,
-                userId: user?.id || 'GUEST',
-                userName: user?.name || 'Guest User',
-                timestamp: new Date().toISOString()
-            });
+        try {
+            // 1. Create Product Order in Pending State
+            const orderPayload = {
+                items: cartItems.map(item => ({
+                    product: item._id || item.id,
+                    quantity: item.qty,
+                    price: item.salePrice
+                })),
+                pricing: {
+                    itemsPrice: cartTotal,
+                    deliveryFee: standardDeliveryFee + expressFee,
+                    discount: blackSavings + discount,
+                    totalPrice: finalTotal
+                },
+                shippingAddress: user.addresses?.find(a => a.isPrimary) || user.addresses?.[0] || {
+                    type: 'Home',
+                    addressLine: 'Default Address' // Placeholder if no address
+                },
+                deliveryType: deliverySpeed === 'express' ? 'express' : 'standard'
+            };
+
+            const orderRes = await addProductOrder(orderPayload);
+            if (!orderRes.success) throw new Error(orderRes.error);
+
+            const productOrder = orderRes.data;
+
+            // 2. Initialize Razorpay Payment
+            const keyRes = await getRazorpayKey();
+            if (!keyRes.success) throw new Error('Could not get payment gateway key');
+
+            const razorpayOrderRes = await createPaymentOrder(finalTotal, 'INR', productOrder.orderId);
+            if (!razorpayOrderRes.success) throw new Error('Could not create payment order');
+
+            const options = {
+                key: keyRes.data.key,
+                amount: razorpayOrderRes.data.amount,
+                currency: razorpayOrderRes.data.currency,
+                name: 'Clean-2-Wash',
+                description: `Payment for Product Order #${productOrder.orderId}`,
+                order_id: razorpayOrderRes.data.id,
+                handler: async (response) => {
+                    // 3. Verify Payment
+                    const verifyRes = await verifyProductOrderPayment({
+                        razorpay_order_id: response.razorpay_order_id,
+                        razorpay_payment_id: response.razorpay_payment_id,
+                        razorpay_signature: response.razorpay_signature,
+                        orderId: productOrder._id
+                    });
+
+                    if (verifyRes.success) {
+                        toast.success('Order placed successfully! 📦');
+                        clearCart();
+                        navigate(`/order-tracking/${productOrder._id}`);
+                    } else {
+                        toast.error('Payment verification failed. Please contact support.');
+                    }
+                },
+                prefill: {
+                    name: user.name,
+                    email: user.email,
+                    contact: user.phone
+                },
+                theme: { color: '#000000' },
+                modal: {
+                    ondismiss: () => {
+                        setPlacing(false);
+                        toast.error('Payment cancelled');
+                    }
+                }
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.open();
+
+        } catch (error) {
+            console.error('Order placement failed:', error);
+            toast.error(error.message || 'Order placement failed');
+        } finally {
             setPlacing(false);
-            clearCart();
-            navigate(`/order/${newOrder.id}`);
-        }, 1800);
+        }
     };
 
     return (
@@ -214,6 +291,37 @@ const CartPage = () => {
                                 </div>
                             )}
                         </div>
+
+                        {/* ── Cross-Sell / Smart Suggestions ── */}
+                        {cartItems.length > 0 && (
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between px-1">
+                                    <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] italic">Procurement Bundle Suggestion</h3>
+                                    <div className="flex items-center gap-1.5 text-[9px] font-black text-brand uppercase">
+                                        <Sparkles size={12} fill="currentColor" /> AI-Curated
+                                    </div>
+                                </div>
+
+                                <div className="bg-content rounded-3xl p-5 relative overflow-hidden group shadow-2xl">
+                                    <div className="absolute top-0 right-0 w-32 h-full bg-brand/5 skew-x-[-20deg] pointer-events-none" />
+                                    <div className="flex gap-4 relative z-10">
+                                        <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 overflow-hidden flex-shrink-0">
+                                            <img src="https://images.unsplash.com/photo-1558227691-41ea78d1f631?w=200&q=80" className="w-full h-full object-cover" alt="Microfiber" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h4 className="text-[12px] font-black text-white italic uppercase tracking-tight leading-none mb-1">Microfiber Elite Pack</h4>
+                                            <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mb-3">800GSM Super Absorbent (Set of 3)</p>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-sm font-black text-brand italic">₹499 <span className="text-[8px] text-white/30 line-through ml-1 italic font-bold">₹799</span></span>
+                                                <button className="bg-brand text-white px-3 py-1.5 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg shadow-brand/20 active:scale-90 transition-transform">
+                                                    Add Bundle
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* ── PRICE SUMMARY ── */}
                         <div className="bg-white rounded-xl border border-gray-100 p-3.5 shadow-sm space-y-2.5">

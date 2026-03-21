@@ -20,14 +20,18 @@ import {
 
 const AdminTransactions = () => {
     const [transactions, setTransactions] = useState([]);
+    const [stats, setStats] = useState({ pendingWithdrawals: 0, totalSettled: 0, platformVolume: 0 });
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterType, setFilterType] = useState('All');
     const [pagination, setPagination] = useState({ page: 1, pages: 1 });
     const [selectedTxn, setSelectedTxn] = useState(null);
+    const [utr, setUtr] = useState('');
+    const [adminNote, setAdminNote] = useState('');
 
     useEffect(() => {
         fetchTransactions();
+        fetchStats();
     }, [pagination.page, filterType]);
 
     const fetchTransactions = async () => {
@@ -53,12 +57,26 @@ const AdminTransactions = () => {
         }
     };
 
+    const fetchStats = async () => {
+        try {
+            const res = await adminAPI.getSettlementStats();
+            if (res.status === 'success') {
+                setStats(res.data);
+            }
+        } catch (err) {
+            console.error("Failed to fetch stats:", err);
+        }
+    };
+
     const handleStatusUpdate = async (id, newStatus) => {
         try {
-            const res = await adminAPI.updateTransactionStatus(id, newStatus);
+            const res = await adminAPI.updateTransactionStatus(id, newStatus, adminNote, utr);
             if (res.status === 'success') {
                 setTransactions(prev => prev.map(t => t._id === id ? { ...t, status: newStatus } : t));
+                fetchStats();
                 setSelectedTxn(null);
+                setUtr('');
+                setAdminNote('');
             }
         } catch (err) {
             console.error("Failed to update status:", err);
@@ -85,11 +103,27 @@ const AdminTransactions = () => {
                 {/* ── Transaction Stats ── */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="bg-surface p-6 rounded-[2rem] border border-gray-100/10 shadow-soft">
-                        <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest mb-2">Platform Liquidity</p>
-                        <h3 className="text-3xl font-black text-content tracking-tighter">₹{transactions.reduce((acc, t) => acc + t.amount, 0).toLocaleString()} <span className="text-[10px] text-brand">Total Volume</span></h3>
+                        <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest mb-2">Pending Settlements</p>
+                        <h3 className="text-3xl font-black text-content tracking-tighter text-orange-500">₹{stats.pendingWithdrawals?.toLocaleString()}</h3>
                         <div className="mt-4 flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                            <span className="text-[8px] font-black text-content-subtle uppercase tracking-widest">Live Accounting Active</span>
+                            <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                            <span className="text-[8px] font-black text-content-subtle uppercase tracking-widest">Awaiting Admin Action</span>
+                        </div>
+                    </div>
+                    <div className="bg-surface p-6 rounded-[2rem] border border-gray-100/10 shadow-soft">
+                        <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest mb-2">Total Settled</p>
+                        <h3 className="text-3xl font-black text-content tracking-tighter text-green-500">₹{stats.totalSettled?.toLocaleString()}</h3>
+                        <div className="mt-4 flex items-center gap-2">
+                            <CheckCircle2 size={12} className="text-green-500" />
+                            <span className="text-[8px] font-black text-content-subtle uppercase tracking-widest">Successfully Disbursed</span>
+                        </div>
+                    </div>
+                    <div className="bg-surface p-6 rounded-[2rem] border border-gray-100/10 shadow-soft">
+                        <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest mb-2">Platform Volume</p>
+                        <h3 className="text-3xl font-black text-content tracking-tighter">₹{stats.platformVolume?.toLocaleString()}</h3>
+                        <div className="mt-4 flex items-center gap-2">
+                            <RefreshCw size={12} className="text-brand" />
+                            <span className="text-[8px] font-black text-content-subtle uppercase tracking-widest">Lifetime Transaction Throughput</span>
                         </div>
                     </div>
                 </div>
@@ -269,34 +303,84 @@ const AdminTransactions = () => {
                                     </div>
                                 </div>
 
-                                <div className="bg-background rounded-2xl p-4 border border-gray-100/10">
-                                    <div className="flex items-center gap-4 mb-4">
-                                        <div className="w-10 h-10 rounded-xl bg-surface flex items-center justify-center border border-gray-100/10">
-                                            <User size={18} className="text-brand" />
+                                <div className="space-y-4">
+                                    <div className="bg-background rounded-2xl p-4 border border-gray-100/10 shadow-inner">
+                                        <div className="flex items-center gap-4 mb-4">
+                                            <div className="w-10 h-10 rounded-xl bg-surface flex items-center justify-center border border-gray-100/10">
+                                                <User size={18} className="text-brand" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[11px] font-black text-content leading-none mb-1">{selectedTxn.user?.name}</p>
+                                                <p className="text-[8px] font-bold text-content-subtle uppercase tracking-widest">{selectedTxn.user?.email || selectedTxn.user?.phone}</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="text-[11px] font-black text-content leading-none mb-1">{selectedTxn.user?.name}</p>
-                                            <p className="text-[8px] font-bold text-content-subtle uppercase tracking-widest">{selectedTxn.user?.email || selectedTxn.user?.phone}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[7px] font-black text-content-subtle uppercase tracking-widest">Temporal Stamp:</span>
-                                        <span className="text-[8px] font-bold text-content">{new Date(selectedTxn.createdAt).toLocaleString()}</span>
-                                    </div>
-                                </div>
 
-                                <div className="space-y-3">
-                                    <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest px-1">Administrative Override</p>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {['pending', 'completed', 'failed'].map(status => (
-                                            <button
-                                                key={status}
-                                                onClick={() => handleStatusUpdate(selectedTxn._id, status)}
-                                                className={`py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedTxn.status === status ? 'bg-content text-white shadow-xl' : 'bg-background text-content-subtle hover:bg-gray-100 hover:text-content'}`}
-                                            >
-                                                {status}
-                                            </button>
-                                        ))}
+                                        {selectedTxn.category === 'WITHDRAWAL' && selectedTxn.user?.bankDetails && (
+                                            <div className="mb-4 pt-4 border-t border-gray-100/5 space-y-2">
+                                                <p className="text-[8px] font-black text-brand uppercase tracking-widest mb-2">Destination Bank Account</p>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <p className="text-[7px] text-content-subtle uppercase font-bold">Holder</p>
+                                                        <p className="text-[10px] font-black text-content">{selectedTxn.user.bankDetails.accountName || 'N/A'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[7px] text-content-subtle uppercase font-bold">IFSC</p>
+                                                        <p className="text-[10px] font-black text-content">{selectedTxn.user.bankDetails.ifscCode || 'N/A'}</p>
+                                                    </div>
+                                                    <div className="col-span-2">
+                                                        <p className="text-[7px] text-content-subtle uppercase font-bold">Account Number</p>
+                                                        <p className="text-[10px] font-black text-content font-mono tracking-wider">{selectedTxn.user.bankDetails.accountNumber || 'N/A'}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[7px] font-black text-content-subtle uppercase tracking-widest">Temporal Stamp:</span>
+                                            <span className="text-[8px] font-bold text-content">{new Date(selectedTxn.createdAt).toLocaleString()}</span>
+                                        </div>
+                                    </div>
+
+                                    {selectedTxn.status === 'pending' && (
+                                        <div className="space-y-3 pt-2">
+                                            <div>
+                                                <label className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-1 block px-1">Transaction Note (Optional)</label>
+                                                <input
+                                                    type="text"
+                                                    value={adminNote}
+                                                    onChange={e => setAdminNote(e.target.value)}
+                                                    placeholder="e.g. Verified by finance"
+                                                    className="w-full bg-background border border-gray-100/10 rounded-xl px-4 py-3 text-xs font-bold text-content outline-none focus:border-brand"
+                                                />
+                                            </div>
+                                            {selectedTxn.category === 'WITHDRAWAL' && (
+                                                <div>
+                                                    <label className="text-[8px] font-black text-brand uppercase tracking-widest mb-1 block px-1">Bank UTR / Reference ID</label>
+                                                    <input
+                                                        type="text"
+                                                        value={utr}
+                                                        onChange={e => setUtr(e.target.value)}
+                                                        placeholder="Enter Bank Ref Number"
+                                                        className="w-full bg-background border border-brand/20 rounded-xl px-4 py-3 text-xs font-black text-content outline-none focus:border-brand"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-3">
+                                        <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest px-1">Administrative Override</p>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {['pending', 'completed', 'rejected'].map(status => (
+                                                <button
+                                                    key={status}
+                                                    onClick={() => handleStatusUpdate(selectedTxn._id, status)}
+                                                    className={`py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedTxn.status === status ? 'bg-content text-white shadow-xl' : 'bg-background text-content-subtle hover:bg-gray-100 hover:text-content'}`}
+                                                >
+                                                    {status === 'completed' && selectedTxn.category === 'WITHDRAWAL' ? 'Settle' : status}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             </div>

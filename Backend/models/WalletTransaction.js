@@ -101,10 +101,21 @@ walletTransactionSchema.pre('validate', async function () {
     if (this.category) {
         this.category = normalizeCategory(this.category);
     }
+
+    // IMMUTABILITY: Prevent modification of finalized transactions
+    if (!this.isNew) {
+        const original = await this.constructor.findById(this._id);
+        if (original && (original.status === 'completed' || original.status === 'rejected')) {
+            throw new Error(`CRITICAL: Attempted to modify finalized transaction #${this._id} (${original.status})`);
+        }
+    }
 });
 
 // Index for getting user's transactions quickly
 walletTransactionSchema.index({ user: 1, createdAt: -1 });
+
+// CRITICAL: Block duplicate credits from same source
+walletTransactionSchema.index({ referenceId: 1, category: 1 }, { unique: true, sparse: true });
 
 walletTransactionSchema.statics.createTransaction = function (payload = {}) {
     const transactionPayload = { ...payload };

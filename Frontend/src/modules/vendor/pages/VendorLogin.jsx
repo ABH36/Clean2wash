@@ -29,7 +29,7 @@ const VendorLogin = () => {
         if (result.success) {
             navigate('/vendor');
         } else {
-            setError(result.error || 'Invalid credentials. Try: vendor@CarWash.in / vendor123');
+            setError(result.error || 'Invalid credentials. Please verify your entry or contact support.');
             setLoading(false);
         }
     };

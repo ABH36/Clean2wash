@@ -9,6 +9,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import VendorLayout from '../components/VendorLayout';
 import { vendorAPI } from '../../../utils/vendorApi';
 import { useAuth } from '../../../context/AuthContext';
+import { socketService } from '../../../utils/socket';
+import { toast } from 'react-hot-toast';
+import { Upload, X, ShieldCheck } from 'lucide-react';
 
 const VendorOrderDetail = () => {
     const { id } = useParams();
@@ -18,34 +21,57 @@ const VendorOrderDetail = () => {
 
     const [staffList, setStaffList] = useState([]);
     const [assignedStaff, setAssignedStaff] = useState({ pickup: null, delivery: null });
+    const [liveBooking, setLiveBooking] = useState(null);
+    const [status, setStatus] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [showDriverPicker, setShowDriverPicker] = useState(false);
+    const [pickerRole, setPickerRole] = useState('pickup');
+    const [showPinModal, setShowPinModal] = useState(false);
+    const [enteredPin, setEnteredPin] = useState('');
+    const [uploading, setUploading] = useState(false);
+
+    const fetchData = async () => {
+        try {
+            const [orderRes, staffRes] = await Promise.all([
+                vendorAPI.getOrderById(id),
+                vendorAPI.getStaff()
+            ]);
+
+            if (orderRes.status === 'success') {
+                setLiveBooking(orderRes.data.order);
+                setStatus(orderRes.data.order.status);
+                setAssignedStaff({
+                    pickup: orderRes.data.order.pickupStaff,
+                    delivery: orderRes.data.order.deliveryStaff
+                });
+            }
+
+            if (staffRes.status === 'success') {
+                setStaffList(staffRes.data.staff);
+            }
+        } catch (err) {
+            console.error('Failed to load order details', err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [orderRes, staffRes] = await Promise.all([
-                    vendorAPI.getOrderById(id),
-                    vendorAPI.getStaff()
-                ]);
-
-                if (orderRes.status === 'success') {
-                    setLiveBooking(orderRes.data.order);
-                    setStatus(orderRes.data.order.status);
-                    setAssignedStaff({
-                        pickup: orderRes.data.order.pickupStaff,
-                        delivery: orderRes.data.order.deliveryStaff
-                    });
-                }
-
-                if (staffRes.status === 'success') {
-                    setStaffList(staffRes.data.staff);
-                }
-            } catch (err) {
-                console.error('Failed to load order details', err);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchData();
+
+        // Socket Listeners - joinBookingRoom is needed for real-time status updates for this specific booking
+        socketService.joinBookingRoom(id);
+
+        socketService.on('booking_status_updated', (data) => {
+            if (data.status) {
+                setStatus(data.status);
+            }
+            fetchData(); // Refresh all data
+        });
+
+        return () => {
+            socketService.off('booking_status_updated');
+        };
     }, [id]);
 
     const handleAcceptRequest = async () => {
@@ -62,18 +88,7 @@ const VendorOrderDetail = () => {
 
     const handleUpdateStatus = async () => {
         try {
-            // Production Grade: Include photos for specific Elite transitions
-            const updatePayload = { status };
-            
-            if (status === 'at-studio' || status === 'quality-check' || status === 'completed') {
-                // Simulated high-end inspection photos
-                updatePayload.photos = [
-                    "data:image/jpeg;base64,/9j/4AAQSkZJRg==", // Placeholder 1
-                    "data:image/jpeg;base64,/9j/4AAQSkZJRg=="  // Placeholder 2
-                ];
-            }
-
-            const res = await vendorAPI.updateOrderStatus(id, updatePayload.status, updatePayload.photos);
+            const res = await vendorAPI.updateOrderStatus(id, status);
             if (res.status === 'success') {
                 const updatedBooking = res.data.booking || res.data.order;
                 setLiveBooking(updatedBooking);
@@ -82,9 +97,44 @@ const VendorOrderDetail = () => {
             }
         } catch (error) {
             console.error('Error updating status', error);
-            const { toast } = await import('react-hot-toast');
             toast.error(error.response?.data?.message || 'Failed to update status');
         }
+    };
+
+    const handleVerifyPin = async () => {
+        try {
+            const res = await vendorAPI.verifyBookingPin(id, enteredPin);
+            if (res.status === 'success') {
+                toast.success("Security PIN Verified! Handover confirmed.");
+                setShowPinModal(false);
+                setEnteredPin('');
+                fetchData();
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Invalid PIN. Access Denied.");
+        }
+    };
+
+    const handlePhotoUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setUploading(true);
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+            try {
+                const res = await vendorAPI.updateOrderStatus(id, status, [reader.result]);
+                if (res.status === 'success') {
+                    toast.success("Evidence uploaded successfully");
+                    fetchData();
+                }
+            } catch (error) {
+                toast.error("Upload failed");
+            } finally {
+                setUploading(false);
+            }
+        };
+        reader.readAsDataURL(file);
     };
 
     const handleAssignStaff = async (staffId) => {
@@ -166,6 +216,11 @@ const VendorOrderDetail = () => {
                                             Accept Request
                                         </button>
                                     )}
+                                {['accepted', 'pickup-assigned'].includes(liveBooking.status) && (
+                                    <button onClick={() => setShowPinModal(true)} className="h-10 px-6 bg-amber-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-500/20 hover:scale-105 transition-all flex items-center gap-2">
+                                        <ShieldCheck size={14} /> Verify PIN
+                                    </button>
+                                )}
                                 <button className="h-10 px-4 border border-gray-100/10 bg-surface rounded-xl text-content-muted font-black text-[10px] uppercase tracking-widest hover:text-brand transition-all">
                                     Print Invoice
                                 </button>
@@ -298,10 +353,30 @@ const VendorOrderDetail = () => {
                                                 <img src={img} alt="Inspection" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                             </div>
                                         ))}
-                                        <button className="aspect-square rounded-2xl border-2 border-dashed border-gray-100/10 bg-background flex flex-col items-center justify-center gap-2 text-content-subtle hover:border-brand hover:text-brand transition-all">
-                                            <Camera size={20} />
-                                            <span className="text-[8px] font-black uppercase tracking-widest">Add</span>
+
+                                        {/* Dynamic Evidence Photos */}
+                                        {(liveBooking.serviceImages?.before || []).map((img, i) => (
+                                            <div key={`before-${i}`} className="aspect-square rounded-2xl overflow-hidden border-2 border-brand/20 bg-background group relative shadow-lg shadow-brand/5">
+                                                <img src={img} alt="Before Wash" className="w-full h-full object-cover" />
+                                                <div className="absolute top-1 right-1 bg-brand text-white text-[6px] px-1 rounded-sm font-black uppercase">Before</div>
+                                            </div>
+                                        ))}
+                                        {(liveBooking.serviceImages?.after || []).map((img, i) => (
+                                            <div key={`after-${i}`} className="aspect-square rounded-2xl overflow-hidden border-2 border-green-500/20 bg-background group relative shadow-lg shadow-green-500/5">
+                                                <img src={img} alt="After Wash" className="w-full h-full object-cover" />
+                                                <div className="absolute top-1 right-1 bg-green-500 text-white text-[6px] px-1 rounded-sm font-black uppercase">After</div>
+                                            </div>
+                                        ))}
+
+                                        <button
+                                            onClick={() => document.getElementById('photo-upload').click()}
+                                            disabled={uploading}
+                                            className="aspect-square rounded-2xl border-2 border-dashed border-gray-100/10 bg-background flex flex-col items-center justify-center gap-2 text-content-subtle hover:border-brand hover:text-brand transition-all"
+                                        >
+                                            {uploading ? <div className="w-4 h-4 border-2 border-brand/30 border-t-brand rounded-full animate-spin" /> : <Camera size={20} />}
+                                            <span className="text-[8px] font-black uppercase tracking-widest">{uploading ? 'Processing' : 'Add Info'}</span>
                                         </button>
+                                        <input id="photo-upload" type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
                                     </div>
                                 </div>
                             </div>
@@ -384,6 +459,59 @@ const VendorOrderDetail = () => {
                     </>
                 )}
             </div>
+
+            {/* PIN Verification Modal */}
+            <AnimatePresence>
+                {showPinModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[110] bg-content/80 backdrop-blur-xl flex items-center justify-center p-4"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            className="bg-surface w-full max-w-sm rounded-[3rem] border border-gray-100/10 p-10 space-y-8 text-center"
+                        >
+                            <div className="space-y-2">
+                                <div className="w-16 h-16 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <ShieldCheck size={32} />
+                                </div>
+                                <h2 className="text-2xl font-black text-content italic tracking-tight">Handover Security</h2>
+                                <p className="text-sm font-bold text-content-subtle leading-relaxed italic">Verify the 4-digit PIN provided by the customer to confirm car collection.</p>
+                            </div>
+
+                            <div className="flex justify-center gap-3">
+                                <input
+                                    type="text"
+                                    maxLength="4"
+                                    value={enteredPin}
+                                    onChange={(e) => setEnteredPin(e.target.value.replace(/\D/g, ''))}
+                                    placeholder="----"
+                                    className="w-full h-20 bg-background border-2 border-gray-100/10 rounded-3xl text-center text-4xl font-black tracking-[0.5em] outline-none focus:border-amber-500 transition-all text-content"
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    onClick={handleVerifyPin}
+                                    disabled={enteredPin.length !== 4}
+                                    className="w-full h-14 bg-amber-500 disabled:opacity-30 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-amber-500/20 transition-all active:scale-95"
+                                >
+                                    Confirm Handover
+                                </button>
+                                <button
+                                    onClick={() => setShowPinModal(false)}
+                                    className="w-full h-14 bg-transparent text-content-subtle rounded-2xl font-black text-[10px] uppercase tracking-widest hover:text-content transition-all"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Driver Picker Modal */}
             <AnimatePresence>

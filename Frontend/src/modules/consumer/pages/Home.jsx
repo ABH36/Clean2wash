@@ -10,6 +10,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { serviceAPI } from '../../../utils/api';
+import LocationIndicator from '../../../components/Location/LocationIndicator';
 import MobileLayout from '../components/layout/MobileLayout';
 import PremiumBadge from '../components/membership/PremiumBadge';
 import BlackPassModal from '../components/membership/BlackPassModal';
@@ -130,13 +131,7 @@ const Home = () => {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-black">CW</div>
-                    <div className="flex flex-col leading-none">
-                        <span className="text-[10px] font-bold text-black/40 uppercase tracking-widest">Clean2Wash</span>
-                        <div className="flex items-center gap-1">
-                            <span className="text-[13px] font-black text-black">{user?.profile?.address?.city || user?.address?.city || 'Indore'}</span>
-                            <ChevronDown size={14} className="text-black/60" />
-                        </div>
-                    </div>
+                    <LocationIndicator variant="minimal" className="ml-1" />
                 </div>
                 <div className="flex items-center gap-2">
                     <button onClick={() => navigate('/wallet')} className="w-10 h-10 bg-black/5 rounded-xl flex items-center justify-center relative">
@@ -163,11 +158,11 @@ const Home = () => {
     );
 
     const userBookings = bookings?.filter(b => b.consumer === user?.id || b.consumer?.id === user?.id || b.userId === user?.id) || [];
-    
+
     // Find active booking for live tracking banner
     const activeBooking = useMemo(() => {
-        return userBookings.find(b => 
-            ['pending', 'confirmed', 'assigned', 'en_route', 'arrived', 'before_photo', 'in_progress', 'washing', 'after_photo', 'pickup-assigned', 'at-studio', 'quality-check', 'ready-for-delivery'].includes(b.status)
+        return userBookings.find(b =>
+            ['pending', 'confirmed', 'assigned', 'en_route', 'arrived', 'before_photo', 'picked-up', 'in_progress', 'washing', 'after_photo', 'pickup-assigned', 'at-studio', 'quality-check', 'ready-for-delivery'].includes(b.status)
         );
     }, [userBookings]);
 
@@ -258,8 +253,8 @@ const Home = () => {
                                 </motion.div>
 
                                 <div className={`absolute inset-0 ${banner.theme === 'dark'
-                                        ? 'bg-gradient-to-r from-black via-black/40 to-transparent'
-                                        : 'bg-gradient-to-r from-white via-white/20 to-transparent'
+                                    ? 'bg-gradient-to-r from-black via-black/40 to-transparent'
+                                    : 'bg-gradient-to-r from-white via-white/20 to-transparent'
                                     }`} />
 
                                 {/* Banner Content */}
@@ -430,8 +425,8 @@ const Home = () => {
                                                 <h4 className="text-[14px] font-[1000] text-black uppercase tracking-tight truncate">{item.title}</h4>
                                                 <div className="flex items-center gap-1.5">
                                                     <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${item.type === 'SERVICE' ? 'bg-brand/10 text-brand' :
-                                                            item.type === 'PRODUCT' ? 'bg-blue-500/10 text-blue-600' :
-                                                                'bg-gray-100 text-black/40'
+                                                        item.type === 'PRODUCT' ? 'bg-blue-500/10 text-blue-600' :
+                                                            'bg-gray-100 text-black/40'
                                                         }`}>
                                                         {item.cat || item.type}
                                                     </span>
@@ -514,7 +509,7 @@ const Home = () => {
 
     const viewMoreServices = [
         { title: 'Instant Wash', icon: Car, color: '#F29F05', path: '/instant-wash' },
-        { title: 'Apartments', icon: Building, color: '#6366F1', path: '/apartments' },
+        { title: 'Apartments', icon: Building, color: '#6366F1', path: '/apartment-wash' },
         { title: 'Appointment', icon: Calendar, color: '#3B82F6', path: '/full-wash-booking' },
         { title: 'Spare Drivers', icon: User, color: '#FF8533', path: '/spare-driver' },
         { title: 'Alerts', icon: Bell, color: '#A855F7', path: '/notifications' },
@@ -654,18 +649,18 @@ const Home = () => {
                 {/* Active Booking Live Tracker Card */}
                 <AnimatePresence>
                     {activeBooking && (
-                        <motion.section 
+                        <motion.section
                             initial={{ opacity: 0, y: -20, height: 0 }}
                             animate={{ opacity: 1, y: 0, height: 'auto' }}
                             className="px-5 pt-3"
                         >
-                            <div 
+                            <div
                                 onClick={() => navigate(`/booking-status?id=${activeBooking._id || activeBooking.id}&type=${activeBooking.service?.type || activeBooking.type || 'captain'}`)}
                                 className="bg-[#0F172A] rounded-3xl p-5 text-white flex flex-col gap-4 relative overflow-hidden shadow-2xl cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform"
                             >
                                 {/* Decorative Blur */}
                                 <div className="absolute -right-8 -top-8 w-32 h-32 bg-brand/30 rounded-full blur-3xl pointer-events-none" />
-                                
+
                                 <div className="relative z-10 flex items-center justify-between">
                                     <div className="flex items-center gap-2.5">
                                         <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/10 backdrop-blur-md">
@@ -773,7 +768,7 @@ const Home = () => {
                     {/* Apartment Wash */}
                     <motion.button
                         whileTap={{ scale: 0.98 }}
-                        onClick={() => navigate('/apartments')}
+                        onClick={() => navigate('/apartment-wash')}
                         className="flex-1 bg-indigo-50/50 p-3 text-left flex flex-col justify-between h-[85px] rounded-2xl relative overflow-hidden group shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-indigo-100/50"
                     >
                         <div className="absolute right-[-15%] top-[15%] w-[100%] h-[95%] transition-transform duration-700 group-hover:scale-105 pointer-events-none z-0">

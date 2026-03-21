@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
-import apiClient, { authAPI, walletAPI, paymentAPI } from '../utils/api';
+import apiClient, { authAPI, walletAPI, paymentAPI, orderAPI } from '../utils/api';
 import { captainAPI } from '../utils/captainApi';
 import { adminAPI } from '../utils/adminApi';
 import { vendorAPI } from '../utils/vendorApi';
 import { staffAPI } from '../utils/staffApi';
 
 import { socketService } from '../utils/socket';
+import { toast } from 'react-hot-toast';
+import { Link } from 'react-router-dom';
 
 // Each panel stores its session under a separate key
 const SESSION_KEYS = {
@@ -36,6 +38,7 @@ export const AuthProvider = ({ children }) => {
         }
         return result;
     });
+    const [trustedContacts, setTrustedContacts] = useState([]);
 
     // Dynamic Token Restoration on mount
     useEffect(() => {
@@ -44,7 +47,113 @@ export const AuthProvider = ({ children }) => {
         if (sessions.admin?.token) adminAPI.setToken(sessions.admin.token);
         if (sessions.staff?.token) staffAPI.setToken(sessions.staff.token);
         if (sessions.captain?.token) captainAPI.setToken(sessions.captain.token);
+
+        // 🔗 Global Socket Lifecycle: High Productivity Flow
+        // Find the first available token across all roles to establish the real-time link
+        const activeToken = sessions.consumer?.token ||
+            sessions.captain?.token ||
+            sessions.admin?.token ||
+            sessions.vendor?.token ||
+            sessions.staff?.token;
+
+        if (activeToken) {
+            socketService.connect(activeToken);
+
+            // 🔔 Phase 3: Global Notification Listener
+            const handleGlobalStatusUpdate = (data) => {
+                console.log('🔄 Global Status Update Received:', data);
+                if (data.bookingId || data._id) {
+                    setBookings(prev => prev.map(booking => {
+                        const id = booking._id || booking.id;
+                        if (id === (data.bookingId || data._id)) {
+                            return { ...booking, status: data.status, ...data.updatedFields };
+                        }
+                        return booking;
+                    }));
+                }
+                setLastRealTimeAlert({
+                    title: 'Booking Updated 📦',
+                    message: data.message || `Status changed to ${data.status}`,
+                    type: 'status_update'
+                });
+
+                // Display Global Toast
+                toast.success(data.message || `Booking status: ${data.status}`, {
+                    id: data.bookingId || data._id, // Prevent duplicate toasts for same update
+                    duration: 4000,
+                    icon: '🚗'
+                });
+            };
+
+            const handleProductOrderStatusUpdate = (data) => {
+                console.log('🔄 Product Order Status Update Received:', data);
+                if (data.orderId) {
+                    setProductOrders(prev => prev.map(order => {
+                        if (order._id === data.orderId) {
+                            return {
+                                ...order,
+                                status: data.status,
+                                statusHistory: [...(order.statusHistory || []), {
+                                    status: data.status,
+                                    comment: data.message,
+                                    timestamp: new Date()
+                                }]
+                            };
+                        }
+                        return order;
+                    }));
+                }
+
+                toast.success(data.message || `Order status: ${data.status}`, {
+                    duration: 5000,
+                    icon: '📦'
+                });
+            };
+
+            const handleNewNotification = (data) => {
+                console.log('📬 New Real-time Notification:', data);
+                const notification = data.notification || {};
+
+                setLastRealTimeAlert({
+                    title: notification.title || 'New Notification!',
+                    message: notification.message || 'Check your notifications panel.',
+                    type: 'notification'
+                });
+
+                // Display Global Professional Toast
+                toast(
+                    (t) => (
+                        <div className="flex flex-col gap-1">
+                            <span className="font-black text-xs uppercase tracking-tight">{notification.title || 'Notification'}</span>
+                            <span className="text-[11px] font-bold opacity-60 leading-tight">{notification.message}</span>
+                        </div>
+                    ),
+                    {
+                        icon: notification.type === 'booking' ? '📦' : '🔔',
+                        duration: 5000,
+                    }
+                );
+            };
+
+            socketService.on('booking_status_updated', handleGlobalStatusUpdate);
+            socketService.on('product_order_status_updated', handleProductOrderStatusUpdate);
+            socketService.on('new_notification', handleNewNotification);
+            socketService.on('new_captain_notification', handleNewNotification);
+            socketService.on('new_vendor_notification', handleNewNotification);
+
+            return () => {
+                socketService.off('booking_status_updated', handleGlobalStatusUpdate);
+                socketService.off('product_order_status_updated', handleProductOrderStatusUpdate);
+                socketService.off('new_notification', handleNewNotification);
+                socketService.off('new_captain_notification', handleNewNotification);
+                socketService.off('new_vendor_notification', handleNewNotification);
+            };
+        } else {
+            socketService.disconnect();
+        }
     }, [sessions]);
+
+    const [lastRealTimeAlert, setLastRealTimeAlert] = useState(null);
 
     // --- CORE AUTH FUNCTIONS (Moved to top to prevent reference errors) ---
     const isLoggedIn = useCallback((role) => !!sessions[role], [sessions]);
@@ -60,7 +169,7 @@ export const AuthProvider = ({ children }) => {
 
     const logout = useCallback((role) => {
         localStorage.removeItem(SESSION_KEYS[role]);
-        
+
         // Clear consumer-specific state and legacy storage
         if (role === 'consumer') {
             localStorage.removeItem('carwash_bookings');
@@ -68,7 +177,6 @@ export const AuthProvider = ({ children }) => {
             setBookings([]);
             setUserSubscription(null);
             setWalletBalance(0);
-            setAddresses([]);
             setTrustedContacts([]);
         }
 
@@ -285,21 +393,7 @@ export const AuthProvider = ({ children }) => {
         }
     }, []);
 
-    // Track addresses from the user session/profile (migrated from localStorage)
-    const [addresses, setAddresses] = useState([]);
-
-    // Update addresses when user session changes
-    useEffect(() => {
-        if (sessions.consumer?.profile?.address) {
-            // Backend currently supports a single address object in profile.address.
-            // We map it to an array for the frontend components that expect multiple addresses.
-            setAddresses([{ id: 1, ...sessions.consumer.profile.address, label: 'Home', isPrimary: true }]);
-        } else {
-            setAddresses([]);
-        }
-    }, [sessions.consumer]);
-
-    const [trustedContacts, setTrustedContacts] = useState([]);
+    // Trusted contacts management
     const [trustedContactsLoading, setTrustedContactsLoading] = useState(false);
 
     const loadTrustedContacts = useCallback(async () => {
@@ -382,6 +476,17 @@ export const AuthProvider = ({ children }) => {
         };
 
         try {
+            // If the booking object already has an ID, it was likely created on the server 
+            // and we're just syncing it back to the context. Skip call to prevent duplicates.
+            if (bookingData._id || bookingData.id) {
+                setBookings(prev => {
+                    const exists = prev.some(b => (b._id === (bookingData._id || bookingData.id)) || (b.id === (bookingData._id || bookingData.id)));
+                    if (exists) return prev;
+                    return [bookingData, ...prev];
+                });
+                return { success: true, data: bookingData };
+            }
+
             const response = await apiClient.createBooking(enrichedData);
             const newBooking = response.data.booking;
             setBookings(prev => [newBooking, ...prev]);
@@ -419,6 +524,55 @@ export const AuthProvider = ({ children }) => {
             setBookings(prev => prev.map(b =>
                 b._id === bookingId ? { ...b, status, ...extraData } : b
             ));
+            return { success: false, error: error.message };
+        }
+    }, []);
+
+    // --- PRODUCT ORDER MANAGEMENT (PHASE 29) ---
+    const [productOrders, setProductOrders] = useState([]);
+    const [productOrdersLoading, setProductOrdersLoading] = useState(false);
+
+    const loadProductOrders = useCallback(async () => {
+        if (!sessions.consumer?.id) return;
+        try {
+            setProductOrdersLoading(true);
+            const response = await orderAPI.getOrders();
+            setProductOrders(response.data.orders || []);
+        } catch (error) {
+            if (error.status !== 401) {
+                console.error('Failed to load product orders:', error);
+            }
+        } finally {
+            setProductOrdersLoading(false);
+        }
+    }, [sessions.consumer]);
+
+    useEffect(() => {
+        if (sessions.consumer?.id) {
+            loadProductOrders();
+        }
+    }, [sessions.consumer?.id, loadProductOrders]);
+
+    const addProductOrder = useCallback(async (orderData) => {
+        try {
+            const response = await orderAPI.createOrder(orderData);
+            const newOrder = response.data.order;
+            setProductOrders(prev => [newOrder, ...prev]);
+            return { success: true, data: newOrder };
+        } catch (error) {
+            console.error('Failed to create product order:', error);
+            return { success: false, error: error.message };
+        }
+    }, []);
+
+    const verifyProductOrderPayment = useCallback(async (paymentData) => {
+        try {
+            const response = await orderAPI.verifyOrderPayment(paymentData);
+            const updatedOrder = response.data.order;
+            setProductOrders(prev => prev.map(o => o._id === updatedOrder._id ? updatedOrder : o));
+            return { success: true, data: updatedOrder };
+        } catch (error) {
+            console.error('Failed to verify product order payment:', error);
             return { success: false, error: error.message };
         }
     }, []);
@@ -520,9 +674,9 @@ export const AuthProvider = ({ children }) => {
         }
     }, []);
 
-    const verifyPayment = useCallback(async (orderId, paymentId, signature) => {
+    const verifyPayment = useCallback(async (orderId, paymentId, signature, bookingId) => {
         try {
-            const response = await paymentAPI.verifyPayment(orderId, paymentId, signature);
+            const response = await paymentAPI.verifyPayment(orderId, paymentId, signature, bookingId);
             return { success: true, data: response.data };
         } catch (error) {
             console.error('Verify payment error:', error);
@@ -563,13 +717,14 @@ export const AuthProvider = ({ children }) => {
 
     // Socket.io Integration
     useEffect(() => {
-        const userId = sessions.consumer?.id || sessions.captain?.id || sessions.vendor?.id || sessions.admin?.id || sessions.staff?.id;
+        const activeSession = sessions.consumer || sessions.captain || sessions.vendor || sessions.admin || sessions.staff;
+        const userId = activeSession?.id || activeSession?._id;
+        const token = activeSession?.token;
 
-        if (userId) {
-            socketService.connect();
-            socketService.joinUserRoom(userId);
+        if (userId && token) {
+            socketService.connect(token);
 
-            // Admins join broadcase room for real-time alerts
+            // Admins join broadcast room for real-time alerts
             if (sessions.admin?.id) {
                 socketService.joinAdminRoom();
             }
@@ -577,8 +732,8 @@ export const AuthProvider = ({ children }) => {
             // Rejoin rooms for current active bookings
             bookings.forEach(b => {
                 const activeStatuses = [
-                    'pending', 'confirmed', 'accepted', 'assigned', 'pickup-assigned', 
-                    'en_route', 'arrived', 'at-studio', 'in_progress', 'washing', 
+                    'pending', 'confirmed', 'accepted', 'assigned', 'pickup-assigned',
+                    'en_route', 'arrived', 'at-studio', 'in_progress', 'washing',
                     'quality-check', 'ready-for-delivery'
                 ];
                 if (activeStatuses.includes(b.status)) {
@@ -591,7 +746,7 @@ export const AuthProvider = ({ children }) => {
 
         const handleBookingUpdate = async (data) => {
             console.log('Real-time booking update received:', data);
-            
+
             // Show toast notification for important status changes
             const statusLabels = {
                 'confirmed': 'Booking confirmed!',
@@ -605,7 +760,7 @@ export const AuthProvider = ({ children }) => {
                 'completed': 'Service completed! Your vehicle is ready.',
                 'cancelled': 'Booking has been cancelled.'
             };
-            
+
             if (statusLabels[data.status]) {
                 const { toast } = await import('react-hot-toast');
                 toast.success(statusLabels[data.status], {
@@ -635,7 +790,7 @@ export const AuthProvider = ({ children }) => {
                 icon: '✅',
                 style: { borderRadius: '12px', background: '#000', color: '#fff', fontSize: '12px', fontWeight: 'bold' }
             });
-            
+
             // Update context seamlessly
             setSessions(prev => {
                 if (prev.captain) {
@@ -659,24 +814,24 @@ export const AuthProvider = ({ children }) => {
         const handleAdminNotification = async (data) => {
             console.log('Real-time admin notification received:', data);
             const { toast } = await import('react-hot-toast');
-            
+
             // Special styling for high priority or SOS alerts
             const isSOS = data.priority === 'high' || data.type === 'SOS';
-            
+
             toast.error(data.title, {
                 icon: isSOS ? '🚨' : '🛡️',
                 duration: isSOS ? 10000 : 5000,
-                style: { 
-                    borderRadius: '16px', 
-                    background: isSOS ? '#ef4444' : '#000', 
-                    color: '#fff', 
-                    fontSize: '12px', 
+                style: {
+                    borderRadius: '16px',
+                    background: isSOS ? '#ef4444' : '#000',
+                    color: '#fff',
+                    fontSize: '12px',
                     fontWeight: '900',
                     border: isSOS ? '2px solid white' : 'none',
                     boxShadow: isSOS ? '0 0 20px rgba(239, 68, 68, 0.5)' : 'none'
                 }
             });
-            
+
             // Refresh dashboard or bookings if needed by emitting a local event or re-fetching
             // For now, the toast is enough for high visibility
         };
@@ -716,7 +871,7 @@ export const AuthProvider = ({ children }) => {
         logout('staff');
         return { success: true };
     }, [logout]);
-    
+
     // Legacy support placeholders
     const validateCredentials = () => null;
     const register = () => true;
@@ -805,6 +960,16 @@ export const AuthProvider = ({ children }) => {
         }
     }, [login]);
 
+    const vendorSendOTP = useCallback(async (phone) => {
+        try {
+            const response = await vendorAPI.sendOTP(phone);
+            return { success: true, data: response };
+        } catch (error) {
+            console.error('Vendor Send OTP error:', error);
+            return { success: false, error: error.message };
+        }
+    }, []);
+
     const vendorGetProfile = useCallback(async () => {
         try {
             const response = await vendorAPI.getProfile();
@@ -885,20 +1050,31 @@ export const AuthProvider = ({ children }) => {
     }, [login]);
 
     // Staff API-based methods
-    const staffLogin = useCallback(async (email, password) => {
+    const staffSendOTP = useCallback(async (phone) => {
         try {
-            const response = await staffAPI.login(email, password);
+            const response = await staffAPI.sendOTP(phone);
+            return { success: true, data: response };
+        } catch (error) {
+            console.error('Staff Send OTP error:', error);
+            return { success: false, error: error.message };
+        }
+    }, []);
+
+    const staffLogin = useCallback(async (phone, otp) => {
+        try {
+            const response = await staffAPI.login(phone, otp);
             const token = response.token || response.data?.token;
             const user = response?.data?.user || response?.user || response;
 
             if (!user || !user._id) {
-                return { success: false, error: 'Invalid server response' };
+                return { success: false, error: 'Auth failed: User not found' };
             }
 
             const userSession = {
                 id: user._id,
                 name: user.name,
                 email: user.email,
+                phone: user.phone,
                 role: 'staff',
                 vendorId: user.profile?.vendorId || null,
                 token,
@@ -911,7 +1087,7 @@ export const AuthProvider = ({ children }) => {
             console.error('Staff Login error:', error);
             return { success: false, error: error.message };
         }
-    }, []);
+    }, [login]);
 
 
 
@@ -932,33 +1108,6 @@ export const AuthProvider = ({ children }) => {
         ));
     }, []);
 
-
-    const addAddress = useCallback(async (addressData) => {
-        try {
-            // Note: Since backend currently only supports one address in consumer.profile.address,
-            // adding an address will update the 'primary' address. The UI may need an array backend eventually.
-            const response = await authAPI.updateAddress(addressData);
-            if (response.data && response.data.address) {
-                setAddresses([{ id: 1, ...response.data.address, label: 'Home', isPrimary: true }]);
-                return { success: true, data: response.data.address };
-            }
-        } catch (error) {
-            console.error('Failed to add address:', error);
-            // Fallback for UI if error
-            setAddresses(prev => [...prev, { ...addressData, id: Date.now() }]);
-            return { success: false, error: error.message };
-        }
-    }, []);
-
-    const removeAddress = useCallback((id) => {
-        // Since backend only supports one address currently, removal isn't fully supported without making it null.
-        // We'll just remove it from local state for now.
-        setAddresses(prev => prev.filter(a => a.id !== id));
-    }, []);
-
-    const setPrimaryAddress = useCallback((id) => {
-        setAddresses(prev => prev.map(a => ({ ...a, isPrimary: a.id === id })));
-    }, []);
 
     const addTrustedContact = useCallback((contact) => setTrustedContacts(prev => [...prev, { ...contact, id: Date.now() }]), []);
     const removeTrustedContact = useCallback((id) => setTrustedContacts(prev => prev.filter(c => c.id !== id)), []);
@@ -1048,6 +1197,11 @@ export const AuthProvider = ({ children }) => {
             bookings,
             addBooking,
             updateBookingStatus,
+            productOrders,
+            productOrdersLoading,
+            loadProductOrders,
+            addProductOrder,
+            verifyProductOrderPayment,
             assignStaffToBooking,
             vehicles,
             vehiclesLoading,
@@ -1058,15 +1212,13 @@ export const AuthProvider = ({ children }) => {
             globalCatalog,
             catalogLoading,
             loadGlobalCatalog,
-            addresses,
-            addAddress,
-            removeAddress,
-            setPrimaryAddress,
             trustedContacts,
             addTrustedContact,
             removeTrustedContact,
             userSubscription,
             walletBalance,
+            lastRealTimeAlert,
+            setLastRealTimeAlert,
             updateBalance,
             loadWallet,
             addToWallet,
@@ -1083,18 +1235,24 @@ export const AuthProvider = ({ children }) => {
             vendorLogin,
             vendorLogout,
             vendorSignup,
+            vendorSendOTP,
             vendorGetProfile,
             captainSignup,
             captainLogin,
             staffLogin,
             staffLogout,
+            staffSendOTP,
             sendOTP,
             verifyOTP,
             apiLogin,
             apiSignup,
             apiLogout,
             setUserSubscription,
-            isBlackPassMember
+            isBlackPassMember,
+            loadTrustedContacts,
+            addContact,
+            removeContact,
+            trustedContactsLoading
         }}>
             {children}
         </AuthContext.Provider>

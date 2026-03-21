@@ -9,95 +9,9 @@ import {
 import MobileLayout from '../components/layout/MobileLayout';
 import { serviceAPI } from '../../../utils/api';
 
+import BeforeAfterSlider from '../../../components/BeforeAfterSlider';
+
 const CATEGORIES = ['All', 'Exterior', 'Interior', 'Ceramic', 'PPF'];
-
-// --- Sub-component: Interactive Before/After Slider ---
-const BeforeAfterSlider = ({ item, index }) => {
-    const [sliderPos, setSliderPos] = useState(50);
-    const containerRef = useRef(null);
-
-    const handleMove = (e) => {
-        if (!containerRef.current) return;
-        const rect = containerRef.current.getBoundingClientRect();
-        const x = e.touches ? e.touches[0].clientX : e.clientX;
-        const position = ((x - rect.left) / rect.width) * 100;
-        setSliderPos(Math.min(Math.max(position, 0), 100));
-    };
-
-    return (
-        <div 
-            ref={containerRef}
-            className="relative w-full aspect-[4/3] overflow-hidden group/slider cursor-col-resize select-none bg-gray-900 rounded-xl"
-            onMouseMove={handleMove}
-            onTouchMove={handleMove}
-        >
-            {/* After Image (Background) */}
-            <div className="absolute inset-0">
-                <img
-                    src={item.afterImg || item.img || 'https://images.unsplash.com/photo-1605515298946-d062f2e9da53?auto=format&fit=crop&q=80&w=800'}
-                    alt="After service"
-                    className="w-full h-full object-cover brightness-110 contrast-110"
-                />
-                <div className="absolute bottom-3 right-3 bg-emerald-500/90 backdrop-blur-md px-2 py-1 rounded-md text-[8px] font-black text-white uppercase tracking-widest shadow-lg">AFTER</div>
-            </div>
-
-            {/* Before Image (Foreground with Clip-path) */}
-            <div 
-                className="absolute inset-0 z-10"
-                style={{ clipPath: `inset(0 ${100 - sliderPos}% 0 0)` }}
-            >
-                <img
-                    src={item.beforeImg || item.img || 'https://images.unsplash.com/photo-1507136566006-cfc505b114fc?auto=format&fit=crop&q=80&w=800'}
-                    alt="Before service"
-                    className="w-full h-full object-cover grayscale-[0.2] contrast-75 brightness-90"
-                />
-                <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md text-[8px] font-black text-white uppercase tracking-widest shadow-lg">BEFORE</div>
-                
-                {/* AI Masking Simulation Overlay for License Plates */}
-                <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                    <div className="w-[40%] h-[15%] mt-[25%] bg-black/40 backdrop-blur-2xl rounded-lg border border-white/20 flex flex-col items-center justify-center opacity-80 overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer" />
-                        <Lock size={12} className="text-white/60 mb-0.5" />
-                        <span className="text-[6px] font-black text-white/40 uppercase tracking-[0.2em]">Privacy Shield Active</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Slider Handle */}
-            <div 
-                className="absolute inset-y-0 z-20 w-0.5 bg-white shadow-[0_0_15px_rgba(0,0,0,0.5)] cursor-col-resize"
-                style={{ left: `${sliderPos}%` }}
-            >
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full shadow-2xl flex items-center justify-center border-4 border-black/5 group-hover/slider:scale-110 transition-transform">
-                    <div className="flex gap-0.5">
-                        <div className="w-0.5 h-3 bg-black/20 rounded-full" />
-                        <div className="w-0.5 h-3 bg-black/20 rounded-full" />
-                    </div>
-                </div>
-            </div>
-
-            {/* Interactive hint overlay */}
-            {index === 0 && (
-                <motion.div 
-                    initial={{ opacity: 1 }}
-                    animate={{ opacity: 0 }}
-                    transition={{ delay: 3, duration: 1 }}
-                    className="absolute inset-0 z-30 pointer-events-none flex items-center justify-center bg-black/20 backdrop-blur-[2px]"
-                >
-                    <div className="flex flex-col items-center">
-                        <motion.div 
-                            animate={{ x: [-20, 20, -20] }}
-                            transition={{ repeat: Infinity, duration: 2 }}
-                        >
-                            <ArrowRight size={32} className="text-white drop-shadow-2xl" />
-                        </motion.div>
-                        <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] mt-2">Slide to compare</span>
-                    </div>
-                </motion.div>
-            )}
-        </div>
-    );
-};
 
 const Portfolio = () => {
     const navigate = useNavigate();
@@ -264,7 +178,11 @@ const Portfolio = () => {
                                         </div>
 
                                         {/* Main Visual: Before/After Slider */}
-                                        <BeforeAfterSlider item={item} index={idx} />
+                                        <BeforeAfterSlider 
+                                            before={item.beforeImg || item.img} 
+                                            after={item.afterImg || item.img} 
+                                            title="Transformation Detail" 
+                                        />
 
                                         {/* Card Footer / Metadata */}
                                         <div className="p-4 bg-gray-50/50 flex items-center justify-between">
@@ -317,7 +235,11 @@ const Portfolio = () => {
                                         <p className="text-white/40 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">{selectedItem.vehicle} • {selectedItem.category}</p>
                                     </div>
                                 </div>
-                                <BeforeAfterSlider item={selectedItem} index={1} />
+                                <BeforeAfterSlider 
+                                    before={selectedItem.beforeImg || selectedItem.img} 
+                                    after={selectedItem.afterImg || selectedItem.img} 
+                                    title="HD Comparison View" 
+                                />
                             </div>
 
                             <div className="grid grid-cols-2 gap-3 w-full max-w-lg">

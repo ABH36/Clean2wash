@@ -19,25 +19,25 @@ const DriverBookings = () => {
 
     // Map DB bookings to display structure
     const available = bookings
-        .filter(b => !['completed', 'cancelled', 'en_route'].includes(b.status))
+        .filter(b => !['completed', 'cancelled', 'en_route', 'arrived', 'active'].includes(b.status))
         .map(b => ({
             id: b._id,
             type: b.service?.name || 'Service',
             customer: b.consumer?.name || 'Customer',
-            pickup: b.consumer?.profile?.address?.city || 'Unknown',
+            pickup: b.location?.address?.street || b.location?.address?.city || 'Unknown',
             dist: '--',
-            reward: `₹${b.price || 0}`
+            reward: `₹${b.pricing?.totalAmount || 0}`
         }));
 
     const scheduled = bookings
-        .filter(b => b.status === 'en_route')
+        .filter(b => ['en_route', 'arrived', 'active'].includes(b.status))
         .map(b => ({
             id: b._id,
             type: b.service?.name || 'Service',
             customer: b.consumer?.name || 'Customer',
             date: b.scheduledAt ? new Date(b.scheduledAt).toLocaleString() : 'ASAP',
-            reward: `₹${b.price || 0}`,
-            status: 'In Progress'
+            reward: `₹${b.pricing?.totalAmount || 0}`,
+            status: b.status.toUpperCase()
         }));
 
     const handleAccept = async (id) => {

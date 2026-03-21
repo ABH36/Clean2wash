@@ -10,6 +10,8 @@ const productController = require('../controllers/productController');
 const profileController = require('../controllers/profileController');
 const paymentController = require('../controllers/paymentController');
 const mapController = require('../controllers/mapController');
+const reviewController = require('../controllers/reviewController');
+const webhookController = require('../controllers/webhookController');
 
 // Import Auth Middleware
 const authMiddleware = require('../../../middlewares/authMiddleware');
@@ -57,8 +59,9 @@ router.get('/services/:serviceId', serviceController.getServiceDetails);
 
 router.get('/vehicles/types', vehicleController.getVehicleTypes);
 
-// Payment routes (public - for getting key)
+// Payment routes (public - for getting key and webhooks)
 router.get('/payment/key', paymentController.getRazorpayKey);
+router.post('/payment/webhook', webhookController.handleRazorpayWebhook);
 
 // Map Proxy routes
 router.get('/maps/proxy/reverse', mapController.reverseGeocodeProxy);
@@ -76,8 +79,16 @@ router.use('/referral', referralRoutes);
 router.get('/profile', authController.getMe);
 router.get('/profile/stats', profileController.getStats);
 router.put('/profile', profileController.updateProfile);
-router.put('/profile/address', profileController.updateAddress);
+router.put('/profile/address', profileController.updateAddress); // Legacy
 router.put('/profile/avatar', profileController.updateAvatar);
+
+// Modern Multi-Address Routes (Phase 1)
+const locationController = require('../controllers/locationController');
+router.get('/profile/addresses', locationController.getAddresses);
+router.post('/profile/addresses', locationController.addAddress);
+router.put('/profile/addresses/:addressId', locationController.updateAddress);
+router.delete('/profile/addresses/:addressId', locationController.deleteAddress);
+router.patch('/profile/addresses/:addressId/primary', locationController.setPrimaryAddress);
 
 // Vehicle routes
 router.get('/vehicles', vehicleController.getMyVehicles);
@@ -100,6 +111,17 @@ router.put('/bookings/:id', bookingController.updateBooking);
 router.delete('/bookings/:id', bookingController.cancelBooking);
 router.post('/bookings/:id/feedback', bookingController.submitFeedback);
 router.post('/bookings/:id/issues', bookingController.reportIssue);
+
+// Product Order routes
+const orderController = require('../controllers/orderController');
+router.get('/orders', orderController.getMyOrders);
+router.post('/orders', orderController.createOrder);
+router.get('/orders/:id', orderController.getOrderDetails);
+router.post('/orders/verify-payment', orderController.verifyOrderPayment);
+
+// Product Review routes
+router.post('/products/:orderId/items/:productId/review', reviewController.submitProductReview);
+router.get('/products/:productId/reviews', reviewController.getProductReviews);
 
 // Payment routes (protected)
 router.post('/payment/create-order', paymentController.createOrder);

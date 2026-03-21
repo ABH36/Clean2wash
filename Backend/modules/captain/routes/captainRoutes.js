@@ -4,6 +4,7 @@ const authController = require('../controllers/authController');
 const jobController = require('../controllers/jobController');
 const profileController = require('../controllers/profileController');
 const rewardsController = require('../controllers/rewardsController');
+const captainProductController = require('../controllers/captainProductController');
 
 const authMiddleware = require('../../../middlewares/authMiddleware');
 
@@ -26,6 +27,7 @@ router.get('/jobs', jobController.getMyJobs);
 router.get('/jobs/:id', jobController.getMyJob);
 router.post('/jobs/:id/accept', jobController.acceptJob);
 router.post('/jobs/:id/decline', jobController.declineJob);
+router.post('/jobs/:id/commit', jobController.commitToScheduledJob);
 router.patch('/jobs/:id/status', jobController.updateJobStatus);
 
 router.get('/dashboard', jobController.getDashboard);
@@ -33,6 +35,12 @@ router.get('/earnings', jobController.getEarnings);
 router.get('/history', jobController.getHistory);
 router.post('/earnings/withdraw', jobController.withdrawPayout);
 router.patch('/online', jobController.toggleOnline);
+// Product Missions (Phase 33)
+router.get('/product-missions/available', captainProductController.getAvailableProductPickups);
+router.post('/product-missions/:orderId/items/:itemId/accept', captainProductController.acceptProductPickup);
+router.patch('/product-missions/:orderId/items/:itemId/status', captainProductController.updateProductStatus);
+router.post('/product-missions/accept-batch', captainProductController.acceptProductBatch);
+
 // Notification routes
 router.get('/notifications', profileController.getNotifications);
 router.patch('/notifications/:notificationId/read', profileController.markNotificationRead);

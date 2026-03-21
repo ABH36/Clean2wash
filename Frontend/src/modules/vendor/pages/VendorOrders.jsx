@@ -5,46 +5,111 @@ import {
 import { useNavigate } from 'react-router-dom';
 import VendorLayout from '../components/VendorLayout';
 import { vendorAPI } from '../../../utils/vendorApi';
+import { socketService } from '../../../utils/socket';
+import { useAuth } from '../../../context/AuthContext';
+import { toast } from 'react-hot-toast';
 
 const VendorOrders = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('Active');
+    const [viewMode, setViewMode] = useState('services'); // 'services' or 'products'
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchOrders = async () => {
-            try {
-                const res = await vendorAPI.getOrders();
-                if (res.status === 'success') {
-                    setOrders(res.data.orders);
-                }
-            } catch (err) {
-                console.error('Failed to load orders', err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchOrders();
-    }, []);
+    const { getUser } = useAuth();
+    const vendor = getUser('vendor');
 
-    const mappedOrders = orders.map(b => ({
-        id: b._id || b.id,
-        customer: b.consumer?.name || 'Guest',
-        car: b.vehicle?.brand ? `${b.vehicle.brand} ${b.vehicle.model}` : 'Unknown',
-        type: b.service?.name || 'Service',
-        status: (b.status || 'pending').toUpperCase(),
-        date: new Date(b.createdAt).toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
-        amount: b.price || b.service?.defaultPrice || '₹0',
-        location: b.consumer?.profile?.address?.city || 'Bengaluru'
-    }));
+    const fetchOrders = async (silent = false) => {
+        if (!silent) setLoading(true);
+        try {
+            const res = viewMode === 'services'
+                ? await vendorAPI.getOrders()
+                : await vendorAPI.getProductOrders();
+
+            if (res.status === 'success') {
+                setOrders(res.data.orders);
+            }
+        } catch (err) {
+            console.error('Failed to load orders', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchOrders();
+
+        if (vendor?.id) {
+            // Socket system is handled globally by AuthContext
+            console.log('[VendorOrders] Monitoring live protocol...');
+            socketService.joinUserRoom(vendor.id);
+
+            const handleUpdate = (data) => {
+                console.log('[Vendor Orders] 📡 Real-time update:', data.type || 'status_change');
+                fetchOrders(true); // Silent refresh
+
+                if (data.type === 'new_studio_booking' || data.type === 'new_product_order') {
+                    toast.success(`New ${data.type === 'new_studio_booking' ? 'Work' : 'Order'} Request available!`, {
+                        icon: '🔔',
+                        duration: 5000
+                    });
+                }
+            };
+
+            socketService.on('new_studio_booking', handleUpdate);
+            socketService.on('booking_status_updated', handleUpdate);
+            socketService.on('new_product_order', handleUpdate);
+            socketService.on('product_order_status_updated', handleUpdate);
+
+            return () => {
+                socketService.off('new_studio_booking', handleUpdate);
+                socketService.off('booking_status_updated', handleUpdate);
+                socketService.off('new_product_order', handleUpdate);
+                socketService.off('product_order_status_updated', handleUpdate);
+            };
+        }
+    }, [vendor?.id, viewMode]);
+
+    const mappedOrders = orders.map(b => {
+        if (viewMode === 'services') {
+            return {
+                id: b._id || b.id,
+                customer: b.consumer?.name || 'Guest',
+                car: b.vehicle?.brand ? `${b.vehicle.brand} ${b.vehicle.model}` : 'Unknown',
+                type: b.service?.name || 'Service',
+                status: (b.status || 'pending').toUpperCase(),
+                date: new Date(b.createdAt).toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
+                amount: b.price || b.service?.defaultPrice || '₹0',
+                location: b.consumer?.profile?.address?.city || 'Bengaluru',
+                isProduct: false
+            };
+        } else {
+            // Product Logic
+            return {
+                id: b._id || b.id,
+                customer: b.consumer?.name || 'Guest',
+                itemsCount: b.myItems?.length || 0,
+                type: b.myItems?.map(i => i.name).join(', ') || 'Products',
+                status: (b.status || 'pending').toUpperCase(),
+                date: new Date(b.createdAt).toLocaleString([], { day: '2-digit', month: 'short' }),
+                amount: `₹${b.myItems?.reduce((sum, i) => sum + (i.price * i.quantity), 0) || 0}`,
+                location: b.consumer?.profile?.city || 'Bengaluru',
+                isProduct: true
+            };
+        }
+    });
 
     // Local filtering based on tab
     const filteredOrders = mappedOrders.filter(o => {
-        if (activeTab === 'Active') return ['ACCEPTED', 'CONFIRMED', 'ASSIGNED', 'PICKUP-ASSIGNED', 'EN_ROUTE', 'AT-STUDIO', 'IN_PROGRESS', 'QUALITY-CHECK', 'DELIVERY-ASSIGNED'].includes(o.status);
-        if (activeTab === 'Completed') return o.status === 'COMPLETED';
+        if (activeTab === 'Active') {
+            const activeStatuses = o.isProduct
+                ? ['PENDING', 'PROCESSING', 'SHIPPED', 'PACKING', 'ACCEPTED']
+                : ['ACCEPTED', 'CONFIRMED', 'ASSIGNED', 'PICKUP-ASSIGNED', 'EN_ROUTE', 'AT-STUDIO', 'IN_PROGRESS', 'QUALITY-CHECK', 'DELIVERY-ASSIGNED'];
+            return activeStatuses.includes(o.status);
+        }
+        if (activeTab === 'Completed') return o.status === 'DELIVERED' || o.status === 'COMPLETED';
         if (activeTab === 'Cancelled') return ['CANCELLED', 'REFUNDED'].includes(o.status);
-        if (activeTab === 'Market') return o.status === 'PENDING';
+        if (activeTab === 'Market') return o.status === 'PENDING' && !o.isProduct;
         return true;
     });
 
@@ -54,15 +119,33 @@ const VendorOrders = () => {
             subtitle="Track & Manage History"
         >
             <div className="space-y-6 max-w-7xl mx-auto">
-                {/* Tabs */}
-                <div className="flex gap-2 bg-background p-1 rounded-xl w-fit border border-gray-100/10">
-                    {['Market', 'Active', 'Completed', 'Cancelled'].map(t => (
-                        <button key={t} onClick={() => setActiveTab(t)}
-                            className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === t ? 'bg-surface text-brand shadow-sm' : 'text-content-subtle hover:text-content'
-                                }`}>
-                            {t}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    {/* Mode Toggle */}
+                    <div className="flex bg-background p-1 rounded-xl border border-gray-100/10 h-11 w-full md:w-fit">
+                        <button
+                            onClick={() => setViewMode('services')}
+                            className={`flex-1 md:flex-none px-6 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'services' ? 'bg-surface text-brand shadow-sm' : 'text-content-subtle hover:text-content'}`}
+                        >
+                            Services
                         </button>
-                    ))}
+                        <button
+                            onClick={() => setViewMode('products')}
+                            className={`flex-1 md:flex-none px-6 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'products' ? 'bg-surface text-brand shadow-sm' : 'text-content-subtle hover:text-content'}`}
+                        >
+                            Products
+                        </button>
+                    </div>
+
+                    {/* Status Tabs */}
+                    <div className="flex gap-2 bg-background p-1 rounded-xl w-fit border border-gray-100/10 h-11">
+                        {['Market', 'Active', 'Completed', 'Cancelled'].map(t => (
+                            <button key={t} onClick={() => setActiveTab(t)}
+                                className={`px-6 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === t ? 'bg-surface text-brand shadow-sm' : 'text-content-subtle hover:text-content'
+                                    }`}>
+                                {t}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Desktop Table View */}
@@ -72,8 +155,8 @@ const VendorOrders = () => {
                             <tr>
                                 <th className="px-6 py-4">Order ID</th>
                                 <th className="px-6 py-4">Customer</th>
-                                <th className="px-6 py-4">Car & Service</th>
-                                <th className="px-6 py-4">Scheduled</th>
+                                <th className="px-6 py-4">{viewMode === 'services' ? 'Car & Service' : 'Products'}</th>
+                                <th className="px-6 py-4">{viewMode === 'services' ? 'Scheduled' : 'Date'}</th>
                                 <th className="px-6 py-4">Amount</th>
                                 <th className="px-6 py-4">Status</th>
                                 <th className="px-6 py-4 text-right">Action</th>
@@ -98,7 +181,7 @@ const VendorOrders = () => {
                             {!loading && filteredOrders.map(order => (
                                 <tr
                                     key={order.id}
-                                    onClick={() => navigate(`/vendor/order/${order.id}`)}
+                                    onClick={() => navigate(viewMode === 'services' ? `/vendor/order/${order.id}` : `/vendor/product-order/${order.id}`)}
                                     className="hover:bg-background/50 transition-colors cursor-pointer group"
                                 >
                                     <td className="px-6 py-4">
@@ -112,8 +195,17 @@ const VendorOrders = () => {
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col">
-                                            <span className="text-xs font-black text-content">{order.car}</span>
-                                            <span className="text-[10px] font-black text-brand uppercase tracking-tight">{order.type}</span>
+                                            {viewMode === 'services' ? (
+                                                <>
+                                                    <span className="text-xs font-black text-content">{order.car}</span>
+                                                    <span className="text-[10px] font-black text-brand uppercase tracking-tight">{order.type}</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span className="text-xs font-black text-content truncate max-w-[200px]">{order.type}</span>
+                                                    <span className="text-[10px] font-black text-brand uppercase tracking-tight">{order.itemsCount} Items</span>
+                                                </>
+                                            )}
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
@@ -126,7 +218,7 @@ const VendorOrders = () => {
                                         <span className="text-sm font-black text-green-500 tracking-tight">{order.amount}</span>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <div className={`w-fit px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${order.status === 'COMPLETED' ? 'bg-green-500/10 text-green-500' :
+                                        <div className={`w-fit px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${order.status === 'COMPLETED' || order.status === 'DELIVERED' ? 'bg-green-500/10 text-green-500' :
                                             order.status === 'CANCELLED' ? 'bg-red-500/10 text-red-500' : 'bg-blue-500/10 text-blue-500'
                                             }`}>
                                             {order.status}
@@ -161,18 +253,18 @@ const VendorOrders = () => {
                                             <p className="text-[10px] font-black text-brand uppercase tracking-widest mb-1">{order.id.substring(0, 8)}</p>
                                             <h3 className="font-black text-base text-content tracking-tight">{order.customer}</h3>
                                         </div>
-                                        <div className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${order.status === 'COMPLETED' ? 'bg-green-500/10 text-green-500' : 'bg-blue-500/10 text-blue-500'
+                                        <div className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${order.status === 'COMPLETED' || order.status === 'DELIVERED' ? 'bg-green-500/10 text-green-500' : 'bg-blue-500/10 text-blue-500'
                                             }`}>
                                             {order.status}
                                         </div>
                                     </div>
                                     <div className="space-y-2 py-3 border-y border-gray-100/5 text-[11px]">
                                         <div className="flex justify-between">
-                                            <span className="text-content-subtle font-bold">Service</span>
-                                            <span className="text-content font-black">{order.type}</span>
+                                            <span className="text-content-subtle font-bold">{viewMode === 'services' ? 'Service' : 'Products'}</span>
+                                            <span className="text-content font-black truncate max-w-[150px]">{order.type}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-content-subtle font-bold">Scheduled</span>
+                                            <span className="text-content-subtle font-bold">{viewMode === 'services' ? 'Scheduled' : 'Date'}</span>
                                             <span className="text-content font-black">{order.date}</span>
                                         </div>
                                         <div className="flex justify-between">
@@ -181,7 +273,7 @@ const VendorOrders = () => {
                                         </div>
                                     </div>
                                     <button
-                                        onClick={() => navigate(`/vendor/order/${order.id}`)}
+                                        onClick={() => navigate(viewMode === 'services' ? `/vendor/order/${order.id}` : `/vendor/product-order/${order.id}`)}
                                         className="w-full h-11 bg-background rounded-xl font-black text-[10px] uppercase tracking-widest text-content-subtle hover:bg-surface-hover transition-all"
                                     >
                                         View Summary

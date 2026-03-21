@@ -2,6 +2,7 @@ const User = require('../../../models/User');
 const WalletTransaction = require('../../../models/WalletTransaction');
 const crypto = require('crypto');
 const razorpay = require('../../../config/razorpay');
+const { executeWalletTransaction } = require('../../../utils/walletHelper');
 
 const ensureWallet = (user) => {
     if (!user.wallet) {
@@ -144,37 +145,23 @@ exports.verifyWalletPayment = async (req, res) => {
             });
         }
 
-        errorStep = 'load_user';
-        const user = await User.findById(req.user._id);
-        if (!user) {
-            return res.status(404).json({ status: 'fail', message: 'User not found' });
-        }
-
-        errorStep = 'update_wallet_balance';
-        ensureWallet(user);
-        const balanceBefore = user.wallet.balance;
-        user.wallet.balance += amount;
-        user.wallet.lastUpdated = Date.now();
-        await user.save();
-
-        errorStep = 'create_wallet_transaction';
-        const transaction = await WalletTransaction.createTransaction({
-            user: user._id,
+        errorStep = 'execute_atomic_credit';
+        const { balance, transaction } = await executeWalletTransaction(
+            req.user._id,
             amount,
-            type: 'credit',
-            status: 'completed',
-            category: 'WALLET_RECHARGE',
-            description: `Wallet recharge of INR ${amount} (via Razorpay)`,
-            referenceId: razorpay_payment_id,
-            referenceType: 'wallet_recharge',
-            paymentMethod: 'razorpay',
-            balanceBefore,
-            balanceAfter: user.wallet.balance
-        });
+            'credit',
+            {
+                category: 'WALLET_RECHARGE',
+                description: `Wallet recharge of INR ${amount} (via Razorpay)`,
+                referenceId: razorpay_payment_id,
+                referenceType: 'wallet_recharge',
+                paymentMethod: 'razorpay'
+            }
+        );
 
         errorStep = 'send_notification';
         const { sendNotification } = require('../../../utils/notificationService');
-        await sendNotification(user._id, {
+        await sendNotification(req.user._id, {
             title: 'Wallet Recharged',
             message: `INR ${amount} has been successfully added to your wallet.`,
             type: 'payment',
@@ -186,7 +173,7 @@ exports.verifyWalletPayment = async (req, res) => {
             status: 'success',
             message: `Successfully added INR ${amount} to wallet.`,
             data: {
-                balance: user.wallet.balance,
+                balance,
                 transaction
             }
         });
@@ -224,7 +211,7 @@ exports.verifyWalletPayment = async (req, res) => {
     }
 };
 
-// Withdraw money from wallet
+// Withdraw money from wallet (Logs as PENDING for admin approval)
 exports.withdrawMoney = async (req, res) => {
     try {
         const { amount } = req.body;
@@ -233,90 +220,59 @@ exports.withdrawMoney = async (req, res) => {
             return res.status(400).json({ status: 'error', message: 'Invalid amount.' });
         }
 
-        const user = await User.findById(req.user._id);
-        if (!user) {
-            return res.status(404).json({ status: 'error', message: 'User not found' });
-        }
-
-        ensureWallet(user);
-        if (user.wallet.balance < amount) {
-            return res.status(400).json({ status: 'error', message: 'Insufficient wallet balance.' });
-        }
-
-        const balanceBefore = user.wallet.balance;
-        user.wallet.balance -= amount;
-        user.wallet.lastUpdated = Date.now();
-        await user.save();
-
-        const transaction = await WalletTransaction.createTransaction({
-            user: user._id,
+        const { balance, transaction } = await executeWalletTransaction(
+            req.user._id,
             amount,
-            type: 'debit',
-            status: 'completed',
-            category: 'WITHDRAWAL',
-            description: `Withdrawal of INR ${amount} to bank`,
-            referenceId: `TXN-WDR-${Date.now()}`,
-            referenceType: 'withdrawal',
-            paymentMethod: 'bank',
-            balanceBefore,
-            balanceAfter: user.wallet.balance
-        });
+            'debit',
+            {
+                category: 'WITHDRAWAL',
+                description: `Withdrawal request for INR ${amount} to bank`,
+                referenceId: `TXN-WDR-${Date.now()}`,
+                referenceType: 'withdrawal',
+                paymentMethod: 'bank',
+                status: 'pending' // Correctly handled by helper now
+            }
+        );
 
         const { sendNotification } = require('../../../utils/notificationService');
-        await sendNotification(user._id, {
-            title: 'Withdrawal Successful',
-            message: `INR ${amount} withdrawal process has been initiated.`,
+        await sendNotification(req.user._id, {
+            title: 'Withdrawal Pending',
+            message: `Your request for INR ${amount} is under review.`,
             type: 'payment',
             priority: 'medium',
-            metaData: { amount, type: 'debit' }
+            metaData: { amount, type: 'debit', status: 'pending' }
         });
 
         res.status(200).json({
             status: 'success',
-            message: `Successfully withdrawn INR ${amount}.`,
+            message: `Withdrawal request for INR ${amount} submitted.`,
             data: {
-                balance: user.wallet.balance,
+                balance,
                 transaction
             }
         });
     } catch (error) {
         console.error('Error withdrawing money:', error);
-        res.status(500).json({
+        res.status(error.message === 'Insufficient wallet balance' ? 400 : 500).json({
             status: 'error',
-            message: 'Failed to process withdrawal.'
+            message: error.message || 'Failed to process withdrawal.'
         });
     }
 };
 
-// Internal function to deduct money (for use in other controllers)
+// Internal function to deduct money (Atomic)
 exports.deductMoney = async (userId, amount, category, description, referenceId) => {
-    const user = await User.findById(userId);
-    if (!user) {
-        throw new Error('User not found.');
-    }
-
-    ensureWallet(user);
-    if (user.wallet.balance < amount) {
-        throw new Error('Insufficient wallet balance.');
-    }
-
-    const balanceBefore = user.wallet.balance;
-    user.wallet.balance -= amount;
-    user.wallet.lastUpdated = Date.now();
-    await user.save();
-
-    const transaction = await WalletTransaction.createTransaction({
-        user: userId,
+    const { balance, transaction } = await executeWalletTransaction(
+        userId,
         amount,
-        type: 'debit',
-        status: 'completed',
-        category,
-        description,
-        referenceId,
-        paymentMethod: 'wallet',
-        balanceBefore,
-        balanceAfter: user.wallet.balance
-    });
+        'debit',
+        {
+            category,
+            description,
+            referenceId,
+            paymentMethod: 'wallet'
+        }
+    );
 
     const { sendNotification } = require('../../../utils/notificationService');
     await sendNotification(userId, {
@@ -330,35 +286,19 @@ exports.deductMoney = async (userId, amount, category, description, referenceId)
     return transaction;
 };
 
-// Internal helper to credit money to wallet (used by refunds and system flows)
+// Internal helper to credit money to wallet (Atomic)
 exports.addMoney = async (userId, amount, category, description, referenceId) => {
-    if (!amount || amount <= 0) {
-        throw new Error('Amount should be greater than 0.');
-    }
-
-    const user = await User.findById(userId);
-    if (!user) {
-        throw new Error('User not found.');
-    }
-
-    ensureWallet(user);
-    const balanceBefore = user.wallet.balance;
-    user.wallet.balance += amount;
-    user.wallet.lastUpdated = Date.now();
-    await user.save();
-
-    const transaction = await WalletTransaction.createTransaction({
-        user: userId,
+    const { balance, transaction } = await executeWalletTransaction(
+        userId,
         amount,
-        type: 'credit',
-        status: 'completed',
-        category,
-        description: description || `INR ${amount} credited to wallet`,
-        referenceId,
-        paymentMethod: 'wallet',
-        balanceBefore,
-        balanceAfter: user.wallet.balance
-    });
+        'credit',
+        {
+            category,
+            description,
+            referenceId,
+            paymentMethod: 'wallet'
+        }
+    );
 
     const { sendNotification } = require('../../../utils/notificationService');
     await sendNotification(userId, {
@@ -371,3 +311,4 @@ exports.addMoney = async (userId, amount, category, description, referenceId) =>
 
     return transaction;
 };
+

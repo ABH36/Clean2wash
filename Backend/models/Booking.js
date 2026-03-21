@@ -116,9 +116,9 @@ const bookingSchema = new mongoose.Schema({
     status: {
         type: String,
         enum: [
-            'pending', 'confirmed', 'accepted', 'assigned', 'pickup-assigned', 
-            'en_route', 'arrived', 'before_photo', 'at-studio', 'washing', 
-            'in_progress', 'after_photo', 'quality-check', 'ready-for-delivery', 
+            'pending', 'confirmed', 'accepted', 'assigned', 'pickup-assigned',
+            'en_route', 'arrived', 'before_photo', 'at-studio', 'washing',
+            'in_progress', 'after_photo', 'quality-check', 'ready-for-delivery',
             'delivery-assigned', 'completed', 'cancelled', 'refunded'
         ],
         default: 'pending'
@@ -136,6 +136,7 @@ const bookingSchema = new mongoose.Schema({
         },
         transactionId: String,
         paidAt: Date,
+        commission: { type: Number, default: 0 },
         refundAmount: Number,
         refundedAt: Date
     },
@@ -178,6 +179,16 @@ const bookingSchema = new mongoose.Schema({
             lat: Number,
             lng: Number,
             updatedAt: Date
+        },
+        custodyStatus: {
+            type: String,
+            enum: ['at-consumer', 'with-specialist', 'at-studio', 'returned'],
+            default: 'at-consumer'
+        },
+        pickupLocation: {
+            lat: Number,
+            lng: Number,
+            capturedAt: Date
         }
     },
     feedback: {
@@ -220,6 +231,10 @@ const bookingSchema = new mongoose.Schema({
         planId: mongoose.Schema.Types.ObjectId,
         washesRemaining: Number
     },
+    subscriptionId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Subscription'
+    },
     notes: {
         consumer: String,
         provider: String,
@@ -241,7 +256,42 @@ const bookingSchema = new mongoose.Schema({
     scheduledAlertSent: {
         type: Boolean,
         default: false
-    }
+    },
+    vendorAlertSent: {
+        type: Boolean,
+        default: false
+    },
+    staffCommitmentAlertSent: {
+        type: Boolean,
+        default: false
+    },
+    isStuckAlertSent: {
+        type: Boolean,
+        default: false
+    },
+    isDoorstepCommitted: {
+        type: Boolean,
+        default: false
+    },
+    isStaffCommitted: {
+        type: Boolean,
+        default: false
+    },
+    doorstepCommitmentAlertSent: {
+        type: Boolean,
+        default: false
+    },
+    reassignedFrom: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Captain'
+    },
+    reassignedAt: Date,
+    activityLog: [{
+        status: String,
+        timestamp: { type: Date, default: Date.now },
+        description: String,
+        metadata: mongoose.Schema.Types.Map
+    }]
 }, {
     timestamps: true,
     toJSON: { virtuals: true },
@@ -255,6 +305,7 @@ bookingSchema.index({ status: 1 });
 bookingSchema.index({ 'schedule.date': 1 });
 bookingSchema.index({ 'payment.status': 1 });
 bookingSchema.index({ 'provider.id': 1 });
+bookingSchema.index({ subscriptionId: 1 });
 bookingSchema.index({ 'location.address.geoPoint': '2dsphere' });
 
 // Virtual for booking timeline status
@@ -288,10 +339,10 @@ bookingSchema.virtual('estimatedCompletion').get(function () {
         return new Date(now.getTime() + estimatedMinutes * 60 * 1000);
     }
 
-    if (this.schedule.date && this.schedule.timeSlot) {
+    if (this.schedule.date && this.schedule.timeSlot?.start) {
         const [hours, minutes] = this.schedule.timeSlot.start.split(':');
         const scheduleDate = new Date(this.schedule.date);
-        scheduleDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        scheduleDate.setHours(parseInt(hours) || 0, parseInt(minutes) || 0, 0, 0);
 
         // Add service duration (convert duration string to minutes)
         const durationMatch = (this.service.duration || '').match(/(\d+)/);
@@ -425,14 +476,17 @@ bookingSchema.statics.getUpcomingBookings = function (userId, limit = 5) {
 };
 
 // Static method to get booking history
-bookingSchema.statics.getBookingHistory = function (userId, page = 1, limit = 10) {
+bookingSchema.statics.getBookingHistory = function (userId, page = 1, limit = 10, filter = {}) {
     const skip = (page - 1) * limit;
 
-    return this.find({
+    const query = {
         consumer: userId,
         status: { $in: ['completed', 'cancelled', 'refunded'] },
-        isActive: true
-    })
+        isActive: true,
+        ...filter
+    };
+
+    return this.find(query)
         .populate('vehicle', 'brand model type plate image')
         .populate('provider.id', 'name phone rating photo')
         .sort({ createdAt: -1 })

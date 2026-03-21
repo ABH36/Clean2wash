@@ -71,6 +71,54 @@ class SpareDriverApiClient {
         });
     }
 
+    async updateBookingStatus(id, status, pin = null) {
+        return this.request(`/bookings/${id}/status`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status, pin })
+        });
+    }
+
+    getTransactions(params = {}) {
+        const query = new URLSearchParams(params).toString();
+        return this.request(`/transactions${query ? `?${query}` : ''}`);
+    }
+
+    async getTripHistory() {
+        return this.request('/history');
+    }
+
+    async cancelBooking(id, reason = '') {
+        return this.request(`/bookings/${id}/cancel`, {
+            method: 'PATCH',
+            body: JSON.stringify({ reason })
+        });
+    }
+
+    async updateLocation(lat, lng) {
+        return this.request('/location', {
+            method: 'PATCH',
+            body: JSON.stringify({ lat, lng })
+        });
+    }
+
+    async toggleOnline(isOnline) {
+        return this.request('/toggle-online', {
+            method: 'PATCH',
+            body: JSON.stringify({ isOnline })
+        });
+    }
+
+    async getNotifications(params = {}) {
+        const query = new URLSearchParams(params).toString();
+        return this.request(`/notifications${query ? `?${query}` : ''}`);
+    }
+
+    async markNotificationRead(id) {
+        return this.request(`/notifications/${id}/read`, {
+            method: 'PATCH'
+        });
+    }
+
     // ── Admin methods (uses admin JWT stored as consumer token) ──
     adminRequest(endpoint, options = {}) {
         const adminToken = localStorage.getItem('auth_admin_token'); // admin token

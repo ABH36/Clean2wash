@@ -59,6 +59,12 @@ const spareDriverSchema = new mongoose.Schema({
     wallet: {
         balance: { type: Number, default: 0, min: 0 },
         lastWithdrawAt: Date
+    },
+    bankDetails: {
+        accountName: String,
+        accountNumber: String,
+        ifscCode: String,
+        bankName: String
     }
 }, {
     timestamps: true

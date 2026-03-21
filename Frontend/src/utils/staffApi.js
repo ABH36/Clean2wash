@@ -8,13 +8,18 @@ class StaffApiClient {
 
     setToken(token) {
         this.token = token;
-        if (token) localStorage.setItem('auth_staff_token', token);
-        else localStorage.removeItem('auth_staff_token');
+        if (token) {
+            localStorage.setItem('auth_staff_token', token);
+        } else {
+            localStorage.removeItem('auth_staff_token');
+        }
     }
 
     async request(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
+
         const config = {
+            method: options.method || 'GET',
             headers: {
                 'Content-Type': 'application/json',
                 ...(this.token && { Authorization: `Bearer ${this.token}` }),
@@ -23,12 +28,15 @@ class StaffApiClient {
             ...options,
         };
 
+        if (options.body && typeof options.body === 'object') {
+            config.body = JSON.stringify(options.body);
+        }
+
         try {
             const response = await fetch(url, config);
 
             if (response.status === 401) {
                 this.setToken(null);
-                console.warn('Staff API returned 401 Unauthorized.');
             }
 
             if (response.status === 204) return null;
@@ -41,15 +49,18 @@ class StaffApiClient {
             }
             return data;
         } catch (error) {
+            console.error(`Staff API Error [${endpoint}]:`, error);
             throw error;
         }
     }
 
-    async login(email, password) {
-        const res = await this.request('/login', {
-            method: 'POST',
-            body: JSON.stringify({ email, password }),
-        });
+    // Auth
+    async sendOTP(phone) {
+        return this.request('/send-otp', { method: 'POST', body: { phone } });
+    }
+
+    async login(phone, otp) {
+        const res = await this.request('/login', { method: 'POST', body: { phone, otp } });
         const token = res.token || res.data?.token;
         if (token) this.setToken(token);
         return res;
@@ -59,8 +70,17 @@ class StaffApiClient {
         return this.request('/profile');
     }
 
+    async updateProfile(data) {
+        return this.request('/profile', { method: 'PATCH', body: data });
+    }
+
+    // Operations
     async getDashboard() {
         return this.request('/dashboard');
+    }
+
+    async getEarnings() {
+        return this.request('/earnings');
     }
 
     async getTasks() {
@@ -71,22 +91,73 @@ class StaffApiClient {
         return this.request(`/tasks/${id}`);
     }
 
-    async updateTaskStatus(id, data) {
+    async uploadProof(images, type) {
+        return this.request('/upload-proof', { method: 'POST', body: { images, type } });
+    }
+
+    async updateTaskStatus(id, status, details = {}) {
         return this.request(`/tasks/${id}/status`, {
             method: 'PATCH',
-            body: JSON.stringify(data)
+            body: { status, ...details },
         });
+    }
+
+    async updateLocation(id, lat, lng) {
+        return this.request(`/tasks/${id}/location`, {
+            method: 'PUT',
+            body: { lat, lng }
+        });
+    }
+
+    // Notifications
+    async getNotifications() {
+        return this.request('/notifications');
+    }
+
+    async toggleAvailability() {
+        return this.request('/availability', { method: 'PATCH' });
+    }
+
+    async markNotificationRead(id) {
+        return this.request(`/notifications/${id}/read`, { method: 'PATCH' });
+    }
+
+    async clearNotifications() {
+        return this.request('/notifications/clear', { method: 'DELETE' });
     }
 }
 
 const apiClient = new StaffApiClient();
 
 export const staffAPI = {
-    login: (email, password) => apiClient.login(email, password),
+    sendOTP: (phone) => apiClient.sendOTP(phone),
+    login: (phone, otp) => apiClient.login(phone, otp),
     getProfile: () => apiClient.getProfile(),
     getDashboard: () => apiClient.getDashboard(),
+    getEarnings: () => apiClient.getEarnings(),
     getTasks: () => apiClient.getTasks(),
     getTaskById: (id) => apiClient.getTaskById(id),
+    uploadProof: (images, type) => apiClient.uploadProof(images, type),
     updateTaskStatus: (id, data) => apiClient.updateTaskStatus(id, data),
+    commitToSlot: (id) => apiClient.request(`/tasks/${id}/commit`, { method: 'POST' }),
+    getNotifications: () => apiClient.getNotifications(),
+    toggleAvailability: () => apiClient.toggleAvailability(),
+    markNotificationRead: (id) => apiClient.markNotificationRead(id),
+    clearNotifications: () => apiClient.clearNotifications(),
+    reportMissedWash: (id, data) => apiClient.request(`/tasks/${id}/missed-wash`, {
+        method: 'POST',
+        body: data
+    }),
+
+    // Phase 32: Product Logistics
+    updateProductItemStatus: (orderId, itemId, status) => apiClient.request(`/product-orders/${orderId}/items/${itemId}/status`, {
+        method: 'PATCH',
+        body: { status }
+    }),
+    verifyProductItemPin: (orderId, itemId, pin) => apiClient.request(`/product-orders/${orderId}/items/${itemId}/verify-pin`, {
+        method: 'POST',
+        body: { pin }
+    }),
+
     setToken: (token) => apiClient.setToken(token)
 };

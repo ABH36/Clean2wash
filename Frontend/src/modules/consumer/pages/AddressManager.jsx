@@ -7,10 +7,12 @@ import {
     Locate, Save, ArrowRight
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
+import { useGeoLocation } from '../../../hooks/useGeoLocation';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { toast } from 'react-hot-toast';
+import { apiClient } from '../../../utils/api';
 
 // Fix Leaflet marker icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -46,19 +48,50 @@ const AddressManager = () => {
     const [searchParams] = useSearchParams();
     const returnPath = searchParams.get('from');
     const isBookingFlow = !!returnPath;
-    
-    const { addresses, addAddress, removeAddress, setPrimaryAddress } = useAuth();
+
+    const { token } = useAuth();
+    const {
+        savedAddresses: addresses,
+        addAddress,
+        updateAddress,
+        removeAddress,
+        setPrimary: setPrimaryAddress,
+        loading: addressLoading
+    } = useGeoLocation();
     const [showSheet, setShowSheet] = useState(false);
     const [editing, setEditing] = useState(null);
-    const [form, setForm] = useState({ label: 'Home', icon: 'home', full: '', landmark: '' });
-    
+    const [form, setForm] = useState({
+        label: 'Home',
+        icon: 'home',
+        full: '',
+        landmark: '',
+        city: 'Bengaluru',
+        state: 'Karnataka',
+        pincode: '560001'
+    });
+
     // Map States
-    const [mapCenter, setMapCenter] = useState([28.6139, 77.2090]); // Delhi fallback
-    const [selectedPos, setSelectedPos] = useState([28.6139, 77.2090]);
+    const [mapCenter, setMapCenter] = useState([12.9716, 77.5946]); // Bengaluru default
+    const [selectedPos, setSelectedPos] = useState([12.9716, 77.5946]);
     const [isLocating, setIsLocating] = useState(false);
-    const [mapSearchQuery, setMapSearchQuery] = useState('');
     const [geocodedAddress, setGeocodedAddress] = useState('');
     const [isGeocoding, setIsGeocoding] = useState(false);
+    const [isSavingInstant, setIsSavingInstant] = useState(false);
+
+    // Auto-detect if triggered from Global Prompt
+    useEffect(() => {
+        const detect = searchParams.get('detect');
+        const lat = searchParams.get('lat');
+        const lng = searchParams.get('lng');
+
+        if (detect === 'true' && lat && lng) {
+            const pos = [parseFloat(lat), parseFloat(lng)];
+            setSelectedPos(pos);
+            setMapCenter(pos);
+            setShowSheet(true);
+            toast.success("Location locked. Give it a name to save!");
+        }
+    }, [searchParams]);
 
     const TYPES = [
         { key: 'home', label: 'Home', ico: Home },
@@ -66,16 +99,29 @@ const AddressManager = () => {
         { key: 'other', label: 'Other', ico: MapPin },
     ];
 
-    // Reverse Geocoding Logic
+    // Reverse Geocoding via Backend Proxy
     useEffect(() => {
         const fetchAddress = async () => {
             if (!selectedPos || selectedPos[0] === 0) return;
             try {
                 setIsGeocoding(true);
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${selectedPos[0]}&lon=${selectedPos[1]}`);
-                const data = await res.json();
-                if (data && data.display_name) {
-                    setGeocodedAddress(data.display_name);
+                const data = await apiClient.request(`/maps/proxy/reverse?lat=${selectedPos[0]}&lon=${selectedPos[1]}`);
+
+                if (data && data.status === 'success') {
+                    const addr = data.data.display_name;
+                    setGeocodedAddress(addr);
+
+                    // Pre-fill form if not editing
+                    if (!editing) {
+                        const parts = data.data.address || {};
+                        setForm(f => ({
+                            ...f,
+                            full: addr,
+                            city: parts.city || parts.town || parts.village || 'Bengaluru',
+                            state: parts.state || 'Karnataka',
+                            pincode: parts.postcode || '560001'
+                        }));
+                    }
                 }
             } catch (err) {
                 console.error("Geocoding failed", err);
@@ -86,7 +132,7 @@ const AddressManager = () => {
 
         const timer = setTimeout(fetchAddress, 800);
         return () => clearTimeout(timer);
-    }, [selectedPos]);
+    }, [selectedPos, editing]);
 
     // Get current location
     const handleLocate = () => {
@@ -111,63 +157,84 @@ const AddressManager = () => {
         );
     };
 
-    const openAdd = () => { 
-        setEditing(null); 
-        setForm({ label: 'Home', icon: 'home', full: '', landmark: '' }); 
-        setShowSheet(true); 
+    const openAdd = (initialText = '') => {
+        setEditing(null);
+        setForm({
+            label: 'Home',
+            icon: 'home',
+            full: initialText || '',
+            landmark: '',
+            city: 'Bengaluru',
+            state: 'Karnataka',
+            pincode: '560001'
+        });
+        setShowSheet(true);
     };
 
-    const openEdit = (addr) => { 
-        setEditing(addr.id || addr._id); 
-        setForm({ 
-            label: addr.label, 
-            icon: addr.icon || 'other', 
-            full: addr.address || addr.full || '', 
-            landmark: addr.landmark || '' 
-        }); 
-        if (addr.coordinates || addr.coords) {
-            const c = addr.coordinates || addr.coords;
-            setMapCenter([c.lat, c.lng]);
-            setSelectedPos([c.lat, c.lng]);
+    const openEdit = (addr) => {
+        setEditing(addr._id || addr.id);
+        setForm({
+            label: addr.label,
+            icon: addr.icon || 'other',
+            full: addr.street || addr.full || '',
+            landmark: addr.landmark || '',
+            city: addr.city || 'Bengaluru',
+            state: addr.state || 'Karnataka',
+            pincode: addr.pincode || '560001'
+        });
+        if (addr.coordinates) {
+            setMapCenter([addr.coordinates.lat, addr.coordinates.lng]);
+            setSelectedPos([addr.coordinates.lat, addr.coordinates.lng]);
         }
-        setShowSheet(true); 
+        setShowSheet(true);
     };
 
-    const handleDelete = (id) => {
-        removeAddress(id);
-        toast.success("Address removed");
+    const handleDelete = async (id) => {
+        try {
+            await removeAddress(id);
+            toast.success("Address removed");
+        } catch (err) {
+            toast.error("Failed to remove address");
+        }
     };
 
-    const handleSetPrimary = (id) => {
-        setPrimaryAddress(id);
-        toast.success("Primary address updated");
+    const handleSetPrimary = async (id) => {
+        try {
+            await setPrimaryAddress(id);
+            toast.success("Primary updated");
+        } catch (err) {
+            toast.error("Failed to set primary");
+        }
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!form.full) {
-            toast.error("Please enter a full address");
+            toast.error("Please enter full address");
             return;
         }
-        
+
         const addressData = {
-            ...form,
-            id: editing || Date.now(),
-            address: form.full,
-            full: form.full,
-            isPrimary: false,
+            label: form.label,
+            street: form.full,
+            city: form.city,
+            state: form.state,
+            pincode: form.pincode,
+            landmark: form.landmark,
             coordinates: { lat: selectedPos[0], lng: selectedPos[1] }
         };
 
-        if (editing) {
-            removeAddress(editing);
-            addAddress(addressData);
-            toast.success("Address updated");
-        } else {
-            addAddress(addressData);
-            toast.success("Address saved");
+        try {
+            if (editing) {
+                await updateAddress(editing, addressData);
+                toast.success("Address updated");
+            } else {
+                await addAddress(addressData);
+                toast.success("Address saved");
+            }
+            setShowSheet(false);
+        } catch (err) {
+            toast.error("Operation failed");
         }
-        
-        setShowSheet(false);
     };
 
     const handleConfirmReturn = (addr) => {
@@ -178,6 +245,34 @@ const AddressManager = () => {
             navigate(`/${returnPath}`);
         } else {
             navigate(-1);
+        }
+    };
+
+    // Instant Save for the current Map Pin (Non-booking flow)
+    const handleInstantSavePin = async () => {
+        if (!geocodedAddress) {
+            toast.error("Detecting location... please wait");
+            return;
+        }
+
+        const addressData = {
+            label: 'Saved Location',
+            street: geocodedAddress,
+            city: 'Bengaluru', // Fallbacks as per existing logic
+            state: 'Karnataka',
+            pincode: '560001',
+            landmark: 'Selected via Map',
+            coordinates: { lat: selectedPos[0], lng: selectedPos[1] }
+        };
+
+        try {
+            setIsSavingInstant(true);
+            await addAddress(addressData);
+            toast.success("Location saved to profile!");
+        } catch (err) {
+            toast.error(err.message || "Failed to save location");
+        } finally {
+            setIsSavingInstant(false);
         }
     };
 
@@ -206,9 +301,9 @@ const AddressManager = () => {
                             <p className="text-[9px] text-brand font-black uppercase tracking-[0.2em] mt-1.5">Manage Locations</p>
                         </div>
                     </div>
-                    <motion.button 
+                    <motion.button
                         whileTap={{ scale: 0.95 }}
-                        onClick={openAdd} 
+                        onClick={openAdd}
                         className="flex items-center gap-2 bg-black text-white px-4 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-black/10 active:bg-brand"
                     >
                         <Plus size={14} strokeWidth={4} /> Add New
@@ -227,10 +322,10 @@ const AddressManager = () => {
                             <MapEvents onMove={setSelectedPos} />
                             <Marker position={selectedPos} />
                         </MapContainer>
-                        
+
                         {/* Overlay Controls */}
                         <div className="absolute top-4 right-4 flex flex-col gap-2 z-[400]">
-                            <button 
+                            <button
                                 onClick={handleLocate}
                                 className={`w-10 h-10 rounded-xl bg-white text-black shadow-lg flex items-center justify-center transition-all ${isLocating ? 'animate-spin' : 'active:scale-90'}`}
                             >
@@ -249,6 +344,22 @@ const AddressManager = () => {
                                 Use Current Location
                             </motion.button>
 
+                            {!isBookingFlow && geocodedAddress && (
+                                <motion.button
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={handleInstantSavePin}
+                                    disabled={isSavingInstant}
+                                    className={`w-full bg-brand text-white py-4 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl flex items-center justify-center gap-3 ${isSavingInstant ? 'opacity-70 grayscale cursor-not-allowed' : ''}`}
+                                >
+                                    {isSavingInstant ? (
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    ) : (
+                                        <Check size={16} strokeWidth={4} />
+                                    )}
+                                    {isSavingInstant ? 'Saving...' : 'Confirm This Location'}
+                                </motion.button>
+                            )}
+
                             {isBookingFlow && (
                                 <motion.button
                                     whileTap={{ scale: 0.95 }}
@@ -260,7 +371,7 @@ const AddressManager = () => {
                                 </motion.button>
                             )}
                         </div>
-                        
+
                         <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                             <div className="w-6 h-6 border-2 border-brand/50 rounded-full flex items-center justify-center">
                                 <div className="w-1.5 h-1.5 bg-brand rounded-full" />
@@ -270,7 +381,7 @@ const AddressManager = () => {
                         {/* Real-time Address Overlay */}
                         <AnimatePresence>
                             {geocodedAddress && (
-                                <motion.div 
+                                <motion.div
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: 10 }}
@@ -290,7 +401,7 @@ const AddressManager = () => {
 
                 {/* Subtitle */}
                 <div className="flex items-center justify-between px-1">
-                    <h3 className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em]">Saved Addresses ({addresses.length})</h3>
+                    <h3 className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em]">Saved Addresses ({addresses?.length || 0})</h3>
                 </div>
 
                 {/* Address Nodes */}
@@ -301,17 +412,17 @@ const AddressManager = () => {
                                 <MapIcon size={24} className="text-gray-300" />
                             </div>
                             <p className="text-[11px] font-black text-black/20 uppercase tracking-widest leading-relaxed">
-                                No saved addresses found.<br/>Add a new location to begin.
+                                No saved addresses found.<br />Add a new location to begin.
                             </p>
                         </div>
                     ) : (
                         addresses.map((addr, i) => {
                             const Icon = ICONS[addr.icon] || MapPin;
                             const isSelected = isBookingFlow; // Visual cue if coming from flow
-                            
+
                             return (
-                                <motion.div 
-                                    key={addr.id || i}
+                                <motion.div
+                                    key={addr._id || addr.id || i}
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: i * 0.05 }}
@@ -322,17 +433,17 @@ const AddressManager = () => {
                                             Primary
                                         </div>
                                     )}
-                                    
+
                                     <div className={`w-12 h-12 rounded-[1.2rem] flex items-center justify-center flex-shrink-0 transition-colors ${addr.isPrimary ? 'bg-brand/10 text-brand' : 'bg-gray-50 text-gray-300 group-hover:bg-brand/5 group-hover:text-brand'}`}>
                                         <Icon size={20} strokeWidth={2.5} />
                                     </div>
-                                    
+
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 mb-1">
                                             <h4 className="font-black text-[14px] text-black uppercase tracking-tight italic">{addr.label}</h4>
                                         </div>
                                         <p className="text-[10px] font-bold text-gray-400 leading-relaxed uppercase tracking-wide line-clamp-2">
-                                            {addr.full || addr.address}
+                                            {addr.street || addr.full || addr.address}
                                         </p>
                                         {addr.landmark && (
                                             <div className="flex items-center gap-1.5 mt-2 opacity-60">
@@ -340,17 +451,17 @@ const AddressManager = () => {
                                                 <p className="text-[8px] font-black text-brand uppercase tracking-tighter italic">{addr.landmark}</p>
                                             </div>
                                         )}
-                                        
+
                                         <div className="flex items-center gap-4 mt-4 pt-4 border-t border-gray-50">
-                                            <button 
-                                                onClick={() => openEdit(addr)} 
+                                            <button
+                                                onClick={() => openEdit(addr)}
                                                 className="text-[9px] font-black text-black/30 uppercase tracking-[0.2em] hover:text-brand transition-colors flex items-center gap-1"
                                             >
                                                 <Edit3 size={10} /> Edit Address
                                             </button>
                                             {!addr.isPrimary && (
-                                                <button 
-                                                    onClick={() => handleSetPrimary(addr.id)}
+                                                <button
+                                                    onClick={() => handleSetPrimary(addr._id || addr.id)}
                                                     className="text-[9px] font-black text-brand uppercase tracking-[0.2em] flex items-center gap-1"
                                                 >
                                                     <Star size={10} /> Set Primary
@@ -358,18 +469,18 @@ const AddressManager = () => {
                                             )}
                                         </div>
                                     </div>
-                                    
+
                                     <div className="flex flex-col gap-2">
                                         {isBookingFlow ? (
-                                            <button 
+                                            <button
                                                 onClick={() => handleConfirmReturn(addr)}
                                                 className="w-10 h-10 bg-brand text-white rounded-xl flex items-center justify-center shadow-lg shadow-brand/20 active:scale-90 transition-transform"
                                             >
                                                 <ArrowRight size={18} strokeWidth={3} />
                                             </button>
                                         ) : !addr.isPrimary && (
-                                            <button 
-                                                onClick={() => handleDelete(addr.id)} 
+                                            <button
+                                                onClick={() => handleDelete(addr._id || addr.id)}
                                                 className="w-8 h-8 bg-gray-50 text-gray-200 rounded-lg flex items-center justify-center hover:bg-red-50 hover:text-red-400 transition-all border border-transparent hover:border-red-100"
                                             >
                                                 <Trash2 size={14} />
@@ -387,24 +498,24 @@ const AddressManager = () => {
             <AnimatePresence>
                 {showSheet && (
                     <>
-                        <motion.div 
-                            initial={{ opacity: 0 }} 
-                            animate={{ opacity: 1 }} 
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/60 backdrop-blur-md z-[2000]" 
-                            onClick={() => setShowSheet(false)} 
+                            className="fixed inset-0 bg-black/60 backdrop-blur-md z-[2000]"
+                            onClick={() => setShowSheet(false)}
                         />
-                        <motion.div 
-                            initial={{ y: '100%' }} 
-                            animate={{ y: 0 }} 
+                        <motion.div
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
                             exit={{ y: '100%' }}
                             transition={{ type: 'spring', damping: 30, stiffness: 200 }}
                             className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-[#F8FAFC] rounded-t-[3rem] z-[2001] p-8 pb-12 shadow-2xl overflow-hidden"
                         >
                             <div className="absolute top-0 right-0 w-48 h-48 bg-brand/5 rounded-full -mr-24 -mt-24 blur-3xl pointer-events-none" />
-                            
+
                             <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-8 cursor-pointer active:scale-90 transition-transform" onClick={() => setShowSheet(false)} />
-                            
+
                             <div className="flex items-center justify-between mb-8">
                                 <h3 className="font-[1000] text-xl tracking-tight text-black italic uppercase italic">{editing ? 'Edit Address' : 'Add New Address'}</h3>
                                 <div className="flex items-center gap-2 bg-brand/10 px-3 py-1 rounded-full">
@@ -443,6 +554,19 @@ const AddressManager = () => {
                                             className="w-full bg-white border border-black/[0.04] rounded-2xl px-5 py-4 font-bold text-[13px] text-black outline-none focus:border-brand shadow-sm resize-none" />
                                     </div>
 
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-black/20 mb-2 ml-1 italic">City</p>
+                                            <input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} placeholder="e.g. Bengaluru"
+                                                className="w-full bg-white border border-black/[0.04] rounded-2xl px-5 py-4 font-bold text-[13px] text-black outline-none focus:border-brand shadow-sm" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-black/20 mb-2 ml-1 italic">Pincode</p>
+                                            <input value={form.pincode} onChange={e => setForm(f => ({ ...f, pincode: e.target.value }))} placeholder="6-digit PIN"
+                                                className="w-full bg-white border border-black/[0.04] rounded-2xl px-5 py-4 font-bold text-[13px] text-black outline-none focus:border-brand shadow-sm" />
+                                        </div>
+                                    </div>
+
                                     <div>
                                         <p className="text-[9px] font-black uppercase tracking-[0.2em] text-black/20 mb-2 ml-1 italic">Landmark (Optional)</p>
                                         <input value={form.landmark} onChange={e => setForm(f => ({ ...f, landmark: e.target.value }))} placeholder="e.g. Near the blue gate"
@@ -450,8 +574,8 @@ const AddressManager = () => {
                                     </div>
                                 </div>
 
-                                <motion.button 
-                                    whileTap={{ scale: 0.97 }} 
+                                <motion.button
+                                    whileTap={{ scale: 0.97 }}
                                     onClick={handleSave}
                                     className="w-full h-16 bg-black text-white rounded-[1.5rem] font-black text-sm uppercase tracking-[0.2em] italic shadow-2xl active:bg-brand transition-colors flex items-center justify-center gap-3"
                                 >

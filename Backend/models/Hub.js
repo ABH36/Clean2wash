@@ -63,7 +63,12 @@ const hubSchema = new mongoose.Schema({
     }],
     metadata: {
         type: mongoose.Schema.Types.Mixed,
-        default: {}
+        default: {
+            isSociety: false,
+            blocks: [], // ['Block A', 'Block B', ...]
+            parkingLevels: [], // ['B1', 'B2', 'Ground']
+            pillarRange: { min: 1, max: 100 }
+        }
     }
 }, {
     timestamps: true

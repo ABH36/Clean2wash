@@ -94,6 +94,20 @@ const AdminSettings = () => {
                 color: 'text-emerald-600',
                 bg: 'bg-emerald-50'
             }))
+        },
+        {
+            title: 'EMERGENCY & SECURITY',
+            items: settings.filter(s => s.category === 'Security' || s.key.includes('mode') || s.key.includes('freeze')).map(s => ({
+                key: s.key,
+                value: s.value,
+                icon: s.key.includes('maintenance') ? <Zap /> : <Shield />,
+                label: s.key.split('_').map(word => word.toUpperCase()).join(' '),
+                sub: s.description || 'Defense Protocol',
+                status: s.value === true ? 'ACTIVE' : 'INACTIVE',
+                color: s.value === true ? 'text-brand' : 'text-content-subtle',
+                bg: s.value === true ? 'bg-brand/10' : 'bg-gray-100/5',
+                type: 'toggle'
+            }))
         }
     ];
 
@@ -175,19 +189,35 @@ const AdminSettings = () => {
                                                 <p className="text-[10px] font-bold text-content-subtle uppercase tracking-tighter opacity-70 mb-4">{item.sub}</p>
 
                                                 <div className="mb-6">
-                                                    <input
-                                                        type={typeof item.value === 'number' ? 'number' : 'text'}
-                                                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-xs font-bold text-content outline-none focus:border-brand transition-all"
-                                                        value={item.value}
-                                                        onChange={(e) => {
-                                                            const val = typeof item.value === 'number' ? Number(e.target.value) : e.target.value;
-                                                            setSettings(prev => prev.map(s => s.key === item.key ? { ...s, value: val } : s));
-                                                        }}
-                                                        onBlur={(e) => {
-                                                            const val = typeof item.value === 'number' ? Number(e.target.value) : e.target.value;
-                                                            handleUpdate(item.key, val);
-                                                        }}
-                                                    />
+                                                    {item.type === 'toggle' ? (
+                                                        <div
+                                                            onClick={() => {
+                                                                const newVal = !item.value;
+                                                                setSettings(prev => prev.map(s => s.key === item.key ? { ...s, value: newVal } : s));
+                                                                handleUpdate(item.key, newVal);
+                                                            }}
+                                                            className={`w-14 h-8 rounded-full p-1 cursor-pointer transition-all duration-300 ${item.value === true ? 'bg-brand' : 'bg-gray-200'}`}
+                                                        >
+                                                            <motion.div
+                                                                animate={{ x: item.value === true ? 24 : 0 }}
+                                                                className="w-6 h-6 bg-white rounded-full shadow-lg"
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <input
+                                                            type={typeof item.value === 'number' ? 'number' : 'text'}
+                                                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-xs font-bold text-content outline-none focus:border-brand transition-all"
+                                                            value={item.value}
+                                                            onChange={(e) => {
+                                                                const val = typeof item.value === 'number' ? Number(e.target.value) : e.target.value;
+                                                                setSettings(prev => prev.map(s => s.key === item.key ? { ...s, value: val } : s));
+                                                            }}
+                                                            onBlur={(e) => {
+                                                                const val = typeof item.value === 'number' ? Number(e.target.value) : e.target.value;
+                                                                handleUpdate(item.key, val);
+                                                            }}
+                                                        />
+                                                    )}
                                                 </div>
                                             </div>
 

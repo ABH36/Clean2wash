@@ -9,6 +9,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import MobileLayout from '../components/layout/MobileLayout';
 import { toast } from 'react-hot-toast';
 import { bookingAPI } from '../../../utils/api';
+import VerifiedBadge from '../components/ui/VerifiedBadge';
 
 const BookingConfirmation = () => {
     const navigate = useNavigate();
@@ -269,6 +270,7 @@ const BookingConfirmation = () => {
                         vehicle: b.vehicle ? `${b.vehicle.brand} ${b.vehicle.model}` : 'Selected Vehicle',
                         vehicleId: b.vehicle?._id,
                         price: `₹${b.pricing.totalAmount}`,
+                        pricing: b.pricing, // Store full pricing object
                         type: b.schedule.type,
                         status: b.status.toUpperCase(),
                         timestamp: b.createdAt,
@@ -284,7 +286,8 @@ const BookingConfirmation = () => {
                             name: b.provider.name,
                             phone: b.provider.phone,
                             photo: b.provider.photo || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&q=80',
-                            rating: b.provider.rating || 4.8
+                            rating: b.provider.rating || 4.8,
+                            isVerified: true // Assumption: All assigned partners are verified
                         } : {
                             name: b.service.category === 'Chauffeur' ? 'Assigning Chauffeur' : 'Assigning Captain',
                             phone: '',
@@ -565,10 +568,12 @@ const BookingConfirmation = () => {
                                     </div>
                                     <div className="flex-1">
                                         <p className="text-sm font-black text-content uppercase tracking-tight">{bookingData.captain.name}</p>
-                                        <div className="flex items-center gap-1 mt-1">
+                                        <div className="flex items-center gap-2 mt-1">
                                             <Star size={10} fill="#FBBF24" className="text-amber-400" />
                                             <span className="text-[9px] font-black text-content">{bookingData.captain.rating}</span>
+                                            {bookingData.captain.isVerified && <VerifiedBadge type="specialist" className="ml-1" />}
                                         </div>
+
                                     </div>
                                 </div>
 
@@ -685,35 +690,39 @@ const BookingConfirmation = () => {
                             exit={{ opacity: 0, x: -20 }}
                             className="space-y-4"
                         >
-                            {/* Pricing Engine */}
+                            {/* Pricing Breakdown */}
                             <div className="bg-white rounded-xl border border-gray-100 p-4">
                                 <div className="flex items-center justify-between mb-3">
-                                    <p className="text-[8.5px] font-black text-content-subtle uppercase tracking-widest">Pricing Engine</p>
+                                    <p className="text-[8.5px] font-black text-content-subtle uppercase tracking-widest">Final Bill Breakdown</p>
                                     <Star size={12} className="text-brand" strokeWidth={3} />
                                 </div>
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between py-2 border-b border-gray-50">
-                                        <span className="text-[9px] font-semibold text-content-subtle">Base Price</span>
-                                        <span className="text-[9px] font-black text-content">₹{pricingEngine.basePrice}</span>
+                                        <span className="text-[9px] font-semibold text-content-subtle">Service Base Price</span>
+                                        <span className="text-[9px] font-black text-content">₹{bookingData.pricing?.baseAmount || 0}</span>
                                     </div>
-                                    <div className="flex items-center justify-between py-2 border-b border-gray-50">
-                                        <span className="text-[9px] font-semibold text-content-subtle">Vehicle Type</span>
-                                        <span className="text-[9px] font-black text-content">Sedan (1.2x)</span>
-                                    </div>
-                                    <div className="flex items-center justify-between py-2 border-b border-gray-50">
-                                        <span className="text-[9px] font-semibold text-content-subtle">City Pricing</span>
-                                        <span className="text-[9px] font-black text-content">Gurgaon (1.0x)</span>
-                                    </div>
-                                    <div className="flex items-center justify-between py-2 border-b border-gray-50">
-                                        <span className="text-[9px] font-semibold text-content-subtle">Surge Multiplier</span>
-                                        <span className="text-[9px] font-black text-content">{pricingEngine.surgeMultiplier}x</span>
-                                    </div>
-                                    <div className="flex items-center justify-between py-2">
-                                        <span className="text-[9px] font-semibold text-content-subtle">Subscription Discount</span>
-                                        <span className="text-[9px] font-black text-green-600">-{(pricingEngine.subscriptionDiscount * 100).toFixed(0)}%</span>
+                                    {(bookingData.pricing?.addonAmount > 0) && (
+                                        <div className="flex items-center justify-between py-2 border-b border-gray-50">
+                                            <span className="text-[9px] font-semibold text-content-subtle">Add-on Services</span>
+                                            <span className="text-[9px] font-black text-content">₹{bookingData.pricing.addonAmount}</span>
+                                        </div>
+                                    )}
+                                    {(bookingData.pricing?.discountAmount > 0) && (
+                                        <div className="flex items-center justify-between py-2 border-b border-gray-50">
+                                            <div className="flex flex-col">
+                                                <span className="text-[9px] font-semibold text-content-subtle">Applied Savings</span>
+                                                <span className="text-[7px] font-black text-green-600 uppercase tracking-tight">Coupons & Membership</span>
+                                            </div>
+                                            <span className="text-[9px] font-black text-green-600">-₹{bookingData.pricing.discountAmount}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex items-center justify-between py-2 bg-brand/5 -mx-4 px-4 mt-2">
+                                        <span className="text-[10px] font-black text-content uppercase tracking-tight">Total Paid</span>
+                                        <span className="text-[14px] font-[1000] text-brand">₹{(bookingData.pricing?.totalAmount || 0).toLocaleString()}</span>
                                     </div>
                                 </div>
                             </div>
+
 
                             {/* Vehicle Pricing */}
                             <div className="bg-white rounded-xl border border-gray-100 p-4">

@@ -12,9 +12,9 @@ const { sendNotification } = require('../../../utils/notificationService');
 // Create subscription
 exports.createSubscription = async (req, res) => {
     try {
-        const { 
-            plan: planId, 
-            paymentMethod, 
+        const {
+            plan: planId,
+            paymentMethod,
             autoRenew = false,
             vehicleId,
             hubId,
@@ -43,7 +43,7 @@ exports.createSubscription = async (req, res) => {
         // Fetch plan data dynamically
         const SubscriptionPlan = require('../../../models/SubscriptionPlan');
         const planObj = await SubscriptionPlan.findById(planId);
-        
+
         if (!planObj) {
             return res.status(400).json({
                 status: 'fail',
@@ -731,14 +731,9 @@ exports.createSubscription = async (req, res) => {
             normalizedServiceHint.includes('apartment')
         );
 
-        // Check if user already has active subscription
         const existingSubscription = await Subscription.getActiveSubscription(req.user.id);
-        if (existingSubscription) {
-            return res.status(400).json({
-                status: 'fail',
-                message: 'You already have an active subscription'
-            });
-        }
+        // We will handle extension logic instead of a hard 400 error below 
+        // if the user tries to purchase the same plan again.
 
         const allPlans = await SubscriptionPlan.find({ isActive: true, status: 'Live' });
         const normalizedRequestedPlan = normalize(planId || planRaw);
@@ -904,15 +899,45 @@ exports.createSubscription = async (req, res) => {
             };
         }
 
-        const subscription = await Subscription.createSubscription(subscriptionPayload);
+        let subscription;
+        let isRenewal = false;
 
-        await User.findByIdAndUpdate(req.user.id, {
-            $inc: { 'stats.totalSubscriptions': 1 }
-        });
+        if (existingSubscription && normalize(existingSubscription.plan) === normalizedRequestedPlan) {
+            // RENEWAL: Extend the existing subscription
+            const currentEndDate = new Date(existingSubscription.endDate);
+            currentEndDate.setMonth(currentEndDate.getMonth() + durationMonths);
+
+            existingSubscription.endDate = currentEndDate;
+            existingSubscription.paymentId = paymentId;
+            existingSubscription.orderId = orderId;
+            existingSubscription.lastPaymentDate = new Date();
+            existingSubscription.status = 'active';
+
+            if (subscriptionPayload.paymentGateway) {
+                existingSubscription.paymentGateway = subscriptionPayload.paymentGateway;
+            }
+
+            subscription = await existingSubscription.save();
+            isRenewal = true;
+        } else {
+            // NEW: Create a new subscription
+            if (existingSubscription) {
+                // Expire the previous one to avoid confusion
+                existingSubscription.status = 'expired';
+                await existingSubscription.save();
+            }
+            subscription = await Subscription.createSubscription(subscriptionPayload);
+        }
+
+        if (!isRenewal) {
+            await User.findByIdAndUpdate(req.user.id, {
+                $inc: { 'stats.totalSubscriptions': 1 }
+            });
+        }
 
         await sendNotification(req.user.id, {
-            title: 'Subscription Activated',
-            message: `${planObj.name} activated successfully.`,
+            title: isRenewal ? 'Subscription Renewed 🔄' : 'Subscription Activated ✨',
+            message: `${planObj.name} ${isRenewal ? 'extended' : 'activated'} successfully.`,
             type: 'subscription',
             priority: 'medium'
         });

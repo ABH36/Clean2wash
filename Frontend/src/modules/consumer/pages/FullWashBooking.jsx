@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
+import { useGeoLocation } from '../../../hooks/useGeoLocation';
 import { useCart } from '../../../context/CartContext';
 import { serviceAPI, vehicleAPI, walletAPI, paymentAPI, subscriptionAPI, productAPI } from '../../../utils/api';
 import apiClient from '../../../utils/api';
@@ -85,17 +86,18 @@ const pkgAddonImages = {
     'p4': 'https://images.unsplash.com/photo-1494905998402-395d579af36f?w=400&q=80',
     'd1': 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=400&q=80',
     'd2': 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=400&q=80',
-    };
+};
 
 const FullWashBooking = () => {
     const navigate = useNavigate();
-    const { 
-        vehicles, addresses, addBooking, updateBookingStatus, bookings, 
-        userSubscription, setUserSubscription, getRazorpayKey, createPaymentOrder, 
-        verifyPayment, getUser, walletBalance, updateBalance, loadWallet, 
-        isBlackPassMember, globalCatalog, loadGlobalCatalog, catalogLoading, 
-        addVehicle, vehiclesLoading 
+    const {
+        vehicles, addBooking, updateBookingStatus, bookings,
+        userSubscription, setUserSubscription, getRazorpayKey, createPaymentOrder,
+        verifyPayment, getUser, walletBalance, updateBalance, loadWallet,
+        isBlackPassMember, globalCatalog, loadGlobalCatalog, catalogLoading,
+        addVehicle, vehiclesLoading
     } = useAuth();
+    const { savedAddresses: addresses } = useGeoLocation();
     const [searchParams] = useSearchParams();
     const user = getUser('consumer');
     const { cartItems: cart, setCartItems: setCart } = useCart();
@@ -108,7 +110,7 @@ const FullWashBooking = () => {
 
     // --- Phase History Management ---
     const [phaseHistory, setPhaseHistory] = useState([]);
-    
+
     const navigateToPhase = useCallback((newPhase) => {
         setPhaseHistory(prev => [...prev, phase]);
         setPhase(newPhase);
@@ -203,8 +205,16 @@ const FullWashBooking = () => {
     const [useSubscription, setUseSubscription] = useState(false);
     const [selectedLocation, setSelectedLocation] = useState(() => {
         const saved = sessionStorage.getItem('iw_location');
-        return saved ? JSON.parse(saved) : null;
+        if (saved) return JSON.parse(saved);
+        return addresses.find(a => a.isPrimary) || addresses[0];
     });
+
+    useEffect(() => {
+        if (!selectedLocation && addresses.length > 0) {
+            const primary = addresses.find(a => a.isPrimary) || addresses[0];
+            setSelectedLocation(primary);
+        }
+    }, [addresses]);
     const [bookingType, setBookingType] = useState(() => {
         const saved = sessionStorage.getItem('iw_booking_type');
         return saved || 'instant';
@@ -248,7 +258,7 @@ const FullWashBooking = () => {
         // 1. Calculate Standard Base Price for this Service
         const dynamicService = dynamicServices.find(s => s.id === id || s._id === id);
         let basePrice = 0;
-        
+
         if (dynamicService?.adjustedPrice) {
             basePrice = dynamicService.adjustedPrice;
         } else if (typeof prices === 'number') {
@@ -267,10 +277,10 @@ const FullWashBooking = () => {
             if (refPrices && typeof refPrices === 'object') {
                 const type = (selectedVehicle?.type || selectedVehicleType || 'sedan').toLowerCase();
                 const standardRefPrice = refPrices[type] || refPrices['sedan'] || 399; // Fallback to 399 if unknown
-                
+
                 // Calculate the multiplier (Factor)
                 const assetFactor = matchedModel.basePrice / standardRefPrice;
-                
+
                 // If the service is the reference service itself, just use the set basePrice
                 if (id === referenceService.id || id === referenceService._id) {
                     basePrice = matchedModel.basePrice;
@@ -297,7 +307,7 @@ const FullWashBooking = () => {
     const getEstimatedTime = useCallback((service, model) => {
         // High priority: Specific Session Time for this asset from Admin Catalog
         if (model?.sessionTime > 0) return model.sessionTime;
-        
+
         // Dynamic Calculation: Service Base + Asset Complexity Multiplier
         // Ensuring base is parsed correctly from strings like "30 min"
         const baseContent = String(service?.duration || '30');
@@ -346,12 +356,13 @@ const FullWashBooking = () => {
 
         try {
             socketService.connect();
-            if (user?.id) socketService.joinUserRoom(user.id);
+            const userData = getUser('consumer');
+            if (userData?._id || userData?.id) socketService.joinUserRoom(userData._id || userData.id);
             socketService.joinBookingRoom(newBookingId);
         } catch (err) {
             console.error('Socket join failed:', err);
         }
-    }, [addBooking, user?.id, setCart]);
+    }, [addBooking, getUser, setCart]);
 
     // --- Phase Recovery & UI Logic ---
     const displayModel = useMemo(() => selectedVehicle?.model || 'Select Vehicle', [selectedVehicle]);
@@ -372,7 +383,7 @@ const FullWashBooking = () => {
 
     const effectiveItems = useMemo(() => {
         const items = [...cart];
-        
+
         // Ensure the active service is included if not in cart (fallback)
         if (activeService && !items.some(it => it.serviceId === (activeService.id || activeService._id))) {
             // But only if we are in a phase that implies a selection has been made
@@ -381,7 +392,7 @@ const FullWashBooking = () => {
                 // For now, let's rely on cart being the source of truth if NOT empty
             }
         }
-        
+
         if (activeBooking) {
             const bookings = Array.isArray(activeBooking) ? activeBooking : [activeBooking];
             bookings.forEach(b => {
@@ -411,22 +422,22 @@ const FullWashBooking = () => {
             const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 p.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 p.description?.toLowerCase().includes(searchQuery.toLowerCase());
-            
+
             // Only show plans strictly relevant to Studio Detailing
             const isStudioPlan = (p.category === 'Studio Detailing');
-            
+
             return matchesSearch && isStudioPlan;
         });
     }, [subscriptionPlans, searchQuery]);
 
-    const blackPassPlan = useMemo(() => 
+    const blackPassPlan = useMemo(() =>
         subscriptionPlans?.find(p => (p.name || p.title || '').toLowerCase().includes('black')),
         [subscriptionPlans]
     );
     const finalPrice = useMemo(() => {
         const servicesAndSubs = effectiveItems.filter(item => item.type !== 'product' && item.type !== 'item');
         const productItems = effectiveItems.filter(item => item.type === 'product' || item.type === 'item');
-        
+
         // Subscription check
         const hasActiveCredits = userSubscription && (userSubscription.monthlyCredits > (userSubscription.usedCredits || 0));
 
@@ -445,7 +456,7 @@ const FullWashBooking = () => {
         let comboDiscount = 0;
         if (washCount > 1) {
             const washesTotal = servicesAndSubs.filter(item => item.type === 'service').reduce((s, i) => s + (i.price || 0), 0);
-            comboDiscount = Math.round(washesTotal * (globalSettings.combo_discount_pct / 200)); 
+            comboDiscount = Math.round(washesTotal * (globalSettings.combo_discount_pct / 200));
         }
 
         // 3. Global Black Pass Benefits
@@ -468,14 +479,14 @@ const FullWashBooking = () => {
                 return sum + (itemPrice * (1 - passDiscountRate));
             }, 0);
 
-            return Math.max(0, Math.round(discountedServiceTotal + discountedProductTotal - comboDiscount));
+            return Math.max(0, Math.round(discountedServiceTotal + discountedProductTotal - comboDiscount - discountAmount));
         }
 
-        return Math.max(0, Math.round(baseServiceTotal + baseProductTotal - comboDiscount));
+        return Math.max(0, Math.round(baseServiceTotal + baseProductTotal - comboDiscount - discountAmount));
     }, [effectiveItems, isBlackPassMember, passConfig, userSubscription, globalSettings]);
 
     // --- Side Effects ---
-    
+
     // 1. Core Services Fetching (Depends on Vehicle Type for dynamic multiplier)
     useEffect(() => {
         const fetchServices = async () => {
@@ -483,14 +494,14 @@ const FullWashBooking = () => {
                 setLoadingServices(true);
                 const vType = selectedVehicle?.type || selectedVehicleType || 'sedan';
                 const servRes = await serviceAPI.getServices({ type: 'vendor', vehicleType: vType });
-                
+
                 if (servRes.status === 'success') {
                     const allServices = servRes.data.services || [];
-                    const filtered = allServices.filter(s => 
+                    const filtered = allServices.filter(s =>
                         s.category === 'Studio Detailing'
                     );
                     setDynamicServices(filtered);
-                    
+
                     if (filtered[0] && !activeServiceId) {
                         setActiveServiceId(filtered[0].id || filtered[0]._id);
                     }
@@ -574,7 +585,7 @@ const FullWashBooking = () => {
         if (urlCoupon && !appliedCoupon) {
             handleApplyCoupon(urlCoupon);
         }
-    }, [searchParams, dynamicServices, phase]); 
+    }, [searchParams, dynamicServices, phase]);
     // 3. Real-time Tracking (Socket.IO)
     useEffect(() => {
         if (!activeBookingId) return;
@@ -585,39 +596,39 @@ const FullWashBooking = () => {
 
         const handleStatusUpdate = (data) => {
             console.log('Clean-2-Wash: Socket Status Update:', data);
-            
+
             // Normalize status from data.status or data if directly passed
             const newStatus = data.status;
-            
+
             if (newStatus) {
                 // If backend sent the full booking (or updated parts), merge it
                 if (data.booking) {
                     setActiveBooking(data.booking);
                 } else {
                     // Manual merge of status and provider info if present
-                    setActiveBooking(prev => ({ 
-                        ...prev, 
+                    setActiveBooking(prev => ({
+                        ...prev,
                         status: newStatus,
                         provider: data.captain ? { ...prev?.provider, ...data.captain } : prev?.provider,
                         securityPin: data.securityPin || prev?.securityPin
                     }));
                 }
-                
+
                 updateBookingStatus(activeBookingId, newStatus);
-                
+
                 // Map DB status to 5-Phase UI State
                 let uiStatusId = '';
                 const dbStatus = newStatus.toLowerCase();
-                
-                if(['pending', 'confirmed', 'accepted'].includes(dbStatus)) {
+
+                if (['pending', 'confirmed', 'accepted'].includes(dbStatus)) {
                     uiStatusId = 'CONFIRMED';
                     // Auto-transition to tracking once confirmed
                     if (phase === PHASES.FINDING) setPhase(PHASES.LIVE_TRACK);
                 }
-                else if(['assigned', 'pickup-assigned', 'en_route', 'arrived'].includes(dbStatus)) uiStatusId = 'EN_ROUTE';
-                else if(['before_photo', 'at-studio', 'washing', 'in_progress', 'after_photo'].includes(dbStatus)) uiStatusId = 'WASHING';
-                else if(['quality-check'].includes(dbStatus)) uiStatusId = 'QUALITY_CHECK';
-                else if(['ready-for-delivery', 'delivery-assigned', 'completed'].includes(dbStatus)) uiStatusId = 'COMPLETED';
+                else if (['assigned', 'pickup-assigned', 'en_route', 'arrived'].includes(dbStatus)) uiStatusId = 'EN_ROUTE';
+                else if (['before_photo', 'at-studio', 'washing', 'in_progress', 'after_photo'].includes(dbStatus)) uiStatusId = 'WASHING';
+                else if (['quality-check'].includes(dbStatus)) uiStatusId = 'QUALITY_CHECK';
+                else if (['ready-for-delivery', 'delivery-assigned', 'completed'].includes(dbStatus)) uiStatusId = 'COMPLETED';
 
                 const idx = JOB_STATES.findIndex(s => s.id === uiStatusId);
                 if (idx !== -1) setJobStateIndex(idx);
@@ -730,7 +741,7 @@ const FullWashBooking = () => {
         setCart(prev => [...prev, newItem]);
         setPhase(PHASES.CART);
     };
-    
+
     const renderAddVehicleModal = () => {
         const filteredCatalog = (globalCatalog || []).filter(item =>
             item.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -944,19 +955,19 @@ const FullWashBooking = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <button 
+                    <button
                         onClick={() => navigate('/addresses?from=studio-wash')}
                         className="w-9 h-9 bg-gray-50/80 rounded-xl flex items-center justify-center border border-black/[0.02] active:scale-95 transition-transform"
                     >
                         <MapPin size={16} className="text-black/60" />
                     </button>
-                    <button 
+                    <button
                         onClick={() => navigate('/wallet')}
                         className="w-9 h-9 bg-gray-50/80 rounded-xl flex items-center justify-center border border-black/[0.02] active:scale-95 transition-transform"
                     >
                         <Wallet size={16} className="text-black/60" />
                     </button>
-                    <button 
+                    <button
                         onClick={() => navigateToPhase(PHASES.SELECT_VEHICLE)}
                         className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all duration-500 ${phase === PHASES.LIVE_TRACK || phase === PHASES.FINDING ? 'bg-black border-[#00FF66]/30 shadow-[0_0_10px_rgba(0,255,102,0.15)]' : 'bg-gray-50/80 border-black/[0.02]'}`}
                     >
@@ -985,9 +996,9 @@ const FullWashBooking = () => {
                             Instant Wash
                         </h1>
                         <p className="text-[9px] font-black text-black/30 uppercase tracking-[0.15em] mt-1.5 flex items-center gap-2">
-                             Protocol Ready for <span className="text-black font-black">{user?.name || 'Authorized User'}</span>
-                             <span className="w-1 h-1 rounded-full bg-black/10" />
-                             {new Date().toLocaleDateString('en-US', { weekday: 'long' })}
+                            Protocol Ready for <span className="text-black font-black">{user?.name || 'Authorized User'}</span>
+                            <span className="w-1 h-1 rounded-full bg-black/10" />
+                            {new Date().toLocaleDateString('en-US', { weekday: 'long' })}
                         </p>
                     </div>
                     <div className="w-12 h-12 rounded-2xl bg-white border border-black/[0.03] shadow-sm flex items-center justify-center">
@@ -1024,10 +1035,10 @@ const FullWashBooking = () => {
                         </div>
                     ) : (
                         <div className="relative h-40 rounded-[2rem] overflow-hidden shadow-lg bg-black group">
-                            <img 
-                                src="https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=800&q=80" 
-                                className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700" 
-                                alt="Standard Banner" 
+                            <img
+                                src="https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=800&q=80"
+                                className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700"
+                                alt="Standard Banner"
                             />
                             <div className="absolute inset-0 bg-gradient-to-tr from-brand/20 to-transparent" />
                             <div className="absolute inset-0 flex flex-col justify-end p-6">
@@ -1081,8 +1092,8 @@ const FullWashBooking = () => {
                                 </div>
                             </div>
                         )}
-                        <button 
-                            onClick={() => navigate('/vehicles?from=studio-wash')} 
+                        <button
+                            onClick={() => navigate('/vehicles?from=studio-wash')}
                             className="text-[10px] font-black text-brand uppercase tracking-[0.15em] border border-orange-100 bg-orange-50/30 px-5 py-3 rounded-2xl active:scale-95 transition-all shadow-sm hover:bg-brand hover:text-white relative z-10"
                         >
                             {selectedVehicle ? 'CHANGE' : 'SELECT'}
@@ -1098,22 +1109,22 @@ const FullWashBooking = () => {
                         </div>
                     ) : (
                         dynamicServices.filter(s => s.category === 'Studio Detailing').map((pkg) => {
-                             const pkgId = pkg.id || pkg._id;
-                             const isServiceExpanded = expandedServiceId === pkgId;
-                             const pkgBasePrice = getPrice(pkg.price, pkgId);
-                             const splitImages = [
-                                 sanitizeUrl(pkg.image),
-                                 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=400&q=80',
-                                 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=400&q=80'
-                             ];
+                            const pkgId = pkg.id || pkg._id;
+                            const isServiceExpanded = expandedServiceId === pkgId;
+                            const pkgBasePrice = getPrice(pkg.price, pkgId);
+                            const splitImages = [
+                                sanitizeUrl(pkg.image),
+                                'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=400&q=80',
+                                'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=400&q=80'
+                            ];
 
-                             return (
-                                 <div key={pkgId} className="space-y-4">
-                                     <div
-                                         onClick={() => setExpandedServiceId(isServiceExpanded ? null : pkgId)}
-                                         className={`px-6 py-4 rounded-[1.5rem] flex items-center justify-between cursor-pointer transition-all ${isServiceExpanded ? 'bg-[#222222] text-white' : 'bg-white text-black border border-black/[0.03] shadow-sm'}`}
-                                     >
-                                         <h3 className="text-[14px] font-[1000] tracking-tight uppercase italic">{pkg.title}</h3>
+                            return (
+                                <div key={pkgId} className="space-y-4">
+                                    <div
+                                        onClick={() => setExpandedServiceId(isServiceExpanded ? null : pkgId)}
+                                        className={`px-6 py-4 rounded-[1.5rem] flex items-center justify-between cursor-pointer transition-all ${isServiceExpanded ? 'bg-[#222222] text-white' : 'bg-white text-black border border-black/[0.03] shadow-sm'}`}
+                                    >
+                                        <h3 className="text-[14px] font-[1000] tracking-tight uppercase italic">{pkg.title}</h3>
                                         <ChevronDown size={18} className={`transition-transform duration-300 ${isServiceExpanded ? 'rotate-180 text-brand' : 'opacity-40'}`} />
                                     </div>
 
@@ -1211,9 +1222,9 @@ const FullWashBooking = () => {
 
                                                         {/* Right Promo Card */}
                                                         <div className="w-[125px] flex-shrink-0 bg-[#FAF1E8] rounded-[2rem] border border-[#E9DCCF]/50 p-4 flex flex-col items-center gap-4 shadow-sm relative overflow-hidden group">
-                                                            <img 
-                                                                src={sanitizeUrl(pkg.image)} 
-                                                                className="w-16 h-16 object-cover rounded-2xl shadow-md border-2 border-white group-hover:scale-110 transition-transform" 
+                                                            <img
+                                                                src={sanitizeUrl(pkg.image)}
+                                                                className="w-16 h-16 object-cover rounded-2xl shadow-md border-2 border-white group-hover:scale-110 transition-transform"
                                                                 alt={pkg.title}
                                                                 onError={(e) => e.target.src = FALLBACK_IMAGES[0]}
                                                             />
@@ -1252,11 +1263,10 @@ const FullWashBooking = () => {
                                                             setActiveServiceId(pkgId);
                                                             setShowServiceCoverage(true);
                                                         }}
-                                                        className={`w-full py-5 rounded-[1.5rem] flex items-center justify-center gap-4 group/btn relative overflow-hidden transition-all ${
-                                                            selectedVehicle 
-                                                            ? 'bg-[#1A1A1A] text-white active:scale-95 shadow-xl shadow-black/10' 
+                                                        className={`w-full py-5 rounded-[1.5rem] flex items-center justify-center gap-4 group/btn relative overflow-hidden transition-all ${selectedVehicle
+                                                            ? 'bg-[#1A1A1A] text-white active:scale-95 shadow-xl shadow-black/10'
                                                             : 'bg-brand text-white shadow-xl shadow-brand/20'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {selectedVehicle ? (
                                                             <>
@@ -1292,40 +1302,40 @@ const FullWashBooking = () => {
                                         )}
                                     </AnimatePresence>
                                 </div>
-                             );
+                            );
                         })
                     )}
 
-                    
-                {/* Vehicle Protocol Selector (New) */}
-                <div className="px-5 pb-8">
-                    <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.3em] mb-4 text-center">Vehicle Protocol</p>
-                    <div className="flex items-center gap-3">
-                        {['Hatch', 'Sedan', 'SUV'].map((type) => {
-                            const isActive = selectedVehicleType === type.toLowerCase();
-                            return (
-                                <button
-                                    key={type}
-                                    onClick={() => setSelectedVehicleType(type.toLowerCase())}
-                                    className={`flex-1 group relative ${isActive ? 'scale-105' : 'opacity-40'}`}
-                                >
-                                    <div className={`bg-white rounded-2xl p-5 border transition-all ${isActive ? 'border-brand shadow-xl ring-4 ring-brand/5' : 'border-black/[0.05]'}`}>
-                                        <div className="flex items-center justify-between mb-2">
-                                            <h4 className={`text-[11px] font-[1000] uppercase tracking-tight ${isActive ? 'text-black' : 'text-gray-400'}`}>{type}</h4>
-                                            {isActive && (
-                                                <div className="w-5 h-5 bg-brand rounded-full flex items-center justify-center text-white shadow-sm">
-                                                    <Check size={12} strokeWidth={4} />
-                                                </div>
-                                            )}
+
+                    {/* Vehicle Protocol Selector (New) */}
+                    <div className="px-5 pb-8">
+                        <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.3em] mb-4 text-center">Vehicle Protocol</p>
+                        <div className="flex items-center gap-3">
+                            {['Hatch', 'Sedan', 'SUV'].map((type) => {
+                                const isActive = selectedVehicleType === type.toLowerCase();
+                                return (
+                                    <button
+                                        key={type}
+                                        onClick={() => setSelectedVehicleType(type.toLowerCase())}
+                                        className={`flex-1 group relative ${isActive ? 'scale-105' : 'opacity-40'}`}
+                                    >
+                                        <div className={`bg-white rounded-2xl p-5 border transition-all ${isActive ? 'border-brand shadow-xl ring-4 ring-brand/5' : 'border-black/[0.05]'}`}>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h4 className={`text-[11px] font-[1000] uppercase tracking-tight ${isActive ? 'text-black' : 'text-gray-400'}`}>{type}</h4>
+                                                {isActive && (
+                                                    <div className="w-5 h-5 bg-brand rounded-full flex items-center justify-center text-white shadow-sm">
+                                                        <Check size={12} strokeWidth={4} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <p className="text-[8px] font-black text-gray-300 uppercase tracking-widest leading-none mb-4">Protocol</p>
+                                            <div className={`h-[2.5px] w-12 rounded-full transition-all ${isActive ? 'bg-brand' : 'bg-gray-100'}`} />
                                         </div>
-                                        <p className="text-[8px] font-black text-gray-300 uppercase tracking-widest leading-none mb-4">Protocol</p>
-                                        <div className={`h-[2.5px] w-12 rounded-full transition-all ${isActive ? 'bg-brand' : 'bg-gray-100'}`} />
-                                    </div>
-                                </button>
-                            );
-                        })}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
-                </div>
 
                     {/* Dynamic FAQ Section */}
                     {dynamicServices.some(s => s.faqs?.length > 0) && (
@@ -1413,7 +1423,7 @@ const FullWashBooking = () => {
                                     {/* Premium Offer Banner */}
                                     {activeService.offers?.length > 0 && (
                                         <div className="overflow-hidden bg-[#1A1A1A] relative h-10 flex items-center mb-6">
-                                            <motion.div 
+                                            <motion.div
                                                 animate={{ x: [0, -500] }}
                                                 transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
                                                 className="flex whitespace-nowrap gap-10"
@@ -1452,13 +1462,13 @@ const FullWashBooking = () => {
                                             <div className="h-4 w-px bg-black/10" />
                                             <span className="text-[9px] font-[1000] text-black/40 uppercase tracking-widest">Protocol Sync Locked</span>
                                         </div>
-                                        
+
                                         <h2 className="text-[34px] font-[1000] text-black leading-[0.9] uppercase italic tracking-tighter mb-6 relative">
                                             {activeService.title}
-                                            <motion.div 
+                                            <motion.div
                                                 initial={{ width: 0 }}
                                                 animate={{ width: 48 }}
-                                                className="absolute -bottom-2 left-0 h-1 bg-brand" 
+                                                className="absolute -bottom-2 left-0 h-1 bg-brand"
                                             />
                                         </h2>
 
@@ -1512,9 +1522,9 @@ const FullWashBooking = () => {
                                                 <div className="absolute right-[-10%] top-[-20%] w-48 h-48 bg-brand/10 rounded-full blur-3xl group-hover:bg-brand/20 transition-all duration-700" />
                                                 <div className="relative z-10 flex items-center gap-6">
                                                     <div className="w-20 h-20 rounded-2xl overflow-hidden border border-white/10 shadow-inner shrink-0 scale-95 group-hover:scale-100 transition-transform duration-500">
-                                                        <img 
-                                                            src={sanitizeUrl(matchedModel.image)} 
-                                                            className="w-full h-full object-cover" 
+                                                        <img
+                                                            src={sanitizeUrl(matchedModel.image)}
+                                                            className="w-full h-full object-cover"
                                                             alt={matchedModel.model}
                                                             onError={handleImageError}
                                                         />
@@ -1599,7 +1609,7 @@ const FullWashBooking = () => {
                                                                         <p className="text-[7px] font-bold text-white/30 uppercase tracking-[0.2em] mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">Asset Specific Coupon</p>
                                                                     </div>
                                                                 </div>
-                                                                <button 
+                                                                <button
                                                                     onClick={() => {
                                                                         setCouponCode(coupon);
                                                                         toast.success("Coupon Protocol Loaded");
@@ -1700,7 +1710,7 @@ const FullWashBooking = () => {
                                             </div>
                                             <div className="space-y-3">
                                                 {activeService.protocolSteps.map((step, idx) => (
-                                                    <motion.div 
+                                                    <motion.div
                                                         key={idx}
                                                         initial={{ x: -20, opacity: 0 }}
                                                         whileInView={{ x: 0, opacity: 1 }}
@@ -1762,11 +1772,10 @@ const FullWashBooking = () => {
                                             setShowServiceCoverage(false);
                                             navigateToPhase(PHASES.CART);
                                         }}
-                                        className={`w-full py-5 rounded-[2rem] font-[1000] text-[15px] uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-4 group relative overflow-hidden ${
-                                            !selectedVehicle 
-                                            ? 'bg-gray-100 text-black/10 cursor-not-allowed' 
+                                        className={`w-full py-5 rounded-[2rem] font-[1000] text-[15px] uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-4 group relative overflow-hidden ${!selectedVehicle
+                                            ? 'bg-gray-100 text-black/10 cursor-not-allowed'
                                             : 'bg-[#1A1A1A] text-white active:scale-95 shadow-black/20'
-                                        }`}
+                                            }`}
                                     >
                                         <div className="absolute inset-0 bg-brand opacity-0 group-hover:opacity-10 transition-opacity" />
                                         <Zap size={18} className={selectedVehicle ? "text-brand" : "text-black/5"} fill="currentColor" />
@@ -1802,7 +1811,7 @@ const FullWashBooking = () => {
                                 >
                                     <X size={24} />
                                 </button>
-                                
+
                                 {activeVideoUrl || showDemoVideo ? (
                                     <iframe
                                         src={activeVideoUrl || "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"}
@@ -1875,7 +1884,7 @@ const FullWashBooking = () => {
                 <div className="absolute inset-0 z-0">
                     <MapContainer
                         center={[userCoords.lat, userCoords.lng]}
-                        zoom={15} 
+                        zoom={15}
                         style={{ height: '100%', width: '100%' }}
                         zoomControl={false}
                         attributionControl={false}
@@ -1883,7 +1892,7 @@ const FullWashBooking = () => {
                         <TileLayer
                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                         />
-                        
+
                         {/* 🌊 Pulsing Concentric Waves (10km scale) */}
                         <Pane name="waves" style={{ zIndex: 300 }}>
                             <div className="absolute inset-0 flex items-center justify-center">
@@ -1899,15 +1908,15 @@ const FullWashBooking = () => {
                                 ))}
                             </div>
                         </Pane>
-                        
+
                         {/* User Location Pulse */}
                         <Marker position={[userCoords.lat, userCoords.lng]} icon={userIcon} />
 
                         {/* Search Area Badge (Floating over user) */}
                         <Pane name="badges" style={{ zIndex: 600 }}>
-                             {isBlackPassMember && (
+                            {isBlackPassMember && (
                                 <div className="absolute top-[40%] left-1/2 -translate-x-1/2 -translate-y-[60px] pointer-events-none">
-                                    <motion.div 
+                                    <motion.div
                                         initial={{ opacity: 0, scale: 0.8 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         className="bg-brand text-black px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-2xl border border-white/20"
@@ -1916,7 +1925,7 @@ const FullWashBooking = () => {
                                         <span className="text-[9px] font-[1000] uppercase tracking-widest italic">Black Priority active</span>
                                     </motion.div>
                                 </div>
-                             )}
+                            )}
                         </Pane>
 
                         {/* Real Expert marker — only shown after expert is assigned */}
@@ -1940,7 +1949,7 @@ const FullWashBooking = () => {
 
                 {/* Top Status - Floating Pill (Maximizes Map View) */}
                 <div className="absolute top-8 left-1/2 -translate-x-1/2 z-[1000] w-full px-5">
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="bg-black/80 backdrop-blur-2xl border border-white/10 rounded-2xl px-4 py-2.5 flex items-center justify-between shadow-2xl"
@@ -1996,9 +2005,9 @@ const FullWashBooking = () => {
                                     </p>
                                 </div>
                             </div>
-                             {isBlackPassMember && (
+                            {isBlackPassMember && (
                                 <div className="px-2 py-1 bg-brand text-black text-[7px] font-black rounded-lg animate-pulse uppercase">Member Benefit</div>
-                             )}
+                            )}
                         </div>
 
                         <div className="flex flex-col gap-3">
@@ -2011,11 +2020,10 @@ const FullWashBooking = () => {
                                         setActiveBookingId(null);
                                     }
                                 }}
-                                className={`w-full h-14 rounded-2xl font-black text-[11px] uppercase tracking-[0.25em] flex items-center justify-center gap-3 transition-all active:scale-95 ${
-                                    findingTime === 0 
-                                    ? 'bg-brand text-black shadow-xl shadow-brand/20' 
+                                className={`w-full h-14 rounded-2xl font-black text-[11px] uppercase tracking-[0.25em] flex items-center justify-center gap-3 transition-all active:scale-95 ${findingTime === 0
+                                    ? 'bg-brand text-black shadow-xl shadow-brand/20'
                                     : 'bg-black text-white shadow-xl shadow-black/10'
-                                }`}
+                                    }`}
                             >
                                 {findingTime === 0 ? (
                                     <>
@@ -2029,7 +2037,7 @@ const FullWashBooking = () => {
                                     </>
                                 )}
                             </button>
-                            
+
                             {findingTime > 0 && (
                                 <p className="text-[8px] font-black text-black/20 text-center uppercase tracking-widest mt-1">
                                     High demand in your area • Optimizing dispatch
@@ -2039,7 +2047,8 @@ const FullWashBooking = () => {
                     </motion.div>
                 </div>
 
-                <style dangerouslySetInnerHTML={{ __html: `
+                <style dangerouslySetInnerHTML={{
+                    __html: `
                     @keyframes scan {
                         from { transform: translateY(-100%); }
                         to { transform: translateY(100%); }
@@ -2056,8 +2065,8 @@ const FullWashBooking = () => {
     const renderLiveTrack = () => {
         const userCoords = selectedLocation?.coordinates || { lat: 12.9716, lng: 77.5946 };
         // If captainPos is not set yet, mock it somewhere nearby initially
-        const currentCaptainCoords = (captainPos.lat && captainPos.lng) 
-            ? [captainPos.lat, captainPos.lng] 
+        const currentCaptainCoords = (captainPos.lat && captainPos.lng)
+            ? [captainPos.lat, captainPos.lng]
             : [userCoords.lat + 0.015, userCoords.lng + 0.01];
 
         const isCompleted = activeBooking?.status === 'completed';
@@ -2097,9 +2106,9 @@ const FullWashBooking = () => {
                         attributionControl={false}
                     >
                         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                        
+
                         <Marker position={[userCoords.lat, userCoords.lng]} icon={userPin} />
-                        
+
                         <motion.div key="captain-marker">
                             <Marker position={currentCaptainCoords} icon={expertIcon} />
                         </motion.div>
@@ -2128,10 +2137,10 @@ const FullWashBooking = () => {
                                 <div className="w-2 h-2 rounded-full bg-brand animate-ping shadow-[0_0_12px_rgba(242,159,5,0.8)]" />
                                 <div className="flex flex-col items-start leading-none">
                                     <span className="text-[10px] font-black text-black uppercase tracking-widest">
-                                        {isCompleted ? 'Service Complete' : 
-                                         activeBooking?.status === 'at-studio' ? 'Asset at Sanctuary' :
-                                         activeBooking?.status === 'in_progress' ? 'Detailing Active' :
-                                         'Specialist Coordinating'}
+                                        {isCompleted ? 'Service Complete' :
+                                            activeBooking?.status === 'at-studio' ? 'Asset at Sanctuary' :
+                                                activeBooking?.status === 'in_progress' ? 'Detailing Active' :
+                                                    'Specialist Coordinating'}
                                     </span>
                                     {!isCompleted && <span className="text-[8px] font-bold text-black/30 uppercase mt-0.5 tracking-tighter italic">Studio Tracking Protocol Active</span>}
                                 </div>
@@ -2209,10 +2218,10 @@ const FullWashBooking = () => {
                                     )}
                                 </div>
                             </div>
-                             <div className="flex gap-2">
-                                 <motion.button whileTap={{ scale: 0.9 }} onClick={() => toast.success(`Calling Specialist...`)} className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-black border border-gray-200 shadow-sm"><Phone size={14} /></motion.button>
-                                 <motion.button whileTap={{ scale: 0.9 }} onClick={() => toast('Chat feature coming soon!')} className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-black border border-gray-200 shadow-sm"><MessageSquare size={14} /></motion.button>
-                             </div>
+                            <div className="flex gap-2">
+                                <motion.button whileTap={{ scale: 0.9 }} onClick={() => toast.success(`Calling Specialist...`)} className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-black border border-gray-200 shadow-sm"><Phone size={14} /></motion.button>
+                                <motion.button whileTap={{ scale: 0.9 }} onClick={() => toast('Chat feature coming soon!')} className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-black border border-gray-200 shadow-sm"><MessageSquare size={14} /></motion.button>
+                            </div>
                         </div>
 
                         {/* Status List (Vertical Steps - Full Visibility) */}
@@ -2249,29 +2258,29 @@ const FullWashBooking = () => {
                         {/* Navigation Actions */}
                         <div className="grid grid-cols-2 gap-3">
                             <motion.button
-                                 whileTap={{ scale: 0.96 }}
-                                 onClick={() => toast.error('Emergency SOS Triggered! Support is on the way.', { duration: 5000 })}
-                                 className="flex items-center justify-center gap-3 bg-red-50 text-red-600 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-100"
-                             >
-                                 <AlertTriangle size={12} />
-                                 SOS Help
-                             </motion.button>
-                             <motion.button
-                                 whileTap={{ scale: 0.96 }}
-                                 onClick={() => {
-                                     const pin = activeBooking?.securityPin || '----';
-                                     toast.success(`SERVICE PIN: ${pin}`, { 
-                                         icon: 'Ã°Å¸â€Â',
-                                         description: 'Provide this to the detailing specialist to start the session.',
-                                         duration: 6000
-                                     });
-                                 }}
-                                 className="bg-black text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-black/20 flex flex-col items-center justify-center gap-1 group overflow-hidden relative"
-                             >
-                                 <div className="absolute inset-0 bg-brand/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-                                 <span className="relative z-10">Security PIN</span>
-                                 <span className="relative z-10 text-[12px] text-brand">{activeBooking?.securityPin || '----'}</span>
-                             </motion.button>
+                                whileTap={{ scale: 0.96 }}
+                                onClick={() => toast.error('Emergency SOS Triggered! Support is on the way.', { duration: 5000 })}
+                                className="flex items-center justify-center gap-3 bg-red-50 text-red-600 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-100"
+                            >
+                                <AlertTriangle size={12} />
+                                SOS Help
+                            </motion.button>
+                            <motion.button
+                                whileTap={{ scale: 0.96 }}
+                                onClick={() => {
+                                    const pin = activeBooking?.securityPin || '----';
+                                    toast.success(`SERVICE PIN: ${pin}`, {
+                                        icon: 'Ã°Å¸â€Â',
+                                        description: 'Provide this to the detailing specialist to start the session.',
+                                        duration: 6000
+                                    });
+                                }}
+                                className="bg-black text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-black/20 flex flex-col items-center justify-center gap-1 group overflow-hidden relative"
+                            >
+                                <div className="absolute inset-0 bg-brand/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                                <span className="relative z-10">Security PIN</span>
+                                <span className="relative z-10 text-[12px] text-brand">{activeBooking?.securityPin || '----'}</span>
+                            </motion.button>
                         </div>
 
                         {/* Bottom Sticky Button */}
@@ -2409,7 +2418,7 @@ const FullWashBooking = () => {
 
                         {/* Active Subscription Summary (Dynamically shown if exists) */}
                         {userSubscription && (
-                            <motion.div 
+                            <motion.div
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 className="bg-black text-white rounded-2xl p-4 shadow-xl border border-brand/30 relative overflow-hidden group"
@@ -2440,7 +2449,7 @@ const FullWashBooking = () => {
                                         <span className="text-[8px] font-black text-brand uppercase tracking-widest italic">{userSubscription.usedCredits || 0} / {userSubscription.monthlyCredits || 0} Used</span>
                                     </div>
                                     <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                                        <motion.div 
+                                        <motion.div
                                             initial={{ width: 0 }}
                                             animate={{ width: `${((userSubscription.usedCredits || 0) / (userSubscription.monthlyCredits || 1)) * 100}%` }}
                                             className="h-full bg-brand"
@@ -2504,7 +2513,7 @@ const FullWashBooking = () => {
                         <div className="flex items-center justify-between">
                             <label className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em] italic ml-1">Voucher Authorization</label>
                             {isBlackPassMember && (
-                                <motion.div 
+                                <motion.div
                                     initial={{ opacity: 0, x: 10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     className="flex items-center gap-1.5 bg-brand/[0.03] px-3 py-1.5 rounded-full border border-brand/10"
@@ -2515,7 +2524,7 @@ const FullWashBooking = () => {
                             )}
                         </div>
                         {isBlackPassMember && (
-                             <p className="text-[8px] font-bold text-brand uppercase tracking-widest ml-1 mb-2 opacity-60">Membership privileges override standard coupons for maximum value.</p>
+                            <p className="text-[8px] font-bold text-brand uppercase tracking-widest ml-1 mb-2 opacity-60">Membership privileges override standard coupons for maximum value.</p>
                         )}
                         <div className="relative group">
                             <input
@@ -2767,7 +2776,7 @@ const FullWashBooking = () => {
                                 const perWash = pkg.perWash || Math.round((pkg.price || 499) / (parseInt(pkg.title) || 2));
                                 const pkgId = pkg.id || pkg._id;
                                 const pkgName = pkg.name || pkg.title;
-                                const isAdded = effectiveItems.some(i => 
+                                const isAdded = effectiveItems.some(i =>
                                     i.type === 'subscription' && (pkgId ? i.serviceId === pkgId : (i.name === pkgName && pkgName !== undefined))
                                 );
 
@@ -3215,10 +3224,10 @@ const FullWashBooking = () => {
 
                         <button
                             onClick={() => {
-                                 if (bookingType === 'schedule' && !selectedSlot) {
-                                     toast.error('Please select a time slot or choose Instant Match');
-                                     return;
-                                 }
+                                if (bookingType === 'schedule' && !selectedSlot) {
+                                    toast.error('Please select a time slot or choose Instant Match');
+                                    return;
+                                }
                                 setPhase(PHASES.PAYMENT);
                             }}
                             className={`flex-[1.5] h-14 rounded-2xl font-[1000] text-[13px] uppercase tracking-[0.15em] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-2xl relative overflow-hidden group ${(bookingType === 'instant' || selectedSlot)
@@ -3285,7 +3294,7 @@ const FullWashBooking = () => {
                                     <Crown size={24} className="text-black" fill="currentColor" />
                                 </div>
                                 <div className="flex-1">
-                                    <h3 className="text-brand font-[1000] text-[14px] uppercase tracking-tight leading-none mb-1.5">Save ₹{Math.round(finalPrice * (discountPct/100))} Right Now!</h3>
+                                    <h3 className="text-brand font-[1000] text-[14px] uppercase tracking-tight leading-none mb-1.5">Save ₹{Math.round(finalPrice * (discountPct / 100))} Right Now!</h3>
                                     <p className="text-white/40 text-[8px] font-black uppercase tracking-widest leading-relaxed">
                                         Join {blackPassPlan?.name || 'Black Pass'} for ₹{passPrice} and unlock {discountPct}% OFF on this booking instantly.
                                     </p>
@@ -3376,18 +3385,18 @@ const FullWashBooking = () => {
                                         }).filter(Boolean);
 
                                     const firstService = effectiveItems.find(i => i.serviceId && i.type !== 'subscription' && i.type !== 'monthly');
-                                    
+
                                     // Map category to a value accepted by Booking model enum
                                     const validCategories = ['Doorstep', 'Studio', 'Studio Detailing', 'Add-ons', 'Prestige', 'Chauffeur'];
                                     const rawCategory = activeService?.category || firstService?.category || 'Studio Detailing';
-                                    const category = validCategories.includes(rawCategory) ? rawCategory : 
-                                                    (rawCategory === 'Express' ? 'Studio Detailing' : 'Studio Detailing');
+                                    const category = validCategories.includes(rawCategory) ? rawCategory :
+                                        (rawCategory === 'Express' ? 'Studio Detailing' : 'Studio Detailing');
 
                                     // Map location type to a value accepted by Booking model enum
                                     const validLocationTypes = ['home', 'office', 'other', 'studio'];
                                     const rawLocationType = activeAddr?.label?.toLowerCase() || 'home';
-                                    const locationType = validLocationTypes.includes(rawLocationType) ? rawLocationType : 
-                                                         (rawLocationType === 'work' ? 'office' : 'other');
+                                    const locationType = validLocationTypes.includes(rawLocationType) ? rawLocationType :
+                                        (rawLocationType === 'work' ? 'office' : 'other');
 
                                     // Map payment method to a value accepted by Booking model enum
                                     const validPaymentMethods = ['cash', 'online', 'wallet', 'subscription'];
@@ -3411,10 +3420,10 @@ const FullWashBooking = () => {
                                         addons: addonObjects,
                                         schedule: bookingType === 'instant'
                                             ? { type: 'instant', date: new Date().toISOString() }
-                                            : { 
-                                                type: 'scheduled', 
-                                                date: selectedDate, 
-                                                timeSlot: selectedSlot ? { start: selectedSlot, end: '' } : null 
+                                            : {
+                                                type: 'scheduled',
+                                                date: selectedDate,
+                                                timeSlot: selectedSlot ? { start: selectedSlot, end: '' } : null
                                             },
                                         location: activeAddr ? {
                                             type: locationType,
@@ -3434,17 +3443,17 @@ const FullWashBooking = () => {
                                     };
 
                                     if (paymentMethod === 'wallet') {
-                                     if (walletBalance < finalPrice) {
-                                         toast.error(`Insufficient wallet balance. You need ₹${finalPrice - walletBalance} more.`);
-                                         setIsProcessing(false);
-                                         return;
-                                     }
+                                        if (walletBalance < finalPrice) {
+                                            toast.error(`Insufficient wallet balance. You need ₹${finalPrice - walletBalance} more.`);
+                                            setIsProcessing(false);
+                                            return;
+                                        }
 
                                         const res = await apiClient.createBooking(bookingPayload);
                                         if (res?.status === 'success' && res?.data?.booking) {
                                             handleBookingSuccess(res.data.booking);
                                             await loadWallet(); // Sync wallet balance from server instead of manual local calculation
-                                            
+
                                             // Process subscriptions if any
                                             const subscriptionItems = effectiveItems.filter(i => i.type === 'monthly' || i.type === 'subscription');
                                             for (const sub of subscriptionItems) {
@@ -3538,19 +3547,19 @@ const FullWashBooking = () => {
                                                             }
                                                         }
 
-                                                         // If it was just a subscription (no service), go to profile/home
-                                                         if (serviceItems.length === 0 && subscriptionItems.length > 0) {
-                                                             toast.success('Subscription activated successfully!');
-                                                             setCart([]);
-                                                             navigate('/');
-                                                         }
-                                                     } else {
-                                                         toast.error('Payment verification failed.');
-                                                     }
-                                                 } catch (err) {
-                                                     console.error('Hander error:', err);
-                                                     toast.error('Error processing payment response.');
-                                                 } finally {
+                                                        // If it was just a subscription (no service), go to profile/home
+                                                        if (serviceItems.length === 0 && subscriptionItems.length > 0) {
+                                                            toast.success('Subscription activated successfully!');
+                                                            setCart([]);
+                                                            navigate('/');
+                                                        }
+                                                    } else {
+                                                        toast.error('Payment verification failed.');
+                                                    }
+                                                } catch (err) {
+                                                    console.error('Hander error:', err);
+                                                    toast.error('Error processing payment response.');
+                                                } finally {
                                                     setIsProcessing(false);
                                                 }
                                             },
@@ -3567,11 +3576,11 @@ const FullWashBooking = () => {
                                         const rzp = new window.Razorpay(options);
                                         rzp.open();
                                     }
-                                 } catch (error) {
-                                     console.error('Payment error:', error);
-                                     toast.error(error.message || 'Payment failed. Please try again.');
-                                     setIsProcessing(false);
-                                 }
+                                } catch (error) {
+                                    console.error('Payment error:', error);
+                                    toast.error(error.message || 'Payment failed. Please try again.');
+                                    setIsProcessing(false);
+                                }
                             }}
                             disabled={!paymentMethod || isProcessing}
                             className={`flex-1 max-w-[200px] h-11 rounded-xl font-[1000] text-[12px] uppercase tracking-widest transition-all flex items-center justify-center gap-2.5 shadow-xl ${!paymentMethod || isProcessing

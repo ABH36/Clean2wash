@@ -263,6 +263,181 @@ const startBookingMonitor = () => {
                 }
             }
 
+            // ─── PASS 3: STUDIO WASH Scheduled Monitor ─────────────────────────────
+            const studioScheduled = await Booking.find({
+                'schedule.type': 'scheduled',
+                'service.type': 'vendor',
+                status: { $in: ['accepted', 'pickup-assigned'] },
+                isActive: true,
+                'schedule.date': {
+                    $gte: new Date(now.getTime() - 12 * 60 * 60 * 1000),
+                    $lte: new Date(now.getTime() + 12 * 60 * 60 * 1000)
+                }
+            }).populate('provider.id').populate('pickupStaff');
+
+            for (const booking of studioScheduled) {
+                const startTime = getScheduledStartTime(booking);
+                if (!startTime) continue;
+                const diffMinutes = (startTime - now) / (1000 * 60);
+                const io = socketService.getIO();
+
+                if (diffMinutes <= 47 && diffMinutes >= 43 && !booking.vendorAlertSent && !booking.pickupStaff) {
+                    const vendorId = booking.provider?.id?._id || booking.provider?.id;
+                    if (vendorId) {
+                        io.to(vendorId.toString()).emit('scheduled_dispatch_alert', {
+                            bookingId: booking._id,
+                            message: `⚠️ Urgent: Assign pickup agent for booking #${booking.bookingId || booking._id.toString().slice(-6)}`,
+                            deadline: 15
+                        });
+                        booking.vendorAlertSent = true;
+                        await booking.save();
+                    }
+                }
+
+                if (diffMinutes <= 32 && diffMinutes >= 28 && !booking.staffCommitmentAlertSent && booking.pickupStaff) {
+                    const staffId = booking.pickupStaff?._id || booking.pickupStaff;
+                    if (staffId) {
+                        io.to(staffId.toString()).emit('scheduled_commitment_request', {
+                            bookingId: booking._id,
+                            message: `⏰ Priority: Scheduled pickup in 30 mins. Please confirm availability in terminal.`,
+                            schedule: booking.schedule
+                        });
+                        booking.staffCommitmentAlertSent = true;
+                        await booking.save();
+                    }
+                }
+
+                if (diffMinutes <= 3 && diffMinutes >= -3 && booking.status === 'pickup-assigned' && !booking.scheduledAlertSent) {
+                    booking.status = 'en_route';
+                    booking.scheduledAlertSent = true;
+                    await booking.save();
+
+                    io.to(booking._id.toString()).emit('booking_status_updated', {
+                        bookingId: booking._id,
+                        status: 'en_route',
+                        message: 'Agent is heading towards you for the scheduled pickup!'
+                    });
+                }
+            }
+
+            // ─── PASS 4: DOORSTEP Scheduled Monitor (Risk Mitigation) ─────────────
+            const doorstepScheduled = await Booking.find({
+                'schedule.type': 'scheduled',
+                'service.type': 'captain',
+                status: 'confirmed',
+                isActive: true,
+                'schedule.date': {
+                    $gte: new Date(now.getTime() - 12 * 60 * 60 * 1000),
+                    $lte: new Date(now.getTime() + 12 * 60 * 60 * 1000)
+                }
+            }).populate('provider.id');
+
+            for (const booking of doorstepScheduled) {
+                const startTime = getScheduledStartTime(booking);
+                if (!startTime) continue;
+                const diffMinutes = (startTime - now) / (1000 * 60);
+                const io = socketService.getIO();
+
+                // Stage 1: T-45 Commitment Alert
+                if (diffMinutes <= 47 && diffMinutes >= 43 && !booking.doorstepCommitmentAlertSent) {
+                    const captainId = booking.provider?.id?._id || booking.provider?.id;
+                    if (captainId) {
+                        io.to(captainId.toString()).emit('doorstep_commitment_request', {
+                            bookingId: booking._id,
+                            message: `⚠️ Urgent: Confirm availability for scheduled wash #${booking.bookingId || booking._id.toString().slice(-6)}`,
+                            deadline: 15
+                        });
+
+                        await sendCaptainNotification(captainId, {
+                            title: '⏰ Commitment Required!',
+                            message: `Please confirm your upcoming wash #${booking.bookingId || booking._id.toString().slice(-6)} at ${booking.schedule.timeSlot.start}. Failure to confirm in 15 mins will result in re-assignment.`,
+                            type: 'booking',
+                            priority: 'high',
+                            metaData: { bookingId: booking._id }
+                        });
+
+                        booking.doorstepCommitmentAlertSent = true;
+                        await booking.save();
+                    }
+                }
+
+                // Stage 2: T-30 Emergency Re-Broadcast (If NOT committed)
+                if (diffMinutes <= 32 && diffMinutes >= 28 && !booking.isDoorstepCommitted) {
+                    const originalCaptainId = booking.provider?.id?._id || booking.provider?.id;
+
+                    console.log(`[Monitor] 🚨 EMERGENCY: Un-commited doorstep booking at T-30. Re-assigning: ${booking._id}`);
+
+                    // 1. Log the failure
+                    booking.activityLog.push({
+                        status: 'reassigned',
+                        description: 'Original captain failed to commit at T-45. Re-broadcasting to nearby specialists.',
+                        metadata: { originalCaptain: originalCaptainId }
+                    });
+
+                    // 2. Unassign and move to pending
+                    booking.reassignedFrom = originalCaptainId;
+                    booking.reassignedAt = new Date();
+                    booking.provider = { type: 'captain' }; // Clear the ID
+                    booking.status = 'pending';
+                    await booking.save();
+
+                    // 3. Inform original captain
+                    if (originalCaptainId) {
+                        io.to(originalCaptainId.toString()).emit('job_unassigned', {
+                            bookingId: booking._id,
+                            reason: 'Failure to commit at T-45'
+                        });
+                    }
+
+                    // 4. Trigger Instant Broadcast for nearby backup captains
+                    await broadcastScheduledBooking(booking);
+
+                    // 5. Notify Admins
+                    await sendAdminNotification({
+                        title: '🔴 Critical: Doorstep Re-assignment',
+                        message: `Booking #${booking.bookingId || booking._id.toString().slice(-6)} reassigned. Specialist failed to commit.`,
+                        type: 'booking',
+                        priority: 'high',
+                        metaData: { bookingId: booking._id }
+                    });
+                }
+            }
+
+            // ─── PASS 5: STUCK BOOKING MONITOR (Proactive Logistics) ─────────────
+            const twoHoursAgo = new Date(now.getTime() - 120 * 60 * 1000);
+            const stuckBookings = await Booking.find({
+                status: { $in: ['assigned', 'en_route', 'arrived', 'pickup-assigned', 'in_progress'] },
+                updatedAt: { $lt: twoHoursAgo },
+                isActive: true,
+                isStuckAlertSent: { $ne: true } // Prevent notification spam
+            }).populate('consumer', 'name');
+
+            for (const b of stuckBookings) {
+                console.log(`[Monitor] ⚠️ STUCK BOOKING DETECTED: ${b._id} (No activity for 2+ hours)`);
+
+                // Emit to Admin Room
+                const io = socketService.getIO();
+                io.to('admin').emit('stuck_booking_alert', {
+                    bookingId: b._id,
+                    status: b.status,
+                    customer: b.consumer?.name || 'Customer',
+                    lastUpdate: b.updatedAt
+                });
+
+                // Send Admin DB Notification
+                await sendAdminNotification({
+                    title: '⚠️ Logistical Bottleneck',
+                    message: `Booking #${b.bookingId || b._id.toString().slice(-6)} has stalled in "${b.status}" status for over 2 hours.`,
+                    type: 'logistics',
+                    priority: 'medium',
+                    metaData: { bookingId: b._id }
+                });
+
+                // Mark as alerted
+                b.isStuckAlertSent = true;
+                await b.save();
+            }
+
         } catch (error) {
             console.error('[Monitor] ❌ Error in booking monitor cycle:', error.message);
         }

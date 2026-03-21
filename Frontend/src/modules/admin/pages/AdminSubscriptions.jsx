@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdminLayout from '../components/AdminLayout';
+// Subscription Matrix Hardened
 import {
     Crown,
     Plus,
@@ -123,7 +124,7 @@ const AdminSubscriptions = () => {
         <AdminLayout title="Subscription Matrix">
             <div className="space-y-12 pb-20">
                 {/* Global Pass Strategy Command Center */}
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="bg-black text-white p-8 sm:p-10 rounded-[3rem] border border-white/5 relative overflow-hidden group shadow-2xl"
@@ -131,7 +132,7 @@ const AdminSubscriptions = () => {
                     <div className="absolute top-0 right-0 p-10 opacity-10 group-hover:rotate-12 transition-transform duration-700">
                         <Crown size={180} />
                     </div>
-                    
+
                     <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
                         <div>
                             <div className="flex items-center gap-3 mb-4">
@@ -141,7 +142,7 @@ const AdminSubscriptions = () => {
                             <p className="text-[11px] font-bold text-white/40 uppercase tracking-[0.2em] leading-relaxed max-w-sm">
                                 Manage universal discount protocols and marketing headlines for the clean2wash BLACK ecosystem globally.
                             </p>
-                            
+
                             <div className="flex items-center gap-10 mt-8">
                                 <div>
                                     <p className="text-[28px] font-[1000] text-brand leading-none">{(passConfig?.discount * 100) || 30}%</p>
@@ -158,7 +159,7 @@ const AdminSubscriptions = () => {
                         <div className="bg-white/5 backdrop-blur-xl p-6 rounded-[2rem] border border-white/10 space-y-5" onClick={(e) => e.stopPropagation()}>
                             <div className="space-y-2">
                                 <label className="text-[9px] font-black text-white/30 uppercase tracking-widest ml-1">Marketing Protocol Headline</label>
-                                <input 
+                                <input
                                     className="w-full bg-black/40 border border-white/10 px-5 py-3 rounded-xl text-[10px] font-black text-white outline-none focus:border-brand transition-all"
                                     value={passConfig?.marketingLine || ''}
                                     placeholder="e.g. Save up to 40% on every service"
@@ -168,7 +169,7 @@ const AdminSubscriptions = () => {
                             <div className="flex gap-4">
                                 <div className="flex-1 space-y-2">
                                     <label className="text-[9px] font-black text-white/30 uppercase tracking-widest ml-1">Discount Rate (0.1 - 0.9)</label>
-                                    <input 
+                                    <input
                                         type="number"
                                         step="0.05"
                                         className="w-full bg-black/40 border border-white/10 px-5 py-3 rounded-xl text-[10px] font-black text-white outline-none focus:border-brand transition-all"
@@ -176,7 +177,7 @@ const AdminSubscriptions = () => {
                                         onChange={(e) => setPassConfig(prev => ({ ...prev, discount: parseFloat(e.target.value) }))}
                                     />
                                 </div>
-                                <button 
+                                <button
                                     onClick={handleUpdateGlobalConfig}
                                     disabled={savingConfig}
                                     className="self-end h-11 px-6 bg-brand text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-white hover:text-black transition-all shadow-lg active:scale-95 flex items-center gap-2"
@@ -322,13 +323,13 @@ const AdminSubscriptions = () => {
                                                             setFormData({ ...formData, applicableServices: next });
                                                         }}
                                                         className={`flex items-center gap-4 px-5 py-4 rounded-2xl border transition-all active:scale-[0.98] ${(formData.applicableServices || []).includes(service)
-                                                                ? 'bg-brand/5 border-brand text-brand shadow-sm shadow-brand/5'
-                                                                : 'bg-gray-50 border-gray-100 text-content-subtle hover:border-brand/30'
+                                                            ? 'bg-brand/5 border-brand text-brand shadow-sm shadow-brand/5'
+                                                            : 'bg-gray-50 border-gray-100 text-content-subtle hover:border-brand/30'
                                                             }`}
                                                     >
                                                         <div className={`w-6 h-6 rounded-xl flex items-center justify-center border-2 transition-all flex-shrink-0 ${(formData.applicableServices || []).includes(service)
-                                                                ? 'bg-brand border-brand text-white'
-                                                                : 'border-gray-200 bg-white group-hover:border-brand/30'
+                                                            ? 'bg-brand border-brand text-white'
+                                                            : 'border-gray-200 bg-white group-hover:border-brand/30'
                                                             }`}>
                                                             {(formData.applicableServices || []).includes(service) && <Check size={14} strokeWidth={4} />}
                                                         </div>
@@ -370,7 +371,7 @@ const AdminSubscriptions = () => {
                             </div>
                             <h3 className="text-xl font-black text-content leading-none uppercase tracking-tighter mb-2">Delete Plan?</h3>
                             <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mb-8 px-4">This action will permanently delete this plan node from the system.</p>
-                            
+
                             <div className="flex gap-3">
                                 <button
                                     onClick={() => setDeleteConfirm({ isOpen: false, id: null })}

@@ -286,11 +286,25 @@ class ApiClient {
         return this.request(`/transactions${query ? `?${query}` : ''}`);
     }
 
-    async updateTransactionStatus(id, status) {
+    async getSettlementStats() {
+        return this.request('/transactions/stats');
+    }
+
+    async updateTransactionStatus(id, status, adminNote, utr) {
         return this.request(`/transactions/${id}/status`, {
             method: 'PATCH',
-            body: JSON.stringify({ status })
+            body: JSON.stringify({ status, adminNote, utr })
         });
+    }
+
+    // Audit Logs
+    async getAuditLogs(params = {}) {
+        const query = new URLSearchParams(params).toString();
+        return this.request(`/audit/logs${query ? `?${query}` : ''}`);
+    }
+
+    async getAuditStats() {
+        return this.request('/audit/stats');
     }
 
     // ── Vehicle Models ───────────────────────────────────────────
@@ -315,6 +329,50 @@ class ApiClient {
 
     async deleteVehicleModel(id) {
         return this.request(`/vehicle-models/${id}`, { method: 'DELETE' });
+    }
+
+    async getSpareDrivers() {
+        return this.request('/spare-drivers');
+    }
+
+    async getSpareDriverBookings() {
+        return this.request('/bookings/chauffeur');
+    }
+
+    // ── Global Product Stats (Phase 35) ─────────────────────────
+    async getProductStats() {
+        return this.request('/products/stats');
+    }
+
+    async getMasterInventory() {
+        return this.request('/products/inventory');
+    }
+
+    async resolveProductDispute(data) {
+        return this.request('/products/resolve-dispute', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+    }
+
+    async get(endpoint, options = {}) {
+        return this.request(endpoint, { ...options, method: 'GET' });
+    }
+
+    async post(endpoint, body, options = {}) {
+        return this.request(endpoint, { ...options, method: 'POST', body: JSON.stringify(body) });
+    }
+
+    async put(endpoint, body, options = {}) {
+        return this.request(endpoint, { ...options, method: 'PUT', body: JSON.stringify(body) });
+    }
+
+    async patch(endpoint, body, options = {}) {
+        return this.request(endpoint, { ...options, method: 'PATCH', body: JSON.stringify(body) });
+    }
+
+    async delete(endpoint, options = {}) {
+        return this.request(endpoint, { ...options, method: 'DELETE' });
     }
 }
 
@@ -365,13 +423,24 @@ export const adminAPI = {
     updateSetting: (key, value) => apiClient.updateSetting(key, value),
     // Transactions
     getTransactions: (params) => apiClient.getTransactions(params),
-    updateTransactionStatus: (id, status) => apiClient.updateTransactionStatus(id, status),
+    getSettlementStats: () => apiClient.getSettlementStats(),
+    updateTransactionStatus: (id, status, adminNote, utr) => apiClient.updateTransactionStatus(id, status, adminNote, utr),
+    // Audit Logs
+    getAuditLogs: (params) => apiClient.getAuditLogs(params),
+    getAuditStats: () => apiClient.getAuditStats(),
     // Vehicle Models
     getVehicleModels: (params) => apiClient.getVehicleModels(params),
     createVehicleModel: (data) => apiClient.createVehicleModel(data),
     updateVehicleModel: (id, data) => apiClient.updateVehicleModel(id, data),
     deleteVehicleModel: (id) => apiClient.deleteVehicleModel(id),
+    getSpareDrivers: () => apiClient.getSpareDrivers(),
+    getSpareDriverBookings: () => apiClient.getSpareDriverBookings(),
     // Expose raw request for legacy callers
     request: (endpoint, opts) => apiClient.request(endpoint, opts),
-    setToken: (token) => apiClient.setToken(token)
+    setToken: (token) => apiClient.setToken(token),
+
+    // Global Product Stats
+    getProductStats: () => apiClient.getProductStats(),
+    getMasterInventory: () => apiClient.getMasterInventory(),
+    resolveProductDispute: (data) => apiClient.resolveProductDispute(data)
 };

@@ -11,7 +11,13 @@ import { useAuth } from '../../../context/AuthContext';
 const PaymentCheckout = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { addBooking } = useAuth();
+    const {
+        addBooking,
+        getRazorpayKey,
+        createPaymentOrder,
+        verifyPayment,
+        sessions
+    } = useAuth();
     const [isProcessing, setIsProcessing] = useState(false);
     const [paymentSuccess, setPaymentSuccess] = useState(false);
     const [selectedMethod, setSelectedMethod] = useState('upi');
@@ -24,21 +30,112 @@ const PaymentCheckout = () => {
         time: 'Now'
     };
 
-    const handlePayment = () => {
-        setIsProcessing(true);
-        // Simulate payment gateway delay
-        setTimeout(async () => {
-            if (bookingInfo) {
-                await addBooking(bookingInfo);
-            }
-            setIsProcessing(false);
-            setPaymentSuccess(true);
+    // Helper to load Razorpay script
+    const loadRazorpayScript = () => {
+        return new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+            script.onload = () => resolve(true);
+            script.onerror = () => resolve(false);
+            document.body.appendChild(script);
+        });
+    };
 
-            // Navigate to success/booking-confirmed after a short delay
-            setTimeout(() => {
-                navigate('/bookings');
-            }, 2000);
-        }, 2500);
+    const handlePayment = async () => {
+        setIsProcessing(true);
+        try {
+            // 1. Create a "Pending" booking first
+            const bookingResult = await addBooking({
+                ...bookingInfo,
+                payment: {
+                    method: selectedMethod,
+                    status: 'pending'
+                }
+            });
+
+            if (!bookingResult.success) {
+                throw new Error(bookingResult.error || 'Failed to initialize booking');
+            }
+
+            const bookingId = bookingResult.data._id;
+
+            // 2. Load Razorpay Script
+            const res = await loadRazorpayScript();
+            if (!res) {
+                throw new Error('Razorpay SDK failed to load. Check your internet connection.');
+            }
+
+            // 3. Get Razorpay Key from Backend
+            const keyRes = await getRazorpayKey();
+            if (!keyRes.success) throw new Error('Failed to fetch payment configuration');
+
+            // 4. Create Order on Backend
+            const orderRes = await createPaymentOrder(amount, 'INR', bookingId);
+            if (!orderRes.success) throw new Error('Failed to create payment order');
+
+            const { id: order_id, amount: order_amount, currency } = orderRes.data;
+
+            // 5. Initialize Razorpay Options
+            const options = {
+                key: keyRes.data.key_id,
+                amount: order_amount,
+                currency: currency,
+                name: 'Clean-2-Wash',
+                description: `Payment for ${serviceName}`,
+                image: '/logo192.png',
+                order_id: order_id,
+                handler: async (response) => {
+                    try {
+                        setIsProcessing(true);
+                        // 6. Verify Payment on Backend
+                        const verifyRes = await verifyPayment(
+                            response.razorpay_order_id,
+                            response.razorpay_payment_id,
+                            response.razorpay_signature,
+                            bookingId
+                        );
+
+                        if (verifyRes.success) {
+                            setPaymentSuccess(true);
+                            setTimeout(() => {
+                                navigate('/bookings');
+                            }, 3000);
+                        } else {
+                            throw new Error('Payment verification failed');
+                        }
+                    } catch (err) {
+                        console.error('Verification Error:', err);
+                        alert('Payment verification failed. Please contact support if amount was deducted.');
+                    } finally {
+                        setIsProcessing(false);
+                    }
+                },
+                prefill: {
+                    name: sessions.consumer?.name || '',
+                    email: sessions.consumer?.email || '',
+                    contact: sessions.consumer?.phone || ''
+                },
+                notes: {
+                    booking_id: bookingId
+                },
+                theme: {
+                    color: '#000000'
+                },
+                modal: {
+                    ondismiss: () => {
+                        setIsProcessing(false);
+                    }
+                }
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.open();
+
+        } catch (error) {
+            console.error('Payment Error:', error);
+            alert(error.message || 'Something went wrong during payment');
+            setIsProcessing(false);
+        }
     };
 
     return (

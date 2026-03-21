@@ -5,7 +5,7 @@ import { useAuth } from '../../../../context/AuthContext';
 import { serviceAPI, subscriptionAPI, paymentAPI } from '../../../../utils/api';
 
 const BlackPassModal = ({ isOpen, onClose }) => {
-    const { user, setUserSubscription, getRazorpayKey, createPaymentOrder, verifyPayment } = useAuth();
+    const { user, login, userSubscription, setUserSubscription, getRazorpayKey, createPaymentOrder, verifyPayment } = useAuth();
     const [loading, setLoading] = useState(false);
     const [plan, setPlan] = useState(null);
     const [error, setError] = useState(null);
@@ -22,7 +22,7 @@ const BlackPassModal = ({ isOpen, onClose }) => {
             const res = await serviceAPI.getPlans();
             if (res.status === 'success' && res.data?.plans) {
                 const blackPass = res.data.plans.find(p => p.name?.toLowerCase().includes('black'));
-                
+
                 if (blackPass) {
                     setPlan(blackPass);
                 } else {
@@ -97,7 +97,7 @@ const BlackPassModal = ({ isOpen, onClose }) => {
                             if (subRes.status === 'success') {
                                 setUserSubscription(subRes.data.subscription);
                                 // Re-fetch profile to sync state (if login updates user context)
-                                if (user?.phone) await login('consumer', user); 
+                                if (user?.phone) await login('consumer', user);
                                 onClose(); // Close modal on success
                                 // Trigger success confetti or message could go here
                             } else {
@@ -143,7 +143,7 @@ const BlackPassModal = ({ isOpen, onClose }) => {
                         onClick={onClose}
                         className="absolute inset-0 bg-black/80 backdrop-blur-md"
                     />
-                    
+
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -153,25 +153,25 @@ const BlackPassModal = ({ isOpen, onClose }) => {
                         {/* Premium Header */}
                         <div className="relative h-48 bg-black flex flex-col items-center justify-center overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-br from-brand/20 to-transparent z-0" />
-                            
+
                             {/* Animated Background Sparks */}
                             {[...Array(6)].map((_, i) => (
                                 <motion.div
                                     key={i}
                                     className="absolute w-1 h-1 bg-brand rounded-full"
-                                    animate={{ 
-                                        y: [-20, -100], 
+                                    animate={{
+                                        y: [-20, -100],
                                         x: [0, (i - 3) * 20],
-                                        opacity: [0, 1, 0] 
+                                        opacity: [0, 1, 0]
                                     }}
-                                    transition={{ 
-                                        repeat: Infinity, 
-                                        duration: 2 + i * 0.5, 
-                                        delay: i * 0.3 
+                                    transition={{
+                                        repeat: Infinity,
+                                        duration: 2 + i * 0.5,
+                                        delay: i * 0.3
                                     }}
-                                    style={{ 
-                                        bottom: '20%', 
-                                        left: `${40 + i * 5}%` 
+                                    style={{
+                                        bottom: '20%',
+                                        left: `${40 + i * 5}%`
                                     }}
                                 />
                             ))}
@@ -189,7 +189,7 @@ const BlackPassModal = ({ isOpen, onClose }) => {
                                 <p className="text-[10px] font-black text-brand uppercase tracking-[0.4em] mt-2">Lifetime Ecosystem Access</p>
                             </motion.div>
 
-                            <button 
+                            <button
                                 onClick={onClose}
                                 className="absolute top-6 right-6 w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-white/60 hover:text-white transition-colors"
                             >
@@ -208,7 +208,7 @@ const BlackPassModal = ({ isOpen, onClose }) => {
                                 <>
                                     <div className="space-y-4 mb-10">
                                         {(plan?.features || []).map((feat, i) => (
-                                            <motion.div 
+                                            <motion.div
                                                 key={i}
                                                 initial={{ x: -10, opacity: 0 }}
                                                 animate={{ x: 0, opacity: 1 }}
@@ -247,20 +247,20 @@ const BlackPassModal = ({ isOpen, onClose }) => {
                                         whileTap={{ scale: 0.95 }}
                                         onClick={handlePurchase}
                                         disabled={loading}
-                                        className="w-full h-16 bg-black text-white rounded-[2rem] font-black text-[12px] uppercase tracking-[0.3em] shadow-2xl flex items-center justify-center gap-4 group hover:bg-brand transition-all duration-300"
+                                        className={`w-full h-16 rounded-[2rem] font-black text-[12px] uppercase tracking-[0.3em] shadow-2xl flex items-center justify-center gap-4 group transition-all duration-300 ${userSubscription ? 'bg-emerald-500 text-white' : 'bg-black text-white hover:bg-brand'}`}
                                     >
                                         {loading ? (
                                             <Loader2 className="w-5 h-5 animate-spin" />
                                         ) : (
                                             <>
-                                                Unlock Premium Now
+                                                {userSubscription ? 'Extend Premium Membership' : 'Unlock Premium Now'}
                                                 <ArrowRight size={18} className="translate-x-0 group-hover:translate-x-1 transition-transform" />
                                             </>
                                         )}
                                     </motion.button>
-                                    
+
                                     <p className="text-center text-[8px] font-bold text-black/20 uppercase tracking-[0.2em] mt-6">
-                                        Powered by Razorpay Secure 
+                                        Powered by Razorpay Secure
                                     </p>
                                 </>
                             )}

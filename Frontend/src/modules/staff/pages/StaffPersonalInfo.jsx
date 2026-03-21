@@ -15,6 +15,8 @@ import {
 import StaffLayout from '../components/StaffLayout';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
+import { staffAPI } from '../../../utils/staffApi';
+import { toast } from 'react-hot-toast';
 
 const StaffPersonalInfo = () => {
     const navigate = useNavigate();
@@ -30,14 +32,25 @@ const StaffPersonalInfo = () => {
     const [formData, setFormData] = useState({
         name: user.name,
         phone: user.phone,
-        email: user.email || (user.name.toLowerCase().replace(' ', '.') + '@carwash.in'),
-        address: user.address || 'CarWash Hub Dormitory, Sector 15',
+        address: user.profile?.address?.street || user.address || 'CarWash Hub Dormitory, Sector 15',
         hub: user.hub || 'Studio Hub'
     });
+    const [isSaving, setIsSaving] = useState(false);
 
-    const handleSave = () => {
-        // Mock save logic
-        navigate(-1);
+    const handleSave = async () => {
+        try {
+            setIsSaving(true);
+            const res = await staffAPI.updateProfile(formData);
+            if (res.status === 'success') {
+                toast.success('Identity Synchronized');
+                // Potential session refresh needed if local state caches user
+                navigate(-1);
+            }
+        } catch (err) {
+            toast.error('Identity Sync Failure');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (

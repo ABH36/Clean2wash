@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdminLayout from '../components/AdminLayout';
 import { adminAPI } from '../../../utils/adminApi';
+import { socketService } from '../../../utils/socket';
 import {
     Search,
     Calendar,
@@ -40,6 +41,7 @@ const AdminBookings = () => {
     const [assignmentType, setAssignmentType] = useState('pickup');
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState('list');
+    const [categoryFilter, setCategoryFilter] = useState('all');
     const [refreshing, setRefreshing] = useState(false);
     const pollRef = useRef(null);
 
@@ -79,9 +81,47 @@ const AdminBookings = () => {
     useEffect(() => {
         fetchBookings();
         fetchStaff();
-        // Auto-refresh every 30s for live data
-        pollRef.current = setInterval(() => fetchBookings(true), 30000);
-        return () => clearInterval(pollRef.current);
+
+        // Socket Integration
+        // Join the elite admin control room (Role-restricted on backend)
+        socketService.joinAdminRoom();
+
+        // Reactive Listeners
+        const handleBookingUpdate = (data) => {
+            console.log('[Admin Bookings] 📡 Booking update received:', data);
+            fetchBookings(true); // Silent refresh
+        };
+
+        const handleLocationPulse = (data) => {
+            console.log('[Admin Bookings] 📍 Location pulse received:', data.bookingId);
+            setBookings(prev => prev.map(b => {
+                if (b._id === data.bookingId || b.id === data.bookingId) {
+                    return {
+                        ...b,
+                        location: {
+                            ...b.location,
+                            address: {
+                                ...b.location?.address,
+                                coordinates: { lat: data.lat, lng: data.lng }
+                            }
+                        }
+                    };
+                }
+                return b;
+            }));
+        };
+
+        socketService.on('booking_status_updated', handleBookingUpdate);
+        socketService.on('new_booking', handleBookingUpdate);
+        socketService.on('new_booking_broadcast', handleBookingUpdate);
+        socketService.on('specialist_location_pulse', handleLocationPulse);
+
+        return () => {
+            socketService.off('booking_status_updated', handleBookingUpdate);
+            socketService.off('new_booking', handleBookingUpdate);
+            socketService.off('new_booking_broadcast', handleBookingUpdate);
+            socketService.off('specialist_location_pulse', handleLocationPulse);
+        };
     }, []);
 
     // Filter logic
@@ -92,7 +132,8 @@ const AdminBookings = () => {
             id.toLowerCase().includes(searchTerm.toLowerCase()) ||
             customerName.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = statusFilter === 'all' || b.status === statusFilter;
-        return matchesSearch && matchesStatus;
+        const matchesCategory = categoryFilter === 'all' || b.service?.category === categoryFilter;
+        return matchesSearch && matchesStatus && matchesCategory;
     });
 
     const getStatusColor = (status) => {
@@ -211,6 +252,19 @@ const AdminBookings = () => {
                             </button>
                         </div>
                     </div>
+                </div>
+
+                {/* Category Terminal Tabs */}
+                <div className="flex gap-2 p-1 bg-white border border-gray-100 rounded-2xl w-fit shadow-soft">
+                    {['all', 'Doorstep', 'Studio', 'Chauffeur'].map(cat => (
+                        <button
+                            key={cat}
+                            onClick={() => setCategoryFilter(cat)}
+                            className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${categoryFilter === cat ? 'bg-brand text-white shadow-lg' : 'text-content-subtle hover:bg-gray-50'}`}
+                        >
+                            {cat}
+                        </button>
+                    ))}
                 </div>
 
                 {/* Main Data Terminal */}
@@ -387,37 +441,52 @@ const AdminBookings = () => {
                                     </div>
                                 </div>
 
-                                {/* Captain/Provider Section */}
-                                {selectedBooking.provider && (
+                                {/* Specialist/Provider Section */}
+                                {(selectedBooking.provider || selectedBooking.service?.category === 'Chauffeur') && (
                                     <div className="space-y-2">
-                                        <h4 className="text-[9px] font-black text-content-subtle uppercase tracking-widest px-1">Assigned Captain</h4>
+                                        <h4 className="text-[9px] font-black text-content-subtle uppercase tracking-widest px-1">
+                                            {selectedBooking.service?.category === 'Chauffeur' ? 'Assigned Driver' : 'Assigned Captain'}
+                                        </h4>
                                         <div className="p-4 rounded-2xl bg-[#0F172A] text-white">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-xl bg-brand/20 border border-brand/30 flex items-center justify-center font-black text-brand text-base">
-                                                    {(selectedBooking.provider?.id?.name || selectedBooking.provider?.name || 'C')[0]}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-black text-white truncate">
-                                                        {selectedBooking.provider?.id?.name || selectedBooking.provider?.name || '—'}
-                                                    </p>
-                                                    <p className="text-[10px] text-white/50 font-bold">
-                                                        {selectedBooking.provider?.id?.phone || selectedBooking.provider?.phone || '—'}
-                                                    </p>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <Star size={8} className="text-yellow-400" fill="currentColor" />
-                                                        <span className="text-[8px] font-black text-white/60">
-                                                            {selectedBooking.provider?.id?.rating || selectedBooking.provider?.rating || '—'}
-                                                        </span>
-                                                        <span className="text-[8px] font-black text-brand uppercase tracking-widest">{selectedBooking.provider.type}</span>
+                                            {selectedBooking.provider ? (
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 rounded-xl bg-brand/20 border border-brand/30 flex items-center justify-center font-black text-brand text-base">
+                                                        {(selectedBooking.provider?.id?.name || selectedBooking.provider?.name || 'C')[0]}
                                                     </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-black text-white truncate">
+                                                            {selectedBooking.provider?.id?.name || selectedBooking.provider?.name || '—'}
+                                                        </p>
+                                                        <p className="text-[10px] text-white/50 font-bold">
+                                                            {selectedBooking.provider?.id?.phone || selectedBooking.provider?.phone || '—'}
+                                                        </p>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <Star size={8} className="text-yellow-400" fill="currentColor" />
+                                                            <span className="text-[8px] font-black text-white/60">
+                                                                {selectedBooking.provider?.id?.rating || selectedBooking.provider?.rating || '—'}
+                                                            </span>
+                                                            <span className="text-[8px] font-black text-brand uppercase tracking-widest">{selectedBooking.provider.type}</span>
+                                                        </div>
+                                                    </div>
+                                                    {(selectedBooking.provider?.id?.phone || selectedBooking.provider?.phone) && (
+                                                        <a href={`tel:${selectedBooking.provider?.id?.phone || selectedBooking.provider?.phone}`}
+                                                            className="w-9 h-9 bg-green-500 rounded-xl flex items-center justify-center">
+                                                            <Phone size={14} className="text-white" />
+                                                        </a>
+                                                    )}
                                                 </div>
-                                                {(selectedBooking.provider?.id?.phone || selectedBooking.provider?.phone) && (
-                                                    <a href={`tel:${selectedBooking.provider?.id?.phone || selectedBooking.provider?.phone}`}
-                                                        className="w-9 h-9 bg-green-500 rounded-xl flex items-center justify-center">
-                                                        <Phone size={14} className="text-white" />
-                                                    </a>
-                                                )}
-                                            </div>
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center py-4 text-white/40">
+                                                    <User size={24} className="mb-2 opacity-20" />
+                                                    <p className="text-[10px] font-black uppercase tracking-widest">No Driver Assigned</p>
+                                                    <button
+                                                        onClick={() => { setAssignmentType('driver'); setIsAssignModalOpen(true); }}
+                                                        className="mt-3 px-4 py-2 bg-brand text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-brand/20"
+                                                    >
+                                                        Assign Now
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 )}
@@ -460,27 +529,24 @@ const AdminBookings = () => {
                                                 const isSOS = issue.type === 'SOS';
                                                 const isOpen = issue.status === 'open';
                                                 return (
-                                                    <div key={idx} className={`p-4 rounded-2xl border-2 relative overflow-hidden ${
-                                                        isSOS && isOpen ? 'bg-red-50 border-red-200' :
+                                                    <div key={idx} className={`p-4 rounded-2xl border-2 relative overflow-hidden ${isSOS && isOpen ? 'bg-red-50 border-red-200' :
                                                         isSOS ? 'bg-gray-50 border-gray-200' :
-                                                        'bg-amber-50 border-amber-200'
-                                                    }`}>
+                                                            'bg-amber-50 border-amber-200'
+                                                        }`}>
                                                         {isSOS && isOpen && (
                                                             <div className="absolute top-0 right-0 w-20 h-20 bg-red-500/10 rounded-full blur-2xl" />
                                                         )}
                                                         <div className="flex items-center justify-between mb-2">
                                                             <div className="flex items-center gap-2">
                                                                 <AlertCircle size={13} className={isSOS ? 'text-red-600' : 'text-amber-600'} />
-                                                                <span className={`text-[9px] font-black uppercase tracking-widest ${
-                                                                    isSOS ? 'text-red-700' : 'text-amber-700'
-                                                                }`}>{issue.type || 'Issue'}</span>
+                                                                <span className={`text-[9px] font-black uppercase tracking-widest ${isSOS ? 'text-red-700' : 'text-amber-700'
+                                                                    }`}>{issue.type || 'Issue'}</span>
                                                             </div>
                                                             <div className="flex items-center gap-2">
-                                                                <span className={`text-[7px] font-black uppercase px-2 py-0.5 rounded-full ${
-                                                                    issue.status === 'open' ? 'bg-red-100 text-red-700' :
+                                                                <span className={`text-[7px] font-black uppercase px-2 py-0.5 rounded-full ${issue.status === 'open' ? 'bg-red-100 text-red-700' :
                                                                     issue.status === 'resolved' ? 'bg-green-100 text-green-700' :
-                                                                    'bg-gray-100 text-gray-600'
-                                                                }`}>{issue.status}</span>
+                                                                        'bg-gray-100 text-gray-600'
+                                                                    }`}>{issue.status}</span>
                                                                 <span className="text-[8px] text-content-subtle">
                                                                     {new Date(issue.reportedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                                 </span>
@@ -528,11 +594,10 @@ const AdminBookings = () => {
                                             <button
                                                 key={val}
                                                 onClick={() => handleUpdateStatus(selectedBooking._id, val)}
-                                                className={`p-2.5 rounded-xl border text-[8px] font-black uppercase tracking-wider transition-all ${
-                                                    selectedBooking.status === val
-                                                        ? 'bg-content text-white border-content shadow-lg'
-                                                        : 'bg-white text-content-subtle border-gray-100 hover:border-brand/30 hover:text-brand'
-                                                }`}
+                                                className={`p-2.5 rounded-xl border text-[8px] font-black uppercase tracking-wider transition-all ${selectedBooking.status === val
+                                                    ? 'bg-content text-white border-content shadow-lg'
+                                                    : 'bg-white text-content-subtle border-gray-100 hover:border-brand/30 hover:text-brand'
+                                                    }`}
                                             >
                                                 {val.replace(/[-_]/g, ' ')}
                                             </button>
@@ -599,27 +664,24 @@ const AdminBookings = () => {
                             <button
                                 key={captain._id}
                                 onClick={() => handleAssign(captain)}
-                                className={`w-full p-4 rounded-2xl border flex items-center gap-4 hover:border-brand hover:bg-brand/5 transition-all group text-left ${
-                                    selectedBooking?.provider?.id?._id === captain._id || selectedBooking?.provider?.id === captain._id
-                                        ? 'border-brand bg-brand/5'
-                                        : 'border-gray-100 bg-gray-50/30'
-                                }`}
+                                className={`w-full p-4 rounded-2xl border flex items-center gap-4 hover:border-brand hover:bg-brand/5 transition-all group text-left ${selectedBooking?.provider?.id?._id === captain._id || selectedBooking?.provider?.id === captain._id
+                                    ? 'border-brand bg-brand/5'
+                                    : 'border-gray-100 bg-gray-50/30'
+                                    }`}
                             >
                                 <div className="relative">
                                     <div className="w-11 h-11 rounded-xl bg-[#0F172A] flex items-center justify-center text-brand font-black text-base">
                                         {(captain.name || 'C')[0]}
                                     </div>
-                                    <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
-                                        captain.isOnline ? 'bg-green-500' : 'bg-gray-400'
-                                    }`} />
+                                    <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${captain.isOnline ? 'bg-green-500' : 'bg-gray-400'
+                                        }`} />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-xs font-black text-content leading-none truncate">{captain.name}</p>
                                     <p className="text-[9px] font-bold text-content-subtle mt-0.5">{captain.phone || '—'}</p>
                                     <div className="flex items-center gap-2 mt-1">
-                                        <span className={`text-[7px] font-black uppercase px-1.5 py-0.5 rounded-full ${
-                                            captain.isOnline ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                                        }`}>
+                                        <span className={`text-[7px] font-black uppercase px-1.5 py-0.5 rounded-full ${captain.isOnline ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                                            }`}>
                                             {captain.isOnline ? 'Online' : 'Offline'}
                                         </span>
                                         {captain.profile?.city && (
@@ -744,9 +806,16 @@ const LiveMapView = ({ bookings, onSelectBooking }) => {
     useEffect(() => {
         if (!map || !window.google) return;
 
-        // Clear old markers
-        Object.values(markersRef.current).forEach(marker => marker.map = null);
-        markersRef.current = {};
+        // Current set of active IDs
+        const activeIds = new Set(activeMappableBookings.map(b => b._id || b.id));
+
+        // 1. Remove markers for bookings no longer active
+        Object.keys(markersRef.current).forEach(id => {
+            if (!activeIds.has(id)) {
+                markersRef.current[id].setMap(null);
+                delete markersRef.current[id];
+            }
+        });
 
         const bounds = new window.google.maps.LatLngBounds();
         let hasPoints = false;
@@ -755,11 +824,13 @@ const LiveMapView = ({ bookings, onSelectBooking }) => {
             const lat = booking.location.address.coordinates.lat;
             const lng = booking.location.address.coordinates.lng;
             const bId = booking._id || booking.id;
+            const pos = { lat, lng };
 
-            // Pin styling based on status
-            let color = '#2563eb'; // Default blue (confirmed)
+            // Status-based coloring
+            let color = '#2563eb'; // Blue
             if (booking.status === 'pending') color = '#f59e0b'; // Amber
-            else if (['in_progress', 'at-studio'].includes(booking.status)) color = '#8b5cf6'; // Purple
+            else if (['in_progress', 'at-studio', 'washing'].includes(booking.status)) color = '#8b5cf6'; // Purple
+            else if (['en_route'].includes(booking.status)) color = '#0ea5e9'; // Light Blue (Moving)
 
             const svgMarker = {
                 path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
@@ -771,29 +842,42 @@ const LiveMapView = ({ bookings, onSelectBooking }) => {
                 anchor: new window.google.maps.Point(12, 24)
             };
 
-            const marker = new window.google.maps.Marker({
-                position: { lat, lng },
-                map,
-                icon: svgMarker,
-                title: `${booking.bookingId || bId} | ${booking.provider?.name || 'Pending Provider'}`
-            });
+            if (markersRef.current[bId]) {
+                // UPDATE EXISTING MARKER
+                const marker = markersRef.current[bId];
 
-            marker.addListener('click', () => {
-                onSelectBooking(booking);
-            });
+                // Only update position if it actually changed significantly (prevent micro-jitter)
+                const currentPos = marker.getPosition();
+                if (!currentPos || Math.abs(currentPos.lat() - lat) > 0.00001 || Math.abs(currentPos.lng() - lng) > 0.00001) {
+                    marker.setPosition(pos);
+                }
+                marker.setIcon(svgMarker);
+            } else {
+                // CREATE NEW MARKER
+                const marker = new window.google.maps.Marker({
+                    position: pos,
+                    map,
+                    icon: svgMarker,
+                    title: `${booking.bookingId || bId} | ${booking.provider?.name || 'Pending Provider'}`,
+                    animation: window.google.maps.Animation.DROP
+                });
 
-            markersRef.current[bId] = marker;
-            bounds.extend({ lat, lng });
+                marker.addListener('click', () => {
+                    onSelectBooking(booking);
+                });
+
+                markersRef.current[bId] = marker;
+            }
+
+            bounds.extend(pos);
             hasPoints = true;
         });
 
-        if (hasPoints) {
+        // Soft fit bounds - only if significantly changed or new points added
+        if (hasPoints && map.getBounds() && !map.getBounds().contains(bounds.getNorthEast())) {
             map.fitBounds(bounds);
-            // Prevent zooming in too close for a single point
-            const listener = window.google.maps.event.addListener(map, "idle", function () {
-                if (map.getZoom() > 14) map.setZoom(14);
-                window.google.maps.event.removeListener(listener);
-            });
+        } else if (hasPoints && !map.getBounds()) {
+            map.fitBounds(bounds);
         }
     }, [map, activeMappableBookings, onSelectBooking]);
 

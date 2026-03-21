@@ -4,12 +4,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft, ShoppingCart, Heart, Star, Share2,
     ShieldCheck, Truck, RefreshCw, ChevronRight,
-    Zap, ShoppingBag, Check, Plus, Minus, MessageCircle
+    Zap, ShoppingBag, Check, Plus, Minus, MessageCircle,
+    Package
 } from 'lucide-react';
 import MobileLayout from '../components/layout/MobileLayout';
 import { useCart } from '../../../context/CartContext';
 import { useWishlist } from '../../../context/WishlistContext';
 import { productAPI } from '../../../utils/api';
+import VerifiedBadge from '../components/ui/VerifiedBadge';
 
 const ProductDetail = () => {
     const { id } = useParams();
@@ -20,6 +22,8 @@ const ProductDetail = () => {
     const [loading, setLoading] = useState(true);
     const [quantity, setQuantity] = useState(1);
     const [activeTab, setActiveTab] = useState('description');
+    const [reviews, setReviews] = useState([]);
+    const [reviewsLoading, setReviewsLoading] = useState(false);
     const [toast, setToast] = useState(false);
 
     useEffect(() => {
@@ -41,6 +45,26 @@ const ProductDetail = () => {
         };
         fetchProduct();
     }, [id, navigate]);
+
+    useEffect(() => {
+        if (activeTab === 'reviews') {
+            fetchReviews();
+        }
+    }, [activeTab, id]);
+
+    const fetchReviews = async () => {
+        try {
+            setReviewsLoading(true);
+            const res = await productAPI.getProductReviews(id);
+            if (res.status === 'success') {
+                setReviews(res.data.reviews);
+            }
+        } catch (err) {
+            console.error("Failed to fetch reviews:", err);
+        } finally {
+            setReviewsLoading(false);
+        }
+    };
 
     if (loading) return (
         <MobileLayout hideNav={true}>
@@ -137,8 +161,8 @@ const ProductDetail = () => {
                             <span className="text-brand font-black text-[10px] uppercase tracking-[0.3em]">{product.category}</span>
                             <div className="flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-100">
                                 <Star size={10} className="text-amber-500 fill-amber-500" />
-                                <span className="text-[10px] font-black text-amber-700">{product.rating}</span>
-                                <span className="text-[10px] font-bold text-amber-900/40">({product.reviews})</span>
+                                <span className="text-[10px] font-black text-amber-700">{product.ratingsAverage?.toFixed(1) || '0.0'}</span>
+                                <span className="text-[10px] font-bold text-amber-900/40">({product.ratingsQuantity || 0})</span>
                             </div>
                         </div>
                         <h1 className="text-2xl font-[1000] text-content leading-tight uppercase tracking-tight">{product.name}</h1>
@@ -189,7 +213,7 @@ const ProductDetail = () => {
                     {/* Tabs Section */}
                     <div className="space-y-4 pt-4">
                         <div className="flex items-center gap-6 border-b border-gray-100">
-                            {['description', 'specifications', 'delivery'].map(tab => (
+                            {['description', 'specifications', 'reviews'].map(tab => (
                                 <button
                                     key={tab}
                                     onClick={() => setActiveTab(tab)}
@@ -241,6 +265,44 @@ const ProductDetail = () => {
                                             <p className="text-[10px] font-bold text-content-subtle">100% biodegradable and zero plastic waste used.</p>
                                         </div>
                                     </div>
+                                </div>
+                            )}
+                            {activeTab === 'reviews' && (
+                                <div className="space-y-6">
+                                    {reviewsLoading ? (
+                                        <div className="flex justify-center py-10">
+                                            <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                                        </div>
+                                    ) : reviews.length === 0 ? (
+                                        <div className="text-center py-10">
+                                            <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-none">Identity Check: No Reviews Found</p>
+                                        </div>
+                                    ) : (
+                                        reviews.map((rev, i) => (
+                                            <div key={i} className="space-y-3 pb-6 border-b border-gray-50 last:border-none">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-brand/10 flex items-center justify-center text-brand font-black text-[10px]">
+                                                            {rev.user?.name?.[0] || 'U'}
+                                                        </div>
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="text-[11px] font-[1000] text-content uppercase tracking-tight">{rev.user?.name}</p>
+                                                                {rev.isVerifiedPurchase && <VerifiedBadge type="purchase" />}
+                                                            </div>
+                                                            <div className="flex gap-0.5">
+                                                                {[1, 2, 3, 4, 5].map(s => (
+                                                                    <Star key={s} size={8} className={s <= rev.rating ? 'text-gold-500 fill-gold-500' : 'text-onyx-200'} />
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <span className="text-[8px] font-bold text-content-subtle lowercase">{new Date(rev.createdAt).toLocaleDateString()}</span>
+                                                </div>
+                                                <p className="text-xs font-medium text-onyx-600 leading-relaxed pl-1">{rev.comment}</p>
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
                             )}
                         </div>

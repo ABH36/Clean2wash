@@ -9,7 +9,9 @@ const adminHubController = require('../controllers/adminHubController');
 const adminVehicleController = require('../controllers/adminVehicleController');
 const adminVehicleModelController = require('../controllers/adminVehicleModelController');
 const adminTransactionController = require('../controllers/adminTransactionController');
+const adminAuditController = require('../controllers/adminAuditController');
 const adminAnalyticsController = require('../controllers/adminAnalyticsController');
+const adminProductController = require('../controllers/adminProductController');
 const authMiddleware = require('../../../middlewares/authMiddleware');
 
 // Public Admin Route
@@ -37,6 +39,8 @@ router.patch('/bookings/:id/status', adminController.updateBookingStatus);
 router.post('/bookings/:id/assign-staff', adminController.assignStaff);
 router.get('/captains', adminController.getActiveCaptains);
 router.post('/bookings/:bookingId/assign', adminController.assignCaptain);
+router.get('/spare-drivers', adminController.getSpareDrivers);
+router.get('/bookings/chauffeur', adminController.getSpareDriverBookings);
 
 // ── Services CRUD ──────────────────────────────────────────────
 router.get('/services', adminServiceController.getServices);
@@ -79,7 +83,14 @@ router.delete('/hubs/:id', adminHubController.deleteHub);
 
 // ── Product Governance ────────────────────────────────────────
 router.get('/products', adminController.getProducts);
+router.get('/products/stats', adminProductController.getProductStats);
+router.get('/products/inventory', adminProductController.getMasterInventory);
+router.post('/products/resolve-dispute', adminProductController.resolveProductDispute);
 router.post('/verify-product', adminController.verifyProduct);
+
+// Product Order Management (Phase 28)
+router.get('/product-orders', adminController.getAllProductOrders);
+router.patch('/product-orders/:id/status', adminController.updateGlobalProductOrderStatus);
 
 // --- Settings Routes ---
 router.get('/settings', adminController.getSettings);
@@ -87,6 +98,11 @@ router.patch('/settings', adminController.updateSetting);
 
 // --- Transaction Hub ---
 router.get('/transactions', adminTransactionController.getAllTransactions);
+router.get('/transactions/stats', adminTransactionController.getSettlementStats);
 router.patch('/transactions/:id/status', adminTransactionController.updateTransactionStatus);
+
+// Audit Logs (P25)
+router.get('/audit/logs', adminAuditController.getAuditLogs);
+router.get('/audit/stats', adminAuditController.getAuditStats);
 
 module.exports = router;

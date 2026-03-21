@@ -12,8 +12,9 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 import CaptainLayout from '../components/CaptainLayout';
+import LocationIndicator from '../../../components/Location/LocationIndicator';
 import { useAuth } from '../../../context/AuthContext';
-import { useCaptain } from '../../../context/CaptainContext';
+import { useCaptain } from '../../../hooks/useCaptain';
 import { useTheme } from '../../../context/ThemeContext';
 import { toast } from 'react-hot-toast';
 import { socketService } from '../../../utils/socket';
@@ -39,6 +40,20 @@ const captainIcon = L.divIcon({
     iconSize: [40, 40],
     iconAnchor: [20, 20],
 });
+
+/**
+ * Suppress browser intervention warnings for vibration
+ */
+const safeVibrate = (pattern) => {
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        try {
+            // Only attempt if user has interacted, otherwise it warns/intervenes
+            navigator.vibrate(pattern);
+        } catch (e) {
+            // Silently fail
+        }
+    }
+};
 
 // Custom job request marker
 const jobIcon = L.divIcon({
@@ -131,14 +146,57 @@ const CaptainHome = () => {
     const { isDarkMode, toggleDarkMode } = useTheme();
     const { sessions } = useAuth();
     const {
-        captainJobs,
         captainJobsLoading,
         captainEarnings,
         acceptJob,
         declineJob,
+        commitToScheduledJob,
         toggleOnline,
-        loadCaptainDashboard
+        loadCaptainDashboard,
+        availableProductMissions,
+        productMissionsLoading,
+        loadAvailableProductMissions,
+        acceptProductMission,
+        acceptProductBatch
     } = useCaptain();
+
+    const handleAcceptProductMission = async (orderId, itemId, isBatch = false, batchItems = []) => {
+        let res;
+        if (isBatch) {
+            res = await acceptProductBatch(batchItems);
+        } else {
+            res = await acceptProductMission(orderId, itemId);
+        }
+
+        if (res.success) {
+            toast.success(isBatch ? 'Batch Mission Claimed!' : 'Product Mission Claimed!', { icon: '📦' });
+            if (!isBatch) {
+                navigate(`/captain/product-mission/${orderId}/${itemId}`);
+            } else {
+                // Navigate to the first item with a batch flag
+                navigate(`/captain/product-mission/${batchItems[0].orderId}/${batchItems[0].itemId}?isBatch=true`);
+            }
+        } else {
+            toast.error(res.error || 'Failed to claim mission');
+        }
+    };
+
+    // Mission Commitment Logic
+    const needsCommitment = captainJobs.find(j =>
+        j.status === 'confirmed' &&
+        j.schedule?.type === 'scheduled' &&
+        !j.isDoorstepCommitted
+    );
+    const [isCommitting, setIsCommitting] = useState(null);
+
+    const handleCommit = async (jobId) => {
+        setIsCommitting(jobId);
+        const res = await commitToScheduledJob(jobId);
+        if (res.success) {
+            toast.success('Mission Confirmed! See you at the slot.', { icon: '✅' });
+        }
+        setIsCommitting(null);
+    };
 
     const user = sessions.captain || { name: 'Captain', id: 'CPT-DEFAULT', isOnline: false };
     const online = user.isOnline;
@@ -147,12 +205,12 @@ const CaptainHome = () => {
     // Function to get initial coordinates based on user city
     const getInitialCoords = () => {
         if (!userCity) return [12.9716, 77.5946]; // Default to Bangalore if nothing else
-        
+
         // Find match in our coordinates map
         const matched = Object.keys(CITY_COORDINATES).find(
             c => c.toLowerCase() === userCity.toLowerCase()
         );
-        
+
         return matched ? CITY_COORDINATES[matched] : [12.9716, 77.5946];
     };
 
@@ -166,7 +224,8 @@ const CaptainHome = () => {
     const currentRating = captainEarnings.rating || user.rating || 5.0;
 
     const pendingRequests = captainJobs.filter(job => job.status === 'pending');
-    const activeJob = captainJobs.find(job => ['accepted', 'confirmed', 'en_route', 'arrived', 'before_photo', 'washing', 'after_photo'].includes(job.status));
+    const activeJobs = captainJobs.filter(job => ['accepted', 'confirmed', 'en_route', 'arrived', 'before_photo', 'washing', 'after_photo'].includes(job.status));
+    const activeJob = activeJobs[0] || null;
 
     const [acceptedJobId, setAcceptedJobId] = useState(null);
     const [captainPosition, setCaptainPosition] = useState(getInitialCoords());
@@ -270,12 +329,10 @@ const CaptainHome = () => {
             const beepInterval = setInterval(playBeep, 2000);
 
             // Vibration
-            if ('vibrate' in navigator) {
-                navigator.vibrate([200, 100, 200]);
-                vibrateIntervalRef.current = setInterval(() => {
-                    if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
-                }, 2000);
-            }
+            safeVibrate([200, 100, 200]);
+            vibrateIntervalRef.current = setInterval(() => {
+                safeVibrate([200, 100, 200]);
+            }, 2000);
 
             // Countdown
             setTimeLeft(30);
@@ -292,12 +349,12 @@ const CaptainHome = () => {
 
             return () => {
                 clearInterval(beepInterval);
-                if ('vibrate' in navigator) navigator.vibrate(0);
+                safeVibrate(0);
             };
         } else {
             if (vibrateIntervalRef.current) clearInterval(vibrateIntervalRef.current);
             if (timeoutRef.current) clearInterval(timeoutRef.current);
-            if ('vibrate' in navigator) navigator.vibrate(0);
+            safeVibrate(0);
         }
 
         return () => {
@@ -306,13 +363,12 @@ const CaptainHome = () => {
         };
     }, [online, activeJob, pendingRequests.length, declineJob, playBeep]);
 
-    // Poll for pending jobs every 30s when online
+    // Load dashboard on mount (Socket context handles subsequent live updates)
     useEffect(() => {
         loadCaptainDashboard?.();
-        if (!online) return;
-        const interval = setInterval(() => { loadCaptainDashboard?.(); }, 30000);
-        return () => clearInterval(interval);
-    }, [online, loadCaptainDashboard]);
+        loadAvailableProductMissions?.();
+    }, [loadCaptainDashboard, loadAvailableProductMissions]);
+
 
     const handleAccept = async (jobId) => {
         setAcceptedJobId(jobId);
@@ -385,7 +441,7 @@ const CaptainHome = () => {
         const handleScheduledJobStarting = (data) => {
             // Play alert beep
             playBeep();
-            if ('vibrate' in navigator) navigator.vibrate([300, 100, 300, 100, 300]);
+            safeVibrate([300, 100, 300, 100, 300]);
 
             toast(
                 (t) => (
@@ -421,9 +477,10 @@ const CaptainHome = () => {
             {/* ── Header ── */}
             <header className={`${isDarkMode ? 'bg-[#0F172A]' : 'bg-gray-50'} px-4 pt-10 pb-4 sticky top-0 z-40 transition-colors duration-500`}>
                 <div className="flex items-center justify-between mb-4">
-                    <div>
+                    <div className="flex-1">
                         <p className={`${isDarkMode ? 'text-white/40' : 'text-content-subtle'} text-[9px] font-black uppercase tracking-widest`}>Captain App</p>
                         <h1 className={`${isDarkMode ? 'text-white' : 'text-content'} text-xl font-black tracking-tight mt-0.5 italic`}>{getGreeting()}, {(user?.name || 'Captain').split(' ')[0]} 👋</h1>
+                        <LocationIndicator variant={isDarkMode ? 'dark' : 'light'} className="mt-3 !py-1 !px-2 shadow-none border-none bg-transparent" />
                     </div>
                     <div className="flex items-center gap-1.5">
                         <button
@@ -432,7 +489,7 @@ const CaptainHome = () => {
                         >
                             {isDarkMode ? <Sun size={14} /> : <Moon size={14} />}
                         </button>
-                        <button 
+                        <button
                             onClick={() => navigate('/captain/notifications')}
                             className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' : 'bg-gray-100 border-gray-200 text-gray-400 hover:text-brand'}`}>
                             <Bell size={14} />
@@ -537,11 +594,10 @@ const CaptainHome = () => {
 
                 {/* Map Overlay — Captain Status Pill */}
                 <div className="absolute top-4 left-4 right-4 z-[500] flex items-center justify-between pointer-events-none">
-                    <div className={`flex items-center gap-2 px-3 py-2 rounded-2xl backdrop-blur-xl border shadow-2xl pointer-events-auto ${
-                        online
-                            ? isDarkMode ? 'bg-green-500/20 border-green-500/30 text-green-400' : 'bg-green-500/15 border-green-400/40 text-green-700'
-                            : isDarkMode ? 'bg-black/50 border-white/10 text-white/50' : 'bg-white/80 border-gray-200 text-gray-500'
-                    }`}>
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-2xl backdrop-blur-xl border shadow-2xl pointer-events-auto ${online
+                        ? isDarkMode ? 'bg-green-500/20 border-green-500/30 text-green-400' : 'bg-green-500/15 border-green-400/40 text-green-700'
+                        : isDarkMode ? 'bg-black/50 border-white/10 text-white/50' : 'bg-white/80 border-gray-200 text-gray-500'
+                        }`}>
                         <span className={`w-2 h-2 rounded-full ${online ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`} />
                         <span className="font-black text-[10px] uppercase tracking-widest">
                             {online ? `Online · ${pendingRequests.length} requests nearby` : 'Offline'}
@@ -567,16 +623,15 @@ const CaptainHome = () => {
                 {/* Top and Bottom gradient fade into content */}
                 <div className={`absolute top-0 left-0 right-0 h-4 pointer-events-none ${isDarkMode ? 'bg-gradient-to-b from-[#0F172A]/50' : 'bg-gradient-to-b from-gray-50/50'}`} />
                 <div className={`absolute bottom-0 left-0 right-0 h-14 pointer-events-none ${isDarkMode ? 'bg-gradient-to-t from-[#0F172A]' : 'bg-gradient-to-t from-gray-50'}`} />
-                
+
                 {/* Working Region Label */}
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[500] pointer-events-auto flex flex-col items-center">
-                    <motion.div 
+                    <motion.div
                         initial={{ y: 10, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         onClick={() => navigate('/captain/area-select')}
-                        className={`px-4 py-2 rounded-full border shadow-2xl backdrop-blur-xl flex items-center gap-2 cursor-pointer active:scale-95 transition-all ${
-                            isDarkMode ? 'bg-black/40 border-white/5 text-white/80' : 'bg-white/80 border-black/5 text-black/70'
-                        }`}
+                        className={`px-4 py-2 rounded-full border shadow-2xl backdrop-blur-xl flex items-center gap-2 cursor-pointer active:scale-95 transition-all ${isDarkMode ? 'bg-black/40 border-white/5 text-white/80' : 'bg-white/80 border-black/5 text-black/70'
+                            }`}
                     >
                         <MapPin size={10} className="text-brand" fill="currentColor" />
                         <span className="text-[9px] font-[1000] uppercase tracking-widest">{currentRegion}</span>
@@ -585,6 +640,121 @@ const CaptainHome = () => {
             </div>
 
             <div className="px-4 py-4 space-y-4 pb-28">
+
+                {/* ── Scheduled Mission Commitment Alert (PASS 4) ── */}
+                {needsCommitment && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`p-4 rounded-[2rem] border-2 shadow-2xl overflow-hidden relative ${isDarkMode ? 'bg-[#1E293B] border-brand/30' : 'bg-white border-brand/20'}`}
+                    >
+                        {/* Shimmering background for urgency */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-brand/5 via-transparent to-brand/5 animate-pulse" />
+
+                        <div className="relative z-10">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-brand rounded-2xl flex items-center justify-center shadow-lg shadow-brand/20">
+                                        <Clock size={20} className="text-white" />
+                                    </div>
+                                    <div>
+                                        <h4 className={`text-sm font-black italic uppercase italic tracking-tighter ${isDarkMode ? 'text-white' : 'text-content'}`}>High Priority Slot</h4>
+                                        <p className="text-brand text-[9px] font-black uppercase tracking-widest leading-none">Confim Attendance Now</p>
+                                    </div>
+                                </div>
+                                <div className={`px-3 py-1.5 rounded-xl border font-black text-[10px] tabular-nums ${isDarkMode ? 'bg-white/5 border-white/10 text-white/40' : 'bg-gray-50 border-gray-100 text-gray-400'}`}>
+                                    Starts in <CountdownTimer targetTime={needsCommitment.schedule} />
+                                </div>
+                            </div>
+
+                            <div className={`p-4 rounded-2xl mb-4 border transition-all ${isDarkMode ? 'bg-black/20 border-white/5 shadow-inner' : 'bg-gray-50 border-gray-100'}`}>
+                                <div className="flex justify-between items-start mb-2">
+                                    <h3 className={`font-black text-base italic leading-none ${isDarkMode ? 'text-white' : 'text-content'}`}>{needsCommitment.serviceName}</h3>
+                                    <p className="font-black text-sm text-brand">{needsCommitment.price}</p>
+                                </div>
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <MapPin size={10} className="text-brand" fill="currentColor" />
+                                    <p className={`text-[11px] font-bold truncate ${isDarkMode ? 'text-white/40' : 'text-content-subtle'}`}>{needsCommitment.address}</p>
+                                </div>
+                            </div>
+
+                            <motion.button
+                                whileTap={{ scale: 0.96 }}
+                                disabled={isCommitting === needsCommitment.id}
+                                onClick={() => handleCommit(needsCommitment.id)}
+                                className={`w-full h-12 rounded-2xl font-black text-sm text-white shadow-xl transition-all flex items-center justify-center gap-3 bg-brand shadow-brand/30`}
+                            >
+                                {isCommitting === needsCommitment.id ? (
+                                    <>Synchronizing Protocol... <Zap size={15} className="animate-pulse" /></>
+                                ) : (
+                                    <>Acknowledge & Confirm <ArrowRight size={18} strokeWidth={3} /></>
+                                )}
+                            </motion.button>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* ── Product Gig Board (Phase 33) ── */}
+                {online && availableProductMissions.length > 0 && (
+                    <section className="space-y-3">
+                        <div className="flex items-center justify-between px-1">
+                            <p className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Available Product Gigs</p>
+                            <div className="flex items-center gap-1.5 text-[9px] font-black text-brand italic">
+                                Flash Gig <Zap size={10} className="fill-brand" />
+                            </div>
+                        </div>
+                        <div className="space-y-3">
+                            {availableProductMissions.map((mission) => {
+                                const isBatch = mission.isBatched;
+                                return (
+                                    <motion.div
+                                        key={isBatch ? `batch-${mission.items[0].itemId}` : `${mission.orderId}-${mission._id}`}
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        className={`p-4 rounded-[1.5rem] border shadow-lg relative overflow-hidden ${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100'}`}
+                                    >
+                                        <div className="flex items-start justify-between relative z-10">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <div className={`px-1.5 py-0.5 border rounded-lg ${isBatch ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-brand/10 border-brand/20'}`}>
+                                                        <span className={`font-black text-[8px] uppercase tracking-tighter ${isBatch ? 'text-indigo-400' : 'text-brand'}`}>
+                                                            {isBatch ? `${mission.itemsCount}x Batched Pickup` : 'Product Pickup'}
+                                                        </span>
+                                                    </div>
+                                                    <span className={`text-[9px] font-bold ${isDarkMode ? 'text-white/40' : 'text-gray-400'}`}>
+                                                        {mission.vendorName || mission.vendorNames}
+                                                    </span>
+                                                </div>
+                                                <h4 className={`text-sm font-black tracking-tight leading-none mb-1 ${isDarkMode ? 'text-white' : 'text-content'}`}>
+                                                    {mission.productName || mission.productNames}
+                                                </h4>
+                                                <div className="flex items-center gap-1.5 mt-2">
+                                                    <MapPin size={10} className="text-brand" fill="currentColor" />
+                                                    <p className={`text-[10px] font-bold truncate ${isDarkMode ? 'text-white/30' : 'text-gray-400'}`}>
+                                                        {isBatch ? 'Multiple Pickup Points' : `Pick from: ${mission.vendorName} Studio`}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[8px] font-black text-brand uppercase tracking-widest mb-1">Fee</p>
+                                                <p className={`text-lg font-black tracking-tighter ${isDarkMode ? 'text-white' : 'text-content'}`}>
+                                                    ₹{mission.estimatedEarnings || 40}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <motion.button
+                                            whileTap={{ scale: 0.95 }}
+                                            onClick={() => handleAcceptProductMission(mission.orderId, mission._id, isBatch, mission.items)}
+                                            className="w-full mt-4 h-10 bg-black text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-black/20 flex items-center justify-center gap-2"
+                                        >
+                                            {isBatch ? 'Claim Batch Missions' : 'Claim Pickup Mission'} <ArrowRight size={14} />
+                                        </motion.button>
+                                    </motion.div>
+                                );
+                            })}
+                        </div>
+                    </section>
+                )}
 
                 {/* ── Verification Banner ── */}
                 {!user.isVerified && (
@@ -640,13 +810,13 @@ const CaptainHome = () => {
                 {/* ── RAPIDO-STYLE INCOMING REQUEST OVERLAY ── */}
                 <AnimatePresence>
                     {online && !activeJob && pendingRequests.length > 0 && (
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 z-[1000] flex flex-col items-center justify-end p-5 bg-black/40 backdrop-blur-sm"
                         >
-                            <motion.div 
+                            <motion.div
                                 initial={{ y: "100%", scale: 0.9 }}
                                 animate={{ y: 0, scale: 1 }}
                                 exit={{ y: "100%", opacity: 0 }}
@@ -715,19 +885,18 @@ const CaptainHome = () => {
 
                                     {/* Action Buttons */}
                                     <div className="flex gap-4">
-                                        <motion.button 
+                                        <motion.button
                                             whileTap={{ scale: 0.95 }}
                                             onClick={() => handleDecline(pendingRequests[0].id)}
                                             className="w-20 h-16 flex items-center justify-center rounded-2xl bg-gray-100 hover:bg-gray-200 text-black/40 transition-colors"
                                         >
                                             <X size={24} strokeWidth={3} />
                                         </motion.button>
-                                        <motion.button 
+                                        <motion.button
                                             whileTap={{ scale: 0.95 }}
                                             onClick={() => handleAccept(pendingRequests[0].id)}
-                                            className={`flex-1 h-16 rounded-2xl font-[1000] text-[15px] uppercase tracking-[0.2em] text-white shadow-2xl transition-all flex items-center justify-center gap-3 ${
-                                                acceptedJobId === pendingRequests[0].id ? 'bg-green-500 shadow-green-500/30' : 'bg-black shadow-black/30'
-                                            }`}
+                                            className={`flex-1 h-16 rounded-2xl font-[1000] text-[15px] uppercase tracking-[0.2em] text-white shadow-2xl transition-all flex items-center justify-center gap-3 ${acceptedJobId === pendingRequests[0].id ? 'bg-green-500 shadow-green-500/30' : 'bg-black shadow-black/30'
+                                                }`}
                                         >
                                             {acceptedJobId === pendingRequests[0].id ? (
                                                 <>Syncing... <Zap size={18} fill="currentColor" className="animate-pulse" /></>
@@ -739,7 +908,7 @@ const CaptainHome = () => {
 
                                     {/* Dynamic Progress Bar at very bottom */}
                                     <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-gray-100">
-                                        <motion.div 
+                                        <motion.div
                                             initial={{ width: "100%" }}
                                             animate={{ width: `${(timeLeft / 30) * 100}%` }}
                                             transition={{ ease: "linear", duration: 1 }}
@@ -768,6 +937,60 @@ const CaptainHome = () => {
                             Go Online Now
                         </motion.button>
                     </motion.div>
+                )}
+
+                {/* ── Today's Mission Timeline (PASS 7) ── */}
+                {online && activeJobs.length > 0 && (
+                    <section className="space-y-3">
+                        <div className="flex items-center justify-between px-1">
+                            <p className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Daily Mission Timeline</p>
+                            <div className="flex items-center gap-1.5 text-[9px] font-black text-brand italic">
+                                Protocols Active <Shield size={10} className="fill-brand" />
+                            </div>
+                        </div>
+                        <div className={`rounded-3xl border p-4 transition-all duration-500 overflow-hidden space-y-4 ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/30' : 'bg-white border-gray-100 shadow-soft'}`}>
+                            {activeJobs.map((job, i) => {
+                                const isCurrent = job.id === activeJob?.id || job._id === activeJob?._id;
+                                return (
+                                    <div key={job.id} className="relative pl-6">
+                                        {/* Timeline Line */}
+                                        {i < activeJobs.length - 1 && (
+                                            <div className={`absolute left-[5px] top-4 w-[2px] h-[calc(100%+8px)] transition-colors ${isCurrent ? 'bg-brand' : isDarkMode ? 'bg-white/5' : 'bg-gray-100'}`} />
+                                        )}
+                                        {/* Dot */}
+                                        <div className={`absolute left-0 top-1 w-3 h-3 rounded-full border-2 z-10 transition-all ${isCurrent ? 'bg-brand border-white' : isDarkMode ? 'bg-[#0F172A] border-white/10' : 'bg-white border-gray-200'}`} />
+
+                                        <div onClick={() => navigate(`/captain/job?id=${job.id}`)} className={`group block p-3 rounded-2xl border transition-all active:scale-95 ${isCurrent ? (isDarkMode ? 'bg-brand/10 border-brand/20' : 'bg-brand/5 border-brand/10') : 'border-transparent'}`}>
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex-1 pr-2">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <h4 className={`text-xs font-black italic tracking-tighter uppercase leading-none ${isDarkMode ? 'text-white' : 'text-content'}`}>
+                                                            {job.serviceName}
+                                                        </h4>
+                                                        {job.schedule?.type === 'scheduled' && (
+                                                            <div className="px-1.5 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-500 text-[8px] font-black uppercase tracking-widest border border-indigo-500/10">Slotted</div>
+                                                        )}
+                                                    </div>
+                                                    <p className={`text-[10px] font-bold truncate ${isDarkMode ? 'text-white/40' : 'text-content-subtle'}`}>{job.address}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className={`text-[10px] font-black tabular-nums transition-colors ${isCurrent ? 'text-brand' : isDarkMode ? 'text-white/20' : 'text-gray-400'}`}>
+                                                        {job.schedule?.timeSlot?.start || 'Instant'}
+                                                    </p>
+                                                    <div className={`mt-1.5 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest ${job.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-500' :
+                                                        job.status === 'en_route' ? 'bg-blue-500/10 text-blue-500 animate-pulse' :
+                                                            'bg-brand/10 text-brand'
+                                                        }`}>
+                                                        {job.status.replace('_', ' ')}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </section>
                 )}
 
                 {/* ── Recent Completed Jobs ── */}

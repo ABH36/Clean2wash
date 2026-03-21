@@ -187,18 +187,7 @@ class ApiClient {
         });
     }
 
-    // Wallet methods
-    async getWallet(params = {}) {
-        const queryString = new URLSearchParams(params).toString();
-        return this.request(`/wallet${queryString ? `?${queryString}` : ''}`);
-    }
 
-    async addToWallet(amount, paymentMethod) {
-        return this.request('/wallet/add', {
-            method: 'POST',
-            body: JSON.stringify({ amount, paymentMethod }),
-        });
-    }
 
     // Payment methods
     async getRazorpayKey() {
@@ -212,10 +201,10 @@ class ApiClient {
         });
     }
 
-    async verifyPayment(razorpay_order_id, razorpay_payment_id, razorpay_signature) {
+    async verifyPayment(razorpay_order_id, razorpay_payment_id, razorpay_signature, bookingId) {
         return this.request('/payment/verify', {
             method: 'POST',
-            body: JSON.stringify({ razorpay_order_id, razorpay_payment_id, razorpay_signature }),
+            body: JSON.stringify({ razorpay_order_id, razorpay_payment_id, razorpay_signature, bookingId }),
         });
     }
 
@@ -223,6 +212,13 @@ class ApiClient {
     async getWallet(params = {}) {
         const queryString = new URLSearchParams(params).toString();
         return this.request(`/wallet${queryString ? `?${queryString}` : ''}`);
+    }
+
+    async addToWallet(amount, paymentMethod) {
+        return this.request('/wallet/add', {
+            method: 'POST',
+            body: JSON.stringify({ amount, paymentMethod }),
+        });
     }
 
     async createWalletOrder(amount) {
@@ -244,11 +240,6 @@ class ApiClient {
             method: 'POST',
             body: JSON.stringify({ amount }),
         });
-    }
-
-    async getTransactions(params = {}) {
-        const queryString = new URLSearchParams(params).toString();
-        return this.request(`/wallet/transactions${queryString ? `?${queryString}` : ''}`);
     }
 
     // Notifications methods
@@ -315,10 +306,6 @@ class ApiClient {
 
     async getVehicleModels(params = {}) {
         const query = new URLSearchParams(params).toString();
-        // Pointing to the internal admin catalog through consumer-friendly endpoint if available, 
-        // or just using the admin endpoint if it's reachable.
-        // For now, assuming we might need a consumer-specific fetch or just call the admin one.
-        // Actually, let's just make it a standard request.
         return this.request(`/services/vehicle-models${query ? `?${query}` : ''}`);
     }
 
@@ -405,7 +392,6 @@ class ApiClient {
 
     async getBanners(params = {}) {
         const queryString = new URLSearchParams(params).toString();
-        // Adjust endpoint based on how the backend serves banners (e.g. /services/banners)
         return this.request(`/services/banners${queryString ? `?${queryString}` : ''}`);
     }
 
@@ -483,6 +469,7 @@ class ApiClient {
             body: JSON.stringify(addressData),
         });
     }
+
     // --- Captain Specific Methods (Internal) ---
     async getPendingJobs() {
         return this.request('/jobs/pending');
@@ -523,6 +510,43 @@ class ApiClient {
             body: JSON.stringify({ isOnline })
         });
     }
+
+    async getAvailableProductMissions() {
+        return this.request('/product-missions/available');
+    }
+
+    async acceptProductMission(orderId, itemId) {
+        return this.request(`/product-missions/${orderId}/items/${itemId}/accept`, {
+            method: 'POST'
+        });
+    }
+
+    async updateProductMissionStatus(orderId, itemId, status, metadata = {}) {
+        return this.request(`/product-missions/${orderId}/items/${itemId}/status`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status, ...metadata })
+        });
+    }
+
+    async get(endpoint, options = {}) {
+        return this.request(endpoint, { ...options, method: 'GET' });
+    }
+
+    async post(endpoint, body, options = {}) {
+        return this.request(endpoint, { ...options, method: 'POST', body: JSON.stringify(body) });
+    }
+
+    async put(endpoint, body, options = {}) {
+        return this.request(endpoint, { ...options, method: 'PUT', body: JSON.stringify(body) });
+    }
+
+    async patch(endpoint, body, options = {}) {
+        return this.request(endpoint, { ...options, method: 'PATCH', body: JSON.stringify(body) });
+    }
+
+    async delete(endpoint, options = {}) {
+        return this.request(endpoint, { ...options, method: 'DELETE' });
+    }
 }
 
 // Create singleton instances for different roles
@@ -560,6 +584,9 @@ export const captainAPI = {
     getEarnings: () => captainApiClient.getCaptainEarnings(),
     getDashboard: () => captainApiClient.getCaptainDashboard(),
     toggleOnline: (isOnline) => captainApiClient.toggleOnline(isOnline),
+    getAvailableProductMissions: () => captainApiClient.getAvailableProductMissions(),
+    acceptProductMission: (orderId, itemId) => captainApiClient.acceptProductMission(orderId, itemId),
+    updateProductMissionStatus: (orderId, itemId, status, metadata) => captainApiClient.updateProductMissionStatus(orderId, itemId, status, metadata),
 };
 
 export const walletAPI = {
@@ -573,7 +600,7 @@ export const walletAPI = {
 export const paymentAPI = {
     getRazorpayKey: () => apiClient.getRazorpayKey(),
     createOrder: (amount, currency, receipt) => apiClient.createOrder(amount, currency, receipt),
-    verifyPayment: (orderId, paymentId, signature) => apiClient.verifyPayment(orderId, paymentId, signature),
+    verifyPayment: (orderId, paymentId, signature, bookingId) => apiClient.verifyPayment(orderId, paymentId, signature, bookingId),
 };
 
 export const notificationAPI = {
@@ -612,6 +639,24 @@ export const productAPI = {
     getProducts: (params) => apiClient.request('/products' + (params ? `?${new URLSearchParams(params).toString()}` : '')),
     getProduct: (id) => apiClient.request(`/products/${id}`),
     getEshopMetadata: () => apiClient.request('/eshop/metadata'),
+    submitProductReview: (data) => apiClient.request('/products/reviews', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }),
+    getProductReviews: (productId) => apiClient.request(`/products/${productId}/reviews`),
+};
+
+export const orderAPI = {
+    getOrders: () => apiClient.request('/orders'),
+    getOrder: (id) => apiClient.request(`/orders/${id}`),
+    createOrder: (data) => apiClient.request('/orders', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    }),
+    verifyOrderPayment: (data) => apiClient.request('/orders/verify-payment', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    }),
 };
 
 export const serviceAPI = {
@@ -644,3 +689,4 @@ export const serviceAPI = {
 export const referralAPI = {
     getStats: () => apiClient.getReferralStats(),
 };
+

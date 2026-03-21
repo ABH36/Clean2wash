@@ -28,6 +28,7 @@ const adminRoutes = require('./modules/admin/routes/adminRoutes');
 const vendorRoutes = require('./modules/vendor/routes/vendorRoutes');
 const staffRoutes = require('./modules/staff/routes/staffRoutes');
 const globalErrorHandler = require('./controllers/errorController');
+const maintenanceMiddleware = require('./middlewares/maintenanceMiddleware');
 
 // Initialize Express app
 const app = express();
@@ -67,6 +68,7 @@ const limiter = rateLimit({
         res.status(options.statusCode).send(options.message);
     }
 });
+app.use('/api', maintenanceMiddleware);
 app.use('/api', limiter);
 
 // Body parsing middleware
@@ -128,10 +130,14 @@ server.listen(PORT, () => {
     console.log(`🚗 SpareDriver API: http://localhost:${PORT}/api/sparedrivers`.cyan.bold);
     console.log(`🏥 Health Check: http://localhost:${PORT}/api/health`.green.bold);
     console.log(`📡 Socket.io initialized on port ${PORT}`.magenta.bold);
-    
+
     // Start Background Monitor for Scheduled Bookings
     const startBookingMonitor = require('./utils/bookingMonitor');
     startBookingMonitor();
+
+    // Start Daily Cron Service (Subscription Job Generator)
+    const { initCronService } = require('./utils/cronService');
+    initCronService();
 });
 
 module.exports = { app, server };

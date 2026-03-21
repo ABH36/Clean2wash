@@ -9,9 +9,14 @@ import {
     Loader2, Check, Map, Settings
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { useAuth } from '../../../context/AuthContext';
+import { useGeoLocation } from '../../../hooks/useGeoLocation';
 import MobileLayout from '../components/layout/MobileLayout';
 import { serviceAPI, bookingAPI } from '../../../utils/api';
+import { socketService } from '../../../utils/socket';
 
 import pointImg from '../../../assets/services/point.png';
 import hourlyImg from '../../../assets/services/hourly.png';
@@ -38,7 +43,8 @@ const SERVICE_TYPES = [
 
 const SpareDriverBooking = () => {
     const navigate = useNavigate();
-    const { vehicles, addresses, refreshStats } = useAuth();
+    const { vehicles, refreshStats } = useAuth();
+    const { savedAddresses: addresses } = useGeoLocation();
     const [services, setServices] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -77,9 +83,123 @@ const SpareDriverBooking = () => {
     }, [bookingDetails]);
 
     const [selectedVehicle, setSelectedVehicle] = useState(vehicles?.[0] || null);
-    const [activeBookingId, setActiveBookingId] = useState(null);
+    const [activeBookingId, setActiveBookingId] = useState(() => {
+        return sessionStorage.getItem('chauffeur_active_booking_id') || null;
+    });
+    const [driverLocation, setDriverLocation] = useState(null);
     const [driverInfo, setDriverInfo] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [elapsedTime, setElapsedTime] = useState(0);
+
+    // ── Session Timer ──
+    useEffect(() => {
+        let interval;
+        if (phase === PHASES.TRIP_ACTIVE) {
+            // Restore from session or start new
+            const startTime = sessionStorage.getItem('chauffeur_trip_start_time') || Date.now();
+            if (!sessionStorage.getItem('chauffeur_trip_start_time')) {
+                sessionStorage.setItem('chauffeur_trip_start_time', startTime);
+            }
+
+            interval = setInterval(() => {
+                const now = Date.now();
+                setElapsedTime(Math.floor((now - startTime) / 1000));
+            }, 1000);
+        } else if (phase === PHASES.TRIP_COMPLETED) {
+            const startTime = sessionStorage.getItem('chauffeur_trip_start_time');
+            const endTime = Date.now();
+            if (startTime) {
+                setElapsedTime(Math.floor((endTime - startTime) / 1000));
+            }
+        }
+        return () => clearInterval(interval);
+    }, [phase]);
+
+    const formatTime = (seconds) => {
+        const hrs = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    // ── WebSocket Telemetry ──
+    useEffect(() => {
+        if (activeBookingId && (phase === PHASES.TRIP_ACTIVE || phase === PHASES.FINDING_DRIVER)) {
+            console.log(`[SpareDriver] Connecting Telemetry for Session: ${activeBookingId}`);
+
+            socketService.connect();
+            socketService.joinBookingRoom(activeBookingId);
+
+            const socket = socketService.getSocket();
+            if (socket) {
+                // Listen for driver pulses
+                socket.on('location_updated', (data) => {
+                    console.log('[SpareDriver] Telemetry Pulse:', data);
+                    if (data.location) {
+                        setDriverLocation(data.location);
+                    }
+                });
+
+                // Listen for status changes
+                socket.on('booking_status_updated', (data) => {
+                    console.log('[SpareDriver] Status Update:', data.status);
+                    setBookingDetails(prev => ({ ...prev, status: data.status }));
+                    if (data.status === 'completed') setPhase(PHASES.TRIP_COMPLETED);
+                    if (data.status === 'active') setPhase(PHASES.TRIP_ACTIVE);
+                });
+            }
+
+            return () => {
+                const socket = socketService.getSocket();
+                if (socket) {
+                    socket.off('location_updated');
+                    socket.off('booking_status_updated');
+                }
+            };
+        }
+    }, [activeBookingId, phase]);
+
+    // Icon setup
+    const driverIcon = L.divIcon({
+        className: 'custom-driver-icon',
+        html: `<div class="w-8 h-8 bg-brand border-2 border-white rounded-full flex items-center justify-center shadow-lg transform rotate-45">
+                 <div class="w-2 h-2 bg-black rounded-full animate-pulse"></div>
+               </div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+    });
+
+    const userIcon = L.divIcon({
+        className: 'custom-user-icon',
+        html: `<div class="w-4 h-4 bg-blue-500 border-2 border-white rounded-full shadow-md"></div>`,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+    });
+
+    // ── Session Restoration ──
+    useEffect(() => {
+        const restoreSession = async () => {
+            if (activeBookingId && !bookingDetails) {
+                try {
+                    console.log('[SpareDriver] Restoring Session:', activeBookingId);
+                    const res = await bookingAPI.getBooking(activeBookingId);
+                    if (res.status === 'success') {
+                        setBookingDetails(res.data.booking);
+                        // Infer phase from status
+                        const status = res.data.booking.status;
+                        if (['en_route', 'arrived'].includes(status)) setPhase(PHASES.FINDING_DRIVER); // "Finding" also includes tracking
+                        if (['active'].includes(status)) setPhase(PHASES.TRIP_ACTIVE);
+                        if (['completed'].includes(status)) setPhase(PHASES.TRIP_COMPLETED);
+                    }
+                } catch (err) {
+                    console.error("Session restoration failed:", err);
+                    sessionStorage.removeItem('chauffeur_active_booking_id');
+                    setActiveBookingId(null);
+                }
+            }
+        };
+        restoreSession();
+    }, [activeBookingId]);
 
     // Fetch services
     useEffect(() => {
@@ -106,10 +226,14 @@ const SpareDriverBooking = () => {
     }, [vehicles, selectedVehicle]);
 
     const handleConfirmBooking = async () => {
+        if (!selectedVehicle) {
+            console.error("No vehicle selected");
+            return;
+        }
         try {
             setIsProcessing(true);
             const bookingData = {
-                vehicle: selectedVehicle._id,
+                vehicleId: selectedVehicle._id || selectedVehicle.id,
                 service: {
                     id: selectedType.id,
                     name: selectedType.title,
@@ -131,17 +255,22 @@ const SpareDriverBooking = () => {
                 location: {
                     type: 'home',
                     address: {
-                        street: addresses?.find(a => a.isPrimary)?.address || 'HSR Layout',
-                        city: 'Bengaluru'
+                        street: addresses?.find(a => a.isPrimary)?.street || addresses?.[0]?.street || 'HSR Layout',
+                        city: addresses?.find(a => a.isPrimary)?.city || addresses?.[0]?.city || 'Bengaluru'
                     }
                 },
                 provider: {
                     type: 'sparedriver'
-                }
+                },
+                paymentMethod: 'cash'
             };
 
             const res = await bookingAPI.createBooking(bookingData);
             if (res.status === 'success') {
+                const bId = res.data.booking._id;
+                setActiveBookingId(bId);
+                sessionStorage.setItem('chauffeur_active_booking_id', bId);
+
                 // Clear session state
                 sessionStorage.removeItem('chauffeur_booking_phase');
                 sessionStorage.removeItem('chauffeur_selected_type');
@@ -149,7 +278,7 @@ const SpareDriverBooking = () => {
 
                 navigate('/payment-checkout', {
                     state: {
-                        bookingId: res.data.booking._id,
+                        bookingId: bId,
                         amount: selectedType.basePrice,
                         serviceName: `Premium ${selectedType.title}`,
                         date: bookingDetails.date,
@@ -216,9 +345,9 @@ const SpareDriverBooking = () => {
                         whileTap={{ scale: 0.98 }}
                         onClick={() => {
                             setSelectedType({
-                                id: type.id,
-                                title: type.title,
-                                subtitle: type.subtitle,
+                                id: type._id || type.id,
+                                title: type.name || type.title,
+                                subtitle: type.description || type.subtitle,
                                 img: type.image || pointImg,
                                 basePrice: type.basePrice
                             });
@@ -315,7 +444,7 @@ const SpareDriverBooking = () => {
                         </div>
                         <div className="flex-1 overflow-hidden">
                             <h4 className="text-[11px] font-[1000] text-black uppercase tracking-tight leading-none mb-1">Current Residence</h4>
-                            <p className="text-[9px] font-bold text-black/30 uppercase tracking-widest truncate">{addresses?.find(a => a.isPrimary)?.address || 'HSR Layout, Bengaluru'}</p>
+                            <p className="text-[9px] font-bold text-black/30 uppercase tracking-widest truncate">{addresses?.find(a => a.isPrimary)?.street || addresses?.[0]?.street || 'HSR Layout, Bengaluru'}</p>
                         </div>
                         <ChevronRight size={14} className="text-black/10 transition-transform group-hover:translate-x-1" />
                     </div>
@@ -394,9 +523,9 @@ const SpareDriverBooking = () => {
                 <div className="grid grid-cols-1 gap-3">
                     {vehicles?.map((v) => (
                         <button
-                            key={v.id}
+                            key={v._id || v.id}
                             onClick={() => setSelectedVehicle(v)}
-                            className={`p-3.5 rounded-2xl border transition-all flex items-center gap-4 text-left ${selectedVehicle?.id === v.id ? 'bg-white border-brand shadow-lg shadow-brand/5' : 'bg-gray-50/50 border-black/[0.03]'}`}
+                            className={`p-3.5 rounded-2xl border transition-all flex items-center gap-4 text-left ${(selectedVehicle?._id || selectedVehicle?.id) === (v._id || v.id) ? 'bg-white border-brand shadow-lg shadow-brand/5' : 'bg-gray-50/50 border-black/[0.03]'}`}
                         >
                             <div className="w-12 h-12 bg-white rounded-xl overflow-hidden shadow-sm border border-black/[0.04]">
                                 <img src={v.img} className="w-full h-full object-cover" />
@@ -405,7 +534,7 @@ const SpareDriverBooking = () => {
                                 <h4 className="text-[13px] font-[1000] text-black leading-none mb-1 uppercase tracking-tight">{v.brand} {v.model}</h4>
                                 <p className="text-[10px] font-bold text-black/30 uppercase tracking-widest">{v.plate}</p>
                             </div>
-                            {selectedVehicle?.id === v.id && (
+                            {(selectedVehicle?._id || selectedVehicle?.id) === (v._id || v.id) && (
                                 <div className="w-5 h-5 bg-brand rounded-full flex items-center justify-center">
                                     <Check size={12} strokeWidth={4} className="text-white" />
                                 </div>
@@ -571,25 +700,59 @@ const SpareDriverBooking = () => {
         </div>
     );
 
+    const MapUpdater = ({ center }) => {
+        const map = useMap();
+        useEffect(() => {
+            if (center) map.flyTo(center, 15);
+        }, [center]);
+        return null;
+    };
+
     const renderTripActive = () => (
         <div className="min-h-screen bg-gray-950 flex flex-col">
             <div className="flex-1 relative">
-                <div className="absolute inset-0 bg-[#0A0A0A]">
-                    <div className="w-full h-full bg-[radial-gradient(circle,rgba(242,159,5,0.04)_1px,transparent_1px)] bg-[size:16px_16px]" />
+                {/* 🗺️ Phase 1: Live Leaflet Integration */}
+                <div className="absolute inset-0 z-0">
+                    <MapContainer
+                        center={driverLocation ? [driverLocation.lat, driverLocation.lng] : [12.9716, 77.5946]}
+                        zoom={15}
+                        zoomControl={false}
+                        className="w-full h-full"
+                    >
+                        <TileLayer
+                            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                        />
+                        {driverLocation && (
+                            <>
+                                <Marker
+                                    position={[driverLocation.lat, driverLocation.lng]}
+                                    icon={driverIcon}
+                                />
+                                <MapUpdater center={[driverLocation.lat, driverLocation.lng]} />
+                            </>
+                        )}
+                        {/* User Goal Marker - Placeholder for pickup */}
+                        <Marker position={[12.9716, 77.5946]} icon={userIcon} />
+                    </MapContainer>
                 </div>
 
                 <div className="absolute top-10 left-4 right-4 z-20">
                     <div className="bg-black/40 backdrop-blur-xl border border-white/5 rounded-2xl p-3.5 flex items-center justify-between shadow-2xl">
                         <div className="flex items-center gap-3">
                             <div className="w-9 h-9 bg-brand/10 rounded-lg flex items-center justify-center">
-                                <Navigation size={18} className="text-brand animate-pulse" />
+                                <Navigation size={18} className={`text-brand ${driverLocation ? 'animate-pulse' : ''}`} />
                             </div>
                             <div>
-                                <h4 className="text-[12px] font-black text-white uppercase tracking-tight leading-none mb-1">Live Location</h4>
-                                <p className="text-[8px] font-bold text-white/30 uppercase tracking-[0.2em] leading-none">{driverInfo?.name} is driving</p>
+                                <h4 className="text-[12px] font-black text-white uppercase tracking-tight leading-none mb-1">Live Telemetry</h4>
+                                <p className="text-[8px] font-bold text-white/30 uppercase tracking-[0.2em] leading-none">
+                                    {driverLocation ? 'Driver is moving' : 'Waiting for GPS pulse...'}
+                                </p>
                             </div>
                         </div>
-                        <div className="px-2 py-1 bg-brand/20 text-brand border border-brand/20 rounded-md text-[8px] font-black uppercase tracking-widest leading-none">Active</div>
+                        <div className="px-2 py-1 bg-brand/20 text-brand border border-brand/20 rounded-md text-[8px] font-black uppercase tracking-widest leading-none">
+                            {phase === PHASES.FINDING_DRIVER ? 'Searching' : 'En Route'}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -600,7 +763,7 @@ const SpareDriverBooking = () => {
                 <div className="flex items-center justify-between">
                     <div>
                         <p className="text-[8px] font-black text-black/20 uppercase tracking-[0.25em] mb-1.5 leading-none">Session Duration</p>
-                        <h4 className="text-3xl font-[1000] text-black tracking-tighter leading-none tabular-nums">00:15:32</h4>
+                        <h4 className="text-3xl font-[1000] text-black tracking-tighter leading-none tabular-nums">{formatTime(elapsedTime)}</h4>
                     </div>
                     <div className="text-right">
                         <div className="flex items-center justify-end gap-1.5 text-brand font-black text-[9px] uppercase tracking-widest">
@@ -620,10 +783,17 @@ const SpareDriverBooking = () => {
                             <p className="text-[8px] font-bold text-black/20 uppercase tracking-widest">Verified Chauffeur</p>
                         </div>
                     </div>
-                    <button className="bg-red-50 text-red-600 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest active:scale-95 transition-transform flex items-center gap-1.5 border border-red-100 shadow-sm">
-                        <AlertTriangle size={12} fill="currentColor" strokeWidth={1} />
-                        SOS
-                    </button>
+                    {bookingDetails?.status === 'arrived' ? (
+                        <div className="bg-brand/10 border border-brand/20 px-3 py-2 rounded-xl text-center">
+                            <p className="text-[7px] font-black text-brand uppercase tracking-widest mb-0.5">Start PIN</p>
+                            <p className="text-sm font-[1000] text-black tracking-widest">{bookingDetails?.securityPin}</p>
+                        </div>
+                    ) : (
+                        <button className="bg-red-50 text-red-600 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest active:scale-95 transition-transform flex items-center gap-1.5 border border-red-100 shadow-sm">
+                            <AlertTriangle size={12} fill="currentColor" strokeWidth={1} />
+                            SOS
+                        </button>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -662,22 +832,28 @@ const SpareDriverBooking = () => {
                 </div>
                 <div className="flex items-center justify-between">
                     <span className="text-[9px] font-black text-black/25 uppercase tracking-widest">Time In Session</span>
-                    <span className="text-[12px] font-black text-black uppercase leading-none">00:45:12</span>
+                    <span className="text-[12px] font-black text-black uppercase leading-none">{formatTime(elapsedTime)}</span>
                 </div>
             </div>
 
             <div className="w-full space-y-3 pt-2">
                 <button
-                    onClick={() => navigate(`/rate?id=${activeBookingId}`)}
-                    className="w-full bg-black text-white h-14 rounded-2xl font-black text-[13px] uppercase tracking-[0.2em] shadow-xl active:scale-[0.98] transition-all flex items-center justify-center mt-2"
+                    onClick={() => {
+                        sessionStorage.removeItem('chauffeur_active_booking_id');
+                        sessionStorage.removeItem('chauffeur_booking_phase');
+                        sessionStorage.removeItem('chauffeur_trip_start_time');
+                        navigate('/home');
+                        refreshStats();
+                    }}
+                    className="w-full bg-black text-white h-14 rounded-2xl font-black text-[13px] uppercase tracking-[0.2em] shadow-xl active:scale-[0.98] transition-all"
                 >
-                    Rate Driver
+                    Return Home
                 </button>
                 <button
-                    onClick={() => navigate('/')}
-                    className="w-full text-black/30 h-10 rounded-lg font-black text-[9px] uppercase tracking-[0.2em] flex items-center justify-center transition-all hover:bg-gray-50 bg-gray-50/50"
+                    onClick={() => navigate('/spare-driver/history')}
+                    className="w-full border border-gray-100 text-black/40 h-14 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] active:scale-[0.98] transition-all"
                 >
-                    Exit to Home
+                    View Trip Details
                 </button>
             </div>
         </div>

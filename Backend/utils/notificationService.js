@@ -101,7 +101,7 @@ const sendCaptainNotification = async (captainId, data) => {
 const sendAdminNotification = async (data) => {
     try {
         const { title, message, type, priority = 'high', metaData } = data;
-        
+
         // 1. Save to Database (using a generic notification with type 'admin')
         const notification = await Notification.create({
             title,
@@ -133,8 +133,146 @@ const sendAdminNotification = async (data) => {
     }
 };
 
+/**
+ * Send a notification to a vendor
+ * @param {string} vendorId - The ID of the vendor
+ * @param {Object} data - Notification data
+ */
+const sendVendorNotification = async (vendorId, data) => {
+    try {
+        const { title, message, type, priority = 'medium', actionUrl, actionText, imageUrl, metaData } = data;
+
+        // 1. Save to Database
+        const notification = await Notification.create({
+            vendor: vendorId,
+            title,
+            message,
+            type,
+            priority,
+            actionUrl,
+            actionText,
+            imageUrl,
+            data: metaData || {}
+        });
+
+        // 2. Emit via Socket.io for real-time update
+        const io = socketService.getIO();
+        if (io) {
+            io.to(vendorId.toString()).emit('new_vendor_notification', {
+                notification: {
+                    id: notification._id,
+                    title,
+                    message,
+                    type,
+                    priority,
+                    createdAt: notification.createdAt,
+                    isNew: true
+                }
+            });
+        }
+
+        return notification;
+    } catch (error) {
+        console.error('Error in sendVendorNotification utility:', error);
+        return null;
+    }
+};
+
+/**
+ * Send a notification to a staff member
+ * @param {string} staffId - The ID of the staff
+ * @param {Object} data - Notification data
+ */
+const sendStaffNotification = async (staffId, data) => {
+    try {
+        const { title, message, type, priority = 'medium', actionUrl, actionText, imageUrl, metaData } = data;
+
+        // 1. Save to Database
+        const notification = await Notification.create({
+            staff: staffId,
+            title,
+            message,
+            type,
+            priority,
+            actionUrl,
+            actionText,
+            imageUrl,
+            data: metaData || {}
+        });
+
+        // 2. Emit via Socket.io for real-time update
+        const io = socketService.getIO();
+        if (io) {
+            io.to(staffId.toString()).emit('new_staff_notification', {
+                notification: {
+                    id: notification._id,
+                    title,
+                    message,
+                    type,
+                    priority,
+                    createdAt: notification.createdAt,
+                    isNew: true
+                }
+            });
+        }
+
+        return notification;
+    } catch (error) {
+        console.error('Error in sendStaffNotification utility:', error);
+        return null;
+    }
+};
+
+/**
+ * Send a notification to a spare driver
+ * @param {string} driverId - The ID of the spare driver
+ * @param {Object} data - Notification data
+ */
+const sendSpareDriverNotification = async (driverId, data) => {
+    try {
+        const { title, message, type, priority = 'medium', actionUrl, actionText, imageUrl, metaData } = data;
+
+        // 1. Save to Database
+        const notification = await Notification.create({
+            spareDriver: driverId,
+            title,
+            message,
+            type,
+            priority,
+            actionUrl,
+            actionText,
+            imageUrl,
+            data: metaData || {}
+        });
+
+        // 2. Emit via Socket.io for real-time update
+        const io = socketService.getIO();
+        if (io) {
+            io.to(driverId.toString()).emit('new_spare_driver_notification', {
+                notification: {
+                    id: notification._id,
+                    title,
+                    message,
+                    type,
+                    priority,
+                    createdAt: notification.createdAt,
+                    isNew: true
+                }
+            });
+        }
+
+        return notification;
+    } catch (error) {
+        console.error('Error in sendSpareDriverNotification utility:', error);
+        return null;
+    }
+};
+
 module.exports = {
     sendNotification,
     sendCaptainNotification,
-    sendAdminNotification
+    sendAdminNotification,
+    sendVendorNotification,
+    sendStaffNotification,
+    sendSpareDriverNotification
 };

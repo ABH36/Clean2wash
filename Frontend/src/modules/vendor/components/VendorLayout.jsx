@@ -3,13 +3,15 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import {
     LayoutDashboard, Package, Truck, Users,
-    Wallet, Settings, Bell, Search, Box, LayoutGrid,
+    Wallet, Settings, Search, Box, LayoutGrid,
     BarChart3, LogOut, ShoppingBag, ChevronRight,
     ShieldCheck, ShieldAlert, Lock, Clock, XCircle,
     Menu, X, Sun, Moon, UserPlus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../../../context/ThemeContext';
+import NotificationBell from './NotificationBell';
+import LocationIndicator from '../../../components/Location/LocationIndicator';
 
 const NAV_GROUPS = [
     {
@@ -239,7 +241,11 @@ const VendorLayout = ({ children, title, subtitle }) => {
                         </button>
                         <div>
                             <h1 className="text-lg font-black tracking-tight text-content leading-none">{title}</h1>
-                            <p className="text-[10px] text-content-subtle font-bold uppercase tracking-widest mt-1">{subtitle}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                                <p className="text-[10px] text-content-subtle font-bold uppercase tracking-widest">{subtitle}</p>
+                                <div className="w-1 h-1 bg-gray-300 rounded-full" />
+                                <LocationIndicator variant="minimal" className="!p-0 !bg-transparent !border-none" />
+                            </div>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -260,10 +266,7 @@ const VendorLayout = ({ children, title, subtitle }) => {
                             {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
                         </button>
 
-                        <button className="relative w-9 h-9 bg-background rounded-xl flex items-center justify-center border border-gray-100/10 hover:bg-surface transition-all">
-                            <Bell size={16} className="text-content-muted" />
-                            <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-brand rounded-full" />
-                        </button>
+                        <NotificationBell />
                         <div
                             className="w-9 h-9 rounded-xl overflow-hidden border-2 border-gray-100/10 cursor-pointer hover:border-brand/30 transition-all"
                             onClick={() => navigate('/vendor/settings')}

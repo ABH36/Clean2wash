@@ -2,9 +2,13 @@ const SpareDriver = require('../../../models/SpareDriver');
 const Booking = require('../../../models/Booking');
 const Setting = require('../../../models/Setting');
 const WalletTransaction = require('../../../models/WalletTransaction');
+const commissionHelper = require('../../../utils/commissionHelper');
+const { socketService } = require('../../../socketService');
+const cloudinary = require('../../../utils/cloudinary');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
+const { executeWalletTransaction } = require('../../../utils/walletHelper');
 const fs = require('fs');
 
 const getDriverIdFromRequest = (req) => req.spareDriver?.id || req.user?.id;
@@ -69,7 +73,7 @@ exports.register = async (req, res) => {
     }
 };
 
-// ── Upload Documents (multipart/form-data with actual files) ──
+// ── Upload Documents (Cloudinary) ──
 exports.uploadDocuments = async (req, res) => {
     try {
         const driverId = getDriverIdFromRequest(req);
@@ -86,10 +90,18 @@ exports.uploadDocuments = async (req, res) => {
             });
         }
 
-        const baseUrl = `${req.protocol}://${req.get('host')}`;
-        const aadhaarUrl = `${baseUrl}/uploads/sparedrivers/${files.aadhaarCard[0].filename}`;
-        const dlUrl = `${baseUrl}/uploads/sparedrivers/${files.drivingLicense[0].filename}`;
-        const selfieUrl = `${baseUrl}/uploads/sparedrivers/${files.selfie[0].filename}`;
+        // Upload to Cloudinary
+        const uploadFile = async (fileArray, field) => {
+            const filePath = fileArray[0].path;
+            const result = await cloudinary.uploadImage(filePath, `clean2wash/sparedrivers/${driverId}`);
+            // Cleanup local file
+            try { fs.unlinkSync(filePath); } catch (e) { }
+            return result.secure_url;
+        };
+
+        const aadhaarUrl = await uploadFile(files.aadhaarCard, 'aadhaar');
+        const dlUrl = await uploadFile(files.drivingLicense, 'dl');
+        const selfieUrl = await uploadFile(files.selfie, 'selfie');
 
         const driver = await SpareDriver.findByIdAndUpdate(
             driverId,
@@ -104,10 +116,11 @@ exports.uploadDocuments = async (req, res) => {
 
         res.status(200).json({
             status: 'success',
-            message: 'Documents uploaded. Pending admin verification.',
+            message: 'Documents uploaded to cloud. Pending admin verification.',
             data: { driver }
         });
     } catch (err) {
+        console.error('Doc Upload Error:', err);
         res.status(400).json({ status: 'fail', message: err.message });
     }
 };
@@ -196,6 +209,28 @@ exports.getBookings = async (req, res) => {
     }
 };
 
+// ── Get Trip History (Completed/Cancelled) ──
+exports.getTripHistory = async (req, res) => {
+    try {
+        const driverId = getDriverIdFromRequest(req);
+        const bookings = await Booking.find({
+            'provider.id': driverId,
+            'provider.type': 'sparedriver',
+            status: { $in: ['completed', 'cancelled'] }
+        })
+            .populate('consumer', 'name phone profile')
+            .populate('vehicle', 'brand model plate')
+            .sort({ updatedAt: -1 });
+
+        res.status(200).json({
+            status: 'success',
+            data: { bookings }
+        });
+    } catch (err) {
+        res.status(500).json({ status: 'fail', message: err.message });
+    }
+};
+
 // ── Accept a booking ──
 exports.acceptBooking = async (req, res) => {
     try {
@@ -229,11 +264,112 @@ exports.acceptBooking = async (req, res) => {
     }
 };
 
+// ── Update live location (Throttled for battery) ──
+exports.updateLocation = async (req, res) => {
+    try {
+        const { lat, lng } = req.body;
+        const driverId = getDriverIdFromRequest(req);
+
+        if (lat === undefined || lng === undefined) {
+            return res.status(400).json({ status: 'fail', message: 'Latitude and longitude are required' });
+        }
+
+        // Throttling: Check if driver exists and when they last updated
+        const driver = await SpareDriver.findById(driverId);
+        if (!driver) return res.status(404).json({ status: 'fail', message: 'Driver not found' });
+
+        // If updated in last 30 seconds, skip DB write (but return success)
+        const lastUpdate = driver.updatedAt || 0;
+        const diff = Date.now() - new Date(lastUpdate).getTime();
+        if (diff < 30000) {
+            return res.status(200).json({
+                status: 'success',
+                message: 'Update skipped (throttled)',
+                data: { location: driver.currentLocation }
+            });
+        }
+
+        driver.currentLocation = {
+            type: 'Point',
+            coordinates: [parseFloat(lng), parseFloat(lat)]
+        };
+        await driver.save({ validateBeforeSave: false });
+
+        res.status(200).json({
+            status: 'success',
+            data: { location: driver.currentLocation }
+        });
+    } catch (err) {
+        res.status(400).json({ status: 'fail', message: err.message });
+    }
+};
+
+// ── Toggle online status ──
+exports.toggleOnline = async (req, res) => {
+    try {
+        const { isOnline } = req.body;
+        const driverId = getDriverIdFromRequest(req);
+
+        const driver = await SpareDriver.findByIdAndUpdate(
+            driverId,
+            { isOnline },
+            { new: true, runValidators: true }
+        );
+
+        if (!driver) return res.status(404).json({ status: 'fail', message: 'Driver not found' });
+
+        res.status(200).json({ status: 'success', data: { isOnline: driver.isOnline } });
+    } catch (err) {
+        res.status(400).json({ status: 'fail', message: err.message });
+    }
+};
+
+// ── Cancel a booking ──
+exports.cancelBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reason } = req.body;
+        const driverId = getDriverIdFromRequest(req);
+
+        const booking = await Booking.findOneAndUpdate(
+            {
+                _id: id,
+                isActive: true,
+                'provider.id': driverId,
+                'provider.type': 'sparedriver',
+                status: { $in: ['en_route', 'arrived'] } // Can't cancel once active/completed
+            },
+            {
+                $set: {
+                    status: 'cancelled',
+                    'cancellation.reason': reason || 'Cancelled by driver',
+                    'cancellation.cancelledBy': 'provider',
+                    'cancellation.time': new Date()
+                }
+            },
+            { new: true }
+        );
+
+        if (!booking) return res.status(404).json({ status: 'fail', message: 'Booking not found or cannot be cancelled now' });
+
+        // Notify Socket
+        try {
+            const io = socketService.getIO();
+            if (io) io.to(booking._id.toString()).emit('booking_status_updated', { bookingId: booking._id, status: 'cancelled' });
+        } catch (e) { }
+
+        res.status(200).json({ status: 'success', data: { booking } });
+    } catch (err) {
+        res.status(400).json({ status: 'fail', message: err.message });
+    }
+};
+
+
 // ── Update booking status ──
 exports.updateBookingStatus = async (req, res) => {
     try {
         const { id } = req.params;
-        const { status } = req.body;
+        const { status, pin } = req.body;
         const driverId = getDriverIdFromRequest(req);
 
         const booking = await Booking.findOne({
@@ -244,65 +380,170 @@ exports.updateBookingStatus = async (req, res) => {
         });
         if (!booking) return res.status(404).json({ status: 'fail', message: 'Booking not found or not assigned to you' });
 
-        booking.status = status;
-        
+        // 🛡️ Hardening: Transition Guards
+        const currentStatus = booking.status;
+        const validTransitions = {
+            'en_route': ['arrived', 'cancelled'],
+            'arrived': ['active', 'cancelled'],
+            'active': ['completed'],
+            'completed': [],
+            'pending': ['en_route', 'cancelled']
+        };
+
+        if (validTransitions[currentStatus] && !validTransitions[currentStatus].includes(status)) {
+            return res.status(400).json({
+                status: 'fail',
+                message: `Invalid status transition: ${currentStatus} -> ${status}`
+            });
+        }
+
+        // 🔐 Phase 2: Security Handover (PIN Verification)
+        if (status === 'active') {
+            if (!pin || pin !== booking.securityPin) {
+                return res.status(403).json({
+                    status: 'fail',
+                    message: 'Invalid Security PIN. Please verify with the customer.'
+                });
+            }
+            booking.tracking = booking.tracking || {};
+            booking.tracking.startedAt = new Date();
+        }
+
+        if (status === 'arrived') {
+            booking.tracking = booking.tracking || {};
+            booking.tracking.arrivedAt = new Date();
+        }
+
         if (status === 'completed') {
             booking.tracking = booking.tracking || {};
             booking.tracking.completedAt = new Date();
-            
-            // --- PAYOUT LOGIC ---
-            if (booking.pricing?.totalAmount > 0) {
-                // Fetch Platform Commission
-                let commissionRate = 15; // Default 15%
-                const commissionSetting = await Setting.findOne({ key: 'platform_commission' });
-                if (commissionSetting && commissionSetting.value) {
-                    commissionRate = parseFloat(commissionSetting.value);
-                }
+            booking.payment = booking.payment || {};
+            booking.payment.status = 'paid';
+            booking.payment.paidAt = new Date();
 
-                const adminCut = (booking.pricing.totalAmount * commissionRate) / 100;
-                const providerPayout = booking.pricing.totalAmount - adminCut;
+            // 💰 Phase 3: Real Payout Engine
+            const totalAmount = booking.pricing?.totalAmount || 0;
+            if (totalAmount > 0) {
+                const { adminCut, providerPayout } = await commissionHelper.calculatePayout(totalAmount, 'sparedriver');
 
-                // Update SpareDriver Wallet
                 const driver = await SpareDriver.findById(driverId);
                 if (driver) {
-                    driver.wallet = driver.wallet || {};
-                    driver.wallet.balance = (driver.wallet.balance || 0) + providerPayout;
-                    await driver.save({ validateBeforeSave: false });
-
-                    // Log Transaction
-                    await WalletTransaction.create({
-                        user: driver._id,
-                        amount: providerPayout,
-                        type: 'credit',
-                        status: 'completed',
-                        category: 'SERVICE_BOOKING',
-                        description: `Payout for booking ${booking.bookingId || booking._id} (Commission deducted: ₹${adminCut.toFixed(2)})`,
-                        referenceId: booking._id.toString()
-                    });
-                }
-                
-                if (booking.payment) {
-                    booking.payment.status = 'paid';
-                    booking.payment.paidAt = new Date();
+                    // 1. Credit Driver Wallet (Atomic)
+                    await executeWalletTransaction(
+                        driver._id,
+                        providerPayout,
+                        'credit',
+                        {
+                            category: 'SERVICE_BOOKING',
+                            description: `Payout for booking ${booking.bookingId || booking._id} (Commission: ₹${adminCut})`,
+                            referenceId: booking._id.toString(),
+                            referenceType: 'booking_payout'
+                        },
+                        null,
+                        SpareDriver
+                    );
                 }
             }
         }
-        
+
+        booking.status = status;
         await booking.save();
 
         // Notify via Socket
         try {
-            const socketService = require('../../../socketService');
             const io = socketService.getIO();
-            io.to(booking._id.toString()).emit('booking_status_updated', {
-                bookingId: booking._id,
-                status: booking.status
-            });
+            if (io) {
+                io.to(booking._id.toString()).emit('booking_status_updated', {
+                    bookingId: booking._id,
+                    status: booking.status
+                });
+            }
         } catch (e) {
             console.error('Socket notification failed:', e.message);
         }
 
         res.status(200).json({ status: 'success', data: { booking } });
+    } catch (err) {
+        res.status(400).json({ status: 'fail', message: err.message });
+    }
+};
+
+// ── Get financial transactions ──
+exports.getTransactions = async (req, res) => {
+    try {
+        const driverId = getDriverIdFromRequest(req);
+        const { page = 1, limit = 20 } = req.query;
+
+        const result = await WalletTransaction.getUserTransactions(driverId, {
+            page,
+            limit,
+            category: 'SERVICE_BOOKING'
+        });
+
+        res.status(200).json({
+            status: 'success',
+            data: result
+        });
+    } catch (err) {
+        res.status(500).json({ status: 'fail', message: err.message });
+    }
+};
+
+// ── Notifications ──
+exports.getNotifications = async (req, res) => {
+    try {
+        const driverId = getDriverIdFromRequest(req);
+        const options = {
+            page: req.query.page || 1,
+            limit: req.query.limit || 20,
+            type: req.query.type,
+            isRead: req.query.isRead
+        };
+
+        const result = await Notification.getSpareDriverNotifications(driverId, options);
+        res.status(200).json({ status: 'success', data: result });
+    } catch (err) {
+        res.status(400).json({ status: 'fail', message: err.message });
+    }
+};
+
+exports.markNotificationRead = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const driverId = getDriverIdFromRequest(req);
+
+        if (id === 'all') {
+            await Notification.markAllAsReadForSpareDriver(driverId);
+        } else {
+            const notification = await Notification.findOne({ _id: id, spareDriver: driverId });
+            if (!notification) return res.status(404).json({ status: 'fail', message: 'Notification not found' });
+            await notification.markAsRead();
+        }
+
+        res.status(200).json({ status: 'success', message: 'Notification(s) marked as read' });
+    } catch (err) {
+        res.status(400).json({ status: 'fail', message: err.message });
+    }
+};
+
+// ── Toggle online status ──
+exports.toggleOnline = async (req, res) => {
+    try {
+        const { isOnline } = req.body;
+        const driverId = getDriverIdFromRequest(req);
+
+        const driver = await SpareDriver.findByIdAndUpdate(
+            driverId,
+            { isOnline },
+            { new: true, runValidators: true }
+        );
+
+        if (!driver) return res.status(404).json({ status: 'fail', message: 'Driver not found' });
+
+        res.status(200).json({
+            status: 'success',
+            data: { isOnline: driver.isOnline }
+        });
     } catch (err) {
         res.status(400).json({ status: 'fail', message: err.message });
     }

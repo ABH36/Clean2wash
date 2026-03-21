@@ -17,4 +17,7 @@ router.post('/create-order', authController.protect, createOrder);
 // Verify Payment (protected)
 router.post('/verify', authController.protect, verifyPayment);
 
+// Razorpay Webhook (Public, signature verified in controller)
+router.post('/webhook', require('../controllers/paymentController').handleWebhook);
+
 module.exports = router;

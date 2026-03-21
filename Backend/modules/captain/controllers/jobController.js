@@ -6,6 +6,9 @@ const Setting = require('../../../models/Setting');
 const WalletTransaction = require('../../../models/WalletTransaction');
 const socketService = require('../../../socketService');
 const { sendNotification } = require('../../../utils/notificationService');
+const { executeWalletTransaction } = require('../../../utils/walletHelper');
+const auditHelper = require('../../../utils/auditHelper');
+const referralService = require('../../../utils/referralService');
 
 const formatBookingForCaptain = (b) => {
     const consumer = b.consumer && b.consumer.name ? b.consumer : {};
@@ -63,7 +66,7 @@ exports.getPendingJobs = async (req, res) => {
         };
 
         // Geospatial filtering: Only show jobs within 5km of captain's selected working area
-        if (captain.location && captain.location.coordinates && 
+        if (captain.location && captain.location.coordinates &&
             (captain.location.coordinates[0] !== 0 || captain.location.coordinates[1] !== 0)) {
             query['location.address.geoPoint'] = {
                 $near: {
@@ -103,34 +106,76 @@ exports.getPendingJobs = async (req, res) => {
 exports.acceptJob = async (req, res) => {
     try {
         const { id } = req.params;
-        const captainId = req.captain.id;
+        const captainId = req.captain?._id || req.auth?.id || req.captain?.id;
+
+        // Phase 7: Slot Conflict Engine
+        // Prevent specialist from accepting an instant job if a scheduled slot is starting soon
+        const targetJob = await Booking.findById(id);
+        if (targetJob?.schedule?.type === 'instant') {
+            const bufferMinutes = 20; // Re-deployment/Travel buffer
+            const estimatedDuration = parseInt(targetJob.service?.duration) || 30; // Default 30 min wash
+            const jobEndTime = new Date(Date.now() + (estimatedDuration + bufferMinutes) * 60 * 1000);
+
+            // Find upcoming confirmed scheduled missions for this captain
+            const upcomingTask = await Booking.findOne({
+                'provider.id': captainId,
+                status: 'confirmed',
+                'schedule.type': 'scheduled',
+                isActive: true,
+                'schedule.date': { $gte: new Date() }
+            }).sort({ 'schedule.date': 1 });
+
+            if (upcomingTask) {
+                // If a scheduled task starts before this instant job can likely finish + buffer
+                // Note: Simplified date check for now
+                const scheduledTime = new Date(upcomingTask.schedule.date);
+                if (scheduledTime < jobEndTime) {
+                    return res.status(403).json({
+                        status: 'fail',
+                        message: `Mission Conflict: This job would overlap with your next scheduled mission at ${upcomingTask.schedule.timeSlot?.start || 'soon'}.`,
+                        code: 'SLOT_CONFLICT'
+                    });
+                }
+            }
+        }
 
         // Atomically update the booking status from 'pending' to 'confirmed'
         // This ensures only one captain can successfully accept the job in a race condition.
         const booking = await Booking.findOneAndUpdate(
-            { 
-                _id: id, 
-                status: 'pending', 
+            {
+                _id: id,
+                status: 'pending',
                 isActive: true,
                 'provider.id': null // Double check it has no provider assigned
             },
-            { 
-                $set: { 
+            {
+                $set: {
                     status: 'confirmed',
                     'provider.id': captainId,
                     'provider.type': 'captain',
                     'tracking.assignedAt': new Date()
-                } 
+                }
             },
             { new: true } // Return the updated document
         ).populate('consumer', 'name phone');
 
         if (!booking) {
-            return res.status(404).json({ 
-                status: 'fail', 
-                message: 'Job no longer available or already accepted by another captain.' 
+            return res.status(404).json({
+                status: 'fail',
+                message: 'Job no longer available or already accepted by another captain.'
             });
         }
+
+        // Audit Log: Job Accepted
+        await auditHelper.logAction({
+            userId: captainId,
+            action: 'BOOKING_ACCEPTED',
+            resource: 'Booking',
+            resourceId: booking._id,
+            oldValue: { status: 'pending' },
+            newValue: { status: 'confirmed', providerId: captainId },
+            req
+        });
 
         // Notify via Socket.io (Instantly updates UI from "Finding" to "Tracking")
         try {
@@ -145,6 +190,18 @@ exports.acceptJob = async (req, res) => {
                     photo: req.captain.photo
                 }
             });
+
+            // ➕ Phase 3: Global Notification Sync
+            // Emit to Consumer's personal room for list-view updates
+            io.to(booking.consumer._id.toString()).emit('booking_status_updated', {
+                bookingId: booking._id,
+                status: 'confirmed',
+                message: `Captain ${req.captain.name} has accepted your booking.`,
+                updatedFields: { 'provider.id': captainId, 'provider.type': 'captain' }
+            });
+
+            // Clear other captains' screens
+            io.emit('broadcast_taken', { bookingId: id });
         } catch (socketErr) {
             console.error('Socket notification failed in acceptJob:', socketErr.message);
         }
@@ -203,9 +260,9 @@ exports.updateJobStatus = async (req, res) => {
         // Elite Hardening: Prevent skipping statuses
         const statusPriority = { 'confirmed': 1, 'en_route': 2, 'arrived': 3, 'before_photo': 4, 'washing': 5, 'after_photo': 6, 'completed': 7 };
         if (statusPriority[status] > statusPriority[booking.status] + 1 && status !== 'cancelled') {
-             // Allow skipping en_route if already arrived, but generally enforce sequence
-             // For simplicity in this audit, we'll allow it but warn in logs
-             console.log(`Status skip detected: ${booking.status} -> ${status}`);
+            // Allow skipping en_route if already arrived, but generally enforce sequence
+            // For simplicity in this audit, we'll allow it but warn in logs
+            console.log(`Status skip detected: ${booking.status} -> ${status}`);
         }
 
         // Elite Hardening: Security PIN Verification
@@ -228,7 +285,7 @@ exports.updateJobStatus = async (req, res) => {
                 message: 'Before-service photo is mandatory to document vehicle condition.'
             });
         }
-        
+
         if (status === 'after_photo' && !req.body.photo && (!booking.serviceImages?.after?.length)) {
             return res.status(400).json({
                 status: 'fail',
@@ -250,7 +307,19 @@ exports.updateJobStatus = async (req, res) => {
             booking.serviceImages.capturedAt = new Date();
         }
 
+        const oldStatus = booking.status;
         booking.status = status;
+
+        // Audit Log: Status Transition
+        await auditHelper.logAction({
+            userId: req.captain._id,
+            action: `BOOKING_STATUS_${status.toUpperCase()}`,
+            resource: 'Booking',
+            resourceId: booking._id,
+            oldValue: { status: oldStatus },
+            newValue: { status },
+            req
+        });
         if (!booking.tracking) booking.tracking = {};
         if (status === 'en_route') {
             booking.tracking.startedAt = new Date();
@@ -263,109 +332,27 @@ exports.updateJobStatus = async (req, res) => {
             if (booking.payment) booking.payment.status = 'paid';
             const amount = booking.pricing?.totalAmount || 0;
             if (amount > 0) {
-                // Fetch Platform Commission
-                let commissionRate = 15; // Default 15%
-                const commissionSetting = await Setting.findOne({ key: 'platform_commission' });
-                if (commissionSetting && commissionSetting.value) {
-                    commissionRate = parseFloat(commissionSetting.value);
-                }
+                // Fetch Dynamic Payout details via helper
+                const commissionHelper = require('../../../utils/commissionHelper');
+                const { adminCut, providerPayout, rate } = await commissionHelper.calculatePayout(amount, 'captain');
 
-                const adminCut = (amount * commissionRate) / 100;
-                const providerPayout = amount - adminCut;
-
-                const captain = await Captain.findById(req.captain._id);
-                if (captain) {
-                    captain.wallet = captain.wallet || {};
-                    const balanceBefore = captain.wallet.balance || 0;
-                    captain.wallet.balance = balanceBefore + providerPayout;
-                    await captain.save({ validateBeforeSave: false });
-
-                    // Log the transaction
-                    await WalletTransaction.create({
-                        user: captain._id,
-                        amount: providerPayout,
-                        type: 'credit',
-                        status: 'completed',
+                // 1. Credit Captain Wallet
+                await executeWalletTransaction(
+                    req.captain._id,
+                    providerPayout,
+                    'credit',
+                    {
                         category: 'SERVICE_BOOKING',
                         description: `Payout for booking ${booking.bookingId || booking._id} (Commission: ₹${adminCut.toFixed(2)})`,
                         referenceId: booking._id.toString(),
-                        balanceBefore,
-                        balanceAfter: balanceBefore + providerPayout
-                    });
-                }
+                        referenceType: 'booking_payout'
+                    },
+                    null,
+                    Captain
+                );
 
-                // --- Referral Reward Logic ---
-                try {
-                    const consumer = await User.findById(booking.consumer);
-                    if (consumer && consumer.referredBy) {
-                        const completedCount = await Booking.countDocuments({
-                            consumer: consumer._id,
-                            status: 'completed'
-                        });
-
-                        if (completedCount === 0) { 
-                            const referrer = await User.findById(consumer.referredBy);
-                            if (referrer) {
-                                const activeReferral = await Promotion.findOne({
-                                    type: 'Referrals',
-                                    status: 'Active',
-                                    isActive: true
-                                }).sort({ createdAt: -1 });
-
-                                const userReward = activeReferral ? parseInt(activeReferral.friendGets.replace(/\D/g, '')) : 50;
-                                const referrerReward = activeReferral ? parseInt(activeReferral.userGets.replace(/\D/g, '')) : 50;
-
-                                referrer.wallet.balance += referrerReward;
-                                referrer.referralsCount += 1;
-                                referrer.totalReferralEarnings += referrerReward;
-                                await referrer.save({ validateBeforeSave: false });
-
-                                await WalletTransaction.create({
-                                    user: referrer._id,
-                                    amount: referrerReward,
-                                    type: 'credit',
-                                    status: 'completed',
-                                    category: 'REWARD',
-                                    description: `Referral reward for ${consumer.name}'s first service`,
-                                    referenceId: booking._id.toString()
-                                });
-
-                                // Notify Referrer
-                                await sendNotification(referrer._id, {
-                                    title: 'Referral Reward! 🎁',
-                                    message: `You earned ₹${referrerReward} credits from ${consumer.name}'s first wash.`,
-                                    type: 'promotion',
-                                    priority: 'medium',
-                                    metaData: { referralId: consumer._id }
-                                });
-
-                                consumer.wallet.balance += userReward;
-                                await consumer.save({ validateBeforeSave: false });
-
-                                await WalletTransaction.create({
-                                    user: consumer._id,
-                                    amount: userReward,
-                                    type: 'credit',
-                                    status: 'completed',
-                                    category: 'REWARD',
-                                    description: `Reward for using referral code on your first service`,
-                                    referenceId: booking._id.toString()
-                                });
-
-                                // Notify Friend (Consumer)
-                                await sendNotification(consumer._id, {
-                                    title: 'Referral Bonus! ✨',
-                                    message: `₹${userReward} Referral bonus added to your wallet. Happy washing!`,
-                                    type: 'promotion',
-                                    priority: 'medium',
-                                    metaData: { bookingId: booking._id }
-                                });
-                            }
-                        }
-                    }
-                } catch (referralError) {
-                    console.error('Error in referral reward processing:', referralError);
-                }
+                // --- Referral Reward Logic (Phase 4) ---
+                await referralService.processReferralReward(booking.consumer, booking._id);
             }
         }
         await booking.save();
@@ -375,6 +362,15 @@ exports.updateJobStatus = async (req, res) => {
             bookingId: booking._id,
             status: booking.status,
             tracking: booking.tracking
+        });
+
+        // ➕ Phase 3: Global Notification Sync
+        // Emit to Consumer's personal room for list-view updates
+        io.to(booking.consumer.toString()).emit('booking_status_updated', {
+            bookingId: booking._id,
+            status: booking.status,
+            tracking: booking.tracking,
+            message: `Booking status changed to ${booking.status}`
         });
 
         // Send notification to consumer on status change
@@ -592,46 +588,48 @@ exports.getHistory = async (req, res) => {
 
 exports.withdrawPayout = async (req, res) => {
     try {
-        const { amount, method = 'bank' } = req.body;
-        const captain = await Captain.findById(req.captain.id);
+        const { amount, bankDetails } = req.body;
+        const captainId = req.captain._id || req.captain.id;
+        const captain = await Captain.findById(captainId);
+
         if (!captain) return res.status(404).json({ status: 'fail', message: 'Captain not found.' });
 
-        captain.wallet = captain.wallet || {};
         const balance = captain.wallet.balance || 0;
-        const withdrawAmount = Math.min(amount || balance, balance);
+        const withdrawAmount = parseFloat(amount);
 
-        if (withdrawAmount <= 0) {
-            return res.status(400).json({
-                status: 'fail',
-                message: 'Insufficient balance to withdraw.'
-            });
+        if (!withdrawAmount || withdrawAmount < 500) {
+            return res.status(400).json({ status: 'fail', message: 'Minimum withdrawal is ₹500.' });
         }
 
-        captain.wallet.balance = balance - withdrawAmount;
-        captain.wallet.lastWithdrawAt = new Date();
-        await captain.save({ validateBeforeSave: false });
+        if (withdrawAmount > balance) {
+            return res.status(400).json({ status: 'fail', message: 'Insufficient balance.' });
+        }
 
-        // Create wallet transaction record
-        await WalletTransaction.create({
-            user: captain._id,
-            amount: withdrawAmount,
-            type: 'debit',
-            status: 'completed',
-            category: 'WITHDRAWAL',
-            description: `Withdrawal of ₹${withdrawAmount} to ${method}`,
-            balanceBefore: balance,
-            balanceAfter: balance - withdrawAmount,
-            paymentMethod: method
-        });
+        // 1. Atomic Debit & Create Record (Status PENDING Override)
+        const result = await executeWalletTransaction(
+            captainId,
+            withdrawAmount,
+            'debit',
+            {
+                category: 'WITHDRAWAL',
+                description: `Bank Withdrawal Request. Account: ${bankDetails?.accountNumber || 'Stored Bank'}`,
+                referenceId: `WD-CAP-${Date.now()}`,
+                referenceType: 'withdrawal',
+                paymentMethod: 'bank',
+                metaData: { bankDetails, requestedAt: new Date() }
+            },
+            null,
+            Captain
+        );
+
+        // Update transaction to pending (helper defaults to completed)
+        result.transaction.status = 'pending';
+        await result.transaction.save();
 
         res.status(200).json({
             status: 'success',
-            message: 'Withdrawal initiated successfully',
-            data: {
-                amount: withdrawAmount,
-                newBalance: captain.wallet.balance,
-                method
-            }
+            message: 'Withdrawal request submitted for admin approval.',
+            data: { transaction: result.transaction }
         });
     } catch (error) {
         console.error('Captain withdrawPayout error:', error);
@@ -715,7 +713,7 @@ exports.toggleOnline = async (req, res) => {
     try {
         const { isOnline } = req.body;
         const captainId = req.captain?._id || req.auth?.id;
-        
+
         const captain = await Captain.findById(captainId);
         if (!captain) return res.status(404).json({ status: 'fail', message: 'Captain not found.' });
         captain.isOnline = typeof isOnline === 'boolean' ? isOnline : !captain.isOnline;
@@ -751,5 +749,43 @@ exports.declineJob = async (req, res) => {
     } catch (error) {
         console.error('Captain declineJob error:', error);
         res.status(500).json({ status: 'error', message: 'Failed to decline job.' });
+    }
+};
+
+exports.commitToScheduledJob = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const captainId = req.captain?._id || req.auth?.id;
+
+        const booking = await Booking.findOne({
+            _id: id,
+            'provider.id': captainId,
+            status: 'confirmed',
+            'schedule.type': 'scheduled'
+        });
+
+        if (!booking) {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'Scheduled job not found or not assigned to you.'
+            });
+        }
+
+        booking.isDoorstepCommitted = true;
+        booking.activityLog.push({
+            status: 'committed',
+            description: 'Captain confirmed availability for doorstep mission.'
+        });
+
+        await booking.save();
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Commitment confirmed. Please arrive on time!',
+            data: { isDoorstepCommitted: true }
+        });
+    } catch (error) {
+        console.error('Captain commitToScheduledJob error:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to confirm commitment.' });
     }
 };

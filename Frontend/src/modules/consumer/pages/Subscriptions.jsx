@@ -9,7 +9,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import MobileLayout from '../components/layout/MobileLayout';
 import { useAuth } from '../../../context/AuthContext';
-import api from '../../../utils/api';
+import api, { serviceAPI } from '../../../utils/api';
 import { toast } from 'react-hot-toast';
 
 const Subscriptions = () => {
@@ -30,7 +30,7 @@ const Subscriptions = () => {
     useEffect(() => {
         const fetchPlans = async () => {
             try {
-                const res = await api.get('/consumer/services/plans');
+                const res = await serviceAPI.getPlans();
                 if (res.data.status === 'success') {
                     setPlans(res.data.data.plans || []);
                 }

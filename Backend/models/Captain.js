@@ -48,6 +48,12 @@ const captainSchema = new mongoose.Schema({
         balance: { type: Number, default: 0, min: 0 },
         lastWithdrawAt: Date
     },
+    bankDetails: {
+        accountName: String,
+        accountNumber: String,
+        ifscCode: String,
+        bankName: String
+    },
     rating: {
         type: Number,
         default: 5.0,

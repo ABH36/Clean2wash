@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     Search, Menu, ShoppingCart, Heart, User, Home,
     ChevronRight, Zap, RefreshCw, Truck, ArrowLeft,
-    Star, Plus, ShoppingBag, Youtube, Mail, Bell, X, Check, Crown
+    Star, Plus, ShoppingBag, Youtube, Mail, Bell, X, Check, Crown, Sparkles
 } from 'lucide-react';
 import MobileLayout from '../components/layout/MobileLayout';
 import { useCart } from '../../../context/CartContext';
@@ -255,6 +255,44 @@ const EShop = () => {
                             ))}
                         </div>
                     </div>
+
+                    {/* ── TRENDING NOW ── */}
+                    {!searchQuery && (
+                        <div className="space-y-4">
+                            <div className="px-5 flex items-center justify-between">
+                                <h2 className="text-base font-[1000] text-content uppercase tracking-tight italic">Trending Now</h2>
+                                <div className="flex items-center gap-1.5 bg-brand/10 px-2 py-0.5 rounded text-[8px] font-black text-brand uppercase tracking-widest">
+                                    <Sparkles size={10} fill="currentColor" /> Hot Picks
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4 px-5 overflow-x-auto no-scrollbar pb-2">
+                                {[
+                                    { name: 'Microfiber Pro', price: 299, image: 'https://images.unsplash.com/photo-1558227691-41ea78d1f631?w=200&q=80', tag: 'Best Seller' },
+                                    { name: 'Ceramic Wax', price: 899, image: 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=200&q=80', tag: 'Premium' },
+                                    { name: 'Foam Cannon', price: 1499, image: 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=200&q=80', tag: 'Professional' }
+                                ].map((item, i) => (
+                                    <motion.div
+                                        whileTap={{ scale: 0.98 }}
+                                        key={i}
+                                        className="flex-shrink-0 w-64 bg-gray-50 rounded-2xl p-4 border border-gray-100 flex gap-4 items-center group cursor-pointer"
+                                    >
+                                        <div className="w-20 h-20 rounded-xl bg-white border border-gray-100 overflow-hidden flex-shrink-0">
+                                            <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={item.name} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <span className="text-[7px] font-black text-brand uppercase tracking-[0.2em]">{item.tag}</span>
+                                            <h4 className="text-[11px] font-[1000] text-content uppercase tracking-tight mt-0.5 truncate">{item.name}</h4>
+                                            <p className="text-sm font-black text-content mt-1 italic">₹{item.price}</p>
+                                            <div className="mt-2 text-[9px] font-black text-brand uppercase tracking-widest flex items-center gap-1">
+                                                Procure <Plus size={10} strokeWidth={3} />
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* ── PRODUCTS LIST ── */}
                     <div className="space-y-4">

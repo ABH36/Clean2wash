@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
+import LocationIndicator from '../../../components/Location/LocationIndicator';
 import {
     LayoutDashboard,
     BarChart3,
@@ -26,7 +27,8 @@ import {
     ShoppingBag,
     UserCheck,
     Wallet,
-    Zap
+    Zap,
+    History
 } from 'lucide-react';
 
 
@@ -56,6 +58,7 @@ const AdminLayout = ({ children, title }) => {
         { icon: <Users size={18} />, label: 'User Management', path: '/admin/users' },
         { icon: <ShieldCheck size={18} />, label: 'Vendor Registry', path: '/admin/users?type=vendors' },
         { icon: <ShoppingBag size={18} />, label: 'Product Governance', path: '/admin/products' },
+        { icon: <TrendingUp size={18} />, label: 'Product War-Room', path: '/admin/product-war-room' },
         { icon: <UserCheck size={18} />, label: 'Chauffeur Drivers', path: '/admin/spare-drivers' },
         { icon: <Package size={18} />, label: 'Operations Hub', path: '/admin/bookings' },
         { icon: <Car size={18} />, label: 'Service Catalog', path: '/admin/services' },
@@ -64,6 +67,7 @@ const AdminLayout = ({ children, title }) => {
         { icon: <Crown size={18} />, label: 'Subscription Control', path: '/admin/subscriptions' },
         { icon: <Tag size={18} />, label: 'Promotions', path: '/admin/promotions' },
         { icon: <Wallet size={18} />, label: 'Audit Ledger', path: '/admin/transactions' },
+        { icon: <History size={18} />, label: 'System Audit Logs', path: '/admin/audit' },
         { icon: <Settings size={18} />, label: 'System Settings', path: '/admin/settings' },
     ];
 
@@ -141,6 +145,9 @@ const AdminLayout = ({ children, title }) => {
                         <h2 className="text-sm lg:text-lg font-black text-content tracking-tight uppercase truncate max-w-[150px] lg:max-w-none">
                             {title}
                         </h2>
+                        <div className="hidden sm:block">
+                            <LocationIndicator variant="minimal" className="!bg-transparent !border-none !p-0 ml-4 opacity-70 hover:opacity-100 transition-opacity" />
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-3 lg:gap-6">

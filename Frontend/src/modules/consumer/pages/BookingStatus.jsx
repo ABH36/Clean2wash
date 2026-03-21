@@ -9,6 +9,57 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import MobileLayout from '../components/layout/MobileLayout';
 import { useAuth } from '../../../context/AuthContext';
 import { toast } from 'react-hot-toast';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import VerifiedBadge from '../components/ui/VerifiedBadge';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import { socketService } from '../../../utils/socket';
+
+const playStatusDing = () => {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, ctx.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.3);
+        gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+        oscillator.start(ctx.currentTime);
+        oscillator.stop(ctx.currentTime + 0.3);
+    } catch (e) { }
+};
+
+const vibrateProtocol = (type) => {
+    if (!('vibrate' in navigator)) return;
+    if (type === 'arrived') navigator.vibrate([200, 100, 200, 100, 200]);
+    else if (type === 'completed') navigator.vibrate([100, 50, 100, 50, 500]);
+    else navigator.vibrate(100);
+};
+
+// 🛠️ Protocol Config: Smooth Marker Movement
+const personIcon = new L.Icon({
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/1048/1048313.png',
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    className: 'leaflet-smooth-marker'
+});
+
+const homeIcon = new L.Icon({
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/619/619153.png',
+    iconSize: [32, 32],
+    iconAnchor: [16, 32]
+});
+
+const RecenterMap = ({ coords }) => {
+    const map = useMap();
+    useEffect(() => {
+        if (coords) map.setView(coords, 14, { animate: true });
+    }, [coords, map]);
+    return null;
+};
 
 const CountdownTimer = ({ targetTime }) => {
     const [timeLeft, setTimeLeft] = useState('');
@@ -51,8 +102,10 @@ const CAPTAIN_STEPS = [
 const VENDOR_STEPS = [
     { id: 'pending', label: 'Studio Request', desc: 'Awaiting studio confirmation', Icon: Zap, activeColor: 'text-violet-500', activeBg: 'bg-violet-50', activeBorder: 'border-violet-200' },
     { id: 'accepted', label: 'Studio Confirmed', desc: 'Premium studio assigned', Icon: ShieldCheck, activeColor: 'text-blue-500', activeBg: 'bg-blue-50', activeBorder: 'border-blue-200' },
-    { id: 'pickup-assigned', label: 'Pickup assigned', desc: 'Driver is coming for pickup', Icon: Navigation, activeColor: 'text-blue-600', activeBg: 'bg-blue-100', activeBorder: 'border-blue-300' },
-    { id: 'arrived', label: 'At Your Door', desc: 'Vehicle handover in progress', Icon: MapPin, activeColor: 'text-brand', activeBg: 'bg-brand/10', activeBorder: 'border-brand/20' },
+    { id: 'pickup-assigned', label: 'Pickup Specialist', desc: 'Awaiting departure', Icon: Navigation, activeColor: 'text-blue-600', activeBg: 'bg-blue-100', activeBorder: 'border-blue-300' },
+    { id: 'en_route', label: 'En Route', desc: 'Specialist is heading your way', Icon: Navigation, activeColor: 'text-blue-600', activeBg: 'bg-blue-200', activeBorder: 'border-blue-400' },
+    { id: 'arrived', label: 'At Your Door', desc: 'Verify handover status', Icon: MapPin, activeColor: 'text-brand', activeBg: 'bg-brand/10', activeBorder: 'border-brand/20' },
+    { id: 'picked-up', label: 'Vehicle Secured', desc: 'Moving to Studio Node', Icon: ShieldCheck, activeColor: 'text-indigo-600', activeBg: 'bg-indigo-50', activeBorder: 'border-indigo-200' },
     { id: 'at-studio', label: 'At Studio', desc: 'Vehicle reached detailing hub', Icon: Truck, activeColor: 'text-orange-500', activeBg: 'bg-orange-50', activeBorder: 'border-orange-200' },
     { id: 'in_progress', label: 'Wash in Progress', desc: 'Deep cleaning in action', Icon: Droplets, activeColor: 'text-sky-500', activeBg: 'bg-sky-50', activeBorder: 'border-sky-200' },
     { id: 'quality-check', label: 'Quality Check', desc: 'Luxury finishing & audit', Icon: CheckCircle2, activeColor: 'text-emerald-500', activeBg: 'bg-emerald-50', activeBorder: 'border-emerald-200' },
@@ -73,6 +126,46 @@ const BookingStatus = () => {
     const liveBooking = bookings.find(b => (b.bookingId === bookingId || b._id === bookingId || b.id === bookingId)) || { id: 'CarWash-8821', serviceName: 'Eco Doorstep Wash', price: '₹473', status: 'CREATED' };
 
     const [step, setStep] = useState(0);
+    const [staffLocation, setStaffLocation] = useState(null);
+
+    // 📡 Live Telemetry Protocol
+    useEffect(() => {
+        if (!bookingId) return;
+
+        // Step 1: Join booking room remains manual as it's targeted context
+        socketService.joinBookingRoom(bookingId);
+        const socket = socketService.getSocket();
+
+        if (socket) {
+            // Priority 1: Specialist Telemetry Pulse
+            const handleLocationPulse = (data) => {
+                if (data.bookingId === bookingId) {
+                    setStaffLocation(data.location);
+                }
+            };
+            socket.on('location_updated', handleLocationPulse);
+            socket.on('specialist_location_pulse', handleLocationPulse);
+
+            // Priority 2: Status Synchronization
+            socket.on('booking_status_updated', (data) => {
+                if (data.bookingId === bookingId) {
+                    toast.success(`Protocol Updated: ${data.status}`);
+                    playStatusDing();
+                    if (data.status === 'arrived') vibrateProtocol('arrived');
+                    else if (data.status === 'completed') vibrateProtocol('completed');
+                    else vibrateProtocol('standard');
+                }
+            });
+        }
+
+        return () => {
+            if (socket) {
+                socket.off('location_updated');
+                socket.off('specialist_location_pulse');
+                socket.off('booking_status_updated');
+            }
+        };
+    }, [bookingId]);
 
     // Sync step with booking status
     useEffect(() => {
@@ -128,6 +221,58 @@ const BookingStatus = () => {
         );
     }
 
+    if (liveBooking.status === 'pending') {
+        return (
+            <MobileLayout hideNav>
+                <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center bg-white">
+                    <div className="relative mb-12 flex items-center justify-center">
+                        <div className="w-48 h-48 bg-brand/5 rounded-full flex items-center justify-center animate-pulse">
+                            <motion.div
+                                animate={{ scale: [1, 1.1, 1] }}
+                                transition={{ repeat: Infinity, duration: 2 }}
+                                className="w-20 h-20 bg-brand rounded-[2rem] flex items-center justify-center shadow-2xl shadow-brand/40"
+                            >
+                                <Navigation size={32} className="text-white fill-white" />
+                            </motion.div>
+                        </div>
+                        <div className="absolute w-48 h-48 border-[3px] border-brand/20 rounded-full animate-ping" />
+                        <div className="absolute w-64 h-64 border-2 border-brand/10 rounded-full animate-ping delay-500" />
+                    </div>
+
+                    <div className="space-y-3 px-6">
+                        <h2 className="text-2xl font-black text-content italic uppercase tracking-tight">Scanning Ecosystem</h2>
+                        <p className="text-sm font-bold text-content-subtle leading-snug">
+                            Finding the nearest verified Specialist for your <span className="text-brand italic">{liveBooking.service?.name}</span>.
+                        </p>
+                    </div>
+
+                    <div className="mt-12 space-y-4 w-full px-6">
+                        <div className="flex flex-col gap-2 bg-gray-50 border border-gray-100 p-4 rounded-3xl">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[9px] font-black text-content-subtle uppercase tracking-widest italic">Dispatch Protocol</span>
+                                <span className="text-[9px] font-black text-brand uppercase italic">Active</span>
+                            </div>
+                            <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
+                                <motion.div
+                                    initial={{ width: '0%' }}
+                                    animate={{ width: '100%' }}
+                                    transition={{ duration: 60, ease: 'linear' }}
+                                    className="h-full bg-brand"
+                                />
+                            </div>
+                        </div>
+                        <button onClick={handleCancel} className="text-[10px] font-black text-content-subtle uppercase tracking-widest hover:text-red-500 transition-colors">Abrupt Search Process</button>
+                    </div>
+
+                    <div className="absolute bottom-10 flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                        <span className="text-[9px] font-black uppercase text-content-subtle tracking-widest opacity-60">Sub-60s Discovery Response Expected</span>
+                    </div>
+                </div>
+            </MobileLayout>
+        );
+    }
+
     return (
         <MobileLayout hideNav>
 
@@ -149,39 +294,36 @@ const BookingStatus = () => {
             <div className="pb-24 space-y-4 px-4 pt-4">
 
                 {/* ── Map ────────────────────────────────────── */}
-                <div className="relative rounded-2xl overflow-hidden border border-gray-100 shadow-soft" style={{ height: 200 }}>
-                    <img
-                        src="https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&q=80"
-                        alt="Map"
-                        className="absolute inset-0 w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-blue-900/25" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-
-                    {/* Captain marker */}
-                    <motion.div
-                        initial={{ x: -60, y: 50 }}
-                        animate={step >= 1 ? { x: 0, y: 0 } : {}}
-                        transition={{ duration: 5, ease: 'easeInOut' }}
-                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20"
+                <div className="relative rounded-3xl overflow-hidden border border-gray-100 shadow-2xl" style={{ height: 280 }}>
+                    <MapContainer
+                        center={[staffLocation?.lat || liveBooking.location?.address?.coordinates?.lat || 20.5937, staffLocation?.lng || liveBooking.location?.address?.coordinates?.lng || 78.9629]}
+                        zoom={14}
+                        zoomControl={false}
+                        style={{ height: '100%', width: '100%' }}
                     >
-                        <div className="relative">
-                            <div className="w-11 h-11 bg-brand rounded-xl rotate-12 flex items-center justify-center shadow-lg border-2 border-white">
-                                <Navigation size={20} className="text-white -rotate-12" fill="white" strokeWidth={1.5} />
-                            </div>
-                            <div className="absolute inset-0 bg-brand/30 rounded-xl rotate-12 animate-ping scale-150" />
-                        </div>
-                    </motion.div>
+                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                        <RecenterMap coords={staffLocation ? [staffLocation.lat, staffLocation.lng] : null} />
 
-                    {/* Destination / Hub */}
-                    <div className="absolute bottom-8 right-8 z-10">
-                        <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-lg border border-gray-100">
-                            {type === 'vendor' ? <Truck size={16} className="text-brand" /> : <MapPin size={16} className="text-content" fill="currentColor" />}
-                        </div>
-                    </div>
+                        {/* Home/Hub Marker */}
+                        <Marker
+                            position={[liveBooking.location?.address?.coordinates?.lat || 20.5937, liveBooking.location?.address?.coordinates?.lng || 78.9629]}
+                            icon={homeIcon}
+                        />
+
+                        {/* Staff/Live Marker */}
+                        {staffLocation && (
+                            <Marker
+                                position={[staffLocation.lat, staffLocation.lng]}
+                                icon={personIcon}
+                            />
+                        )}
+                    </MapContainer>
+
+                    {/* Overlay gradient for aesthetics */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none z-[400]" />
 
                     {/* ETA / Timer */}
-                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm rounded-xl px-3 py-2 flex items-center gap-2 shadow-md">
+                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm rounded-xl px-3 py-2 flex items-center gap-2 shadow-md z-[500]">
                         <Clock size={13} className="text-brand" strokeWidth={2.5} />
                         <div>
                             {liveBooking.schedule?.type === 'scheduled' && liveBooking.status === 'confirmed' ? (
@@ -360,6 +502,22 @@ const BookingStatus = () => {
                             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                             className="bg-content rounded-2xl overflow-hidden border border-white/5 shadow-lg"
                         >
+                            {/* ⏰ Scheduled Assignment Progress */}
+                            {liveBooking.schedule?.type === 'scheduled' && step <= 2 && (
+                                <div className="bg-white/5 px-5 py-4 border-b border-white/5">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="text-[8px] font-black text-white/40 uppercase tracking-[0.2em] italic">Commitment Signal</p>
+                                        <div className="flex items-center gap-1.5 bg-brand/20 px-2 py-0.5 rounded-lg border border-brand/20">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
+                                            <span className="text-[8px] font-black text-brand uppercase">Active</span>
+                                        </div>
+                                    </div>
+                                    <p className="text-[10px] text-white font-black italic">
+                                        {liveBooking.pickupStaff ? 'Specialist Committed — Preparing Protocol' : 'Finalizing Specialist Assignment...'}
+                                    </p>
+                                </div>
+                            )}
+
                             {/* Top row */}
                             <div className="px-5 pt-5 pb-4 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
@@ -377,7 +535,7 @@ const BookingStatus = () => {
                                                 <Star size={9} fill="currentColor" className="text-black" />
                                                 <span className="text-[9px] font-black text-black">{performer?.rating || '4.9'}</span>
                                             </div>
-                                            <span className="text-white/30 text-[9px] font-bold">Verified</span>
+                                            <VerifiedBadge type="specialist" />
                                         </div>
                                     </div>
                                 </div>
@@ -419,18 +577,30 @@ const BookingStatus = () => {
                     )}
                 </AnimatePresence>
 
-                <div className="grid grid-cols-2 gap-3">
-                    {[
-                        { label: 'Service', value: liveBooking.service?.name || liveBooking.serviceName || 'Car Wash' },
-                        { label: 'Paid', value: `₹${liveBooking.pricing?.totalAmount || liveBooking.amount || liveBooking.price || '0'}` },
-                        { label: 'Vehicle', value: liveBooking.vehicle?.name || liveBooking.vehicleInfo?.name || liveBooking.vehicle || 'Honda City' },
-                        { label: 'Duration', value: '~45 minutes' },
-                    ].map((d) => (
-                        <div key={d.label} className="bg-white rounded-xl border border-gray-100 shadow-soft px-4 py-3">
-                            <p className="text-[8px] font-black uppercase tracking-widest text-content-subtle mb-0.5">{d.label}</p>
-                            <p className="text-sm font-black text-content tracking-tight leading-snug">{d.value}</p>
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-soft p-4">
+                    <p className="text-[8.5px] font-black text-content-subtle uppercase tracking-widest mb-3">Bill Breakdown</p>
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-content-subtle lowercase">Base Amount</span>
+                            <span className="text-[10px] font-black text-content">₹{liveBooking.pricing?.baseAmount || liveBooking.price || 0}</span>
                         </div>
-                    ))}
+                        {(liveBooking.pricing?.addonAmount > 0) && (
+                            <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-bold text-content-subtle lowercase">Add-ons</span>
+                                <span className="text-[10px] font-black text-content">₹{liveBooking.pricing.addonAmount}</span>
+                            </div>
+                        )}
+                        {(liveBooking.pricing?.discountAmount > 0) && (
+                            <div className="flex justify-between items-center text-green-600">
+                                <span className="text-[10px] font-bold lowercase">Membership/Coupon Savings</span>
+                                <span className="text-[10px] font-black">-₹{liveBooking.pricing.discountAmount}</span>
+                            </div>
+                        )}
+                        <div className="pt-2 border-t border-gray-50 flex justify-between items-center">
+                            <span className="text-[11px] font-black text-content uppercase tracking-tight">Total Paid</span>
+                            <span className="text-base font-[1000] text-brand">₹{liveBooking.pricing?.totalAmount || liveBooking.amount || liveBooking.price || '0'}</span>
+                        </div>
+                    </div>
                 </div>
 
                 {/* ── Note ─────────────────────────────────────── */}

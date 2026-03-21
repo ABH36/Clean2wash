@@ -41,16 +41,36 @@ const userSchema = new mongoose.Schema({
         code: String,
         expiresAt: Date
     },
+    isOnline: {
+        type: Boolean,
+        default: true
+    },
     profile: {
         avatar: { type: String, default: '' },
-        // Consumer specific
+        // Consumer specific (Legacy support)
         address: {
             street: String,
             city: String,
             state: String,
             pincode: String,
-            coordinates: { lat: Number, lng: Number }
+            coordinates: { lat: Number, lng: Number },
+            landmark: String
         },
+        // Modern Multi-Address Support
+        addresses: [{
+            label: { type: String, default: 'Home' }, // Home, Office, Other
+            street: { type: String, required: true },
+            city: { type: String, required: true },
+            state: { type: String, required: true },
+            pincode: { type: String, required: true },
+            landmark: { type: String },
+            coordinates: {
+                lat: { type: Number, required: true },
+                lng: { type: Number, required: true }
+            },
+            isPrimary: { type: Boolean, default: false },
+            addedAt: { type: Date, default: Date.now }
+        }],
         // Captain / SpareDriver specific
         vehicleType: { type: String, default: '' },
         plate: { type: String, default: '' },
@@ -109,6 +129,12 @@ const userSchema = new mongoose.Schema({
             default: Date.now
         }
     },
+    bankDetails: {
+        accountName: String,
+        accountNumber: String,
+        ifscCode: String,
+        bankName: String
+    },
     vehicles: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Vehicle'
@@ -123,10 +149,6 @@ const userSchema = new mongoose.Schema({
         default: 5.0,
         min: 0,
         max: 5
-    },
-    isOnline: {
-        type: Boolean,
-        default: false
     },
     currentLocation: {
         type: {
@@ -184,13 +206,49 @@ userSchema.index({ 'profile.address.city': 1 });
 userSchema.index({ isActive: 1, isOnline: 1 });
 userSchema.index({ currentLocation: '2dsphere' }, { sparse: true });
 
-// Pre-save middleware to hash password and generate referral code
+// Pre-save middleware to sync addresses and hash password
 userSchema.pre('save', async function () {
+    // 1. Bidirectional Address Synchronization (Legacy <-> Modern)
+    if (this.isModified('profile.address') && !this.isModified('profile.addresses')) {
+        // Legacy update (frontend old version): Sync to the first address
+        if (this.profile.address && this.profile.address.street) {
+            if (!this.profile.addresses || this.profile.addresses.length === 0) {
+                this.profile.addresses = [{
+                    ...this.profile.address.toObject(),
+                    label: 'Home',
+                    isPrimary: true
+                }];
+            } else {
+                // Update the first/primary address
+                const primaryIndex = this.profile.addresses.findIndex(a => a.isPrimary);
+                const idx = primaryIndex === -1 ? 0 : primaryIndex;
+                this.profile.addresses[idx] = {
+                    ...this.profile.addresses[idx],
+                    ...this.profile.address.toObject(),
+                    isPrimary: true
+                };
+            }
+        }
+    } else if (this.isModified('profile.addresses')) {
+        // Modern update (frontend new version): Sync primary back to legacy
+        const primaryAddress = this.profile.addresses.find(a => a.isPrimary) || this.profile.addresses[0];
+        if (primaryAddress) {
+            this.profile.address = {
+                street: primaryAddress.street,
+                city: primaryAddress.city,
+                state: primaryAddress.state,
+                pincode: primaryAddress.pincode,
+                coordinates: primaryAddress.coordinates,
+                landmark: primaryAddress.landmark
+            };
+        }
+    }
+
+    // 2. Hash Password & Referral logic
     if (this.isModified('password') && this.password) {
         this.password = await bcrypt.hash(this.password, 12);
     }
 
-    // Generate Referral Code if not present
     if (!this.referralCode) {
         const namePart = (this.name || 'USER').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
         const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -206,8 +264,7 @@ userSchema.methods.correctPassword = async function (candidatePassword, userPass
 
 // Instance method to generate OTP
 userSchema.methods.generateOTP = function () {
-    // FIXED DEFAULT TO 1234 FOR TESTING PURPOSES AS PER FRONTEND EXPECTATION
-    const otp = '1234';
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
     this.otp = {
         code: otp,
         expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
@@ -219,13 +276,10 @@ userSchema.methods.generateOTP = function () {
 userSchema.methods.verifyOTP = function (enteredOTP) {
     if (!this.otp || !this.otp.code) return false;
 
-    // DEV MODE FALLBACK
-    if (enteredOTP === '1234') return true;
-
-    const isExpired = this.otp.expiresAt < new Date();
+    const isExpired = new Date(this.otp.expiresAt) < new Date();
     if (isExpired) return false;
 
-    return this.otp.code === enteredOTP;
+    return this.otp.code === String(enteredOTP);
 };
 
 // Static method to find user by email or phone

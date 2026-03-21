@@ -26,7 +26,16 @@ const AdminHubs = () => {
     const [editingHub, setEditingHub] = useState(null);
     const [hubs, setHubs] = useState([]);
     const [vendors, setVendors] = useState([]);
-    const [formData, setFormData] = useState({ name: '', city: '', captains: '', manager: '', status: 'Online', type: 'Studio', load: 'Moderate', vendor: '' });
+    const [formData, setFormData] = useState({
+        name: '', city: '', captains: '', manager: '', status: 'Online',
+        type: 'Studio', load: 'Moderate', vendor: '',
+        metadata: {
+            isSociety: false,
+            blocks: '',
+            parkingLevels: '',
+            pillarRange: { min: 1, max: 100 }
+        }
+    });
     const [loading, setLoading] = useState(false);
     const [pageLoading, setPageLoading] = useState(true);
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, id: null });
@@ -69,13 +78,31 @@ const AdminHubs = () => {
 
     const handleOpenAdd = () => {
         setEditingHub(null);
-        setFormData({ name: '', city: '', captains: '', manager: '', status: 'Online', type: 'Studio', load: 'Moderate', vendor: '' });
+        setFormData({
+            name: '', city: '', captains: '', manager: '', status: 'Online',
+            type: 'Studio', load: 'Moderate', vendor: '',
+            metadata: {
+                isSociety: false,
+                blocks: '',
+                parkingLevels: '',
+                pillarRange: { min: 1, max: 100 }
+            }
+        });
         setIsModalOpen(true);
     };
 
     const handleOpenEdit = (hub) => {
         setEditingHub(hub);
-        setFormData({ ...hub, vendor: hub.vendor?._id || hub.vendor || '' });
+        setFormData({
+            ...hub,
+            vendor: hub.vendor?._id || hub.vendor || '',
+            metadata: {
+                isSociety: hub.metadata?.isSociety || false,
+                blocks: Array.isArray(hub.metadata?.blocks) ? hub.metadata.blocks.join(', ') : '',
+                parkingLevels: Array.isArray(hub.metadata?.parkingLevels) ? hub.metadata.parkingLevels.join(', ') : '',
+                pillarRange: hub.metadata?.pillarRange || { min: 1, max: 100 }
+            }
+        });
         setIsModalOpen(true);
     };
 
@@ -83,10 +110,19 @@ const AdminHubs = () => {
         e.preventDefault();
         setLoading(true);
         try {
+            const payload = {
+                ...formData,
+                metadata: {
+                    ...formData.metadata,
+                    blocks: typeof formData.metadata.blocks === 'string' ? formData.metadata.blocks.split(',').map(b => b.trim()).filter(b => b) : formData.metadata.blocks,
+                    parkingLevels: typeof formData.metadata.parkingLevels === 'string' ? formData.metadata.parkingLevels.split(',').map(p => p.trim()).filter(p => p) : formData.metadata.parkingLevels
+                }
+            };
+
             if (editingHub) {
-                await adminAPI.updateHub(editingHub._id, formData);
+                await adminAPI.updateHub(editingHub._id, payload);
             } else {
-                await adminAPI.createHub(formData);
+                await adminAPI.createHub(payload);
             }
             await fetchHubs();
             setIsModalOpen(false);
@@ -101,7 +137,7 @@ const AdminHubs = () => {
     const handleDelete = async () => {
         const id = deleteConfirm.id;
         if (!id) return;
-        
+
         try {
             await adminAPI.deleteHub(id);
             setHubs(prev => prev.filter(h => h.id !== id));
@@ -409,6 +445,49 @@ const AdminHubs = () => {
                                                 onChange={e => setFormData({ ...formData, manager: e.target.value })}
                                             />
                                         </div>
+
+                                        <div className="col-span-full pt-4 border-t border-gray-100 space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <h4 className="text-[10px] font-black text-content uppercase tracking-widest leading-none">Society Configuration</h4>
+                                                    <p className="text-[8px] font-bold text-content-subtle uppercase tracking-widest mt-1">Enable cluster mode for apartment complexes</p>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, metadata: { ...formData.metadata, isSociety: !formData.metadata.isSociety } })}
+                                                    className={`w-12 h-6 rounded-full transition-all relative ${formData.metadata?.isSociety ? 'bg-brand' : 'bg-gray-200'}`}
+                                                >
+                                                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${formData.metadata?.isSociety ? 'left-7' : 'left-1'}`} />
+                                                </button>
+                                            </div>
+
+                                            {formData.metadata?.isSociety && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, height: 0 }}
+                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                    className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                                                >
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Tower / Blocks (Comma separated)</label>
+                                                        <input
+                                                            placeholder="Block A, Block B, Tower 1"
+                                                            className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand"
+                                                            value={formData.metadata.blocks}
+                                                            onChange={e => setFormData({ ...formData, metadata: { ...formData.metadata, blocks: e.target.value } })}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Parking Levels (Comma separated)</label>
+                                                        <input
+                                                            placeholder="B1, B2, Ground"
+                                                            className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand"
+                                                            value={formData.metadata.parkingLevels}
+                                                            onChange={e => setFormData({ ...formData, metadata: { ...formData.metadata, parkingLevels: e.target.value } })}
+                                                        />
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </div>
                                     </div>
                                     <div className="pt-2 md:pt-4">
                                         <button
@@ -449,7 +528,7 @@ const AdminHubs = () => {
                             </div>
                             <h3 className="text-xl font-black text-content leading-none uppercase tracking-tighter mb-2">Decommission Node?</h3>
                             <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mb-8 px-4">This action will permanently terminate this infrastructure node protocol.</p>
-                            
+
                             <div className="flex gap-3">
                                 <button
                                     onClick={() => setDeleteConfirm({ isOpen: false, id: null })}

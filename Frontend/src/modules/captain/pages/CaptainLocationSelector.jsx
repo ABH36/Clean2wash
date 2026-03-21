@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { 
-    ChevronLeft, MapPin, Navigation, Search, 
+import {
+    ChevronLeft, MapPin, Navigation, Search,
     Check, Locate, ArrowRight, X, Compass
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { toast } from 'react-hot-toast';
-import { useCaptain } from '../../../context/CaptainContext';
+import { useCaptain } from '../../../hooks/useCaptain';
 
 // Fix Leaflet marker icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -41,7 +41,7 @@ const ChangeView = ({ center }) => {
 const CaptainLocationSelector = () => {
     const navigate = useNavigate();
     const { updateLocation } = useCaptain();
-    
+
     // Default to a central location (Delhi) if GPS fails
     const [mapCenter, setMapCenter] = useState([28.6139, 77.2090]);
     const [selectedPos, setSelectedPos] = useState([28.6139, 77.2090]);
@@ -99,7 +99,7 @@ const CaptainLocationSelector = () => {
     const handleSearch = async (e) => {
         e.preventDefault();
         if (!searchQuery.trim()) return;
-        
+
         setIsGeocoding(true);
         try {
             const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`);
@@ -160,8 +160,8 @@ const CaptainLocationSelector = () => {
                         <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
                             <Search size={18} className="text-black/30 group-focus-within:text-brand transition-colors" />
                         </div>
-                        <input 
-                            type="text" 
+                        <input
+                            type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Search any area, city or junction..."
@@ -186,13 +186,13 @@ const CaptainLocationSelector = () => {
 
                     {/* Overlay Buttons */}
                     <div className="absolute top-4 right-4 flex flex-col gap-2 z-[400]">
-                        <button 
+                        <button
                             onClick={handleLocate}
                             className={`w-11 h-11 rounded-2xl bg-white text-black shadow-xl flex items-center justify-center transition-all ${isLocating ? 'animate-spin' : 'active:scale-90 hover:bg-gray-50'}`}
                         >
                             <Locate size={20} strokeWidth={2.5} className={isLocating ? 'text-brand' : ''} />
                         </button>
-                        <button 
+                        <button
                             onClick={() => navigate('/captain')}
                             className="w-11 h-11 rounded-2xl bg-white text-black shadow-xl flex items-center justify-center transition-all active:scale-90 hover:bg-gray-50"
                         >
@@ -210,13 +210,13 @@ const CaptainLocationSelector = () => {
 
                 {/* Bottom Detail Card */}
                 <div className="px-5 pb-8">
-                    <motion.div 
+                    <motion.div
                         initial={{ y: 20, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         className="bg-white rounded-[2.5rem] p-6 shadow-2xl border border-gray-100 relative overflow-hidden"
                     >
                         <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full -mr-16 -mt-16 blur-2xl" />
-                        
+
                         <div className="flex items-start gap-4 mb-6">
                             <div className="w-12 h-12 rounded-2xl bg-brand/10 text-brand flex items-center justify-center flex-shrink-0">
                                 <Compass size={24} strokeWidth={2.5} />
@@ -233,9 +233,8 @@ const CaptainLocationSelector = () => {
                             whileTap={{ scale: 0.95 }}
                             disabled={isSaving || isGeocoding}
                             onClick={handleConfirm}
-                            className={`w-full py-5 rounded-[1.8rem] font-black text-[13px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-2xl transition-all ${
-                                isSaving ? 'bg-gray-100 text-black/20 italic' : 'bg-black text-white active:bg-brand active:shadow-brand/20'
-                            }`}
+                            className={`w-full py-5 rounded-[1.8rem] font-black text-[13px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-2xl transition-all ${isSaving ? 'bg-gray-100 text-black/20 italic' : 'bg-black text-white active:bg-brand active:shadow-brand/20'
+                                }`}
                         >
                             {isSaving ? (
                                 <>Setting Region... <div className="w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin" /></>
@@ -243,7 +242,7 @@ const CaptainLocationSelector = () => {
                                 <>Start Waiting Here <ArrowRight size={18} strokeWidth={3} /></>
                             )}
                         </motion.button>
-                        
+
                         <p className="text-[8px] font-black text-center text-black/30 uppercase tracking-[0.15em] mt-4">
                             Requests within 5km of this point will be broadcast to you.
                         </p>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, ShieldCheck, Timer, RefreshCw, CheckCircle2, Zap } from 'lucide-react';
-import { useCaptain } from '../../../context/CaptainContext';
+import { useCaptain } from '../../../hooks/useCaptain';
 import { toast } from 'react-hot-toast';
 
 const CaptainOTPVerification = () => {
@@ -111,7 +111,7 @@ const CaptainOTPVerification = () => {
                     <div className="w-16 h-16 bg-surface border border-gray-100/10 text-brand rounded-[2rem] flex items-center justify-center shadow-2xl mb-8 mx-auto">
                         <Zap size={32} />
                     </div>
-                    
+
                     <h1 className="text-3xl font-[1000] text-white tracking-tighter leading-tight mb-2 uppercase italic">
                         Confirm <span className="text-brand">Protocol.</span>
                     </h1>
@@ -142,18 +142,17 @@ const CaptainOTPVerification = () => {
                                     otpRefs.current[i - 1]?.focus();
                                 }
                             }}
-                            className={`w-14 h-16 text-center text-2xl font-[1000] rounded-2xl border-2 transition-all outline-none shadow-sm placeholder:opacity-20 ${
-                                otp[i] 
-                                    ? 'border-brand bg-white/10 text-brand ring-4 ring-brand/5' 
+                            className={`w-14 h-16 text-center text-2xl font-[1000] rounded-2xl border-2 transition-all outline-none shadow-sm placeholder:opacity-20 ${otp[i]
+                                    ? 'border-brand bg-white/10 text-brand ring-4 ring-brand/5'
                                     : 'border-white/5 bg-white/5 text-white/40 focus:border-brand/30'
-                            }`}
+                                }`}
                             placeholder="0"
                         />
                     ))}
                 </div>
 
                 {error && (
-                    <motion.p 
+                    <motion.p
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         className="text-red-500 text-[10px] font-black uppercase tracking-widest text-center mb-6"
@@ -167,11 +166,10 @@ const CaptainOTPVerification = () => {
                         disabled={otp.join('').length < 4 || loading}
                         whileTap={{ scale: 0.97 }}
                         onClick={handleVerify}
-                        className={`w-full h-16 rounded-2xl font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center transition-all shadow-xl ${
-                            otp.join('').length === 4 
-                                ? 'bg-brand text-white shadow-brand/20 hover:scale-[1.02]' 
+                        className={`w-full h-16 rounded-2xl font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center transition-all shadow-xl ${otp.join('').length === 4
+                                ? 'bg-brand text-white shadow-brand/20 hover:scale-[1.02]'
                                 : 'bg-white/5 text-white/10 border border-white/5 pointer-events-none'
-                        }`}
+                            }`}
                     >
                         {status === 'verifying' ? (
                             <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin" />

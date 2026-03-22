@@ -110,25 +110,19 @@ exports.resolveProductDispute = async (req, res, next) => {
         if (!item) return next(new AppError('Item not found', 404));
 
         if (action === 'manual_refund') {
-            // Logic for manual wallet credit
-            const User = require('../../../models/User');
-            const WalletTransaction = require('../../../models/WalletTransaction');
+            const { executeWalletTransaction } = require('../../../utils/walletHelper');
 
-            const consumer = await User.findById(order.consumer);
-            if (consumer) {
-                consumer.wallet.balance += (refundAmount || item.price * item.quantity);
-                await consumer.save();
-
-                await WalletTransaction.create({
-                    user: consumer._id,
-                    amount: refundAmount || item.price * item.quantity,
-                    type: 'credit',
-                    category: 'refund',
+            await executeWalletTransaction(
+                order.consumer,
+                refundAmount || item.price * item.quantity,
+                'credit',
+                {
+                    category: 'REFUND',
                     description: `Admin Manual Refund for Order ${orderId}`,
                     referenceId: orderId,
-                    status: 'completed'
-                });
-            }
+                    referenceType: 'product_order'
+                }
+            );
 
             item.status = 'cancelled';
         }

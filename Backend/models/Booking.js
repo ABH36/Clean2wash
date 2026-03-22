@@ -306,6 +306,7 @@ bookingSchema.index({ 'schedule.date': 1 });
 bookingSchema.index({ 'payment.status': 1 });
 bookingSchema.index({ 'provider.id': 1 });
 bookingSchema.index({ subscriptionId: 1 });
+bookingSchema.index({ 'schedule.date': 1, status: 1, 'location.hub': 1 });
 bookingSchema.index({ 'location.address.geoPoint': '2dsphere' });
 
 // Virtual for booking timeline status

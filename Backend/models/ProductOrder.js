@@ -125,6 +125,5 @@ const ProductOrderSchema = new mongoose.Schema({
 // Index for performance
 ProductOrderSchema.index({ consumer: 1, status: 1 });
 ProductOrderSchema.index({ 'items.vendor': 1 });
-ProductOrderSchema.index({ orderId: 1 });
 
 module.exports = mongoose.model('ProductOrder', ProductOrderSchema);

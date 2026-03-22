@@ -1,0 +1,54 @@
+# Walkthrough: Phase 2 - Communication Hardening (FCM & Real-time Standardization)
+
+Phase 2 has successfully hardened the communication layer of the Clean-2-Wash platform. We have moved from a basic Socket-only approach to a robust, multi-channel notification system that supports background push notifications via Firebase Cloud Messaging (FCM) for all user roles.
+
+## Key Accomplishments
+
+### 1. Global Backend FCM Rollout 🚀
+We have standardized the storage and registration of FCM tokens across all service provider and consumer models.
+- **Model Extensions**: Added `fcmTokens` array to `User`, [Captain](file:///c:/Users/FTT/Documents/GitHub/Clean-2-Wash/Frontend/src/utils/api.js#499-502), and [SpareDriver](file:///c:/Users/FTT/Documents/GitHub/Clean-2-Wash/Frontend/src/utils/spareDriverApi.js#3-158) schemas.
+- **Secure Registration**: Implemented [updateFCMToken](file:///c:/Users/FTT/Documents/GitHub/Clean-2-Wash/Backend/modules/sparedrivers/controllers/spareDriverController.js#553-610) controllers in all modules:
+  - Consumer & Captain Auth Controllers
+  - Vendor & Staff Auth Controllers
+  - SpareDriver Controller
+- **Unified Engine**: Refactored `notificationService.js` to intelligently route messages via Socket.IO (for active sessions) and FCM (for offline/background delivery).
+
+### 2. Frontend Infrastructure Calibration 📱
+The frontend now fully supports native-like push notifications.
+- **Firebase Core**: Integrated `firebase-messaging` with a reliable device token acquisition flow in [firebase.js](file:///c:/Users/FTT/Documents/GitHub/Clean-2-Wash/Frontend/src/utils/firebase.js).
+- **Background Support**: Deployed `firebase-messaging-sw.js` to handle alerts when the app is closed or in the background.
+- **API Standardization**: Every role-specific API utility ([api.js](file:///c:/Users/FTT/Documents/GitHub/Clean-2-Wash/Frontend/src/utils/api.js), [captainApi.js](file:///c:/Users/FTT/Documents/GitHub/Clean-2-Wash/Frontend/src/utils/captainApi.js), etc.) now includes a [registerFCMToken](file:///c:/Users/FTT/Documents/GitHub/Clean-2-Wash/Frontend/src/utils/spareDriverApi.js#151-157) method, ensuring a uniform registration interface.
+
+### 3. AuthContext Real-time Synchronization 🔗
+The `AuthContext` has been structurally refactored to serve as the platform's central nervous system for alerts.
+- **Token Sync**: Automatically synchronizes the device's FCM token with the backend upon login or session restoration for all 6 user roles.
+- **Unified Alerting**: Consolidates Socket.IO events and FCM foreground messages into a single `handleNewNotification` pipeline.
+- **Premium UX**: Added high-visibility toast notifications and premium notification sounds for critical updates.
+
+## Verification & Proof of Work
+
+### Backend Registration Logic
+The implementation limits document bloat by maintaining only the **3 most recent tokens** per user, prioritizing active devices.
+```javascript
+// Example from Staff Auth Controller
+if (user.fcmTokens.length > 3) {
+    user.fcmTokens.sort((a, b) => b.lastUsed - a.lastUsed);
+    user.fcmTokens = user.fcmTokens.slice(0, 3);
+}
+```
+
+### Frontend Synchronization
+The `AuthContext` now uses a stable `useCallback` to prevent listener re-registration:
+```javascript
+const handleNewNotification = useCallback((data) => {
+    // Unifies UI, Sound, and Local State storage
+    // ...
+}, []);
+```
+
+## Next Steps
+- **Push Verification**: The user should verify the VAPID key and Firebase project credentials in `.env.local` and Vite environment variables.
+- **Phase 3 Preparation**: Moving towards **Dynamic Operational Dashboards** to utilize these real-time streams for specialized workflows.
+
+---
+**Phase 2 Status: [COMPLETED ✅]**

@@ -125,6 +125,13 @@ class StaffApiClient {
     async clearNotifications() {
         return this.request('/notifications/clear', { method: 'DELETE' });
     }
+
+    async registerFCMToken(token, platform) {
+        return this.request('/fcm-token', {
+            method: 'POST',
+            body: { token, platform },
+        });
+    }
 }
 
 const apiClient = new StaffApiClient();
@@ -158,6 +165,6 @@ export const staffAPI = {
         method: 'POST',
         body: { pin }
     }),
-
+    registerFCMToken: (token, platform) => apiClient.registerFCMToken(token, platform),
     setToken: (token) => apiClient.setToken(token)
 };

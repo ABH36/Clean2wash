@@ -6,13 +6,14 @@ const profileController = require('../controllers/profileController');
 const rewardsController = require('../controllers/rewardsController');
 const captainProductController = require('../controllers/captainProductController');
 
-const authMiddleware = require('../../../middlewares/authMiddleware');
+const authMiddleware = require('../../../middleware/authMiddleware');
 
 router.post('/auth/signup', authController.register);
 router.post('/auth/send-otp', authController.sendOTP);
 router.post('/auth/verify-otp', authController.verifyOTP);
 router.post('/auth/login', authController.login);
 router.post('/auth/logout', authController.logout);
+router.post('/auth/fcm-token', authMiddleware.protect, authController.updateFCMToken);
 
 router.use(authMiddleware.protect);
 router.use(authMiddleware.restrictTo('captain'));

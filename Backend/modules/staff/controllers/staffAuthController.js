@@ -151,7 +151,61 @@ exports.updateProfile = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Profile Update Error:', error);
         res.status(500).json({ status: 'error', message: 'Failed to synchronize identity updates' });
+    }
+};
+
+// Update FCM Token for push notifications (Phase 2 Hardening)
+exports.updateFCMToken = async (req, res) => {
+    try {
+        const { token, platform } = req.body;
+        if (!token) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'FCM token is required'
+            });
+        }
+
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'Staff user not found'
+            });
+        }
+
+        if (!user.fcmTokens) user.fcmTokens = [];
+
+        const existingTokenIndex = user.fcmTokens.findIndex(t => t.token === token);
+
+        if (existingTokenIndex > -1) {
+            user.fcmTokens[existingTokenIndex].lastUsed = new Date();
+            if (platform) user.fcmTokens[existingTokenIndex].platform = platform;
+        } else {
+            user.fcmTokens.push({
+                token,
+                platform: platform || 'web',
+                lastUsed: new Date()
+            });
+        }
+
+        if (user.fcmTokens.length > 3) {
+            user.fcmTokens.sort((a, b) => b.lastUsed - a.lastUsed);
+            user.fcmTokens = user.fcmTokens.slice(0, 3);
+        }
+
+        await user.save({ validateBeforeSave: false });
+
+        res.status(200).json({
+            status: 'success',
+            message: 'FCM token registered successfully'
+        });
+
+    } catch (error) {
+        console.error('Error updating Staff FCM token:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to update FCM token'
+        });
     }
 };

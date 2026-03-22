@@ -6,9 +6,11 @@ const { sendNotification } = require('../../../utils/notificationService');
 const socketService = require('../../../socketService');
 const mongoose = require('mongoose');
 const auditHelper = require('../../../utils/auditHelper');
+const catchAsync = require('../../../utils/catchAsync');
+const AppError = require('../../../utils/AppError');
 
 // Create Product Order
-exports.createOrder = async (req, res) => {
+exports.createOrder = catchAsync(async (req, res, next) => {
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -16,7 +18,7 @@ exports.createOrder = async (req, res) => {
         const { items, pricing, paymentMethod, shippingAddress, razorpayOrderId, couponCode } = req.body;
 
         if (!items || items.length === 0) {
-            return res.status(400).json({ status: 'fail', message: 'No items in order' });
+            return next(new AppError('No items in order', 400));
         }
 
         const enrichedItems = [];
@@ -53,13 +55,13 @@ exports.createOrder = async (req, res) => {
             }).session(session);
 
             if (!promo) {
-                throw new Error('Invalid or expired coupon code.');
+                throw new AppError('Invalid or expired coupon code.', 400);
             }
 
             // Check if user already used this coupon
             const user = await User.findById(req.user.id).session(session);
             if (user.usedPromotions && user.usedPromotions.includes(promo._id)) {
-                throw new Error('You have already used this coupon.');
+                throw new AppError('You have already used this coupon.', 400);
             }
 
             // Calculate Discount
@@ -141,51 +143,39 @@ exports.createOrder = async (req, res) => {
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
-        console.error('Create product order error:', error);
-        res.status(400).json({
-            status: 'fail',
-            message: error.message || 'Failed to place order'
-        });
+        throw error;
     }
-};
+});
 
 // Get My Orders
-exports.getMyOrders = async (req, res) => {
-    try {
-        const orders = await ProductOrder.find({ consumer: req.user.id, isActive: true })
-            .populate('items.product', 'name image category')
-            .sort({ createdAt: -1 });
+exports.getMyOrders = catchAsync(async (req, res, next) => {
+    const orders = await ProductOrder.find({ consumer: req.user.id, isActive: true })
+        .populate('items.product', 'name image category')
+        .sort({ createdAt: -1 });
 
-        res.status(200).json({
-            status: 'success',
-            data: { orders }
-        });
-    } catch (error) {
-        res.status(500).json({ status: 'error', message: 'Failed to fetch orders' });
-    }
-};
+    res.status(200).json({
+        status: 'success',
+        data: { orders }
+    });
+});
 
 // Get Single Order Details
-exports.getOrderDetails = async (req, res) => {
-    try {
-        const order = await ProductOrder.findOne({
-            _id: req.params.id,
-            consumer: req.user.id,
-            isActive: true
-        }).populate('items.product items.vendor', 'name image category profile.studioName');
+exports.getOrderDetails = catchAsync(async (req, res, next) => {
+    const order = await ProductOrder.findOne({
+        _id: req.params.id,
+        consumer: req.user.id,
+        isActive: true
+    }).populate('items.product items.vendor', 'name image category profile.studioName');
 
-        if (!order) {
-            return res.status(404).json({ status: 'fail', message: 'Order not found' });
-        }
-
-        res.status(200).json({
-            status: 'success',
-            data: { order }
-        });
-    } catch (error) {
-        res.status(500).json({ status: 'error', message: 'Failed to fetch order details' });
+    if (!order) {
+        return next(new AppError('Order not found', 404));
     }
-};
+
+    res.status(200).json({
+        status: 'success',
+        data: { order }
+    });
+});
 
 // Update Order Status (For Webhook/Manual) -- Internal use
 exports.updateOrderStatusInternal = async (orderId, updates) => {
@@ -205,62 +195,56 @@ exports.updateOrderStatusInternal = async (orderId, updates) => {
 };
 
 // Verify Order Payment
-exports.verifyOrderPayment = async (req, res) => {
-    try {
-        const { razorpay_order_id, razorpay_payment_id, razorpay_signature, orderId } = req.body;
-        const crypto = require('crypto');
+exports.verifyOrderPayment = catchAsync(async (req, res, next) => {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, orderId } = req.body;
+    const crypto = require('crypto');
 
-        if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-            return res.status(400).json({ status: 'fail', message: 'Payment details missing' });
-        }
-
-        const secret = process.env.RAZORPAY_KEY_SECRET || 'GkxKRQ2B0U63BKBoayuugS3D';
-        const generated_signature = crypto
-            .createHmac('sha256', secret)
-            .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-            .digest('hex');
-
-        if (generated_signature !== razorpay_signature) {
-            return res.status(400).json({ status: 'fail', message: 'Invalid signature' });
-        }
-
-        const order = await ProductOrder.findByIdAndUpdate(
-            orderId,
-            {
-                $set: {
-                    'payment.status': 'paid',
-                    'payment.transactionId': razorpay_payment_id,
-                    'payment.razorpayPaymentId': razorpay_payment_id,
-                    'payment.razorpaySignature': razorpay_signature,
-                    status: 'processing'
-                },
-                $push: {
-                    history: { status: 'processing', note: 'Payment verified successfully.' }
-                }
-            },
-            { new: true }
-        );
-
-        if (!order) {
-            return res.status(404).json({ status: 'fail', message: 'Order not found' });
-        }
-
-        // Notify user
-        await sendNotification(req.user.id, {
-            title: 'Order Confirmed! 📦',
-            message: `Your payment was successful. Order #${order.orderId} is now being processed.`,
-            type: 'payment',
-            priority: 'medium'
-        });
-
-        res.status(200).json({
-            status: 'success',
-            message: 'Payment verified and order confirmed',
-            data: { order }
-        });
-
-    } catch (error) {
-        console.error('Verify order payment error:', error);
-        res.status(500).json({ status: 'error', message: 'Verification failed' });
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+        return next(new AppError('Payment details missing', 400));
     }
-};
+
+    const secret = process.env.RAZORPAY_KEY_SECRET || 'GkxKRQ2B0U63BKBoayuugS3D';
+    const generated_signature = crypto
+        .createHmac('sha256', secret)
+        .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+        .digest('hex');
+
+    if (generated_signature !== razorpay_signature) {
+        return next(new AppError('Invalid signature', 400));
+    }
+
+    const order = await ProductOrder.findByIdAndUpdate(
+        orderId,
+        {
+            $set: {
+                'payment.status': 'paid',
+                'payment.transactionId': razorpay_payment_id,
+                'payment.razorpayPaymentId': razorpay_payment_id,
+                'payment.razorpaySignature': razorpay_signature,
+                status: 'processing'
+            },
+            $push: {
+                history: { status: 'processing', note: 'Payment verified successfully.' }
+            }
+        },
+        { new: true }
+    );
+
+    if (!order) {
+        return next(new AppError('Order not found', 404));
+    }
+
+    // Notify user
+    await sendNotification(req.user.id, {
+        title: 'Order Confirmed! 📦',
+        message: `Your payment was successful. Order #${order.orderId} is now being processed.`,
+        type: 'payment',
+        priority: 'medium'
+    });
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Payment verified and order confirmed',
+        data: { order }
+    });
+});

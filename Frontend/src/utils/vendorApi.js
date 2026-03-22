@@ -280,6 +280,13 @@ class ApiClient {
             method: 'POST'
         });
     }
+
+    async registerFCMToken(token, platform) {
+        return this.request('/fcm-token', {
+            method: 'POST',
+            body: JSON.stringify({ token, platform }),
+        });
+    }
 }
 
 const apiClient = new ApiClient();
@@ -329,5 +336,6 @@ export const vendorAPI = {
     assignProductAgent: (orderId, itemId, agentId, agentType) => apiClient.assignProductAgent(orderId, itemId, agentId, agentType),
     verifyProductPin: (orderId, itemId, pin) => apiClient.verifyProductPin(orderId, itemId, pin),
     cancelProductItem: (orderId, itemId, reason) => apiClient.cancelProductItem(orderId, itemId, reason),
-    acknowledgeProductReturn: (orderId, itemId) => apiClient.acknowledgeProductReturn(orderId, itemId)
+    acknowledgeProductReturn: (orderId, itemId) => apiClient.acknowledgeProductReturn(orderId, itemId),
+    registerFCMToken: (token, platform) => apiClient.registerFCMToken(token, platform)
 };

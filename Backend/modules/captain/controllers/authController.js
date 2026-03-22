@@ -189,7 +189,7 @@ exports.verifyOTP = async (req, res) => {
             if (userData.vehicleType !== undefined) captain.profile.vehicleType = userData.vehicleType;
             if (userData.plate !== undefined) captain.profile.plate = userData.plate;
             if (userData.kit !== undefined) captain.profile.kit = userData.kit;
-            
+
             // Handle file uploads if present in userData
             const cloudinary = require('../../../utils/cloudinary');
             try {
@@ -310,5 +310,61 @@ exports.getMe = async (req, res) => {
     } catch (error) {
         console.error('Captain getMe error:', error);
         res.status(500).json({ status: 'error', message: 'Failed to get profile.' });
+    }
+};
+
+// Update FCM Token for push notifications (Phase 2 Hardening)
+exports.updateFCMToken = async (req, res) => {
+    try {
+        const { token, platform } = req.body;
+
+        if (!token) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'FCM token is required'
+            });
+        }
+
+        const captain = await Captain.findById(req.captain.id);
+        if (!captain) {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'Captain not found'
+            });
+        }
+
+        if (!captain.fcmTokens) captain.fcmTokens = [];
+
+        const existingTokenIndex = captain.fcmTokens.findIndex(t => t.token === token);
+
+        if (existingTokenIndex > -1) {
+            captain.fcmTokens[existingTokenIndex].lastUsed = new Date();
+            if (platform) captain.fcmTokens[existingTokenIndex].platform = platform;
+        } else {
+            captain.fcmTokens.push({
+                token,
+                platform: platform || 'unknown',
+                lastUsed: new Date()
+            });
+        }
+
+        if (captain.fcmTokens.length > 3) {
+            captain.fcmTokens.sort((a, b) => b.lastUsed - a.lastUsed);
+            captain.fcmTokens = captain.fcmTokens.slice(0, 3);
+        }
+
+        await captain.save({ validateBeforeSave: false });
+
+        res.status(200).json({
+            status: 'success',
+            message: 'FCM token registered successfully'
+        });
+
+    } catch (error) {
+        console.error('Error updating Captain FCM token:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to update FCM token'
+        });
     }
 };

@@ -30,7 +30,7 @@ exports.sendOTP = async (req, res) => {
 
         // Generate a random 6-digit OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        
+
         // Store in-memory for 10 minutes
         tempOTPStore.set(phone, { otp, expires: Date.now() + 600000 });
 
@@ -126,9 +126,9 @@ exports.register = async (req, res) => {
         }
     } catch (error) {
         console.error('❌ CRITICAL SIGNUP FAILURE:', error);
-        res.status(400).json({ 
-            status: 'error', 
-            message: error.message.includes('duplicate key') ? 'Business identity (Email/Phone) already registered.' : error.message 
+        res.status(400).json({
+            status: 'error',
+            message: error.message.includes('duplicate key') ? 'Business identity (Email/Phone) already registered.' : error.message
         });
     }
 };
@@ -211,5 +211,61 @@ exports.updateProfile = async (req, res) => {
     } catch (error) {
         console.error('Error updating vendor profile:', error);
         res.status(500).json({ status: 'error', message: 'Error updating profile' });
+    }
+};
+
+// Update FCM Token for push notifications (Phase 2 Hardening)
+exports.updateFCMToken = async (req, res) => {
+    try {
+        const { token, platform } = req.body;
+
+        if (!token) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'FCM token is required'
+            });
+        }
+
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'Vendor user not found'
+            });
+        }
+
+        if (!user.fcmTokens) user.fcmTokens = [];
+
+        const existingTokenIndex = user.fcmTokens.findIndex(t => t.token === token);
+
+        if (existingTokenIndex > -1) {
+            user.fcmTokens[existingTokenIndex].lastUsed = new Date();
+            if (platform) user.fcmTokens[existingTokenIndex].platform = platform;
+        } else {
+            user.fcmTokens.push({
+                token,
+                platform: platform || 'unknown',
+                lastUsed: new Date()
+            });
+        }
+
+        if (user.fcmTokens.length > 3) {
+            user.fcmTokens.sort((a, b) => b.lastUsed - a.lastUsed);
+            user.fcmTokens = user.fcmTokens.slice(0, 3);
+        }
+
+        await user.save({ validateBeforeSave: false });
+
+        res.status(200).json({
+            status: 'success',
+            message: 'FCM token registered successfully'
+        });
+
+    } catch (error) {
+        console.error('Error updating Vendor FCM token:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to update FCM token'
+        });
     }
 };

@@ -139,38 +139,32 @@ exports.verifyProductDeliveryPin = async (req, res) => {
             note: `Item ${item.name} delivered by ${req.user.name}`
         });
 
-        // 4. Trigger Vendor Payout (Reusing logic from vendorController for consistency)
-        // Note: In production, this would be a shared utility function
+        // 4. Trigger Vendor Payout (Hardened Phase 1)
         const commissionHelper = require('../../../utils/commissionHelper');
-        const WalletTransaction = require('../../../models/WalletTransaction');
+        const { executeWalletTransaction } = require('../../../utils/walletHelper');
 
         const itemTotal = item.price * item.quantity;
         const { adminCut, providerPayout } = await commissionHelper.calculatePayout(itemTotal, 'vendor');
 
-        const vendor = await User.findById(item.vendor);
-        if (vendor) {
-            vendor.wallet = vendor.wallet || {};
-            vendor.wallet.balance = (vendor.wallet.balance || 0) + providerPayout;
-            await vendor.save({ validateBeforeSave: false });
-
-            await WalletTransaction.create({
-                user: vendor._id,
-                amount: providerPayout,
-                type: 'credit',
-                status: 'completed',
+        // Use the centralized helper for atomic credit and logging
+        await executeWalletTransaction(
+            item.vendor,
+            providerPayout,
+            'credit',
+            {
                 category: 'PRODUCT_SALE',
-                description: `Payout for ${item.name} in Order ${order.orderId}`,
+                description: `Payout for ${item.name} (Order #${order.orderId})`,
                 referenceId: order._id,
                 referenceType: 'product_order'
-            });
+            }
+        );
 
-            await sendVendorNotification(vendor._id, {
-                title: 'Payment Credited! 🪙',
-                message: `₹${providerPayout.toFixed(0)} credited for Order #${order.orderId}.`,
-                type: 'payout',
-                priority: 'high'
-            });
-        }
+        await sendVendorNotification(item.vendor, {
+            title: 'Payment Credited! 🪙',
+            message: `₹${providerPayout.toFixed(0)} credited for Order #${order.orderId}.`,
+            type: 'payout',
+            priority: 'high'
+        });
 
         // 5. Finalize Order if all items delivered
         const allDelivered = order.items.every(it => it.status === 'delivered');
@@ -285,37 +279,28 @@ exports.cancelProductItem = async (req, res) => {
             note: `Item cancelled by vendor. Reason: ${reason || 'Not specified'}`
         });
 
-        // Atomic Refund Logic
+        // Atomic Refund Logic (Hardened Phase 1)
         if (order.payment.status === 'paid' && (order.payment.method === 'wallet' || order.payment.method === 'online')) {
             const refundAmount = item.price * item.quantity;
-            const WalletTransaction = require('../../../models/WalletTransaction');
+            const { executeWalletTransaction } = require('../../../utils/walletHelper');
 
-            const consumer = order.consumer;
-            if (consumer) {
-                consumer.wallet = consumer.wallet || { balance: 0 };
-                const balanceBefore = consumer.wallet.balance || 0;
-                consumer.wallet.balance += refundAmount;
-                await consumer.save({ validateBeforeSave: false });
-
-                await WalletTransaction.create({
-                    user: consumer._id,
-                    amount: refundAmount,
-                    type: 'credit',
-                    status: 'completed',
+            await executeWalletTransaction(
+                order.consumer._id,
+                refundAmount,
+                'credit',
+                {
                     category: 'REFUND',
                     description: `Refund: Cancelled item ${item.name} (Order #${order.orderId})`,
-                    balanceBefore,
-                    balanceAfter: consumer.wallet.balance,
                     referenceId: order._id,
                     referenceType: 'product_order'
-                });
+                }
+            );
 
-                await sendNotification(consumer._id, {
-                    title: 'Refund Processed! 💸',
-                    message: `₹${refundAmount} has been credited to your wallet for the cancelled item: ${item.name}.`,
-                    type: 'wallet'
-                });
-            }
+            await sendNotification(order.consumer._id, {
+                title: 'Refund Processed! 💸',
+                message: `₹${refundAmount} has been credited to your wallet for the cancelled item: ${item.name}.`,
+                type: 'wallet'
+            });
         }
 
         // 4. Atomic Stock Recovery

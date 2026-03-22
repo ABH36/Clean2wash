@@ -84,7 +84,12 @@ const captainSchema = new mongoose.Schema({
             type: [Number],
             default: [0, 0] // [longitude, latitude]
         }
-    }
+    },
+    fcmTokens: [{
+        token: String,
+        platform: String,
+        lastUsed: { type: Date, default: Date.now }
+    }]
 }, {
     timestamps: true,
     toJSON: { virtuals: true },

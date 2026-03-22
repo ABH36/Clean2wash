@@ -2,6 +2,7 @@ const SpareDriver = require('../../../models/SpareDriver');
 const Booking = require('../../../models/Booking');
 const Setting = require('../../../models/Setting');
 const WalletTransaction = require('../../../models/WalletTransaction');
+const Notification = require('../../../models/Notification');
 const commissionHelper = require('../../../utils/commissionHelper');
 const { socketService } = require('../../../socketService');
 const cloudinary = require('../../../utils/cloudinary');
@@ -546,5 +547,63 @@ exports.toggleOnline = async (req, res) => {
         });
     } catch (err) {
         res.status(400).json({ status: 'fail', message: err.message });
+    }
+};
+
+// Update FCM Token for push notifications (Phase 2 Hardening)
+exports.updateFCMToken = async (req, res) => {
+    try {
+        const { token, platform } = req.body;
+
+        if (!token) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'FCM token is required'
+            });
+        }
+
+        const driverId = getDriverIdFromRequest(req);
+        const driver = await SpareDriver.findById(driverId);
+
+        if (!driver) {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'SpareDriver not found'
+            });
+        }
+
+        if (!driver.fcmTokens) driver.fcmTokens = [];
+
+        const existingTokenIndex = driver.fcmTokens.findIndex(t => t.token === token);
+
+        if (existingTokenIndex > -1) {
+            driver.fcmTokens[existingTokenIndex].lastUsed = new Date();
+            if (platform) driver.fcmTokens[existingTokenIndex].platform = platform;
+        } else {
+            driver.fcmTokens.push({
+                token,
+                platform: platform || 'unknown',
+                lastUsed: new Date()
+            });
+        }
+
+        if (driver.fcmTokens.length > 3) {
+            driver.fcmTokens.sort((a, b) => b.lastUsed - a.lastUsed);
+            driver.fcmTokens = driver.fcmTokens.slice(0, 3);
+        }
+
+        await driver.save({ validateBeforeSave: false });
+
+        res.status(200).json({
+            status: 'success',
+            message: 'FCM token registered successfully'
+        });
+
+    } catch (error) {
+        console.error('Error updating SpareDriver FCM token:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to update FCM token'
+        });
     }
 };

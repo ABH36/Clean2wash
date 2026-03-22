@@ -28,7 +28,8 @@ import {
     UserCheck,
     Wallet,
     Zap,
-    History
+    History,
+    TrendingUp
 } from 'lucide-react';
 
 

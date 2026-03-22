@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const walletController = require('../controllers/walletController');
-const { protect } = require('../../../middlewares/authMiddleware');
+const { protect } = require('../../../middleware/authMiddleware');
 
 // Base route: /api/consumer/wallet
 router.use(protect); // Ensure user is logged in

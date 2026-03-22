@@ -12,7 +12,7 @@ const adminTransactionController = require('../controllers/adminTransactionContr
 const adminAuditController = require('../controllers/adminAuditController');
 const adminAnalyticsController = require('../controllers/adminAnalyticsController');
 const adminProductController = require('../controllers/adminProductController');
-const authMiddleware = require('../../../middlewares/authMiddleware');
+const authMiddleware = require('../../../middleware/authMiddleware');
 
 // Public Admin Route
 router.post('/login', adminAuthController.login);

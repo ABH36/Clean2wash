@@ -75,7 +75,6 @@ const hubSchema = new mongoose.Schema({
 });
 
 hubSchema.index({ city: 1, type: 1, isActive: 1 });
-hubSchema.index({ name: 1 });
 
 const Hub = mongoose.model('Hub', hubSchema);
 

@@ -2,6 +2,8 @@ const User = require('../../../models/User');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { sanitizePhone } = require('../../../utils/authUtils');
+const catchAsync = require('../../../utils/catchAsync');
+const AppError = require('../../../utils/AppError');
 
 // Helper function to create JWT token
 const signToken = (id) => {
@@ -42,349 +44,236 @@ const validateEmail = (email) => {
 };
 
 // Send OTP for login/signup
-exports.sendOTP = async (req, res) => {
+exports.sendOTP = catchAsync(async (req, res, next) => {
+    const { identifier, type } = req.body; // identifier can be phone or email, type can be 'phone' or 'email'
+
+    if (!identifier) {
+        return next(new AppError('Phone number or email is required', 400));
+    }
+
+    // Validate identifier based on type
+    if (type === 'phone' && !validatePhone(identifier)) {
+        return next(new AppError('Please provide a valid 10-digit phone number', 400));
+    }
+
+    if (type === 'email' && !validateEmail(identifier)) {
+        return next(new AppError('Please provide a valid email address', 400));
+    }
+
+    // Find consumer by phone or email
+    let consumer = await User.findByEmailOrPhone(identifier);
+    const isNewUser = !consumer;
+
+    // Signup: new user with userData — create consumer only then
+    if (isNewUser && req.body.userData) {
+        const { name, phone, email } = req.body.userData;
+        consumer = new User({
+            name: name || `User_${identifier.slice(-4)}`,
+            phone: sanitizePhone(phone || (type === 'phone' ? identifier : '')),
+            email: email || (type === 'email' ? identifier : `user_${identifier}@temp.com`),
+            password: 'defaultPassword123', // Will be updated after OTP verification
+            role: 'consumer'
+        });
+    }
+
+    // Login: user not found and no signup data — do NOT create, ask to sign up
+    if (!consumer) {
+        return next(new AppError('No account found with this phone/email. Please sign up first.', 404));
+    }
+
+    // Generate and save OTP
+    const otp = consumer.generateOTP();
     try {
-        const { identifier, type } = req.body; // identifier can be phone or email, type can be 'phone' or 'email'
-
-        if (!identifier) {
-            return res.status(400).json({
-                status: 'fail',
-                message: 'Phone number or email is required'
-            });
-        }
-
-        // Validate identifier based on type
-        if (type === 'phone' && !validatePhone(identifier)) {
-            return res.status(400).json({
-                status: 'fail',
-                message: 'Please provide a valid 10-digit phone number'
-            });
-        }
-
-        if (type === 'email' && !validateEmail(identifier)) {
-            return res.status(400).json({
-                status: 'fail',
-                message: 'Please provide a valid email address'
-            });
-        }
-
-        // Find consumer by phone or email
-        let consumer = await User.findByEmailOrPhone(identifier);
-        const isNewUser = !consumer;
-
-        // Signup: new user with userData — create consumer only then
-        if (isNewUser && req.body.userData) {
-            const { name, phone, email } = req.body.userData;
-            consumer = new User({
-                name: name || `User_${identifier.slice(-4)}`,
-                phone: sanitizePhone(phone || (type === 'phone' ? identifier : '')),
-                email: email || (type === 'email' ? identifier : `user_${identifier}@temp.com`),
-                password: 'defaultPassword123', // Will be updated after OTP verification
-                role: 'consumer'
-            });
-        }
-
-        // Login: user not found and no signup data — do NOT create, ask to sign up
-        if (!consumer) {
-            return res.status(404).json({
-                status: 'fail',
-                message: 'No account found with this phone/email. Please sign up first.'
-            });
-        }
-
-        // Generate and save OTP
-        const otp = consumer.generateOTP();
-        try {
-            await consumer.save();
-        } catch (saveError) {
-            console.error('Error saving consumer:', saveError);
-            // If save fails due to duplicate, try to find existing consumer
-            if (saveError.code === 11000) {
-                consumer = await User.findByEmailOrPhone(identifier);
-                if (!consumer) {
-                    throw saveError;
-                }
-                const newOtp = consumer.generateOTP();
-                await consumer.save();
-            } else {
+        await consumer.save();
+    } catch (saveError) {
+        console.error('Error saving consumer:', saveError);
+        // If save fails due to duplicate, try to find existing consumer
+        if (saveError.code === 11000) {
+            consumer = await User.findByEmailOrPhone(identifier);
+            if (!consumer) {
                 throw saveError;
             }
+            const newOtp = consumer.generateOTP();
+            await consumer.save();
+        } else {
+            throw saveError;
         }
-
-        // In development, send OTP in response
-        if (process.env.NODE_ENV === 'development') {
-            console.log(`🔢 OTP for ${identifier}: ${otp}`);
-        }
-
-        // TODO: Integrate with SMS/Email service for production
-        // await sendSMS(phone, `Your Clean2Wash OTP is: ${otp}`);
-        // await sendEmail(email, 'Your Clean2Wash OTP', `Your OTP is: ${otp}`);
-
-        res.status(200).json({
-            status: 'success',
-            message: 'OTP sent successfully',
-            data: {
-                isNewUser,
-                identifier,
-                otp: process.env.NODE_ENV === 'development' ? otp : undefined
-            }
-        });
-
-    } catch (error) {
-        console.error('Error in sendOTP:', error);
-
-        if (error.name === 'ValidationError') {
-            const messages = Object.values(error.errors).map(el => el.message);
-            return res.status(400).json({
-                status: 'fail',
-                message: `Validation Error: ${messages.join('. ')}`
-            });
-        }
-
-        res.status(500).json({
-            status: 'error',
-            message: 'Failed to send OTP. Please try again.',
-            error: process.env.NODE_ENV === 'development' ? error.stack || error.message : undefined
-        });
     }
-};
+
+    // In development, send OTP in response
+    if (process.env.NODE_ENV === 'development') {
+        console.log(`🔢 OTP for ${identifier}: ${otp}`);
+    }
+
+    res.status(200).json({
+        status: 'success',
+        message: 'OTP sent successfully',
+        data: {
+            isNewUser,
+            identifier,
+            otp: process.env.NODE_ENV === 'development' ? otp : undefined
+        }
+    });
+});
 
 // Verify OTP and login/signup
-exports.verifyOTP = async (req, res, next) => {
-    try {
-        const { identifier, otp, userData } = req.body;
+exports.verifyOTP = catchAsync(async (req, res, next) => {
+    const { identifier, otp, userData } = req.body;
 
-        if (!identifier || !otp) {
-            return res.status(400).json({
-                status: 'fail',
-                message: 'Identifier and OTP are required'
-            });
-        }
+    if (!identifier || !otp) {
+        return next(new AppError('Identifier and OTP are required', 400));
+    }
 
-        // Find consumer
-        const consumer = await User.findByEmailOrPhone(identifier);
-        if (!consumer) {
-            return res.status(404).json({
-                status: 'fail',
-                message: 'User not found. Please request a new OTP.'
-            });
-        }
+    // Find consumer
+    const consumer = await User.findByEmailOrPhone(identifier);
+    if (!consumer) {
+        return next(new AppError('User not found. Please request a new OTP.', 404));
+    }
 
-        // Verify OTP
-        if (!consumer.verifyOTP(otp)) {
-            return res.status(400).json({
-                status: 'fail',
-                message: 'Invalid or expired OTP. Please request a new OTP.'
-            });
-        }
+    // Verify OTP
+    if (!consumer.verifyOTP(otp)) {
+        return next(new AppError('Invalid or expired OTP. Please request a new OTP.', 400));
+    }
 
-        // Clear OTP after successful verification
-        consumer.otp = undefined;
-        consumer.isVerified = true;
+    // Clear OTP after successful verification
+    consumer.otp = undefined;
+    consumer.isVerified = true;
 
-        const isSignup = req.body.isSignup === true;
-        if (isSignup && userData) {
-            if (userData.name) consumer.name = userData.name;
-            if (userData.email && userData.email !== consumer.email) consumer.email = userData.email;
-            if (userData.phone && userData.phone !== consumer.phone) consumer.phone = userData.phone;
+    const isSignup = req.body.isSignup === true;
+    if (isSignup && userData) {
+        if (userData.name) consumer.name = userData.name;
+        if (userData.email && userData.email !== consumer.email) consumer.email = userData.email;
+        if (userData.phone && userData.phone !== consumer.phone) consumer.phone = userData.phone;
 
-            // Handle Referral Code Linkage
-            if (userData.referralCode && !consumer.referredBy) {
-                const referrer = await User.findOne({ referralCode: userData.referralCode.toUpperCase() });
-                if (referrer && referrer._id.toString() !== consumer._id.toString()) {
-                    consumer.referredBy = referrer._id;
-                }
+        // Handle Referral Code Linkage
+        if (userData.referralCode && !consumer.referredBy) {
+            const referrer = await User.findOne({ referralCode: userData.referralCode.toUpperCase() });
+            if (referrer && referrer._id.toString() !== consumer._id.toString()) {
+                consumer.referredBy = referrer._id;
             }
         }
-
-        // Update login info
-        consumer.lastLogin = new Date();
-        consumer.loginCount += 1;
-
-        await consumer.save({ validateBeforeSave: false });
-
-        // Remove sensitive data
-        consumer.password = undefined;
-        consumer.otp = undefined;
-
-        // Send token
-        createSendToken(consumer, 200, res, 'Login successful');
-
-    } catch (error) {
-        console.error('Error in verifyOTP:', error);
-        res.status(500).json({
-            status: 'error',
-            message: 'Failed to verify OTP. Please try again.'
-        });
     }
-};
+
+    // Update login info
+    consumer.lastLogin = new Date();
+    consumer.loginCount += 1;
+
+    await consumer.save({ validateBeforeSave: false });
+
+    // Remove sensitive data
+    consumer.password = undefined;
+    consumer.otp = undefined;
+
+    // Send token
+    createSendToken(consumer, 200, res, 'Login successful');
+});
 
 // Login with phone/email and password (alternative method)
-exports.login = async (req, res, next) => {
-    try {
-        const { identifier, password } = req.body;
+exports.login = catchAsync(async (req, res, next) => {
+    const { identifier, password } = req.body;
 
-        if (!identifier || !password) {
-            return res.status(400).json({
-                status: 'fail',
-                message: 'Please provide identifier and password'
-            });
-        }
-
-        const sanitizedIdentifier = sanitizePhone(identifier);
-
-        // Find consumer and include password
-        const consumer = await User.findOne({
-            $or: [
-                { phone: sanitizedIdentifier },
-                { email: identifier.toLowerCase() }
-            ]
-        }).select('+password');
-
-        if (!consumer || !(await consumer.correctPassword(password, consumer.password))) {
-            return res.status(401).json({
-                status: 'fail',
-                message: 'Incorrect identifier or password'
-            });
-        }
-
-        // Check if consumer is active
-        if (!consumer.isActive) {
-            return res.status(401).json({
-                status: 'fail',
-                message: 'Your account has been deactivated. Please contact support.'
-            });
-        }
-
-        // Update login info
-        consumer.lastLogin = new Date();
-        consumer.loginCount += 1;
-        await consumer.save({ validateBeforeSave: false });
-
-        // Send token
-        createSendToken(consumer, 200, res, 'Login successful');
-
-    } catch (error) {
-        console.error('Error in login:', error);
-        res.status(500).json({
-            status: 'error',
-            message: 'Failed to login. Please try again.'
-        });
+    if (!identifier || !password) {
+        return next(new AppError('Please provide identifier and password', 400));
     }
-};
+
+    const sanitizedIdentifier = sanitizePhone(identifier);
+
+    // Find consumer and include password
+    const consumer = await User.findOne({
+        $or: [
+            { phone: sanitizedIdentifier },
+            { email: identifier.toLowerCase() }
+        ]
+    }).select('+password');
+
+    if (!consumer || !(await consumer.correctPassword(password, consumer.password))) {
+        return next(new AppError('Incorrect identifier or password', 401));
+    }
+
+    // Check if consumer is active
+    if (!consumer.isActive) {
+        return next(new AppError('Your account has been deactivated. Please contact support.', 401));
+    }
+
+    // Update login info
+    consumer.lastLogin = new Date();
+    consumer.loginCount += 1;
+    await consumer.save({ validateBeforeSave: false });
+
+    // Send token
+    createSendToken(consumer, 200, res, 'Login successful');
+});
 
 // Signup (for new users)
-exports.signup = async (req, res, next) => {
-    try {
-        const { name, email, phone, password } = req.body;
+exports.signup = catchAsync(async (req, res, next) => {
+    const { name, email, phone, password } = req.body;
 
-        // Validate required fields
-        if (!name || !email || !phone || !password) {
-            return res.status(400).json({
-                status: 'fail',
-                message: 'Please provide all required fields: name, email, phone, password'
-            });
-        }
-
-        // Validate email and phone formats
-        if (!validateEmail(email)) {
-            return res.status(400).json({
-                status: 'fail',
-                message: 'Please provide a valid email address'
-            });
-        }
-
-        if (!validatePhone(phone)) {
-            return res.status(400).json({
-                status: 'fail',
-                message: 'Please provide a valid 10-digit phone number'
-            });
-        }
-
-        // Check if consumer already exists
-        const existingConsumer = await User.findOne({
-            $or: [{ email }, { phone }]
-        });
-
-        if (existingConsumer) {
-            return res.status(400).json({
-                status: 'fail',
-                message: 'A user with this email or phone number already exists'
-            });
-        }
-
-        // Create new consumer
-        const signupData = {
-            name,
-            email,
-            phone: sanitizePhone(phone),
-            password,
-            role: 'consumer',
-            isVerified: false
-        };
-
-        // Handle referral code during direct signup
-        if (req.body.referralCode) {
-            const referrer = await User.findOne({ referralCode: req.body.referralCode.toUpperCase() });
-            if (referrer) {
-                signupData.referredBy = referrer._id;
-            }
-        }
-
-        const newConsumer = await User.create(signupData);
-
-        // Generate OTP for verification
-        const otp = newConsumer.generateOTP();
-        await newConsumer.save({ validateBeforeSave: false });
-
-        // In development, send OTP in response
-        if (process.env.NODE_ENV === 'development') {
-            console.log(`🔢 OTP for ${email}: ${otp}`.cyan.bold);
-        }
-
-        // TODO: Send OTP via email/SMS
-
-        res.status(201).json({
-            status: 'success',
-            message: 'Account created successfully. Please verify your email/phone with the OTP sent.',
-            data: {
-                consumer: {
-                    id: newConsumer._id,
-                    name: newConsumer.name,
-                    email: newConsumer.email,
-                    phone: newConsumer.phone
-                },
-                otp: process.env.NODE_ENV === 'development' ? otp : undefined
-            }
-        });
-
-    } catch (error) {
-        console.error('Error in signup:', error);
-
-        // Handle Mongoose validation errors
-        if (error.name === 'ValidationError') {
-            const messages = Object.values(error.errors).map(el => el.message);
-            return res.status(400).json({
-                status: 'fail',
-                message: messages.join('. ')
-            });
-        }
-
-        // Handle duplicate key errors
-        if (error.code === 11000) {
-            const field = Object.keys(error.keyValue)[0];
-            return res.status(400).json({
-                status: 'fail',
-                message: `A user with this ${field} already exists`
-            });
-        }
-
-        res.status(500).json({
-            status: 'error',
-            message: 'Failed to create account. Please try again.'
-        });
+    // Validate required fields
+    if (!name || !email || !phone || !password) {
+        return next(new AppError('Please provide all required fields: name, email, phone, password', 400));
     }
-};
+
+    // Validate email and phone formats
+    if (!validateEmail(email)) {
+        return next(new AppError('Please provide a valid email address', 400));
+    }
+
+    if (!validatePhone(phone)) {
+        return next(new AppError('Please provide a valid 10-digit phone number', 400));
+    }
+
+    // Check if consumer already exists
+    const existingConsumer = await User.findOne({
+        $or: [{ email }, { phone }]
+    });
+
+    if (existingConsumer) {
+        return next(new AppError('A user with this email or phone number already exists', 400));
+    }
+
+    // Create new consumer
+    const signupData = {
+        name,
+        email,
+        phone: sanitizePhone(phone),
+        password,
+        role: 'consumer',
+        isVerified: false
+    };
+
+    // Handle referral code during direct signup
+    if (req.body.referralCode) {
+        const referrer = await User.findOne({ referralCode: req.body.referralCode.toUpperCase() });
+        if (referrer) {
+            signupData.referredBy = referrer._id;
+        }
+    }
+
+    const newConsumer = await User.create(signupData);
+
+    // Generate OTP for verification
+    const otp = newConsumer.generateOTP();
+    await newConsumer.save({ validateBeforeSave: false });
+
+    // In development, send OTP in response
+    if (process.env.NODE_ENV === 'development') {
+        console.log(`🔢 OTP for ${email}: ${otp}`);
+    }
+
+    res.status(201).json({
+        status: 'success',
+        message: 'Account created successfully. Please verify your email/phone with the OTP sent.',
+        data: {
+            consumer: {
+                id: newConsumer._id,
+                name: newConsumer.name,
+                email: newConsumer.email,
+                phone: newConsumer.phone
+            },
+            otp: process.env.NODE_ENV === 'development' ? otp : undefined
+        }
+    });
+});
 
 // Logout (client-side token removal)
 exports.logout = (req, res) => {
@@ -395,87 +284,97 @@ exports.logout = (req, res) => {
 };
 
 // Protect middleware - to verify JWT token
-exports.protect = async (req, res, next) => {
-    try {
-        // 1) Get token and check if it's there
-        let token;
-        if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-            token = req.headers.authorization.split(' ')[1];
-        }
-
-        if (!token) {
-            return res.status(401).json({
-                status: 'fail',
-                message: 'You are not logged in! Please log in to get access.'
-            });
-        }
-
-        // 2) Verification token
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-
-        // 3) Check if consumer still exists
-        const currentConsumer = await User.findById(decoded.id);
-        if (!currentConsumer) {
-            return res.status(401).json({
-                status: 'fail',
-                message: 'The user belonging to this token no longer exists.'
-            });
-        }
-
-        // 4) Check if consumer is active
-        if (!currentConsumer.isActive) {
-            return res.status(401).json({
-                status: 'fail',
-                message: 'Your account has been deactivated. Please contact support.'
-            });
-        }
-
-        // Grant access to protected route
-        req.user = currentConsumer;
-        next();
-
-    } catch (error) {
-        if (error.name === 'JsonWebTokenError') {
-            return res.status(401).json({
-                status: 'fail',
-                message: 'Invalid token. Please log in again.'
-            });
-        }
-
-        if (error.name === 'TokenExpiredError') {
-            return res.status(401).json({
-                status: 'fail',
-                message: 'Your token has expired! Please log in again.'
-            });
-        }
-
-        res.status(500).json({
-            status: 'error',
-            message: 'Failed to authenticate. Please try again.'
-        });
+exports.protect = catchAsync(async (req, res, next) => {
+    // 1) Get token and check if it's there
+    let token;
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        token = req.headers.authorization.split(' ')[1];
     }
-};
+
+    if (!token) {
+        return next(new AppError('You are not logged in! Please log in to get access.', 401));
+    }
+
+    // 2) Verification token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+
+    // 3) Check if consumer still exists
+    const currentConsumer = await User.findById(decoded.id);
+    if (!currentConsumer) {
+        return next(new AppError('The user belonging to this token no longer exists.', 401));
+    }
+
+    // 4) Check if consumer is active
+    if (!currentConsumer.isActive) {
+        return next(new AppError('Your account has been deactivated. Please contact support.', 401));
+    }
+
+    // Grant access to protected route
+    req.user = currentConsumer;
+    next();
+});
 
 // Get current user profile
-exports.getMe = async (req, res) => {
-    try {
-        const consumer = await User.findById(req.user.id)
-            .populate('vehicles')
-            .populate('primaryVehicle')
-            .populate('subscription');
+exports.getMe = catchAsync(async (req, res, next) => {
+    const consumer = await User.findById(req.user.id)
+        .populate('vehicles')
+        .populate('primaryVehicle')
+        .populate('subscription');
 
-        res.status(200).json({
-            status: 'success',
-            data: {
-                consumer
-            }
-        });
+    if (!consumer) {
+        return next(new AppError('User not found', 404));
+    }
 
-    } catch (error) {
-        console.error('Error in getMe:', error);
-        res.status(500).json({
-            status: 'error',
-            message: 'Failed to get profile. Please try again.'
+    res.status(200).json({
+        status: 'success',
+        data: {
+            consumer
+        }
+    });
+});
+
+// Update FCM Token for push notifications
+exports.updateFCMToken = catchAsync(async (req, res, next) => {
+    const { token, platform } = req.body;
+
+    if (!token) {
+        return next(new AppError('FCM token is required', 400));
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+        return next(new AppError('User not found', 404));
+    }
+
+    // Initialize fcmTokens if not exists (safety)
+    if (!user.fcmTokens) user.fcmTokens = [];
+
+    // Check if token already exists
+    const existingTokenIndex = user.fcmTokens.findIndex(t => t.token === token);
+
+    if (existingTokenIndex > -1) {
+        // Update last used timestamp
+        user.fcmTokens[existingTokenIndex].lastUsed = new Date();
+        if (platform) user.fcmTokens[existingTokenIndex].platform = platform;
+    } else {
+        // Add new token
+        user.fcmTokens.push({
+            token,
+            platform: platform || 'unknown',
+            lastUsed: new Date()
         });
     }
-};
+
+    // Limit tokens per user to 3 (prevent document bloat)
+    if (user.fcmTokens.length > 3) {
+        user.fcmTokens.sort((a, b) => b.lastUsed - a.lastUsed);
+        user.fcmTokens = user.fcmTokens.slice(0, 3);
+    }
+
+    await user.save({ validateBeforeSave: false });
+
+    res.status(200).json({
+        status: 'success',
+        message: 'FCM token registered successfully'
+    });
+});

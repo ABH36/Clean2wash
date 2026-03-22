@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const serviceController = require('../controllers/serviceController');
-const { protect } = require('../../../middlewares/authMiddleware');
+const { protect } = require('../../../middleware/authMiddleware');
 
 // Get all active banners
 router.get('/banners', protect, serviceController.getBanners);

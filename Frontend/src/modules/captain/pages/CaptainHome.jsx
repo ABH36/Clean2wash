@@ -146,6 +146,7 @@ const CaptainHome = () => {
     const { isDarkMode, toggleDarkMode } = useTheme();
     const { sessions } = useAuth();
     const {
+        captainJobs,
         captainJobsLoading,
         captainEarnings,
         acceptJob,
@@ -572,7 +573,7 @@ const CaptainHome = () => {
                         {/* Pending job markers */}
                         {jobsWithLocation.map(job => (
                             <Marker
-                                key={job.id}
+                                key={job.id || job._id}
                                 position={[job.location.coordinates[1], job.location.coordinates[0]]}
                                 icon={jobIcon}
                             />

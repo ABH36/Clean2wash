@@ -564,20 +564,19 @@ exports.handleMissedWash = async (req, res) => {
 
                 const consumer = await User.findById(booking.consumer._id);
                 if (consumer) {
-                    const balanceBefore = consumer.wallet.balance || 0;
-                    consumer.wallet.balance += refundAmount;
-                    await consumer.save({ validateBeforeSave: false });
+                    const { executeWalletTransaction } = require('../../../utils/walletHelper');
 
-                    await WalletTransaction.createTransaction({
-                        user: consumer._id,
-                        type: 'credit',
-                        amount: refundAmount,
-                        description: `Refund: Missed Apartment Wash (#${booking.bookingId})`,
-                        category: 'REFUND',
-                        balanceBefore,
-                        balanceAfter: consumer.wallet.balance,
-                        status: 'completed'
-                    });
+                    await executeWalletTransaction(
+                        booking.consumer._id,
+                        refundAmount,
+                        'credit',
+                        {
+                            category: 'REFUND',
+                            description: `Refund: Missed Apartment Wash (#${booking.bookingId})`,
+                            referenceId: booking._id,
+                            referenceType: 'booking'
+                        }
+                    );
                 }
             }
         }

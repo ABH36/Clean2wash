@@ -62,6 +62,9 @@ const reviewSchema = new mongoose.Schema({
 // Prevent duplicate reviews from the same user for the same transaction+target
 reviewSchema.index({ user: 1, refId: 1, targetId: 1 }, { unique: true });
 
+// Optimize real-time target rating calculations
+reviewSchema.index({ targetId: 1, rating: 1 });
+
 // Static method to calculate average ratings
 reviewSchema.statics.calcAverageRatings = async function (targetId, targetModel) {
     const stats = await this.aggregate([

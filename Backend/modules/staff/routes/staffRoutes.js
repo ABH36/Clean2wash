@@ -1,13 +1,14 @@
 const express = require('express');
 const staffAuthController = require('../controllers/staffAuthController');
 const staffController = require('../controllers/staffController');
-const authMiddleware = require('../../../middlewares/authMiddleware');
+const authMiddleware = require('../../../middleware/authMiddleware');
 
 const router = express.Router();
 
 // Public auth routes
 router.post('/send-otp', staffAuthController.sendOTP);
 router.post('/login', staffAuthController.login);
+router.post('/fcm-token', staffAuthController.updateFCMToken);
 
 // Protected routes
 router.use(authMiddleware.protect);

@@ -547,6 +547,13 @@ class ApiClient {
     async delete(endpoint, options = {}) {
         return this.request(endpoint, { ...options, method: 'DELETE' });
     }
+
+    async registerFCMToken(token, platform) {
+        return this.request('/auth/fcm-token', {
+            method: 'POST',
+            body: JSON.stringify({ token, platform }),
+        });
+    }
 }
 
 // Create singleton instances for different roles

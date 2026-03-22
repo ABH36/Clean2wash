@@ -193,7 +193,12 @@ const userSchema = new mongoose.Schema({
     loginCount: {
         type: Number,
         default: 0
-    }
+    },
+    fcmTokens: [{
+        token: String,
+        platform: String,
+        lastUsed: { type: Date, default: Date.now }
+    }]
 }, {
     timestamps: true,
     toJSON: { virtuals: true },

@@ -65,7 +65,12 @@ const spareDriverSchema = new mongoose.Schema({
         accountNumber: String,
         ifscCode: String,
         bankName: String
-    }
+    },
+    fcmTokens: [{
+        token: String,
+        platform: String,
+        lastUsed: { type: Date, default: Date.now }
+    }]
 }, {
     timestamps: true
 });

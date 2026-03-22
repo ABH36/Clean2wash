@@ -249,6 +249,13 @@ class ApiClient {
             body: JSON.stringify({ status, ...metadata })
         });
     }
+
+    async registerFCMToken(token, platform) {
+        return this.request('/auth/fcm-token', {
+            method: 'POST',
+            body: JSON.stringify({ token, platform }),
+        });
+    }
 }
 
 // Create and export singleton instance
@@ -287,5 +294,6 @@ export const captainAPI = {
     acceptProductMission: (orderId, itemId) => apiClient.acceptProductMission(orderId, itemId),
     acceptProductBatch: (batchItems) => apiClient.acceptProductBatch(batchItems),
     updateProductMissionStatus: (orderId, itemId, status, metadata) => apiClient.updateProductMissionStatus(orderId, itemId, status, metadata),
+    registerFCMToken: (token, platform) => apiClient.registerFCMToken(token, platform),
     setToken: (token) => apiClient.setToken(token)
 };

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const ctrl = require('../controllers/spareDriverController');
-const authMiddleware = require('../../../middlewares/authMiddleware');
+const authMiddleware = require('../../../middleware/authMiddleware');
 
 // ── Public Driver Routes ──
 router.post('/register', ctrl.register);
@@ -29,6 +29,7 @@ router.get('/history', authMiddleware.protect, authMiddleware.restrictTo('spared
 router.get('/transactions', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.getTransactions);
 router.get('/notifications', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.getNotifications);
 router.patch('/notifications/:id/read', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.markNotificationRead);
+router.post('/fcm-token', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.updateFCMToken);
 
 // ── Admin-Only Routes ──
 router.get('/admin/drivers', authMiddleware.protect, authMiddleware.restrictTo('admin'), ctrl.adminListDrivers);

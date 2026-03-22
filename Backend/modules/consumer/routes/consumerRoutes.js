@@ -14,7 +14,7 @@ const reviewController = require('../controllers/reviewController');
 const webhookController = require('../controllers/webhookController');
 
 // Import Auth Middleware
-const authMiddleware = require('../../../middlewares/authMiddleware');
+const authMiddleware = require('../../../middleware/authMiddleware');
 
 const walletRoutes = require('./walletRoutes');
 const referralRoutes = require('./referralRoutes');
@@ -25,6 +25,7 @@ router.post('/auth/verify-otp', authController.verifyOTP);
 router.post('/auth/login', authController.login);
 router.post('/auth/signup', authController.signup);
 router.post('/auth/logout', authController.logout);
+router.post('/auth/fcm-token', authMiddleware.protect, authController.updateFCMToken);
 
 // Public routes (no authentication required)
 router.get('/services', serviceController.getServices);

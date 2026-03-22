@@ -74,7 +74,7 @@ const CaptainHistory = () => {
                 <div className="px-4 mt-6 space-y-4">
                     {filteredJobs.map((item, i) => (
                         <motion.div
-                            key={item.id}
+                            key={item.id || item._id || `job-${i}`}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.05 }}

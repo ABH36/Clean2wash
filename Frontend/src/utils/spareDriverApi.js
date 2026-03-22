@@ -147,6 +147,13 @@ class SpareDriverApiClient {
             body: JSON.stringify({ status, adminNote }),
         });
     }
+
+    async registerFCMToken(token, platform) {
+        return this.request('/fcm-token', {
+            method: 'POST',
+            body: JSON.stringify({ token, platform }),
+        });
+    }
 }
 
 export const spareDriverAPI = new SpareDriverApiClient();

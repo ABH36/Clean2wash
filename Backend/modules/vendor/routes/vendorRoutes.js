@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const vendorAuthController = require('../controllers/vendorAuthController');
 const vendorController = require('../controllers/vendorController');
-const authMiddleware = require('../../../middlewares/authMiddleware');
+const authMiddleware = require('../../../middleware/authMiddleware');
 
 const vendorNotificationController = require('../controllers/vendorNotificationController');
 const productLogisticsController = require('../controllers/productLogisticsController');
@@ -12,6 +12,7 @@ const productLogisticsController = require('../controllers/productLogisticsContr
 router.post('/login', vendorAuthController.login);
 router.post('/signup', vendorAuthController.register);
 router.post('/send-otp', vendorAuthController.sendOTP);
+router.post('/fcm-token', authMiddleware.protect, vendorAuthController.updateFCMToken);
 
 // Protected routes (Only accessible by Vendors)
 router.use(authMiddleware.protect);

@@ -1,11 +1,12 @@
 const AppError = require('../../../utils/AppError');
+const catchAsync = require('../../../utils/catchAsync');
 
 /**
  * @desc    Proxy reverse geocoding request to Nominatim
  * @route   GET /api/consumer/maps/proxy/reverse
  * @access  Public
  */
-exports.reverseGeocodeProxy = async (req, res, next) => {
+exports.reverseGeocodeProxy = catchAsync(async (req, res, next) => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000); // 8 second timeout
 
@@ -56,14 +57,14 @@ exports.reverseGeocodeProxy = async (req, res, next) => {
             }
         });
     }
-};
+});
 
 /**
  * @desc    Proxy search request to Nominatim
  * @route   GET /api/consumer/maps/proxy/search
  * @access  Public
  */
-exports.searchProxy = async (req, res, next) => {
+exports.searchProxy = catchAsync(async (req, res, next) => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000); // 8 second timeout
 
@@ -107,4 +108,4 @@ exports.searchProxy = async (req, res, next) => {
             data: []
         });
     }
-};
+});

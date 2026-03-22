@@ -13,9 +13,18 @@ const path = require('path');
 
 // Load environment variables
 dotenv.config({ path: './.env.local' });
-console.log('JWT_SECRET loaded:', !!process.env.JWT_SECRET);
-if (process.env.JWT_SECRET) {
-    console.log('JWT_SECRET signature check:', process.env.JWT_SECRET.substring(0, 4) + '...');
+
+// Elite Hardening: Production Environment Safety Check
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+    console.error('CRITICAL: JWT_SECRET is not defined in production!'.red.bold);
+    process.exit(1);
+}
+
+if (process.env.NODE_ENV === 'development') {
+    console.log('JWT_SECRET loaded:', !!process.env.JWT_SECRET);
+    if (process.env.JWT_SECRET) {
+        console.log('JWT_SECRET signature check:', process.env.JWT_SECRET.substring(0, 4) + '...');
+    }
 }
 
 const AppError = require('./utils/AppError');
@@ -28,14 +37,26 @@ const adminRoutes = require('./modules/admin/routes/adminRoutes');
 const vendorRoutes = require('./modules/vendor/routes/vendorRoutes');
 const staffRoutes = require('./modules/staff/routes/staffRoutes');
 const globalErrorHandler = require('./controllers/errorController');
-const maintenanceMiddleware = require('./middlewares/maintenanceMiddleware');
+const maintenanceMiddleware = require('./middleware/maintenanceMiddleware');
 
 // Initialize Express app
 const app = express();
 
-// CORS first - before any other middleware (Vite = 5173)
+// CORS configuration
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',')
+    : ['http://localhost:5173', 'http://localhost:3000'];
+
 app.use(cors({
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) === -1) {
+            const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+            return callback(new Error(msg), false);
+        }
+        return callback(null, true);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']

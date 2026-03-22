@@ -655,28 +655,25 @@ exports.requestPayout = async (req, res) => {
             return res.status(400).json({ status: 'error', message: 'Insufficient balance' });
         }
 
-        // create a pending transaction
-        const txn = await WalletTransaction.create({
-            user: vendorId,
-            amount: amount,
-            type: 'debit',
-            status: 'pending',
-            category: 'WITHDRAWAL',
-            description: `Bank Withdrawal Request. Account: ${bankDetails?.accountNumber || 'Stored Bank'}`,
-            metadata: {
-                bankDetails,
-                requestedAt: new Date()
-            }
-        });
+        const { executeWalletTransaction } = require('../../../utils/walletHelper');
 
-        // Deduct from balance immediately (Hold)
-        vendor.wallet.balance -= amount;
-        await vendor.save({ validateBeforeSave: false });
+        // Execute atomic debit with transaction logging
+        const txnResult = await executeWalletTransaction(
+            vendorId,
+            amount,
+            'debit',
+            {
+                category: 'WITHDRAWAL',
+                description: `Bank Withdrawal Request. Account: ${bankDetails?.accountNumber || 'Stored Bank'}`,
+                status: 'pending',
+                metaData: { bankDetails, requestedAt: new Date() }
+            }
+        );
 
         res.status(200).json({
             status: 'success',
             message: 'Withdrawal request submitted for approval',
-            data: { transaction: txn }
+            data: { transaction: txnResult.transaction }
         });
 
     } catch (error) {
@@ -1063,31 +1060,24 @@ exports.requestPayout = async (req, res) => {
             return res.status(400).json({ status: 'error', message: 'Insufficient balance' });
         }
 
-        const balanceBefore = vendor.wallet.balance;
-        const balanceAfter = balanceBefore - amount;
+        const { executeWalletTransaction } = require('../../../utils/walletHelper');
 
-        // Create transaction record
-        await WalletTransaction.create({
-            user: vendor._id,
-            type: 'debit',
+        const txn = await executeWalletTransaction(
+            vendor._id,
             amount,
-            description: 'Bank Transfer Payout Request',
-            category: 'WITHDRAWAL',
-            status: 'pending',
-            balanceBefore,
-            balanceAfter,
-            paymentMethod: 'netbanking'
-        });
-
-        // Update user balance
-        vendor.wallet.balance = balanceAfter;
-        vendor.wallet.lastUpdated = new Date();
-        await vendor.save({ validateBeforeSave: false });
+            'debit',
+            {
+                category: 'WITHDRAWAL',
+                description: 'Bank Transfer Payout Request',
+                status: 'pending',
+                paymentMethod: 'netbanking'
+            }
+        );
 
         res.status(200).json({
             status: 'success',
             message: 'Payout request submitted successfully',
-            data: { balance: balanceAfter }
+            data: { balance: txn.balance }
         });
     } catch (error) {
         console.error('Error requesting payout:', error);
@@ -1211,47 +1201,44 @@ exports.updateProductOrderItemStatus = async (req, res) => {
 
             if (itemTotal > 0) {
                 const commissionHelper = require('../../../utils/commissionHelper');
-                const WalletTransaction = require('../../../models/WalletTransaction');
+                const { executeWalletTransaction } = require('../../../utils/walletHelper');
 
                 const { adminCut, providerPayout, rate } = await commissionHelper.calculatePayout(itemTotal, 'vendor');
 
-                // Update Vendor Wallet
-                const vendor = await User.findById(vendorId);
-                if (vendor) {
-                    vendor.wallet = vendor.wallet || {};
-                    vendor.wallet.balance = (vendor.wallet.balance || 0) + providerPayout;
-                    vendor.wallet.lastUpdated = new Date();
-                    await vendor.save({ validateBeforeSave: false });
-
-                    // Log Transaction
-                    await WalletTransaction.create({
-                        user: vendor._id,
-                        amount: providerPayout,
-                        type: 'credit',
-                        status: 'completed',
+                // Update Vendor Wallet Atomically
+                await executeWalletTransaction(
+                    vendorId,
+                    providerPayout,
+                    'credit',
+                    {
                         category: 'PRODUCT_SALE',
                         description: `Payout for ${item.name} x ${item.quantity} in Order ${order.orderId} (Commission: ₹${adminCut.toFixed(2)})`,
                         referenceId: order._id.toString(),
-                        referenceType: 'product_order'
-                    });
+                        referenceType: 'product_order',
+                        status: 'completed'
+                    }
+                );
 
-                    // Notify Vendor
-                    await sendVendorNotification(vendor._id, {
-                        title: 'Product Sale Credited! 🪙',
-                        message: `₹${providerPayout.toFixed(0)} credited for "${item.name}" from Order #${order.orderId}.`,
-                        type: 'payout',
-                        priority: 'high',
-                        metaData: { amount: providerPayout, orderId: order._id }
-                    });
-                }
+                // Notify Vendor
+                await sendVendorNotification(vendorId, {
+                    title: 'Product Sale Credited! 🪙',
+                    message: `₹${providerPayout.toFixed(0)} credited for "${item.name}" from Order #${order.orderId}.`,
+                    type: 'payout',
+                    priority: 'high',
+                    metaData: { amount: providerPayout, orderId: order._id }
+                });
             }
         }
 
-        // If all items in the order are delivered, mark the whole order as delivered
+        // 5. Finalize Order if all items delivered
         const allDelivered = order.items.every(it => it.status === 'delivered');
         if (allDelivered) {
             order.status = 'delivered';
-            order.history.push({ status: 'delivered', note: 'All items delivered. Order complete.' });
+            order.history.push({
+                status: 'delivered',
+                timestamp: new Date(),
+                note: 'All items delivered. Order complete.'
+            });
         }
 
         await order.save();
@@ -1261,6 +1248,7 @@ exports.updateProductOrderItemStatus = async (req, res) => {
             message: `Item status updated to ${status}. Payout processed if delivered.`,
             data: { order }
         });
+
     } catch (error) {
         console.error('Error updating product order item status:', error);
         res.status(500).json({ status: 'error', message: 'Update failed' });

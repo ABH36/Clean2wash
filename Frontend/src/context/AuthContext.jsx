@@ -6,6 +6,7 @@ import { vendorAPI } from '../utils/vendorApi';
 import { staffAPI } from '../utils/staffApi';
 
 import { socketService } from '../utils/socket';
+import { requestForToken, onMessageListener } from '../utils/firebase';
 import { toast } from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 
@@ -39,6 +40,53 @@ export const AuthProvider = ({ children }) => {
         return result;
     });
     const [trustedContacts, setTrustedContacts] = useState([]);
+    const [bookings, setBookings] = useState([]);
+    const [productOrders, setProductOrders] = useState([]);
+    const [notifications, setNotifications] = useState([]);
+    const [lastRealTimeAlert, setLastRealTimeAlert] = useState(null);
+
+    // 🔔 Core Notification Handler: Stable & Reusable
+    const handleNewNotification = useCallback((data) => {
+        console.log('🆕 Real-time Notification:', data);
+        const notification = data.notification || data;
+
+        const newNotif = {
+            id: notification.id || Date.now(),
+            title: notification.title || 'New Notification',
+            message: notification.body || notification.message || 'You have a new update.',
+            type: notification.type || 'general',
+            read: false,
+            createdAt: new Date(),
+            ...notification
+        };
+
+        setNotifications(prev => {
+            const exists = prev.some(n => n.id === newNotif.id);
+            if (exists) return prev;
+            return [newNotif, ...prev];
+        });
+
+        setLastRealTimeAlert({
+            title: newNotif.title,
+            message: newNotif.message,
+            type: newNotif.type,
+            data: data.data || {}
+        });
+
+        // Global Toast if toast is available
+        if (toast) {
+            toast(newNotif.title, {
+                icon: '🔔',
+                style: {
+                    borderRadius: '12px',
+                    background: '#000',
+                    color: '#fff',
+                    fontSize: '12px',
+                    fontWeight: 'bold'
+                }
+            });
+        }
+    }, []);
 
     // Dynamic Token Restoration on mount
     useEffect(() => {
@@ -103,46 +151,47 @@ export const AuthProvider = ({ children }) => {
                         return order;
                     }));
                 }
-
-                toast.success(data.message || `Order status: ${data.status}`, {
-                    duration: 5000,
-                    icon: '📦'
-                });
+                toast.success(data.message || `Order status: ${data.status}`, { duration: 5000, icon: '📦' });
             };
 
-            const handleNewNotification = (data) => {
-                console.log('📬 New Real-time Notification:', data);
-                const notification = data.notification || {};
-
-                setLastRealTimeAlert({
-                    title: notification.title || 'New Notification!',
-                    message: notification.message || 'Check your notifications panel.',
-                    type: 'notification'
-                });
-
-                // Display Global Professional Toast
-                toast(
-                    (t) => (
-                        <div className="flex flex-col gap-1">
-                            <span className="font-black text-xs uppercase tracking-tight">{notification.title || 'Notification'}</span>
-                            <span className="text-[11px] font-bold opacity-60 leading-tight">{notification.message}</span>
-                        </div>
-                    ),
-                    {
-                        icon: notification.type === 'booking' ? '📦' : '🔔',
-                        duration: 5000,
+            const handleGenericStatusUpdate = (data) => {
+                handleNewNotification({
+                    notification: {
+                        title: data.title || 'Status Updated',
+                        message: data.message || `Status changed to ${data.status}`,
+                        type: 'booking'
                     }
-                );
+                });
+
+                // Also update local booking state if it's a direct status update
+                if (data.bookingId || data._id) {
+                    setBookings(prev => prev.map(booking => {
+                        const id = booking._id || booking.id;
+                        if (id === (data.bookingId || data._id)) {
+                            return { ...booking, status: data.status, ...data.updatedFields };
+                        }
+                        return booking;
+                    }));
+                }
             };
 
-            socketService.on('booking_status_updated', handleGlobalStatusUpdate);
+            socketService.on('booking_status_updated', handleGenericStatusUpdate);
             socketService.on('product_order_status_updated', handleProductOrderStatusUpdate);
             socketService.on('new_notification', handleNewNotification);
             socketService.on('new_captain_notification', handleNewNotification);
             socketService.on('new_vendor_notification', handleNewNotification);
+            socketService.on('captain_verified', (data) => {
+                handleNewNotification({
+                    notification: {
+                        title: 'Account Verified! ✅',
+                        message: data.message || 'You can now start accepting jobs.',
+                        type: 'account'
+                    }
+                });
+            });
 
             return () => {
-                socketService.off('booking_status_updated', handleGlobalStatusUpdate);
+                socketService.off('booking_status_updated', handleGenericStatusUpdate);
                 socketService.off('product_order_status_updated', handleProductOrderStatusUpdate);
                 socketService.off('new_notification', handleNewNotification);
                 socketService.off('new_captain_notification', handleNewNotification);
@@ -151,9 +200,57 @@ export const AuthProvider = ({ children }) => {
         } else {
             socketService.disconnect();
         }
-    }, [sessions]);
+    }, [sessions, handleNewNotification, setBookings, setProductOrders, setLastRealTimeAlert]); // Note: handleNewNotification needs to be stable
 
-    const [lastRealTimeAlert, setLastRealTimeAlert] = useState(null);
+    // 📱 FCM Token Management & Foreground Listener
+    useEffect(() => {
+        const activeToken = sessions.consumer?.token ||
+            sessions.captain?.token ||
+            sessions.admin?.token ||
+            sessions.vendor?.token ||
+            sessions.staff?.token;
+
+        if (!activeToken) return;
+
+        // 1. Register Device Token
+        const syncFCM = async () => {
+            try {
+                const fcmToken = await requestForToken();
+                if (!fcmToken) return;
+
+                const platform = /Mobi|Android|iPhone/i.test(navigator.userAgent) ? 'mobile' : 'web';
+
+                // Send to backend based on active role
+                if (sessions.consumer?.token) {
+                    await authAPI.registerFCMToken(fcmToken, platform);
+                } else if (sessions.captain?.token) {
+                    await captainAPI.registerFCMToken(fcmToken, platform);
+                } else if (sessions.vendor?.token) {
+                    await vendorAPI.registerFCMToken(fcmToken, platform);
+                } else if (sessions.staff?.token) {
+                    await staffAPI.registerFCMToken(fcmToken, platform);
+                } else if (sessions.sparedriver?.token) {
+                    const { spareDriverAPI } = await import('../utils/spareDriverApi');
+                    await spareDriverAPI.registerFCMToken(fcmToken, platform);
+                }
+                console.log('🚀 FCM: Token synced with backend');
+            } catch (err) {
+                console.warn('❌ FCM Sync Error:', err);
+            }
+        };
+
+        syncFCM();
+
+        // 2. Set up Foreground message listener
+        const unsubscribeFCM = onMessageListener((payload) => {
+            console.log('📬 FCM Foreground Notification:', payload);
+            handleNewNotification({ notification: payload.notification });
+        });
+
+        return () => {
+            if (typeof unsubscribeFCM === 'function') unsubscribeFCM();
+        };
+    }, [sessions, handleNewNotification]);
 
     // --- CORE AUTH FUNCTIONS (Moved to top to prevent reference errors) ---
     const isLoggedIn = useCallback((role) => !!sessions[role], [sessions]);
@@ -438,7 +535,6 @@ export const AuthProvider = ({ children }) => {
         }
     }, []);
     // Booking management with backend integration - trust API as single source of truth
-    const [bookings, setBookings] = useState([]);
     const [bookingsLoading, setBookingsLoading] = useState(false);
 
     // Bookings are now managed by backend - no localStorage sync needed
@@ -529,7 +625,6 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     // --- PRODUCT ORDER MANAGEMENT (PHASE 29) ---
-    const [productOrders, setProductOrders] = useState([]);
     const [productOrdersLoading, setProductOrdersLoading] = useState(false);
 
     const loadProductOrders = useCallback(async () => {
@@ -1113,7 +1208,6 @@ export const AuthProvider = ({ children }) => {
     const removeTrustedContact = useCallback((id) => setTrustedContacts(prev => prev.filter(c => c.id !== id)), []);
 
     // Notification functions (placeholder for future implementation)
-    const [notifications, setNotifications] = useState([]);
     const markNotificationRead = useCallback((id) => {
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
     }, []);

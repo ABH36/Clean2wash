@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle2, XCircle, Eye, Clock, Filter, RefreshCw, User, Phone, Mail } from 'lucide-react';
-import AdminLayout from '../components/AdminLayout';
 import { spareDriverAPI } from '../../../utils/spareDriverApi';
 import { toast } from 'react-hot-toast';
 
@@ -51,7 +50,7 @@ const AdminSpareDrivers = () => {
     const pendingCount = drivers.filter(d => d.status === 'pending_verification').length;
 
     return (
-        <AdminLayout title="Spare Driver Verification">
+        <>
             <div className="space-y-6">
 
                 {/* ── Stats Bar ── */}
@@ -262,7 +261,7 @@ const AdminSpareDrivers = () => {
                     </div>
                 )}
             </div>
-        </AdminLayout>
+        </>
     );
 };
 

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AdminLayout from '../components/AdminLayout';
 import { adminAPI } from '../../../utils/adminApi';
 import { socketService } from '../../../utils/socket';
 import {
@@ -186,7 +185,7 @@ const AdminBookings = () => {
     const sosCount = bookings.filter(b => b.issues?.some(i => i.type === 'SOS' && i.status === 'open')).length;
 
     return (
-        <AdminLayout title="Operations Hub">
+        <>
             <div className="space-y-6">
                 {/* SOS Banner */}
                 {sosCount > 0 && (
@@ -270,7 +269,7 @@ const AdminBookings = () => {
                 {/* Main Data Terminal */}
                 {viewMode === 'list' ? (
                     <div className="bg-white rounded-[3rem] border border-gray-100 shadow-soft overflow-hidden">
-                        <div className="overflow-x-auto">
+                        <div className="admin-table-container">
                             <table className="w-full text-left">
                                 <thead className="bg-gray-50/50">
                                     <tr>
@@ -370,10 +369,10 @@ const AdminBookings = () => {
                 ) : (
                     <LiveMapView bookings={filteredBookings} onSelectBooking={setSelectedBooking} />
                 )}
-            </div>
+            </div >
 
             {/* Sidebar Details Drawer */}
-            <AnimatePresence>
+            < AnimatePresence >
                 {selectedBooking && (
                     <div className="fixed inset-0 z-[100] flex justify-end">
                         <motion.div
@@ -647,8 +646,9 @@ const AdminBookings = () => {
                             </div>
                         </motion.div>
                     </div>
-                )}
-            </AnimatePresence>
+                )
+                }
+            </AnimatePresence >
 
             <AdminModal
                 isOpen={isAssignModalOpen}
@@ -707,7 +707,7 @@ const AdminBookings = () => {
                     </div>
                 </div>
             </AdminModal>
-        </AdminLayout>
+        </>
     );
 };
 

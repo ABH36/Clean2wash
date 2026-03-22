@@ -16,11 +16,24 @@ const PaymentCheckout = () => {
         getRazorpayKey,
         createPaymentOrder,
         verifyPayment,
-        sessions
+        sessions,
+        paymentMethods,
+        loadPaymentMethods
     } = useAuth();
     const [isProcessing, setIsProcessing] = useState(false);
     const [paymentSuccess, setPaymentSuccess] = useState(false);
     const [selectedMethod, setSelectedMethod] = useState('upi');
+
+    useEffect(() => {
+        loadPaymentMethods();
+    }, [loadPaymentMethods]);
+
+    useEffect(() => {
+        const defaultMethod = paymentMethods.find(m => m.isDefault);
+        if (defaultMethod) {
+            setSelectedMethod(defaultMethod.type.toLowerCase());
+        }
+    }, [paymentMethods]);
 
     // Get booking data from navigation state or fallback
     const { amount, serviceName, date, time, bookingInfo } = location.state || {

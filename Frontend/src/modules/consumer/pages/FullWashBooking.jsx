@@ -2260,8 +2260,8 @@ const FullWashBooking = () => {
                         <div className="grid grid-cols-2 gap-3">
                             <motion.button
                                 whileTap={{ scale: 0.96 }}
-                                onClick={() => toast.error('Emergency SOS Triggered! Support is on the way.', { duration: 5000 })}
-                                className="flex items-center justify-center gap-3 bg-red-50 text-red-600 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest border border-red-100"
+                                onClick={() => navigate(`/safety/sos?id=${activeBookingId}`)}
+                                className="flex items-center justify-center gap-3 bg-red-50 text-red-600 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-100"
                             >
                                 <AlertTriangle size={12} />
                                 SOS Help

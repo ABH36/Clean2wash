@@ -40,10 +40,14 @@ export const AuthProvider = ({ children }) => {
         return result;
     });
     const [trustedContacts, setTrustedContacts] = useState([]);
+    const [paymentMethods, setPaymentMethods] = useState([]);
+    const [methodsLoading, setMethodsLoading] = useState(false);
     const [bookings, setBookings] = useState([]);
     const [productOrders, setProductOrders] = useState([]);
     const [notifications, setNotifications] = useState([]);
     const [lastRealTimeAlert, setLastRealTimeAlert] = useState(null);
+    const [activeSOS, setActiveSOS] = useState(null);
+    const [isSOSLoading, setIsSOSLoading] = useState(false);
 
     // 🔔 Core Notification Handler: Stable & Reusable
     const handleNewNotification = useCallback((data) => {
@@ -1215,6 +1219,103 @@ export const AuthProvider = ({ children }) => {
         setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     }, []);
 
+    // Payment method functions
+    const loadPaymentMethods = useCallback(async () => {
+        setMethodsLoading(true);
+        try {
+            const res = await apiClient.get('/profile/payment-methods');
+            if (res.status === 'success') {
+                setPaymentMethods(res.data.methods);
+                return { success: true, data: res.data.methods };
+            }
+            return { success: false, error: res.message };
+        } catch (err) {
+            return { success: false, error: err.message };
+        } finally {
+            setMethodsLoading(false);
+        }
+    }, []);
+
+    const addPaymentMethod = useCallback(async (methodData) => {
+        try {
+            const res = await apiClient.post('/profile/payment-methods', methodData);
+            if (res.status === 'success') {
+                setPaymentMethods(res.data.methods);
+                return { success: true, data: res.data.methods };
+            }
+            return { success: false, error: res.message };
+        } catch (err) {
+            return { success: false, error: err.message };
+        }
+    }, []);
+
+    const removePaymentMethod = useCallback(async (methodId) => {
+        try {
+            const res = await apiClient.delete(`/profile/payment-methods/${methodId}`);
+            if (res.status === 'success') {
+                setPaymentMethods(res.data.methods);
+                return { success: true, data: res.data.methods };
+            }
+            return { success: false, error: res.message };
+        } catch (err) {
+            return { success: false, error: err.message };
+        }
+    }, []);
+
+    const setDefaultPaymentMethod = useCallback(async (methodId) => {
+        try {
+            const res = await apiClient.patch(`/profile/payment-methods/${methodId}/default`);
+            if (res.status === 'success') {
+                setPaymentMethods(res.data.methods);
+                return { success: true, data: res.data.methods };
+            }
+            return { success: false, error: res.message };
+        } catch (err) {
+            return { success: false, error: err.message };
+        }
+    }, []);
+
+    const resolveSOS = useCallback(async (sosId) => {
+        try {
+            await apiClient.patch(`/sos/${sosId}/resolve`);
+            setActiveSOS(null);
+            return { success: true };
+        } catch (err) {
+            return { success: false, error: err.message };
+        }
+    }, []);
+
+    const dispatchSOS = useCallback(async (sosData) => {
+        setIsSOSLoading(true);
+        try {
+            const res = await apiClient.post('/sos', sosData);
+            if (res.status === 'success') {
+                const sosId = res.data.sosId;
+                // Fetch full details
+                const detailRes = await apiClient.get(`/sos/${sosId}`);
+                setActiveSOS(detailRes.data.sos);
+                return { success: true, sosId };
+            }
+            return { success: false, error: res.message };
+        } catch (err) {
+            return { success: false, error: err.message };
+        } finally {
+            setIsSOSLoading(false);
+        }
+    }, []);
+
+    const getSOSStatus = useCallback(async (sosId) => {
+        try {
+            const res = await apiClient.get(`/sos/${sosId}`);
+            if (res.status === 'success') {
+                setActiveSOS(res.data.sos);
+                return { success: true, data: res.data.sos };
+            }
+        } catch (err) {
+            console.error('Failed to sync SOS status:', err);
+        }
+    }, []);
+
     const deleteUser = useCallback((role, userId) => {
         // Replaced by backend user management
         console.warn('deleteUser deprecated');
@@ -1319,10 +1420,23 @@ export const AuthProvider = ({ children }) => {
             notifications,
             markNotificationRead,
             markAllNotificationsRead,
-            // Payment methods
+            // Payment methods management
+            paymentMethods,
+            methodsLoading,
+            loadPaymentMethods,
+            addPaymentMethod,
+            removePaymentMethod,
+            setDefaultPaymentMethod,
+            // Payment execution (Razorpay)
             getRazorpayKey,
             createPaymentOrder,
             verifyPayment,
+            // SOS management
+            activeSOS,
+            isSOSLoading,
+            dispatchSOS,
+            resolveSOS,
+            getSOSStatus,
 
             adminLogin,
             adminLogout,

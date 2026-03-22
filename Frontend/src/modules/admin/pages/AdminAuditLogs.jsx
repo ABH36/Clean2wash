@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AdminLayout from '../components/AdminLayout';
 import { adminAPI } from '../../../utils/adminApi';
 import {
     Shield,
@@ -67,7 +66,7 @@ const AdminAuditLogs = () => {
     };
 
     return (
-        <AdminLayout title="System Audit Ledger">
+        <>
             <div className="space-y-8 pb-20">
 
                 {/* ── Audit Stats ── */}
@@ -127,7 +126,7 @@ const AdminAuditLogs = () => {
 
                 {/* ── Logs Feed ── */}
                 <div className="bg-surface rounded-[2.5rem] border border-gray-100/10 shadow-soft overflow-hidden">
-                    <div className="overflow-x-auto">
+                    <div className="admin-table-container">
                         <table className="w-full text-left">
                             <thead className="bg-background/80 border-b border-gray-100/5">
                                 <tr>
@@ -204,7 +203,7 @@ const AdminAuditLogs = () => {
             </div>
 
             {/* ── Log Inspector Modal ── */}
-            <AnimatePresence>
+            < AnimatePresence >
                 {selectedLog && (
                     <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedLog(null)} className="absolute inset-0 bg-background/80 backdrop-blur-md" />
@@ -281,9 +280,10 @@ const AdminAuditLogs = () => {
                             </div>
                         </motion.div>
                     </div>
-                )}
-            </AnimatePresence>
-        </AdminLayout>
+                )
+                }
+            </AnimatePresence >
+        </>
     );
 };
 

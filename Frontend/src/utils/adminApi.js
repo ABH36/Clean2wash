@@ -442,5 +442,16 @@ export const adminAPI = {
     // Global Product Stats
     getProductStats: () => apiClient.getProductStats(),
     getMasterInventory: () => apiClient.getMasterInventory(),
-    resolveProductDispute: (data) => apiClient.resolveProductDispute(data)
+    resolveProductDispute: (data) => apiClient.resolveProductDispute(data),
+
+    // Notifications
+    getNotifications: (params) => {
+        const filteredParams = Object.fromEntries(
+            Object.entries(params || {}).filter(([_, v]) => v !== undefined)
+        );
+        const query = new URLSearchParams(filteredParams).toString();
+        return apiClient.request(`/notifications${query ? `?${query}` : ''}`);
+    },
+    markNotificationRead: (id) => apiClient.request(`/notifications/${id}/read`, { method: 'PATCH' }),
+    markAllRead: () => apiClient.request('/notifications/read-all', { method: 'POST' })
 };

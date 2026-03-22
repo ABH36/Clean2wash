@@ -48,7 +48,7 @@ const Home = () => {
     const [sosCountdown, setSosCountdown] = useState(5);
     const [sosActive, setSosActive] = useState(false);
     const [showBlackPassModal, setShowBlackPassModal] = useState(false);
-    const { getUser, userSubscription, isBlackPassMember, bookings } = useAuth();
+    const { getUser, userSubscription, isBlackPassMember, bookings, dispatchSOS } = useAuth();
     const user = getUser('consumer');
 
     const triggerSOS = () => {
@@ -321,7 +321,41 @@ const Home = () => {
             timer = setTimeout(() => setSosCountdown(c => c - 1), 1000);
         } else if (showSOS && sosCountdown === 0 && !sosActive) {
             setSosActive(true);
-            // Simulate SOS Signal Sent
+
+            // Dispatch Real SOS
+            const initiateSOS = async () => {
+                let coords = [77.1025, 28.7041]; // Default
+
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(async (position) => {
+                        coords = [position.coords.longitude, position.coords.latitude];
+                        const res = await dispatchSOS({
+                            coordinates: coords,
+                            address: "Emergency Location",
+                            description: "Urgent SOS triggered from Home Dashboard"
+                        });
+
+                        if (res.success) {
+                            setShowSOS(false);
+                            navigate('/sos-active');
+                        } else {
+                            toast.error("Failed to dispatch SOS signal. Please call 100.");
+                        }
+                    }, async (err) => {
+                        // If blocked, try dispatching with default or last known
+                        const res = await dispatchSOS({
+                            coordinates: coords,
+                            address: "Unknown Location (GPS Blocked)",
+                            description: "Urgent SOS triggered from Home Dashboard"
+                        });
+                        if (res.success) {
+                            setShowSOS(false);
+                            navigate('/sos-active');
+                        }
+                    });
+                }
+            };
+            initiateSOS();
         }
         return () => clearTimeout(timer);
     }, [showSOS, sosCountdown, sosActive]);
@@ -515,7 +549,7 @@ const Home = () => {
         { title: 'Alerts', icon: Bell, color: '#A855F7', path: '/notifications' },
         { title: 'E-Shop', icon: ShoppingBag, color: '#10B981', path: '/e-shop' },
         { title: 'Studio Wash', icon: HomeIcon, color: '#6366F1', path: '/studios' },
-        { title: 'SOS', icon: AlertTriangle, color: '#EF4444', action: triggerSOS },
+        { title: 'SOS', icon: AlertTriangle, color: '#EF4444', path: '/safety/sos' },
         { title: 'Support', icon: Heart, color: '#EC4899', path: '/help' },
         { title: 'Vehicle', icon: Truck, color: '#3B82F6', path: '/vehicles' },
         { title: 'Wallet', icon: Wallet, color: '#F59E0B', path: '/wallet' }

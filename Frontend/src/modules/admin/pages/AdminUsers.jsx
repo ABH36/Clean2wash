@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AdminLayout from '../components/AdminLayout';
 import {
     Search,
     UserPlus,
@@ -195,7 +194,7 @@ const AdminUsers = () => {
     };
 
     return (
-        <AdminLayout title="Identity Management">
+        <>
             <div className="space-y-6">
                 {/* Tactical Selection Bar */}
                 <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
@@ -233,7 +232,7 @@ const AdminUsers = () => {
 
                 {/* Registry Terminal */}
                 <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-soft overflow-hidden">
-                    <div className="overflow-x-auto">
+                    <div className="admin-table-container">
                         <table className="w-full text-left">
                             <thead className="bg-gray-50/50">
                                 <tr>
@@ -393,22 +392,22 @@ const AdminUsers = () => {
                             </tbody>
                         </table>
                     </div>
+                </div>
 
-                    {/* Footer Nav */}
-                    <div className="px-10 py-5 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between">
-                        <p className="text-[9px] font-black text-content-subtle uppercase tracking-[0.2em]">Displaying {filteredUsers.length} Nodes in Secure Hub</p>
-                        <div className="flex items-center gap-2">
-                            <button className="w-9 h-9 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-content-subtle hover:text-brand transition-all shadow-sm"><ChevronLeft size={16} /></button>
-                            <button className="h-9 px-4 rounded-xl bg-brand text-white flex items-center justify-center text-[10px] font-black uppercase tracking-widest shadow-lg shadow-brand/20">1</button>
-                            <button className="w-9 h-9 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-content-subtle hover:text-brand transition-all shadow-sm font-black text-[10px]">2</button>
-                            <button className="w-9 h-9 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-content-subtle hover:text-brand transition-all shadow-sm"><ChevronRight size={16} /></button>
-                        </div>
+                {/* Footer Nav */}
+                <div className="px-10 py-5 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between">
+                    <p className="text-[9px] font-black text-content-subtle uppercase tracking-[0.2em]">Displaying {filteredUsers.length} Nodes in Secure Hub</p>
+                    <div className="flex items-center gap-2">
+                        <button className="w-9 h-9 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-content-subtle hover:text-brand transition-all shadow-sm"><ChevronLeft size={16} /></button>
+                        <button className="h-9 px-4 rounded-xl bg-brand text-white flex items-center justify-center text-[10px] font-black uppercase tracking-widest shadow-lg shadow-brand/20">1</button>
+                        <button className="w-9 h-9 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-content-subtle hover:text-brand transition-all shadow-sm font-black text-[10px]">2</button>
+                        <button className="w-9 h-9 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-content-subtle hover:text-brand transition-all shadow-sm"><ChevronRight size={16} /></button>
                     </div>
                 </div>
             </div>
 
             {/* Entity Configuration Modal */}
-            <AnimatePresence>
+            < AnimatePresence >
                 {isModalOpen && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                         <motion.div
@@ -555,10 +554,11 @@ const AdminUsers = () => {
                             </div>
                         </motion.div>
                     </div>
-                )}
-            </AnimatePresence>
+                )
+                }
+            </AnimatePresence >
             {/* ID Proof Inspection Modal */}
-            <AnimatePresence>
+            < AnimatePresence >
                 {viewingIdProof && (
                     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
                         <motion.div
@@ -575,40 +575,40 @@ const AdminUsers = () => {
                             className="bg-white w-full max-w-3xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-gray-100 flex flex-col md:flex-row h-[80vh] md:h-auto"
                         >
                             <div className="flex-1 bg-gray-50 flex items-center justify-center p-6 relative overflow-y-auto max-h-[80vh]">
-                                                {activeTab === 'Captains' ? (
-                                                    <div className="flex flex-col gap-8 w-full">
-                                                        {viewingIdProof.profile?.drivingLicense && (
-                                                            <div className="w-full">
-                                                                <p className="text-xs font-black text-content-subtle uppercase mb-2">Driving License</p>
-                                                                <img src={viewingIdProof.profile.drivingLicense} alt="Driving License" className="max-w-full h-auto object-contain rounded-2xl shadow-md border-4 border-white" />
-                                                            </div>
-                                                        )}
-                                                        {viewingIdProof.profile?.aadharCard && (
-                                                            <div className="w-full">
-                                                                <p className="text-xs font-black text-content-subtle uppercase mb-2">Aadhar Card</p>
-                                                                <img src={viewingIdProof.profile.aadharCard} alt="Aadhar Card" className="max-w-full h-auto object-contain rounded-2xl shadow-md border-4 border-white" />
-                                                            </div>
-                                                        )}
-                                                        {viewingIdProof.profile?.photo && (
-                                                            <div className="w-full">
-                                                                <p className="text-xs font-black text-content-subtle uppercase mb-2">Captain Photo</p>
-                                                                <img src={viewingIdProof.profile.photo} alt="Captain Photo" className="max-w-[200px] h-auto object-contain rounded-2xl shadow-md border-4 border-white" />
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <img
-                                                        src={viewingIdProof.profile?.idProof}
-                                                        alt="ID Proof"
-                                                        className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl border-4 border-white"
-                                                    />
-                                                )}
-                                                
-                                                <div className="fixed top-10 left-10 flex items-center gap-2 bg-white/90 backdrop-blur px-4 py-2 rounded-xl border border-gray-100 shadow-sm z-10">
-                                                    <Shield size={14} className="text-brand" />
-                                                    <span className="text-[10px] font-black text-content uppercase tracking-widest">Identity Document</span>
-                                                </div>
+                                {activeTab === 'Captains' ? (
+                                    <div className="flex flex-col gap-8 w-full">
+                                        {viewingIdProof.profile?.drivingLicense && (
+                                            <div className="w-full">
+                                                <p className="text-xs font-black text-content-subtle uppercase mb-2">Driving License</p>
+                                                <img src={viewingIdProof.profile.drivingLicense} alt="Driving License" className="max-w-full h-auto object-contain rounded-2xl shadow-md border-4 border-white" />
                                             </div>
+                                        )}
+                                        {viewingIdProof.profile?.aadharCard && (
+                                            <div className="w-full">
+                                                <p className="text-xs font-black text-content-subtle uppercase mb-2">Aadhar Card</p>
+                                                <img src={viewingIdProof.profile.aadharCard} alt="Aadhar Card" className="max-w-full h-auto object-contain rounded-2xl shadow-md border-4 border-white" />
+                                            </div>
+                                        )}
+                                        {viewingIdProof.profile?.photo && (
+                                            <div className="w-full">
+                                                <p className="text-xs font-black text-content-subtle uppercase mb-2">Captain Photo</p>
+                                                <img src={viewingIdProof.profile.photo} alt="Captain Photo" className="max-w-[200px] h-auto object-contain rounded-2xl shadow-md border-4 border-white" />
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <img
+                                        src={viewingIdProof.profile?.idProof}
+                                        alt="ID Proof"
+                                        className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl border-4 border-white"
+                                    />
+                                )}
+
+                                <div className="fixed top-10 left-10 flex items-center gap-2 bg-white/90 backdrop-blur px-4 py-2 rounded-xl border border-gray-100 shadow-sm z-10">
+                                    <Shield size={14} className="text-brand" />
+                                    <span className="text-[10px] font-black text-content uppercase tracking-widest">Identity Document</span>
+                                </div>
+                            </div>
                             <div className="w-full md:w-80 p-10 flex flex-col justify-between">
                                 <div className="space-y-8">
                                     <div>
@@ -683,7 +683,7 @@ const AdminUsers = () => {
                     </div>
                 )}
             </AnimatePresence >
-        </AdminLayout >
+        </>
     );
 };
 

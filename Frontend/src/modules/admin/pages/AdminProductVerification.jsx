@@ -5,7 +5,6 @@ import {
     ShieldCheck, Clock, Layers, ChevronRight, Play
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AdminLayout from '../components/AdminLayout';
 import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -75,7 +74,7 @@ const AdminProductVerification = () => {
     };
 
     return (
-        <AdminLayout title="Product Governance">
+        <>
             <div className="flex items-center justify-between mb-8 px-1">
                 <div>
                     <h2 className="text-xl font-black text-content uppercase tracking-tight">Product Governance</h2>
@@ -328,7 +327,7 @@ const AdminProductVerification = () => {
                     </div>
                 )}
             </AnimatePresence>
-        </AdminLayout>
+        </>
     );
 };
 

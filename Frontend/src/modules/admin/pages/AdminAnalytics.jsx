@@ -6,7 +6,6 @@ import {
     ArrowDownRight
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import AdminLayout from '../components/AdminLayout';
 import { adminAPI } from '../../../utils/adminApi';
 
 const AdminAnalytics = () => {
@@ -39,7 +38,7 @@ const AdminAnalytics = () => {
     };
 
     return (
-        <AdminLayout title="Intelligence Engine">
+        <>
             <div className="space-y-8">
                 {/* Tactical Header Control */}
                 <div className="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-soft flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
@@ -56,7 +55,7 @@ const AdminAnalytics = () => {
 
                     <div className="flex items-center gap-3 w-full lg:w-auto overflow-x-auto pb-1 lg:pb-0 scrollbar-hide">
                         <div className="relative group shrink-0">
-                            <select 
+                            <select
                                 value={timeRange}
                                 onChange={(e) => setTimeRange(e.target.value)}
                                 className="flex items-center gap-3 bg-gray-50 px-5 py-2.5 rounded-2xl border border-gray-100 hover:border-brand transition-all text-[10px] font-black text-content uppercase tracking-widest outline-none appearance-none cursor-pointer pr-10"
@@ -107,7 +106,7 @@ const AdminAnalytics = () => {
                         <div className="h-64 flex items-end gap-3 px-2 relative z-10">
                             {(() => {
                                 if (!stats?.revenueTimeline) return null;
-                                
+
                                 const maxRevenue = Math.max(...stats.revenueTimeline.map(r => r.revenue), 1);
                                 const isDaily = stats.timeRange !== 'Year-to-Date';
 
@@ -217,7 +216,7 @@ const AdminAnalytics = () => {
                     ))}
                 </div>
             </div>
-        </AdminLayout>
+        </>
     );
 };
 

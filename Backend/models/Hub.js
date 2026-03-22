@@ -13,9 +13,11 @@ const hubSchema = new mongoose.Schema({
         trim: true
     },
     location: {
-        type: String,
-        trim: true,
-        default: ''
+        address: { type: String, trim: true, default: '' },
+        coordinates: {
+            type: { type: String, enum: ['Point'], default: 'Point' },
+            coordinates: { type: [Number], default: [77.1025, 28.7041] } // [lng, lat] - Default to Delhi for new seeds
+        }
     },
     type: {
         type: String,
@@ -75,6 +77,7 @@ const hubSchema = new mongoose.Schema({
 });
 
 hubSchema.index({ city: 1, type: 1, isActive: 1 });
+hubSchema.index({ 'location.coordinates': '2dsphere' });
 
 const Hub = mongoose.model('Hub', hubSchema);
 

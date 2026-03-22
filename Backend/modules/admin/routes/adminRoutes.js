@@ -105,4 +105,9 @@ router.patch('/transactions/:id/status', adminTransactionController.updateTransa
 router.get('/audit/logs', adminAuditController.getAuditLogs);
 router.get('/audit/stats', adminAuditController.getAuditStats);
 
+// --- Notification Management ---
+router.get('/notifications', adminController.getNotifications);
+router.patch('/notifications/:id/read', adminController.markNotificationRead);
+router.post('/notifications/read-all', adminController.clearAllNotifications);
+
 module.exports = router;

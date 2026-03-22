@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AdminLayout from '../components/AdminLayout';
 import { adminAPI } from '../../../utils/adminApi';
 import { toast } from 'react-hot-toast';
 import {
@@ -217,7 +216,7 @@ const AdminServices = () => {
     };
 
     return (
-        <AdminLayout title="Catalog Control">
+        <>
             <div className="space-y-6">
                 {/* Control Matrix Header */}
                 <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
@@ -299,7 +298,7 @@ const AdminServices = () => {
                         ))}
                     </div>
                 ) : (
-                    <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-soft overflow-hidden">
+                    <div className="admin-table-container">
                         <table className="w-full text-left">
                             <thead className="bg-gray-50/50">
                                 <tr>
@@ -363,7 +362,7 @@ const AdminServices = () => {
             </div>
 
             {/* Protocol Configuration Terminal */}
-            <AnimatePresence>
+            < AnimatePresence >
                 {isModalOpen && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                         <motion.div
@@ -388,7 +387,7 @@ const AdminServices = () => {
                                     <X size={20} />
                                 </button>
                             </div>
-                            
+
                             {/* Tabs UI */}
                             <div className="px-10 py-4 bg-white border-b border-gray-100 flex items-center gap-6 overflow-x-auto scrollbar-hide">
                                 {[
@@ -644,22 +643,22 @@ const AdminServices = () => {
                                                 <div className="space-y-4">
                                                     <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest flex items-center justify-between">
                                                         <span className="flex items-center gap-2"><Stars size={14} className="text-amber-500" /> Premium Features</span>
-                                                        <button type="button" onClick={() => setFormData({...formData, features: [...formData.features, {icon: 'CheckCircle2', text: ''}]})} className="text-brand text-[9px]">+ Add Feature</button>
+                                                        <button type="button" onClick={() => setFormData({ ...formData, features: [...formData.features, { icon: 'CheckCircle2', text: '' }] })} className="text-brand text-[9px]">+ Add Feature</button>
                                                     </label>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                         {formData.features.map((f, idx) => (
                                                             <div key={idx} className="flex gap-2">
-                                                                <input 
-                                                                    className="flex-1 bg-gray-50 border border-gray-100 px-4 py-2 rounded-xl text-[11px] font-bold outline-none" 
-                                                                    placeholder="e.g. Eco-Friendly" 
+                                                                <input
+                                                                    className="flex-1 bg-gray-50 border border-gray-100 px-4 py-2 rounded-xl text-[11px] font-bold outline-none"
+                                                                    placeholder="e.g. Eco-Friendly"
                                                                     value={f.text}
                                                                     onChange={e => {
                                                                         const newF = [...formData.features];
                                                                         newF[idx].text = e.target.value;
-                                                                        setFormData({...formData, features: newF});
+                                                                        setFormData({ ...formData, features: newF });
                                                                     }}
                                                                 />
-                                                                <button type="button" onClick={() => setFormData({...formData, features: formData.features.filter((_, i) => i !== idx)})} className="p-2 text-red-500"><Trash2 size={12} /></button>
+                                                                <button type="button" onClick={() => setFormData({ ...formData, features: formData.features.filter((_, i) => i !== idx) })} className="p-2 text-red-500"><Trash2 size={12} /></button>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -669,23 +668,23 @@ const AdminServices = () => {
                                                 <div className="space-y-4">
                                                     <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest flex items-center justify-between">
                                                         <span className="flex items-center gap-2"><Settings size={14} className="text-blue-500" /> Execution Steps</span>
-                                                        <button type="button" onClick={() => setFormData({...formData, protocolSteps: [...formData.protocolSteps, '']})} className="text-brand text-[9px]">+ Add Step</button>
+                                                        <button type="button" onClick={() => setFormData({ ...formData, protocolSteps: [...formData.protocolSteps, ''] })} className="text-brand text-[9px]">+ Add Step</button>
                                                     </label>
                                                     <div className="space-y-2">
                                                         {formData.protocolSteps.map((step, idx) => (
                                                             <div key={idx} className="flex gap-2">
                                                                 <span className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-black">{idx + 1}</span>
-                                                                <input 
-                                                                    className="flex-1 bg-gray-50 border border-gray-100 px-4 py-2 rounded-xl text-[11px] font-bold outline-none" 
-                                                                    placeholder="e.g. Foam Pre-wash" 
+                                                                <input
+                                                                    className="flex-1 bg-gray-50 border border-gray-100 px-4 py-2 rounded-xl text-[11px] font-bold outline-none"
+                                                                    placeholder="e.g. Foam Pre-wash"
                                                                     value={step}
                                                                     onChange={e => {
                                                                         const newS = [...formData.protocolSteps];
                                                                         newS[idx] = e.target.value;
-                                                                        setFormData({...formData, protocolSteps: newS});
+                                                                        setFormData({ ...formData, protocolSteps: newS });
                                                                     }}
                                                                 />
-                                                                <button type="button" onClick={() => setFormData({...formData, protocolSteps: formData.protocolSteps.filter((_, i) => i !== idx)})} className="p-2 text-red-500"><Trash2 size={12} /></button>
+                                                                <button type="button" onClick={() => setFormData({ ...formData, protocolSteps: formData.protocolSteps.filter((_, i) => i !== idx) })} className="p-2 text-red-500"><Trash2 size={12} /></button>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -695,31 +694,31 @@ const AdminServices = () => {
                                                 <div className="space-y-4">
                                                     <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest flex items-center justify-between">
                                                         <span className="flex items-center gap-2"><MessageSquare size={14} className="text-emerald-500" /> Service FAQs</span>
-                                                        <button type="button" onClick={() => setFormData({...formData, faqs: [...formData.faqs, {question: '', answer: ''}]})} className="text-brand text-[9px]">+ Add FAQ</button>
+                                                        <button type="button" onClick={() => setFormData({ ...formData, faqs: [...formData.faqs, { question: '', answer: '' }] })} className="text-brand text-[9px]">+ Add FAQ</button>
                                                     </label>
                                                     <div className="space-y-4">
                                                         {formData.faqs.map((faq, idx) => (
                                                             <div key={idx} className="bg-gray-50 rounded-2xl p-4 space-y-2 relative group">
-                                                                <button type="button" onClick={() => setFormData({...formData, faqs: formData.faqs.filter((_, i) => i !== idx)})} className="absolute top-2 right-2 p-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={12} /></button>
-                                                                <input 
-                                                                    className="w-full bg-white border border-gray-200 px-4 py-2 rounded-xl text-[11px] font-bold outline-none" 
-                                                                    placeholder="Question" 
+                                                                <button type="button" onClick={() => setFormData({ ...formData, faqs: formData.faqs.filter((_, i) => i !== idx) })} className="absolute top-2 right-2 p-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={12} /></button>
+                                                                <input
+                                                                    className="w-full bg-white border border-gray-200 px-4 py-2 rounded-xl text-[11px] font-bold outline-none"
+                                                                    placeholder="Question"
                                                                     value={faq.question}
                                                                     onChange={e => {
                                                                         const newF = [...formData.faqs];
                                                                         newF[idx].question = e.target.value;
-                                                                        setFormData({...formData, faqs: newF});
+                                                                        setFormData({ ...formData, faqs: newF });
                                                                     }}
                                                                 />
-                                                                <textarea 
-                                                                    className="w-full bg-white border border-gray-200 px-4 py-2 rounded-xl text-[10px] font-medium outline-none resize-none" 
-                                                                    placeholder="Answer" 
+                                                                <textarea
+                                                                    className="w-full bg-white border border-gray-200 px-4 py-2 rounded-xl text-[10px] font-medium outline-none resize-none"
+                                                                    placeholder="Answer"
                                                                     rows={2}
                                                                     value={faq.answer}
                                                                     onChange={e => {
                                                                         const newF = [...formData.faqs];
                                                                         newF[idx].answer = e.target.value;
-                                                                        setFormData({...formData, faqs: newF});
+                                                                        setFormData({ ...formData, faqs: newF });
                                                                     }}
                                                                 />
                                                             </div>
@@ -812,49 +811,49 @@ const AdminServices = () => {
                                                             <p className="text-[9px] font-bold text-emerald-700/60 mt-1 uppercase">BANNERS SHOWN IN PROTOCOL MODAL</p>
                                                         </div>
                                                     </div>
-                                                    <button type="button" onClick={() => setFormData({...formData, offers: [...formData.offers, {text: '', code: '', color: 'brand'}]})} className="text-emerald-700 text-[10px] font-black uppercase tracking-widest">+ Add Offer</button>
+                                                    <button type="button" onClick={() => setFormData({ ...formData, offers: [...formData.offers, { text: '', code: '', color: 'brand' }] })} className="text-emerald-700 text-[10px] font-black uppercase tracking-widest">+ Add Offer</button>
                                                 </div>
 
                                                 <div className="space-y-3">
                                                     {formData.offers.map((offer, idx) => (
                                                         <div key={idx} className="bg-white rounded-xl p-4 border border-emerald-100 space-y-3 relative group">
-                                                            <button type="button" onClick={() => setFormData({...formData, offers: formData.offers.filter((_, i) => i !== idx)})} className="absolute top-2 right-2 p-1.5 text-red-500 opacity-0 group-hover:opacity-100 transition-all"><X size={12} /></button>
+                                                            <button type="button" onClick={() => setFormData({ ...formData, offers: formData.offers.filter((_, i) => i !== idx) })} className="absolute top-2 right-2 p-1.5 text-red-500 opacity-0 group-hover:opacity-100 transition-all"><X size={12} /></button>
                                                             <div className="grid grid-cols-2 gap-3">
                                                                 <div className="col-span-2 space-y-1">
                                                                     <label className="text-[8px] font-black text-content-subtle uppercase">Offer Message</label>
-                                                                    <input 
-                                                                        className="w-full bg-gray-50 border border-gray-100 px-3 py-2 rounded-lg text-[10px] font-bold outline-none" 
-                                                                        placeholder="e.g. 20% OFF on your first wash" 
+                                                                    <input
+                                                                        className="w-full bg-gray-50 border border-gray-100 px-3 py-2 rounded-lg text-[10px] font-bold outline-none"
+                                                                        placeholder="e.g. 20% OFF on your first wash"
                                                                         value={offer.text}
                                                                         onChange={e => {
                                                                             const newO = [...formData.offers];
                                                                             newO[idx].text = e.target.value;
-                                                                            setFormData({...formData, offers: newO});
+                                                                            setFormData({ ...formData, offers: newO });
                                                                         }}
                                                                     />
                                                                 </div>
                                                                 <div className="space-y-1">
                                                                     <label className="text-[8px] font-black text-content-subtle uppercase">Promo Code</label>
-                                                                    <input 
-                                                                        className="w-full bg-gray-50 border border-gray-100 px-3 py-2 rounded-lg text-[10px] font-bold outline-none" 
-                                                                        placeholder="CLEAN20" 
+                                                                    <input
+                                                                        className="w-full bg-gray-50 border border-gray-100 px-3 py-2 rounded-lg text-[10px] font-bold outline-none"
+                                                                        placeholder="CLEAN20"
                                                                         value={offer.code}
                                                                         onChange={e => {
                                                                             const newO = [...formData.offers];
                                                                             newO[idx].code = e.target.value;
-                                                                            setFormData({...formData, offers: newO});
+                                                                            setFormData({ ...formData, offers: newO });
                                                                         }}
                                                                     />
                                                                 </div>
                                                                 <div className="space-y-1">
                                                                     <label className="text-[8px] font-black text-content-subtle uppercase">Theme</label>
-                                                                    <select 
-                                                                        className="w-full bg-gray-50 border border-gray-100 px-3 py-2 rounded-lg text-[10px] font-bold outline-none" 
+                                                                    <select
+                                                                        className="w-full bg-gray-50 border border-gray-100 px-3 py-2 rounded-lg text-[10px] font-bold outline-none"
                                                                         value={offer.color}
                                                                         onChange={e => {
                                                                             const newO = [...formData.offers];
                                                                             newO[idx].color = e.target.value;
-                                                                            setFormData({...formData, offers: newO});
+                                                                            setFormData({ ...formData, offers: newO });
                                                                         }}
                                                                     >
                                                                         <option value="brand">Brand Gold</option>
@@ -908,51 +907,54 @@ const AdminServices = () => {
                             </div>
                         </motion.div>
                     </div>
-                )}
-            </AnimatePresence>
+                )
+                }
+            </AnimatePresence >
 
             {/* Delete Confirmation Modal */}
-            <AnimatePresence>
-                {deleteConfirm.isOpen && (
-                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setDeleteConfirm({ isOpen: false, id: null })}
-                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 relative z-10 border border-gray-100 shadow-2xl text-center"
-                        >
-                            <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                                <Trash2 size={32} />
-                            </div>
-                            <h3 className="text-xl font-black text-content leading-none uppercase tracking-tighter mb-2">Decommission?</h3>
-                            <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mb-8 px-4">This action will permanently decommissioning this service protocol.</p>
-                            
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setDeleteConfirm({ isOpen: false, id: null })}
-                                    className="flex-1 bg-gray-100 text-content-subtle py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleDelete}
-                                    className="flex-1 bg-red-500 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all"
-                                >
-                                    Terminate
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-        </AdminLayout>
+            < AnimatePresence >
+                {
+                    deleteConfirm.isOpen && (
+                        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                onClick={() => setDeleteConfirm({ isOpen: false, id: null })}
+                                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                            />
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                                className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 relative z-10 border border-gray-100 shadow-2xl text-center"
+                            >
+                                <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                                    <Trash2 size={32} />
+                                </div>
+                                <h3 className="text-xl font-black text-content leading-none uppercase tracking-tighter mb-2">Decommission?</h3>
+                                <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mb-8 px-4">This action will permanently decommissioning this service protocol.</p>
+
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setDeleteConfirm({ isOpen: false, id: null })}
+                                        className="flex-1 bg-gray-100 text-content-subtle py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleDelete}
+                                        className="flex-1 bg-red-500 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all"
+                                    >
+                                        Terminate
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )
+                }
+            </AnimatePresence >
+        </>
     );
 };
 

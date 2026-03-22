@@ -11,6 +11,7 @@ const profileController = require('../controllers/profileController');
 const paymentController = require('../controllers/paymentController');
 const mapController = require('../controllers/mapController');
 const reviewController = require('../controllers/reviewController');
+const sosController = require('../controllers/sosController');
 const webhookController = require('../controllers/webhookController');
 
 // Import Auth Middleware
@@ -138,6 +139,17 @@ router.delete('/notifications/clear', profileController.clearNotifications);
 router.get('/profile/trusted-contacts', profileController.getTrustedContacts);
 router.post('/profile/trusted-contacts', profileController.addTrustedContact);
 router.delete('/profile/trusted-contacts/:contactId', profileController.removeTrustedContact);
+
+// Payment Methods routes
+router.get('/profile/payment-methods', profileController.getPaymentMethods);
+router.post('/profile/payment-methods', profileController.addPaymentMethod);
+router.delete('/profile/payment-methods/:methodId', profileController.removePaymentMethod);
+router.patch('/profile/payment-methods/:methodId/default', profileController.setDefaultPaymentMethod);
+
+// SOS Alert routes
+router.post('/sos', sosController.triggerSOS);
+router.get('/sos/:id', sosController.getSOSStatus);
+router.patch('/sos/:id/resolve', sosController.resolveSOS);
 
 // Account management
 router.get('/subscription', profileController.getSubscription);

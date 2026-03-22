@@ -1,12 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import {
     ChevronLeft, Search, MapPin, Star, Clock,
     Filter, SlidersHorizontal, Navigation, ArrowRight,
-    Briefcase, ShieldCheck, Zap, Droplets
+    Briefcase, ShieldCheck, Zap, Droplets, Map as MapIcon, List
 } from 'lucide-react';
 import MobileLayout from '../components/layout/MobileLayout';
+import LocationContext from '../../../context/LocationContextBase';
+import { serviceAPI } from '../../../utils/api';
+
+// Fix Leaflet marker icon issue in production/Vite
+const studioIcon = new L.Icon({
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png',
+    iconSize: [38, 38],
+    iconAnchor: [19, 38],
+    popupAnchor: [0, -38]
+});
+
+const userIcon = new L.Icon({
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/7077/7077313.png',
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+    popupAnchor: [0, -30]
+});
+
+// Helper component to center map
+const RecenterMap = ({ lat, lng }) => {
+    const map = useMap();
+    useEffect(() => {
+        if (lat && lng) map.setView([lat, lng], 13);
+    }, [lat, lng, map]);
+    return null;
+};
 
 const StudioDiscovery = () => {
     const navigate = useNavigate();
@@ -14,23 +43,38 @@ const StudioDiscovery = () => {
     const [activeFilter, setActiveFilter] = useState('All');
     const [studios, setStudios] = useState([]);
     const [loading, setLoading] = useState(true);
+    const { currentLocation, detectCurrentLocation } = useContext(LocationContext);
+    const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
 
-    React.useEffect(() => {
+    useEffect(() => {
+        if (!currentLocation) {
+            detectCurrentLocation().catch(err => console.error('Location detection failed:', err));
+        }
+    }, [currentLocation, detectCurrentLocation]);
+
+    useEffect(() => {
         const fetchStudios = async () => {
             try {
                 setLoading(true);
-                const response = await serviceAPI.getHubs({ type: 'Studio' });
+                const params = { type: 'Studio' };
+                if (currentLocation) {
+                    params.lat = currentLocation.lat;
+                    params.lng = currentLocation.lng;
+                    params.radius = 10;
+                }
+
+                const response = await serviceAPI.getHubs(params);
                 if (response.status === 'success') {
-                    // Map backend Hubs to UI format
                     const mappedStudios = response.data.hubs.map(hub => ({
                         id: hub._id,
                         name: hub.vendor?.profile?.studioName || hub.name,
                         location: `${hub.city} · ${hub.load} Load`,
+                        coordinates: hub.location?.coordinates?.coordinates || [77.1025, 28.7041], // [lng, lat]
                         rating: hub.vendor?.rating || 4.8,
-                        reviews: Math.floor(Math.random() * 500) + 100, // Simulated reviews count
+                        reviews: Math.floor(Math.random() * 500) + 100,
                         image: hub.vendor?.profile?.avatar || 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=600&q=80',
                         tags: [hub.city, 'Express Wash'],
-                        price: '₹899', // Starting price placeholder
+                        price: '₹899',
                         isElite: hub.type === 'Studio',
                         features: ['Pickup Available', 'CCTV Monitor', 'Waiting Lounge']
                     }));
@@ -43,7 +87,7 @@ const StudioDiscovery = () => {
             }
         };
         fetchStudios();
-    }, []);
+    }, [currentLocation]);
 
     const filteredStudios = studios.filter(s =>
         s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -95,97 +139,186 @@ const StudioDiscovery = () => {
             </header>
 
             <div className="px-4 py-4 space-y-6 pb-24">
-                {/* ── Map Teaser ── */}
-                <div className="bg-content rounded-2xl p-4 shadow-lg flex items-center justify-between relative overflow-hidden group">
-                    <div className="relative z-10">
-                        <h3 className="text-white font-black text-sm tracking-tight mb-1">View on Map</h3>
-                        <p className="text-white/40 text-[9px] font-bold uppercase tracking-widest">See studios around you</p>
-                    </div>
-                    <button onClick={() => navigate('/map?type=vendor')} className="relative z-10 w-10 h-10 bg-brand rounded-xl flex items-center justify-center text-white shadow-lg">
-                        <Navigation size={18} fill="white" />
+                {/* ── View Toggle ── */}
+                <div className="flex bg-gray-100 p-1 rounded-2xl">
+                    <button
+                        onClick={() => setViewMode('list')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-white shadow-md text-brand' : 'text-content-muted'}`}
+                    >
+                        <List size={16} /> List View
                     </button>
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand/10 blur-3xl rounded-full" />
+                    <button
+                        onClick={() => setViewMode('map')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'map' ? 'bg-white shadow-md text-brand' : 'text-content-muted'}`}
+                    >
+                        <MapIcon size={16} /> Map View
+                    </button>
                 </div>
 
-                {/* ── Studio List ── */}
-                <div className="space-y-4">
-                    {loading ? (
-                        [1, 2, 3].map(i => (
-                            <div key={i} className="h-64 bg-gray-50 rounded-2xl animate-pulse" />
-                        ))
-                    ) : filteredStudios.length === 0 ? (
-                        <div className="py-20 text-center">
-                            <MapPin size={40} className="mx-auto text-gray-200 mb-4" />
-                            <p className="text-xs font-bold text-content-subtle uppercase tracking-widest">No studios found nearby</p>
-                        </div>
-                    ) : (
-                        filteredStudios.map((studio, i) => (
-                            <motion.div
-                                key={studio.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: i * 0.1 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={() => navigate(`/map?studio=${studio.id}&type=vendor&price=${studio.price}`)}
-                                className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden group cursor-pointer"
+                <AnimatePresence mode="wait">
+                    {viewMode === 'map' ? (
+                        <motion.div
+                            key="map"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="h-[60vh] rounded-[2.5rem] overflow-hidden border-2 border-white shadow-2xl relative"
+                        >
+                            <MapContainer
+                                center={[currentLocation?.lat || 28.7041, currentLocation?.lng || 77.1025]}
+                                zoom={13}
+                                className="h-full w-full z-10"
                             >
-                                {/* Image Header */}
-                                <div className="relative h-44 overflow-hidden">
-                                    <img src={studio.image} alt={studio.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                                    {studio.isElite && (
-                                        <div className="absolute top-3 left-3 bg-brand px-2.5 py-1.5 rounded-lg flex items-center gap-1.5">
-                                            <Zap size={10} className="text-white" fill="white" />
-                                            <span className="text-white text-[8px] font-black uppercase tracking-widest">Elite Service</span>
-                                        </div>
-                                    )}
-                                    <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
-                                        <div>
-                                            <h3 className="text-white text-lg font-black tracking-tight leading-none mb-1">{studio.name}</h3>
-                                            <div className="flex items-center gap-2">
-                                                <div className="flex items-center gap-1 bg-white/20 backdrop-blur-md px-2 py-0.5 rounded-md">
-                                                    <Star size={10} className="text-amber-400" fill="currentColor" />
-                                                    <span className="text-white text-[10px] font-black">{studio.rating}</span>
-                                                </div>
-                                                <span className="text-white/60 text-[10px] font-bold">{studio.location}</span>
-                                            </div>
-                                        </div>
-                                        <div className="bg-white p-2.5 rounded-xl shadow-lg">
-                                            <p className="text-[7px] font-black text-content-subtle uppercase tracking-widest leading-none mb-0.5">Starts at</p>
-                                            <p className="text-brand font-black text-base leading-none italic">{studio.price}</p>
-                                        </div>
-                                    </div>
-                                </div>
+                                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                                <RecenterMap lat={currentLocation?.lat} lng={currentLocation?.lng} />
 
-                                {/* Features Footer */}
-                                <div className="p-4 flex items-center justify-between">
-                                    <div className="flex gap-2">
-                                        {studio.features.slice(0, 2).map(f => (
-                                            <div key={f} className="flex items-center gap-1 text-[9px] font-black text-content-subtle uppercase tracking-wider">
-                                                <ShieldCheck size={12} className="text-brand" /> {f}
+                                {currentLocation && (
+                                    <Marker position={[currentLocation.lat, currentLocation.lng]} icon={userIcon}>
+                                        <Popup>You are here</Popup>
+                                    </Marker>
+                                )}
+
+                                {studios.map(studio => (
+                                    <Marker
+                                        key={studio.id}
+                                        position={[studio.coordinates[1], studio.coordinates[0]]}
+                                        icon={studioIcon}
+                                    >
+                                        <Popup>
+                                            <div className="p-1 min-w-[150px]">
+                                                <img src={studio.image} className="w-full h-20 object-cover rounded-lg mb-2" alt={studio.name} />
+                                                <h4 className="font-black text-xs uppercase mb-1">{studio.name}</h4>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-brand font-black italic">{studio.price}</span>
+                                                    <button
+                                                        onClick={() => navigate(`/service/${studio.id}`)}
+                                                        className="bg-black text-white text-[8px] px-2 py-1 rounded-md font-black uppercase"
+                                                    >
+                                                        Details
+                                                    </button>
+                                                </div>
                                             </div>
-                                        ))}
-                                    </div>
-                                    <button className="w-8 h-8 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-brand group-hover:bg-brand group-hover:text-white transition-all">
-                                        <ArrowRight size={14} strokeWidth={3} />
+                                        </Popup>
+                                    </Marker>
+                                ))}
+                            </MapContainer>
+
+                            {!currentLocation && (
+                                <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-20 flex flex-col items-center justify-center text-center p-10">
+                                    <Navigation size={40} className="text-brand animate-bounce mb-4" />
+                                    <h4 className="font-black text-content uppercase tracking-tight">Detecting Location...</h4>
+                                    <p className="text-[10px] font-bold text-content-subtle mt-2">Allow location access to see studios near you</p>
+                                    <button
+                                        onClick={() => detectCurrentLocation()}
+                                        className="mt-6 bg-black text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest"
+                                    >
+                                        Enable Access
                                     </button>
                                 </div>
-                            </motion.div>
-                        ))
-                    )}
-                </div>
+                            )}
+                        </motion.div>
+                    ) : (
+                        <motion.div
+                            key="list"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="space-y-4"
+                        >
+                            {/* ── Map Teaser (Only in List View) ── */}
+                            <div className="bg-content rounded-2xl p-4 shadow-lg flex items-center justify-between relative overflow-hidden group">
+                                <div className="relative z-10">
+                                    <h3 className="text-white font-black text-sm tracking-tight mb-1">View on Map</h3>
+                                    <p className="text-white/40 text-[9px] font-bold uppercase tracking-widest">See studios around you</p>
+                                </div>
+                                <button onClick={() => setViewMode('map')} className="relative z-10 w-10 h-10 bg-brand rounded-xl flex items-center justify-center text-white shadow-lg">
+                                    <Navigation size={18} fill="white" />
+                                </button>
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-brand/10 blur-3xl rounded-full" />
+                            </div>
 
-                {/* ── Promotion ── */}
-                <div className="bg-gray-100 rounded-2xl p-5 border border-dashed border-gray-300 flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                        <Droplets size={24} className="text-blue-500" />
-                    </div>
-                    <div className="flex-1">
-                        <h4 className="font-black text-xs text-content uppercase tracking-widest">Become a Partner</h4>
-                        <p className="text-[10px] font-bold text-content-subtle mt-1">List your studio on CarWash and reach 10x customers.</p>
-                    </div>
-                    <button onClick={() => navigate('/vendor/signup')} className="text-brand text-[8px] font-black uppercase tracking-widest border-b border-brand/30">Join Us</button>
-                </div>
+                            {/* ── Studio List ── */}
+                            <div className="space-y-4">
+                                {loading ? (
+                                    [1, 2, 3].map(i => (
+                                        <div key={i} className="h-64 bg-gray-50 rounded-2xl animate-pulse" />
+                                    ))
+                                ) : filteredStudios.length === 0 ? (
+                                    <div className="py-20 text-center">
+                                        <MapPin size={40} className="mx-auto text-gray-200 mb-4" />
+                                        <p className="text-xs font-bold text-content-subtle uppercase tracking-widest">No studios found nearby</p>
+                                    </div>
+                                ) : (
+                                    filteredStudios.map((studio, i) => (
+                                        <motion.div
+                                            key={studio.id}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: i * 0.1 }}
+                                            whileTap={{ scale: 0.98 }}
+                                            onClick={() => navigate(`/map?studio=${studio.id}&type=vendor&price=${studio.price}`)}
+                                            className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden group cursor-pointer"
+                                        >
+                                            {/* Image Header */}
+                                            <div className="relative h-44 overflow-hidden">
+                                                <img src={studio.image} alt={studio.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                                {studio.isElite && (
+                                                    <div className="absolute top-3 left-3 bg-brand px-2.5 py-1.5 rounded-lg flex items-center gap-1.5">
+                                                        <Zap size={10} className="text-white" fill="white" />
+                                                        <span className="text-white text-[8px] font-black uppercase tracking-widest">Elite Service</span>
+                                                    </div>
+                                                )}
+                                                <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
+                                                    <div>
+                                                        <h3 className="text-white text-lg font-black tracking-tight leading-none mb-1">{studio.name}</h3>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="flex items-center gap-1 bg-white/20 backdrop-blur-md px-2 py-0.5 rounded-md">
+                                                                <Star size={10} className="text-amber-400" fill="currentColor" />
+                                                                <span className="text-white text-[10px] font-black">{studio.rating}</span>
+                                                            </div>
+                                                            <span className="text-white/60 text-[10px] font-bold">{studio.location}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="bg-white p-2.5 rounded-xl shadow-lg">
+                                                        <p className="text-[7px] font-black text-content-subtle uppercase tracking-widest leading-none mb-0.5">Starts at</p>
+                                                        <p className="text-brand font-black text-base leading-none italic">{studio.price}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Features Footer */}
+                                            <div className="p-4 flex items-center justify-between">
+                                                <div className="flex gap-2">
+                                                    {studio.features.slice(0, 2).map(f => (
+                                                        <div key={f} className="flex items-center gap-1 text-[9px] font-black text-content-subtle uppercase tracking-wider">
+                                                            <ShieldCheck size={12} className="text-brand" /> {f}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <button className="w-8 h-8 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-brand group-hover:bg-brand group-hover:text-white transition-all">
+                                                    <ArrowRight size={14} strokeWidth={3} />
+                                                </button>
+                                            </div>
+                                        </motion.div>
+                                    ))
+                                )}
+                            </div>
+
+                            {/* ── Promotion ── */}
+                            <div className="bg-gray-100 rounded-2xl p-5 border border-dashed border-gray-300 flex items-center gap-4">
+                                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                                    <Droplets size={24} className="text-blue-500" />
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="font-black text-xs text-content uppercase tracking-widest">Become a Partner</h4>
+                                    <p className="text-[10px] font-bold text-content-subtle mt-1">List your studio on CarWash and reach 10x customers.</p>
+                                </div>
+                                <button onClick={() => navigate('/vendor/signup')} className="text-brand text-[8px] font-black uppercase tracking-widest border-b border-brand/30">Join Us</button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </MobileLayout>
     );

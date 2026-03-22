@@ -5,6 +5,7 @@ const jobController = require('../controllers/jobController');
 const profileController = require('../controllers/profileController');
 const rewardsController = require('../controllers/rewardsController');
 const captainProductController = require('../controllers/captainProductController');
+const sosController = require('../../consumer/controllers/sosController');
 
 const authMiddleware = require('../../../middleware/authMiddleware');
 
@@ -41,6 +42,9 @@ router.get('/product-missions/available', captainProductController.getAvailableP
 router.post('/product-missions/:orderId/items/:itemId/accept', captainProductController.acceptProductPickup);
 router.patch('/product-missions/:orderId/items/:itemId/status', captainProductController.updateProductStatus);
 router.post('/product-missions/accept-batch', captainProductController.acceptProductBatch);
+
+// SOS Response
+router.post('/sos/:id/respond', sosController.respondToSOS);
 
 // Notification routes
 router.get('/notifications', profileController.getNotifications);

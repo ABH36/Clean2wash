@@ -6,6 +6,7 @@ const ProductOrder = require('../../../models/ProductOrder');
 const Hub = require('../../../models/Hub');
 const Setting = require('../../../models/Setting');
 const AuditLog = require('../../../models/AuditLog');
+const Notification = require('../../../models/Notification');
 const socketService = require('../../../socketService');
 const { sendCaptainNotification, sendVendorNotification } = require('../../../utils/notificationService');
 const WalletTransaction = require('../../../models/WalletTransaction');
@@ -789,7 +790,78 @@ exports.updateGlobalProductOrderStatus = async (req, res) => {
             data: { order }
         });
     } catch (error) {
-        console.error('Error updating global order status:', error);
         res.status(500).json({ status: 'error', message: 'Update failed' });
+    }
+};
+
+// --- NOTIFICATION MANAGEMENT ---
+
+// Get all admin notifications
+exports.getNotifications = async (req, res) => {
+    try {
+        const { page, limit, type, isRead, priority } = req.query;
+
+        // Safely parse isRead boolean
+        let isReadParsed = undefined;
+        if (isRead === 'true') isReadParsed = true;
+        if (isRead === 'false') isReadParsed = false;
+
+        const options = {
+            page,
+            limit,
+            type,
+            isRead: isReadParsed,
+            priority
+        };
+
+        const result = await Notification.getAdminNotifications(options);
+
+        res.status(200).json({
+            status: 'success',
+            data: result
+        });
+    } catch (error) {
+        console.error('Error fetching admin notifications:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to fetch notifications' });
+    }
+};
+
+// Mark a notification as read
+exports.markNotificationRead = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const notification = await Notification.findById(id);
+
+        if (!notification) {
+            return res.status(404).json({ status: 'fail', message: 'Notification not found' });
+        }
+
+        await notification.markAsRead();
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Notification marked as read'
+        });
+    } catch (error) {
+        console.error('Error marking notification as read:', error);
+        res.status(500).json({ status: 'error', message: 'Update failed' });
+    }
+};
+
+// Mark all admin notifications as read
+exports.clearAllNotifications = async (req, res) => {
+    try {
+        await Notification.updateMany(
+            { isAdmin: true, isRead: false },
+            { isRead: true }
+        );
+
+        res.status(200).json({
+            status: 'success',
+            message: 'All notifications marked as read'
+        });
+    } catch (error) {
+        console.error('Error clearing admin notifications:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to clear notifications' });
     }
 };

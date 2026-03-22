@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import AdminLayout from '../components/AdminLayout';
 import { adminAPI } from '../../../utils/adminApi';
 import {
     TrendingUp,
@@ -176,45 +175,49 @@ const AdminDashboard = () => {
 
     if (loading) {
         return (
-            <AdminLayout title="Operational IQ">
+            <>
                 <div className="flex items-center justify-center h-64">
                     <div className="w-8 h-8 border-4 border-brand/30 border-t-brand rounded-full animate-spin" />
                 </div>
-            </AdminLayout>
+            </>
         );
     }
 
     return (
-        <AdminLayout title="Operational IQ">
+        <>
             {/* ── EMERGENCY OPS SECTION (SOS + STUCK) ── */}
-            <div className="mb-8 space-y-6">
+            <div className="mb-10 space-y-8">
                 {/* 1. SOS Alerts */}
                 {stats.criticalIssues && stats.criticalIssues.length > 0 && (
                     <div className="space-y-4">
                         <div className="flex items-center gap-3 px-1">
-                            <div className="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping" />
-                            <h3 className="text-sm font-black text-red-600 uppercase tracking-[0.2em]">Active SOS Alerts</h3>
+                            <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+                            <h3 className="text-[10px] font-black text-red-600 uppercase tracking-[0.3em]">Critical Incident Report (SOS)</h3>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {stats.criticalIssues.map((issue, idx) => (
                                 <motion.div
                                     key={idx}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="bg-red-600 p-6 rounded-[2.5rem] text-white shadow-xl shadow-red-200 group relative overflow-hidden"
+                                    initial={{ opacity: 0, scale: 0.98 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="bg-white p-8 rounded-[2rem] border-2 border-red-500/20 shadow-premium-color group relative overflow-hidden"
                                 >
                                     <div className="relative z-10">
-                                        <p className="text-[9px] font-black uppercase tracking-widest opacity-80 mb-2">SOS | {issue.bookingId || issue._id.slice(-6)}</p>
-                                        <h4 className="text-lg font-black leading-tight mb-2 uppercase italic">{issue.consumer?.name}</h4>
-                                        <p className="text-xs font-bold opacity-90 line-clamp-1">{issue.issues?.find(i => i.type === 'SOS')?.description}</p>
+                                        <div className="flex justify-between items-start mb-6">
+                                            <span className="text-[9px] font-black text-white bg-red-600 px-3 py-1 rounded-full uppercase tracking-widest">Active SOS</span>
+                                            <ShieldAlert size={18} className="text-red-500" />
+                                        </div>
+                                        <h4 className="text-xl font-black text-content uppercase tracking-tight mb-2 leading-none">{issue.consumer?.name}</h4>
+                                        <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mb-6">
+                                            {issue.issues?.find(i => i.type === 'SOS')?.description || 'Emergency assistance requested'}
+                                        </p>
                                         <button
                                             onClick={() => navigate(`/admin/bookings?id=${issue._id}`)}
-                                            className="mt-4 w-full py-2 bg-white text-red-600 rounded-xl text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all"
+                                            className="w-full py-3.5 bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-red-200 hover:bg-content transition-all"
                                         >
-                                            Response Hub
+                                            Intercept Incident
                                         </button>
                                     </div>
-                                    <AlertCircle size={80} className="absolute -right-4 -bottom-4 text-white/10" />
                                 </motion.div>
                             ))}
                         </div>
@@ -262,117 +265,122 @@ const AdminDashboard = () => {
             </div>
 
             {/* Tactical Stats Matrix */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-10">
                 {STATS.map((stat, i) => (
                     <motion.div
                         key={i}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: i * 0.1 }}
-                        className="bg-surface p-6 rounded-[2rem] border border-gray-100/10 shadow-soft group hover:border-brand transition-all relative overflow-hidden"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        className="bg-white p-7 rounded-[2.25rem] border border-gray-100 shadow-soft group hover:border-brand/40 transition-all relative overflow-hidden"
                     >
                         <div className="relative z-10">
-                            <div className="flex items-center justify-between mb-6">
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors group-hover:bg-brand group-hover:text-white ${stat.bg} ${stat.color}`}>
+                            <div className="flex items-center justify-between mb-8">
+                                <div className={`w-12 h-12 rounded-[1.25rem] flex items-center justify-center transition-all group-hover:scale-110 ${stat.bg} ${stat.color}`}>
                                     {stat.icon}
                                 </div>
-                                <div className={`flex items-center gap-1 text-[8px] font-black uppercase px-2 py-1 rounded-lg ${stat.isUp ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
-                                    {stat.trend}
+                                <div className={`text-[8px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full ${stat.isUp ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                                    {stat.trend.split('|')[0]}
                                 </div>
                             </div>
-                            <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] mb-1.5 px-0.5">{stat.label}</p>
-                            <h3 className="text-3xl font-black text-content tracking-tighter leading-none">{stat.val}</h3>
+                            <p className="text-[9px] font-black text-content-subtle uppercase tracking-[0.25em] mb-2 px-0.5">{stat.label}</p>
+                            <h3 className="text-4xl font-black text-content tracking-tighter leading-none tabular-nums [font-feature-settings:'tnum']">{stat.val}</h3>
                         </div>
                     </motion.div>
                 ))}
             </div>
 
             {/* Growth Loop Analytics (Phase 4) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-gradient-to-br from-indigo-600 to-violet-700 p-8 rounded-[2.5rem] text-white shadow-xl shadow-indigo-100 relative overflow-hidden group">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-soft relative overflow-hidden group">
                     <div className="relative z-10">
-                        <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-80 mb-2">Total Referrals</p>
-                        <h4 className="text-4xl font-black tracking-tight mb-6">{stats.growthLoop?.totalReferredUsers || 0}</h4>
-                        <div className="flex items-center gap-2">
-                            <Users size={16} className="text-indigo-200" />
-                            <span className="text-[10px] font-bold opacity-90 uppercase tracking-widest">Invited Users</span>
+                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-content-subtle mb-3">Total Referrals</p>
+                        <h4 className="text-4xl font-black tracking-tight text-content mb-6">{stats.growthLoop?.totalReferredUsers || 0}</h4>
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
+                                <Users size={16} />
+                            </div>
+                            <span className="text-[10px] font-bold text-content-subtle uppercase tracking-widest">Global Invited Network</span>
                         </div>
                     </div>
-                    <Users size={120} className="absolute -right-8 -bottom-8 text-white/10 group-hover:scale-110 transition-transform duration-700" />
                 </div>
 
-                <div className="bg-white p-8 rounded-[2.5rem] border border-indigo-50 shadow-soft relative overflow-hidden group">
+                <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-soft relative overflow-hidden group">
                     <div className="relative z-10">
-                        <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.3em] mb-2">Conversion Rate</p>
+                        <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em] mb-3">Conversion Matrix</p>
                         <h4 className="text-4xl font-black text-content tracking-tight mb-6">{stats.growthLoop?.referralConversionRate || 0}%</h4>
-                        <div className="h-1.5 bg-indigo-50 rounded-full overflow-hidden">
+                        <div className="h-1.5 bg-gray-50 rounded-full overflow-hidden">
                             <motion.div
                                 initial={{ width: 0 }}
                                 animate={{ width: `${stats.growthLoop?.referralConversionRate || 0}%` }}
-                                className="h-full bg-indigo-500"
+                                className="h-full bg-brand"
                             />
                         </div>
-                        <p className="text-[9px] font-bold text-content-subtle mt-4 uppercase tracking-widest">Successful Wash Match</p>
+                        <p className="text-[9px] font-bold text-content-subtle mt-4 uppercase tracking-widest px-0.5">Verified Wash Match</p>
                     </div>
                 </div>
 
-                <div className="bg-white p-8 rounded-[2.5rem] border border-green-50 shadow-soft relative overflow-hidden group">
+                <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-soft relative overflow-hidden group">
                     <div className="relative z-10">
-                        <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.3em] mb-2">Rewards Distributed</p>
-                        <h4 className="text-4xl font-black text-content tracking-tight mb-6">₹{(stats.growthLoop?.totalReferralRewards || 0).toLocaleString()}</h4>
-                        <div className="flex items-center gap-2 text-green-600">
-                            <CheckCircle2 size={14} />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Growth Capital Spent</span>
+                        <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em] mb-3">Rewards Distributed</p>
+                        <h4 className="text-4xl font-black text-content tracking-tight mb-6 tabular-nums">₹{(stats.growthLoop?.totalReferralRewards || 0).toLocaleString()}</h4>
+                        <div className="flex items-center gap-3 text-brand">
+                            <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center">
+                                <Wallet size={16} />
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-widest">Growth Capital Yield</span>
                         </div>
                     </div>
-                    <Wallet size={80} className="absolute -right-4 -bottom-4 text-green-50 group-hover:rotate-12 transition-transform duration-500" />
                 </div>
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                 {/* Operations Feed */}
-                <div className="xl:col-span-2 bg-surface rounded-[2.5rem] border border-gray-100/10 shadow-soft overflow-hidden flex flex-col">
-                    <div className="p-8 border-b border-gray-100/10 flex items-center justify-between bg-background/50">
+                <div className="xl:col-span-2 bg-white rounded-[2.5rem] border border-gray-100 shadow-premium overflow-hidden flex flex-col">
+                    <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-white">
                         <div>
-                            <h3 className="text-lg font-black text-content uppercase tracking-tight leading-none">Live Service Stream</h3>
-                            <p className="text-[9px] font-black text-content-subtle uppercase tracking-[0.25em] mt-2">Aggregated Ecosystem Logs</p>
+                            <h3 className="text-lg font-black text-content uppercase tracking-tight leading-none">Intelligence Feed</h3>
+                            <p className="text-[9px] font-black text-content-subtle uppercase tracking-[0.3em] mt-3">Global Operations Logbook</p>
                         </div>
                         <button
                             onClick={() => navigate('/admin/bookings')}
-                            className="text-[10px] font-black text-brand uppercase tracking-widest border-b border-brand/20 pb-0.5 hover:border-brand transition-all"
+                            className="h-10 px-5 bg-gray-50 text-content rounded-xl text-[9px] font-black uppercase tracking-[0.15em] hover:bg-content hover:text-white transition-all"
                         >
-                            Operations Hub
+                            Full Registry
                         </button>
                     </div>
-                    <div className="overflow-x-auto">
+                    <div className="admin-table-container">
                         <table className="w-full text-left">
-                            <thead className="bg-background/80">
-                                <tr>
-                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest">Node ID</th>
-                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest">Entity</th>
-                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest">Status</th>
-                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest text-right">Value</th>
+                            <thead>
+                                <tr className="bg-gray-50/50">
+                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest">Descriptor</th>
+                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest text-center">Protocol Status</th>
+                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest text-right">Value (INR)</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100/5">
+                            <tbody className="divide-y divide-gray-50">
                                 {RECENT_ORDERS.map((order, i) => (
-                                    <tr key={i} className="hover:bg-background/50 transition-all cursor-pointer group">
-                                        <td className="px-8 py-6">
-                                            <span className="text-xs font-black text-content tracking-tight">{order.id}</span>
-                                            <p className="text-[8px] font-bold text-content-subtle mt-1">{order.time}</p>
+                                    <tr key={i} className="hover:bg-gray-50/30 transition-all cursor-pointer group">
+                                        <td className="px-8 py-7">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center shrink-0">
+                                                    <Car size={16} className="text-content-subtle group-hover:text-brand transition-colors" />
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs font-black text-content tracking-tight block">{order.customer}</span>
+                                                    <p className="text-[8px] font-bold text-content-subtle uppercase tracking-widest mt-1.5">{order.service} | {order.time}</p>
+                                                </div>
+                                            </div>
                                         </td>
-                                        <td className="px-8 py-6">
-                                            <span className="text-xs font-bold text-content">{order.customer}</span>
-                                        </td>
-                                        <td className="px-8 py-6">
-                                            <div className="flex items-center gap-2">
-                                                <div className={`w-1.5 h-1.5 rounded-full ${order.status === 'Completed' ? 'bg-green-500' : 'bg-brand'} animate-pulse`} />
-                                                <span className={`text-[8px] font-black uppercase px-2.5 py-1 rounded-full ${order.status === 'Completed' ? 'bg-green-500/10 text-green-500' : 'bg-brand/10 text-brand'}`}>
+                                        <td className="px-8 py-7">
+                                            <div className="flex justify-center">
+                                                <span className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest ${order.status === 'Completed' ? 'bg-green-50 text-green-600' : 'bg-brand/10 text-brand'
+                                                    }`}>
                                                     {order.status}
                                                 </span>
                                             </div>
                                         </td>
-                                        <td className="px-8 py-6 text-xs font-black text-content text-right">{order.amount}</td>
+                                        <td className="px-8 py-7 text-xs font-black text-content text-right tabular-nums">{order.amount}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -426,8 +434,8 @@ const AdminDashboard = () => {
                         </div>
                     </div>
                 </div>
-            </div>
-        </AdminLayout>
+            </div >
+        </>
     );
 };
 

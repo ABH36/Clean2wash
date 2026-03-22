@@ -1,11 +1,40 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import {
     MapPin, ChevronLeft, Search, Navigation, Home, Briefcase,
     Plus, ChevronRight, Check, Zap, Calendar, Clock,
-    ChevronDown, Locate, Map as MapIcon, Crosshair
+    ChevronDown, Locate, Map as MapIcon, Crosshair, Star
 } from 'lucide-react';
+import LocationContext from '../../../context/LocationContextBase';
+import { serviceAPI } from '../../../utils/api';
+
+// Fix Leaflet marker icon issue
+const studioIcon = new L.Icon({
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png',
+    iconSize: [38, 38],
+    iconAnchor: [19, 38],
+    popupAnchor: [0, -38]
+});
+
+const userIcon = new L.Icon({
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/7077/7077313.png',
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+    popupAnchor: [0, -30]
+});
+
+// Helper component to center map
+const RecenterMap = ({ lat, lng }) => {
+    const map = useMap();
+    useEffect(() => {
+        if (lat && lng) map.setView([lat, lng], 13);
+    }, [lat, lng, map]);
+    return null;
+};
 
 const SAVED_PLACES = [
     { id: 'home', label: 'Home', address: 'HSR Layout, Sector 2, Bengaluru 560102', icon: Home, type: 'residential' },
@@ -21,13 +50,47 @@ const RECENT_LOCATIONS = [
 const MapScreen = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const type = searchParams.get('type');
     const context = searchParams.get('from') || 'wash';
+    const { currentLocation, detectCurrentLocation } = useContext(LocationContext);
 
     const searchInputRef = useRef(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedLocation, setSelectedLocation] = useState(SAVED_PLACES[0]);
     const [searchResults, setSearchResults] = useState([]);
-    const [mapOpacity, setMapOpacity] = useState(0.4);
+    const [mapOpacity, setMapOpacity] = useState(0.8); // Default to full opacity for real map
+    const [studios, setStudios] = useState([]);
+
+    // Fetch studios if type=vendor
+    useEffect(() => {
+        if (type === 'vendor') {
+            const fetchStudios = async () => {
+                try {
+                    const params = { type: 'Studio' };
+                    if (currentLocation) {
+                        params.lat = currentLocation.lat;
+                        params.lng = currentLocation.lng;
+                        params.radius = 10;
+                    }
+                    const response = await serviceAPI.getHubs(params);
+                    if (response.status === 'success') {
+                        const mapped = response.data.hubs.map(hub => ({
+                            id: hub._id,
+                            name: hub.vendor?.profile?.studioName || hub.name,
+                            coordinates: hub.location?.coordinates?.coordinates || [77.1025, 28.7041],
+                            rating: hub.vendor?.rating || 4.8,
+                            image: hub.vendor?.profile?.avatar || 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=600&q=80',
+                            price: '₹899'
+                        }));
+                        setStudios(mapped);
+                    }
+                } catch (err) {
+                    console.error('Failed to fetch vendors for map:', err);
+                }
+            };
+            fetchStudios();
+        }
+    }, [type, currentLocation]);
 
     // Filter results based on search query
     useEffect(() => {
@@ -63,36 +126,60 @@ const MapScreen = () => {
         <div className="h-screen w-full bg-white relative overflow-hidden flex flex-col font-sans">
             {/* ── Background Map Surface ── */}
             <div className="absolute inset-0 z-0">
-                <motion.img
-                    animate={{ opacity: mapOpacity }}
-                    src="https://images.unsplash.com/photo-1524661135-423995f22d0b?w=1000&q=80"
-                    className="w-full h-full object-cover grayscale mix-blend-multiply"
-                    alt="Map Background"
-                />
-                <div className="absolute inset-0 bg-gradient-to-b from-white via-transparent to-white/90" />
+                <MapContainer
+                    center={[currentLocation?.lat || 28.7041, currentLocation?.lng || 77.1025]}
+                    zoom={13}
+                    zoomControl={false}
+                    className="h-full w-full"
+                >
+                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                    <RecenterMap lat={currentLocation?.lat} lng={currentLocation?.lng} />
 
-                {/* Visual Grid */}
-                <div className="absolute inset-0 opacity-[0.02] pointer-events-none"
+                    {currentLocation && (
+                        <Marker position={[currentLocation.lat, currentLocation.lng]} icon={userIcon}>
+                            <Popup>You are here</Popup>
+                        </Marker>
+                    )}
+
+                    {type === 'vendor' && studios.map(studio => (
+                        <Marker
+                            key={studio.id}
+                            position={[studio.coordinates[1], studio.coordinates[0]]}
+                            icon={studioIcon}
+                        >
+                            <Popup>
+                                <div className="p-1 min-w-[150px]">
+                                    <img src={studio.image} className="w-full h-20 object-cover rounded-lg mb-2" alt={studio.name} />
+                                    <h4 className="font-black text-xs uppercase mb-1">{studio.name}</h4>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-brand font-black italic">{studio.price}</span>
+                                        <button
+                                            onClick={() => navigate(`/service/${studio.id}`)}
+                                            className="bg-black text-white text-[8px] px-2 py-1 rounded-md font-black uppercase"
+                                        >
+                                            Book
+                                        </button>
+                                    </div>
+                                </div>
+                            </Popup>
+                        </Marker>
+                    ))}
+                </MapContainer>
+
+                <div className="absolute inset-0 bg-gradient-to-b from-white via-transparent to-white/90 pointer-events-none" />
+                <div className="absolute inset-0 opacity-[0.05] pointer-events-none"
                     style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
 
-                {/* Center Pin Indicator - MOVED UP to avoid UI overlap */}
-                <div className="absolute top-[38%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10">
-                    <motion.div
-                        initial={{ y: -20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        className="relative"
-                    >
-                        <div className="w-14 h-14 bg-black rounded-[1.25rem] flex items-center justify-center shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-2 border-white relative z-10">
-                            <MapPin size={28} className="text-brand" fill="currentColor" strokeWidth={1} />
-                        </div>
-                        <div className="w-2 h-2 bg-black rounded-full mx-auto mt-1 shadow-2xl" />
-                        <motion.div
-                            animate={{ scale: [1, 2.5, 1], opacity: [0.15, 0, 0.15] }}
-                            transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
-                            className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-12 h-12 bg-black/10 rounded-full blur-md"
-                        />
-                    </motion.div>
-                </div>
+                {!type && (
+                    <div className="absolute top-[38%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10">
+                        <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="relative">
+                            <div className="w-14 h-14 bg-black rounded-[1.25rem] flex items-center justify-center shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-2 border-white relative z-10">
+                                <MapPin size={28} className="text-brand" fill="currentColor" strokeWidth={1} />
+                            </div>
+                            <div className="w-2 h-2 bg-black rounded-full mx-auto mt-1 shadow-2xl" />
+                        </motion.div>
+                    </div>
+                )}
             </div>
 
             {/* ── Top Bar Container ── */}

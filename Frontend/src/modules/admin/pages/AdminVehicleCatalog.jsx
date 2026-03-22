@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AdminLayout from '../components/AdminLayout';
 import { adminAPI } from '../../../utils/adminApi';
 import { toast } from 'react-hot-toast';
 import {
@@ -219,7 +218,7 @@ const AdminVehicleCatalog = () => {
     };
 
     return (
-        <AdminLayout title="Vehicle Catalog">
+        <>
             <div className="space-y-6">
                 {/* Filters & Search */}
                 <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
@@ -326,7 +325,7 @@ const AdminVehicleCatalog = () => {
                                 ))}
                             </div>
                         ) : (
-                            <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-soft overflow-hidden">
+                            <div className="admin-table-container bg-white rounded-[2.5rem] border border-gray-100 shadow-soft overflow-hidden">
                                 <table className="w-full text-left">
                                     <thead className="bg-gray-50/50">
                                         <tr>
@@ -520,22 +519,22 @@ const AdminVehicleCatalog = () => {
                                             <div className="space-y-4">
                                                 <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest flex items-center justify-between">
                                                     <span className="flex items-center gap-2"><Tag size={14} className="text-amber-500" /> Identity Highlights</span>
-                                                    <button type="button" onClick={() => setFormData({...formData, features: [...formData.features, '']})} className="text-brand text-[9px]">+ Add Feature</button>
+                                                    <button type="button" onClick={() => setFormData({ ...formData, features: [...formData.features, ''] })} className="text-brand text-[9px]">+ Add Feature</button>
                                                 </label>
                                                 <div className="space-y-2">
                                                     {formData.features.map((f, idx) => (
                                                         <div key={idx} className="flex gap-2">
-                                                            <input 
-                                                                className="flex-1 bg-gray-50 border border-gray-100 px-4 py-2 rounded-xl text-[11px] font-bold outline-none" 
-                                                                placeholder="e.g. Extra Luxury Care" 
+                                                            <input
+                                                                className="flex-1 bg-gray-50 border border-gray-100 px-4 py-2 rounded-xl text-[11px] font-bold outline-none"
+                                                                placeholder="e.g. Extra Luxury Care"
                                                                 value={f}
                                                                 onChange={e => {
                                                                     const newF = [...formData.features];
                                                                     newF[idx] = e.target.value;
-                                                                    setFormData({...formData, features: newF});
+                                                                    setFormData({ ...formData, features: newF });
                                                                 }}
                                                             />
-                                                            <button type="button" onClick={() => setFormData({...formData, features: formData.features.filter((_, i) => i !== idx)})} className="p-2 text-red-500"><Trash2 size={12} /></button>
+                                                            <button type="button" onClick={() => setFormData({ ...formData, features: formData.features.filter((_, i) => i !== idx) })} className="p-2 text-red-500"><Trash2 size={12} /></button>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -545,23 +544,23 @@ const AdminVehicleCatalog = () => {
                                             <div className="space-y-4">
                                                 <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest flex items-center justify-between">
                                                     <span className="flex items-center gap-2"><Zap size={14} className="text-blue-500" /> Model Prep Protocol</span>
-                                                    <button type="button" onClick={() => setFormData({...formData, protocolSteps: [...formData.protocolSteps, '']})} className="text-brand text-[9px]">+ Add Step</button>
+                                                    <button type="button" onClick={() => setFormData({ ...formData, protocolSteps: [...formData.protocolSteps, ''] })} className="text-brand text-[9px]">+ Add Step</button>
                                                 </label>
                                                 <div className="space-y-2">
                                                     {formData.protocolSteps.map((step, idx) => (
                                                         <div key={idx} className="flex gap-2">
                                                             <span className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-black">{idx + 1}</span>
-                                                            <input 
-                                                                className="flex-1 bg-gray-50 border border-gray-100 px-4 py-2 rounded-xl text-[11px] font-bold outline-none" 
-                                                                placeholder="e.g. Special Wheel Care" 
+                                                            <input
+                                                                className="flex-1 bg-gray-50 border border-gray-100 px-4 py-2 rounded-xl text-[11px] font-bold outline-none"
+                                                                placeholder="e.g. Special Wheel Care"
                                                                 value={step}
                                                                 onChange={e => {
                                                                     const newS = [...formData.protocolSteps];
                                                                     newS[idx] = e.target.value;
-                                                                    setFormData({...formData, protocolSteps: newS});
+                                                                    setFormData({ ...formData, protocolSteps: newS });
                                                                 }}
                                                             />
-                                                            <button type="button" onClick={() => setFormData({...formData, protocolSteps: formData.protocolSteps.filter((_, i) => i !== idx)})} className="p-2 text-red-500"><Trash2 size={12} /></button>
+                                                            <button type="button" onClick={() => setFormData({ ...formData, protocolSteps: formData.protocolSteps.filter((_, i) => i !== idx) })} className="p-2 text-red-500"><Trash2 size={12} /></button>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -605,7 +604,7 @@ const AdminVehicleCatalog = () => {
                             </div>
                             <h3 className="text-xl font-black text-content uppercase tracking-tighter mb-2">Deactivate Model?</h3>
                             <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mb-8 px-4">This action will deactivate this vehicle model from the operational catalog.</p>
-                            
+
                             <div className="flex gap-3">
                                 <button
                                     onClick={() => setDeleteConfirm({ isOpen: false, id: null })}
@@ -624,7 +623,7 @@ const AdminVehicleCatalog = () => {
                     </div>
                 )}
             </AnimatePresence>
-        </AdminLayout>
+        </>
     );
 };
 

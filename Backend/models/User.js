@@ -112,6 +112,15 @@ const userSchema = new mongoose.Schema({
             phone: { type: String, required: true },
             relation: { type: String },
             addedAt: { type: Date, default: Date.now }
+        }],
+        paymentMethods: [{
+            type: { type: String, enum: ['Card', 'UPI'], required: true },
+            brand: String, // Visa, MasterCard, Google Pay, etc.
+            last4: String, // for cards
+            expiry: String, // for cards (e.g. 12/28)
+            handle: String, // for UPI (e.g. user@okaxis)
+            isDefault: { type: Boolean, default: false },
+            addedAt: { type: Date, default: Date.now }
         }]
     },
     subscription: {

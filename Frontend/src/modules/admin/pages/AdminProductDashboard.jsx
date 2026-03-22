@@ -67,12 +67,7 @@ const AdminProductDashboard = () => {
     }
 
     return (
-        <div className="p-6 pb-24 space-y-8">
-            {/* Header */}
-            <div>
-                <h1 className="text-3xl font-bold text-onyx-900 mb-2">Product War-Room</h1>
-                <p className="text-onyx-600">Global oversight of platform products, inventory, and settlements.</p>
-            </div>
+        <div className="space-y-8 pb-20">
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -163,7 +158,7 @@ const StatCard = ({ title, value, icon, trend, isUp, warning }) => (
 );
 
 const VendorPerformanceTable = ({ vendors }) => (
-    <div className="overflow-x-auto">
+    <div className="admin-table-container">
         <table className="w-full text-left">
             <thead>
                 <tr className="text-onyx-500 text-sm font-medium border-b border-onyx-50">
@@ -212,7 +207,7 @@ const InventoryTable = ({ inventory, searchTerm, setSearchTerm }) => (
                 <span>Filters</span>
             </button>
         </div>
-        <div className="overflow-x-auto">
+        <div className="admin-table-container">
             <table className="w-full text-left">
                 <thead>
                     <tr className="text-onyx-500 text-sm font-medium border-b border-onyx-50">

@@ -22,6 +22,7 @@ import MapScreen from './modules/consumer/pages/MapScreen';
 import Signup from './modules/consumer/pages/Signup';
 import OTPVerification from './modules/consumer/pages/OTPVerification';
 import MyBookings from './modules/consumer/pages/MyBookings';
+import MyOrders from './modules/consumer/pages/MyOrders';
 import Notifications from './modules/consumer/pages/Notifications';
 import RateExperience from './modules/consumer/pages/RateExperience';
 import VehicleManager from './modules/consumer/pages/VehicleManager';
@@ -51,8 +52,8 @@ import ProductDetail from './modules/consumer/pages/ProductDetail';
 import Portfolio from './modules/consumer/pages/Portfolio';
 import ApartmentWash from './modules/consumer/pages/ApartmentWash';
 import OrderTracking from './modules/consumer/pages/OrderTracking';
-import MyOrders from './modules/consumer/pages/MyOrders';
-import LocationPromptModal from './modules/consumer/components/LocationPromptModal';
+import SOSActive from './modules/consumer/pages/SOSActive';
+import EmergencySOS from './modules/consumer/pages/EmergencySOS';
 
 // ── Spare Driver Pages ──
 import SpareDriverBooking from './modules/consumer/pages/SpareDriverBooking';
@@ -113,7 +114,7 @@ import SocietyRoute from './modules/staff/pages/SocietyRoute';
 import StaffProductTaskDetail from './modules/staff/pages/StaffProductTaskDetail';
 import CaptainProductMission from './modules/captain/pages/CaptainProductMission';
 
-// ── Admin Module ──
+import AdminPanelLayout from './modules/admin/components/AdminLayout';
 import AdminDashboard from './modules/admin/pages/AdminDashboard';
 import AdminAnalytics from './modules/admin/pages/AdminAnalytics';
 import AdminUsers from './modules/admin/pages/AdminUsers';
@@ -130,11 +131,17 @@ import AdminTransactions from './modules/admin/pages/AdminTransactions';
 import AdminVehicleCatalog from './modules/admin/pages/AdminVehicleCatalog';
 import AdminAuditLogs from './modules/admin/pages/AdminAuditLogs';
 import AdminProductDashboard from './modules/admin/pages/AdminProductDashboard';
+import AdminNotifications from './modules/admin/pages/AdminNotifications';
+import LocationPromptModal from './modules/consumer/components/LocationPromptModal';
 
 // ── Scroll to top on route change ──
 const ScrollToTop = () => {
   const { pathname } = useLocation();
-  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  useEffect(() => {
+    if (!pathname.startsWith('/admin')) {
+      window.scrollTo(0, 0);
+    }
+  }, [pathname]);
   return null;
 };
 
@@ -233,6 +240,8 @@ function App() {
                       <Route path="/compliance" element={P('consumer', <ComplianceCenter />)} />
                       <Route path="/safety/incidents" element={P('consumer', <IncidentLog />)} />
                       <Route path="/portfolio" element={P('consumer', <Portfolio />)} />
+                      <Route path="/sos-active" element={P('consumer', <SOSActive />)} />
+                      <Route path="/safety/sos" element={P('consumer', <EmergencySOS />)} />
 
                       {/* ── Captain: Protected ── */}
                       <Route path="/captain" element={P('captain', <CaptainHome />)} />
@@ -276,21 +285,24 @@ function App() {
                       <Route path="/staff/society-route" element={P('staff', <SocietyRoute />)} />
 
                       {/* ── Admin: Protected ── */}
-                      <Route path="/admin" element={P('admin', <AdminDashboard />)} />
-                      <Route path="/admin/analytics" element={P('admin', <AdminAnalytics />)} />
-                      <Route path="/admin/users" element={P('admin', <AdminUsers />)} />
-                      <Route path="/admin/services" element={P('admin', <AdminServices />)} />
-                      <Route path="/admin/subscriptions" element={P('admin', <AdminSubscriptions />)} />
-                      <Route path="/admin/bookings" element={P('admin', <AdminBookings />)} />
-                      <Route path="/admin/settings" element={P('admin', <AdminSettings />)} />
-                      <Route path="/admin/hubs" element={P('admin', <AdminHubs />)} />
-                      <Route path="/admin/products" element={P('admin', <AdminProductVerification />)} />
-                      <Route path="/admin/promotions" element={P('admin', <AdminPromotions />)} />
-                      <Route path="/admin/spare-drivers" element={P('admin', <AdminSpareDrivers />)} />
-                      <Route path="/admin/transactions" element={P('admin', <AdminTransactions />)} />
-                      <Route path="/admin/vehicle-catalog" element={P('admin', <AdminVehicleCatalog />)} />
-                      <Route path="/admin/product-war-room" element={P('admin', <AdminProductDashboard />)} />
-                      <Route path="/admin/audit" element={P('admin', <AdminAuditLogs />)} />
+                      <Route element={P('admin', <AdminPanelLayout />)}>
+                        <Route path="/admin" element={<AdminDashboard />} />
+                        <Route path="/admin/analytics" element={<AdminAnalytics />} />
+                        <Route path="/admin/users" element={<AdminUsers />} />
+                        <Route path="/admin/services" element={<AdminServices />} />
+                        <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
+                        <Route path="/admin/bookings" element={<AdminBookings />} />
+                        <Route path="/admin/settings" element={<AdminSettings />} />
+                        <Route path="/admin/hubs" element={<AdminHubs />} />
+                        <Route path="/admin/products" element={<AdminProductVerification />} />
+                        <Route path="/admin/promotions" element={<AdminPromotions />} />
+                        <Route path="/admin/spare-drivers" element={<AdminSpareDrivers />} />
+                        <Route path="/admin/transactions" element={<AdminTransactions />} />
+                        <Route path="/admin/vehicle-catalog" element={<AdminVehicleCatalog />} />
+                        <Route path="/admin/product-war-room" element={<AdminProductDashboard />} />
+                        <Route path="/admin/notifications" element={<AdminNotifications />} />
+                        <Route path="/admin/audit" element={<AdminAuditLogs />} />
+                      </Route>
 
                       {/* ── Fallback ── */}
                       <Route path="*" element={<Home />} />

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AdminLayout from '../components/AdminLayout';
 import { adminAPI } from '../../../utils/adminApi';
 import { toast } from 'react-hot-toast';
 import {
@@ -112,7 +111,7 @@ const AdminSettings = () => {
     ];
 
     return (
-        <AdminLayout title="System Configuration">
+        <>
             <div className="max-w-6xl mx-auto space-y-10">
                 {/* Tactical Command Bar */}
                 <div className="flex flex-col lg:flex-row items-center justify-between gap-6 bg-white p-8 rounded-[3rem] border border-gray-100 shadow-soft relative overflow-hidden group">
@@ -250,7 +249,7 @@ const AdminSettings = () => {
                     <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">© 2026 CarWash Intelligence Systems</p>
                 </div>
             </div>
-        </AdminLayout>
+        </>
     );
 };
 

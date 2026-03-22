@@ -21,9 +21,13 @@ const notificationSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'SpareDriver'
     },
+    isAdmin: {
+        type: Boolean,
+        default: false
+    },
     type: {
         type: String,
-        enum: ['booking', 'payment', 'promotion', 'system', 'vehicle', 'service', 'verification', 'order-assigned', 'payout', 'subscription'],
+        enum: ['booking', 'payment', 'promotion', 'system', 'vehicle', 'service', 'verification', 'order-assigned', 'payout', 'subscription', 'sos'],
         required: true
     },
     title: {
@@ -75,6 +79,7 @@ notificationSchema.index({ vendor: 1, createdAt: -1 });
 notificationSchema.index({ vendor: 1, isRead: 1 });
 notificationSchema.index({ spareDriver: 1, createdAt: -1 });
 notificationSchema.index({ spareDriver: 1, isRead: 1 });
+notificationSchema.index({ isAdmin: 1, createdAt: -1 }); // New index for admin notifications
 notificationSchema.index({ type: 1, priority: 1 });
 
 // Static method to get consumer notifications
@@ -310,6 +315,38 @@ notificationSchema.statics.deleteOldNotifications = async function (daysOld = 30
         createdAt: { $lt: cutoffDate },
         isRead: true
     });
+};
+
+// Static method to get admin notifications
+notificationSchema.statics.getAdminNotifications = async function (options = {}) {
+    const { page = 1, limit = 20, type, isRead, priority } = options;
+    const skip = (page - 1) * limit;
+
+    const query = { isAdmin: true };
+
+    if (type) query.type = type;
+    if (isRead !== undefined) query.isRead = isRead;
+    if (priority) query.priority = priority;
+
+    const notifications = await this.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .select('-__v');
+
+    const total = await this.countDocuments(query);
+    const unreadCount = await this.countDocuments({ isAdmin: true, isRead: false });
+
+    return {
+        notifications,
+        pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total,
+            pages: Math.ceil(total / limit)
+        },
+        unreadCount
+    };
 };
 
 const Notification = mongoose.model('Notification', notificationSchema);

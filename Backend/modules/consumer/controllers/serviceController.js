@@ -801,15 +801,29 @@ exports.getServicePlans = catchAsync(async (req, res, next) => {
 
 // Get available hubs/societies
 exports.getHubs = catchAsync(async (req, res, next) => {
-    const { type, city, q, limit = 100 } = req.query;
+    const { type, city, q, lat, lng, radius = 10, limit = 100 } = req.query;
     const query = { isActive: true };
     if (type) query.type = type;
     if (city) query.city = city;
+
+    // Geospatial Radius Filtering
+    if (lat && lng) {
+        query['location.coordinates'] = {
+            $near: {
+                $geometry: {
+                    type: 'Point',
+                    coordinates: [parseFloat(lng), parseFloat(lat)]
+                },
+                $maxDistance: parseInt(radius) * 1000 // Convert km to meters
+            }
+        };
+    }
+
     if (q) {
         query.$or = [
             { name: { $regex: q, $options: 'i' } },
             { city: { $regex: q, $options: 'i' } },
-            { location: { $regex: q, $options: 'i' } }
+            { 'location.address': { $regex: q, $options: 'i' } }
         ];
     }
 

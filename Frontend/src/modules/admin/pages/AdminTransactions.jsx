@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AdminLayout from '../components/AdminLayout';
 import { adminAPI } from '../../../utils/adminApi';
 import {
     ArrowDownLeft,
@@ -97,7 +96,7 @@ const AdminTransactions = () => {
     };
 
     return (
-        <AdminLayout title="Financial Oversight">
+        <>
             <div className="space-y-6">
 
                 {/* ── Transaction Stats ── */}
@@ -163,7 +162,7 @@ const AdminTransactions = () => {
 
                 {/* ── Grid View ────────────────────────────────────────────── */}
                 <div className="bg-surface rounded-[2.5rem] border border-gray-100/10 shadow-soft overflow-hidden">
-                    <div className="overflow-x-auto">
+                    <div className="admin-table-container">
                         <table className="w-full text-left">
                             <thead className="bg-background/80 border-b border-gray-100/5">
                                 <tr>
@@ -239,29 +238,29 @@ const AdminTransactions = () => {
                             </tbody>
                         </table>
                     </div>
+                </div>
 
-                    {/* ── Pagination ── */}
-                    <div className="p-6 bg-background/50 border-t border-gray-100/5 flex items-center justify-between">
-                        <p className="text-[9px] font-black text-content-subtle uppercase tracking-widest">
-                            Showing {transactions.length} of {pagination.total} fiscal nodes
-                        </p>
-                        <div className="flex items-center gap-1">
-                            {[...Array(pagination.pages)].map((_, i) => (
-                                <button
-                                    key={i}
-                                    onClick={() => setPagination(prev => ({ ...prev, page: i + 1 }))}
-                                    className={`w-8 h-8 rounded-xl text-[10px] font-black transition-all ${pagination.page === i + 1 ? 'bg-brand text-white shadow-lg shadow-brand/25' : 'bg-surface text-content-subtle hover:text-content'}`}
-                                >
-                                    {i + 1}
-                                </button>
-                            ))}
-                        </div>
+                {/* ── Pagination ── */}
+                <div className="p-6 bg-background/50 border-t border-gray-100/5 flex items-center justify-between">
+                    <p className="text-[9px] font-black text-content-subtle uppercase tracking-widest">
+                        Showing {transactions.length} of {pagination.total} fiscal nodes
+                    </p>
+                    <div className="flex items-center gap-1">
+                        {[...Array(pagination.pages)].map((_, i) => (
+                            <button
+                                key={i}
+                                onClick={() => setPagination(prev => ({ ...prev, page: i + 1 }))}
+                                className={`w-8 h-8 rounded-xl text-[10px] font-black transition-all ${pagination.page === i + 1 ? 'bg-brand text-white shadow-lg shadow-brand/25' : 'bg-surface text-content-subtle hover:text-content'}`}
+                            >
+                                {i + 1}
+                            </button>
+                        ))}
                     </div>
                 </div>
             </div>
 
             {/* ── Inspector Modal ────────────────────────────────────────────── */}
-            <AnimatePresence>
+            < AnimatePresence >
                 {selectedTxn && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 pb-24 lg:pb-6">
                         <motion.div
@@ -386,9 +385,10 @@ const AdminTransactions = () => {
                             </div>
                         </motion.div>
                     </div>
-                )}
-            </AnimatePresence>
-        </AdminLayout>
+                )
+                }
+            </AnimatePresence >
+        </>
     );
 };
 

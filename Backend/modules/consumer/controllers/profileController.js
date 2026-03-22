@@ -12,6 +12,117 @@ const catchAsync = require('../../../utils/catchAsync');
 const AppError = require('../../../utils/AppError');
 
 
+
+// --- Payment Methods ---
+
+// Get saved payment methods
+exports.getPaymentMethods = catchAsync(async (req, res, next) => {
+    const user = await User.findById(req.user.id).select('profile.paymentMethods');
+    res.status(200).json({
+        status: 'success',
+        data: {
+            methods: user.profile.paymentMethods || []
+        }
+    });
+});
+
+// Add payment method
+exports.addPaymentMethod = catchAsync(async (req, res, next) => {
+    const { type, brand, last4, expiry, handle, isDefault } = req.body;
+
+    if (!type || (!last4 && !handle)) {
+        return next(new AppError('Payment method details are incomplete', 400));
+    }
+
+    const user = await User.findById(req.user.id);
+
+    // If this is the first method or marked as default, unset others as default
+    if (isDefault || user.profile.paymentMethods.length === 0) {
+        user.profile.paymentMethods.forEach(m => m.isDefault = false);
+    }
+
+    user.profile.paymentMethods.push({
+        type,
+        brand,
+        last4,
+        expiry,
+        handle,
+        isDefault: isDefault || user.profile.paymentMethods.length === 0
+    });
+
+    await user.save();
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Payment method added successfully',
+        data: {
+            methods: user.profile.paymentMethods
+        }
+    });
+});
+
+// Set default payment method
+exports.setDefaultPaymentMethod = catchAsync(async (req, res, next) => {
+    const { methodId } = req.params;
+    const user = await User.findById(req.user.id);
+
+    let methodFound = false;
+    user.profile.paymentMethods.forEach(m => {
+        if (m._id.toString() === methodId) {
+            m.isDefault = true;
+            methodFound = true;
+        } else {
+            m.isDefault = false;
+        }
+    });
+
+    if (!methodFound) {
+        return next(new AppError('Payment method not found', 404));
+    }
+
+    await user.save();
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Default payment method updated',
+        data: {
+            methods: user.profile.paymentMethods
+        }
+    });
+});
+
+// Remove payment method
+exports.removePaymentMethod = catchAsync(async (req, res, next) => {
+    const { methodId } = req.params;
+    const user = await User.findById(req.user.id);
+
+    const methodToRemove = user.profile.paymentMethods.find(m => m._id.toString() === methodId);
+    if (!methodToRemove) {
+        return next(new AppError('Payment method not found', 404));
+    }
+
+    const wasDefault = methodToRemove.isDefault;
+
+    user.profile.paymentMethods = user.profile.paymentMethods.filter(
+        m => m._id.toString() !== methodId
+    );
+
+    // If we removed the default, set a new one if available
+    if (wasDefault && user.profile.paymentMethods.length > 0) {
+        user.profile.paymentMethods[0].isDefault = true;
+    }
+
+    await user.save();
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Payment method removed successfully',
+        data: {
+            methods: user.profile.paymentMethods
+        }
+    });
+});
+
 // --- Trusted Contacts ---
 
 // Get trusted contacts

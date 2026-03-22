@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AdminLayout from '../components/AdminLayout';
 // Subscription Matrix Hardened
 import {
     Crown,
@@ -121,7 +120,7 @@ const AdminSubscriptions = () => {
     };
 
     return (
-        <AdminLayout title="Subscription Matrix">
+        <>
             <div className="space-y-12 pb-20">
                 {/* Global Pass Strategy Command Center */}
                 <motion.div
@@ -390,7 +389,7 @@ const AdminSubscriptions = () => {
                     </div>
                 )}
             </AnimatePresence>
-        </AdminLayout>
+        </>
     );
 };
 

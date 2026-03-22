@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AdminLayout from '../components/AdminLayout';
 import { adminAPI } from '../../../utils/adminApi';
 import { toast } from 'react-hot-toast';
 import {
@@ -88,8 +87,8 @@ const AdminPromotions = () => {
         setLoading(true);
 
         try {
-            const finalData = { 
-                ...formData, 
+            const finalData = {
+                ...formData,
                 type: activeTab,
                 applicableServices: [] // Force Global
             };
@@ -143,7 +142,7 @@ const AdminPromotions = () => {
     });
 
     return (
-        <AdminLayout title="Growth & Promotions">
+        <>
             <div className="space-y-6">
                 {/* Control Header */}
                 <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
@@ -387,11 +386,10 @@ const AdminPromotions = () => {
                                                             key={t}
                                                             type="button"
                                                             onClick={() => setFormData({ ...formData, theme: t })}
-                                                            className={`h-12 rounded-2xl border font-black text-[10px] uppercase tracking-widest transition-all ${
-                                                                formData.theme === t 
-                                                                    ? 'bg-content text-white border-content shadow-lg' 
+                                                            className={`h-12 rounded-2xl border font-black text-[10px] uppercase tracking-widest transition-all ${formData.theme === t
+                                                                    ? 'bg-content text-white border-content shadow-lg'
                                                                     : 'bg-white text-content-subtle border-gray-100 hover:border-brand/30'
-                                                            }`}
+                                                                }`}
                                                         >
                                                             {t} Theme
                                                         </button>
@@ -467,7 +465,7 @@ const AdminPromotions = () => {
                             </div>
                             <h3 className="text-xl font-black text-content leading-none uppercase tracking-tighter mb-2">Terminate Promo?</h3>
                             <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mb-8 px-4">This action will permanently terminate this promotion protocol.</p>
-                            
+
                             <div className="flex gap-3">
                                 <button
                                     onClick={() => setDeleteConfirm({ isOpen: false, id: null })}
@@ -486,7 +484,7 @@ const AdminPromotions = () => {
                     </div>
                 )}
             </AnimatePresence>
-        </AdminLayout>
+        </>
     );
 };
 

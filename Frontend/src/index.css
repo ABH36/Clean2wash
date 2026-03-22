@@ -44,8 +44,8 @@
   --color-content-muted: var(--text-muted);
   --color-content-subtle: var(--text-subtle);
 
-  --radius-card: 2.5rem;
-  --radius-button: 1.25rem;
+  --radius-card: 1rem;
+  --radius-button: 0.75rem;
 
   --shadow-premium: 0 12px 40px -8px rgba(0, 0, 0, 0.08);
   --shadow-premium-color: 0 12px 40px -8px rgba(255, 107, 0, 0.2);

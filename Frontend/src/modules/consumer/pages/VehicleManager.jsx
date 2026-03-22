@@ -58,7 +58,7 @@ const VehicleManager = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const fromPage = searchParams.get('from');
-    
+
     const { vehicles, addVehicle, updateVehicle, removeVehicle, setPrimaryVehicle, user } = useAuth();
     const [showSheet, setShowSheet] = useState(false);
     const [editId, setEditId] = useState(null);
@@ -106,7 +106,7 @@ const VehicleManager = () => {
 
     const filteredCatalog = useMemo(() => {
         if (!Array.isArray(globalCatalog)) return [];
-        const filtered = globalCatalog.filter(m => 
+        const filtered = globalCatalog.filter(m =>
             m.brand?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             m.model?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             m.type?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -158,7 +158,7 @@ const VehicleManager = () => {
         await new Promise(r => setTimeout(r, 1500));
 
         // Smart mock: pick a random model from catalog if available, else fallback
-        const mockModel = globalCatalog.length > 0 
+        const mockModel = globalCatalog.length > 0
             ? globalCatalog[Math.floor(Math.random() * globalCatalog.length)]
             : { brand: 'Maruti', model: 'Swift ZXI', type: 'Hatchback' };
 
@@ -296,25 +296,24 @@ const VehicleManager = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 font-outfit">
-            <style dangerouslySetInnerHTML={{ __html: `@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap'); .font-outfit { font-family: 'Outfit', sans-serif; }` }} />
+        <div className="min-h-screen bg-[#F8F9FA] font-sans pb-32">
 
             <AnimatePresence>
                 {toast && <Toast key={toast.msg} msg={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
             </AnimatePresence>
 
-            <header className="px-5 pt-12 pb-6 bg-white/80 backdrop-blur-xl sticky top-0 z-50 border-b border-black/[0.03]">
+            <header className="px-4 pt-8 pb-4 bg-white/80 backdrop-blur-xl sticky top-0 z-50 border-b border-black/[0.03]">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => navigate(-1)} className="w-11 h-11 bg-gray-50 border border-black/[0.02] rounded-2xl flex items-center justify-center active:scale-90 transition-all shadow-sm">
-                        <ChevronLeft size={20} className="text-black" />
+                    <button onClick={() => navigate(-1)} className="w-10 h-10 bg-gray-50 border border-black/[0.02] rounded-xl flex items-center justify-center active:scale-90 transition-all shadow-sm">
+                        <ChevronLeft size={18} className="text-black" />
                     </button>
                     <div className="flex-1">
-                        <p className="text-[10px] font-black text-brand uppercase tracking-[0.2em] leading-none mb-1.5 italic">Fleet Management</p>
-                        <h1 className="text-[22px] font-[1000] tracking-tighter text-black leading-none uppercase italic">Your Garaj</h1>
+                        <p className="text-[9px] font-black text-brand uppercase tracking-[0.2em] leading-none mb-1 text-opacity-40">Fleet Management</p>
+                        <h1 className="text-[18px] font-[1000] tracking-tighter text-black leading-none uppercase">Your Garaj</h1>
                     </div>
                     <button onClick={openAdd}
-                        className="flex items-center gap-2 bg-black text-white px-5 py-3 rounded-2xl font-black text-[10px] shadow-2xl shadow-black/20 active:scale-95 transition-all uppercase tracking-widest">
-                        <Plus size={14} strokeWidth={3} /> Register
+                        className="flex items-center gap-2 bg-black text-white px-4 py-2.5 rounded-xl font-black text-[9px] shadow-2xl shadow-black/20 active:scale-95 transition-all uppercase tracking-widest">
+                        <Plus size={12} strokeWidth={3} /> Register
                     </button>
                 </div>
             </header>
@@ -330,63 +329,63 @@ const VehicleManager = () => {
                             <motion.div key={vId} layout
                                 initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.95, y: 20 }} transition={{ type: 'spring', damping: 20, stiffness: 100 }}
-                                className={`group bg-white rounded-[2.5rem] border overflow-hidden transition-all duration-300 ${v.isPrimary ? 'border-brand/30 shadow-2xl shadow-brand/10' : 'border-black/[0.03] shadow-xl hover:shadow-2xl'}`}>
+                                className={`group bg-white rounded-xl border overflow-hidden transition-all duration-300 ${v.isPrimary ? 'border-brand/30 shadow-2xl shadow-brand/10' : 'border-black/[0.03] shadow-xl hover:shadow-2xl'}`}>
 
                                 <div className="relative h-56 overflow-hidden">
                                     <img src={v.image || v.img || TYPE_IMG[v.type]} alt={v.model} className="w-full h-full object-cover transform scale-100 group-hover:scale-110 transition-transform duration-700" />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-                                    
-                                    <div className="absolute top-5 left-6 flex items-center gap-2">
+
+                                    <div className="absolute top-4 left-4 flex items-center gap-2">
                                         {v.isPrimary ? (
-                                            <div className="bg-[#00FF66] text-black text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg shadow-[#00FF66]/20">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
-                                                Active Session Protocol
+                                            <div className="bg-[#00FF66] text-black text-[8px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-lg shadow-[#00FF66]/20">
+                                                <div className="w-1 h-1 rounded-full bg-black animate-pulse" />
+                                                Active Protocol
                                             </div>
                                         ) : (
-                                            <div className="bg-white/10 backdrop-blur-md border border-white/20 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl shadow-inner">
+                                            <div className="bg-white/10 backdrop-blur-md border border-white/20 text-white text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg shadow-inner">
                                                 {v.type}
                                             </div>
                                         )}
                                     </div>
 
-                                    <div className="absolute bottom-6 left-6 right-6">
+                                    <div className="absolute bottom-4 left-4 right-4">
                                         <div className="flex items-end justify-between gap-4">
                                             <div>
-                                                <p className="text-brand text-[10px] font-black uppercase tracking-[0.3em] mb-1.5 leading-none italic">{v.brand}</p>
-                                                <h3 className="text-white font-[1000] text-[24px] tracking-tighter leading-none uppercase italic">
+                                                <p className="text-brand text-[9px] font-black uppercase tracking-[0.3em] mb-1 leading-none">{v.brand}</p>
+                                                <h3 className="text-white font-[1000] text-[20px] tracking-tighter leading-none uppercase">
                                                     {v.model}
                                                 </h3>
                                             </div>
-                                            <div className="bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl border border-white flex flex-col items-center shadow-2xl">
-                                                <p className="text-[7px] font-black text-black/20 uppercase leading-none mb-1.5 tracking-[0.2em]">Plate Registry</p>
-                                                <p className="text-[12px] font-[1000] text-black tracking-[0.1em] leading-none block">{v.plate.replace(/\s/g, '').toUpperCase()}</p>
+                                            <div className="bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white flex flex-col items-center shadow-2xl">
+                                                <p className="text-[6px] font-black text-black/20 uppercase leading-none mb-1 tracking-[0.2em]">Plate</p>
+                                                <p className="text-[11px] font-[1000] text-black tracking-[0.1em] leading-none block">{v.plate.replace(/\s/g, '').toUpperCase()}</p>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="px-6 py-6 bg-white">
+                                <div className="px-4 py-4 bg-white">
                                     {/* Compliance Grid */}
-                                    <div className="grid grid-cols-2 gap-4 mb-6">
+                                    <div className="grid grid-cols-2 gap-3 mb-4">
                                         {insStatus && (
-                                            <div className={`px-4 py-3.5 rounded-2xl border ${insStatus.bg.replace('bg-', 'border-').replace('50', '200')} ${insStatus.bg} flex items-center gap-3`}>
-                                                <div className={`p-2 rounded-xl ${insStatus.bg.replace('bg-', 'bg-').replace('50', '100')} ${insStatus.color}`}>
-                                                    <ShieldAlert size={14} />
+                                            <div className={`px-3 py-2.5 rounded-xl border ${insStatus.bg.replace('bg-', 'border-').replace('50', '200')} ${insStatus.bg} flex items-center gap-3`}>
+                                                <div className={`p-1.5 rounded-lg ${insStatus.bg.replace('bg-', 'bg-').replace('50', '100')} ${insStatus.color}`}>
+                                                    <ShieldAlert size={12} />
                                                 </div>
                                                 <div>
                                                     <p className="text-[7px] font-black text-black/20 uppercase tracking-widest leading-none mb-1">Insurance</p>
-                                                    <p className={`text-[10px] font-black uppercase ${insStatus.color} leading-none`}>{insStatus.label}</p>
+                                                    <p className={`text-[9px] font-black uppercase ${insStatus.color} leading-none`}>{insStatus.label}</p>
                                                 </div>
                                             </div>
                                         )}
                                         {pucStatus && (
-                                            <div className={`px-4 py-3.5 rounded-2xl border ${pucStatus.bg.replace('bg-', 'border-').replace('50', '200')} ${pucStatus.bg} flex items-center gap-3`}>
-                                                <div className={`p-2 rounded-xl ${pucStatus.bg.replace('bg-', 'bg-').replace('50', '100')} ${pucStatus.color}`}>
-                                                    <Zap size={14} />
+                                            <div className={`px-3 py-2.5 rounded-xl border ${pucStatus.bg.replace('bg-', 'border-').replace('50', '200')} ${pucStatus.bg} flex items-center gap-3`}>
+                                                <div className={`p-1.5 rounded-lg ${pucStatus.bg.replace('bg-', 'bg-').replace('50', '100')} ${pucStatus.color}`}>
+                                                    <Zap size={12} />
                                                 </div>
                                                 <div>
                                                     <p className="text-[7px] font-black text-black/20 uppercase tracking-widest leading-none mb-1">Compliance</p>
-                                                    <p className={`text-[10px] font-black uppercase ${pucStatus.color} leading-none`}>{pucStatus.label}</p>
+                                                    <p className={`text-[9px] font-black uppercase ${pucStatus.color} leading-none`}>{pucStatus.label}</p>
                                                 </div>
                                             </div>
                                         )}
@@ -396,21 +395,21 @@ const VehicleManager = () => {
                                         <div className="flex gap-2">
                                             {!v.isPrimary ? (
                                                 <button onClick={() => handleSetPrimary(vId)}
-                                                    className="px-6 h-10 bg-black text-white text-[9px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-brand transition-all flex items-center gap-2 shadow-lg shadow-black/10">
-                                                    <Check size={14} strokeWidth={3} /> Select Protocol
+                                                    className="px-4 h-9 bg-black text-white text-[9px] font-black uppercase tracking-[0.2em] rounded-xl hover:bg-brand transition-all flex items-center gap-2 shadow-lg shadow-black/10">
+                                                    <Check size={12} strokeWidth={3} /> Select Protocol
                                                 </button>
                                             ) : (
-                                                <div className="flex items-center gap-2 px-4 h-10 bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase tracking-[0.2em] rounded-2xl border border-emerald-100">
-                                                    <CheckCircle2 size={14} strokeWidth={3} /> Station Paired
+                                                <div className="flex items-center gap-2 px-3 h-9 bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase tracking-[0.2em] rounded-xl border border-emerald-100">
+                                                    <CheckCircle2 size={12} strokeWidth={3} /> Station Paired
                                                 </div>
                                             )}
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <button onClick={() => openEdit(v)} className="w-10 h-10 bg-gray-50 text-black rounded-2xl flex items-center justify-center border border-black/[0.03] hover:border-brand hover:text-brand transition-all shadow-sm">
-                                                <Edit3 size={16} />
+                                            <button onClick={() => openEdit(v)} className="w-9 h-9 bg-gray-50 text-black rounded-xl flex items-center justify-center border border-black/[0.03] hover:border-brand hover:text-brand transition-all shadow-sm">
+                                                <Edit3 size={14} />
                                             </button>
-                                            <button onClick={() => handleDelete(vId)} className="w-10 h-10 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center border border-rose-100 hover:bg-rose-500 hover:text-white transition-all shadow-sm">
-                                                <Trash2 size={16} />
+                                            <button onClick={() => handleDelete(vId)} className="w-9 h-9 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center border border-rose-100 hover:bg-rose-500 hover:text-white transition-all shadow-sm">
+                                                <Trash2 size={14} />
                                             </button>
                                         </div>
                                     </div>
@@ -425,7 +424,7 @@ const VehicleManager = () => {
                     <div className="px-2">
                         <div className="flex items-center justify-between mb-4">
                             <div>
-                                <h2 className="text-[18px] font-[1000] text-black uppercase tracking-tighter leading-none italic">Master Fleet Registry</h2>
+                                <h2 className="text-[18px] font-[1000] text-black uppercase tracking-tighter leading-none">Master Fleet Registry</h2>
                                 <p className="text-[10px] font-bold text-black/30 uppercase tracking-[0.1em] mt-2">Pair your model with the Studio Grade protocol</p>
                             </div>
                             <div className="bg-black text-white px-3 py-2 rounded-2xl flex items-center gap-2 shadow-xl shadow-black/10">
@@ -436,22 +435,22 @@ const VehicleManager = () => {
 
                         {/* Search Bar - Luxury Glass */}
                         <div className="relative group">
-                            <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-                                <FileSearch size={16} className="text-black/20 group-focus-within:text-brand transition-colors" />
+                            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                                <FileSearch size={14} className="text-black/20 group-focus-within:text-brand transition-colors" />
                             </div>
-                            <input 
+                            <input
                                 type="text"
                                 placeholder="SEARCH YOUR MODEL (E.G. BMW, THAR...)"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-white border border-black/[0.03] rounded-[2rem] px-14 py-5 font-black text-[12px] text-black tracking-[0.05em] uppercase focus:border-brand focus:ring-8 focus:ring-brand/5 transition-all outline-none shadow-xl shadow-black/[0.02]"
+                                className="w-full bg-white border border-black/[0.03] rounded-xl px-10 py-3.5 font-black text-[11px] text-black tracking-[0.05em] uppercase focus:border-brand focus:ring-8 focus:ring-brand/5 transition-all outline-none shadow-xl shadow-black/[0.02]"
                             />
                             {searchQuery && (
-                                <button 
+                                <button
                                     onClick={() => setSearchQuery('')}
-                                    className="absolute inset-y-0 right-5 flex items-center text-black/20 hover:text-rose-500 transition-colors"
+                                    className="absolute inset-y-0 right-4 flex items-center text-black/20 hover:text-rose-500 transition-colors"
                                 >
-                                    <X size={18} />
+                                    <X size={16} />
                                 </button>
                             )}
                         </div>
@@ -490,7 +489,7 @@ const VehicleManager = () => {
                                                 setShowSheet(true);
                                             }
                                         }}
-                                        className={`relative group h-52 rounded-[2.5rem] overflow-hidden transition-all duration-500 ${isMatched ? 'ring-2 ring-[#00FF66] shadow-2xl shadow-[#00FF66]/20' : 'bg-white shadow-xl hover:shadow-2xl'}`}
+                                        className={`relative group h-48 rounded-xl overflow-hidden transition-all duration-500 ${isMatched ? 'ring-2 ring-[#00FF66] shadow-2xl shadow-[#00FF66]/20' : 'bg-white shadow-xl hover:shadow-2xl'}`}
                                     >
                                         <img src={m.image || 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=400&q=80'}
                                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={m.model} />
@@ -504,8 +503,8 @@ const VehicleManager = () => {
 
                                         <div className="absolute bottom-4 left-4 right-4">
                                             <p className="text-white/60 text-[8px] font-black uppercase tracking-[0.2em] leading-none mb-1">{m.brand}</p>
-                                            <h3 className="text-white font-[1000] text-[13px] leading-tight uppercase tracking-tighter line-clamp-1 italic">{m.model}</h3>
-                                            
+                                            <h3 className="text-white font-[1000] text-[13px] leading-tight uppercase tracking-tighter line-clamp-1">{m.model}</h3>
+
                                             <div className="flex items-center gap-2 mt-2">
                                                 <div className="flex items-center gap-1 text-white/40 text-[8px] font-black uppercase tracking-widest">
                                                     <Clock size={8} />
@@ -544,7 +543,7 @@ const VehicleManager = () => {
                             <div className="px-6 pt-5 pb-3 border-b border-gray-50 sticky top-0 bg-white/80 backdrop-blur-md z-10">
                                 <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-5" />
                                 <div className="flex items-center justify-between">
-                                    <h3 className="font-black text-xl tracking-tight text-gray-900 italic uppercase">
+                                    <h3 className="font-black text-xl tracking-tight text-gray-900 uppercase">
                                         {editId ? 'Modify Fleet' : 'Recruit Vehicle'}
                                     </h3>
                                     <button onClick={closeSheet} className="w-9 h-9 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 font-black">✕</button>
@@ -554,7 +553,7 @@ const VehicleManager = () => {
                             <div className="overflow-y-auto px-6 py-6 pb-12 space-y-6">
                                 {/* VAHAN FETCH Integration */}
                                 <div className="space-y-3">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-brand italic">Vehicle Identification</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-brand">Vehicle Identification</p>
                                     <div className="flex gap-2">
                                         <div className="flex-1 relative">
                                             <input placeholder="ENTER PLATE (e.g. KA05MR7821)" value={form.plate}
@@ -602,7 +601,7 @@ const VehicleManager = () => {
 
                                 {/* COMPLIANCE DATES */}
                                 <div className="space-y-3 pt-2">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-brand italic">Compliance & Reminders</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-brand">Compliance & Reminders</p>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <div className="flex items-center justify-between px-1">
@@ -624,7 +623,7 @@ const VehicleManager = () => {
                                 </div>
 
                                 <motion.button whileTap={{ scale: 0.97 }} onClick={handleSave} disabled={isSaving}
-                                    className={`w-full h-14 ${isSaving ? 'bg-gray-400' : 'bg-gray-900'} text-white rounded-2xl font-black text-sm shadow-xl shadow-gray-900/20 flex items-center justify-center gap-3 uppercase italic tracking-widest transition-all`}>
+                                    className={`w-full h-14 ${isSaving ? 'bg-gray-400' : 'bg-gray-900'} text-white rounded-2xl font-black text-sm shadow-xl shadow-gray-900/20 flex items-center justify-center gap-3 uppercase tracking-widest transition-all`}>
                                     {isSaving ? (
                                         <Zap size={18} className="animate-spin" />
                                     ) : (

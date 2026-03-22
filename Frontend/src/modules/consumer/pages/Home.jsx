@@ -819,7 +819,7 @@ const Home = () => {
                                         <div className="flex items-center gap-2 mb-1">
                                             <h4 className="text-[14px] font-[1000] text-black uppercase tracking-tight">{service.title}</h4>
                                             {service.badge && (
-                                                <span className="bg-brand/10 text-brand text-[7px] font-black px-1.5 py-0.5 rounded-full uppercase italic">{service.badge}</span>
+                                                <span className="bg-brand/10 text-brand text-[7px] font-black px-1.5 py-0.5 rounded-full uppercase">{service.badge}</span>
                                             )}
                                         </div>
                                         <p className="text-[9px] font-black text-black/30 uppercase tracking-widest leading-none">

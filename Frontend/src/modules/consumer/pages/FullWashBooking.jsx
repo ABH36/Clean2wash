@@ -806,11 +806,11 @@ const FullWashBooking = () => {
                                                         />
                                                     </div>
                                                     <div className="flex-1">
-                                                        <h4 className="text-[14px] font-black text-black leading-tight uppercase italic">{item.brand} {item.model}</h4>
+                                                        <h4 className="text-[14px] font-black text-black leading-tight uppercase">{item.brand} {item.model}</h4>
                                                         <div className="flex items-center gap-2 mt-1">
                                                             <span className="text-[8px] font-black text-black/30 uppercase tracking-widest">{item.type}</span>
                                                             <div className="w-1 h-1 rounded-full bg-brand" />
-                                                            <span className="text-[8px] font-black text-brand uppercase tracking-widest italic">{item.difficulty} Protocol</span>
+                                                            <span className="text-[8px] font-black text-brand uppercase tracking-widest">{item.difficulty} Protocol</span>
                                                         </div>
                                                     </div>
                                                     <ChevronRight size={18} className="text-gray-300" />
@@ -848,8 +848,8 @@ const FullWashBooking = () => {
                                                 />
                                             </div>
                                             <div>
-                                                <h3 className="text-[22px] font-black text-black leading-none uppercase italic tracking-tight">{selectedGlobalModel.brand}</h3>
-                                                <h4 className="text-[18px] font-black text-brand leading-none uppercase italic mt-1">{selectedGlobalModel.model}</h4>
+                                                <h3 className="text-[22px] font-black text-black leading-none uppercase tracking-tight">{selectedGlobalModel.brand}</h3>
+                                                <h4 className="text-[18px] font-black text-brand leading-none uppercase mt-1">{selectedGlobalModel.model}</h4>
                                                 <div className="inline-flex items-center gap-2 bg-black text-white px-2.5 py-1 rounded-lg mt-3">
                                                     <LayoutGrid size={12} className="text-brand" />
                                                     <span className="text-[9px] font-black uppercase tracking-widest">{selectedGlobalModel.type} Protocol</span>
@@ -949,7 +949,7 @@ const FullWashBooking = () => {
                     >
                         <ChevronLeft size={22} strokeWidth={2.5} />
                     </button>
-                    <h1 className="text-[14px] font-[1000] text-black tracking-tight uppercase" style={{ fontFamily: 'Inter, sans-serif' }}>
+                    <h1 className="text-[13px] font-[1000] text-black tracking-tight uppercase">
                         Studio Detailing Experience
                     </h1>
                 </div>
@@ -987,15 +987,15 @@ const FullWashBooking = () => {
         const totalPrice = basePrice + addonTotal;
 
         return (
-            <div className="bg-gray-100 min-h-screen pb-20 font-outfit">
+            <div className="bg-gray-100 min-h-screen pb-20 font-sans">
                 {/* Personalized Header Section */}
                 <div className="px-5 pt-8 pb-4 flex items-center justify-between">
                     <div>
                         <p className="text-[10px] font-black text-brand uppercase tracking-[0.2em] mb-1">Station 01 / LIVE</p>
-                        <h1 className="text-[28px] font-[1000] text-black leading-none uppercase italic tracking-tighter">
+                        <h1 className="text-[22px] font-[1000] text-black leading-none uppercase tracking-tighter">
                             Instant Wash
                         </h1>
-                        <p className="text-[9px] font-black text-black/30 uppercase tracking-[0.15em] mt-1.5 flex items-center gap-2">
+                        <p className="text-[8px] font-black text-black/30 uppercase tracking-[0.15em] mt-1 flex items-center gap-2">
                             Protocol Ready for <span className="text-black font-black">{user?.name || 'Authorized User'}</span>
                             <span className="w-1 h-1 rounded-full bg-black/10" />
                             {new Date().toLocaleDateString('en-US', { weekday: 'long' })}
@@ -1008,13 +1008,13 @@ const FullWashBooking = () => {
 
                 {/* Live Status Pulse */}
                 <div className="px-5 pb-4">
-                    <div className="flex items-center justify-between bg-white/50 backdrop-blur-md rounded-2xl px-4 py-3 border border-black/[0.02] shadow-inner">
+                    <div className="flex items-center justify-between bg-white/50 backdrop-blur-md rounded-xl px-3 py-2 border border-black/[0.02] shadow-inner">
                         <div className="flex items-center gap-3">
                             <div className="relative flex h-2.5 w-2.5">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                             </div>
-                            <span className="text-[10px] font-black text-black uppercase tracking-widest italic">Live Ops Status</span>
+                            <span className="text-[10px] font-black text-black uppercase tracking-widest">Live Ops Status</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <Radar size={12} className="text-emerald-500 animate-pulse" />
@@ -1026,15 +1026,15 @@ const FullWashBooking = () => {
                 {/* Dynamic Banner Section */}
                 <div className="px-5 pt-2">
                     {banners && banners.length > 0 ? (
-                        <div className="relative h-40 rounded-[2rem] overflow-hidden shadow-lg border border-white">
+                        <div className="relative h-40 rounded-xl overflow-hidden shadow-lg border border-white">
                             <img src={sanitizeUrl(banners[0].image)} className="w-full h-full object-cover" alt="Offers" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-6">
-                                <h3 className="text-white text-lg font-black uppercase italic leading-none">{banners[0].title || "Luxury Protocol"}</h3>
-                                <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest mt-1">{banners[0].subtitle || "Exclusive Studio Grade Experience"}</p>
+                                <h3 className="text-white text-base font-black uppercase leading-none">{banners[0].title || "Luxury Protocol"}</h3>
+                                <p className="text-white/70 text-[9px] font-bold uppercase tracking-widest mt-1">{banners[0].subtitle || "Exclusive Studio Grade Experience"}</p>
                             </div>
                         </div>
                     ) : (
-                        <div className="relative h-40 rounded-[2rem] overflow-hidden shadow-lg bg-black group">
+                        <div className="relative h-40 rounded-xl overflow-hidden shadow-lg bg-black group">
                             <img
                                 src="https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=800&q=80"
                                 className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700"
@@ -1043,8 +1043,8 @@ const FullWashBooking = () => {
                             <div className="absolute inset-0 bg-gradient-to-tr from-brand/20 to-transparent" />
                             <div className="absolute inset-0 flex flex-col justify-end p-6">
                                 <span className="w-8 h-1 bg-brand mb-3" />
-                                <h3 className="text-white text-xl font-[1000] uppercase italic leading-none tracking-tighter">PREMIUM STUDIO WASH</h3>
-                                <p className="text-white/60 text-[9px] font-black uppercase tracking-[0.3em] mt-2">Zero Wait Time Policy</p>
+                                <h3 className="text-white text-lg font-[1000] uppercase leading-none tracking-tighter">PREMIUM STUDIO WASH</h3>
+                                <p className="text-white/60 text-[8px] font-black uppercase tracking-[0.3em] mt-2">Zero Wait Time Policy</p>
                             </div>
                         </div>
                     )}
@@ -1052,12 +1052,12 @@ const FullWashBooking = () => {
 
                 {/* Selected Vehicle Context (Premium Redesign) */}
                 <div className="px-5 pt-6 pb-2">
-                    <div className="bg-white rounded-[1.5rem] p-5 flex items-center justify-between border border-black/[0.03] shadow-[0_20px_50px_rgba(0,0,0,0.06)] relative overflow-hidden group">
+                    <div className="bg-white rounded-xl p-4 flex items-center justify-between border border-black/[0.03] shadow-[0_20px_50px_rgba(0,0,0,0.06)] relative overflow-hidden group">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-brand/10 transition-colors" />
 
                         {selectedVehicle ? (
                             <div className="flex items-center gap-5 relative z-10">
-                                <div className="w-16 h-16 bg-gray-50 rounded-[1.25rem] flex items-center justify-center border border-black/[0.02] shadow-inner overflow-hidden">
+                                <div className="w-16 h-16 bg-gray-50 rounded-lg flex items-center justify-center border border-black/[0.02] shadow-inner overflow-hidden">
                                     {selectedVehicle.img ? (
                                         <img src={sanitizeUrl(selectedVehicle.img)} className="w-full h-full object-cover grayscale-[0.5] group-hover:grayscale-0 transition-all duration-500" alt={selectedVehicle.model} />
                                     ) : (
@@ -1066,7 +1066,7 @@ const FullWashBooking = () => {
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2 mb-1.5">
-                                        <h4 className="text-[15px] font-[1000] text-black tracking-tight leading-none uppercase italic">
+                                        <h4 className="text-[14px] font-[1000] text-black tracking-tight leading-none uppercase">
                                             {matchedModel ? `${matchedModel.brand} ${matchedModel.model}` : `${selectedVehicle.brand} ${selectedVehicle.model}`}
                                         </h4>
                                         {matchedModel && (
@@ -1083,18 +1083,18 @@ const FullWashBooking = () => {
                             </div>
                         ) : (
                             <div className="flex items-center gap-4 relative z-10 opacity-40 grayscale">
-                                <div className="w-16 h-16 bg-gray-50 rounded-[1.25rem] flex items-center justify-center border border-black/[0.02] shadow-inner">
+                                <div className="w-16 h-16 bg-gray-50 rounded-lg flex items-center justify-center border border-black/[0.02] shadow-inner">
                                     <Car size={32} className="text-black/80" />
                                 </div>
                                 <div>
-                                    <h4 className="text-[15px] font-[1000] text-black tracking-tight leading-none mb-1.5 uppercase italic">Select Asset</h4>
+                                    <h4 className="text-[14px] font-[1000] text-black tracking-tight leading-none mb-1 uppercase">Select Asset</h4>
                                     <p className="text-[9px] font-black text-black/10 uppercase tracking-[0.2em] leading-none">Vehicle Protocol Required</p>
                                 </div>
                             </div>
                         )}
                         <button
                             onClick={() => navigate('/vehicles?from=studio-wash')}
-                            className="text-[10px] font-black text-brand uppercase tracking-[0.15em] border border-orange-100 bg-orange-50/30 px-5 py-3 rounded-2xl active:scale-95 transition-all shadow-sm hover:bg-brand hover:text-white relative z-10"
+                            className="text-[10px] font-black text-brand uppercase tracking-[0.15em] border border-orange-100 bg-orange-50/30 px-3 py-2 rounded-xl active:scale-95 transition-all shadow-sm hover:bg-brand hover:text-white relative z-10"
                         >
                             {selectedVehicle ? 'CHANGE' : 'SELECT'}
                         </button>
@@ -1122,9 +1122,9 @@ const FullWashBooking = () => {
                                 <div key={pkgId} className="space-y-4">
                                     <div
                                         onClick={() => setExpandedServiceId(isServiceExpanded ? null : pkgId)}
-                                        className={`px-6 py-4 rounded-[1.5rem] flex items-center justify-between cursor-pointer transition-all ${isServiceExpanded ? 'bg-[#222222] text-white' : 'bg-white text-black border border-black/[0.03] shadow-sm'}`}
+                                        className={`px-4 py-3 rounded-xl flex items-center justify-between cursor-pointer transition-all ${isServiceExpanded ? 'bg-[#222222] text-white' : 'bg-white text-black border border-black/[0.03] shadow-sm'}`}
                                     >
-                                        <h3 className="text-[14px] font-[1000] tracking-tight uppercase italic">{pkg.title}</h3>
+                                        <h3 className="text-[13px] font-[1000] tracking-tight uppercase">{pkg.title}</h3>
                                         <ChevronDown size={18} className={`transition-transform duration-300 ${isServiceExpanded ? 'rotate-180 text-brand' : 'opacity-40'}`} />
                                     </div>
 
@@ -1134,7 +1134,7 @@ const FullWashBooking = () => {
                                                 initial={{ opacity: 0, height: 0 }}
                                                 animate={{ opacity: 1, height: 'auto' }}
                                                 exit={{ opacity: 0, height: 0 }}
-                                                className="bg-white rounded-[2.5rem] border border-black/[0.03] overflow-hidden shadow-[0_15px_50px_rgba(0,0,0,0.05)] mb-4"
+                                                className="bg-white rounded-xl border border-black/[0.03] overflow-hidden shadow-[0_15px_50px_rgba(0,0,0,0.05)] mb-4"
                                             >
                                                 {/* Diagonal Image Split Section */}
                                                 <div className="relative h-[110px] flex overflow-hidden">
@@ -1147,7 +1147,7 @@ const FullWashBooking = () => {
                                                     </div>
                                                     <div className="flex-1 relative group">
                                                         <img src={splitImages[2]} className="w-full h-full object-cover" alt="" />
-                                                        <div className="absolute top-4 right-4 bg-black/80 px-2 py-1 rounded text-white text-[10px] font-black italic shadow-lg">
+                                                        <div className="absolute top-4 right-4 bg-black/80 px-2 py-1 rounded text-white text-[10px] font-black shadow-lg">
                                                             {selectedVehicle?.brand || 'BMW'}
                                                             <div className="flex gap-0.5 mt-0.5">
                                                                 {[1, 2, 3].map(i => <div key={i} className="w-1.5 h-1 bg-brand" />)}
@@ -1157,20 +1157,20 @@ const FullWashBooking = () => {
                                                 </div>
 
                                                 {/* Rating & Price Stats */}
-                                                <div className="px-6 py-5 flex items-center justify-between border-b border-black/[0.02]">
+                                                <div className="px-4 py-3 flex items-center justify-between border-b border-black/[0.02]">
                                                     <div className="flex items-center gap-3">
-                                                        <Star size={20} fill="#F29F05" className="text-brand" />
-                                                        <span className="text-[16px] font-[1000] text-black leading-none">{pkg.rating || "4.9"}</span>
+                                                        <Star size={16} fill="#F29F05" className="text-brand" />
+                                                        <span className="text-[14px] font-[1000] text-black leading-none">{pkg.rating || "4.9"}</span>
                                                         <div className="w-1.5 h-1.5 bg-black/10 rounded-full" />
-                                                        <span className="text-[13px] font-bold text-black/30 tracking-tight">2,530 Ratings</span>
+                                                        <span className="text-[11px] font-bold text-black/30 tracking-tight">2,530 Ratings</span>
                                                         {pkg.tag && (
                                                             <span className="ml-2 px-2 py-0.5 bg-black text-white text-[7px] font-black rounded uppercase tracking-widest">{pkg.tag}</span>
                                                         )}
                                                     </div>
 
-                                                    <div className="bg-[#FAF1E8] px-6 py-2.5 rounded-[1.5rem] border border-[#EBE0D5] text-center shadow-sm">
+                                                    <div className="bg-[#FAF1E8] px-4 py-2 rounded-xl border border-[#EBE0D5] text-center shadow-sm">
                                                         <p className="text-[9px] font-black text-black/40 uppercase tracking-widest leading-none mb-1">Starting</p>
-                                                        <span className="text-[22px] font-[1000] text-black leading-none">₹{pkgBasePrice}</span>
+                                                        <span className="text-[18px] font-[1000] text-black leading-none">₹{pkgBasePrice}</span>
                                                     </div>
                                                 </div>
 
@@ -1182,11 +1182,11 @@ const FullWashBooking = () => {
                                                 </div>
 
                                                 {/* Package Content */}
-                                                <div className="p-6 pt-5 space-y-6">
+                                                <div className="p-4 pt-3 space-y-6">
                                                     {pkg.features && pkg.features.length > 0 && (
                                                         <div className="flex flex-wrap gap-2">
                                                             {pkg.features.slice(0, 3).map((feat, i) => (
-                                                                <div key={i} className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-full border border-black/[0.02]">
+                                                                <div key={i} className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-full border border-black/[0.02]">
                                                                     <div className="w-1 h-1 rounded-full bg-brand" />
                                                                     <span className="text-[9px] font-black text-black/60 uppercase tracking-tight">{feat.text}</span>
                                                                 </div>
@@ -1210,7 +1210,7 @@ const FullWashBooking = () => {
                                                                 </button>
                                                             </div>
 
-                                                            <div className="bg-orange-50/50 rounded-2xl p-4 border border-orange-100/30">
+                                                            <div className="bg-orange-50/50 rounded-xl p-3 border border-orange-100/30">
                                                                 <div className="flex items-start gap-3">
                                                                     <div className="w-1.5 h-1.5 rounded-full bg-brand mt-1.5" />
                                                                     <p className="text-[11px] font-bold text-black/60 leading-relaxed">
@@ -1221,7 +1221,7 @@ const FullWashBooking = () => {
                                                         </div>
 
                                                         {/* Right Promo Card */}
-                                                        <div className="w-[125px] flex-shrink-0 bg-[#FAF1E8] rounded-[2rem] border border-[#E9DCCF]/50 p-4 flex flex-col items-center gap-4 shadow-sm relative overflow-hidden group">
+                                                        <div className="w-[125px] flex-shrink-0 bg-[#FAF1E8] rounded-xl border border-[#E9DCCF]/50 p-3 flex flex-col items-center gap-4 shadow-sm relative overflow-hidden group">
                                                             <img
                                                                 src={sanitizeUrl(pkg.image)}
                                                                 className="w-16 h-16 object-cover rounded-2xl shadow-md border-2 border-white group-hover:scale-110 transition-transform"
@@ -1263,7 +1263,7 @@ const FullWashBooking = () => {
                                                             setActiveServiceId(pkgId);
                                                             setShowServiceCoverage(true);
                                                         }}
-                                                        className={`w-full py-5 rounded-[1.5rem] flex items-center justify-center gap-4 group/btn relative overflow-hidden transition-all ${selectedVehicle
+                                                        className={`w-full py-3 rounded-xl flex items-center justify-center gap-4 group/btn relative overflow-hidden transition-all ${selectedVehicle
                                                             ? 'bg-[#1A1A1A] text-white active:scale-95 shadow-xl shadow-black/10'
                                                             : 'bg-brand text-white shadow-xl shadow-brand/20'
                                                             }`}
@@ -1272,12 +1272,12 @@ const FullWashBooking = () => {
                                                             <>
                                                                 <div className="absolute inset-0 bg-brand opacity-0 group-hover/btn:opacity-10 transition-opacity" />
                                                                 <Zap size={18} className="text-brand" fill="currentColor" />
-                                                                <span className="text-[14px] font-[1000] uppercase italic tracking-[0.1em]">Select Asset & Book</span>
+                                                                <span className="text-[13px] font-[1000] uppercase tracking-[0.1em]">Select Asset & Book</span>
                                                             </>
                                                         ) : (
                                                             <>
                                                                 <Car size={18} className="animate-bounce" />
-                                                                <span className="text-[14px] font-[1000] uppercase italic tracking-[0.1em]">Register Vehicle to Book</span>
+                                                                <span className="text-[13px] font-[1000] uppercase tracking-[0.1em]">Register Vehicle to Book</span>
                                                             </>
                                                         )}
                                                     </motion.button>
@@ -1319,7 +1319,7 @@ const FullWashBooking = () => {
                                         onClick={() => setSelectedVehicleType(type.toLowerCase())}
                                         className={`flex-1 group relative ${isActive ? 'scale-105' : 'opacity-40'}`}
                                     >
-                                        <div className={`bg-white rounded-2xl p-5 border transition-all ${isActive ? 'border-brand shadow-xl ring-4 ring-brand/5' : 'border-black/[0.05]'}`}>
+                                        <div className={`bg-white rounded-xl p-4 border transition-all ${isActive ? 'border-brand shadow-xl ring-4 ring-brand/5' : 'border-black/[0.05]'}`}>
                                             <div className="flex items-center justify-between mb-2">
                                                 <h4 className={`text-[11px] font-[1000] uppercase tracking-tight ${isActive ? 'text-black' : 'text-gray-400'}`}>{type}</h4>
                                                 {isActive && (
@@ -1341,7 +1341,7 @@ const FullWashBooking = () => {
                     {dynamicServices.some(s => s.faqs?.length > 0) && (
                         <div className="px-1 py-8 space-y-6">
                             <div className="flex items-center justify-between px-4">
-                                <h3 className="text-[12px] font-[1000] text-black uppercase tracking-[0.2em] italic">Protocol Intelligence</h3>
+                                <h3 className="text-[11px] font-[1000] text-black uppercase tracking-[0.2em]">Protocol Intelligence</h3>
                                 <div className="flex gap-1">
                                     <div className="w-1 h-1 rounded-full bg-brand" />
                                     <div className="w-3 h-1 rounded-full bg-brand/20" />
@@ -1349,10 +1349,11 @@ const FullWashBooking = () => {
                             </div>
 
                             <div className="space-y-3">
+                                {/* FAQ list */}
                                 {dynamicServices.flatMap(s => s.faqs || []).slice(0, 4).map((faq, i) => (
-                                    <details key={i} className="group bg-white rounded-3xl border border-black/[0.02] overflow-hidden shadow-sm transition-all duration-300 open:shadow-md">
-                                        <summary className="list-none px-6 py-5 flex items-center justify-between cursor-pointer active:bg-gray-50 transition-colors">
-                                            <span className="text-[12px] font-black text-black uppercase tracking-tight">{faq.question}</span>
+                                    <details key={i} className="group bg-white rounded-xl border border-black/[0.02] overflow-hidden shadow-sm transition-all duration-300 open:shadow-md">
+                                        <summary className="list-none px-4 py-3 flex items-center justify-between cursor-pointer active:bg-gray-50 transition-colors">
+                                            <span className="text-[11px] font-black text-black uppercase tracking-tight">{faq.question}</span>
                                             <ChevronDown size={16} className="text-black/20 group-open:rotate-180 transition-transform" />
                                         </summary>
                                         <div className="px-6 pb-6 pt-2">
@@ -1371,7 +1372,7 @@ const FullWashBooking = () => {
                     {/* ... (as existing) ... */}
                     <div className="px-1 py-8 space-y-6">
                         <div className="text-center space-y-1">
-                            <h3 className="text-[11px] font-[1000] text-black uppercase tracking-[0.3em] leading-none mb-2">The Studio Standard</h3>
+                            <h3 className="text-[10px] font-[1000] text-black uppercase tracking-[0.3em] leading-none mb-2">The Studio Standard</h3>
                             <div className="flex items-center justify-center gap-4">
                                 <div className="h-px w-8 bg-black/10" />
                                 <Stars size={14} className="text-brand" />
@@ -1386,8 +1387,8 @@ const FullWashBooking = () => {
                                 { icon: Zap, label: "Live Track", sub: "Real-time Ops" },
                                 { icon: CreditCard, label: "Secure Pay", sub: "Protocol Ensured" }
                             ].map((item, i) => (
-                                <div key={i} className="bg-white rounded-3xl p-5 border border-black/[0.02] shadow-sm flex flex-col items-center text-center gap-3">
-                                    <div className="w-10 h-10 bg-gray-50 rounded-2xl flex items-center justify-center">
+                                <div key={i} className="bg-white rounded-xl p-3 border border-black/[0.02] shadow-sm flex flex-col items-center text-center gap-3">
+                                    <div className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center">
                                         <item.icon size={18} className="text-black/80" />
                                     </div>
                                     <div>
@@ -1416,7 +1417,7 @@ const FullWashBooking = () => {
                                 animate={{ y: 0 }}
                                 exit={{ y: '100%' }}
                                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                                className="relative w-full max-w-lg bg-white rounded-t-[2.5rem] flex flex-col max-h-[95vh] shadow-2xl overflow-hidden font-outfit"
+                                className="relative w-full max-w-lg bg-white rounded-t-3xl flex flex-col max-h-[95vh] shadow-2xl overflow-hidden font-sans"
                             >
                                 {/* Modal Header */}
                                 <div className="relative pt-2 pb-6">
@@ -1433,7 +1434,7 @@ const FullWashBooking = () => {
                                                         {activeService.offers.map((offer, idx) => (
                                                             <div key={idx} className="flex items-center gap-3">
                                                                 <Star size={10} className="text-brand" fill="currentColor" />
-                                                                <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] italic">
+                                                                <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">
                                                                     {offer.text} {offer.code && <span className="text-brand ml-2">[{offer.code}]</span>}
                                                                 </span>
                                                             </div>
@@ -1463,7 +1464,7 @@ const FullWashBooking = () => {
                                             <span className="text-[9px] font-[1000] text-black/40 uppercase tracking-widest">Protocol Sync Locked</span>
                                         </div>
 
-                                        <h2 className="text-[34px] font-[1000] text-black leading-[0.9] uppercase italic tracking-tighter mb-6 relative">
+                                        <h2 className="text-[26px] font-[1000] text-black leading-[0.9] uppercase tracking-tighter mb-6 relative">
                                             {activeService.title}
                                             <motion.div
                                                 initial={{ width: 0 }}
@@ -1473,11 +1474,11 @@ const FullWashBooking = () => {
                                         </h2>
 
                                         <div className="grid grid-cols-2 gap-3">
-                                            <div className="bg-gray-50/80 backdrop-blur-sm rounded-3xl p-5 border border-black/[0.02] flex flex-col justify-between h-28">
+                                            <div className="bg-gray-50/80 backdrop-blur-sm rounded-xl p-4 border border-black/[0.02] flex flex-col justify-between h-24">
                                                 <p className="text-[8px] font-black text-black/30 uppercase tracking-[0.15em] leading-none mb-1">Execution Protocol</p>
                                                 <div className="flex items-baseline gap-1">
-                                                    <span className="text-[28px] font-[1000] text-black leading-none">{activeServiceDuration}</span>
-                                                    <span className="text-[12px] font-black text-black/40 uppercase tracking-tighter">Mins</span>
+                                                    <span className="text-[24px] font-[1000] text-black leading-none">{activeServiceDuration}</span>
+                                                    <span className="text-[11px] font-black text-black/40 uppercase tracking-tighter">Mins</span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
@@ -1486,10 +1487,10 @@ const FullWashBooking = () => {
                                                     </span>
                                                 </div>
                                             </div>
-                                            <div className="bg-brand/5 backdrop-blur-sm rounded-3xl p-5 border border-brand/10 flex flex-col justify-between h-28">
+                                            <div className="bg-brand/5 backdrop-blur-sm rounded-xl p-4 border border-brand/10 flex flex-col justify-between h-24">
                                                 <p className="text-[8px] font-black text-black/30 uppercase tracking-[0.15em] leading-none mb-1">Session Valuation</p>
                                                 <div className="flex items-baseline gap-1">
-                                                    <span className="text-[28px] font-[1000] text-black leading-none">₹{activeServicePrice}</span>
+                                                    <span className="text-[24px] font-[1000] text-black leading-none">₹{activeServicePrice}</span>
                                                     <span className="text-[10px] font-black text-brand uppercase tracking-tighter">Total</span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
@@ -1509,7 +1510,7 @@ const FullWashBooking = () => {
                                             <div className="flex items-center justify-between px-1">
                                                 <div className="flex items-center gap-2">
                                                     <Car size={14} className="text-brand" />
-                                                    <h3 className="text-[11px] font-black text-black uppercase tracking-[0.15em] italic">Vehicle Intelligence</h3>
+                                                    <h3 className="text-[11px] font-black text-black uppercase tracking-[0.15em]">Vehicle Intelligence</h3>
                                                 </div>
                                                 <div className="flex items-center gap-2 bg-black/5 px-2 py-1 rounded-lg">
                                                     <LayoutGrid size={10} className="text-black/40" />
@@ -1518,7 +1519,7 @@ const FullWashBooking = () => {
                                             </div>
 
                                             {/* Brand & Model Designation Card */}
-                                            <div className="bg-black text-white p-6 rounded-[2.5rem] relative overflow-hidden shadow-2xl shadow-black/20 group">
+                                            <div className="bg-black text-white p-4 rounded-xl relative overflow-hidden shadow-2xl shadow-black/20 group">
                                                 <div className="absolute right-[-10%] top-[-20%] w-48 h-48 bg-brand/10 rounded-full blur-3xl group-hover:bg-brand/20 transition-all duration-700" />
                                                 <div className="relative z-10 flex items-center gap-6">
                                                     <div className="w-20 h-20 rounded-2xl overflow-hidden border border-white/10 shadow-inner shrink-0 scale-95 group-hover:scale-100 transition-transform duration-500">
@@ -1530,8 +1531,8 @@ const FullWashBooking = () => {
                                                         />
                                                     </div>
                                                     <div>
-                                                        <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-1 italic">Asset Identification</p>
-                                                        <h4 className="text-[20px] font-[1000] uppercase italic leading-none tracking-tight">
+                                                        <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-1">Asset Identification</p>
+                                                        <h4 className="text-[18px] font-[1000] uppercase leading-none tracking-tight">
                                                             {matchedModel.brand} <span className="text-brand">{matchedModel.model}</span>
                                                         </h4>
                                                         <div className="flex items-center gap-3 mt-3">
@@ -1548,18 +1549,18 @@ const FullWashBooking = () => {
 
                                             {/* Complexity & Offer Matrix */}
                                             <div className="grid grid-cols-2 gap-3">
-                                                <div className="bg-gray-50 p-5 rounded-[2rem] border border-black/[0.02]">
+                                                <div className="bg-gray-50 p-4 rounded-xl border border-black/[0.02]">
                                                     <p className="text-[8px] font-black text-black/30 uppercase tracking-widest mb-3">Complexity Index</p>
                                                     <div className="flex items-center gap-2">
                                                         <div className={`w-2 h-2 rounded-full ${matchedModel.difficulty === 'Hard' ? 'bg-red-500' : matchedModel.difficulty === 'Medium' ? 'bg-orange-500' : 'bg-emerald-500'}`} />
-                                                        <span className="text-[14px] font-[1000] text-black uppercase italic">{matchedModel.difficulty || 'Standard'}</span>
+                                                        <span className="text-[14px] font-[1000] text-black uppercase">{matchedModel.difficulty || 'Standard'}</span>
                                                     </div>
                                                 </div>
-                                                <div className="bg-gray-50 p-5 rounded-[2rem] border border-black/[0.02]">
+                                                <div className="bg-gray-50 p-4 rounded-xl border border-black/[0.02]">
                                                     <p className="text-[8px] font-black text-black/30 uppercase tracking-widest mb-3">Prep Protocol</p>
                                                     <div className="flex items-center gap-2">
                                                         <Timer size={14} className="text-black/40" />
-                                                        <span className="text-[14px] font-[1000] text-black uppercase italic">{matchedModel.protocolSteps?.length || 0} Steps</span>
+                                                        <span className="text-[14px] font-[1000] text-black uppercase">{matchedModel.protocolSteps?.length || 0} Steps</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1567,12 +1568,12 @@ const FullWashBooking = () => {
                                             {/* Identify Highlights */}
                                             {matchedModel.features?.length > 0 && (
                                                 <div className="space-y-3">
-                                                    <h4 className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] px-1 italic">Identity Highlights</h4>
+                                                    <h4 className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] px-1">Identity Highlights</h4>
                                                     <div className="flex flex-wrap gap-2">
                                                         {matchedModel.features.map((feat, idx) => (
                                                             <div key={idx} className="bg-[#FAF1E8] border border-[#E9DCCF] px-4 py-2 rounded-2xl flex items-center gap-2">
                                                                 <CheckCircle2 size={12} className="text-brand" />
-                                                                <span className="text-[10px] font-black text-black uppercase tracking-tighter italic">{feat}</span>
+                                                                <span className="text-[10px] font-black text-black uppercase tracking-tighter">{feat}</span>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -1581,31 +1582,31 @@ const FullWashBooking = () => {
 
                                             {/* Offer Protocols & Coupons */}
                                             {(matchedModel.offers?.length > 0 || matchedModel.coupons?.length > 0) && (
-                                                <div className="bg-brand/5 border border-brand/10 rounded-[2.5rem] p-6 space-y-4">
+                                                <div className="bg-brand/5 border border-brand/10 rounded-xl p-4 space-y-4">
                                                     <div className="flex items-center gap-2">
                                                         <Gift size={16} className="text-brand" />
-                                                        <h4 className="text-[12px] font-[1000] text-black uppercase tracking-widest italic leading-none">Offer Protocols</h4>
+                                                        <h4 className="text-[12px] font-[1000] text-black uppercase tracking-widest leading-none">Offer Protocols</h4>
                                                     </div>
                                                     <div className="space-y-3">
                                                         {matchedModel.offers?.map((offer, idx) => (
                                                             <div key={idx} className="flex items-center justify-between bg-white p-3 rounded-2xl border border-brand/5">
                                                                 <div>
-                                                                    <p className="text-[11px] font-[1000] text-black uppercase italic tracking-tight">{offer.title || 'Launch Offer'}</p>
+                                                                    <p className="text-[11px] font-[1000] text-black uppercase tracking-tight">{offer.title || 'Launch Offer'}</p>
                                                                     <p className="text-[8px] font-bold text-black/30 uppercase tracking-widest">{offer.description || 'Dynamic Discount Applied'}</p>
                                                                 </div>
-                                                                <div className="bg-emerald-500 text-white px-3 py-1 rounded-xl text-[10px] font-black italic">
+                                                                <div className="bg-emerald-500 text-white px-3 py-1 rounded-xl text-[10px] font-black">
                                                                     -{offer.discountPercentage || 10}%
                                                                 </div>
                                                             </div>
                                                         ))}
                                                         {matchedModel.coupons?.map((coupon, idx) => (
-                                                            <div key={idx} className="flex items-center justify-between bg-black text-white p-4 rounded-3xl group active:scale-95 transition-all">
+                                                            <div key={idx} className="flex items-center justify-between bg-black text-white p-3 rounded-xl group active:scale-95 transition-all">
                                                                 <div className="flex items-center gap-3">
                                                                     <div className="w-8 h-8 rounded-xl bg-brand/20 flex items-center justify-center border border-brand/20">
                                                                         <Zap size={14} className="text-brand" />
                                                                     </div>
                                                                     <div>
-                                                                        <p className="text-[13px] font-[1000] uppercase italic tracking-widest">{coupon}</p>
+                                                                        <p className="text-[13px] font-[1000] uppercase tracking-widest">{coupon}</p>
                                                                         <p className="text-[7px] font-bold text-white/30 uppercase tracking-[0.2em] mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">Asset Specific Coupon</p>
                                                                     </div>
                                                                 </div>
@@ -1629,15 +1630,15 @@ const FullWashBooking = () => {
                                                 <div className="space-y-4">
                                                     <div className="flex items-center gap-2 px-1">
                                                         <Shield size={14} className="text-emerald-500" />
-                                                        <h3 className="text-[11px] font-black text-black uppercase tracking-[0.15em] italic">Model Prep Protocol</h3>
+                                                        <h3 className="text-[11px] font-black text-black uppercase tracking-[0.15em]">Model Prep Protocol</h3>
                                                     </div>
                                                     <div className="grid grid-cols-1 gap-2">
                                                         {matchedModel.protocolSteps.map((step, idx) => (
-                                                            <div key={idx} className="bg-white border border-black/[0.03] p-4 rounded-3xl flex items-center gap-4 group">
+                                                            <div key={idx} className="bg-white border border-black/[0.03] p-3 rounded-xl flex items-center gap-4 group">
                                                                 <div className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-[10px] font-black">
                                                                     {idx + 1}
                                                                 </div>
-                                                                <p className="text-[11px] font-[1000] text-black uppercase italic tracking-tight">{step}</p>
+                                                                <p className="text-[11px] font-[1000] text-black uppercase tracking-tight">{step}</p>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -1650,12 +1651,12 @@ const FullWashBooking = () => {
                                         <div className="flex items-center justify-between px-1">
                                             <div className="flex items-center gap-2">
                                                 <Radar size={14} className="text-brand" />
-                                                <h3 className="text-[11px] font-black text-black uppercase tracking-[0.15em] italic">Scope of Maintenance</h3>
+                                                <h3 className="text-[11px] font-black text-black uppercase tracking-[0.15em]">Scope of Maintenance</h3>
                                             </div>
                                             <span className="text-[8px] font-black text-black/20 uppercase tracking-widest">V.2.4 Analytics</span>
                                         </div>
 
-                                        <div className="border border-black/[0.04] rounded-[2rem] overflow-hidden bg-gray-50/20 backdrop-blur-xl">
+                                        <div className="border border-black/[0.04] rounded-xl overflow-hidden bg-gray-50/20 backdrop-blur-xl">
                                             <div className="flex bg-white/40 border-b border-black/[0.04]">
                                                 <div className="flex-1 py-4 px-6 flex items-center justify-center gap-2 border-r border-black/[0.04] bg-emerald-50/30">
                                                     <CheckCircle2 size={12} className="text-emerald-500" />
@@ -1684,7 +1685,7 @@ const FullWashBooking = () => {
                                                                 ) : (
                                                                     <div className="w-1.5 h-1.5 rounded-full bg-black/5" />
                                                                 )}
-                                                                <span className={`text-[12px] font-[1000] uppercase tracking-tight italic ${row.in !== '-' ? 'text-black' : 'text-black/10'}`}>{row.in}</span>
+                                                                <span className={`text-[12px] font-[1000] uppercase tracking-tight ${row.in !== '-' ? 'text-black' : 'text-black/10'}`}>{row.in}</span>
                                                             </div>
                                                             <div className="flex-1 py-3 px-6 flex items-center gap-3">
                                                                 {row.out !== '-' ? (
@@ -1706,7 +1707,7 @@ const FullWashBooking = () => {
                                         <div className="space-y-4">
                                             <div className="flex items-center gap-2 px-1">
                                                 <Zap size={14} className="text-brand" fill="currentColor" />
-                                                <h3 className="text-[11px] font-black text-black uppercase tracking-[0.15em] italic">Execution Pipeline</h3>
+                                                <h3 className="text-[11px] font-black text-black uppercase tracking-[0.15em]">Execution Pipeline</h3>
                                             </div>
                                             <div className="space-y-3">
                                                 {activeService.protocolSteps.map((step, idx) => (
@@ -1716,13 +1717,13 @@ const FullWashBooking = () => {
                                                         whileInView={{ x: 0, opacity: 1 }}
                                                         viewport={{ once: true }}
                                                         transition={{ delay: idx * 0.1 }}
-                                                        className="flex items-center gap-4 bg-gray-50/50 p-4 rounded-3xl border border-black/[0.02] hover:border-brand/20 transition-all hover:bg-white"
+                                                        className="flex items-center gap-4 bg-gray-50/50 p-3 rounded-xl border border-black/[0.02] hover:border-brand/20 transition-all hover:bg-white"
                                                     >
                                                         <div className="w-8 h-8 rounded-2xl bg-black text-white flex items-center justify-center text-[10px] font-[1000] shadow-lg shadow-black/20 shrink-0">
                                                             {idx + 1}
                                                         </div>
                                                         <div className="flex-1">
-                                                            <p className="text-[12px] font-[1000] text-black uppercase tracking-tight italic leading-none truncate">{step}</p>
+                                                            <p className="text-[12px] font-[1000] text-black uppercase tracking-tight leading-none truncate">{step}</p>
                                                             <p className="text-[8px] font-bold text-black/20 uppercase tracking-widest mt-1">Verified Phase {idx + 1}</p>
                                                         </div>
                                                         <Check size={12} className="text-brand" strokeWidth={3} />
@@ -1733,12 +1734,12 @@ const FullWashBooking = () => {
                                     )}
 
                                     {/* Security & Support Note */}
-                                    <div className="bg-emerald-50 p-5 rounded-[2rem] border border-emerald-100 flex items-start gap-4">
+                                    <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 flex items-start gap-4">
                                         <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-sm shrink-0">
                                             <ShieldCheck size={20} className="text-emerald-500" />
                                         </div>
                                         <div>
-                                            <p className="text-[12px] font-[1000] text-emerald-900 uppercase tracking-tight leading-none mb-1.5 italic">Studio Grade Warranty</p>
+                                            <p className="text-[12px] font-[1000] text-emerald-900 uppercase tracking-tight leading-none mb-1.5">Studio Grade Warranty</p>
                                             <p className="text-[9px] font-bold text-emerald-700/60 leading-relaxed uppercase tracking-widest">
                                                 This protocol includes 100% paint safety assurance and premium chemical usage.
                                             </p>
@@ -1747,7 +1748,7 @@ const FullWashBooking = () => {
                                 </div>
 
                                 {/* Modal Footer */}
-                                <div className="absolute bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-xl border-t border-black/[0.03] animate-in slide-in-from-bottom duration-500">
+                                <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-xl border-t border-black/[0.03] animate-in slide-in-from-bottom duration-500">
                                     <motion.button
                                         whileTap={{ scale: 0.98 }}
                                         disabled={!selectedVehicle}
@@ -1772,7 +1773,7 @@ const FullWashBooking = () => {
                                             setShowServiceCoverage(false);
                                             navigateToPhase(PHASES.CART);
                                         }}
-                                        className={`w-full py-5 rounded-[2rem] font-[1000] text-[15px] uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-4 group relative overflow-hidden ${!selectedVehicle
+                                        className={`w-full py-3.5 rounded-xl font-[1000] text-sm uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-4 group relative overflow-hidden ${!selectedVehicle
                                             ? 'bg-gray-100 text-black/10 cursor-not-allowed'
                                             : 'bg-[#1A1A1A] text-white active:scale-95 shadow-black/20'
                                             }`}
@@ -1803,7 +1804,7 @@ const FullWashBooking = () => {
                                 initial={{ scale: 0.9, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0.9, opacity: 0 }}
-                                className="relative w-full max-w-4xl aspect-video bg-black rounded-[2rem] overflow-hidden shadow-2xl border border-white/10"
+                                className="relative w-full max-w-4xl aspect-video bg-black rounded-xl overflow-hidden shadow-2xl border border-white/10"
                             >
                                 <button
                                     onClick={() => { setVideoPlaying(false); setShowDemoVideo(false); }}
@@ -1868,7 +1869,7 @@ const FullWashBooking = () => {
         const expertIcon = L.divIcon({
             className: 'custom-expert-pin',
             html: `
-                <div class="w-8 h-8 bg-white rounded-xl flex items-center justify-center border-2 border-brand shadow-xl">
+                <div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center border-2 border-brand shadow-xl">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
                     </svg>
@@ -1879,7 +1880,7 @@ const FullWashBooking = () => {
         });
 
         return (
-            <div className="flex flex-col min-h-screen bg-[#F8F9FB] relative overflow-hidden font-outfit">
+            <div className="flex flex-col min-h-screen bg-[#F8F9FB] relative overflow-hidden font-sans">
                 {/* Map Layer - Rapido Style (Light Navigation) */}
                 <div className="absolute inset-0 z-0">
                     <MapContainer
@@ -1922,7 +1923,7 @@ const FullWashBooking = () => {
                                         className="bg-brand text-black px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-2xl border border-white/20"
                                     >
                                         <Crown size={12} fill="currentColor" strokeWidth={3} />
-                                        <span className="text-[9px] font-[1000] uppercase tracking-widest italic">Black Priority active</span>
+                                        <span className="text-[9px] font-[1000] uppercase tracking-widest">Black Priority active</span>
                                     </motion.div>
                                 </div>
                             )}
@@ -1952,7 +1953,7 @@ const FullWashBooking = () => {
                     <motion.div
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-black/80 backdrop-blur-2xl border border-white/10 rounded-2xl px-4 py-2.5 flex items-center justify-between shadow-2xl"
+                        className="bg-black/80 backdrop-blur-2xl border border-white/10 rounded-xl px-4 py-2.5 flex items-center justify-between shadow-2xl"
                     >
                         <div className="flex items-center gap-3">
                             <div className="relative">
@@ -1986,14 +1987,14 @@ const FullWashBooking = () => {
                     <motion.div
                         initial={{ opacity: 0, y: 50 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-white rounded-[2.5rem] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-black/5"
+                        className="bg-white rounded-xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-black/5"
                     >
                         {/* Pull Bar */}
                         <div className="w-10 h-1 bg-gray-100 rounded-full mx-auto -mt-2 mb-5" />
 
                         <div className="flex items-center justify-between mb-5">
                             <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isBlackPassMember ? 'bg-brand text-black' : 'bg-black text-white'}`}>
+                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isBlackPassMember ? 'bg-brand text-black' : 'bg-black text-white'}`}>
                                     <Zap size={18} fill="currentColor" />
                                 </div>
                                 <div>
@@ -2020,7 +2021,7 @@ const FullWashBooking = () => {
                                         setActiveBookingId(null);
                                     }
                                 }}
-                                className={`w-full h-14 rounded-2xl font-black text-[11px] uppercase tracking-[0.25em] flex items-center justify-center gap-3 transition-all active:scale-95 ${findingTime === 0
+                                className={`w-full h-12 rounded-xl font-black text-[11px] uppercase tracking-[0.25em] flex items-center justify-center gap-3 transition-all active:scale-95 ${findingTime === 0
                                     ? 'bg-brand text-black shadow-xl shadow-brand/20'
                                     : 'bg-black text-white shadow-xl shadow-black/10'
                                     }`}
@@ -2095,7 +2096,7 @@ const FullWashBooking = () => {
         });
 
         return (
-            <div className="fixed inset-0 bg-[#F8F9FB] z-[100] flex flex-col overflow-hidden font-outfit">
+            <div className="fixed inset-0 bg-[#F8F9FB] z-[100] flex flex-col overflow-hidden font-sans">
                 {/* Navigational Map Layer (Rapido Style) */}
                 <div className="absolute inset-0 z-0">
                     <MapContainer
@@ -2123,7 +2124,7 @@ const FullWashBooking = () => {
                         <motion.button
                             whileTap={{ scale: 0.9 }}
                             onClick={() => navigate('/')}
-                            className="w-10 h-10 bg-black/40 backdrop-blur-xl rounded-xl flex items-center justify-center border border-white/10"
+                            className="w-10 h-10 bg-black/40 backdrop-blur-xl rounded-lg flex items-center justify-center border border-white/10"
                         >
                             <ChevronLeft size={20} className="text-white" />
                         </motion.button>
@@ -2131,7 +2132,7 @@ const FullWashBooking = () => {
                         <motion.div
                             initial={{ scale: 0.8, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            className="bg-white px-4 py-2.5 rounded-2xl border border-black/5 flex items-center gap-4 shadow-[0_10px_30px_rgba(0,0,0,0.1)]"
+                            className="bg-white px-4 py-2.5 rounded-xl border border-black/5 flex items-center gap-4 shadow-[0_10px_30px_rgba(0,0,0,0.1)]"
                         >
                             <div className="flex items-center gap-2.5">
                                 <div className="w-2 h-2 rounded-full bg-brand animate-ping shadow-[0_0_12px_rgba(242,159,5,0.8)]" />
@@ -2142,12 +2143,12 @@ const FullWashBooking = () => {
                                                 activeBooking?.status === 'in_progress' ? 'Detailing Active' :
                                                     'Specialist Coordinating'}
                                     </span>
-                                    {!isCompleted && <span className="text-[8px] font-bold text-black/30 uppercase mt-0.5 tracking-tighter italic">Studio Tracking Protocol Active</span>}
+                                    {!isCompleted && <span className="text-[8px] font-bold text-black/30 uppercase mt-0.5 tracking-tighter">Studio Tracking Protocol Active</span>}
                                 </div>
                             </div>
                             <div className="w-px h-4 bg-black/5" />
                             <div className="flex flex-col items-end leading-none">
-                                <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-brand text-black rounded-xl border border-brand/20 shadow-lg">
+                                <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-brand text-black rounded-lg border border-brand/20 shadow-lg">
                                     <div className="flex flex-col items-center">
                                         <span className="text-[6px] font-black uppercase tracking-tighter leading-none opacity-50">START PIN</span>
                                         <span className="text-[13px] font-[1000] tracking-[0.1em] leading-none mt-0.5">{activeBooking?.securityPin || '5310'}</span>
@@ -2164,7 +2165,7 @@ const FullWashBooking = () => {
                 <motion.div
                     initial={{ y: '100%' }}
                     animate={{ y: 0 }}
-                    className="mt-auto relative z-20 bg-white rounded-t-[2.5rem] shadow-[0_-30px_60px_rgba(0,0,0,0.5)] pb-6 min-h-[45vh] max-h-[75vh] overflow-y-auto"
+                    className="mt-auto relative z-20 bg-white rounded-t-3xl shadow-[0_-30px_60px_rgba(0,0,0,0.5)] pb-6 min-h-[45vh] max-h-[75vh] overflow-y-auto"
                 >
                     {/* Pull Handle */}
                     <div className="w-12 h-1 bg-gray-100 rounded-full mx-auto my-3 sticky top-0 bg-white z-30" />
@@ -2173,7 +2174,7 @@ const FullWashBooking = () => {
                         {/* Service Title & Pricing */}
                         <div className="flex items-center justify-between py-1">
                             <div className="flex items-center gap-3">
-                                <div className="w-14 h-14 bg-[#FFF6E9] rounded-xl flex items-center justify-center border border-orange-100/50 overflow-hidden shadow-inner">
+                                <div className="w-12 h-12 bg-[#FFF6E9] rounded-lg flex items-center justify-center border border-orange-100/50 overflow-hidden shadow-inner">
                                     <img
                                         src={sanitizeUrl(selectedVehicle?.image || selectedVehicle?.img || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80')}
                                         className="w-full h-full object-cover"
@@ -2194,7 +2195,7 @@ const FullWashBooking = () => {
                         </div>
 
                         {/* Specialist Status Timeline */}
-                        <div className="bg-gray-50 rounded-xl p-3 flex items-center gap-3 border border-black/[0.06]/50">
+                        <div className="bg-gray-50 rounded-lg p-3 flex items-center gap-3 border border-black/[0.06]/50">
                             <div className="relative">
                                 <img
                                     src={sanitizeUrl(activeBooking?.provider?.photo || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80")}
@@ -2219,8 +2220,8 @@ const FullWashBooking = () => {
                                 </div>
                             </div>
                             <div className="flex gap-2">
-                                <motion.button whileTap={{ scale: 0.9 }} onClick={() => toast.success(`Calling Specialist...`)} className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-black border border-gray-200 shadow-sm"><Phone size={14} /></motion.button>
-                                <motion.button whileTap={{ scale: 0.9 }} onClick={() => toast('Chat feature coming soon!')} className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-black border border-gray-200 shadow-sm"><MessageSquare size={14} /></motion.button>
+                                <motion.button whileTap={{ scale: 0.9 }} onClick={() => toast.success(`Calling Specialist...`)} className="w-9 h-9 bg-white rounded-md flex items-center justify-center text-black border border-gray-200 shadow-sm"><Phone size={14} /></motion.button>
+                                <motion.button whileTap={{ scale: 0.9 }} onClick={() => toast('Chat feature coming soon!')} className="w-9 h-9 bg-white rounded-md flex items-center justify-center text-black border border-gray-200 shadow-sm"><MessageSquare size={14} /></motion.button>
                             </div>
                         </div>
 
@@ -2260,7 +2261,7 @@ const FullWashBooking = () => {
                             <motion.button
                                 whileTap={{ scale: 0.96 }}
                                 onClick={() => toast.error('Emergency SOS Triggered! Support is on the way.', { duration: 5000 })}
-                                className="flex items-center justify-center gap-3 bg-red-50 text-red-600 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-100"
+                                className="flex items-center justify-center gap-3 bg-red-50 text-red-600 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest border border-red-100"
                             >
                                 <AlertTriangle size={12} />
                                 SOS Help
@@ -2275,7 +2276,7 @@ const FullWashBooking = () => {
                                         duration: 6000
                                     });
                                 }}
-                                className="bg-black text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-black/20 flex flex-col items-center justify-center gap-1 group overflow-hidden relative"
+                                className="bg-black text-white py-3 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-xl shadow-black/20 flex flex-col items-center justify-center gap-1 group overflow-hidden relative"
                             >
                                 <div className="absolute inset-0 bg-brand/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
                                 <span className="relative z-10">Security PIN</span>
@@ -2289,7 +2290,7 @@ const FullWashBooking = () => {
                             animate={{ scale: 1 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => isCompleted ? navigate('/') : null}
-                            className={`w-full py-3.5 rounded-xl text-[11px] font-black uppercase tracking-[0.3em] shadow-2xl transition-all ${isCompleted ? 'bg-green-600 text-white shadow-green-500/20' : 'bg-brand text-white shadow-brand/20'
+                            className={`w-full py-3.5 rounded-lg text-[11px] font-black uppercase tracking-[0.3em] shadow-2xl transition-all ${isCompleted ? 'bg-green-600 text-white shadow-green-500/20' : 'bg-brand text-white shadow-brand/20'
                                 }`}
                         >
                             {isCompleted ? 'Service Finalized' : 'Track Deployment'}
@@ -2308,10 +2309,10 @@ const FullWashBooking = () => {
             <div className="min-h-screen bg-[#F8F9FB] pb-32">
                 {/* Cart Header */}
                 <div className="bg-white/80 backdrop-blur-md px-4 py-3 flex items-center gap-3 border-b border-black/[0.03] sticky top-0 z-50">
-                    <button onClick={handleBack} className="w-8 h-8 flex items-center justify-center bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                    <button onClick={handleBack} className="w-8 h-8 flex items-center justify-center bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                         <ChevronLeft size={16} strokeWidth={2.5} />
                     </button>
-                    <h2 className="text-[14px] font-black text-black uppercase tracking-tight">Booking Summary</h2>
+                    <h2 className="text-[13px] font-black text-black uppercase tracking-tight">Booking Summary</h2>
                 </div>
 
                 <div className="p-4 space-y-4">
@@ -2351,9 +2352,9 @@ const FullWashBooking = () => {
                             }
 
                             return (
-                                <div key={item.id || item._id || idx} className="bg-white rounded-2xl p-3.5 shadow-sm relative border border-black/[0.03] flex items-center justify-between group transition-all hover:border-brand/30">
+                                <div key={item.id || item._id || idx} className="bg-white rounded-xl p-3 shadow-sm relative border border-black/[0.03] flex items-center justify-between group transition-all hover:border-brand/30">
                                     <div className="flex items-center gap-3.5">
-                                        <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center border border-black/[0.05] shadow-sm overflow-hidden flex-shrink-0">
+                                        <div className="w-14 h-14 bg-white rounded-lg flex items-center justify-center border border-black/[0.05] shadow-sm overflow-hidden flex-shrink-0">
                                             {isSubscription || isAddon ? (
                                                 <div className="w-full h-full flex items-center justify-center bg-gray-50">
                                                     {isSubscription ? <Crown size={24} className="text-amber-500" /> : <Zap size={24} className="text-blue-500" />}
@@ -2373,7 +2374,7 @@ const FullWashBooking = () => {
                                                     {isProduct ? 'Product' : (isSubscription ? 'Plan' : (isAddon ? 'Upgrade' : (selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model}` : (selectedVehicleType ? selectedVehicleType : 'Vehicle'))))}
                                                 </p>
                                             </div>
-                                            <h4 className="text-[11.5px] font-[1000] text-black leading-none uppercase tracking-tight mb-1.5">
+                                            <h4 className="text-[11px] font-[1000] text-black leading-none uppercase tracking-tight mb-1.5">
                                                 {item.serviceName}
                                             </h4>
                                             <div className="flex items-center gap-2">
@@ -2391,7 +2392,7 @@ const FullWashBooking = () => {
                                         </div>
                                     </div>
                                     <div className="text-right flex flex-col items-end gap-1.5">
-                                        <div className="text-[17px] font-[1000] text-black tracking-tight leading-none mb-1">
+                                        <div className="text-[15px] font-[1000] text-black tracking-tight leading-none mb-1">
                                             ₹{isSubscribedWash ? 0 : item.price}
                                         </div>
                                         {isSubscribedWash ? (
@@ -2421,12 +2422,12 @@ const FullWashBooking = () => {
                             <motion.div
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                className="bg-black text-white rounded-2xl p-4 shadow-xl border border-brand/30 relative overflow-hidden group"
+                                className="bg-black text-white rounded-xl p-3 shadow-xl border border-brand/30 relative overflow-hidden group"
                             >
                                 <div className="absolute top-0 right-0 w-32 h-full bg-brand/[0.05] skew-x-[-20deg]" />
                                 <div className="flex items-center justify-between relative z-10">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-brand rounded-xl flex items-center justify-center shadow-lg shadow-brand/20 flex-shrink-0">
+                                        <div className="w-10 h-10 bg-brand rounded-lg flex items-center justify-center shadow-lg shadow-brand/20 flex-shrink-0">
                                             <Crown size={20} className="text-black" fill="currentColor" />
                                         </div>
                                         <div>
@@ -2438,15 +2439,15 @@ const FullWashBooking = () => {
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <div className="text-right">
-                                            <div className="text-[12px] font-black uppercase italic text-white/40 leading-none">Status</div>
+                                            <div className="text-[12px] font-black uppercase text-white/40 leading-none">Status</div>
                                             <div className="text-[10px] font-black text-[#00FF66] uppercase tracking-widest mt-1">Active</div>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="mt-4 bg-white/5 rounded-xl p-3 border border-white/5">
+                                <div className="mt-4 bg-white/5 rounded-lg p-3 border border-white/5">
                                     <div className="flex items-center justify-between mb-2">
                                         <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Plan Usage Timeline</span>
-                                        <span className="text-[8px] font-black text-brand uppercase tracking-widest italic">{userSubscription.usedCredits || 0} / {userSubscription.monthlyCredits || 0} Used</span>
+                                        <span className="text-[8px] font-black text-brand uppercase tracking-widest">{userSubscription.usedCredits || 0} / {userSubscription.monthlyCredits || 0} Used</span>
                                     </div>
                                     <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
                                         <motion.div
@@ -2476,19 +2477,19 @@ const FullWashBooking = () => {
                                         key={promo.id || idx}
                                         onClick={() => promo.badge ? handleApplyCoupon(promo.badge) : null}
                                         whileTap={{ scale: 0.95 }}
-                                        className={`flex-shrink-0 w-64 p-4 rounded-[2rem] border transition-all relative overflow-hidden snap-center ${appliedCoupon?.code === promo.badge
+                                        className={`flex-shrink-0 w-64 p-4 rounded-xl border transition-all relative overflow-hidden snap-center ${appliedCoupon?.code === promo.badge
                                             ? 'bg-black border-black text-white shadow-lg shadow-black/20'
                                             : 'bg-white border-black/[0.04] text-black shadow-sm hover:border-brand/30'
                                             }`}
                                     >
                                         <div className="relative z-10 flex items-start gap-3 text-left">
-                                            <div className={`w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0 ${appliedCoupon?.code === promo.badge ? 'bg-white/20' : 'bg-brand/5 text-brand'
+                                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${appliedCoupon?.code === promo.badge ? 'bg-white/20' : 'bg-brand/5 text-brand'
                                                 }`}>
                                                 {promo.type === 'Coupons' ? <Percent size={18} /> : <Zap size={18} />}
                                             </div>
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-2">
-                                                    <span className={`text-[12px] font-black uppercase italic ${appliedCoupon?.code === promo.badge ? 'text-white' : 'text-black'}`}>
+                                                    <span className={`text-[12px] font-black uppercase ${appliedCoupon?.code === promo.badge ? 'text-white' : 'text-black'}`}>
                                                         {promo.badge || 'PROMO'}
                                                     </span>
                                                     {appliedCoupon?.code === promo.badge && <Check size={12} className="text-brand" />}
@@ -2511,7 +2512,7 @@ const FullWashBooking = () => {
                     {/* Manual Coupon Input (Added) */}
                     <div className="mt-8 space-y-3 px-1">
                         <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em] italic ml-1">Voucher Authorization</label>
+                            <label className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em] ml-1">Voucher Authorization</label>
                             {isBlackPassMember && (
                                 <motion.div
                                     initial={{ opacity: 0, x: 10 }}
@@ -2530,13 +2531,13 @@ const FullWashBooking = () => {
                             <input
                                 type="text"
                                 placeholder="Enter Promotional Code"
-                                className="w-full bg-white border border-black/[0.04] px-5 py-4 rounded-2xl text-[13px] font-[1000] text-black outline-none focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all uppercase placeholder:text-black/10 shadow-sm"
+                                className="w-full bg-white border border-black/[0.04] px-5 py-3 rounded-xl text-[13px] font-[1000] text-black outline-none focus:border-brand focus:ring-4 focus:ring-brand/5 transition-all uppercase placeholder:text-black/10 shadow-sm"
                                 value={couponCode}
                                 onChange={e => setCouponCode(e.target.value)}
                             />
                             <button
                                 onClick={() => handleApplyCoupon()}
-                                className="absolute right-2 top-2 bottom-2 px-5 bg-black text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-brand transition-all active:scale-95 shadow-lg"
+                                className="absolute right-2 top-2 bottom-2 px-4 bg-black text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-brand transition-all active:scale-95 shadow-lg"
                             >
                                 Apply
                             </button>
@@ -2545,7 +2546,7 @@ const FullWashBooking = () => {
                             <motion.p
                                 initial={{ opacity: 0, y: -5 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="text-[9px] font-black text-red-500 uppercase italic ml-1 flex items-center gap-1"
+                                className="text-[9px] font-black text-red-500 uppercase ml-1 flex items-center gap-1"
                             >
                                 <X size={10} strokeWidth={3} /> {couponError}
                             </motion.p>
@@ -2554,20 +2555,20 @@ const FullWashBooking = () => {
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                className="flex items-center justify-between bg-emerald-50 border border-emerald-100 px-4 py-3 rounded-xl shadow-sm"
+                                className="flex items-center justify-between bg-emerald-50 border border-emerald-100 px-4 py-3 rounded-lg shadow-sm"
                             >
                                 <div className="flex items-center gap-2">
                                     <div className="w-6 h-6 rounded-lg bg-emerald-500 flex items-center justify-center text-white">
                                         <Check size={14} strokeWidth={3} />
                                     </div>
-                                    <span className="text-[10px] font-black text-emerald-600 uppercase italic leading-none">Protocol {appliedCoupon.code} Authorized</span>
+                                    <span className="text-[10px] font-black text-emerald-600 uppercase leading-none">Protocol {appliedCoupon.code} Authorized</span>
                                 </div>
                                 <button
                                     onClick={() => {
                                         setAppliedCoupon(null);
                                         setCouponCode('');
                                     }}
-                                    className="text-[9px] font-black text-emerald-600/50 uppercase italic hover:text-red-500 transition-colors"
+                                    className="text-[9px] font-black text-emerald-600/50 uppercase hover:text-red-500 transition-colors"
                                 >
                                     Remove
                                 </button>
@@ -2611,11 +2612,11 @@ const FullWashBooking = () => {
                                                         setCart(prev => [...prev, addonItem]);
                                                     }
                                                 }}
-                                                className={`min-w-[125px] p-3 rounded-[1.5rem] border transition-all duration-300 flex flex-col items-center gap-2 relative overflow-hidden ${isAdded
+                                                className={`min-w-[125px] p-3 rounded-xl border transition-all duration-300 flex flex-col items-center gap-2 relative overflow-hidden ${isAdded
                                                     ? 'bg-black border-black text-white shadow-lg'
                                                     : 'bg-white border-black/[0.04] text-black shadow-sm'}`}
                                             >
-                                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${isAdded ? 'bg-white/10' : 'bg-gray-50'}`}>
+                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isAdded ? 'bg-white/10' : 'bg-gray-50'}`}>
                                                     <Zap size={18} className={isAdded ? 'text-brand' : 'text-black/40'} />
                                                 </div>
                                                 <div className="text-center">
@@ -2641,11 +2642,11 @@ const FullWashBooking = () => {
                     {/* Add Another Asset (High-End CTA) */}
                     <button
                         onClick={() => navigate('/e-shop?from=booking')}
-                        className="w-full bg-white border border-black/[0.03] rounded-2xl p-3.5 flex items-center justify-between group active:scale-[0.98] transition-all relative overflow-hidden shadow-sm hover:bg-gray-50"
+                        className="w-full bg-white border border-black/[0.03] rounded-xl p-3 flex items-center justify-between group active:scale-[0.98] transition-all relative overflow-hidden shadow-sm hover:bg-gray-50"
                     >
                         <div className="absolute top-0 right-0 w-24 h-24 bg-brand/5 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-brand/10 transition-colors" />
                         <div className="flex items-center gap-3.5 relative z-10">
-                            <div className="w-8 h-8 bg-black text-white rounded-xl flex items-center justify-center shadow-lg transform group-hover:rotate-90 transition-transform duration-500">
+                            <div className="w-8 h-8 bg-black text-white rounded-lg flex items-center justify-center shadow-lg transform group-hover:rotate-90 transition-transform duration-500">
                                 <Plus size={16} strokeWidth={3} />
                             </div>
                             <div className="text-left">
@@ -2655,7 +2656,7 @@ const FullWashBooking = () => {
                                 </div>
                             </div>
                         </div>
-                        <div className="w-7 h-7 rounded-xl bg-gray-50 flex items-center justify-center shadow-sm relative z-10 group-hover:bg-brand transition-colors">
+                        <div className="w-7 h-7 rounded-lg bg-gray-50 flex items-center justify-center shadow-sm relative z-10 group-hover:bg-brand transition-colors">
                             <ArrowRight size={12} className="text-black/30 group-hover:text-black transition-colors" strokeWidth={3} />
                         </div>
                     </button>
@@ -2673,18 +2674,18 @@ const FullWashBooking = () => {
                         const blackPrice = blackPassPlan ? Math.round(comboPrice * 0.7) : 312;
 
                         return (
-                            <div className="bg-[#FAF1E8]/60 rounded-3xl p-3.5 pt-9 relative overflow-hidden border border-[#E9DCCF] mt-1 group hover:bg-[#FAF1E8] transition-colors duration-500 shadow-sm">
-                                <div className="absolute top-0 left-0 bg-[#1A1A1A] text-white px-3 py-1.5 text-[8.5px] font-black rounded-br-2xl uppercase tracking-widest">
+                            <div className="bg-[#FAF1E8]/60 rounded-xl p-3 pt-8 relative overflow-hidden border border-[#E9DCCF] mt-1 group hover:bg-[#FAF1E8] transition-colors duration-500 shadow-sm">
+                                <div className="absolute top-0 left-0 bg-[#1A1A1A] text-white px-3 py-1.5 text-[8.5px] font-black rounded-br-xl uppercase tracking-widest">
                                     <span className="text-[#2D9944]">{globalSettings.combo_discount_pct || 20}% OFF</span> ON COMBO
                                 </div>
 
                                 <div className="flex items-center justify-between mb-5">
                                     <div className="flex items-center gap-2.5">
-                                        <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-sm border border-black/[0.05]">
+                                        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm border border-black/[0.05]">
                                             <Bike size={18} className="text-black/80" />
                                         </div>
                                         <Plus size={12} className="text-black/10" strokeWidth={3} />
-                                        <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-sm border border-black/[0.05]">
+                                        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm border border-black/[0.05]">
                                             <Car size={18} className="text-black/80" />
                                         </div>
                                     </div>
@@ -2722,7 +2723,7 @@ const FullWashBooking = () => {
                                             setCart(prev => [...prev, bikeItem, carItem]);
                                             toast.success(`Combo added to cart! (${globalSettings.combo_discount_pct || 20}% Discount applied)`);
                                         }}
-                                        className="flex-1 bg-white border border-black/[0.06] text-black py-2.5 rounded-xl font-[1000] text-[10px] uppercase tracking-widest shadow-sm active:scale-[0.98] transition-all hover:bg-black hover:text-white hover:border-black"
+                                        className="flex-1 bg-white border border-black/[0.06] text-black py-2.5 rounded-lg font-[1000] text-[10px] uppercase tracking-widest shadow-sm active:scale-[0.98] transition-all hover:bg-black hover:text-white hover:border-black"
                                     >
                                         Book Combo
                                     </button>
@@ -2744,7 +2745,7 @@ const FullWashBooking = () => {
                                                 setCart(prev => [...prev, subscriptionItem]);
                                                 toast.success(`${blackPassPlan.name} added to cart!`);
                                             }}
-                                            className="flex-[1.8] bg-[#1A1A1A] text-white py-2.5 rounded-xl font-black text-[10px] uppercase tracking-[0.1em] flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-xl shadow-black/10 group-hover:bg-black"
+                                            className="flex-[1.8] bg-[#1A1A1A] text-white py-2 rounded-lg font-black text-[10px] uppercase tracking-[0.1em] flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-xl shadow-black/10 group-hover:bg-black"
                                         >
                                             ₹{blackPrice} WITH <span className="text-brand">BLACK</span>
                                             <ChevronRight size={12} strokeWidth={3} className="text-brand/50" />
@@ -2759,7 +2760,7 @@ const FullWashBooking = () => {
                     <div className="space-y-4 pt-2">
                         <div className="flex items-center justify-between px-1">
                             <h3 className="text-[10px] font-black text-black/30 uppercase tracking-[0.2em]">Monthly Subscription</h3>
-                            <span className="text-emerald-600 text-[8px] font-black uppercase tracking-widest bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100 shadow-sm">Upto 50% Savings</span>
+                            <span className="text-emerald-600 text-[8px] font-black uppercase tracking-widest bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 shadow-sm">Upto 50% Savings</span>
                         </div>
 
                         <div className="grid grid-cols-1 gap-2.5">
@@ -2781,9 +2782,9 @@ const FullWashBooking = () => {
                                 );
 
                                 return (
-                                    <div key={pkg.id || i} className={`bg-white rounded-2xl border p-3.5 shadow-sm flex items-center justify-between relative overflow-hidden group transition-all duration-300 ${isAdded ? 'border-brand ring-1 ring-brand/20' : 'border-black/[0.03] hover:border-brand/40'}`}>
+                                    <div key={pkg.id || i} className={`bg-white rounded-xl border p-3 shadow-sm flex items-center justify-between relative overflow-hidden group transition-all duration-300 ${isAdded ? 'border-brand ring-1 ring-brand/20' : 'border-black/[0.03] hover:border-brand/40'}`}>
                                         <div className="absolute top-0 right-0 w-24 h-24 bg-brand/5 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-150 duration-700" />
-                                        <div className="absolute top-0 left-0 bg-[#F3DCCB] text-black px-3 py-1 text-[7.5px] font-[1000] rounded-br-xl uppercase tracking-widest shadow-sm">
+                                        <div className="absolute top-0 left-0 bg-[#F3DCCB] text-black px-3 py-1 text-[7.5px] font-[1000] rounded-br-lg uppercase tracking-widest shadow-sm">
                                             Total ₹{pkg.price}
                                         </div>
 
@@ -2819,7 +2820,7 @@ const FullWashBooking = () => {
                                                     setCart(prev => [...prev, subscriptionItem]);
                                                 }
                                             }}
-                                            className={`px-5 py-2.5 rounded-xl text-[10px] font-[1000] uppercase tracking-widest shadow-md active:scale-95 transition-all relative z-10 ${isAdded ? 'bg-black text-white' : 'bg-[#F3DCCB] text-black hover:bg-black hover:text-white'}`}
+                                            className={`px-4 py-2 rounded-lg text-[10px] font-[1000] uppercase tracking-widest shadow-md active:scale-95 transition-all relative z-10 ${isAdded ? 'bg-black text-white' : 'bg-[#F3DCCB] text-black hover:bg-black hover:text-white'}`}
                                         >
                                             {isAdded ? 'Added' : 'Select'}
                                         </button>
@@ -2830,21 +2831,21 @@ const FullWashBooking = () => {
                     </div>
 
                     {/* Delivery Address (Premium Integration) */}
-                    <div className="bg-white rounded-3xl p-5 border border-black/[0.03] shadow-sm relative overflow-hidden group">
+                    <div className="bg-white rounded-xl p-4 border border-black/[0.03] shadow-sm relative overflow-hidden group">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-gray-50 rounded-full -mr-16 -mt-16 blur-3xl" />
                         <div className="flex items-center justify-between mb-5 relative z-10">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-2xl bg-black flex items-center justify-center text-white shadow-lg shadow-black/10">
+                                <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center text-white shadow-lg shadow-black/10">
                                     <MapPin size={18} strokeWidth={2.5} />
                                 </div>
                                 <div>
                                     <h4 className="text-[12px] font-black text-black uppercase tracking-widest leading-none">Service Address</h4>
-                                    <p className="text-[7.5px] font-black text-black/20 uppercase tracking-[0.2em] mt-1.5 font-outfit">Precision Pin Verified</p>
+                                    <p className="text-[7.5px] font-black text-black/20 uppercase tracking-[0.2em] mt-1.5 font-sans">Precision Pin Verified</p>
                                 </div>
                             </div>
                             <button
                                 onClick={() => navigate('/addresses?from=instant-wash')}
-                                className="bg-brand/10 text-brand px-4 py-2 rounded-xl text-[9.5px] font-black uppercase tracking-widest hover:bg-brand hover:text-white transition-all active:scale-95 shadow-sm border border-brand/20"
+                                className="bg-brand/10 text-brand px-3 py-1.5 rounded-lg text-[9.5px] font-black uppercase tracking-widest hover:bg-brand hover:text-white transition-all active:scale-95 shadow-sm border border-brand/20"
                             >
                                 Change
                             </button>
@@ -2852,15 +2853,15 @@ const FullWashBooking = () => {
                         {(() => {
                             const activeAddr = selectedLocation || addresses.find(a => a.isPrimary) || addresses[0];
                             return activeAddr ? (
-                                <div className="flex items-center gap-4 bg-gray-50/50 p-4 rounded-2xl border border-black/[0.02] relative z-10">
-                                    <div className="w-12 h-12 rounded-2xl bg-white border border-black/[0.05] flex items-center justify-center text-black/40 shadow-sm flex-shrink-0">
+                                <div className="flex items-center gap-4 bg-gray-50/50 p-3 rounded-xl border border-black/[0.02] relative z-10">
+                                    <div className="w-12 h-12 rounded-xl bg-white border border-black/[0.05] flex items-center justify-center text-black/40 shadow-sm flex-shrink-0">
                                         {activeAddr.label?.toLowerCase() === 'home' ? <Home size={22} strokeWidth={2.5} /> : <MapPin size={22} strokeWidth={2.5} />}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-1.5 mb-1">
                                             <h5 className="text-[11px] font-[1000] text-black uppercase tracking-tight truncate">{activeAddr.label || 'Home'}</h5>
                                         </div>
-                                        <p className="text-[10px] font-bold text-black/30 truncate leading-tight font-outfit">
+                                        <p className="text-[10px] font-bold text-black/30 truncate leading-tight font-sans">
                                             {activeAddr.street || activeAddr.full || activeAddr.address || 'Pinned Location'}
                                         </p>
                                     </div>
@@ -2871,7 +2872,7 @@ const FullWashBooking = () => {
                             ) : (
                                 <button
                                     onClick={() => navigate('/addresses?from=instant-wash')}
-                                    className="w-full py-8 border-2 border-dashed border-black/[0.05] rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-black/20 hover:bg-gray-50 hover:border-brand/20 transition-all group flex flex-col items-center justify-center gap-2"
+                                    className="w-full py-8 border-2 border-dashed border-black/[0.05] rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-black/20 hover:bg-gray-50 hover:border-brand/20 transition-all group flex flex-col items-center justify-center gap-2"
                                 >
                                     <Plus size={20} className="text-black/10 group-hover:text-brand transition-colors" strokeWidth={3} />
                                     Add Service Address
@@ -2887,7 +2888,7 @@ const FullWashBooking = () => {
                                 <h3 className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em]">Craft Care Essentials</h3>
                                 <p className="text-[7.5px] font-black text-brand uppercase tracking-tighter mt-1">Exclusive Add-ons for later use</p>
                             </div>
-                            <button onClick={() => navigate('/e-shop')} className="bg-black text-white px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 active:scale-95 transition-all">
+                            <button onClick={() => navigate('/e-shop')} className="bg-black text-white px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 active:scale-95 transition-all">
                                 View Store <ArrowRight size={8} strokeWidth={3} />
                             </button>
                         </div>
@@ -2896,9 +2897,9 @@ const FullWashBooking = () => {
                                 <motion.div
                                     key={product._id}
                                     whileTap={{ scale: 0.98 }}
-                                    className="min-w-[160px] bg-white rounded-2xl p-2 border border-black/[0.03] shadow-sm flex flex-col gap-2"
+                                    className="min-w-[160px] bg-white rounded-xl p-2 border border-black/[0.03] shadow-sm flex flex-col gap-2"
                                 >
-                                    <div className="w-full aspect-square bg-gray-50 rounded-xl overflow-hidden">
+                                    <div className="w-full aspect-square bg-gray-50 rounded-lg overflow-hidden">
                                         <img
                                             src={sanitizeUrl(product.image)}
                                             className="w-full h-full object-cover"
@@ -2932,7 +2933,7 @@ const FullWashBooking = () => {
                                                     setCart(prev => [...prev, productItem]);
                                                     toast.success(`${product.name} added to your purchases!`);
                                                 }}
-                                                className="w-6 h-6 bg-black text-white rounded-lg flex items-center justify-center active:scale-95 transition-transform"
+                                                className="w-6 h-6 bg-black text-white rounded-md flex items-center justify-center active:scale-95 transition-transform"
                                             >
                                                 <Plus size={12} strokeWidth={3} />
                                             </button>
@@ -2940,7 +2941,7 @@ const FullWashBooking = () => {
                                     </div>
                                 </motion.div>
                             )) : (
-                                <div className="w-full py-8 text-center bg-white rounded-2xl border border-black/[0.03] border-dashed">
+                                <div className="w-full py-8 text-center bg-white rounded-xl border border-black/[0.03] border-dashed">
                                     <p className="text-[9px] font-black text-black/10 uppercase tracking-widest">Curating relevant products...</p>
                                 </div>
                             )}
@@ -3020,7 +3021,7 @@ const FullWashBooking = () => {
             <div className="min-h-screen bg-[#F8F9FB] pb-32">
                 {/* Header */}
                 <div className="px-5 py-3 flex items-center gap-3 bg-white border-b border-black/[0.04] sticky top-0 z-50">
-                    <button onClick={handleBack} className="w-8 h-8 flex items-center justify-center bg-gray-50 rounded-xl">
+                    <button onClick={handleBack} className="w-8 h-8 flex items-center justify-center bg-gray-50 rounded-lg">
                         <ChevronLeft size={18} />
                     </button>
                     <h2 className="text-[14px] font-[1000] text-black uppercase tracking-tight">Select Slot</h2>
@@ -3041,20 +3042,20 @@ const FullWashBooking = () => {
 
                 <div className="p-4 space-y-4">
                     {/* Booking Mode Selector */}
-                    <div className="bg-white rounded-2xl border border-black/[0.06] p-1.5 flex gap-1.5 shadow-sm overflow-hidden">
+                    <div className="bg-white rounded-xl border border-black/[0.06] p-1 flex gap-1.5 shadow-sm overflow-hidden">
                         <button
                             onClick={() => setBookingType('instant')}
-                            className={`flex-1 flex items-center justify-center gap-2.5 py-4 rounded-xl transition-all relative group ${bookingType === 'instant' ? 'bg-black text-white shadow-xl shadow-black/10' : 'bg-transparent text-black/40 hover:bg-gray-50'}`}
+                            className={`flex-1 flex items-center justify-center gap-2.5 py-3 rounded-lg transition-all relative group ${bookingType === 'instant' ? 'bg-black text-white shadow-xl shadow-black/10' : 'bg-transparent text-black/40 hover:bg-gray-50'}`}
                         >
-                            {bookingType === 'instant' && <motion.div layoutId="modebg" className="absolute inset-0 bg-black rounded-xl -z-10" />}
+                            {bookingType === 'instant' && <motion.div layoutId="modebg" className="absolute inset-0 bg-black rounded-lg -z-10" />}
                             <Zap size={16} className={bookingType === 'instant' ? 'text-brand' : 'text-black/20'} fill="currentColor" />
                             <span className="text-[12px] font-black uppercase tracking-widest">Instant Match</span>
                         </button>
                         <button
                             onClick={() => setBookingType('schedule')}
-                            className={`flex-1 flex items-center justify-center gap-2.5 py-4 rounded-xl transition-all relative group ${bookingType === 'schedule' ? 'bg-black text-white shadow-xl shadow-black/10' : 'bg-transparent text-black/40 hover:bg-gray-50'}`}
+                            className={`flex-1 flex items-center justify-center gap-2.5 py-3 rounded-lg transition-all relative group ${bookingType === 'schedule' ? 'bg-black text-white shadow-xl shadow-black/10' : 'bg-transparent text-black/40 hover:bg-gray-50'}`}
                         >
-                            {bookingType === 'schedule' && <motion.div layoutId="modebg" className="absolute inset-0 bg-black rounded-xl -z-10" />}
+                            {bookingType === 'schedule' && <motion.div layoutId="modebg" className="absolute inset-0 bg-black rounded-lg -z-10" />}
                             <Calendar size={16} className={bookingType === 'schedule' ? 'text-brand' : 'text-black/20'} />
                             <span className="text-[12px] font-black uppercase tracking-widest">Schedule</span>
                         </button>
@@ -3070,7 +3071,7 @@ const FullWashBooking = () => {
                             </div>
                         )}
 
-                        <div className="bg-white rounded-3xl border border-black/[0.06] p-5 shadow-sm space-y-8">
+                        <div className="bg-white rounded-xl border border-black/[0.06] p-4 shadow-sm space-y-8">
                             <div>
                                 <h3 className="text-[14px] font-black text-black mb-5 uppercase tracking-tight">Select Service Date</h3>
                                 {/* Date Picker */}
@@ -3081,13 +3082,13 @@ const FullWashBooking = () => {
                                             <div key={i} className="flex flex-col items-center gap-2 flex-shrink-0">
                                                 <div className="relative">
                                                     {d.trend && (
-                                                        <div className={`absolute -top-1.5 -right-1.5 w-5 h-5 rounded-md flex items-center justify-center shadow-md z-10 ${d.trend === 'up' ? 'bg-[#FFD700]' : 'bg-emerald-500'}`}>
+                                                        <div className={`absolute -top-1.5 -right-1.5 w-5 h-5 rounded-sm flex items-center justify-center shadow-md z-10 ${d.trend === 'up' ? 'bg-[#FFD700]' : 'bg-emerald-500'}`}>
                                                             <Zap size={10} className={d.trend === 'up' ? 'text-black' : 'text-white'} fill="currentColor" />
                                                         </div>
                                                     )}
                                                     <button
                                                         onClick={() => setSelectedDate(d.fullDate)}
-                                                        className={`w-[58px] py-4 rounded-2xl flex flex-col items-center transition-all duration-300 border ${isSelected ? 'bg-black text-white border-black shadow-xl scale-105' : 'bg-white text-black/40 border-black/[0.05] hover:border-black/10'}`}
+                                                        className={`w-[52px] py-3 rounded-xl flex flex-col items-center transition-all duration-300 border ${isSelected ? 'bg-black text-white border-black shadow-xl scale-105' : 'bg-white text-black/40 border-black/[0.05] hover:border-black/10'}`}
                                                     >
                                                         <span className="text-[8px] font-[1000] mb-1.5 uppercase tracking-widest leading-none">{d.month}</span>
                                                         <span className="text-[18px] font-[1000] mb-1 leading-none">{d.day}</span>
@@ -3124,7 +3125,7 @@ const FullWashBooking = () => {
                                                 <button
                                                     key={slot}
                                                     onClick={() => setSelectedSlot(slot)}
-                                                    className={`py-3.5 rounded-xl text-[12px] font-black transition-all border ${selectedSlot === slot
+                                                    className={`py-3 rounded-lg text-[12px] font-black transition-all border ${selectedSlot === slot
                                                         ? 'bg-black text-white border-black shadow-lg scale-[0.98]'
                                                         : 'bg-white text-black/50 border-black/[0.06] hover:border-black/20'
                                                         }`}
@@ -3149,7 +3150,7 @@ const FullWashBooking = () => {
                                                 <button
                                                     key={slot}
                                                     onClick={() => setSelectedSlot(slot)}
-                                                    className={`py-3.5 rounded-xl text-[12px] font-black transition-all border ${selectedSlot === slot
+                                                    className={`py-3 rounded-lg text-[12px] font-black transition-all border ${selectedSlot === slot
                                                         ? 'bg-black text-white border-black shadow-lg scale-[0.98]'
                                                         : 'bg-white text-black/50 border-black/[0.06] hover:border-black/20'
                                                         }`}
@@ -3174,7 +3175,7 @@ const FullWashBooking = () => {
                                                 <button
                                                     key={slot}
                                                     onClick={() => setSelectedSlot(slot)}
-                                                    className={`py-3.5 rounded-xl text-[12px] font-black transition-all border ${selectedSlot === slot
+                                                    className={`py-3 rounded-lg text-[12px] font-black transition-all border ${selectedSlot === slot
                                                         ? 'bg-black text-white border-black shadow-lg scale-[0.98]'
                                                         : 'bg-white text-black/50 border-black/[0.06] hover:border-black/20'
                                                         }`}
@@ -3191,8 +3192,8 @@ const FullWashBooking = () => {
 
                     {/* Terms Banner */}
                     <div className="px-5 mt-2">
-                        <div className="bg-[#1A1A1A] rounded-2xl p-4 flex items-start gap-3 shadow-xl">
-                            <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
+                        <div className="bg-[#1A1A1A] rounded-xl p-3 flex items-start gap-3 shadow-xl">
+                            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
                                 <Shield size={16} className="text-brand" />
                             </div>
                             <p className="text-[10px] font-bold text-white/60 leading-normal">
@@ -3230,12 +3231,12 @@ const FullWashBooking = () => {
                                 }
                                 setPhase(PHASES.PAYMENT);
                             }}
-                            className={`flex-[1.5] h-14 rounded-2xl font-[1000] text-[13px] uppercase tracking-[0.15em] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-2xl relative overflow-hidden group ${(bookingType === 'instant' || selectedSlot)
+                            className={`flex-[1.5] h-12 rounded-xl font-[1000] text-[12px] uppercase tracking-[0.15em] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-2xl relative overflow-hidden group ${(bookingType === 'instant' || selectedSlot)
                                 ? 'bg-black text-white shadow-black/20'
                                 : 'bg-gray-100 text-black/20 pointer-events-none border border-black/[0.03]'
                                 }`}
                         >
-                            <span className="relative z-10 italic">{bookingType === 'instant' ? 'Instant Booking' : 'Confirm & Schedule'}</span>
+                            <span className="relative z-10">{bookingType === 'instant' ? 'Instant Booking' : 'Confirm & Schedule'}</span>
                             <ArrowRight size={18} strokeWidth={3} className="relative z-10 group-hover:translate-x-1.5 transition-transform" />
                         </button>
                     </div>
@@ -3258,10 +3259,10 @@ const FullWashBooking = () => {
         const passPrice = blackPassPlan?.price || passConfig?.price || 499;
 
         return (
-            <div className="min-h-screen bg-[#F8F9FB] pb-32 font-outfit">
+            <div className="min-h-screen bg-[#F8F9FB] pb-32 font-sans">
                 {/* Header */}
                 <div className="px-5 py-3 flex items-center gap-3 bg-white border-b border-black/[0.04] sticky top-0 z-50">
-                    <button onClick={() => setPhase(PHASES.SELECT_SLOT)} className="w-8 h-8 flex items-center justify-center bg-gray-50 rounded-xl">
+                    <button onClick={() => setPhase(PHASES.SELECT_SLOT)} className="w-8 h-8 flex items-center justify-center bg-gray-50 rounded-lg">
                         <ChevronLeft size={18} />
                     </button>
                     <h2 className="text-[14px] font-[1000] text-black uppercase tracking-tight">Payment Selection</h2>
@@ -3269,7 +3270,7 @@ const FullWashBooking = () => {
 
                 <div className="p-4 space-y-3.5">
                     {/* Security Badge - Compact & Pro */}
-                    <div className="bg-emerald-50/80 rounded-2xl p-3 flex items-center gap-3 border border-emerald-100/50">
+                    <div className="bg-emerald-50/80 rounded-xl p-2.5 flex items-center gap-3 border border-emerald-100/50">
                         <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-emerald-500/10">
                             <ShieldCheck size={16} strokeWidth={3} />
                         </div>
@@ -3286,11 +3287,11 @@ const FullWashBooking = () => {
                             animate={{ scale: 1, opacity: 1 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => navigate('/subscription')}
-                            className="bg-black rounded-[2.2rem] p-5 border border-brand/30 shadow-2xl relative overflow-hidden group cursor-pointer"
+                            className="bg-black rounded-xl p-4 border border-brand/30 shadow-2xl relative overflow-hidden group cursor-pointer"
                         >
                             <div className="absolute top-0 right-0 w-32 h-full bg-brand/[0.05] skew-x-[-20deg]" />
                             <div className="flex items-center gap-4 relative z-10">
-                                <div className="w-12 h-12 bg-brand rounded-2xl flex items-center justify-center shadow-lg shadow-brand/20">
+                                <div className="w-12 h-12 bg-brand rounded-xl flex items-center justify-center shadow-lg shadow-brand/20">
                                     <Crown size={24} className="text-black" fill="currentColor" />
                                 </div>
                                 <div className="flex-1">
@@ -3299,7 +3300,7 @@ const FullWashBooking = () => {
                                         Join {blackPassPlan?.name || 'Black Pass'} for ₹{passPrice} and unlock {discountPct}% OFF on this booking instantly.
                                     </p>
                                 </div>
-                                <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-brand">
+                                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-brand">
                                     <ChevronRight size={18} strokeWidth={3} />
                                 </div>
                             </div>
@@ -3314,7 +3315,7 @@ const FullWashBooking = () => {
                             <button
                                 key={opt.id}
                                 onClick={() => setPaymentMethod(opt.id)}
-                                className={`w-full bg-white p-3.5 rounded-xl flex items-center justify-between transition-all border ${paymentMethod === opt.id ? 'border-brand shadow-md ring-1 ring-brand/10' : 'border-black/[0.03]'
+                                className={`w-full bg-white p-3 rounded-lg flex items-center justify-between transition-all border ${paymentMethod === opt.id ? 'border-brand shadow-md ring-1 ring-brand/10' : 'border-black/[0.03]'
                                     }`}
                             >
                                 <div className="flex items-center gap-3">
@@ -3334,7 +3335,7 @@ const FullWashBooking = () => {
                                         )}
                                     </div>
                                 </div>
-                                <span className={`px-2 py-1 ${isBlackPassMember ? 'bg-gradient-to-r from-brand to-amber-400 text-black shadow-lg shadow-brand/20' : 'bg-brand text-white'} text-[9px] font-black rounded-lg uppercase tracking-tighter italic flex items-center gap-1.5 border border-white/20 transition-all hover:scale-105 active:scale-95`}>
+                                <span className={`px-2 py-1 ${isBlackPassMember ? 'bg-gradient-to-r from-brand to-amber-400 text-black shadow-lg shadow-brand/20' : 'bg-brand text-white'} text-[9px] font-black rounded-lg uppercase tracking-tighter flex items-center gap-1.5 border border-white/20 transition-all hover:scale-105 active:scale-95`}>
                                     {isBlackPassMember ? <><Crown size={10} fill="currentColor" /> Black Member Elite</> : 'Verified Plus'}
                                 </span>
                                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${paymentMethod === opt.id ? 'border-brand bg-brand animate-in zoom-in-50' : 'border-black/[0.1]'
@@ -3346,7 +3347,7 @@ const FullWashBooking = () => {
                     </div>
 
                     {/* Restricted Warning - Compact */}
-                    <div className="bg-[#FFF8F0] rounded-xl p-4 flex items-start gap-3 border border-orange-100/50">
+                    <div className="bg-[#FFF8F0] rounded-lg p-4 flex items-start gap-3 border border-orange-100/50">
                         <Info size={14} className="text-orange-500 mt-0.5 shrink-0" />
                         <p className="text-[10px] font-black text-orange-900 leading-normal uppercase tracking-tight">
                             COD Restricted: Online confirmation required to secure priority booking.
@@ -3360,7 +3361,7 @@ const FullWashBooking = () => {
                         <div className="flex-1">
                             <div className="flex items-center gap-1.5 mb-1">
                                 <span className="text-[11px] font-black text-black uppercase tracking-widest leading-none">Total</span>
-                                <div className="px-1.5 py-0.5 bg-emerald-50 rounded text-[7px] font-black text-emerald-600 uppercase tracking-tighter border border-emerald-100/30">
+                                <div className="px-1.5 py-0.5 bg-emerald-50 rounded-sm text-[7px] font-black text-emerald-600 uppercase tracking-tighter border border-emerald-100/30">
                                     Final Price
                                 </div>
                             </div>

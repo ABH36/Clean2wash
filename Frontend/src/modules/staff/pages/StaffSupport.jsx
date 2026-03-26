@@ -51,8 +51,8 @@ const StaffSupport = () => {
                 {/* Main Support Card - Compact Version */}
                 <div className={`${isDarkMode ? 'bg-[#1E293B] border border-white/5' : 'bg-content'} rounded-[2rem] p-6 text-white relative overflow-hidden shadow-2xl shadow-content/20 group transition-all duration-500`}>
                     <div className="relative z-10">
-                        <p className="text-[8px] font-black text-brand-light uppercase tracking-[0.25em] mb-1.5 italic">Operational Node</p>
-                        <h2 className={`text-2xl font-black italic tracking-tighter leading-tight mb-4 uppercase ${isDarkMode ? 'text-white' : 'text-white'}`}>Support <br /> Terminal</h2>
+                        <p className="text-[8px] font-black text-brand-light uppercase tracking-[0.25em] mb-1.5">Operational Node</p>
+                        <h2 className={`text-2xl font-black tracking-tighter leading-tight mb-4 uppercase ${isDarkMode ? 'text-white' : 'text-white'}`}>Support <br /> Terminal</h2>
                         <p className={`${isDarkMode ? 'text-white/30' : 'text-white/40'} text-[9px] font-bold leading-relaxed mb-6 uppercase tracking-widest max-w-[200px]`}>
                             Authorized personnel only. Encrypted channel for protocol sync.
                         </p>
@@ -65,7 +65,7 @@ const StaffSupport = () => {
                 </div>
 
                 <div className="space-y-3">
-                    <p className={`text-[9px] font-black uppercase tracking-[0.2em] px-3 italic ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Communication Channels</p>
+                    <p className={`text-[9px] font-black uppercase tracking-[0.2em] px-3 ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Communication Channels</p>
                     {SUPPORT_CHANNELS.map((channel, i) => (
                         <motion.button
                             key={i}
@@ -76,7 +76,7 @@ const StaffSupport = () => {
                                 {React.cloneElement(channel.icon, { size: 18 })}
                             </div>
                             <div className="flex-1">
-                                <h3 className={`text-xs font-black italic uppercase leading-none mb-1 tracking-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>{channel.label}</h3>
+                                <h3 className={`text-xs font-black uppercase leading-none mb-1 tracking-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>{channel.label}</h3>
                                 <p className={`text-[8px] font-bold uppercase mb-2 tracking-widest leading-none ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>{channel.sub}</p>
                                 <div className="flex items-center gap-1.5 text-brand">
                                     <span className="text-[8px] font-black uppercase tracking-[0.15em]">{channel.action}</span>

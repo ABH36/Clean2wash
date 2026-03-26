@@ -81,6 +81,11 @@ import CaptainSettings from './modules/captain/pages/CaptainSettings';
 import CaptainSupport from './modules/captain/pages/CaptainSupport';
 import CaptainRewards from './modules/captain/pages/CaptainRewards';
 import CaptainProfileEdit from './modules/captain/pages/CaptainProfileEdit';
+import CaptainNotifications from './modules/captain/pages/CaptainNotifications';
+import CaptainPersonalInfo from './modules/captain/pages/CaptainPersonalInfo';
+import CaptainPortfolio from './modules/captain/pages/CaptainPortfolio';
+import CaptainLocationSelector from './modules/captain/pages/CaptainLocationSelector';
+import CaptainOTPVerification from './modules/captain/pages/CaptainOTPVerification';
 
 // ── Vendor Module ──
 import VendorHome from './modules/vendor/pages/VendorHome';
@@ -111,6 +116,7 @@ import StaffSecurity from './modules/staff/pages/StaffSecurity';
 import StaffSupport from './modules/staff/pages/StaffSupport';
 import StaffNotifications from './modules/staff/pages/StaffNotifications';
 import SocietyRoute from './modules/staff/pages/SocietyRoute';
+import StaffMapView from './modules/staff/pages/StaffMapView';
 import StaffProductTaskDetail from './modules/staff/pages/StaffProductTaskDetail';
 import CaptainProductMission from './modules/captain/pages/CaptainProductMission';
 
@@ -180,6 +186,7 @@ function App() {
                       <Route path="/otp-verify" element={<OTPVerification />} />
                       <Route path="/captain/login" element={<CaptainLogin />} />
                       <Route path="/captain/signup" element={<CaptainSignup />} />
+                      <Route path="/captain/otp-verify" element={<CaptainOTPVerification />} />
                       <Route path="/vendor/login" element={<VendorLogin />} />
                       <Route path="/vendor/signup" element={<VendorSignup />} />
                       <Route path="/staff/login" element={<StaffLogin />} />
@@ -255,6 +262,10 @@ function App() {
                       <Route path="/captain/support" element={P('captain', <CaptainSupport />)} />
                       <Route path="/captain/rewards" element={P('captain', <CaptainRewards />)} />
                       <Route path="/captain/profile/edit" element={P('captain', <CaptainProfileEdit />)} />
+                      <Route path="/captain/notifications" element={P('captain', <CaptainNotifications />)} />
+                      <Route path="/captain/profile/personal" element={P('captain', <CaptainPersonalInfo />)} />
+                      <Route path="/captain/portfolio" element={P('captain', <CaptainPortfolio />)} />
+                      <Route path="/captain/area-select" element={P('captain', <CaptainLocationSelector />)} />
 
                       {/* ── Vendor: Protected ── */}
                       <Route path="/vendor" element={P('vendor', <VendorHome />)} />
@@ -283,6 +294,7 @@ function App() {
                       <Route path="/staff/profile/support" element={P('staff', <StaffSupport />)} />
                       <Route path="/staff/profile/notifications" element={P('staff', <StaffNotifications />)} />
                       <Route path="/staff/society-route" element={P('staff', <SocietyRoute />)} />
+                      <Route path="/staff/map" element={P('staff', <StaffMapView />)} />
 
                       {/* ── Admin: Protected ── */}
                       <Route element={P('admin', <AdminPanelLayout />)}>

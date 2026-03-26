@@ -167,8 +167,8 @@ const VendorProductOrderDetail = () => {
                                 <div className="bg-surface rounded-[2.5rem] p-8 text-content relative overflow-hidden shadow-2xl border border-gray-100/10">
                                     <div className="relative z-10 flex items-center justify-between">
                                         <div>
-                                            <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] italic mb-1">Order Status</p>
-                                            <h2 className="text-3xl font-black italic tracking-tighter uppercase">{order.status}</h2>
+                                            <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] mb-1">Order Status</p>
+                                            <h2 className="text-3xl font-black tracking-tighter uppercase">{order.status}</h2>
                                         </div>
                                         <div className="w-16 h-16 bg-brand/5 rounded-2xl flex items-center justify-center text-brand">
                                             <Package size={32} />
@@ -179,7 +179,7 @@ const VendorProductOrderDetail = () => {
 
                                 {/* Product Items belonging to this Vendor */}
                                 <div className="bg-surface p-8 rounded-[2.5rem] border border-gray-100/10 shadow-soft">
-                                    <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic mb-6">Dispatch Manifest</h3>
+                                    <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-widest mb-6">Dispatch Manifest</h3>
                                     <div className="space-y-4">
                                         {order.myItems.map(item => (
                                             <div key={item._id} className="p-6 bg-background rounded-[2rem] border border-gray-100/10 space-y-6">
@@ -192,11 +192,11 @@ const VendorProductOrderDetail = () => {
                                                             <h4 className="font-black text-lg text-content tracking-tight">{item.name}</h4>
                                                             <p className="text-[10px] font-bold text-content-subtle uppercase">Qty: {item.quantity} · ₹{item.price}</p>
                                                             <div className={`mt-2 w-fit px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${item.status === 'delivered' ? 'bg-green-500/10 text-green-500' :
-                                                                    item.status === 'shipped' ? 'bg-amber-500/10 text-amber-500' :
-                                                                        item.status === 'cancelled' ? 'bg-red-500/10 text-red-500' :
-                                                                            item.status === 'returning_to_pickup' ? 'bg-purple-500/10 text-purple-500' :
-                                                                                item.status === 'returned' ? 'bg-blue-500/10 text-blue-500' :
-                                                                                    'bg-blue-500/10 text-blue-500'
+                                                                item.status === 'shipped' ? 'bg-amber-500/10 text-amber-500' :
+                                                                    item.status === 'cancelled' ? 'bg-red-500/10 text-red-500' :
+                                                                        item.status === 'returning_to_pickup' ? 'bg-purple-500/10 text-purple-500' :
+                                                                            item.status === 'returned' ? 'bg-blue-500/10 text-blue-500' :
+                                                                                'bg-blue-500/10 text-blue-500'
                                                                 }`}>
                                                                 {item.status.replace(/_/g, ' ')}
                                                             </div>
@@ -254,7 +254,7 @@ const VendorProductOrderDetail = () => {
                                                             </div>
                                                             <div>
                                                                 <p className="text-[10px] font-black text-content uppercase tracking-tight">Delivery Agent</p>
-                                                                <p className="text-[9px] font-bold text-content-subtle italic">Assigned at {new Date(item.fulfillment.dispatchedAt).toLocaleTimeString()}</p>
+                                                                <p className="text-[9px] font-bold text-content-subtle">Assigned at {new Date(item.fulfillment.dispatchedAt).toLocaleTimeString()}</p>
                                                             </div>
                                                         </div>
                                                         <div className="flex gap-2">
@@ -272,7 +272,7 @@ const VendorProductOrderDetail = () => {
                             <div className="space-y-6">
                                 {/* Shipping Destination */}
                                 <div className="bg-surface p-6 rounded-[2rem] border border-gray-100/10 shadow-soft space-y-4">
-                                    <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Shipping Destination</h3>
+                                    <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Shipping Destination</h3>
                                     <div className="h-32 bg-background rounded-2xl border border-gray-100/10 relative overflow-hidden group">
                                         <div className="absolute inset-0 flex items-center justify-center text-content-subtle">
                                             <MapPin size={24} className="group-hover:scale-125 transition-transform" />
@@ -281,7 +281,7 @@ const VendorProductOrderDetail = () => {
                                     <div className="space-y-1">
                                         <p className="text-[12px] font-black text-content">{order.consumer?.name}</p>
                                         <p className="text-[11px] font-bold text-content-subtle leading-snug">{order.shippingAddress?.addressLine}, {order.shippingAddress?.city}</p>
-                                        <p className="text-[11px] font-bold text-content-subtle italic">PIN: {order.shippingAddress?.pincode}</p>
+                                        <p className="text-[11px] font-bold text-content-subtle">PIN: {order.shippingAddress?.pincode}</p>
                                     </div>
                                     <div className="flex gap-2 pt-2">
                                         <button className="flex-1 h-10 bg-background border border-gray-100/10 rounded-xl text-brand font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
@@ -295,7 +295,7 @@ const VendorProductOrderDetail = () => {
 
                                 {/* Order Timeline */}
                                 <div className="bg-surface p-6 rounded-[2rem] border border-gray-100/10 shadow-soft space-y-6">
-                                    <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Logistics Timeline</h3>
+                                    <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Logistics Timeline</h3>
                                     <div className="space-y-4 relative">
                                         <div className="absolute left-3 top-2 bottom-2 w-0.5 bg-gray-100/10" />
                                         {order.history?.map((event, i) => (
@@ -305,7 +305,7 @@ const VendorProductOrderDetail = () => {
                                                 </div>
                                                 <div>
                                                     <p className="text-[11px] font-black uppercase tracking-tight text-content">{event.status}</p>
-                                                    <p className="text-[9px] font-bold text-content-subtle italic">{new Date(event.timestamp).toLocaleString()}</p>
+                                                    <p className="text-[9px] font-bold text-content-subtle">{new Date(event.timestamp).toLocaleString()}</p>
                                                 </div>
                                             </div>
                                         ))}
@@ -335,8 +335,8 @@ const VendorProductOrderDetail = () => {
                                 <div className="w-16 h-16 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4">
                                     <ShieldCheck size={32} />
                                 </div>
-                                <h2 className="text-2xl font-black text-content italic tracking-tight">Security Handover</h2>
-                                <p className="text-sm font-bold text-content-subtle leading-relaxed italic">Enter the unique 4-digit PIN provided by the consumer to release the item.</p>
+                                <h2 className="text-2xl font-black text-content tracking-tight">Security Handover</h2>
+                                <p className="text-sm font-bold text-content-subtle leading-relaxed">Enter the unique 4-digit PIN provided by the consumer to release the item.</p>
                             </div>
 
                             <input
@@ -383,7 +383,7 @@ const VendorProductOrderDetail = () => {
                             className="bg-surface w-full max-w-md rounded-[2.5rem] border border-gray-100/10 p-8 space-y-6"
                         >
                             <div className="flex justify-between items-center">
-                                <h2 className="text-xl font-black text-content italic tracking-tight">Assign Delivery Staff</h2>
+                                <h2 className="text-xl font-black text-content tracking-tight">Assign Delivery Staff</h2>
                                 <button onClick={() => setShowStaffPicker(false)} className="w-10 h-10 bg-background border border-gray-100/10 rounded-xl flex items-center justify-center text-content-muted">✕</button>
                             </div>
                             <div className="space-y-2">

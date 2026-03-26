@@ -44,7 +44,7 @@ const SERVICE_TYPES = [
 const SpareDriverBooking = () => {
     const navigate = useNavigate();
     const { vehicles, refreshStats } = useAuth();
-    const { savedAddresses: addresses } = useGeoLocation();
+    const { savedAddresses: addresses, selectedAddress, currentLocation } = useGeoLocation();
     const [services, setServices] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -255,8 +255,9 @@ const SpareDriverBooking = () => {
                 location: {
                     type: 'home',
                     address: {
-                        street: addresses?.find(a => a.isPrimary)?.street || addresses?.[0]?.street || 'HSR Layout',
-                        city: addresses?.find(a => a.isPrimary)?.city || addresses?.[0]?.city || 'Bengaluru'
+                        street: selectedAddress?.street || addresses?.find(a => a.isPrimary)?.street || addresses?.[0]?.street || 'Current Location',
+                        city: selectedAddress?.city || addresses?.find(a => a.isPrimary)?.city || addresses?.[0]?.city || 'Bengaluru',
+                        coordinates: selectedAddress?.coordinates || currentLocation || addresses?.[0]?.coordinates || { lat: 28.6139, lng: 77.2090 }
                     }
                 },
                 provider: {
@@ -444,7 +445,7 @@ const SpareDriverBooking = () => {
                         </div>
                         <div className="flex-1 overflow-hidden">
                             <h4 className="text-[11px] font-[1000] text-black uppercase tracking-tight leading-none mb-1">Current Residence</h4>
-                            <p className="text-[9px] font-bold text-black/30 uppercase tracking-widest truncate">{addresses?.find(a => a.isPrimary)?.street || addresses?.[0]?.street || 'HSR Layout, Bengaluru'}</p>
+                            <p className="text-[9px] font-bold text-black/30 uppercase tracking-widest truncate">{selectedAddress?.street || addresses?.find(a => a.isPrimary)?.street || addresses?.[0]?.street || 'Current Location'}</p>
                         </div>
                         <ChevronRight size={14} className="text-black/10 transition-transform group-hover:translate-x-1" />
                     </div>
@@ -714,7 +715,7 @@ const SpareDriverBooking = () => {
                 {/* 🗺️ Phase 1: Live Leaflet Integration */}
                 <div className="absolute inset-0 z-0">
                     <MapContainer
-                        center={driverLocation ? [driverLocation.lat, driverLocation.lng] : [12.9716, 77.5946]}
+                        center={driverLocation ? [driverLocation.lat, driverLocation.lng] : (selectedAddress?.coordinates ? [selectedAddress.coordinates.lat, selectedAddress.coordinates.lng] : (currentLocation ? [currentLocation.lat, currentLocation.lng] : [28.6139, 77.2090]))}
                         zoom={15}
                         zoomControl={false}
                         className="w-full h-full"
@@ -733,7 +734,7 @@ const SpareDriverBooking = () => {
                             </>
                         )}
                         {/* User Goal Marker - Placeholder for pickup */}
-                        <Marker position={[12.9716, 77.5946]} icon={userIcon} />
+                        <Marker position={selectedAddress?.coordinates ? [selectedAddress.coordinates.lat, selectedAddress.coordinates.lng] : (currentLocation ? [currentLocation.lat, currentLocation.lng] : [28.6139, 77.2090])} icon={userIcon} />
                     </MapContainer>
                 </div>
 

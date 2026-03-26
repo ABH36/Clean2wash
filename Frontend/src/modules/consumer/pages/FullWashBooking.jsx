@@ -97,14 +97,14 @@ const FullWashBooking = () => {
         isBlackPassMember, globalCatalog, loadGlobalCatalog, catalogLoading,
         addVehicle, vehiclesLoading
     } = useAuth();
-    const { savedAddresses: addresses } = useGeoLocation();
+    const { savedAddresses: addresses, selectedAddress, setSelectedAddress, currentLocation } = useGeoLocation();
     const [searchParams] = useSearchParams();
     const user = getUser('consumer');
     const { cartItems: cart, setCartItems: setCart } = useCart();
 
     // --- Core UI & Persistence States ---
     const [phase, setPhase] = useState(() => {
-        const saved = sessionStorage.getItem('iw_phase');
+        const saved = sessionStorage.getItem('fw_phase');
         return saved || PHASES.SERVICE_SELECTION;
     });
 
@@ -145,7 +145,7 @@ const FullWashBooking = () => {
         }
     }, [phase, phaseHistory, navigate]);
     const [selectedVehicle, setSelectedVehicle] = useState(() => {
-        const saved = sessionStorage.getItem('iw_vehicle');
+        const saved = sessionStorage.getItem('fw_vehicle');
         if (saved) return JSON.parse(saved);
         return vehicles.find(v => v.isPrimary) || vehicles[0];
     });
@@ -199,24 +199,24 @@ const FullWashBooking = () => {
 
     // --- Booking & Cart States ---
     const [serviceAddons, setServiceAddons] = useState(() => {
-        const saved = sessionStorage.getItem('iw_addons');
+        const saved = sessionStorage.getItem('fw_addons');
         return saved ? JSON.parse(saved) : {};
     });
     const [useSubscription, setUseSubscription] = useState(false);
     const [selectedLocation, setSelectedLocation] = useState(() => {
-        const saved = sessionStorage.getItem('iw_location');
+        const saved = sessionStorage.getItem('fw_location');
         if (saved) return JSON.parse(saved);
-        return addresses.find(a => a.isPrimary) || addresses[0];
+        return selectedAddress || addresses.find(a => a.isPrimary) || addresses[0];
     });
 
     useEffect(() => {
-        if (!selectedLocation && addresses.length > 0) {
-            const primary = addresses.find(a => a.isPrimary) || addresses[0];
-            setSelectedLocation(primary);
+        if (!selectedLocation && (selectedAddress || addresses.length > 0)) {
+            const fallback = selectedAddress || addresses.find(a => a.isPrimary) || addresses[0];
+            setSelectedLocation(fallback);
         }
-    }, [addresses]);
+    }, [addresses, selectedAddress]);
     const [bookingType, setBookingType] = useState(() => {
-        const saved = sessionStorage.getItem('iw_booking_type');
+        const saved = sessionStorage.getItem('fw_booking_type');
         return saved || 'instant';
     });
     const [selectedDate, setSelectedDate] = useState(() => {
@@ -229,6 +229,7 @@ const FullWashBooking = () => {
     const [couponCode, setCouponCode] = useState('');
     const [appliedCoupon, setAppliedCoupon] = useState(null);
     const [couponError, setCouponError] = useState('');
+    const [parkingDetails, setParkingDetails] = useState({ basement: '', block: '', pillar: '', area: '' });
     const [isProcessing, setIsProcessing] = useState(false);
     const [loadingConfig, setLoadingConfig] = useState(true);
 
@@ -297,7 +298,7 @@ const FullWashBooking = () => {
         }
 
         // 3. Auto-apply Black Pass discount
-        if (isBlackPassMember && passConfig?.discount) {
+        if (isBlackPassMember && passConfig?.discount && isServiceEligibleForBlackPass(id)) {
             basePrice = basePrice * (1 - passConfig.discount);
         }
 
@@ -318,10 +319,47 @@ const FullWashBooking = () => {
 
     const canUseSubscription = useCallback((serviceId) => {
         if (!isBlackPassMember || !userSubscription) return false;
+        
+        // Find the service in dynamic services to get its category
+        const service = dynamicServices.find(s => s.id === serviceId || s._id === serviceId);
+        if (!service) return false;
+
         const plan = subscriptionPlans.find(p => p.id === userSubscription.planId || p._id === userSubscription.planId);
         if (!plan) return false;
-        return plan.applicableServices?.includes(serviceId) || plan.applicableServices?.includes('all');
-    }, [isBlackPassMember, userSubscription, subscriptionPlans]);
+
+        // Use the same robust logic as backend Subscription.js
+        return plan.applicableServices?.some(serviceName => {
+            if (serviceName === 'Instant Wash') {
+                return service.category === 'Doorstep';
+            }
+            if (serviceName === 'Studio Wash') {
+                return service.category === 'Studio' || service.category === 'Studio Detailing';
+            }
+            if (serviceName === 'Apartment Wash') {
+                return service.category === 'Doorstep' || service.category === 'Apartment';
+            }
+            if (serviceName === 'Spare Driver') {
+                return service.category === 'Chauffeur';
+            }
+            return false;
+        }) || plan.applicableServices?.includes('all');
+    }, [isBlackPassMember, userSubscription, subscriptionPlans, dynamicServices]);
+
+    const isServiceEligibleForBlackPass = useCallback((serviceId) => {
+        if (!passConfig) return true; // Default to true if not loaded
+        const service = dynamicServices.find(s => s.id === serviceId || s._id === serviceId);
+        if (!service) return true;
+
+        const category = service.category;
+        
+        // Match logic from passConfig.applicableCategories if it exists
+        if (passConfig.applicableCategories && passConfig.applicableCategories.length > 0) {
+            return passConfig.applicableCategories.includes(category);
+        }
+
+        // Fallback: Black Pass usually applies to Doorstep/Studio by default
+        return ['Doorstep', 'Studio', 'Studio Detailing', 'Apartment'].includes(category);
+    }, [passConfig, dynamicServices]);
 
     const activeService = useMemo(() => {
         if (!dynamicServices || dynamicServices.length === 0) return null;
@@ -346,13 +384,19 @@ const FullWashBooking = () => {
         addBooking(booking);
 
         // Persist active booking for session recovery
-        sessionStorage.setItem('iw_active_booking_id', newBookingId);
+        sessionStorage.setItem('fw_active_booking_id', newBookingId);
 
         // Success state + cart cleanup
-        setPhase(PHASES.FINDING);
         setCart([]);
         localStorage.removeItem('clean2wash_cart');
-        toast.success("Booking successful!");
+
+        if (booking.schedule?.type === 'scheduled') {
+            toast.success("Booking scheduled successfully! 🗓️");
+            navigate('/my-bookings');
+        } else {
+            setPhase(PHASES.FINDING);
+            toast.success("Booking successful! Finding nearest expert. ✨");
+        }
 
         try {
             socketService.connect();
@@ -369,6 +413,29 @@ const FullWashBooking = () => {
     const displayBrand = useMemo(() => selectedVehicle?.brand || 'CLEAN-2-WASH', [selectedVehicle]);
     const isMatched = useMemo(() => !!matchedModel, [matchedModel]);
 
+    const isVehicleBusy = useCallback(() => {
+        if (!selectedVehicle || !bookings) return false;
+        const vid = selectedVehicle._id || selectedVehicle.id;
+        const today = new Date().toDateString();
+
+        return bookings.some(b => {
+             const bvid = b.vehicle?._id || b.vehicle?.id;
+             if (bvid !== vid) return false;
+             
+             // Check if it's an active status
+             const isActive = ['pending', 'confirmed', 'assigned', 'en_route', 'washing', 'in_progress', 'arrived'].includes(b.status);
+             if (!isActive) return false;
+
+             // If it's a scheduled booking, only busy if it's for today
+             if (b.schedule?.type === 'scheduled') {
+                 return new Date(b.schedule.date).toDateString() === today;
+             }
+
+             // Otherwise (instant) it's busy
+             return true;
+        });
+    }, [selectedVehicle, bookings]);
+
     const categories = useMemo(() => {
         if (!dynamicServices || dynamicServices.length === 0) return [];
         const uniqueCats = [...new Set(dynamicServices.map(s => s.category))];
@@ -382,26 +449,9 @@ const FullWashBooking = () => {
     }, [dynamicServices, expandedServiceId]);
 
     const effectiveItems = useMemo(() => {
-        const items = [...cart];
-
-        // Ensure the active service is included if not in cart (fallback)
-        if (activeService && !items.some(it => it.serviceId === (activeService.id || activeService._id))) {
-            // But only if we are in a phase that implies a selection has been made
-            if ([PHASES.CART, PHASES.SELECT_SLOT].includes(phase)) {
-                // If cart is empty, we should probably add it back or it was cleared?
-                // For now, let's rely on cart being the source of truth if NOT empty
-            }
-        }
-
-        if (activeBooking) {
-            const bookings = Array.isArray(activeBooking) ? activeBooking : [activeBooking];
-            bookings.forEach(b => {
-                const alreadyIn = items.some(it => (it.id === b.id || it._id === b._id));
-                if (!alreadyIn) items.push(b);
-            });
-        }
-        return items;
-    }, [activeBooking, cart, activeService, phase]);
+        // 🛡️ Data Isolation: ONLY show items currently in the cart for the summary.
+        return [...cart];
+    }, [cart]);
 
     const totalCartPrice = useMemo(() => effectiveItems.reduce((sum, item) => sum + Number(item.price || item.salePrice || 0), 0), [effectiveItems]);
     const totalCartDuration = useMemo(() => effectiveItems.reduce((sum, item) => sum + (item.duration || 0), 0), [effectiveItems]);
@@ -441,9 +491,12 @@ const FullWashBooking = () => {
         // Subscription check
         const hasActiveCredits = userSubscription && (userSubscription.monthlyCredits > (userSubscription.usedCredits || 0));
 
+        // 💎 Dynamic Check: Is there a subscription in the cart that should apply benefits NOW?
+        const hasSubscriptionInCart = effectiveItems.some(item => item.type === 'subscription');
+
         // 1. Calculate Base Totals
         let baseServiceTotal = servicesAndSubs.reduce((sum, item) => {
-            if (hasActiveCredits && item.type === 'service' && !item.isAddon) {
+            if (item.type === 'service' && !item.isAddon && (canUseSubscription(item.serviceId) || hasSubscriptionInCart)) {
                 return sum + 0;
             }
             return sum + Number(item.price || 0);
@@ -470,8 +523,13 @@ const FullWashBooking = () => {
             const discountedServiceTotal = servicesAndSubs.reduce((sum, item) => {
                 const itemPrice = Number(item.price || 0);
                 if (item.type === 'subscription') return sum + itemPrice;
-                if (item.isSubscribedWash || hasActiveCredits) return sum + 0;
-                return sum + (itemPrice * (1 - passDiscountRate));
+                if (canUseSubscription(item.serviceId) || item.isSubscribedWash || hasSubscriptionInCart) return sum + 0;
+                
+                // Only apply 30% if service is eligible for Black Pass
+                if (isServiceEligibleForBlackPass(item.serviceId)) {
+                    return sum + (itemPrice * (1 - passDiscountRate));
+                }
+                return sum + itemPrice;
             }, 0);
 
             const discountedProductTotal = productItems.reduce((sum, item) => {
@@ -620,12 +678,12 @@ const FullWashBooking = () => {
                 let uiStatusId = '';
                 const dbStatus = newStatus.toLowerCase();
 
-                if (['pending', 'confirmed', 'accepted'].includes(dbStatus)) {
+                if (['pending', 'confirmed', 'accepted', 'assigned', 'pickup-assigned'].includes(dbStatus)) {
                     uiStatusId = 'CONFIRMED';
-                    // Auto-transition to tracking once confirmed
+                    // Auto-transition to tracking once confirmed/accepted
                     if (phase === PHASES.FINDING) setPhase(PHASES.LIVE_TRACK);
                 }
-                else if (['assigned', 'pickup-assigned', 'en_route', 'arrived'].includes(dbStatus)) uiStatusId = 'EN_ROUTE';
+                else if (['en_route', 'arrived'].includes(dbStatus)) uiStatusId = 'EN_ROUTE';
                 else if (['before_photo', 'at-studio', 'washing', 'in_progress', 'after_photo'].includes(dbStatus)) uiStatusId = 'WASHING';
                 else if (['quality-check'].includes(dbStatus)) uiStatusId = 'QUALITY_CHECK';
                 else if (['ready-for-delivery', 'delivery-assigned', 'completed'].includes(dbStatus)) uiStatusId = 'COMPLETED';
@@ -682,27 +740,34 @@ const FullWashBooking = () => {
 
     // 4. Persistence & Session Recovery
     useEffect(() => {
-        sessionStorage.setItem('iw_phase', phase);
-        if (selectedVehicle) sessionStorage.setItem('iw_vehicle', JSON.stringify(selectedVehicle));
-        if (selectedLocation) sessionStorage.setItem('iw_location', JSON.stringify(selectedLocation));
-        sessionStorage.setItem('iw_addons', JSON.stringify(serviceAddons));
-        sessionStorage.setItem('iw_booking_type', bookingType);
-        if (activeBookingId) sessionStorage.setItem('iw_active_booking_id', activeBookingId);
+        sessionStorage.setItem('fw_phase', phase);
+        if (selectedVehicle) sessionStorage.setItem('fw_vehicle', JSON.stringify(selectedVehicle));
+        if (selectedLocation) sessionStorage.setItem('fw_location', JSON.stringify(selectedLocation));
+        sessionStorage.setItem('fw_addons', JSON.stringify(serviceAddons));
+        sessionStorage.setItem('fw_booking_type', bookingType);
+        if (activeBookingId) sessionStorage.setItem('fw_active_booking_id', activeBookingId);
     }, [phase, selectedVehicle, selectedLocation, serviceAddons, bookingType, activeBookingId]);
 
     useEffect(() => {
         const recoverSession = async () => {
-            const savedId = sessionStorage.getItem('iw_active_booking_id');
+            const savedId = sessionStorage.getItem('fw_active_booking_id');
             if (savedId && !activeBookingId) {
                 console.log('Clean-2-Wash: Attempting session recovery for:', savedId);
                 try {
                     const res = await apiClient.getBooking(savedId);
                     if (res?.status === 'success' && res?.data?.booking) {
                         const b = res.data.booking;
+                        
+                        // 💎 Isolated Recovery Logic: Only recover if it matches 'vendor' (Studio) type
+                        if (b.service?.type !== 'vendor') {
+                            console.log('Clean-2-Wash: Active booking is not a Studio service, skipping recovery on this page.');
+                            return;
+                         }
+
                         setActiveBookingId(savedId);
                         setActiveBooking(b);
                         if (['pending'].includes(b.status)) setPhase(PHASES.FINDING);
-                        else if (['confirmed', 'en_route', 'at-studio', 'in_progress'].includes(b.status)) setPhase(PHASES.LIVE_TRACK);
+                        else if (['confirmed', 'accepted', 'assigned', 'pickup-assigned', 'en_route', 'at-studio', 'in_progress'].includes(b.status)) setPhase(PHASES.LIVE_TRACK);
                     }
                 } catch (err) {
                     console.error('Session recovery failed:', err);
@@ -738,7 +803,8 @@ const FullWashBooking = () => {
             addons: selectedAddonIds
         };
 
-        setCart(prev => [...prev, newItem]);
+        // 🚀 Fresh Start: Clear previous services to avoid duplicates
+        setCart([newItem]);
         setPhase(PHASES.CART);
     };
 
@@ -1256,10 +1322,16 @@ const FullWashBooking = () => {
                                                         whileTap={{ scale: 0.98 }}
                                                         onClick={() => {
                                                             if (!selectedVehicle) {
-                                                                hotToast.error('Register your vehicle in Garaj first!');
-                                                                setTimeout(() => navigate('/vehicles?from=instant-wash'), 1000);
+                                                                toast.error('Register your vehicle in Garaj first!');
+                                                                setTimeout(() => navigate('/vehicles?from=studio-wash'), 1000);
                                                                 return;
                                                             }
+
+                                                            if (isVehicleBusy()) {
+                                                                toast.error(`This vehicle already has an active booking for today. Please finish it first! 🚗`);
+                                                                return;
+                                                            }
+
                                                             setActiveServiceId(pkgId);
                                                             setShowServiceCoverage(true);
                                                         }}
@@ -1765,11 +1837,8 @@ const FullWashBooking = () => {
                                                 duration: activeServiceDuration,
                                                 type: 'service'
                                             };
-                                            setCart(prev => {
-                                                const isDuplicate = prev.some(it => it.serviceId === newItem.serviceId && it.vehicleId === newItem.vehicleId);
-                                                if (isDuplicate) return prev;
-                                                return [...prev, newItem];
-                                            });
+                                            // 🛡️ User Focus: Ensure only ONE primary service is active
+                                            setCart([newItem]);
                                             setShowServiceCoverage(false);
                                             navigateToPhase(PHASES.CART);
                                         }}
@@ -1846,7 +1915,7 @@ const FullWashBooking = () => {
     ];
 
     const renderFinding = () => {
-        const userCoords = selectedLocation?.coordinates || { lat: 12.9716, lng: 77.5946 };
+        const userCoords = selectedLocation?.coordinates || selectedAddress?.coordinates || currentLocation || { lat: 28.6139, lng: 77.2090 };
         const currentMessage = SEARCH_MESSAGES[Math.floor((60 - findingTime) / 10) % SEARCH_MESSAGES.length] || SEARCH_MESSAGES[0];
 
         // Real captain position — from socket locationUpdate after booking accepted
@@ -2064,7 +2133,7 @@ const FullWashBooking = () => {
     };
 
     const renderLiveTrack = () => {
-        const userCoords = selectedLocation?.coordinates || { lat: 12.9716, lng: 77.5946 };
+        const userCoords = selectedLocation?.coordinates || selectedAddress?.coordinates || currentLocation || { lat: 28.6139, lng: 77.2090 };
         // If captainPos is not set yet, mock it somewhere nearby initially
         const currentCaptainCoords = (captainPos.lat && captainPos.lng)
             ? [captainPos.lat, captainPos.lng]
@@ -2399,11 +2468,37 @@ const FullWashBooking = () => {
                                             <div className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-brand/10 rounded text-[6.5px] font-black text-brand uppercase tracking-tighter border border-brand/20">
                                                 <Crown size={7} fill="currentColor" /> 1 CREDIT USED
                                             </div>
-                                        ) : (!isProduct && !isSubscription && !isAddon && (
-                                            <div className="inline-flex items-center gap-1 px-1 py-0.5 bg-emerald-50 rounded text-[6.5px] font-black text-emerald-600 uppercase tracking-tighter border border-emerald-100/30">
-                                                <Zap size={7} fill="currentColor" /> SAVED ₹49
-                                            </div>
-                                        ))}
+                                        ) : (!isProduct && !isSubscription && !isAddon && (() => {
+                                            const service = dynamicServices.find(s => s.id === item.serviceId || s._id === item.serviceId);
+                                            if (!service) return null;
+                                            
+                                            // 1. Calculate Standard Price for this vehicle type without Luxury valuation
+                                            const standardBase = service.basePrice || 0;
+                                            const vType = (selectedVehicle?.type || selectedVehicleType || 'sedan').toLowerCase();
+                                            const multipliers = {
+                                                'hatchback': 1.0, 'sedan': 1.2, 'suv': 1.5, 'muv': 1.4, 'compact suv': 1.4,
+                                                'mpv': 1.4, 'pickup': 1.6, 'luxury sedan': 2.0, 'luxury suv': 2.2,
+                                                'coupe': 1.8, 'convertible': 2.0, 'sports car': 2.5, 'supercar': 3.0,
+                                                'ev': 1.2, 'mini truck': 1.8, 'truck': 2.5, 'van': 1.8, 'bus': 2.5,
+                                                'traveler': 1.8, 'tractor': 2.0, 'vintage': 2.5, 'bike': 0.6,
+                                                'scooter': 0.5, 'superbike': 0.9, 'luxury': 2.0
+                                            };
+                                            const typeMultiplier = multipliers[vType] || 1.0;
+                                            const standardPrice = Math.round(standardBase * typeMultiplier);
+                                            
+                                            // 2. Luxe Savings: Difference between Standard Vehicle Price and the luxe-adjusted item price
+                                            // Only show if the Luxe Price is lower (Savings)
+                                            const luxeSavings = standardPrice - item.price;
+                                            
+                                            if (luxeSavings > 0) {
+                                                return (
+                                                    <div className="inline-flex items-center gap-1 px-1 py-0.5 bg-emerald-50 rounded text-[6.5px] font-black text-emerald-600 uppercase tracking-tighter border border-emerald-100/30">
+                                                        <Zap size={7} fill="currentColor" /> SAVED ₹{luxeSavings}
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        })())}
                                         {(isProduct || isSubscription || isAddon) && (
                                             <button
                                                 onClick={() => setCart(cart.filter(i => (i.id || i._id) !== (item.id || item._id)))}
@@ -2639,27 +2734,7 @@ const FullWashBooking = () => {
                         </div>
                     )}
 
-                    {/* Add Another Asset (High-End CTA) */}
-                    <button
-                        onClick={() => navigate('/e-shop?from=booking')}
-                        className="w-full bg-white border border-black/[0.03] rounded-xl p-3 flex items-center justify-between group active:scale-[0.98] transition-all relative overflow-hidden shadow-sm hover:bg-gray-50"
-                    >
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-brand/5 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-brand/10 transition-colors" />
-                        <div className="flex items-center gap-3.5 relative z-10">
-                            <div className="w-8 h-8 bg-black text-white rounded-lg flex items-center justify-center shadow-lg transform group-hover:rotate-90 transition-transform duration-500">
-                                <Plus size={16} strokeWidth={3} />
-                            </div>
-                            <div className="text-left">
-                                <span className="block text-[12px] font-black text-black uppercase tracking-widest">Add Another Asset</span>
-                                <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className="text-[7.5px] font-bold text-emerald-600 uppercase tracking-tight leading-none">Auto-apply {globalSettings.multi_asset_discount_pct || 20}% Discount</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="w-7 h-7 rounded-lg bg-gray-50 flex items-center justify-center shadow-sm relative z-10 group-hover:bg-brand transition-colors">
-                            <ArrowRight size={12} className="text-black/30 group-hover:text-black transition-colors" strokeWidth={3} />
-                        </div>
-                    </button>
+                    {/* 🚀 ADD ANOTHER ASSET REMOVED FOR FRICTIONLESS CHECKOUT */}
 
                     {/* Car & Bike Combo Card (From Studio Wash) */}
                     {(() => {
@@ -2767,7 +2842,7 @@ const FullWashBooking = () => {
                             {(filteredSubscriptionPlans.length > 0 ? filteredSubscriptionPlans.filter(p => {
                                 // Filter out already owned plan or Black Pass if isBlackPassMember
                                 const isOwned = userSubscription?.planId === (p.id || p._id);
-                                const isBlackPass = p.name?.toLowerCase().includes('black') || p.title?.toLowerCase().includes('black');
+                                const isBlackPass = (p.name || p.title || '').toLowerCase().includes('black');
                                 return !isOwned && (!isBlackPass || !isBlackPassMember);
                             }) : [
                                 { title: '2 Wash/Month', price: 458, description: '229 per wash' },
@@ -2777,23 +2852,24 @@ const FullWashBooking = () => {
                                 const perWash = pkg.perWash || Math.round((pkg.price || 499) / (parseInt(pkg.title) || 2));
                                 const pkgId = pkg.id || pkg._id;
                                 const pkgName = pkg.name || pkg.title;
-                                const isAdded = effectiveItems.some(i =>
-                                    i.type === 'subscription' && (pkgId ? i.serviceId === pkgId : (i.name === pkgName && pkgName !== undefined))
+                                const isAdded = cart.some(i =>
+                                    i.type === 'subscription' && (pkgId ? (i.id === pkgId || i.serviceId === pkgId) : (i.name === pkgName))
                                 );
 
                                 return (
-                                    <div key={pkg.id || i} className={`bg-white rounded-xl border p-3 shadow-sm flex items-center justify-between relative overflow-hidden group transition-all duration-300 ${isAdded ? 'border-brand ring-1 ring-brand/20' : 'border-black/[0.03] hover:border-brand/40'}`}>
+                                    <div key={pkgId || i} className={`bg-white rounded-2xl border p-4 shadow-sm flex items-center justify-between relative overflow-hidden group transition-all duration-300 ${isAdded ? 'border-brand ring-1 ring-brand/20' : 'border-black/[0.03] hover:border-brand/40'}`}>
                                         <div className="absolute top-0 right-0 w-24 h-24 bg-brand/5 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-150 duration-700" />
-                                        <div className="absolute top-0 left-0 bg-[#F3DCCB] text-black px-3 py-1 text-[7.5px] font-[1000] rounded-br-lg uppercase tracking-widest shadow-sm">
+
+                                        {/* Total Price Badge */}
+                                        <div className="absolute top-0 left-0 bg-[#F3E8DF] text-black px-3 py-1.5 text-[8px] font-black rounded-br-2xl uppercase tracking-widest leading-none">
                                             Total ₹{pkg.price}
                                         </div>
 
-                                        <div className="pt-4 flex-1">
-                                            <h4 className="text-[12px] font-black text-black tracking-tight uppercase leading-none mb-1.5 group-hover:text-brand transition-colors">{pkg.title || pkg.name}</h4>
+                                        <div className="pt-5 flex-1 text-left">
+                                            <h4 className="text-[14px] font-[1000] text-black tracking-tight uppercase leading-none mb-1.5">{pkgName}</h4>
                                             <div className="flex items-center gap-2">
-                                                <span className="text-[15px] font-[1000] text-emerald-600 leading-none tracking-tighter">₹{perWash}/WASH</span>
-                                                <div className="w-1 h-1 rounded-full bg-black/5" />
-                                                <span className="text-[9px] font-bold text-black/10 line-through tracking-tighter">WAS ₹{perWash * 2}</span>
+                                                <span className="text-[16px] font-[1000] text-emerald-600 leading-none tracking-tighter">₹{perWash}/WASH</span>
+                                                <span className="text-[9px] font-bold text-black/10 line-through tracking-tighter uppercase">Was ₹{perWash * 2}</span>
                                             </div>
                                         </div>
 
@@ -2802,25 +2878,23 @@ const FullWashBooking = () => {
                                                 if (isAdded) {
                                                     setCart(prev => prev.filter(item => {
                                                         if (item.type !== 'subscription') return true;
-                                                        const pkgId = pkg.id || pkg._id;
-                                                        const pkgName = pkg.name || pkg.title;
-                                                        if (pkgId && item.serviceId) return item.serviceId !== pkgId;
-                                                        return item.name !== pkgName;
+                                                        return (item.id !== pkgId && item.serviceId !== pkgId && item.name !== pkgName);
                                                     }));
                                                 } else {
                                                     const subscriptionItem = {
-                                                        id: pkg.id || pkg._id || Date.now(),
-                                                        serviceId: pkg.id || pkg._id,
-                                                        serviceName: pkg.name || pkg.title,
-                                                        name: pkg.name || pkg.title,
+                                                        id: pkgId || Date.now(),
+                                                        serviceId: pkgId,
+                                                        serviceName: pkgName,
+                                                        name: pkgName,
                                                         price: pkg.price,
                                                         type: 'subscription',
                                                         vehicleName: 'Monthly Pass'
                                                     };
                                                     setCart(prev => [...prev, subscriptionItem]);
+                                                    toast.success(`${pkgName} added to your booking!`);
                                                 }
                                             }}
-                                            className={`px-4 py-2 rounded-lg text-[10px] font-[1000] uppercase tracking-widest shadow-md active:scale-95 transition-all relative z-10 ${isAdded ? 'bg-black text-white' : 'bg-[#F3DCCB] text-black hover:bg-black hover:text-white'}`}
+                                            className={`px-6 py-2.5 rounded-xl text-[10px] font-[1000] uppercase tracking-widest shadow-md active:scale-95 transition-all relative z-10 ${isAdded ? 'bg-black text-white' : 'bg-white border border-black/[0.1] text-black hover:bg-black hover:text-white'}`}
                                         >
                                             {isAdded ? 'Added' : 'Select'}
                                         </button>
@@ -2851,7 +2925,7 @@ const FullWashBooking = () => {
                             </button>
                         </div>
                         {(() => {
-                            const activeAddr = selectedLocation || addresses.find(a => a.isPrimary) || addresses[0];
+                            const activeAddr = selectedLocation || selectedAddress || addresses.find(a => a.isPrimary) || addresses[0];
                             return activeAddr ? (
                                 <div className="flex items-center gap-4 bg-gray-50/50 p-3 rounded-xl border border-black/[0.02] relative z-10">
                                     <div className="w-12 h-12 rounded-xl bg-white border border-black/[0.05] flex items-center justify-center text-black/40 shadow-sm flex-shrink-0">
@@ -2879,73 +2953,68 @@ const FullWashBooking = () => {
                                 </button>
                             );
                         })()}
-                    </div>
 
-                    {/* Recommendation Section (E-shop Integration) */}
-                    <div className="pt-2 pb-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex flex-col">
-                                <h3 className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em]">Craft Care Essentials</h3>
-                                <p className="text-[7.5px] font-black text-brand uppercase tracking-tighter mt-1">Exclusive Add-ons for later use</p>
-                            </div>
-                            <button onClick={() => navigate('/e-shop')} className="bg-black text-white px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 active:scale-95 transition-all">
-                                View Store <ArrowRight size={8} strokeWidth={3} />
-                            </button>
-                        </div>
-                        <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
-                            {suggestedProducts.length > 0 ? suggestedProducts.map(product => (
-                                <motion.div
-                                    key={product._id}
-                                    whileTap={{ scale: 0.98 }}
-                                    className="min-w-[160px] bg-white rounded-xl p-2 border border-black/[0.03] shadow-sm flex flex-col gap-2"
-                                >
-                                    <div className="w-full aspect-square bg-gray-50 rounded-lg overflow-hidden">
-                                        <img
-                                            src={sanitizeUrl(product.image)}
-                                            className="w-full h-full object-cover"
-                                            alt={product.name}
-                                            onError={handleImageError}
+                        {/* Parking Logistics (Conditional for Societies) */}
+                        {(selectedLocation || addresses.find(a => a.isPrimary) || addresses[0])?.hubId && (
+                            <motion.div 
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                className="mt-4 pt-4 border-t border-black/[0.03] space-y-4"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-lg bg-brand/10 flex items-center justify-center text-brand">
+                                        <Car size={14} strokeWidth={2.5} />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-[10px] font-black text-black uppercase tracking-widest leading-none">Parking Logistics</h4>
+                                        <p className="text-[7px] font-bold text-brand uppercase tracking-widest mt-1">Society Protocol Active</p>
+                                    </div>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-2.5">
+                                    <div className="space-y-1">
+                                        <label className="text-[7.5px] font-black text-black/20 uppercase tracking-widest ml-0.5">Basement / Lvl</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="B1, B2, G"
+                                            value={parkingDetails.basement}
+                                            onChange={(e) => setParkingDetails(prev => ({ ...prev, basement: e.target.value }))}
+                                            className="w-full bg-gray-50/50 border border-black/[0.03] px-3 py-2 rounded-lg text-[11px] font-[1000] text-black outline-none focus:border-brand/40 transition-all uppercase placeholder:text-black/5"
                                         />
                                     </div>
-                                    <div className="px-1">
-                                        <h4 className="text-[10px] font-black text-black line-clamp-1 uppercase tracking-tighter mb-1">{product.name}</h4>
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex flex-col">
-                                                <span className={`text-[12px] font-[1000] ${isBlackPassMember ? 'text-brand' : 'text-black'}`}>
-                                                    ₹{isBlackPassMember ? Math.round(product.salePrice * (1 - (passConfig?.discount || 0.3))) : product.salePrice}
-                                                </span>
-                                                {isBlackPassMember && (
-                                                    <span className="text-[7px] font-black text-black/20 line-through uppercase tracking-tighter">₹{product.salePrice}</span>
-                                                )}
-                                            </div>
-                                            <button
-                                                onClick={() => {
-                                                    const productPrice = isBlackPassMember ? Math.round(product.salePrice * (1 - (passConfig?.discount || 0.3))) : product.salePrice;
-                                                    const productItem = {
-                                                        id: product._id || Date.now() + Math.random(),
-                                                        serviceName: product.name,
-                                                        price: productPrice,
-                                                        vehicleId: selectedVehicle?.id,
-                                                        vehicleName: "E-shop Item",
-                                                        image: product.image,
-                                                        type: 'product'
-                                                    };
-                                                    setCart(prev => [...prev, productItem]);
-                                                    toast.success(`${product.name} added to your purchases!`);
-                                                }}
-                                                className="w-6 h-6 bg-black text-white rounded-md flex items-center justify-center active:scale-95 transition-transform"
-                                            >
-                                                <Plus size={12} strokeWidth={3} />
-                                            </button>
-                                        </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[7.5px] font-black text-black/20 uppercase tracking-widest ml-0.5">Block / Tower</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="A, B, C"
+                                            value={parkingDetails.block}
+                                            onChange={(e) => setParkingDetails(prev => ({ ...prev, block: e.target.value }))}
+                                            className="w-full bg-gray-50/50 border border-black/[0.03] px-3 py-2 rounded-lg text-[11px] font-[1000] text-black outline-none focus:border-brand/40 transition-all uppercase placeholder:text-black/5"
+                                        />
                                     </div>
-                                </motion.div>
-                            )) : (
-                                <div className="w-full py-8 text-center bg-white rounded-xl border border-black/[0.03] border-dashed">
-                                    <p className="text-[9px] font-black text-black/10 uppercase tracking-widest">Curating relevant products...</p>
+                                    <div className="space-y-1">
+                                        <label className="text-[7.5px] font-black text-black/20 uppercase tracking-widest ml-0.5">Pillar No.</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="P-12, P-8"
+                                            value={parkingDetails.pillar}
+                                            onChange={(e) => setParkingDetails(prev => ({ ...prev, pillar: e.target.value }))}
+                                            className="w-full bg-gray-50/50 border border-black/[0.03] px-3 py-2 rounded-lg text-[11px] font-[1000] text-black outline-none focus:border-brand/40 transition-all uppercase placeholder:text-black/5"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[7.5px] font-black text-black/20 uppercase tracking-widest ml-0.5">Parking Slot</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="402, 501"
+                                            value={parkingDetails.slotNumber}
+                                            onChange={(e) => setParkingDetails(prev => ({ ...prev, slotNumber: e.target.value }))}
+                                            className="w-full bg-gray-50/50 border border-black/[0.03] px-3 py-2 rounded-lg text-[11px] font-[1000] text-black outline-none focus:border-brand/40 transition-all uppercase placeholder:text-black/5"
+                                        />
+                                    </div>
                                 </div>
-                            )}
-                        </div>
+                            </motion.div>
+                        )}
                     </div>
                 </div>
 
@@ -3388,15 +3457,15 @@ const FullWashBooking = () => {
                                     const firstService = effectiveItems.find(i => i.serviceId && i.type !== 'subscription' && i.type !== 'monthly');
 
                                     // Map category to a value accepted by Booking model enum
-                                    const validCategories = ['Doorstep', 'Studio', 'Studio Detailing', 'Add-ons', 'Prestige', 'Chauffeur'];
+                                    const validCategories = ['Doorstep', 'Studio', 'Studio Detailing', 'Add-ons', 'Prestige', 'Chauffeur', 'Apartment'];
                                     const rawCategory = activeService?.category || firstService?.category || 'Studio Detailing';
                                     const category = validCategories.includes(rawCategory) ? rawCategory :
                                         (rawCategory === 'Express' ? 'Studio Detailing' : 'Studio Detailing');
 
                                     // Map location type to a value accepted by Booking model enum
-                                    const validLocationTypes = ['home', 'office', 'other', 'studio'];
+                                    const validLocationTypes = ['home', 'office', 'other', 'studio', 'apartment', 'Apartment'];
                                     const rawLocationType = activeAddr?.label?.toLowerCase() || 'home';
-                                    const locationType = validLocationTypes.includes(rawLocationType) ? rawLocationType :
+                                    const locationType = validLocationTypes.includes(rawLocationType) ? (rawLocationType === 'apartment' ? 'Apartment' : rawLocationType) :
                                         (rawLocationType === 'work' ? 'office' : 'other');
 
                                     // Map payment method to a value accepted by Booking model enum
@@ -3440,7 +3509,9 @@ const FullWashBooking = () => {
                                             }
                                         } : undefined,
                                         paymentMethod: mappedPaymentMethod,
-                                        couponCode: appliedCoupon?.code
+                                        couponCode: appliedCoupon?.code,
+                                        hubId: activeAddr?.hubId,
+                                        parkingDetails: activeAddr?.hubId ? parkingDetails : undefined
                                     };
 
                                     if (paymentMethod === 'wallet') {

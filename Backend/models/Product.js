@@ -69,7 +69,11 @@ const productSchema = new mongoose.Schema({
     specifications: [{
         key: String,
         value: String
-    }]
+    }],
+    salesCount: {
+        type: Number,
+        default: 0
+    }
 }, {
     timestamps: true
 });

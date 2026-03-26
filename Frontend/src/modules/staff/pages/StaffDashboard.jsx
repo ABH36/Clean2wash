@@ -208,7 +208,7 @@ const StaffDashboard = () => {
                                 <Activity size={24} className={isOnline ? 'animate-pulse' : ''} />
                             </div>
                             <div>
-                                <h3 className={`text-base font-black italic uppercase italic leading-none mb-1.5 ${isDarkMode ? 'text-white' : 'text-content'}`}>
+                                <h3 className={`text-base font-black uppercase leading-none mb-1.5 ${isDarkMode ? 'text-white' : 'text-content'}`}>
                                     {isOnline ? 'Active Protocol' : 'Terminal Offline'}
                                 </h3>
                                 <p className={`text-[10px] font-black uppercase tracking-widest leading-none ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>
@@ -239,11 +239,11 @@ const StaffDashboard = () => {
                         <div className="relative z-10">
                             <div className="flex justify-between items-start mb-4">
                                 <div className="flex gap-4">
-                                    <div className="w-10 h-10 bg-brand rounded-2xl flex items-center justify-center shadow-lg shadow-brand/20">
-                                        <Clock size={20} className="text-white" />
+                                    <div className="w-10 h-10 bg-brand rounded-2xl flex items-center justify-center shadow-lg shadow-brand/20 text-white">
+                                        <Clock size={20} strokeWidth={2.5} />
                                     </div>
                                     <div>
-                                        <h4 className={`text-sm font-black italic uppercase leading-none mb-1 ${isDarkMode ? 'text-white' : 'text-content'}`}>Hub Mission Alert</h4>
+                                        <h4 className={`text-sm font-black uppercase leading-none mb-1 ${isDarkMode ? 'text-white' : 'text-content'}`}>Hub Mission Alert</h4>
                                         <div className="flex items-center gap-1.5">
                                             <span className="w-1.5 h-1.5 bg-brand rounded-full animate-ping" />
                                             <p className={`text-[9px] font-black uppercase tracking-widest text-brand`}>Dispatch Commitment Required</p>
@@ -256,7 +256,7 @@ const StaffDashboard = () => {
                             </div>
 
                             <div className={`p-4 rounded-2xl mb-4 border transition-colors ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-gray-50 border-gray-100'}`}>
-                                <h3 className={`font-black text-base italic leading-none mb-1 truncate ${isDarkMode ? 'text-white' : 'text-content'}`}>{needsCommitment.service?.name || 'Studio Wash'}</h3>
+                                <h3 className={`font-black text-base leading-none mb-1 truncate ${isDarkMode ? 'text-white' : 'text-content'}`}>{needsCommitment.service?.name || 'Studio Wash'}</h3>
                                 <p className={`text-[10px] font-bold truncate ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>{needsCommitment.consumer?.profile?.address?.street || needsCommitment.location?.address?.landmark || 'Hub Center'}</p>
                             </div>
 
@@ -285,9 +285,9 @@ const StaffDashboard = () => {
                         <div className="relative z-10">
                             <div className="flex items-center gap-2 mb-2">
                                 <Activity size={12} className="text-brand animate-pulse" />
-                                <p className={`text-[8px] font-black uppercase tracking-widest italic ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Active Pulse</p>
+                                <p className={`text-[8px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Active Pulse</p>
                             </div>
-                            <h4 className={`text-3xl font-black italic tracking-tighter ${isDarkMode ? 'text-white' : 'text-content'}`}>{stats.activeTasks}</h4>
+                            <h4 className={`text-3xl font-black tracking-tighter ${isDarkMode ? 'text-white' : 'text-content'}`}>{stats.activeTasks}</h4>
                             <p className={`text-[7px] font-bold uppercase mt-1 ${isDarkMode ? 'text-white/20' : 'text-content-muted'}`}>Pending Protocols</p>
                         </div>
                         <div className="absolute -top-6 -right-6 w-20 h-20 bg-brand/5 rounded-full blur-2xl transition-all group-hover:bg-brand/10" />
@@ -301,9 +301,9 @@ const StaffDashboard = () => {
                         <div className="relative z-10">
                             <div className="flex items-center gap-2 mb-2">
                                 <Zap size={12} className="text-amber-500" />
-                                <p className={`text-[8px] font-black uppercase tracking-widest italic ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Completed</p>
+                                <p className={`text-[8px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Completed</p>
                             </div>
-                            <h4 className={`text-3xl font-black italic tracking-tighter ${isDarkMode ? 'text-white' : 'text-content'}`}>{stats.completedTasks}</h4>
+                            <h4 className={`text-3xl font-black tracking-tighter ${isDarkMode ? 'text-white' : 'text-content'}`}>{stats.completedTasks}</h4>
                             <div className="flex items-center gap-1 mt-1">
                                 <span className="w-1 h-1 bg-green-500 rounded-full animate-ping" />
                                 <p className="text-[7px] font-black text-green-500 uppercase tracking-widest">Handshake Validated</p>
@@ -318,8 +318,17 @@ const StaffDashboard = () => {
                     <section className="space-y-4">
                         <div className="flex items-center justify-between px-2">
                             <h3 className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Daily Hub Forecast</h3>
-                            <div className="flex items-center gap-1.5 text-[9px] font-black text-brand italic">
-                                Protocols Active <Shield size={10} className="fill-brand" />
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => navigate('/staff/map')}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all ${isDarkMode ? 'bg-brand/10 border-brand/20 text-brand hover:bg-brand/20' : 'bg-brand/5 border-brand/10 text-brand hover:bg-brand/10'}`}
+                                >
+                                    <Navigation size={10} fill="currentColor" />
+                                    Mission Map
+                                </button>
+                                <div className="flex items-center gap-1.5 text-[9px] font-black text-brand">
+                                    Protocols Active <Shield size={10} className="fill-brand" />
+                                </div>
                             </div>
                         </div>
                         <div className={`rounded-3xl border p-4 transition-all duration-500 overflow-hidden space-y-4 ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/30' : 'bg-white border-gray-100 shadow-soft'}`}>
@@ -334,7 +343,7 @@ const StaffDashboard = () => {
                                         <div onClick={() => navigate(`/staff/task/${task._id}`)} className={`p-3 rounded-2xl border transition-all active:scale-95 ${i === 0 ? (isDarkMode ? 'bg-brand/10 border-brand/20' : 'bg-brand/5 border-brand/10') : 'border-transparent'}`}>
                                             <div className="flex justify-between items-start">
                                                 <div className="flex-1 pr-2">
-                                                    <h4 className={`text-xs font-black italic tracking-tight uppercase leading-none mb-1 ${isDarkMode ? 'text-white' : 'text-content'}`}>
+                                                    <h4 className={`text-xs font-black tracking-tight uppercase leading-none mb-1 ${isDarkMode ? 'text-white' : 'text-content'}`}>
                                                         {task.service?.name || 'Studio Wash'}
                                                     </h4>
                                                     <p className={`text-[10px] font-bold truncate ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>{task.vehicle?.brand} {task.vehicle?.model} · {task.vehicle?.plate}</p>
@@ -364,7 +373,7 @@ const StaffDashboard = () => {
                                 <Car size={24} />
                             </div>
                             <div>
-                                <h3 className={`text-base font-black italic uppercase leading-none mb-1.5 ${isDarkMode ? 'text-white' : 'text-content'}`}>Society Cluster</h3>
+                                <h3 className={`text-base font-black uppercase leading-none mb-1.5 ${isDarkMode ? 'text-white' : 'text-content'}`}>Society Cluster</h3>
                                 <p className={`text-[10px] font-black uppercase tracking-widest leading-none text-[#D4AF37]`}>Analyze Society Missions</p>
                             </div>
                         </div>
@@ -399,7 +408,7 @@ const StaffDashboard = () => {
                         {loading ? (
                             <div key="loading" className="flex flex-col items-center justify-center py-20 gap-4">
                                 <div className="w-10 h-10 border-4 border-brand/20 border-t-brand rounded-full animate-spin" />
-                                <p className="text-[8px] font-black uppercase tracking-[0.5em] text-brand italic">Synchronizing Logs...</p>
+                                <p className="text-[8px] font-black uppercase tracking-[0.5em] text-brand">Synchronizing Logs...</p>
                             </div>
                         ) : filteredTasks.length > 0 ? (
                             <motion.div
@@ -429,9 +438,9 @@ const StaffDashboard = () => {
                                                 <div>
                                                     <div className="flex items-center gap-2 mb-1">
                                                         <span className={`w-2 h-2 rounded-full ${task.status === 'ongoing' ? 'bg-brand' : task.status === 'completed' ? 'bg-green-500' : 'bg-amber-500'} animate-pulse`} />
-                                                        <p className="text-[10px] font-black text-brand uppercase tracking-[0.2em] italic">#{String(task.id).slice(-6)}</p>
+                                                        <p className="text-[10px] font-black text-brand uppercase tracking-[0.2em]">#{String(task.id).slice(-6)}</p>
                                                     </div>
-                                                    <h3 className={`text-2xl font-black italic uppercase tracking-tighter leading-none ${isDarkMode ? 'text-white' : 'text-content'}`}>{task.type} Operation</h3>
+                                                    <h3 className={`text-2xl font-black uppercase tracking-tighter leading-none ${isDarkMode ? 'text-white' : 'text-content'}`}>{task.type} Operation</h3>
                                                 </div>
                                             </div>
                                             <div className={`${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-100'} px-4 py-2 rounded-2xl border transition-colors`}>
@@ -449,7 +458,7 @@ const StaffDashboard = () => {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className={`text-[10px] font-bold uppercase tracking-widest leading-none mb-1.5 ${isDarkMode ? 'text-white/20' : 'text-content-muted'}`}>{task.customer}</p>
-                                                    <h4 className={`text-base font-black italic leading-tight uppercase truncate ${isDarkMode ? 'text-white/80' : 'text-content'}`}>{task.address}</h4>
+                                                    <h4 className={`text-base font-black leading-tight uppercase truncate ${isDarkMode ? 'text-white/80' : 'text-content'}`}>{task.address}</h4>
                                                 </div>
                                             </div>
                                             {task.isProduct ? (
@@ -457,11 +466,11 @@ const StaffDashboard = () => {
                                                     <div className="flex items-center justify-between">
                                                         <div>
                                                             <p className={`text-[8px] font-black uppercase tracking-[0.2em] ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Product Shipment</p>
-                                                            <p className={`text-[10px] font-black italic uppercase ${isDarkMode ? 'text-white/80' : 'text-content'}`}>{task.productName}</p>
+                                                            <p className={`text-[10px] font-black uppercase ${isDarkMode ? 'text-white/80' : 'text-content'}`}>{task.productName}</p>
                                                         </div>
                                                         <div className="text-right">
                                                             <p className={`text-[8px] font-black uppercase tracking-[0.2em] ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Qty</p>
-                                                            <p className={`text-[10px] font-black italic uppercase text-brand`}>{task.quantity}</p>
+                                                            <p className={`text-[10px] font-black uppercase text-brand`}>{task.quantity}</p>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -469,11 +478,11 @@ const StaffDashboard = () => {
                                                 <div className={`grid grid-cols-2 gap-3 p-5 rounded-[2rem] transition-all ${isDarkMode ? 'bg-white/5 border border-white/10' : 'bg-gray-50/50 border border-gray-100'}`}>
                                                     <div className="space-y-1">
                                                         <p className={`text-[8px] font-black uppercase tracking-[0.2em] ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Vehicle Identity</p>
-                                                        <p className={`text-[10px] font-black italic uppercase ${isDarkMode ? 'text-white/80' : 'text-content'}`}>{task.vehicle}</p>
+                                                        <p className={`text-[10px] font-black uppercase ${isDarkMode ? 'text-white/80' : 'text-content'}`}>{task.vehicle}</p>
                                                     </div>
                                                     <div className="space-y-1 text-right">
                                                         <p className={`text-[8px] font-black uppercase tracking-[0.2em] ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Plate Number</p>
-                                                        <p className={`text-[10px] font-black italic uppercase text-brand`}>{task.plate}</p>
+                                                        <p className={`text-[10px] font-black uppercase text-brand`}>{task.plate}</p>
                                                     </div>
                                                 </div>
                                             )}
@@ -506,7 +515,7 @@ const StaffDashboard = () => {
                                 <div className={`w-32 h-32 rounded-[3rem] flex items-center justify-center mb-8 border border-dashed transition-all ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
                                     <Bell size={48} className={isDarkMode ? 'text-white/10' : 'text-gray-200'} />
                                 </div>
-                                <h3 className={`font-black italic uppercase tracking-[0.5em] mb-3 ${isDarkMode ? 'text-white' : 'text-content'}`}>Silent Terminal</h3>
+                                <h3 className={`font-black uppercase tracking-[0.5em] mb-3 ${isDarkMode ? 'text-white' : 'text-content'}`}>Silent Terminal</h3>
                                 <p className={`text-[10px] font-bold uppercase tracking-widest px-14 leading-relaxed ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>
                                     The grid is currently quiet. We'll alert you the moment a new assignment is initialized.
                                 </p>

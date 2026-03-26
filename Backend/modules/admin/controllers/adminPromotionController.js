@@ -23,7 +23,24 @@ exports.getPromotions = async (req, res) => {
 // POST create a new promotion
 exports.createPromotion = async (req, res) => {
     try {
-        const promotion = await Promotion.create(req.body);
+        const { code, val, valUnit, expiry } = req.body;
+
+        // 1. Unique Code Validation
+        if (code) {
+            const existing = await Promotion.findOne({ code, isActive: true });
+            if (existing) throw new Error(`Promotion code ${code} already exists.`);
+        }
+
+        // 2. Value Logic
+        if (valUnit === 'PERCENT' && (val <= 0 || val > 100)) {
+            throw new Error('Percentage value must be between 1 and 100.');
+        }
+
+        const promotion = await Promotion.create({
+            ...req.body,
+            expiry: expiry ? new Date(expiry) : null
+        });
+
         res.status(201).json({
             status: 'success',
             data: { promotion }
@@ -57,6 +74,30 @@ exports.updatePromotion = async (req, res) => {
     }
 };
 
+// GET promotion analytics
+exports.getPromotionStats = async (req, res) => {
+    try {
+        const stats = await Promotion.aggregate([
+            { $match: { isActive: true } },
+            {
+                $group: {
+                    _id: '$type',
+                    count: { $sum: 1 },
+                    totalUsage: { $sum: '$usage' },
+                    averageValue: { $avg: '$val' }
+                }
+            }
+        ]);
+
+        res.status(200).json({
+            status: 'success',
+            data: { stats }
+        });
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: 'Failed to generate analytics' });
+    }
+};
+
 // DELETE promotion
 exports.deletePromotion = async (req, res) => {
     try {
@@ -69,7 +110,7 @@ exports.deletePromotion = async (req, res) => {
 
         res.status(200).json({
             status: 'success',
-            message: 'Promotion protocol terminated successfully'
+            message: 'Promotion deleted successfully'
         });
     } catch (error) {
         console.error('Error deleting promotion:', error);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-    ChevronLeft, Bell, Star, Zap, Navigation, 
+import {
+    ChevronLeft, Bell, Star, Zap, Navigation,
     Shield, CheckCircle2, Trash2, Clock, Info, AlertTriangle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -105,12 +105,12 @@ const CaptainNotifications = () => {
                                 <ChevronLeft size={18} strokeWidth={2.5} />
                             </button>
                             <div>
-                                <h1 className={`text-xl font-black tracking-tight leading-none uppercase italic ${isDarkMode ? 'text-white' : 'text-content'}`}>Notifications</h1>
+                                <h1 className={`text-xl font-black tracking-tight leading-none uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>Notifications</h1>
                                 <p className={`text-[9px] font-black uppercase tracking-widest mt-1 ${isDarkMode ? 'text-white/40' : 'text-content-subtle'}`}>Command Intelligence</p>
                             </div>
                         </div>
                         {notifications.length > 0 && (
-                            <button 
+                            <button
                                 onClick={clearAll}
                                 className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white' : 'bg-red-50 text-red-500 border border-red-100 hover:bg-red-500 hover:text-white'}`}
                             >
@@ -156,7 +156,7 @@ const CaptainNotifications = () => {
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-start justify-between gap-2 mb-1">
-                                                    <h3 className={`font-black text-sm tracking-tight uppercase italic ${isDarkMode ? 'text-white' : 'text-content'} ${!notif.isRead ? 'text-brand' : ''}`}>
+                                                    <h3 className={`font-black text-sm tracking-tight uppercase ${isDarkMode ? 'text-white' : 'text-content'} ${!notif.isRead ? 'text-brand' : ''}`}>
                                                         {notif.title}
                                                     </h3>
                                                     <span className={`text-[8px] font-bold whitespace-nowrap bg-gray-500/10 px-2 py-0.5 rounded-full ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>

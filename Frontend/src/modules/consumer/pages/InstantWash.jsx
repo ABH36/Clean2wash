@@ -23,6 +23,7 @@ import AddressSelector from '../components/AddressSelector';
 import { MapContainer, TileLayer, Marker, useMap, Pane } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import BenefitBadge from '../../../components/common/BenefitBadge';
 
 // Leaflet Icon Fix for Vite
 delete L.Icon.Default.prototype._getIconUrl;
@@ -98,7 +99,7 @@ const InstantWash = () => {
         isBlackPassMember, globalCatalog, loadGlobalCatalog, catalogLoading,
         addVehicle, vehiclesLoading
     } = useAuth();
-    const { savedAddresses: addresses, loading: addressesLoading, primaryAddress } = useGeoLocation();
+    const { savedAddresses: addresses, loading: addressesLoading, primaryAddress, selectedAddress, setSelectedAddress, currentLocation } = useGeoLocation();
     const [searchParams] = useSearchParams();
     const user = getUser('consumer');
     const { cartItems: cart, setCartItems: setCart } = useCart();
@@ -106,7 +107,7 @@ const InstantWash = () => {
     // --- Core UI & Persistence States ---
     const [phase, setPhase] = useState(() => {
         const saved = sessionStorage.getItem('iw_phase');
-        return saved || PHASES.SERVICE_SELECTION;
+        return saved || PHASES.SELECT_VEHICLE;
     });
 
     // --- Phase History Management ---
@@ -148,8 +149,16 @@ const InstantWash = () => {
     const [selectedVehicle, setSelectedVehicle] = useState(() => {
         const saved = sessionStorage.getItem('iw_vehicle');
         if (saved) return JSON.parse(saved);
-        return vehicles.find(v => v.isPrimary) || vehicles[0];
+        return null; // Don't auto-select to force awareness
     });
+
+    // Auto-select first vehicle when vehicles list loads if none selected
+    useEffect(() => {
+        if (!selectedVehicle && vehicles && vehicles.length > 0) {
+            const primary = vehicles.find(v => v.isPrimary) || vehicles[0];
+            setSelectedVehicle(primary);
+        }
+    }, [vehicles, selectedVehicle]);
     const [selectedVehicleType, setSelectedVehicleType] = useState(() => selectedVehicle?.type?.toLowerCase() || 'sedan');
 
     useEffect(() => {
@@ -204,18 +213,8 @@ const InstantWash = () => {
         return saved ? JSON.parse(saved) : {};
     });
     const [useSubscription, setUseSubscription] = useState(false);
-    const [selectedLocation, setSelectedLocation] = useState(() => {
-        const saved = sessionStorage.getItem('iw_location');
-        if (saved) return JSON.parse(saved);
-        return addresses.find(a => a.isPrimary) || addresses[0];
-    });
+    // Removed local selectedLocation state as it's now global in LocationContext
 
-    useEffect(() => {
-        if (!selectedLocation && addresses.length > 0) {
-            const primary = addresses.find(a => a.isPrimary) || addresses[0];
-            setSelectedLocation(primary);
-        }
-    }, [addresses]);
     const [bookingType, setBookingType] = useState(() => {
         const saved = sessionStorage.getItem('iw_booking_type');
         return saved || 'instant';
@@ -247,6 +246,19 @@ const InstantWash = () => {
 
     // --- Helper Functions (Defined before memos/effects that use them) ---
     // --- Core Context Memos & State Dependencies ---
+    // Persist critical booking flow state
+    useEffect(() => {
+        sessionStorage.setItem('iw_phase', phase);
+    }, [phase]);
+
+    useEffect(() => {
+        if (selectedVehicle) {
+            sessionStorage.setItem('iw_vehicle', JSON.stringify(selectedVehicle));
+        } else {
+            sessionStorage.removeItem('iw_vehicle');
+        }
+    }, [selectedVehicle]);
+
     const matchedModel = useMemo(() => {
         if (!selectedVehicle || allVehicleModels.length === 0) return null;
         return allVehicleModels.find(m =>
@@ -317,11 +329,18 @@ const InstantWash = () => {
         return Math.floor(base * multiplier);
     }, []);
 
-    const canUseSubscription = useCallback((serviceId) => {
+    const canUseSubscription = useCallback((serviceId, category, serviceType = 'instant') => {
         if (!isBlackPassMember || !userSubscription) return false;
         const plan = subscriptionPlans.find(p => p.id === userSubscription.planId || p._id === userSubscription.planId);
         if (!plan) return false;
-        return plan.applicableServices?.includes(serviceId) || plan.applicableServices?.includes('all');
+
+        const applicable = plan.applicableServices || [];
+        if (applicable.includes('all')) return true;
+
+        const categoryMatch = category ? applicable.includes(category) : applicable.includes(serviceId);
+        const typeMatch = applicable.includes(serviceType);
+
+        return categoryMatch && typeMatch;
     }, [isBlackPassMember, userSubscription, subscriptionPlans]);
 
     const activeService = useMemo(() => {
@@ -370,6 +389,26 @@ const InstantWash = () => {
     const displayBrand = useMemo(() => selectedVehicle?.brand || 'CLEAN-2-WASH', [selectedVehicle]);
     const isMatched = useMemo(() => !!matchedModel, [matchedModel]);
 
+    const isVehicleBusy = useCallback(() => {
+        if (!selectedVehicle || !bookings) return false;
+        const vid = selectedVehicle._id || selectedVehicle.id;
+        const today = new Date().toDateString();
+
+        return bookings.some(b => {
+             const bvid = b.vehicle?._id || b.vehicle?.id;
+             if (bvid !== vid) return false;
+             
+             const isActive = ['pending', 'confirmed', 'assigned', 'en_route', 'washing', 'in_progress', 'arrived'].includes(b.status);
+             if (!isActive) return false;
+
+             if (b.schedule?.type === 'scheduled') {
+                 return new Date(b.schedule.date).toDateString() === today;
+             }
+
+             return true;
+        });
+    }, [selectedVehicle, bookings]);
+
     const categories = useMemo(() => {
         if (!dynamicServices || dynamicServices.length === 0) return [];
         const uniqueCats = [...new Set(dynamicServices.map(s => s.category))];
@@ -383,26 +422,10 @@ const InstantWash = () => {
     }, [dynamicServices, expandedServiceId]);
 
     const effectiveItems = useMemo(() => {
-        const items = [...cart];
-
-        // Ensure the active service is included if not in cart (fallback)
-        if (activeService && !items.some(it => it.serviceId === (activeService.id || activeService._id))) {
-            // But only if we are in a phase that implies a selection has been made
-            if ([PHASES.CART, PHASES.SELECT_SLOT].includes(phase)) {
-                // If cart is empty, we should probably add it back or it was cleared?
-                // For now, let's rely on cart being the source of truth if NOT empty
-            }
-        }
-
-        if (activeBooking) {
-            const bookings = Array.isArray(activeBooking) ? activeBooking : [activeBooking];
-            bookings.forEach(b => {
-                const alreadyIn = items.some(it => (it.id === b.id || it._id === b._id));
-                if (!alreadyIn) items.push(b);
-            });
-        }
-        return items;
-    }, [activeBooking, cart, activeService, phase]);
+        // 🛡️ Data Isolation: ONLY show items currently in the cart for the summary.
+        // We exclude activeBooking to prevent historical/unrelated bookings from appearing in the summary list.
+        return [...cart];
+    }, [cart]);
 
     const totalCartPrice = useMemo(() => effectiveItems.reduce((sum, item) => sum + Number(item.price || item.salePrice || 0), 0), [effectiveItems]);
     const totalCartDuration = useMemo(() => effectiveItems.reduce((sum, item) => sum + (item.duration || 0), 0), [effectiveItems]);
@@ -434,32 +457,57 @@ const InstantWash = () => {
         subscriptionPlans?.find(p => (p.name || p.title || '').toLowerCase().includes('black')),
         [subscriptionPlans]
     );
-    const finalPrice = useMemo(() => {
+    const { finalPrice, pricingBreakdown } = useMemo(() => {
         const servicesAndSubs = effectiveItems.filter(item => item.type !== 'product' && item.type !== 'item');
         const productItems = effectiveItems.filter(item => item.type === 'product' || item.type === 'item');
+        const subtotal = effectiveItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
+        
+        let breakdown = [];
+        let currentPrice = subtotal;
 
-        // Subscription check
-        const hasActiveCredits = userSubscription && (userSubscription.monthlyCredits > (userSubscription.usedCredits || 0));
-
-        // 1. Calculate Base Totals
-        let baseServiceTotal = servicesAndSubs.reduce((sum, item) => {
-            if (hasActiveCredits && item.type === 'service' && !item.isAddon) {
-                return sum + 0;
-            }
-            return sum + Number(item.price || 0);
-        }, 0);
-
-        let baseProductTotal = productItems.reduce((sum, item) => sum + Number(item.price || item.salePrice || 0), 0);
-
-        // 2. Dynamic Combo Discount (Multi-asset/Multi-service)
-        const washCount = servicesAndSubs.filter(item => item.type === 'service').length;
-        let comboDiscount = 0;
-        if (washCount > 1) {
-            const washesTotal = servicesAndSubs.filter(item => item.type === 'service').reduce((s, i) => s + (i.price || 0), 0);
-            comboDiscount = Math.round(washesTotal * (globalSettings.combo_discount_pct / 200));
+        // 1. Subscription/Loyalty check
+        if (paymentMethod === 'subscription' || paymentMethod === 'loyalty') {
+            return { 
+                finalPrice: 0, 
+                pricingBreakdown: [{ type: 'loyalty', name: 'Loyalty Reward', amount: subtotal, description: '100% Free Wash Applied' }] 
+            };
         }
 
-        // 3. Global Black Pass Benefits
+        // 2. Already Subscribed / Active Credits
+        const hasActiveCredits = userSubscription && (userSubscription.monthlyCredits > (userSubscription.usedCredits || 0));
+        const hasSubscriptionInCart = effectiveItems.some(item => item.type === 'subscription');
+        
+        if (hasActiveCredits || hasSubscriptionInCart) {
+            const qualifyingService = servicesAndSubs.find(item => 
+                item.type === 'service' && 
+                !item.isAddon && 
+                canUseSubscription(item.serviceId, item.category, 'instant')
+            );
+            if (qualifyingService) {
+                const creditSaving = Number(qualifyingService.price || 0);
+                if (creditSaving > 0) {
+                    currentPrice -= creditSaving;
+                    breakdown.push({ 
+                        type: 'subscription', 
+                        name: hasActiveCredits ? 'Subscription Credit' : 'New Member Benefit', 
+                        amount: creditSaving, 
+                        description: 'Wash covered by plan' 
+                    });
+                }
+            }
+        }
+
+        // 3. Combo Discount
+        const washCount = servicesAndSubs.filter(item => item.type === 'service').length;
+        if (washCount > 1) {
+            const washesTotal = servicesAndSubs.filter(item => item.type === 'service').reduce((s, i) => s + (i.price || 0), 0);
+            const comboPct = globalSettings.combo_discount_pct || 5;
+            const comboSaving = Math.round(washesTotal * (comboPct / 100));
+            currentPrice -= comboSaving;
+            breakdown.push({ type: 'combo', name: 'Combo Deal', amount: comboSaving, description: `${comboPct}% Multi-service Discount` });
+        }
+
+        // 4. Black Pass Membership
         const hasBlackPassInCart = effectiveItems.some(item =>
             item.type === 'subscription' && (item.serviceName?.toLowerCase().includes('black') || item.name?.toLowerCase().includes('black'))
         );
@@ -467,23 +515,30 @@ const InstantWash = () => {
         const passDiscountRate = passConfig?.discount || 0.3;
 
         if (shouldApplyGlobalPass) {
-            const discountedServiceTotal = servicesAndSubs.reduce((sum, item) => {
-                const itemPrice = Number(item.price || 0);
-                if (item.type === 'subscription') return sum + itemPrice;
-                if (item.isSubscribedWash || hasActiveCredits) return sum + 0;
-                return sum + (itemPrice * (1 - passDiscountRate));
-            }, 0);
-
-            const discountedProductTotal = productItems.reduce((sum, item) => {
-                const itemPrice = Number(item.price || item.salePrice || 0);
-                return sum + (itemPrice * (1 - passDiscountRate));
-            }, 0);
-
-            return Math.max(0, Math.round(discountedServiceTotal + discountedProductTotal - comboDiscount - discountAmount));
+            const passSaving = Math.round(currentPrice * passDiscountRate);
+            currentPrice -= passSaving;
+            if (passSaving > 0) {
+                breakdown.push({ 
+                    type: 'blackpass', 
+                    name: 'Black Pass', 
+                    amount: passSaving, 
+                    description: `${Math.round(passDiscountRate * 100)}% Member Discount` 
+                });
+            }
         }
 
-        return Math.max(0, Math.round(baseServiceTotal + baseProductTotal - comboDiscount - discountAmount));
-    }, [effectiveItems, isBlackPassMember, passConfig, userSubscription, globalSettings]);
+        // 5. Coupons
+        if (discountAmount > 0) {
+            const couponSaving = Math.min(discountAmount, currentPrice);
+            currentPrice -= couponSaving;
+            breakdown.push({ type: 'coupon', name: 'Promo Applied', amount: couponSaving, description: 'Coupon Savings' });
+        }
+
+        return { 
+            finalPrice: Math.max(0, Math.round(currentPrice)), 
+            pricingBreakdown: breakdown 
+        };
+    }, [effectiveItems, isBlackPassMember, passConfig, userSubscription, globalSettings, paymentMethod, discountAmount]);
 
     // --- Side Effects ---
 
@@ -684,11 +739,11 @@ const InstantWash = () => {
     useEffect(() => {
         sessionStorage.setItem('iw_phase', phase);
         if (selectedVehicle) sessionStorage.setItem('iw_vehicle', JSON.stringify(selectedVehicle));
-        if (selectedLocation) sessionStorage.setItem('iw_location', JSON.stringify(selectedLocation));
+        if (selectedAddress) sessionStorage.setItem('iw_location', JSON.stringify(selectedAddress));
         sessionStorage.setItem('iw_addons', JSON.stringify(serviceAddons));
         sessionStorage.setItem('iw_booking_type', bookingType);
         if (activeBookingId) sessionStorage.setItem('iw_active_booking_id', activeBookingId);
-    }, [phase, selectedVehicle, selectedLocation, serviceAddons, bookingType, activeBookingId]);
+    }, [phase, selectedVehicle, selectedAddress, serviceAddons, bookingType, activeBookingId]);
 
     useEffect(() => {
         const recoverSession = async () => {
@@ -699,6 +754,13 @@ const InstantWash = () => {
                     const res = await apiClient.getBooking(savedId);
                     if (res?.status === 'success' && res?.data?.booking) {
                         const b = res.data.booking;
+                        
+                        // 💎 Isolated Recovery Logic: Only recover if it matches 'captain' (Instant/Express) type
+                        if (b.service?.type !== 'captain') {
+                            console.log('Clean-2-Wash: Active booking is not an Instant/Express service, skipping recovery on this page.');
+                            return;
+                        }
+
                         setActiveBookingId(savedId);
                         setActiveBooking(b);
                         if (['pending'].includes(b.status)) setPhase(PHASES.FINDING);
@@ -706,6 +768,14 @@ const InstantWash = () => {
                     }
                 } catch (err) {
                     console.error('Session recovery failed:', err);
+                    // If the booking no longer exists, clear the stale session ID
+                    if (err.message?.includes('404') || err.message?.toLowerCase().includes('not found')) {
+                        console.log('Clean-2-Wash: Clearing stale booking session');
+                        sessionStorage.removeItem('iw_active_booking_id');
+                        sessionStorage.removeItem('iw_phase'); // Reset to root phase
+                        setActiveBookingId(null);
+                        setPhase(PHASES.SELECT_VEHICLE);
+                    }
                 }
             }
         };
@@ -729,16 +799,18 @@ const InstantWash = () => {
             id: Date.now(),
             serviceId: activeServiceId,
             serviceName: activeService.title,
+            category: activeService.category,
             price: basePrice + addonsPrice,
             duration: getEstimatedTime(activeService, matchedModel),
             vehicleId: selectedVehicle?.id || selectedVehicle?._id,
             vehicleName: `${selectedVehicle.brand} ${selectedVehicle.model}`,
             vehicleImg: selectedVehicle.img,
-            type: 'standard',
+            type: 'service',
             addons: selectedAddonIds
         };
 
-        setCart(prev => [...prev, newItem]);
+        // 🚀 Fresh Start: Clear previous services to avoid duplicates
+        setCart([newItem]);
         setPhase(PHASES.CART);
     };
 
@@ -1251,10 +1323,16 @@ const InstantWash = () => {
                                                         whileTap={{ scale: 0.98 }}
                                                         onClick={() => {
                                                             if (!selectedVehicle) {
-                                                                hotToast.error('Register your vehicle in Garaj first!');
+                                                                toast.error('Register your vehicle in Garaj first!');
                                                                 setTimeout(() => navigate('/vehicles?from=instant-wash'), 1000);
                                                                 return;
                                                             }
+
+                                                            if (isVehicleBusy()) {
+                                                                toast.error(`This vehicle already has an active booking for today. Please finish it first! 🚗`);
+                                                                return;
+                                                            }
+
                                                             setActiveServiceId(pkgId);
                                                             setShowServiceCoverage(true);
                                                         }}
@@ -1747,27 +1825,29 @@ const InstantWash = () => {
                                         whileTap={{ scale: 0.98 }}
                                         disabled={!selectedVehicle}
                                         onClick={() => {
-                                            if (!selectedVehicle) return;
+                                            if (!selectedVehicle) {
+                                                toast.error('Register your vehicle in Garaj first!');
+                                                setTimeout(() => navigate('/vehicles?from=instant-wash'), 1000);
+                                                return;
+                                            }
                                             const newItem = {
                                                 id: Date.now(),
                                                 serviceId: activeService.id || activeService._id,
                                                 serviceName: activeService.title,
+                                                category: activeService.category,
                                                 price: activeServicePrice,
-                                                vehicleId: selectedVehicle?.id,
+                                                vehicleId: selectedVehicle?.id || selectedVehicle?._id,
                                                 vehicleName: selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model}` : "Premium Asset",
                                                 vehicleImg: selectedVehicle?.img || FALLBACK_IMAGES[0],
                                                 duration: activeServiceDuration,
                                                 type: 'service'
                                             };
-                                            setCart(prev => {
-                                                const isDuplicate = prev.some(it => it.serviceId === newItem.serviceId && it.vehicleId === newItem.vehicleId);
-                                                if (isDuplicate) return prev;
-                                                return [...prev, newItem];
-                                            });
+                                            // 🛡️ User Focus: Ensure only ONE primary service is active
+                                            setCart([newItem]);
                                             setShowServiceCoverage(false);
                                             navigateToPhase(PHASES.CART);
                                         }}
-                                        className={`w-full py-5 rounded-[2rem] font-[1000] text-[15px] uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-4 group relative overflow-hidden ${!selectedVehicle
+                                        className={`w-full py-5 rounded-[2rem] font-[1000] text-[15px] uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-3 group relative overflow-hidden ${!selectedVehicle
                                             ? 'bg-gray-100 text-black/10 cursor-not-allowed'
                                             : 'bg-[#1A1A1A] text-white active:scale-95 shadow-black/20'
                                             }`}
@@ -1840,7 +1920,7 @@ const InstantWash = () => {
     ];
 
     const renderFinding = () => {
-        const userCoords = selectedLocation?.coordinates || { lat: 12.9716, lng: 77.5946 };
+        const userCoords = selectedAddress?.coordinates || currentLocation || { lat: 28.6139, lng: 77.2090 };
         const currentMessage = SEARCH_MESSAGES[Math.floor((60 - findingTime) / 10) % SEARCH_MESSAGES.length] || SEARCH_MESSAGES[0];
         // Real captain position — from socket locationUpdate after booking accepted
         // captainPos is updated via socket in parent useEffect
@@ -2057,7 +2137,7 @@ const InstantWash = () => {
     };
 
     const renderLiveTrack = () => {
-        const userCoords = selectedLocation?.coordinates || { lat: 12.9716, lng: 77.5946 };
+        const userCoords = selectedAddress?.coordinates || currentLocation || { lat: 28.6139, lng: 77.2090 };
         // If captainPos is not set yet, mock it somewhere nearby initially
         const currentCaptainCoords = (captainPos.lat && captainPos.lng)
             ? [captainPos.lat, captainPos.lng]
@@ -2331,7 +2411,9 @@ const InstantWash = () => {
                             if (!isProduct && !isSubscription && !isAddon && userSubscription) {
                                 const usedCount = userSubscription.usedCredits || 0;
                                 const totalCount = userSubscription.monthlyCredits || 0;
-                                if (usedCount < totalCount) {
+                                const isEligible = canUseSubscription(item.serviceId, item.category, 'instant');
+                                
+                                if (usedCount < totalCount && isEligible) {
                                     isSubscribedWash = true;
                                     typeTag = 'Free with Pass';
                                     tagColor = 'text-brand font-black';
@@ -2547,7 +2629,7 @@ const InstantWash = () => {
                             >
                                 <div className="flex items-center gap-2">
                                     <div className="w-6 h-6 rounded-lg bg-emerald-500 flex items-center justify-center text-white">
-                                        <Check size={14} strokeWidth={3} />
+                                        <Check size={12} strokeWidth={4} />
                                     </div>
                                     <span className="text-[10px] font-black text-emerald-600 uppercase leading-none">Protocol {appliedCoupon.code} Authorized</span>
                                 </div>
@@ -2626,28 +2708,6 @@ const InstantWash = () => {
                             </div>
                         </div>
                     )}
-
-                    {/* Add Another Asset (High-End CTA) */}
-                    <button
-                        onClick={() => navigate('/e-shop?from=booking')}
-                        className="w-full bg-white border border-black/[0.03] rounded-2xl p-3.5 flex items-center justify-between group active:scale-[0.98] transition-all relative overflow-hidden shadow-sm hover:bg-gray-50"
-                    >
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-brand/5 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-brand/10 transition-colors" />
-                        <div className="flex items-center gap-3.5 relative z-10">
-                            <div className="w-8 h-8 bg-black text-white rounded-xl flex items-center justify-center shadow-lg transform group-hover:rotate-90 transition-transform duration-500">
-                                <Plus size={16} strokeWidth={3} />
-                            </div>
-                            <div className="text-left">
-                                <span className="block text-[12px] font-black text-black uppercase tracking-widest">Add Another Asset</span>
-                                <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className="text-[7.5px] font-bold text-emerald-600 uppercase tracking-tight leading-none">Auto-apply {globalSettings.multi_asset_discount_pct || 20}% Discount</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="w-7 h-7 rounded-xl bg-gray-50 flex items-center justify-center shadow-sm relative z-10 group-hover:bg-brand transition-colors">
-                            <ArrowRight size={12} className="text-black/30 group-hover:text-black transition-colors" strokeWidth={3} />
-                        </div>
-                    </button>
 
                     {/* Car & Bike Combo Card (From Studio Wash) */}
                     {(() => {
@@ -2765,23 +2825,24 @@ const InstantWash = () => {
                                 const perWash = pkg.perWash || Math.round((pkg.price || 499) / (parseInt(pkg.title) || 2));
                                 const pkgId = pkg.id || pkg._id;
                                 const pkgName = pkg.name || pkg.title;
-                                const isAdded = effectiveItems.some(i =>
-                                    i.type === 'subscription' && (pkgId ? i.serviceId === pkgId : (i.name === pkgName && pkgName !== undefined))
+                                const isAdded = cart.some(i =>
+                                    i.type === 'subscription' && (pkgId ? (i.id === pkgId || i.serviceId === pkgId) : (i.name === pkgName))
                                 );
 
                                 return (
-                                    <div key={pkg.id || i} className={`bg-white rounded-2xl border p-3.5 shadow-sm flex items-center justify-between relative overflow-hidden group transition-all duration-300 ${isAdded ? 'border-brand ring-1 ring-brand/20' : 'border-black/[0.03] hover:border-brand/40'}`}>
+                                    <div key={pkgId || i} className={`bg-white rounded-2xl border p-4 shadow-sm flex items-center justify-between relative overflow-hidden group transition-all duration-300 ${isAdded ? 'border-brand ring-1 ring-brand/20' : 'border-black/[0.03] hover:border-brand/40'}`}>
                                         <div className="absolute top-0 right-0 w-24 h-24 bg-brand/5 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-150 duration-700" />
-                                        <div className="absolute top-0 left-0 bg-[#F3DCCB] text-black px-3 py-1 text-[7.5px] font-[1000] rounded-br-xl uppercase tracking-widest shadow-sm">
+
+                                        {/* Total Price Badge (Matching Screenshot) */}
+                                        <div className="absolute top-0 left-0 bg-[#F3E8DF] text-black px-3 py-1.5 text-[8px] font-black rounded-br-2xl uppercase tracking-widest leading-none">
                                             Total ₹{pkg.price}
                                         </div>
 
-                                        <div className="pt-4 flex-1">
-                                            <h4 className="text-[12px] font-black text-black tracking-tight uppercase leading-none mb-1.5 group-hover:text-brand transition-colors">{pkg.title || pkg.name}</h4>
+                                        <div className="pt-5 flex-1 text-left">
+                                            <h4 className="text-[14px] font-[1000] text-black tracking-tight uppercase leading-none mb-1.5">{pkg.title || pkg.name}</h4>
                                             <div className="flex items-center gap-2">
-                                                <span className="text-[15px] font-[1000] text-emerald-600 leading-none tracking-tighter">₹{perWash}/WASH</span>
-                                                <div className="w-1 h-1 rounded-full bg-black/5" />
-                                                <span className="text-[9px] font-bold text-black/10 line-through tracking-tighter">WAS ₹{perWash * 2}</span>
+                                                <span className="text-[16px] font-[1000] text-emerald-600 leading-none tracking-tighter">₹{perWash}/WASH</span>
+                                                <span className="text-[9px] font-bold text-black/10 line-through tracking-tighter uppercase">Was ₹{perWash * 2}</span>
                                             </div>
                                         </div>
 
@@ -2790,25 +2851,23 @@ const InstantWash = () => {
                                                 if (isAdded) {
                                                     setCart(prev => prev.filter(item => {
                                                         if (item.type !== 'subscription') return true;
-                                                        const pkgId = pkg.id || pkg._id;
-                                                        const pkgName = pkg.name || pkg.title;
-                                                        if (pkgId && item.serviceId) return item.serviceId !== pkgId;
-                                                        return item.name !== pkgName;
+                                                        return (item.id !== pkgId && item.serviceId !== pkgId && item.name !== pkgName);
                                                     }));
                                                 } else {
                                                     const subscriptionItem = {
-                                                        id: pkg.id || pkg._id || Date.now(),
-                                                        serviceId: pkg.id || pkg._id,
-                                                        serviceName: pkg.name || pkg.title,
-                                                        name: pkg.name || pkg.title,
+                                                        id: pkgId || Date.now(),
+                                                        serviceId: pkgId,
+                                                        serviceName: pkgName,
+                                                        name: pkgName,
                                                         price: pkg.price,
                                                         type: 'subscription',
                                                         vehicleName: 'Monthly Pass'
                                                     };
                                                     setCart(prev => [...prev, subscriptionItem]);
+                                                    toast.success(`${pkgName} added to your booking!`);
                                                 }
                                             }}
-                                            className={`px-5 py-2.5 rounded-xl text-[10px] font-[1000] uppercase tracking-widest shadow-md active:scale-95 transition-all relative z-10 ${isAdded ? 'bg-black text-white' : 'bg-[#F3DCCB] text-black hover:bg-black hover:text-white'}`}
+                                            className={`px-6 py-2.5 rounded-xl text-[10px] font-[1000] uppercase tracking-widest shadow-md active:scale-95 transition-all relative z-10 ${isAdded ? 'bg-black text-white' : 'bg-white border border-black/[0.1] text-black hover:bg-black hover:text-white'}`}
                                         >
                                             {isAdded ? 'Added' : 'Select'}
                                         </button>
@@ -2839,7 +2898,7 @@ const InstantWash = () => {
                             </button>
                         </div>
                         {(() => {
-                            const activeAddr = selectedLocation || addresses.find(a => a.isPrimary) || addresses[0];
+                            const activeAddr = selectedAddress || addresses.find(a => a.isPrimary) || addresses[0];
                             return activeAddr ? (
                                 <div className="flex items-center gap-4 bg-gray-50/50 p-4 rounded-2xl border border-black/[0.02] relative z-10">
                                     <div className="w-12 h-12 rounded-2xl bg-white border border-black/[0.05] flex items-center justify-center text-black/40 shadow-sm flex-shrink-0">
@@ -2868,80 +2927,24 @@ const InstantWash = () => {
                             );
                         })()}
                     </div>
-
-                    {/* Recommendation Section (E-shop Integration) */}
-                    <div className="pt-2 pb-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex flex-col">
-                                <h3 className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em]">Craft Care Essentials</h3>
-                                <p className="text-[7.5px] font-black text-brand uppercase tracking-tighter mt-1">Exclusive Add-ons for later use</p>
-                            </div>
-                            <button onClick={() => navigate('/e-shop')} className="bg-black text-white px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 active:scale-95 transition-all">
-                                View Store <ArrowRight size={8} strokeWidth={3} />
-                            </button>
-                        </div>
-                        <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
-                            {suggestedProducts.length > 0 ? suggestedProducts.map(product => (
-                                <motion.div
-                                    key={product._id}
-                                    whileTap={{ scale: 0.98 }}
-                                    className="min-w-[160px] bg-white rounded-2xl p-2 border border-black/[0.03] shadow-sm flex flex-col gap-2"
-                                >
-                                    <div className="w-full aspect-square bg-gray-50 rounded-xl overflow-hidden">
-                                        <img
-                                            src={sanitizeUrl(product.image)}
-                                            className="w-full h-full object-cover"
-                                            alt={product.name}
-                                            onError={handleImageError}
-                                        />
-                                    </div>
-                                    <div className="px-1">
-                                        <h4 className="text-[10px] font-black text-black line-clamp-1 uppercase tracking-tighter mb-1">{product.name}</h4>
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex flex-col">
-                                                <span className={`text-[12px] font-[1000] ${isBlackPassMember ? 'text-brand' : 'text-black'}`}>
-                                                    ₹{isBlackPassMember ? Math.round(product.salePrice * (1 - (passConfig?.discount || 0.3))) : product.salePrice}
-                                                </span>
-                                                {isBlackPassMember && (
-                                                    <span className="text-[7px] font-black text-black/20 line-through uppercase tracking-tighter">₹{product.salePrice}</span>
-                                                )}
-                                            </div>
-                                            <button
-                                                onClick={() => {
-                                                    const productPrice = isBlackPassMember ? Math.round(product.salePrice * (1 - (passConfig?.discount || 0.3))) : product.salePrice;
-                                                    const productItem = {
-                                                        id: product._id || Date.now() + Math.random(),
-                                                        serviceName: product.name,
-                                                        price: productPrice,
-                                                        vehicleId: selectedVehicle?.id,
-                                                        vehicleName: "E-shop Item",
-                                                        image: product.image,
-                                                        type: 'product'
-                                                    };
-                                                    setCart(prev => [...prev, productItem]);
-                                                    toast.success(`${product.name} added to your purchases!`);
-                                                }}
-                                                className="w-6 h-6 bg-black text-white rounded-lg flex items-center justify-center active:scale-95 transition-transform"
-                                            >
-                                                <Plus size={12} strokeWidth={3} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )) : (
-                                <div className="w-full py-8 text-center bg-white rounded-2xl border border-black/[0.03] border-dashed">
-                                    <p className="text-[9px] font-black text-black/10 uppercase tracking-widest">Curating relevant products...</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
                 </div>
 
                 {/* Cart Footer (Ultra Modern - Matching Studio Wash) */}
                 <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-black/[0.04] px-4 py-2.5 pb-5 z-50 shadow-[0_-12px_35px_rgba(0,0,0,0.02)]">
+                    <div className="max-w-lg mx-auto mb-3">
+                        {pricingBreakdown.length > 0 && (
+                            <div className="flex gap-2 overflow-x-auto no-scrollbar py-2">
+                                {pricingBreakdown.map((benefit, idx) => (
+                                    <div key={idx} className="flex-shrink-0">
+                                        <BenefitBadge {...benefit} />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                     <div className="flex items-center justify-between max-w-lg mx-auto gap-3 transition-all">
                         <div className="flex-1">
-                            <p className="text-[6.5px] font-black text-black/20 uppercase tracking-[0.25em] mb-0.5 leading-none">Final Estimate</p>
+                            <p className="text-[6.5px] font-black text-black/20 uppercase tracking-[0.25em] mb-0.5 leading-none">Net Payable</p>
                             <div className="flex items-baseline gap-1.5">
                                 <span className="text-[22px] font-[1000] text-black tracking-tighter leading-none">₹{finalPrice}</span>
                                 <span className="px-1 py-0.5 bg-black/[0.03] text-black/40 text-[7px] font-black rounded text-center uppercase tracking-tighter leading-none">Instant</span>
@@ -2959,7 +2962,7 @@ const InstantWash = () => {
                         </div>
                         <button
                             onClick={() => {
-                                const activeAddr = selectedLocation || addresses.find(a => a.isPrimary) || addresses[0];
+                                const activeAddr = selectedAddress || addresses.find(a => a.isPrimary) || addresses[0];
                                 if (!activeAddr) {
                                     navigate('/addresses?from=instant-wash');
                                     toast.error('Please select a service address');
@@ -2970,7 +2973,7 @@ const InstantWash = () => {
                             className={`flex-1 max-w-[145px] flex items-center justify-center gap-2 h-12 rounded-xl font-[1000] text-[12px] uppercase tracking-widest active:scale-[0.97] transition-all shadow-lg group relative overflow-hidden bg-black text-white shadow-black/5 hover:bg-brand hover:text-black`}
                         >
                             <div className="absolute inset-0 bg-brand/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <span className="relative z-10">{(selectedLocation || addresses.find(a => a.isPrimary) || addresses[0]) ? 'Next Step' : 'Set Address'}</span>
+                            <span className="relative z-10">{(selectedAddress || addresses.find(a => a.isPrimary) || addresses[0]) ? 'Next Step' : 'Set Address'}</span>
                             <ChevronRight size={14} className="relative z-10 group-hover:translate-x-1 transition-transform duration-300" strokeWidth={3} />
                         </button>
                     </div>
@@ -3021,8 +3024,9 @@ const InstantWash = () => {
                         <MapPin size={16} fill="currentColor" className="text-black" />
                         <p className="text-[11px] font-[1000] text-black uppercase tracking-tight">
                             Service at - <span className="text-black/30">{(() => {
-                                const a = selectedLocation || addresses.find(x => x.isPrimary) || addresses[0];
-                                return a ? (a.full || a.address || a.street || a.address?.street || a.label || 'Your Address') : 'Address not saved';
+                                const a = selectedAddress || addresses.find(x => x.isPrimary) || addresses[0];
+                                if (!a) return 'Address not saved';
+                                return a.street || a.address || a.full || a.label || 'Your Address';
                             })()}</span>
                         </p>
                     </div>
@@ -3235,6 +3239,12 @@ const InstantWash = () => {
 
     const renderPayment = () => {
         const paymentOptions = [
+            ...(user?.loyalty?.rewardsAvailable > 0 ? [{ 
+                id: 'subscription', 
+                name: 'Loyalty Reward', 
+                icon: <Crown size={18} className="text-brand" fill="currentColor" />, 
+                subtitle: `${user.loyalty.rewardsAvailable} FREE WASH AVAILABLE` 
+            }] : []),
             { id: 'wallet', name: 'Clean2Wash Wallet', icon: <Wallet size={18} strokeWidth={2.5} />, balance: walletBalance },
             { id: 'googlepay', name: 'Google Pay', icon: 'https://cdn-icons-png.flaticon.com/512/6124/6124998.png' },
             { id: 'phonepe', name: 'PhonePe', icon: 'https://img.icons8.com/color/480/phonepe.png' },
@@ -3316,6 +3326,9 @@ const InstantWash = () => {
                                     </div>
                                     <div className="flex flex-col">
                                         <span className="text-[13px] font-[1000] text-black tracking-tight leading-none">{opt.name}</span>
+                                        {opt.subtitle && (
+                                            <span className="text-[8px] font-black text-brand mt-1 uppercase tracking-widest">{opt.subtitle}</span>
+                                        )}
                                         {opt.id === 'wallet' && (
                                             <span className={`text-[9px] font-bold mt-1 uppercase tracking-widest ${opt.balance < finalPrice ? 'text-red-500' : 'text-emerald-600'}`}>
                                                 Balance: ₹{opt.balance}
@@ -3345,6 +3358,17 @@ const InstantWash = () => {
 
                 {/* Refined Footer (Ultra Modern) */}
                 <div className="fixed bottom-0 left-0 right-0 bg-white shadow-[0_-15px_40px_rgba(0,0,0,0.03)] border-t border-black/[0.04] p-4 pb-8 z-50">
+                    <div className="max-w-lg mx-auto mb-4">
+                        {pricingBreakdown.length > 0 && (
+                            <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                                {pricingBreakdown.map((benefit, idx) => (
+                                    <div key={idx} className="flex-shrink-0">
+                                        <BenefitBadge {...benefit} />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                     <div className="flex items-center justify-between max-w-lg mx-auto w-full gap-4">
                         <div className="flex-1">
                             <div className="flex items-center gap-1.5 mb-1">
@@ -3366,7 +3390,7 @@ const InstantWash = () => {
                                 setIsProcessing(true);
 
                                 try {
-                                    const activeAddr = selectedLocation || addresses.find(a => a.isPrimary) || addresses[0];
+                                    const activeAddr = selectedAddress || addresses.find(a => a.isPrimary) || addresses[0];
                                     const addonObjects = (serviceAddons[activeServiceId] || [])
                                         .map(addonId => {
                                             const a = activeService?.addons?.find(x => x.id === addonId && !x.included);
@@ -3376,15 +3400,15 @@ const InstantWash = () => {
                                     const firstService = effectiveItems.find(i => i.serviceId && i.type !== 'subscription' && i.type !== 'monthly');
 
                                     // Map category to a value accepted by Booking model enum
-                                    const validCategories = ['Doorstep', 'Studio', 'Add-ons', 'Prestige', 'Chauffeur'];
+                                    const validCategories = ['Doorstep', 'Studio', 'Add-ons', 'Prestige', 'Chauffeur', 'Apartment'];
                                     const rawCategory = activeService?.category || firstService?.category || 'Doorstep';
                                     const category = validCategories.includes(rawCategory) ? rawCategory :
                                         (rawCategory === 'Express' ? 'Doorstep' : 'Doorstep');
 
                                     // Map location type to a value accepted by Booking model enum
-                                    const validLocationTypes = ['home', 'office', 'other', 'studio'];
+                                    const validLocationTypes = ['home', 'office', 'other', 'studio', 'apartment', 'Apartment'];
                                     const rawLocationType = activeAddr?.label?.toLowerCase() || 'home';
-                                    const locationType = validLocationTypes.includes(rawLocationType) ? rawLocationType :
+                                    const locationType = validLocationTypes.includes(rawLocationType) ? (rawLocationType === 'apartment' ? 'Apartment' : rawLocationType) :
                                         (rawLocationType === 'work' ? 'office' : 'other');
 
                                     // Map payment method to a value accepted by Booking model enum
@@ -3422,8 +3446,8 @@ const InstantWash = () => {
                                                 state: activeAddr.state || user?.profile?.state || 'Karnataka',
                                                 pincode: activeAddr.pincode,
                                                 coordinates: (activeAddr.coordinates || activeAddr.coords) ? {
-                                                    lat: Number((activeAddr.coordinates || activeAddr.coords).lat),
-                                                    lng: Number((activeAddr.coordinates || activeAddr.coords).lng)
+                                                    lat: Number((activeAddr.coordinates || activeAddr.coords).lat || 0),
+                                                    lng: Number((activeAddr.coordinates || activeAddr.coords).lng || 0)
                                                 } : undefined
                                             }
                                         } : undefined,
@@ -3431,8 +3455,8 @@ const InstantWash = () => {
                                         couponCode: appliedCoupon?.code
                                     };
 
-                                    if (paymentMethod === 'wallet') {
-                                        if (walletBalance < finalPrice) {
+                                    if (paymentMethod === 'wallet' || paymentMethod === 'subscription') {
+                                        if (paymentMethod === 'wallet' && walletBalance < finalPrice) {
                                             toast.error(`Insufficient wallet balance. You need ₹${finalPrice - walletBalance} more.`);
                                             setIsProcessing(false);
                                             return;
@@ -3441,29 +3465,35 @@ const InstantWash = () => {
                                         const res = await apiClient.createBooking(bookingPayload);
                                         if (res?.status === 'success' && res?.data?.booking) {
                                             handleBookingSuccess(res.data.booking);
-                                            await loadWallet(); // Sync wallet balance from server instead of manual local calculation
-
+                                            if (paymentMethod === 'wallet') await loadWallet(); 
+                                            
                                             // Process subscriptions if any
                                             const subscriptionItems = effectiveItems.filter(i => i.type === 'monthly' || i.type === 'subscription');
                                             for (const sub of subscriptionItems) {
                                                 try {
-                                                    const subRes = await subscriptionAPI.createSubscription({
+                                                    await subscriptionAPI.createSubscription({
                                                         planId: sub.serviceId || sub.planId,
-                                                        paymentMethod: 'wallet'
+                                                        plan: sub.serviceId || sub.planId,
+                                                        paymentMethod: 'wallet',
+                                                        status: 'active'
                                                     });
-                                                    if (subRes?.status === 'success' && (subRes?.data?.subscription || subRes?.subscription)) {
-                                                        setUserSubscription(subRes.data?.subscription || subRes.subscription);
-                                                    }
                                                 } catch (subErr) {
                                                     console.error('Wallet sub activation error:', subErr);
                                                 }
                                             }
                                         } else {
-                                            throw new Error(res?.message || 'Wallet payment failed');
+                                            throw new Error(res?.message || 'Payment failed');
                                         }
                                     } else {
+                                        const vehicleId = selectedVehicle?._id || selectedVehicle?.id;
+                                        if (!vehicleId) {
+                                            toast.error('Vehicle session lost. Please select your vehicle again.');
+                                            setPhase(PHASES.SELECT_VEHICLE);
+                                            setIsProcessing(false);
+                                            return;
+                                        }
+
                                         const keyRes = await getRazorpayKey();
-                                        // 2. Create Razorpay Order - Backend handles multiplication by 100
                                         const orderRes = await createPaymentOrder(finalPrice);
 
                                         if (!keyRes?.data?.key_id || !orderRes?.data?.order_id) {
@@ -3490,7 +3520,7 @@ const InstantWash = () => {
                                             currency: currency,
                                             name: 'Clean-2-Wash',
                                             description: `${activeService?.title || 'Car Wash Service'}`,
-                                            image: 'https://cdn-icons-png.flaticon.com/512/3003/3003984.png', // Public URL to avoid localhost loopback CORS issues
+                                            image: 'https://cdn-icons-png.flaticon.com/512/3003/3003984.png',
                                             order_id: order_id,
                                             handler: async function (response) {
                                                 try {
@@ -3502,7 +3532,6 @@ const InstantWash = () => {
                                                     );
 
                                                     if (verificationResult.success) {
-                                                        // 1. Process standard service bookings
                                                         const serviceItems = effectiveItems.filter(i => i.serviceId && i.type !== 'subscription');
                                                         if (serviceItems.length > 0) {
                                                             const res = await apiClient.createBooking({
@@ -3513,31 +3542,25 @@ const InstantWash = () => {
 
                                                             if (res?.status === 'success' && res?.data?.booking) {
                                                                 handleBookingSuccess(res.data.booking);
-                                                            } else {
-                                                                console.error('Booking creation failed after payment:', res);
                                                             }
                                                         }
 
-                                                        // 2. Process subscription purchases
                                                         const subscriptionItems = effectiveItems.filter(i => i.type === 'monthly' || i.type === 'subscription');
                                                         for (const sub of subscriptionItems) {
                                                             try {
-                                                                const subRes = await subscriptionAPI.createSubscription({
+                                                                await subscriptionAPI.createSubscription({
                                                                     planId: sub.serviceId || sub.planId,
+                                                                    plan: sub.serviceId || sub.planId,
                                                                     paymentId: response.razorpay_payment_id,
                                                                     orderId: response.razorpay_order_id,
-                                                                    paymentMethod: 'online'
+                                                                    paymentMethod: 'online',
+                                                                    status: 'active'
                                                                 });
-                                                                // Refresh local user subscription state
-                                                                if (subRes?.status === 'success' && (subRes?.data?.subscription || subRes?.subscription)) {
-                                                                    setUserSubscription(subRes.data?.subscription || subRes.subscription);
-                                                                }
                                                             } catch (subErr) {
                                                                 console.error('Failed to activate subscription:', subErr);
                                                             }
                                                         }
 
-                                                        // If it was just a subscription (no service), go to profile/home
                                                         if (serviceItems.length === 0 && subscriptionItems.length > 0) {
                                                             toast.success('Subscription activated successfully!');
                                                             setCart([]);
@@ -3547,7 +3570,7 @@ const InstantWash = () => {
                                                         toast.error('Payment verification failed.');
                                                     }
                                                 } catch (err) {
-                                                    console.error('Hander error:', err);
+                                                    console.error('Handler error:', err);
                                                     toast.error('Error processing payment response.');
                                                 } finally {
                                                     setIsProcessing(false);

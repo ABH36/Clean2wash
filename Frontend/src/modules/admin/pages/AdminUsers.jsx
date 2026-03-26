@@ -32,6 +32,18 @@ import { adminAPI } from '../../../utils/adminApi';
 const AdminUsers = () => {
     const location = useLocation();
     const [activeTab, setActiveTab] = useState('Consumers');
+    const [hubs, setHubs] = useState([]);
+
+    const fetchHubs = async () => {
+        try {
+            const res = await adminAPI.getHubs();
+            if (res.status === 'success') {
+                setHubs(res.data.hubs || []);
+            }
+        } catch (err) {
+            console.error("Failed to fetch hubs:", err);
+        }
+    };
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -86,6 +98,7 @@ const AdminUsers = () => {
 
     useEffect(() => {
         fetchUsers();
+        fetchHubs();
     }, [currentRole]);
 
     const filteredUsers = users.filter(u =>
@@ -480,17 +493,25 @@ const AdminUsers = () => {
                                                 />
                                             </div>
                                         )}
-                                        {activeTab === 'Captains' ? (
+                                        {activeTab === 'Captains' || activeTab === 'Staff' ? (
                                             <div className="space-y-1.5 font-sans">
-                                                <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Operational Hub</label>
-                                                <input
-                                                    placeholder="e.g. Sector 15 Node"
-                                                    className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
+                                                <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">
+                                                    {activeTab === 'Captains' ? 'Operational Hub' : 'Assigned Hub'}
+                                                </label>
+                                                <select
+                                                    className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm appearance-none"
                                                     value={formData.hub}
                                                     onChange={e => setFormData({ ...formData, hub: e.target.value })}
-                                                />
+                                                >
+                                                    <option value="">Select a Hub</option>
+                                                    {hubs.map(hub => (
+                                                        <option key={hub._id} value={hub.name}>{hub.name} ({hub.city})</option>
+                                                    ))}
+                                                </select>
                                             </div>
-                                        ) : activeTab === 'Staff' ? (
+                                        ) : null}
+
+                                        {activeTab === 'Staff' ? (
                                             <div className="space-y-1.5 font-sans">
                                                 <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Access Designation</label>
                                                 <select

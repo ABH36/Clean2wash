@@ -17,13 +17,15 @@ const generateDailySubscriptionJobs = async () => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        // 1. Find all ACTIVE subscriptions
+        // 1. Find all ACTIVE subscriptions that have a vehicle and hub assigned
         const activeSubscriptions = await Subscription.find({
             status: 'active',
-            endDate: { $gte: today }
+            endDate: { $gte: today },
+            vehicle: { $exists: true, $ne: null },
+            hub: { $exists: true, $ne: null }
         }).populate('user hub vehicle');
 
-        console.log(`[Cron] Found ${activeSubscriptions.length} active subscriptions to process.`);
+        console.log(`[Cron] Found ${activeSubscriptions.length} valid subscriptions with vehicles to process.`);
 
         // Group subscriptions by Hub to optimize staff lookup
         const hubMap = {};
@@ -50,6 +52,12 @@ const generateDailySubscriptionJobs = async () => {
 
             let staffIndex = 0;
             for (const sub of subscriptions) {
+                // Secondary safety check
+                if (!sub.vehicle) {
+                    console.warn(`[Cron] ⚠️ Skipping subscription ${sub._id} - Vehicle data lost during population.`);
+                    continue;
+                }
+
                 // Check if a booking already exists for this subscription today
                 const existingBooking = await Booking.findOne({
                     subscriptionId: sub._id,
@@ -71,26 +79,39 @@ const generateDailySubscriptionJobs = async () => {
                 const bookingData = {
                     consumer: sub.user?._id,
                     vehicle: sub.vehicle?._id,
-                    hubId: sub.hub?._id,
                     subscriptionId: sub._id,
                     service: {
                         id: sub.service?.id || 'apartment-wash',
                         key: sub.service?.key || 'APARTMENT_WASH',
                         name: sub.service?.title || 'Apartment Car Wash',
+                        category: 'Apartment',
                         type: 'vendor'
                     },
                     location: {
                         type: 'Apartment',
+                        hubId: sub.hub?._id,
                         address: {
-                            society: sub.hub?.name,
-                            city: sub.hub?.city,
-                            landmark: `Block: ${sub.parkingDetails?.block}, Pillar: ${sub.parkingDetails?.pillar}, Level: ${sub.parkingDetails?.basement}`
+                            street: sub.hub?.name || 'Apartment Complex',
+                            city: sub.hub?.city || 'City',
+                            coordinates: sub.hub?.location?.coordinates || { lat: 0, lng: 0 }
+                        },
+                        parkingDetails: {
+                            basement: sub.parkingDetails?.basement,
+                            block: sub.parkingDetails?.block,
+                            pillar: sub.parkingDetails?.pillar,
+                            slotNumber: sub.parkingDetails?.slotNumber,
+                            area: `Apartment: ${sub.hub?.name}`
                         }
                     },
                     pricing: {
+                        baseAmount: 0, // Paid via subscription
                         totalAmount: 0,
-                        isPaid: true,
-                        paymentMethod: 'subscription'
+                        currency: 'INR'
+                    },
+                    payment: {
+                        method: 'subscription',
+                        status: 'paid',
+                        paidAt: new Date()
                     },
                     schedule: {
                         type: 'scheduled',
@@ -102,7 +123,7 @@ const generateDailySubscriptionJobs = async () => {
                     },
                     status: 'confirmed',
                     provider: {
-                        id: assignedStaff?._id || sub.hub?.vendor, // Assign to specific staff if available, else fall back to vendor
+                        id: assignedStaff?._id || sub.hub?.vendor,
                         type: 'vendor'
                     }
                 };
@@ -116,6 +137,15 @@ const generateDailySubscriptionJobs = async () => {
                         title: 'Service Activated 🧼',
                         message: `Your daily apartment wash for ${sub.vehicle?.plate || 'your vehicle'} has been initialized. Specialist ${assignedStaff?.name || 'is on the way'}.`,
                         type: 'booking'
+                    });
+                }
+
+                // 5. Notify assigned staff (Captain)
+                if (assignedStaff?._id) {
+                    await sendNotification(assignedStaff._id, {
+                        title: 'Morning Duty Assigned 🚗',
+                        message: `You have a new wash scheduled at ${sub.hub?.name}. Slot: ${sub.slot === 'morning' ? '6-9 AM' : '6-8 PM'}.`,
+                        type: 'status-update'
                     });
                 }
             }

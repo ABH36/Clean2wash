@@ -88,6 +88,16 @@ const consumerSchema = new mongoose.Schema({
     loginCount: {
         type: Number,
         default: 0
+    },
+    loyalty: {
+        completedBookingsCount: {
+            type: Number,
+            default: 0
+        },
+        rewardsAvailable: {
+            type: Number,
+            default: 0
+        }
     }
 }, {
     timestamps: true,

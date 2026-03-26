@@ -5,7 +5,7 @@ import {
     ChevronLeft, MapPin, Phone, MessageSquare, Truck,
     ShieldCheck, CheckCircle2, Navigation2, Clock,
     Camera, AlertCircle, ArrowUpRight, Search, User,
-    Package, X, Lock, Trash2, ShieldAlert
+    Package, X, Lock, Trash2, ShieldAlert, Zap, Check
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
@@ -49,7 +49,7 @@ const PinModal = ({ isOpen, onConfirm, onCancel, title, isDarkMode }) => {
                         <Lock size={36} strokeWidth={2.5} />
                     </div>
                     <div className="mb-8">
-                        <h3 className={`text-2xl font-black italic uppercase tracking-tight mb-2 ${isDarkMode ? 'text-white' : 'text-content'}`}>{title}</h3>
+                        <h3 className={`text-2xl font-black uppercase tracking-tight mb-2 ${isDarkMode ? 'text-white' : 'text-content'}`}>{title}</h3>
                         <p className={`text-[10px] font-black uppercase tracking-[0.2em] px-4 leading-relaxed ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Sync the 4-digit security code with the consumer's terminal.</p>
                     </div>
 
@@ -276,7 +276,7 @@ const TaskDetails = () => {
     const taskData = task || {};
     const isDelivery = ['quality-check', 'ready-for-delivery', 'delivery-assigned', 'completed'].includes(taskData.status);
     const statusIdx = {
-        'en_route': 1, 'arrived': 2, 'picked-up': 3, 'at-studio': 4, 'washing': 4, 'quality-check': 4, 'ready-for-delivery': 5, 'completed': 6
+        'pickup-assigned': 1, 'confirmed': 1, 'accepted': 1, 'en_route': 2, 'arrived': 3, 'picked-up': 4, 'at-studio': 5, 'washing': 5, 'quality-check': 5, 'ready-for-delivery': 6, 'completed': 6
     }[taskData.status] || 0;
 
     return (
@@ -291,8 +291,8 @@ const TaskDetails = () => {
                     <ChevronLeft size={24} />
                 </motion.button>
                 <div className="text-center">
-                    <p className={`text-[9px] font-black uppercase tracking-[0.3em] leading-none mb-1.5 italic ${isDarkMode ? 'text-brand-light' : 'text-brand'}`}>Authorized Terminal</p>
-                    <h1 className={`text-lg font-black italic leading-none tracking-tight uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>#{String(taskData._id).slice(-8).toUpperCase()}</h1>
+                    <p className={`text-[9px] font-black uppercase tracking-[0.3em] leading-none mb-1.5 ${isDarkMode ? 'text-brand-light' : 'text-brand'}`}>Authorized Terminal</p>
+                    <h1 className={`text-lg font-black leading-none tracking-tight uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>#{String(taskData._id).slice(-8).toUpperCase()}</h1>
                 </div>
                 <div className="w-12 h-12 rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-center">
                     <ShieldCheck size={24} className="text-brand" />
@@ -303,7 +303,7 @@ const TaskDetails = () => {
             {!isConnectionActive && (
                 <div className="bg-amber-500 text-white px-6 py-2 flex items-center justify-center gap-2 sticky top-[88px] z-40 animate-pulse">
                     <ShieldAlert size={14} />
-                    <span className="text-[10px] font-black uppercase tracking-widest italic leading-none">Protocol Paused: Offline Mode Active</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest leading-none">Protocol Paused: Offline Mode Active</span>
                 </div>
             )}
 
@@ -323,9 +323,9 @@ const TaskDetails = () => {
                             <div>
                                 <div className="flex items-center gap-2 mb-2">
                                     <Zap size={14} className="text-brand animate-pulse" />
-                                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-brand italic">Priority Protocol</span>
+                                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-brand">Priority Protocol</span>
                                 </div>
-                                <h2 className={`text-2xl font-black italic uppercase leading-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>
+                                <h2 className={`text-2xl font-black uppercase leading-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>
                                     Scheduled Pickup <br /> Request
                                 </h2>
                             </div>
@@ -333,11 +333,11 @@ const TaskDetails = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className={`p-4 rounded-3xl border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white border-gray-100 shadow-soft'}`}>
                                     <p className="text-[8px] font-black uppercase tracking-widest opacity-40 mb-1">Target Slot</p>
-                                    <p className={`text-sm font-black italic ${isDarkMode ? 'text-white' : 'text-content'}`}>{taskData.schedule.timeSlot?.start || '10:00 AM'}</p>
+                                    <p className={`text-sm font-black ${isDarkMode ? 'text-white' : 'text-content'}`}>{taskData.schedule.timeSlot?.start || '10:00 AM'}</p>
                                 </div>
                                 <div className={`p-4 rounded-3xl border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white border-gray-100 shadow-soft'}`}>
                                     <p className="text-[8px] font-black uppercase tracking-widest opacity-40 mb-1">Status</p>
-                                    <p className="text-sm font-black italic text-brand">Awaiting Commitment</p>
+                                    <p className="text-sm font-black text-brand">Awaiting Commitment</p>
                                 </div>
                             </div>
 
@@ -353,19 +353,19 @@ const TaskDetails = () => {
                                         toast.error(err.message || 'Operation Timing Failure');
                                     }
                                 }}
-                                className="w-full h-20 bg-brand text-white rounded-[2.5rem] font-black text-xs uppercase tracking-[0.2em] italic shadow-xl shadow-brand/40 active:scale-95 transition-all flex items-center justify-center gap-3"
+                                className="w-full h-20 bg-brand text-white rounded-[2.5rem] font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-brand/40 active:scale-95 transition-all flex items-center justify-center gap-3"
                             >
                                 <CheckCircle2 size={20} />
                                 {isCommitted ? 'Slot Secured' : 'Acknowledge & Commit to Slot'}
                             </button>
 
-                            <p className="text-center text-[9px] font-bold opacity-40 uppercase tracking-widest italic">This commitment triggers the consumer departure signal</p>
+                            <p className="text-center text-[9px] font-bold opacity-40 uppercase tracking-widest">This commitment triggers the consumer departure signal</p>
                         </div>
                     </motion.div>
                 </div>
             )}
 
-            <div className={`mt-8 px-6 space-y-6`}>
+            <div className="mt-8 px-6 space-y-6">
                 {/* 🗺️ Live Tactical Map Node */}
                 <div className={`relative h-72 rounded-[3.5rem] overflow-hidden border shadow-2xl transition-all ${isDarkMode ? 'border-white/5 bg-[#0F172A]' : 'border-gray-100 bg-white'}`}>
                     <div className="absolute inset-0 z-0">
@@ -383,28 +383,41 @@ const TaskDetails = () => {
                     </div>
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent pointer-events-none z-10" />
 
-                    <div className="absolute inset-x-8 bottom-8 flex items-end justify-between">
+                    <div className="absolute inset-x-8 bottom-8 flex items-end justify-between z-20">
                         <div className="space-y-3 max-w-[70%] text-white">
                             <div className="flex items-center gap-2">
                                 <span className={`w-2 h-2 rounded-full animate-ping ${isConnectionActive ? 'bg-brand' : 'bg-amber-500'}`} />
-                                <p className={`text-[9px] font-black uppercase tracking-widest italic leading-none ${isConnectionActive ? 'text-brand' : 'text-amber-500'}`}>
+                                <p className={`text-[9px] font-black uppercase tracking-widest leading-none ${isConnectionActive ? 'text-brand' : 'text-amber-500'}`}>
                                     {isConnectionActive ? 'Precision Route Ready' : 'Protocol Signal Weak'}
                                 </p>
                             </div>
                             <div>
-                                <h3 className="text-xl font-black italic leading-tight uppercase truncate mb-1">
+                                <h3 className="text-xl font-black leading-tight uppercase truncate mb-1">
                                     {(statusIdx >= 3 && statusIdx < 5)
                                         ? (taskData.provider?.businessName || 'Authorized Hub')
                                         : (taskData.location?.address?.street || 'Assigned point')
                                     }
                                 </h3>
-                                <p className="text-[10px] font-bold uppercase tracking-widest opacity-60 flex items-center gap-2">
-                                    <MapPin size={10} className="text-brand" />
-                                    {(statusIdx >= 3 && statusIdx < 5)
-                                        ? 'Returning to Studio Node'
-                                        : (taskData.location?.landmark || 'Check terminal notes')
+                                <div className="mt-1">
+                                    {(taskData.location?.parkingDetails || taskData.location?.landmark)
+                                        ? (
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-2">
+                                                    <MapPin size={10} className="text-brand" />
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">
+                                                        {taskData.location?.parkingDetails 
+                                                            ? `Lvl: ${taskData.location.parkingDetails.basement} • Blk: ${taskData.location.parkingDetails.block} • P:${taskData.location.parkingDetails.pillar}` 
+                                                            : taskData.location?.landmark}
+                                                    </span>
+                                                </div>
+                                                {taskData.location?.parkingDetails?.slotNumber && (
+                                                    <p className="text-[9px] font-black text-brand uppercase tracking-widest ml-4">Slot: {taskData.location.parkingDetails.slotNumber}</p>
+                                                )}
+                                            </div>
+                                        )
+                                        : <p className="text-[10px] font-bold opacity-40 uppercase tracking-widest leading-none">Check terminal notes</p>
                                     }
-                                </p>
+                                </div>
                             </div>
                         </div>
                         <motion.button
@@ -439,7 +452,7 @@ const TaskDetails = () => {
                                 <User size={32} className="text-brand" />
                             </div>
                             <div className="pt-1">
-                                <h4 className={`text-2xl font-black italic uppercase tracking-tighter leading-none mb-1.5 ${isDarkMode ? 'text-white' : 'text-content'}`}>{taskData.consumer?.name || 'Protocol Consumer'}</h4>
+                                <h4 className={`text-2xl font-black uppercase tracking-tighter leading-none mb-1.5 ${isDarkMode ? 'text-white' : 'text-content'}`}>{taskData.consumer?.name || 'Protocol Consumer'}</h4>
                                 <div className="flex items-center gap-2">
                                     <span className="w-2 h-2 bg-green-500/20 border border-green-500/40 rounded-full" />
                                     <p className={`text-[9px] font-black uppercase tracking-[0.2em] ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Identity Verified</p>
@@ -459,11 +472,11 @@ const TaskDetails = () => {
                     <div className={`p-6 rounded-[2rem] flex items-center justify-between transition-all ${isDarkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
                         <div className="space-y-1">
                             <p className={`text-[8px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-content-muted'}`}>Assigned Vehicle</p>
-                            <h5 className={`text-sm font-black italic text-brand uppercase`}>{taskData.vehicle?.brand} {taskData.vehicle?.model}</h5>
+                            <h5 className={`text-sm font-black text-brand uppercase`}>{taskData.vehicle?.brand} {taskData.vehicle?.model}</h5>
                         </div>
                         <div className="text-right space-y-1">
                             <p className={`text-[8px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-content-muted'}`}>Plate Log</p>
-                            <p className={`text-[10px] font-black uppercase italic ${isDarkMode ? 'text-white/80' : 'text-content'}`}>{taskData.vehicle?.plate || '--'}</p>
+                            <p className={`text-[10px] font-black uppercase ${isDarkMode ? 'text-white/80' : 'text-content'}`}>{taskData.vehicle?.plate || '--'}</p>
                         </div>
                     </div>
 
@@ -473,7 +486,7 @@ const TaskDetails = () => {
                                 <MessageSquare size={12} className="text-brand" />
                                 <p className={`text-[8px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Dispatch Instructions</p>
                             </div>
-                            <p className={`text-[10px] font-bold italic leading-relaxed ${isDarkMode ? 'text-white/60' : 'text-content-muted'}`}>
+                            <p className={`text-[10px] font-bold leading-relaxed ${isDarkMode ? 'text-white/60' : 'text-content-muted'}`}>
                                 "{taskData.location.instructions}"
                             </p>
                         </div>
@@ -486,7 +499,7 @@ const TaskDetails = () => {
                     <div className="flex items-center justify-between mb-6 relative z-10">
                         <div className="flex items-center gap-3">
                             <Zap size={18} className="text-brand" />
-                            <h4 className={`text-[11px] font-black uppercase tracking-widest italic ${isDarkMode ? 'text-white/80' : 'text-content'}`}>Service Manifest</h4>
+                            <h4 className={`text-[11px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/80' : 'text-content'}`}>Service Manifest</h4>
                         </div>
                         <span className={`px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${isDarkMode ? 'bg-brand/10 border-brand/20 text-brand' : 'bg-brand/5 border-brand/10 text-brand'}`}>Elite Suite</span>
                     </div>
@@ -495,7 +508,7 @@ const TaskDetails = () => {
                         {/* Main Service */}
                         <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-gray-50 border-gray-100'} flex items-center justify-between`}>
                             <p className={`text-[10px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-white/60' : 'text-content'}`}>{taskData.service?.name || 'Protocol Service'}</p>
-                            <span className="text-[10px] font-black italic text-brand">Core</span>
+                            <span className="text-[10px] font-black text-brand">Core</span>
                         </div>
 
                         {/* Add-ons */}
@@ -506,11 +519,11 @@ const TaskDetails = () => {
                                         <div className="w-2 h-2 rounded-full bg-brand" />
                                         <p className={`text-[10px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-white/60' : 'text-content'}`}>{addon.name}</p>
                                     </div>
-                                    <span className={`text-[10px] font-black italic ${isDarkMode ? 'text-white/40' : 'text-content-muted'}`}>Premium Add-on</span>
+                                    <span className={`text-[10px] font-black ${isDarkMode ? 'text-white/40' : 'text-content-muted'}`}>Premium Add-on</span>
                                 </div>
                             ))
                         ) : (
-                            <p className="text-center py-4 text-[9px] font-black uppercase tracking-[0.3em] opacity-20 italic">No Supplemental Add-ons Dispatched</p>
+                            <p className="text-center py-4 text-[9px] font-black uppercase tracking-[0.3em] opacity-20">No Supplemental Add-ons Dispatched</p>
                         )}
                     </div>
                 </div>
@@ -522,7 +535,7 @@ const TaskDetails = () => {
                         <div className="space-y-4">
                             <div className="flex items-center gap-2 px-3">
                                 <ShieldCheck size={12} className="text-green-500" />
-                                <h4 className={`text-[10px] font-black uppercase tracking-[0.3em] italic ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Pickup Handover Proofs</h4>
+                                <h4 className={`text-[10px] font-black uppercase tracking-[0.3em] ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Pickup Handover Proofs</h4>
                             </div>
                             <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
                                 {taskData.serviceImages.before.map((img, idx) => (
@@ -537,7 +550,7 @@ const TaskDetails = () => {
                     <div className="flex items-center justify-between px-3">
                         <div className="flex items-center gap-2">
                             <Camera size={12} className="text-brand" />
-                            <h4 className={`text-[10px] font-black uppercase tracking-[0.3em] italic ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>{isDelivery ? 'Delivery Sync Media' : 'Media Evidence Log'}</h4>
+                            <h4 className={`text-[10px] font-black uppercase tracking-[0.3em] ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>{isDelivery ? 'Delivery Sync Media' : 'Media Evidence Log'}</h4>
                         </div>
                         <span className={`text-[10px] font-black ${photos.length >= 2 ? 'text-green-500' : 'text-brand'}`}>{photos.length}/4 Captured</span>
                     </div>
@@ -557,7 +570,7 @@ const TaskDetails = () => {
                         {photos.length < 4 && (
                             <label className={`h-44 rounded-[2.5rem] border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all cursor-pointer ${isDarkMode ? 'bg-white/5 border-white/10 text-white/20 hover:border-brand/40 hover:text-brand' : 'bg-white border-gray-100 text-gray-300 hover:border-brand hover:text-brand'}`}>
                                 <Camera size={32} strokeWidth={1.5} />
-                                <p className="text-[9px] font-black uppercase tracking-widest italic">Initialize Camera</p>
+                                <p className="text-[9px] font-black uppercase tracking-widest">Initialize Camera</p>
                                 <input type="file" accept="image/*" multiple onChange={handlePhotoCapture} className="hidden" />
                             </label>
                         )}
@@ -569,7 +582,7 @@ const TaskDetails = () => {
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">
                             <ShieldAlert size={20} className={isVcrReady ? 'text-green-500' : 'text-amber-500'} />
-                            <h4 className={`text-[11px] font-black uppercase tracking-widest italic ${isVcrReady ? 'text-green-500' : 'text-amber-500'}`}>
+                            <h4 className={`text-[11px] font-black uppercase tracking-widest ${isVcrReady ? 'text-green-500' : 'text-amber-500'}`}>
                                 {isVcrReady ? 'VCR Protocol Verified' : 'Liability Handshake: VCR'}
                             </h4>
                         </div>
@@ -589,8 +602,11 @@ const TaskDetails = () => {
                                 <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${vcrChecklist[key] ? 'bg-brand border-brand text-white' : 'border-current'}`}>
                                     {vcrChecklist[key] && <Check size={12} strokeWidth={4} />}
                                 </div>
-                                <span className="text-[10px] font-black uppercase tracking-tighter italic">
-                                    {key === 'valuables' ? 'Valuables Out' : key === 'fuel' ? 'Fuel Logged' : `No ${key}`}
+                                <span className="text-[10px] font-black uppercase tracking-tighter">
+                                    {key === 'scratches' ? 'Scratches Checked' : 
+                                     key === 'dents' ? 'Dents Checked' : 
+                                     key === 'valuables' ? 'Valuables Checked' : 
+                                     'Fuel Checked'}
                                 </span>
                             </button>
                         ))}
@@ -613,7 +629,7 @@ const TaskDetails = () => {
                     ))}
                 </div>
 
-                {taskData.status === 'pickup-assigned' && (
+                {['accepted', 'confirmed', 'pickup-assigned'].includes(taskData.status) && (
                     <motion.button whileTap={{ scale: 0.98 }} onClick={() => handleUpdateStatus('en_route')} disabled={isSubmitting} className="w-full h-20 bg-brand text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-[0_20px_40px_-12px_rgba(75,135,255,0.4)]">
                         {isSubmitting ? 'Syncing...' : 'Initialize Pickup'} <Truck size={22} />
                     </motion.button>
@@ -657,7 +673,7 @@ const TaskDetails = () => {
                 ) : (
                     ['at-studio', 'washing', 'quality-check'].includes(taskData.status) && (
                         <div className="flex flex-col items-center gap-3 py-2">
-                            <p className={`text-[10px] font-black uppercase tracking-[0.5em] italic ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Studio Node Active</p>
+                            <p className={`text-[10px] font-black uppercase tracking-[0.5em] ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Studio Node Active</p>
                             <div className="flex gap-2">
                                 <span className="w-1.5 h-1.5 bg-brand rounded-full animate-bounce" />
                                 <span className="w-1.5 h-1.5 bg-brand rounded-full animate-bounce [animation-delay:0.2s]" />
@@ -685,8 +701,8 @@ const TaskDetails = () => {
                 {isUploading && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-[#0F172A]/90 backdrop-blur-2xl z-[500] flex flex-col items-center justify-center p-10 text-center">
                         <div className="w-24 h-24 border-8 border-brand/10 border-t-brand rounded-full animate-spin mb-10" />
-                        <h3 className="text-3xl font-black italic text-white uppercase tracking-tighter mb-4">Evidence Streaming</h3>
-                        <p className="text-[10px] font-black uppercase tracking-[0.5em] text-brand italic">Protocol Secured • Transmitting High-Resolution Proofs to Studio Node</p>
+                        <h3 className="text-3xl font-black text-white uppercase tracking-tighter mb-4">Evidence Streaming</h3>
+                        <p className="text-[10px] font-black uppercase tracking-[0.5em] text-brand">Protocol Secured • Transmitting High-Resolution Proofs to Studio Node</p>
                     </motion.div>
                 )}
             </AnimatePresence>

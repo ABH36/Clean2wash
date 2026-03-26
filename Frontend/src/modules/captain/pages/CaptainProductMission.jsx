@@ -202,7 +202,7 @@ const CaptainProductMission = () => {
                                     </div>
                                 </div>
                                 <div className="px-2 py-1 bg-black/5 rounded-lg">
-                                    <span className="text-[9px] font-black text-black/40 uppercase tracking-widest italic">Item #{idx + 1}</span>
+                                    <span className="text-[9px] font-black text-black/40 uppercase tracking-widest">Item #{idx + 1}</span>
                                 </div>
                             </div>
 
@@ -271,7 +271,7 @@ const CaptainProductMission = () => {
                     whileTap={{ scale: 0.98 }}
                     onClick={handleNextStatus}
                     disabled={isVerifying}
-                    className={`w-full h-14 rounded-2xl flex items-center justify-center gap-3 shadow-2xl transition-all bg-brand text-white font-black uppercase italic tracking-wider`}
+                    className={`w-full h-14 rounded-2xl flex items-center justify-center gap-3 shadow-2xl transition-all bg-brand text-white font-black uppercase tracking-wider`}
                 >
                     {isVerifying ? 'Updating Status...' : (
                         <>

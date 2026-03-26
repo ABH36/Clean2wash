@@ -1,22 +1,37 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { apiClient } from '../utils/api';
+
+import { geocodingService } from '../utils/geocoding';
 import LocationContext from './LocationContextBase';
 
 export const LocationProvider = ({ children }) => {
-    const { isAuthenticated } = useAuth();
+    const { user } = useAuth();
     const [savedAddresses, setSavedAddresses] = useState([]);
     const [primaryAddress, setPrimaryAddress] = useState(null);
     const [currentLocation, setCurrentLocation] = useState(null);
     const [loading, setLoading] = useState(false);
     const [isInitializing, setIsInitializing] = useState(true);
     const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+    const [selectedAddress, setSelectedAddressState] = useState(() => {
+        const saved = localStorage.getItem('clean2wash_selected_address');
+        return saved ? JSON.parse(saved) : null;
+    });
+
+    const setSelectedAddress = useCallback((addr) => {
+        setSelectedAddressState(addr);
+        if (addr) {
+            localStorage.setItem('clean2wash_selected_address', JSON.stringify(addr));
+        } else {
+            localStorage.removeItem('clean2wash_selected_address');
+        }
+    }, []);
 
     /**
      * Fetch saved addresses from backend
      */
     const fetchSavedAddresses = useCallback(async () => {
-        if (!isAuthenticated) return;
+        if (!user) return;
 
         try {
             setLoading(true);
@@ -25,7 +40,17 @@ export const LocationProvider = ({ children }) => {
             if (response.status === 'success') {
                 const addresses = response.data.addresses;
                 setSavedAddresses(addresses);
-                setPrimaryAddress(addresses.find(a => a.isPrimary) || addresses[0] || null);
+                const primary = addresses.find(a => a.isPrimary) || addresses[0] || null;
+                setPrimaryAddress(primary);
+
+                // Auto-select primary if nothing is selected or if selected address is no longer in saved list
+                if (!selectedAddress && primary) {
+                    setSelectedAddress(primary);
+                } else if (selectedAddress && addresses.length > 0) {
+                    // Refresh selected address if it's a saved one (to get latest details)
+                    const latest = addresses.find(a => a.id === selectedAddress.id);
+                    if (latest) setSelectedAddress(latest);
+                }
 
                 // Trigger location prompt if no addresses found after a delay
                 if (addresses.length === 0) {
@@ -38,7 +63,7 @@ export const LocationProvider = ({ children }) => {
             setLoading(false);
             setIsInitializing(false);
         }
-    }, [isAuthenticated]);
+    }, [user]);
 
     /**
      * Geolocation: Get current browser coordinates
@@ -50,15 +75,27 @@ export const LocationProvider = ({ children }) => {
                 return;
             }
 
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                    setCurrentLocation(location);
-                    resolve(location);
-                },
-                (err) => reject(err),
-                { enableHighAccuracy: true, timeout: 5000 }
-            );
+            const options = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 };
+
+            const success = (pos) => {
+                const location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                setCurrentLocation(location);
+                resolve(location);
+            };
+
+            const error = (err) => {
+                // If high accuracy failed/timeout, try one more time with standard accuracy
+                if (options.enableHighAccuracy) {
+                    console.warn('High accuracy location failed, retrying with standard accuracy...');
+                    options.enableHighAccuracy = false;
+                    options.timeout = 10000;
+                    navigator.geolocation.getCurrentPosition(success, (err2) => reject(err2), options);
+                } else {
+                    reject(err);
+                }
+            };
+
+            navigator.geolocation.getCurrentPosition(success, error, options);
         });
     }, []);
 
@@ -68,24 +105,52 @@ export const LocationProvider = ({ children }) => {
     const addAddress = async (addressData) => {
         try {
             setLoading(true);
-            console.log('LocationContext: Adding address payload:', addressData);
-
             const response = await apiClient.request('/profile/addresses', {
                 method: 'POST',
                 body: JSON.stringify(addressData)
             });
 
-            console.log('LocationContext: Server response for addAddress:', response);
-
             if (response.status === 'success') {
                 await fetchSavedAddresses();
                 return response.data.address;
             } else {
-                console.error('LocationContext: Server returned fail status:', response);
                 throw new Error(response.message || 'Failed to add address');
             }
         } catch (error) {
-            console.error('LocationContext: Add address exception:', error);
+            console.error('Add address failed:', error);
+            throw error;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
+     * 🛰️ Save Location Protocol: Coords -> Geocode -> Backend
+     */
+    const saveLocation = async (lat, lng, label = 'Selected') => {
+        try {
+            setLoading(true);
+            const geocoded = await geocodingService.reverse(lat, lng);
+            
+            if (!geocoded) throw new Error('Geocoding Failed');
+
+            const addressData = {
+                label,
+                street: geocoded.street,
+                city: geocoded.city,
+                state: geocoded.state,
+                pincode: geocoded.pincode,
+                coordinates: { lat, lng },
+                isPrimary: savedAddresses.length === 0
+            };
+
+            const saved = await addAddress(addressData);
+            if (saved) {
+                setSelectedAddress(saved);
+                return saved;
+            }
+        } catch (error) {
+            console.error('Save location failed:', error);
             throw error;
         } finally {
             setLoading(false);
@@ -164,7 +229,7 @@ export const LocationProvider = ({ children }) => {
 
     // Initialize addresses when authenticated
     useEffect(() => {
-        if (isAuthenticated) {
+        if (user) {
             fetchSavedAddresses();
         } else {
             setSavedAddresses([]);
@@ -172,7 +237,7 @@ export const LocationProvider = ({ children }) => {
             setIsInitializing(false);
             setShowLocationPrompt(false);
         }
-    }, [isAuthenticated, fetchSavedAddresses]);
+    }, [user, fetchSavedAddresses]);
 
     // Expose value
     const value = {
@@ -188,7 +253,10 @@ export const LocationProvider = ({ children }) => {
         removeAddress,
         setPrimary,
         showLocationPrompt,
-        setShowLocationPrompt
+        setShowLocationPrompt,
+        selectedAddress,
+        setSelectedAddress,
+        saveLocation
     };
 
     return (
@@ -197,4 +265,8 @@ export const LocationProvider = ({ children }) => {
         </LocationContext.Provider>
     );
 };
+
+export default LocationProvider;
+
+
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-    Bell, X, Check, Clock, Package, 
+import {
+    Bell, X, Check, Clock, Package,
     AlertCircle, ShoppingBag, Wallet, Trash2,
     Calendar, Truck, ShieldCheck
 } from 'lucide-react';
@@ -104,19 +104,18 @@ const StaffNotificationBell = () => {
         <div className="relative" ref={dropdownRef}>
             <motion.button
                 whileTap={{ scale: 0.9 }}
-                animate={{ 
+                animate={{
                     scale: unreadCount > 0 ? [1, 1.05, 1] : 1,
                 }}
-                transition={{ 
-                    repeat: unreadCount > 0 ? Infinity : 0, 
-                    duration: 2 
+                transition={{
+                    repeat: unreadCount > 0 ? Infinity : 0,
+                    duration: 2
                 }}
                 onClick={() => setIsOpen(!isOpen)}
-                className={`relative w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
-                    isDarkMode 
-                    ? (isOpen ? 'bg-brand text-white shadow-lg shadow-brand/20' : 'bg-white/5 border border-white/5 text-white/40 hover:text-white') 
-                    : (isOpen ? 'bg-brand text-white shadow-lg shadow-brand/20' : 'bg-white border border-gray-100 text-content shadow-soft')
-                }`}
+                className={`relative w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${isDarkMode
+                        ? (isOpen ? 'bg-brand text-white shadow-lg shadow-brand/20' : 'bg-white/5 border border-white/5 text-white/40 hover:text-white')
+                        : (isOpen ? 'bg-brand text-white shadow-lg shadow-brand/20' : 'bg-white border border-gray-100 text-content shadow-soft')
+                    }`}
             >
                 <Bell size={22} strokeWidth={2.5} />
                 <AnimatePresence>
@@ -133,7 +132,7 @@ const StaffNotificationBell = () => {
                 </AnimatePresence>
                 {/* 🌟 Luxury Outer Glow Pulse */}
                 {unreadCount > 0 && (
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, scale: 1 }}
                         animate={{ opacity: [0.4, 0, 0.4], scale: [1, 1.4, 1] }}
                         transition={{ repeat: Infinity, duration: 2 }}
@@ -148,22 +147,20 @@ const StaffNotificationBell = () => {
                         initial={{ opacity: 0, y: 15, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 15, scale: 0.95 }}
-                        className={`absolute right-0 mt-4 w-[340px] rounded-[2.5rem] shadow-2xl border backdrop-blur-3xl overflow-hidden z-[100] ${
-                            isDarkMode ? 'bg-[#1E293B]/95 border-white/10' : 'bg-white/95 border-gray-100'
-                        }`}
+                        className={`absolute right-0 mt-4 w-[340px] rounded-[2.5rem] shadow-2xl border backdrop-blur-3xl overflow-hidden z-[100] ${isDarkMode ? 'bg-[#1E293B]/95 border-white/10' : 'bg-white/95 border-gray-100'
+                            }`}
                     >
                         {/* Header */}
                         <div className="p-6 border-b border-inherit flex items-center justify-between">
                             <div>
-                                <h3 className={`text-sm font-black italic uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>Terminal Alerts</h3>
+                                <h3 className={`text-sm font-black uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>Terminal Alerts</h3>
                                 <p className={`text-[9px] font-black uppercase tracking-widest mt-0.5 ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Sync Node: Operational</p>
                             </div>
                             {notifications.length > 0 && (
                                 <button
                                     onClick={clearAll}
-                                    className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
-                                        isDarkMode ? 'bg-white/5 text-white/20 hover:text-white' : 'bg-gray-50 text-content-subtle hover:text-content'
-                                    }`}
+                                    className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 text-white/20 hover:text-white' : 'bg-gray-50 text-content-subtle hover:text-content'
+                                        }`}
                                 >
                                     <Trash2 size={14} />
                                 </button>
@@ -175,7 +172,7 @@ const StaffNotificationBell = () => {
                             {loading && notifications.length === 0 ? (
                                 <div className="p-12 text-center">
                                     <div className="w-8 h-8 border-2 border-brand/20 border-t-brand rounded-full animate-spin mx-auto mb-4" />
-                                    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-brand italic">Fetching Protocol Logs...</p>
+                                    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-brand">Fetching Protocol Logs...</p>
                                 </div>
                             ) : notifications.length > 0 ? (
                                 <div className="p-2 space-y-1">
@@ -184,20 +181,18 @@ const StaffNotificationBell = () => {
                                             key={notification._id}
                                             initial={{ x: -10, opacity: 0 }}
                                             animate={{ x: 0, opacity: 1 }}
-                                            className={`p-4 rounded-3xl flex gap-4 transition-all relative group ${
-                                                !notification.isRead 
-                                                ? (isDarkMode ? 'bg-white/5' : 'bg-gray-50/50') 
-                                                : 'opacity-60 grayscale-[0.5]'
-                                            }`}
+                                            className={`p-4 rounded-3xl flex gap-4 transition-all relative group ${!notification.isRead
+                                                    ? (isDarkMode ? 'bg-white/5' : 'bg-gray-50/50')
+                                                    : 'opacity-60 grayscale-[0.5]'
+                                                }`}
                                             onClick={() => markAsRead(notification._id)}
                                         >
-                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${
-                                                isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white border-gray-100 shadow-sm'
-                                            }`}>
+                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white border-gray-100 shadow-sm'
+                                                }`}>
                                                 {getIcon(notification.type)}
                                             </div>
                                             <div className="flex-1 min-w-0 pr-4">
-                                                <h4 className={`text-xs font-black italic uppercase leading-none mb-1.5 ${isDarkMode ? 'text-white' : 'text-content'}`}>
+                                                <h4 className={`text-xs font-black uppercase leading-none mb-1.5 ${isDarkMode ? 'text-white' : 'text-content'}`}>
                                                     {notification.title}
                                                 </h4>
                                                 <p className={`text-[10px] font-bold uppercase tracking-widest leading-relaxed line-clamp-2 ${isDarkMode ? 'text-white/40' : 'text-content-subtle'}`}>
@@ -229,9 +224,8 @@ const StaffNotificationBell = () => {
                         {/* Footer */}
                         {notifications.length > 0 && (
                             <div className="p-5 border-t border-inherit">
-                                <button className={`w-full py-3.5 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] transition-all ${
-                                    isDarkMode ? 'bg-white/5 text-white/40 hover:bg-brand hover:text-white' : 'bg-gray-50 text-content-subtle hover:bg-brand hover:text-white'
-                                }`}>
+                                <button className={`w-full py-3.5 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] transition-all ${isDarkMode ? 'bg-white/5 text-white/40 hover:bg-brand hover:text-white' : 'bg-gray-50 text-content-subtle hover:bg-brand hover:text-white'
+                                    }`}>
                                     Operation Logs History
                                 </button>
                             </div>

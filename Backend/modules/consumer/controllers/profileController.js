@@ -792,6 +792,39 @@ exports.cancelSubscription = catchAsync(async (req, res, next) => {
     });
 });
 
+// Use subscription credit directly (Direct Dash-Usage)
+exports.useSubscriptionCredit = catchAsync(async (req, res, next) => {
+    const subscription = await Subscription.getActiveSubscription(req.user.id);
+
+    if (!subscription) {
+        return next(new AppError('No active subscription found', 404));
+    }
+
+    if (subscription.getAvailableCredits() <= 0) {
+        return next(new AppError('Insufficient subscription credits', 400));
+    }
+
+    // Atomically decrement
+    subscription.usedCredits += 1;
+    await subscription.save();
+
+    await sendNotification(req.user.id, {
+        title: 'Credit Used! 🧼',
+        message: 'One wash credit has been deducted from your active plan.',
+        type: 'subscription',
+        priority: 'medium'
+    });
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Credit deducted successfully',
+        data: {
+            washesLeft: subscription.getAvailableCredits(),
+            subscription
+        }
+    });
+});
+
 // Pause subscription
 exports.pauseSubscription = catchAsync(async (req, res, next) => {
     const subscription = await Subscription.getActiveSubscription(req.user.id);
@@ -805,6 +838,7 @@ exports.pauseSubscription = catchAsync(async (req, res, next) => {
     }
 
     subscription.status = 'paused';
+    subscription.lastPauseDate = new Date();
     await subscription.save();
 
     res.status(200).json({
@@ -826,12 +860,30 @@ exports.resumeSubscription = catchAsync(async (req, res, next) => {
         return next(new AppError('No paused subscription found or subscription has expired', 404));
     }
 
+    const now = new Date();
+    const pausedAt = subscription.lastPauseDate || now;
+    const durationMs = now.getTime() - pausedAt.getTime();
+
+    // Temporal Extension: Move end date forward by the paused duration
+    subscription.endDate = new Date(subscription.endDate.getTime() + durationMs);
+    if (subscription.nextBillingDate) {
+        subscription.nextBillingDate = new Date(subscription.nextBillingDate.getTime() + durationMs);
+    }
+
+    // Record in history
+    subscription.pauseHistory.push({
+        pausedAt,
+        resumedAt: now,
+        durationMs
+    });
+
     subscription.status = 'active';
+    subscription.lastPauseDate = null;
     await subscription.save();
 
     res.status(200).json({
         status: 'success',
-        message: 'Subscription resumed successfully',
+        message: `Subscription resumed. Validity extended by ${Math.ceil(durationMs / (1000 * 60 * 60 * 24))} days.`,
         data: { subscription }
     });
 });

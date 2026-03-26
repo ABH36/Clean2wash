@@ -3,6 +3,7 @@ import { Search, MapPin, Navigation, X, AlertTriangle } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { useGeoLocation } from '../../../hooks/useGeoLocation';
 
 // Fix Leaflet marker icon issue
 delete L.Icon.Default.prototype._getIconUrl;
@@ -52,7 +53,16 @@ const LeafletMapController = ({ center, zoom }) => {
     return null;
 };
 
-const MapPicker = ({ onSelect, initialCenter = { lat: 12.9716, lng: 77.5946 }, onClose, autoDetect = false }) => {
+const MapPicker = ({ onSelect, initialCenter: propCenter, onClose, autoDetect = false }) => {
+    const { currentLocation, selectedAddress } = useGeoLocation();
+    
+    // Resolve initial center: Prop -> Selected -> Current -> Delhi Fallback
+    const initialCenter = useMemo(() => {
+        if (propCenter) return propCenter;
+        if (selectedAddress?.coordinates) return selectedAddress.coordinates;
+        if (currentLocation) return currentLocation;
+        return { lat: 28.6139, lng: 77.2090 };
+    }, [propCenter, selectedAddress, currentLocation]);
     const mapRef = useRef(null);
     const [mapEngine, setMapEngine] = useState('leaflet'); // Default to leaflet, switch to google if key exists
     const [googleMap, setGoogleMap] = useState(null);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Package, MapPin, Phone, MessageSquare, Plus, Users, ChevronRight } from 'lucide-react';
+import { Package, MapPin, Phone, MessageSquare, Plus, Users, ChevronRight, Award } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import VendorLayout from '../components/VendorLayout';
 import { useAuth } from '../../../context/AuthContext';
@@ -20,18 +20,38 @@ const VendorHome = () => {
         rating: 0,
         recentActivity: []
     });
+    const [leads, setLeads] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const fetchDashboard = async () => {
         try {
-            const res = await vendorAPI.getDashboard();
+            const [res, leadRes] = await Promise.all([
+                vendorAPI.getDashboard(),
+                vendorAPI.getLeads()
+            ]);
+
             if (res.status === 'success') {
                 setStats(res.data);
+            }
+            if (leadRes.status === 'success') {
+                setLeads(leadRes.data.leads || []);
             }
         } catch (err) {
             console.error("Failed to fetch vendor dashboard data", err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleAcceptLead = async (orderId) => {
+        try {
+            const res = await vendorAPI.acceptLead(orderId);
+            if (res.status === 'success') {
+                toast.success('Order claimed successfully! 💎');
+                fetchDashboard();
+            }
+        } catch (err) {
+            toast.error(err.message || 'Failed to claim order');
         }
     };
 
@@ -96,41 +116,101 @@ const VendorHome = () => {
             title={user.studioName || "Studio Dashboard"}
             subtitle={`${user.city || 'Bengaluru'} · Active Session`}
         >
-            <div className="space-y-6 max-w-7xl mx-auto">
+            <div className="space-y-8">
+                {/* Market Opportunities - Lead Board */}
+                {leads.length > 0 && (
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3 px-2">
+                            <div className="w-2 h-2 rounded-full bg-orange-500 animate-ping" />
+                            <h3 className="text-[10px] font-black text-content uppercase tracking-[0.3em]">Market Opportunities (Indore Hub)</h3>
+                        </div>
+                        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                            {leads.map((lead, i) => (
+                                <motion.div
+                                    key={lead._id}
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ delay: i * 0.1 }}
+                                    className="min-w-[300px] bg-gradient-to-br from-orange-50 to-white p-6 rounded-[2rem] border-2 border-orange-100 shadow-xl shadow-orange-500/5 relative overflow-hidden group"
+                                >
+                                    <div className="relative z-10">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className="w-10 h-10 bg-orange-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
+                                                <Award size={20} />
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest leading-none">Estimate</p>
+                                                <p className="text-xl font-black text-orange-950 tracking-tighter">₹{lead.pricing?.totalAmount || '0'}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="mb-6">
+                                            <h4 className="text-base font-black text-orange-950 uppercase tracking-tight mb-1">{lead.consumer?.name || 'New Lead'}</h4>
+                                            <p className="text-[10px] font-bold text-orange-600/60 uppercase tracking-tighter">
+                                                {lead.vehicle?.brand} {lead.vehicle?.model} · {lead.location?.address?.city || 'Indore'}
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            onClick={() => handleAcceptLead(lead._id)}
+                                            className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-lg shadow-orange-500/20 active:scale-95 flex items-center justify-center gap-2"
+                                        >
+                                            Accept Order & Assign Staff
+                                        </button>
+                                    </div>
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full blur-3xl -translate-x-12 -translate-y-12" />
+                                </motion.div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                <div className="space-y-8">
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                    {STATS.map(s => (
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                    {STATS.map((s, i) => (
                         <motion.div
                             key={s.label}
                             initial={{ opacity: 0, y: 15 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group"
+                            transition={{ delay: i * 0.1 }}
+                            className="bg-surface p-5 md:p-8 rounded-[2.5rem] border border-gray-100/10 shadow-soft relative overflow-hidden group hover:border-brand/30 transition-all"
                         >
                             <div className="relative z-10">
-                                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest mb-1">{s.label}</p>
-                                <div className="flex items-end gap-3">
-                                    <h2 className={`text-3xl font-black ${s.color} tracking-tight`}>{s.val}</h2>
-                                    <span className={`mb-1 text-[9px] font-black px-2 py-0.5 rounded-md ${s.bg} ${s.color}`}>
+                                <p className="text-[9px] md:text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] mb-2">{s.label}</p>
+                                <div className="flex items-baseline gap-3">
+                                    <h2 className={`text-2xl md:text-4xl font-black ${s.color} tracking-tighter leading-none`}>{s.val}</h2>
+                                    <span className={`text-[8px] md:text-[10px] font-black px-2 py-0.5 rounded-lg ${s.bg} ${s.color} uppercase tracking-widest`}>
                                         {s.trend}
                                     </span>
                                 </div>
                             </div>
+                            {/* Decorative element */}
+                            <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-brand/5 rounded-full blur-3xl group-hover:bg-brand/10 transition-colors" />
                         </motion.div>
                     ))}
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Recent Jobs */}
-                    <div className="lg:col-span-2 space-y-4">
+                    <div className="lg:col-span-2 space-y-6">
                         {loading ? (
-                            <div className="flex items-center justify-center py-20">
-                                <div className="w-8 h-8 border-4 border-brand/30 border-t-brand rounded-full animate-spin" />
+                            <div className="flex items-center justify-center py-20 bg-surface rounded-[2.5rem] border border-gray-100/10">
+                                <div className="w-10 h-10 border-4 border-brand/20 border-t-brand rounded-full animate-spin shadow-lg shadow-brand/20" />
                             </div>
                         ) : (
                             <>
-                                <div className="flex items-center justify-between px-1">
-                                    <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-[0.15em]">Live Operations</h3>
-                                    <button onClick={() => navigate('/vendor/orders')} className="text-[10px] font-black text-brand uppercase tracking-widest border-b border-brand/20">View All</button>
+                                <div className="flex items-center justify-between px-2">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-2 h-2 rounded-full bg-brand animate-pulse" />
+                                        <h3 className="text-[10px] font-black text-content uppercase tracking-[0.3em]">Tactical Registry (Live)</h3>
+                                    </div>
+                                    <button
+                                        onClick={() => navigate('/vendor/orders')}
+                                        className="text-[9px] font-black text-brand uppercase tracking-widest hover:tracking-[0.2em] transition-all"
+                                    >
+                                        Full Log List
+                                    </button>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -139,39 +219,47 @@ const VendorHome = () => {
                                             key={job.id}
                                             layoutId={job.id}
                                             onClick={() => navigate(job.isProduct ? `/vendor/product-order/${job.id}` : `/vendor/order/${job.id}`)}
-                                            className="bg-surface p-5 rounded-3xl border border-gray-100/10 shadow-sm group hover:border-brand/20 transition-all cursor-pointer relative"
+                                            className="bg-surface p-6 rounded-[2.5rem] border border-gray-100/10 shadow-soft group hover:border-brand/40 transition-all cursor-pointer relative overflow-hidden active:scale-95"
                                         >
-                                            <div className="space-y-4">
+                                            <div className="relative z-10 space-y-5">
                                                 <div className="flex justify-between items-start">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-9 h-9 bg-background rounded-xl flex items-center justify-center text-brand">
-                                                            <Package size={18} />
+                                                        <div className="w-10 h-10 bg-background rounded-2xl flex items-center justify-center text-brand border border-gray-100/5 shadow-inner">
+                                                            <Package size={20} />
                                                         </div>
                                                         <div>
-                                                            <p className="text-[10px] font-black text-brand uppercase tracking-widest mb-0.5">{job.id}</p>
-                                                            <p className="text-[10px] font-bold text-content-subtle uppercase tracking-tight">{job.time}</p>
+                                                            <p className="text-[9px] font-black text-brand uppercase tracking-widest mb-0.5">#{job.id}</p>
+                                                            <p className="text-[9px] font-bold text-content-subtle uppercase tracking-tight opacity-50">{job.time}</p>
                                                         </div>
                                                     </div>
-                                                    <div className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${getStatusStyles(job.rawStatus)}`}>
+                                                    <div className={`px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-[0.2em] shadow-sm ${getStatusStyles(job.rawStatus)}`}>
                                                         {job.status}
                                                     </div>
                                                 </div>
 
                                                 <div>
-                                                    <h4 className="text-sm font-black text-content tracking-tight">{job.customer}</h4>
-                                                    <p className="text-[10px] font-bold text-content-subtle uppercase tracking-tight">{job.car} · {job.service}</p>
+                                                    <h4 className="text-base font-black text-content tracking-tight uppercase leading-none mb-2">{job.customer}</h4>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[10px] font-black text-brand uppercase tracking-widest px-2 py-0.5 bg-brand/5 rounded-md">{job.type}</span>
+                                                        <span className="text-[10px] font-bold text-content-subtle uppercase tracking-tight">· {job.car}</span>
+                                                    </div>
                                                 </div>
 
-                                                <div className="flex items-center gap-2 pt-3 border-t border-gray-100/5">
-                                                    <MapPin size={10} className="text-content-subtle" />
-                                                    <span className="text-[10px] font-bold text-content-subtle italic">{job.address}</span>
+                                                <div className="flex items-center gap-2 pt-4 border-t border-gray-100/5">
+                                                    <MapPin size={10} className="text-brand" />
+                                                    <span className="text-[10px] font-bold text-content-subtle uppercase tracking-tighter truncate">{job.address}</span>
                                                 </div>
                                             </div>
+                                            {/* Modern hover effect */}
+                                            <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full blur-3xl translate-x-16 -translate-y-16 group-hover:bg-brand/10 transition-colors" />
                                         </motion.div>
                                     ))}
                                     {JOBS.length === 0 && (
-                                        <div className="text-center py-10 bg-surface rounded-3xl border border-dashed border-gray-200">
-                                            <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic">No Live Operations in Registry</p>
+                                        <div className="col-span-full text-center py-24 bg-surface rounded-[3rem] border border-dashed border-gray-100/20 flex flex-col items-center gap-4">
+                                            <div className="w-16 h-16 bg-background rounded-[1.5rem] flex items-center justify-center text-content-subtle/20 border border-gray-100/10 shadow-inner">
+                                                <Package size={32} />
+                                            </div>
+                                            <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em]">No active operations in sector</p>
                                         </div>
                                     )}
                                 </div>
@@ -179,44 +267,56 @@ const VendorHome = () => {
                         )}
                     </div>
 
-                    {/* Quick Actions */}
-                    <div className="space-y-6">
+                    {/* Quick Actions & Health */}
+                    <div className="space-y-8">
                         <div className="space-y-4">
-                            <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-[0.15em] px-1">Quick Actions</h3>
-                            <div className="grid grid-cols-1 gap-2">
+                            <h3 className="text-[10px] font-black text-content uppercase tracking-[0.3em] px-2">Rapid Command</h3>
+                            <div className="grid grid-cols-1 gap-3">
                                 {QUICK_ACTIONS.map(action => (
                                     <button
                                         key={action.label}
                                         onClick={() => navigate(action.path)}
-                                        className="w-full bg-surface p-4 rounded-2xl border border-gray-100/10 shadow-sm flex items-center justify-between group hover:border-brand/20 transition-all"
+                                        className="w-full bg-surface p-5 rounded-[1.8rem] border border-gray-100/10 shadow-soft flex items-center justify-between group hover:border-brand/40 transition-all hover:-translate-y-1 active:scale-95"
                                     >
                                         <div className="flex items-center gap-4">
-                                            <div className={`w-9 h-9 ${action.color} rounded-xl flex items-center justify-center text-white`}>
-                                                <action.icon size={16} />
+                                            <div className={`w-10 h-10 ${action.color} rounded-2xl flex items-center justify-center text-white shadow-lg shadow-${action.color.split('-')[1]}/20`}>
+                                                <action.icon size={18} />
                                             </div>
-                                            <span className="text-[11px] font-black text-content uppercase tracking-widest">{action.label}</span>
+                                            <span className="text-[11px] font-black text-content uppercase tracking-[0.2em]">{action.label}</span>
                                         </div>
-                                        <Plus size={14} className="text-content-subtle group-hover:rotate-90 transition-transform" />
+                                        <ChevronRight size={14} className="text-content-subtle group-hover:text-brand group-hover:translate-x-1 transition-all" />
                                     </button>
                                 ))}
                             </div>
                         </div>
 
                         {/* Performance Mini-Card */}
-                        <div className="bg-content rounded-3xl p-6 text-white relative overflow-hidden shadow-xl shadow-content/10">
+                        <div className="bg-[#0B1222] rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl border border-white/5 group">
                             <div className="relative z-10">
-                                <h3 className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] mb-4">Studio Health</h3>
-                                <div className="flex items-center justify-between mb-4">
-                                    <div>
-                                        <p className="text-2xl font-black tracking-tight">{stats.rating.toFixed(1)} <span className="text-brand">⭐</span></p>
-                                        <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mt-1">Average Review</p>
+                                <div className="flex items-center justify-between mb-8">
+                                    <h3 className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em]">Global Rating</h3>
+                                    <div className="w-8 h-8 rounded-xl bg-brand/20 flex items-center justify-center text-brand">
+                                        <Award size={16} />
                                     </div>
                                 </div>
-                                <button className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all">
-                                    Performance Report
+                                <div className="flex items-baseline gap-2 mb-6">
+                                    <h4 className="text-5xl font-black tracking-tighter leading-none">{stats.rating.toFixed(1)}</h4>
+                                    <span className="text-brand text-2xl">★</span>
+                                </div>
+                                <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] mb-8 leading-relaxed">
+                                    Maintaining elite standards across <span className="text-white">Bengaluru Hub</span>
+                                </p>
+                                <button
+                                    onClick={() => navigate('/vendor/reports')}
+                                    className="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 group-hover:bg-brand group-hover:text-white group-hover:border-brand shadow-xl"
+                                >
+                                    Detailed Analytics <ChevronRight size={14} />
                                 </button>
                             </div>
+                            {/* Neon glow */}
+                            <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-brand/5 rounded-full blur-[80px]" />
                         </div>
+                    </div>
                     </div>
                 </div>
             </div>

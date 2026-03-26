@@ -31,13 +31,35 @@ const EShop = () => {
         }
     }, []);
 
-    // Dynamic State
+    // Trending State
+    const [trendingProducts, setTrendingProducts] = useState([]);
+    const [trendingLoading, setTrendingLoading] = useState(true);
+
+    // Products & Metadata State
     const [products, setProducts] = useState([]);
-    const [metadata, setMetadata] = useState({ categories: [], banners: [], settings: null });
     const [loading, setLoading] = useState(true);
+    const [metadata, setMetadata] = useState({ banners: [], categories: [], settings: {} });
     const [metadataLoading, setMetadataLoading] = useState(true);
 
+
+    useEffect(() => {
+        const fetchTrending = async () => {
+            try {
+                const res = await productAPI.getTrendingProducts();
+                if (res.status === 'success') {
+                    setTrendingProducts(res.data.products);
+                }
+            } catch (err) {
+                console.error("Failed to fetch trending products:", err);
+            } finally {
+                setTrendingLoading(false);
+            }
+        };
+        fetchTrending();
+    }, []);
+
     const showToast = (name) => {
+
         setToast(name);
         setTimeout(() => setToast(null), 2000);
     };
@@ -69,9 +91,10 @@ const EShop = () => {
         const fetchProducts = async () => {
             try {
                 setLoading(true);
+                // Ensure 'All' category sends undefined to fetch all approved products
                 const res = await productAPI.getProducts({
                     category: activeCategory === 'All' ? undefined : activeCategory,
-                    search: searchQuery
+                    search: searchQuery || undefined
                 });
                 if (res.status === 'success') {
                     setProducts(res.data.products);
@@ -147,38 +170,36 @@ const EShop = () => {
                 <div className="space-y-6">
                     {/* ── DYNAMIC BANNERS ── */}
                     {!searchQuery && activeCategory === 'All' && metadata.banners?.length > 0 && (
-                        <div className="px-5 pt-4">
+                        <div className="px-5 pt-2">
                             {metadata.banners.map((banner, idx) => (
-                                <div key={banner.id || idx} className={`rounded-xl p-6 relative overflow-hidden flex items-center justify-between min-h-[160px] ${banner.theme === 'dark' ? 'bg-content text-white' : 'bg-[#FFF9E5]'}`}>
-                                    <div className="relative z-10 space-y-1">
-                                        <h3 className="text-[28px] font-[1000] leading-none tracking-tighter uppercase whitespace-pre-line">
+                                <div key={banner.id || idx} className={`rounded-2xl p-6 relative overflow-hidden flex items-center justify-between min-h-[180px] shadow-sm ${banner.theme === 'dark' ? 'bg-[#1A1A1A] text-white' : 'bg-gradient-to-br from-[#FFF9E5] to-[#FFF0D0] text-content'}`}>
+                                    <div className="relative z-10 space-y-2">
+                                        <div className="inline-block bg-brand/20 px-2 py-0.5 rounded text-[8px] font-black text-brand uppercase tracking-widest">Limited Offer</div>
+                                        <h3 className="text-[26px] font-[1000] leading-[1.1] tracking-tighter uppercase whitespace-pre-line">
                                             {banner.title}
                                         </h3>
                                         <button
                                             onClick={() => navigate(banner.path)}
-                                            className={`mt-3 px-4 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest shadow-lg ${banner.theme === 'dark' ? 'bg-brand text-white' : 'bg-content text-white'}`}
+                                            className={`mt-2 px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-transform active:scale-95 shadow-lg ${banner.theme === 'dark' ? 'bg-brand text-white' : 'bg-content text-white'}`}
                                         >
                                             {banner.cta}
                                         </button>
                                     </div>
 
-                                    <div className="relative z-10 text-right">
-                                        <p className={`text-[12px] font-black uppercase tracking-widest leading-tight mb-2 ${banner.theme === 'dark' ? 'text-white/60' : 'text-content'}`}>
+                                    <div className="relative z-10 text-right h-full flex flex-col justify-between">
+                                        <p className={`text-[11px] font-[1000] uppercase tracking-widest leading-tight ${banner.theme === 'dark' ? 'text-white/60' : 'text-content/60'}`}>
                                             {banner.subtitle}
                                         </p>
-                                        <div className={`border-l-2 pl-4 ${banner.theme === 'dark' ? 'border-white/10' : 'border-content/10'}`}>
-                                            <p className={`text-[10px] font-black uppercase tracking-widest ${banner.theme === 'dark' ? 'text-white/40' : 'text-content-subtle'}`}>Special</p>
-                                            <h4 className="text-4xl font-[1000] leading-none">Offer</h4>
+                                        <div className={`mt-4 border-l-2 pl-4 ${banner.theme === 'dark' ? 'border-brand/40' : 'border-brand'}`}>
+                                            <p className={`text-[9px] font-black uppercase tracking-widest ${banner.theme === 'dark' ? 'text-white/40' : 'text-content-subtle'}`}>Special</p>
+                                            <h4 className="text-4xl font-[1000] leading-none text-brand">Picks</h4>
                                         </div>
                                     </div>
                                     {banner.image && (
                                         <div className="absolute inset-0 z-0">
-                                            <img src={banner.image} className="w-full h-full object-cover opacity-20" alt="" />
+                                            <img src={banner.image} className="w-full h-full object-cover opacity-10 grayscale" alt="" />
                                         </div>
                                     )}
-                                    <div className="absolute right-0 bottom-0 opacity-10">
-                                        <ShoppingBag size={120} />
-                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -186,78 +207,79 @@ const EShop = () => {
 
                     {/* Fallback Banner if no metadata banners */}
                     {!searchQuery && activeCategory === 'All' && (!metadata.banners || metadata.banners.length === 0) && !metadataLoading && (
-                        <div className="px-5 pt-4">
-                            <div className="bg-[#FFF9E5] rounded-xl p-6 relative overflow-hidden flex items-center justify-between min-h-[160px]">
-                                <div className="relative z-10 space-y-1">
-                                    <h3 className="text-[32px] font-[1000] text-content leading-none tracking-tighter">FLASH<br />SALE</h3>
-                                    <button className="mt-3 bg-content text-white px-4 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest shadow-lg">SHOP NOW</button>
+                        <div className="px-5 pt-2">
+                             <div className="bg-gradient-to-br from-[#FFF9E5] to-[#FFF0D0] rounded-2xl p-6 relative overflow-hidden flex items-center justify-between min-h-[180px] shadow-sm">
+                                <div className="relative z-10 space-y-2">
+                                    <div className="inline-block bg-brand/20 px-2 py-0.5 rounded text-[8px] font-black text-brand uppercase tracking-widest">Grand Launch</div>
+                                    <h3 className="text-[32px] font-[1000] text-content leading-none tracking-tighter uppercase italic">FLASH<br />SALE</h3>
+                                    <button className="mt-2 bg-content text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95 transition-all">SHOP NOW</button>
                                 </div>
 
                                 <div className="relative z-10 text-right">
                                     <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-none">Big Deals</p>
                                     <p className="text-[12px] font-black text-content uppercase tracking-widest leading-none mb-2">Bigger Savings</p>
-                                    <div className="border-l-2 border-content/10 pl-4">
+                                    <div className="border-l-2 border-brand pl-4">
                                         <p className="text-[10px] font-black text-content-subtle uppercase trekking-tight">Flat</p>
-                                        <h4 className="text-4xl font-[1000] text-content leading-none">10%</h4>
+                                        <h4 className="text-4xl font-[1000] text-brand leading-none italic">10%</h4>
                                         <p className="text-[10px] font-black text-content uppercase tracking-widest">Off</p>
                                     </div>
                                 </div>
-                                <div className="absolute right-0 bottom-0 opacity-10">
-                                    <ShoppingBag size={120} />
+                                <div className="absolute right-0 bottom-0 opacity-5">
+                                    <ShoppingBag size={140} />
                                 </div>
                             </div>
                         </div>
                     )}
 
                     {/* ── MICRO FEATURES ── */}
-                    <div className="px-5 flex items-center justify-around">
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-gray-50 rounded-full flex items-center justify-center text-content-subtle border border-gray-100"><Truck size={14} /></div>
+                    <div className="px-5 flex items-center justify-between gap-3">
+                        <div className="flex-1 bg-gray-50/50 border border-gray-100 p-3 rounded-2xl flex items-center gap-3">
+                            <div className="w-10 h-10 bg-white shadow-sm rounded-xl flex items-center justify-center text-brand"><Truck size={18} /></div>
                             <div>
-                                <p className="text-[9px] font-black text-content leading-none">Fast Delivery</p>
-                                <p className="text-[7px] font-bold text-content-subtle uppercase tracking-tighter">On all orders</p>
+                                <p className="text-[10px] font-black text-content leading-tight">Fast Delivery</p>
+                                <p className="text-[8px] font-bold text-content-subtle uppercase tracking-tighter">On all orders</p>
                             </div>
                         </div>
-                        <div className="h-8 w-px bg-gray-100" />
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-gray-50 rounded-full flex items-center justify-center text-content-subtle border border-gray-100"><RefreshCw size={14} /></div>
+                        <div className="flex-1 bg-gray-50/50 border border-gray-100 p-3 rounded-2xl flex items-center gap-3">
+                            <div className="w-10 h-10 bg-white shadow-sm rounded-xl flex items-center justify-center text-brand"><RefreshCw size={18} /></div>
                             <div>
-                                <p className="text-[9px] font-black text-content leading-none">Quick Refunds</p>
-                                <p className="text-[7px] font-bold text-content-subtle uppercase tracking-tighter">In clean2wash points</p>
+                                <p className="text-[10px] font-black text-content leading-tight">Quick Refunds</p>
+                                <p className="text-[8px] font-bold text-content-subtle uppercase tracking-tighter">In C2W Points</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* ── SHOP BY CATEGORY ── */}
+                    {/* ── SHOP BY CATEGORY (Pills) ── */}
                     <div className="space-y-4">
                         <div className="px-5 flex items-center justify-between">
-                            <h2 className="text-base font-[1000] text-content uppercase tracking-tight">Shop by Category</h2>
-                            <button onClick={() => setActiveCategory('All')} className="text-[10px] font-black text-brand uppercase tracking-widest">View All</button>
+                            <h2 className="text-[12px] font-[1000] text-content uppercase tracking-[0.1em]">Explore Categories</h2>
                         </div>
 
-                        <div className="flex gap-4 px-5 overflow-x-auto no-scrollbar pb-2">
-                            {(metadata.categories?.length > 0 ? metadata.categories : CATEGORIES_DATA).map((cat, i) => (
-                                <motion.div
-                                    whileTap={{ scale: 0.98 }}
-                                    key={i}
-                                    className={`flex-shrink-0 w-44 space-y-2 cursor-pointer transition-opacity ${activeCategory === cat.key ? "opacity-100" : "opacity-60"}`}
-                                    onClick={() => setActiveCategory(activeCategory === cat.key ? 'All' : cat.key)}
-                                >
-                                    <div className={`aspect-[4/3] rounded-xl overflow-hidden border border-gray-100 shadow-sm relative group ${activeCategory === cat.key ? "ring-2 ring-brand" : ""}`}>
-                                        <img src={cat.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={cat.title} />
-                                        <div className="absolute inset-0 bg-black/5" />
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <p className={`text-[10px] font-black uppercase tracking-tight ${activeCategory === cat.key ? "text-brand" : "text-content"}`}>{cat.title}</p>
-                                        <ChevronRight size={12} className={activeCategory === cat.key ? "text-brand" : "text-content-subtle"} />
-                                    </div>
-                                </motion.div>
-                            ))}
+                        <div className="flex gap-2 px-5 overflow-x-auto no-scrollbar pb-2">
+                            {['All', ...(metadata.categories?.map(c => c.key) || CATEGORIES_DATA.map(c => c.key))].map((catKey) => {
+                                const isAll = catKey === 'All';
+                                const catData = isAll ? { title: 'All' } : (metadata.categories?.find(c => c.key === catKey) || CATEGORIES_DATA.find(c => c.key === catKey));
+                                const isActive = activeCategory === catKey;
+
+                                return (
+                                    <motion.button
+                                        whileTap={{ scale: 0.95 }}
+                                        key={catKey}
+                                        onClick={() => setActiveCategory(catKey)}
+                                        className={`flex-shrink-0 px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${isActive
+                                            ? 'bg-brand border-brand text-white shadow-lg shadow-brand/20'
+                                            : 'bg-white border-gray-100 text-content-subtle'
+                                            }`}
+                                    >
+                                        {catData?.title}
+                                    </motion.button>
+                                );
+                            })}
                         </div>
                     </div>
 
                     {/* ── TRENDING NOW ── */}
-                    {!searchQuery && (
+                    {!searchQuery && trendingProducts.length > 0 && (
                         <div className="space-y-4">
                             <div className="px-5 flex items-center justify-between">
                                 <h2 className="text-base font-[1000] text-content uppercase tracking-tight italic">Trending Now</h2>
@@ -267,25 +289,22 @@ const EShop = () => {
                             </div>
 
                             <div className="flex gap-4 px-5 overflow-x-auto no-scrollbar pb-2">
-                                {[
-                                    { name: 'Microfiber Pro', price: 299, image: 'https://images.unsplash.com/photo-1558227691-41ea78d1f631?w=200&q=80', tag: 'Best Seller' },
-                                    { name: 'Ceramic Wax', price: 899, image: 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=200&q=80', tag: 'Premium' },
-                                    { name: 'Foam Cannon', price: 1499, image: 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=200&q=80', tag: 'Professional' }
-                                ].map((item, i) => (
+                                {trendingProducts.map((item, i) => (
                                     <motion.div
                                         whileTap={{ scale: 0.98 }}
-                                        key={i}
+                                        key={item._id}
+                                        onClick={() => navigate(`/e-shop/product/${item._id}`)}
                                         className="flex-shrink-0 w-64 bg-gray-50 rounded-2xl p-4 border border-gray-100 flex gap-4 items-center group cursor-pointer"
                                     >
                                         <div className="w-20 h-20 rounded-xl bg-white border border-gray-100 overflow-hidden flex-shrink-0">
                                             <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={item.name} />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <span className="text-[7px] font-black text-brand uppercase tracking-[0.2em]">{item.tag}</span>
+                                            <span className="text-[7px] font-black text-brand uppercase tracking-[0.2em]">{item.badge || 'Trending'}</span>
                                             <h4 className="text-[11px] font-[1000] text-content uppercase tracking-tight mt-0.5 truncate">{item.name}</h4>
-                                            <p className="text-sm font-black text-content mt-1 italic">₹{item.price}</p>
+                                            <p className="text-sm font-black text-content mt-1 italic">₹{item.salePrice}</p>
                                             <div className="mt-2 text-[9px] font-black text-brand uppercase tracking-widest flex items-center gap-1">
-                                                Procure <Plus size={10} strokeWidth={3} />
+                                                View Details <ChevronRight size={10} strokeWidth={3} />
                                             </div>
                                         </div>
                                     </motion.div>
@@ -293,6 +312,7 @@ const EShop = () => {
                             </div>
                         </div>
                     )}
+
 
                     {/* ── PRODUCTS LIST ── */}
                     <div className="space-y-4">
@@ -325,77 +345,95 @@ const EShop = () => {
                                                 initial={{ opacity: 0, y: 10 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 transition={{ delay: i * 0.05 }}
-                                                className="bg-white border border-gray-100 rounded-xl p-3 shadow-sm group relative"
+                                                className="bg-white border border-gray-100 rounded-2xl p-2.5 shadow-sm group relative"
                                             >
                                                 <div
-                                                    className="relative aspect-square rounded-lg overflow-hidden bg-gray-50 mb-3 cursor-pointer"
+                                                    className="relative aspect-square rounded-xl overflow-hidden bg-gray-50 mb-3 cursor-pointer"
                                                     onClick={() => navigate(`/e-shop/product/${pId}`)}
                                                 >
-                                                    <img src={prod.image} className="w-full h-full object-contain mix-blend-multiply" alt={prod.name} />
-                                                    <div className="absolute top-2 left-2 bg-white/95 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-black text-content border border-gray-100 flex items-center gap-0.5">
-                                                        <Zap size={8} className="text-orange-500" fill="currentColor" /> {discounted}% OFF
-                                                    </div>
+                                                    <img src={prod.image} className="w-full h-full object-contain p-2 mix-blend-multiply group-hover:scale-110 transition-transform duration-500" alt={prod.name} />
+                                                    
+                                                    {discounted > 0 && (
+                                                        <div className="absolute top-2 left-2 bg-brand px-1.5 py-0.5 rounded-lg text-[8px] font-black text-white shadow-lg flex items-center gap-0.5">
+                                                            <Zap size={8} fill="currentColor" /> {discounted}% OFF
+                                                        </div>
+                                                    )}
+                                                    
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             toggleWishlist(prod);
                                                         }}
-                                                        className="absolute top-2 right-2 p-1.5 bg-white/80 backdrop-blur-sm rounded-lg shadow-sm active:scale-95 transition-all"
+                                                        className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm active:scale-95 transition-all"
                                                     >
                                                         <Heart size={14} className={`${inWishlist ? 'text-brand fill-brand' : 'text-content-subtle'}`} />
                                                     </button>
                                                 </div>
-                                                <div className="space-y-1">
+                                                <div className="px-1 space-y-1.5">
                                                     <h4
-                                                        className="text-[11px] font-[1000] text-content uppercase tracking-tight leading-tight line-clamp-2 min-h-[28px] cursor-pointer"
+                                                        className="text-[11px] font-black text-content uppercase tracking-tight leading-tight line-clamp-2 min-h-[28px] cursor-pointer"
                                                         onClick={() => navigate(`/e-shop/product/${pId}`)}
                                                     >
                                                         {prod.name}
                                                     </h4>
-                                                    <div className="flex items-center gap-1">
-                                                        {[...Array(5)].map((_, starI) => (
-                                                            <Star key={starI} size={8} className={starI < Math.floor(prod.rating) ? 'text-amber-400' : 'text-gray-200'} fill="currentColor" />
-                                                        ))}
-                                                        <span className="text-[8px] font-bold text-content-subtle">{prod.rating}</span>
+                                                    
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-1">
+                                                            <Star size={8} className="text-amber-400" fill="currentColor" />
+                                                            <span className="text-[8px] font-black text-content">{prod.rating || '4.5'}</span>
+                                                        </div>
+                                                        <div className="text-[8px] font-black text-green-600 uppercase">In Stock</div>
                                                     </div>
-                                                    <div className="flex items-baseline gap-1.5 mt-2">
-                                                        <span className={`text-sm font-[1000] ${isBlackPassMember ? 'text-brand' : 'text-content'}`}>Rs. {(isBlackPassMember ? (prod.salePrice * 0.7) : prod.salePrice)?.toLocaleString()}</span>
-                                                        <span className="text-[9px] font-bold text-content-subtle line-through opacity-50">₹{prod.price?.toLocaleString()}</span>
+
+                                                    <div className="pt-1 flex flex-col">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className={`text-sm font-[1000] ${isBlackPassMember ? 'text-brand' : 'text-black'}`}>
+                                                                ₹{(isBlackPassMember ? (prod.salePrice * 0.7) : prod.salePrice)?.toLocaleString()}
+                                                            </span>
+                                                            {discounted > 0 && (
+                                                                <span className="text-[9px] font-bold text-content-subtle line-through opacity-40">₹{prod.price?.toLocaleString()}</span>
+                                                            )}
+                                                        </div>
                                                         {isBlackPassMember && (
-                                                            <div className="ml-1 px-1 py-0.5 bg-black rounded flex items-center gap-0.5 scale-[0.7] origin-left">
-                                                                <Crown size={8} className="text-brand" fill="currentColor" />
-                                                                <span className="text-[8px] font-black text-brand uppercase">Black</span>
+                                                            <div className="mt-1 flex items-center gap-1">
+                                                                <div className="px-1 py-0.5 bg-black rounded flex items-center gap-0.5">
+                                                                    <Crown size={7} className="text-brand" fill="currentColor" />
+                                                                    <span className="text-[7px] font-black text-brand uppercase">Member Price</span>
+                                                                </div>
                                                             </div>
                                                         )}
                                                     </div>
 
-                                                    {(prod.stock > 0 || prod.inStock) ? (
-                                                        <button
-                                                            onClick={() => inCart ? navigate('/cart') : handleAddToCart(prod)}
-                                                            className={`w-full mt-3 py-2.5 rounded-lg font-black text-[9px] uppercase tracking-widest transition-all ${inCart
-                                                                ? 'bg-green-500/10 border border-green-500/30 text-green-600 flex items-center justify-center gap-1'
-                                                                : 'border-2 border-brand text-brand hover:bg-brand hover:text-white'
-                                                                }`}
-                                                        >
-                                                            {inCart ? <><Check size={10} strokeWidth={3} /> In Cart</> : 'ADD TO CART'}
-                                                        </button>
-                                                    ) : (
-                                                        <button disabled className="w-full mt-3 py-2.5 bg-gray-50 border border-gray-100 text-gray-300 rounded-lg font-black text-[9px] uppercase tracking-widest cursor-not-allowed">
-                                                            OUT OF STOCK
-                                                        </button>
-                                                    )}
+                                                    <button
+                                                        onClick={() => inCart ? navigate('/cart') : handleAddToCart(prod)}
+                                                        disabled={!(prod.stock > 0 || prod.inStock)}
+                                                        className={`w-full mt-2 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all active:scale-95 ${inCart
+                                                            ? 'bg-green-50 text-green-600 border border-green-100 flex items-center justify-center gap-1'
+                                                            : 'bg-black text-white hover:bg-brand'
+                                                            } ${!(prod.stock > 0 || prod.inStock) ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+                                                    >
+                                                        {!(prod.stock > 0 || prod.inStock) ? 'Out of Stock' : inCart ? <><Check size={10} strokeWidth={3} /> In Cart</> : 'Add to Cart'}
+                                                    </button>
                                                 </div>
                                             </motion.div>
                                         );
                                     })}
+
                                 </div>
                             )}
-
-                            {products.length === 0 && !loading && (
-                                <div className="text-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                                    <ShoppingBag size={40} className="mx-auto text-gray-300 mb-3" />
-                                    <p className="text-xs font-black text-content-subtle uppercase tracking-widest">No Products Found</p>
-                                    <button onClick={() => { setSearchQuery(''); setActiveCategory('All'); }} className="mt-4 text-[10px] font-[1000] text-brand uppercase underline">Clear Filters</button>
+                                                 {products.length === 0 && !loading && (
+                                <div className="text-center py-12 bg-gray-50/50 rounded-3xl border border-dashed border-gray-200 mx-5 mt-4">
+                                    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                                        <ShoppingBag size={24} className="text-gray-300" />
+                                    </div>
+                                    <h3 className="text-sm font-black text-content uppercase tracking-widest mb-1">No products found</h3>
+                                    <p className="text-[10px] font-bold text-content-subtle uppercase trekking-tight mb-6 px-10">We couldn't find any items in <span className="text-brand">"{activeCategory}"</span> category.</p>
+                                    <button 
+                                        onClick={() => { setSearchQuery(''); setActiveCategory('All'); }} 
+                                        className="px-6 py-2.5 bg-black text-white rounded-full text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-black/10"
+                                    >
+                                        Browse All Items
+                                    </button>
                                 </div>
                             )}
                         </div>

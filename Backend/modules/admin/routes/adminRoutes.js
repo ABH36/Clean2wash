@@ -75,6 +75,9 @@ router.post('/plans', adminSubscriptionController.createPlan);
 router.patch('/plans/:id', adminSubscriptionController.updatePlan);
 router.delete('/plans/:id', adminSubscriptionController.deletePlan);
 
+// Admin User Subscriptions (Active Instances)
+router.get('/subscriptions', adminSubscriptionController.getAllSubscriptions);
+
 // ── Hubs CRUD ──────────────────────────────────────────────
 router.get('/hubs', adminHubController.getHubs);
 router.post('/hubs', adminHubController.createHub);
@@ -85,7 +88,9 @@ router.delete('/hubs/:id', adminHubController.deleteHub);
 router.get('/products', adminController.getProducts);
 router.get('/products/stats', adminProductController.getProductStats);
 router.get('/products/inventory', adminProductController.getMasterInventory);
+router.get('/products/live-missions', adminProductController.getLiveMissions);
 router.post('/products/resolve-dispute', adminProductController.resolveProductDispute);
+
 router.post('/verify-product', adminController.verifyProduct);
 
 // Product Order Management (Phase 28)

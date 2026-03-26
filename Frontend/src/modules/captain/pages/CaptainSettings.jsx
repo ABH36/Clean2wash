@@ -56,7 +56,7 @@ const CaptainSettings = () => {
                         <button onClick={() => navigate(-1)} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isDarkMode ? 'bg-white/10 text-white' : 'bg-white border border-gray-100 shadow-sm text-content'}`}>
                             <ArrowLeft size={20} />
                         </button>
-                        <h1 className={`text-xl font-black italic tracking-tight uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>Settings</h1>
+                        <h1 className={`text-xl font-black tracking-tight uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>Settings</h1>
                     </div>
                 </div>
 
@@ -71,7 +71,7 @@ const CaptainSettings = () => {
                             )}
                         </div>
                         <div>
-                            <h3 className={`font-black italic text-lg uppercase leading-none mb-1 ${isDarkMode ? 'text-white' : 'text-content'}`}>{user.name}</h3>
+                            <h3 className={`font-black text-lg uppercase leading-none mb-1 ${isDarkMode ? 'text-white' : 'text-content'}`}>{user.name}</h3>
                             <p className={`${isDarkMode ? 'text-white/40' : 'text-content-subtle'} text-[10px] font-black uppercase tracking-widest leading-none`}>ID: {user.id || user._id}</p>
                         </div>
                         <button onClick={() => navigate('/captain/profile')} className="ml-auto w-10 h-10 bg-brand text-white rounded-xl flex items-center justify-center shadow-lg shadow-brand/20 hover:brightness-110 active:scale-95 transition-all">
@@ -82,7 +82,7 @@ const CaptainSettings = () => {
                     {/* Settings Groups */}
                     {SETTINGS_GROUPS.map((group, i) => (
                         <div key={i} className="space-y-4">
-                            <h4 className="px-4 text-[10px] font-black text-brand uppercase tracking-[0.2em] italic">{group.title}</h4>
+                            <h4 className="px-4 text-[10px] font-black text-brand uppercase tracking-[0.2em]">{group.title}</h4>
                             <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} border rounded-[2.5rem] overflow-hidden transition-all shadow-2xl shadow-black/5`}>
                                 {group.items.map((item, j) => (
                                     <div
@@ -95,7 +95,7 @@ const CaptainSettings = () => {
                                                 {React.cloneElement(item.icon, { size: 18 })}
                                             </div>
                                             <div>
-                                                <p className={`font-black text-sm italic uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>{item.label}</p>
+                                                <p className={`font-black text-sm uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>{item.label}</p>
                                                 <p className={`${isDarkMode ? 'text-white/30' : 'text-content-subtle'} text-[9px] font-bold mt-0.5`}>{item.sub}</p>
                                             </div>
                                         </div>
@@ -109,7 +109,7 @@ const CaptainSettings = () => {
                                         {item.arrow && <ChevronRight size={16} className={isDarkMode ? 'text-white/20' : 'text-gray-300'} />}
 
                                         {item.status && (
-                                            <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-lg italic ${isDarkMode ? 'bg-green-400/10 text-green-400' : 'bg-green-50 text-green-600 border border-green-100'}`}>
+                                            <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${isDarkMode ? 'bg-green-400/10 text-green-400' : 'bg-green-50 text-green-600 border border-green-100'}`}>
                                                 {item.status}
                                             </span>
                                         )}
@@ -127,14 +127,14 @@ const CaptainSettings = () => {
                                 await captainLogout();
                                 navigate('/captain/login');
                             }}
-                            className={`w-full flex items-center justify-center gap-3 py-5 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] italic border transition-all ${isDarkMode
+                            className={`w-full flex items-center justify-center gap-3 py-5 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] border transition-all ${isDarkMode
                                 ? 'bg-red-500/10 border-red-500/10 text-red-500 hover:bg-red-500 hover:text-white shadow-2xl shadow-red-500/10'
                                 : 'bg-red-50 border-red-100 text-red-600 hover:bg-red-600 hover:text-white shadow-soft shadow-red-500/5'
                                 }`}
                         >
                             <LogOut size={16} strokeWidth={2.5} /> Sign Out Session
                         </motion.button>
-                        <p className={`text-center text-[9px] font-black uppercase tracking-[0.3em] italic ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>CarWash Captain v2.4.1 Build 2201</p>
+                        <p className={`text-center text-[9px] font-black uppercase tracking-[0.3em] ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>CarWash Captain v2.4.1 Build 2201</p>
                     </div>
                 </div>
             </div>

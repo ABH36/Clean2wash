@@ -5,7 +5,7 @@ import {
     Home as HomeIcon, Gift, User, Car, ShoppingBag, Image,
     Shield, FileText, Search, Zap, ShieldCheck, CreditCard, Sparkles,
     Instagram, Twitter, Facebook, Heart, Truck, Building, Briefcase, Wallet,
-    AlertTriangle, BatteryCharging, ArrowRight, Activity, BellRing, MoreHorizontal, X, LayoutGrid, Calendar, ShieldAlert
+    AlertTriangle, BatteryCharging, ArrowRight, Activity, BellRing, MoreHorizontal, X, LayoutGrid, Calendar, ShieldAlert, Clock
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';

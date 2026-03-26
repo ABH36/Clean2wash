@@ -104,6 +104,16 @@ class ApiClient {
         return this.request(`/orders/${orderId}`);
     }
 
+    async getLeads() {
+        return this.request('/leads');
+    }
+
+    async acceptLead(orderId) {
+        return this.request(`/leads/${orderId}/accept`, {
+            method: 'POST'
+        });
+    }
+
     async updateOrderStatus(orderId, status, photos = []) {
         return this.request(`/orders/${orderId}/status`, {
             method: 'PATCH',
@@ -303,6 +313,8 @@ export const vendorAPI = {
     getDashboard: () => apiClient.getDashboard(),
     getOrders: () => apiClient.getOrders(),
     getOrderById: (orderId) => apiClient.getOrderById(orderId),
+    getLeads: () => apiClient.getLeads(),
+    acceptLead: (orderId) => apiClient.acceptLead(orderId),
     updateOrderStatus: (orderId, status, photos = []) => apiClient.updateOrderStatus(orderId, status, photos),
     verifyBookingPin: (orderId, pin) => apiClient.verifyBookingPin(orderId, pin),
     assignStaff: (orderId, staffId, type) => apiClient.assignStaff(orderId, staffId, type),

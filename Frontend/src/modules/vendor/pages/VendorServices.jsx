@@ -135,48 +135,60 @@ const VendorServices = () => {
                 key={s._id}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className={`bg-surface rounded-[2.5rem] border border-gray-100/10 shadow-soft overflow-hidden group hover:border-brand/20 transition-all ${viewMode === 'list' ? 'flex items-center p-4' : 'p-8 space-y-6'}`}
+                className={`bg-surface rounded-[2.5rem] border border-gray-100/10 shadow-soft overflow-hidden group hover:border-brand/30 transition-all relative ${viewMode === 'list' ? 'flex flex-col md:flex-row items-center p-6 md:p-4 gap-6 md:gap-0' : 'p-8 space-y-7'}`}
             >
-                <div className={`${viewMode === 'list' ? 'flex items-center gap-4 flex-1' : 'space-y-6'}`}>
-                    <div className={`w-14 h-14 ${colors.bg} rounded-2xl flex items-center justify-center ${colors.text} transition-all group-hover:scale-110`}>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-brand/10 transition-colors" />
+
+                <div className={`${viewMode === 'list' ? 'flex items-center gap-5 flex-1 w-full' : 'space-y-7'}`}>
+                    <div className={`w-14 h-14 ${colors.bg} rounded-2xl flex items-center justify-center ${colors.text} transition-all group-hover:scale-110 shadow-inner shrink-0 relative z-10`}>
                         <Icon size={28} />
                     </div>
 
-                    <div className={`${viewMode === 'list' ? 'flex-1' : 'space-y-1'}`}>
+                    <div className={`${viewMode === 'list' ? 'flex-1 min-w-0' : 'space-y-2'} relative z-10`}>
                         <div className="flex items-center gap-2">
-                            <h3 className="text-lg font-black text-content tracking-tight">{s.name}</h3>
-                            {!s.isActive && <span className="text-[8px] font-black bg-background border border-gray-100/10 text-content-muted px-2 py-0.5 rounded uppercase tracking-widest">Paused</span>}
+                            <h3 className="text-lg font-black text-content tracking-tight uppercase leading-none truncate">{s.name}</h3>
+                            {!s.isActive && (
+                                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-background border border-gray-100/10 text-content-subtle text-[8px] font-black uppercase tracking-widest shrink-0">
+                                    <div className="w-1 h-1 bg-gray-400 rounded-full" />
+                                    Paused
+                                </div>
+                            )}
                         </div>
-                        <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest italic">{s.category} · {s.type} · {s.time}</p>
+                        <p className="text-[10px] font-black text-brand uppercase tracking-widest opacity-80">{s.category} · {s.type} · {s.time}</p>
                     </div>
 
                     {viewMode === 'list' && (
-                        <div className="px-8 border-x border-gray-100/10 mx-8">
-                            <span className="text-xl font-black italic tracking-tighter text-content">₹{s.price}</span>
+                        <div className="md:px-8 md:border-x border-gray-100/5 md:mx-8 hidden md:block">
+                            <span className="text-2xl font-black tracking-tighter text-content leading-none">₹{s.price}</span>
                         </div>
                     )}
                 </div>
 
-                <div className={`${viewMode === 'grid' ? 'flex items-center justify-between pt-4 border-t border-gray-100/10' : 'flex gap-2'}`}>
-                    {viewMode === 'grid' && <span className="text-2xl font-black italic tracking-tighter text-content">₹{s.price}</span>}
+                <div className={`w-full ${viewMode === 'grid' ? 'flex items-center justify-between pt-5 border-t border-gray-100/5' : 'flex items-center justify-between md:justify-end gap-4 md:gap-3 w-full md:w-auto relative z-10'}`}>
+                    {(viewMode === 'grid' || (typeof window !== 'undefined' && window.innerWidth < 768)) && (
+                        <div className="flex flex-col">
+                            <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-0.5 opacity-50">Operational Cost</p>
+                            <span className="text-2xl font-black tracking-tighter text-content leading-none">₹{s.price}</span>
+                        </div>
+                    )}
                     <div className="flex gap-2">
                         <button
                             onClick={() => handleOpenDrawer(s)}
-                            className="w-10 h-10 bg-background border border-gray-100/10 rounded-xl flex items-center justify-center text-content-muted hover:text-brand transition-all"
+                            className="w-11 h-11 bg-background border border-gray-100/10 rounded-xl flex items-center justify-center text-content-subtle hover:text-brand hover:border-brand/40 transition-all shadow-sm group/btn"
                         >
-                            <Edit3 size={18} />
+                            <Edit3 size={18} className="group-hover/btn:scale-110 transition-transform" />
                         </button>
                         <button
                             onClick={() => handleToggleActive(s)}
-                            className={`w-10 h-10 rounded-xl border border-gray-100/10 flex items-center justify-center transition-all ${s.isActive ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}
+                            className={`w-11 h-11 rounded-xl border flex items-center justify-center transition-all shadow-sm group/btn ${s.isActive ? 'bg-green-500/10 border-green-500/20 text-green-600' : 'bg-red-500/10 border-red-500/20 text-red-600'}`}
                         >
-                            <Power size={18} />
+                            <Power size={18} className="group-hover/btn:scale-110 transition-transform" />
                         </button>
                         <button
                             onClick={() => setShowDeleteConfirm(s._id)}
-                            className="w-10 h-10 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                            className="w-11 h-11 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl flex items-center justify-center md:opacity-0 group-hover:opacity-100 transition-all shadow-sm group/btn"
                         >
-                            <Trash2 size={18} />
+                            <Trash2 size={18} className="group-hover/btn:scale-110 transition-transform" />
                         </button>
                     </div>
                 </div>
@@ -247,7 +259,7 @@ const VendorServices = () => {
                                 <Sparkles size={24} />
                             </div>
                             <div>
-                                <h3 className="text-base font-black text-content uppercase tracking-tighter italic">Catalog Empty</h3>
+                                <h3 className="text-base font-black text-content uppercase tracking-tighter">Catalog Empty</h3>
                                 <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-1">Add your first studio service to begin orders</p>
                             </div>
                             <button
@@ -277,7 +289,7 @@ const VendorServices = () => {
                         >
                             <div className="px-8 py-8 border-b border-gray-100/10 flex items-center justify-between">
                                 <div>
-                                    <h2 className="text-xl font-black text-content italic tracking-tight uppercase tracking-tighter">Service <span className="text-brand">Forge</span></h2>
+                                    <h2 className="text-xl font-black text-content tracking-tight uppercase tracking-tighter">Service <span className="text-brand">Forge</span></h2>
                                     <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-1">Configure your tactical studio offering</p>
                                 </div>
                                 <button onClick={() => setDrawerOpen(false)} className="w-10 h-10 bg-background border border-gray-100/10 rounded-xl flex items-center justify-center text-content-muted">
@@ -287,7 +299,7 @@ const VendorServices = () => {
 
                             <div className="flex-1 overflow-y-auto p-8 space-y-6">
                                 <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest px-4 italic underline decoration-brand/30 underline-offset-4 mb-2 block">Service Name</label>
+                                    <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest px-4 underline decoration-brand/30 underline-offset-4 mb-2 block">Service Name</label>
                                     <input
                                         type="text"
                                         placeholder="e.g. Ceramic Protection Plus"
@@ -299,7 +311,7 @@ const VendorServices = () => {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest px-4 italic mb-2 block">Category</label>
+                                        <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest px-4 mb-2 block">Category</label>
                                         <select
                                             value={form.category}
                                             onChange={e => setForm({ ...form, category: e.target.value })}
@@ -309,7 +321,7 @@ const VendorServices = () => {
                                         </select>
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest px-4 italic mb-2 block">Base Price (₹)</label>
+                                        <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest px-4 mb-2 block">Base Price (₹)</label>
                                         <input
                                             type="number"
                                             placeholder="1299"
@@ -321,7 +333,7 @@ const VendorServices = () => {
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest px-4 italic mb-2 block">Service Type</label>
+                                    <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest px-4 mb-2 block">Service Type</label>
                                     <select
                                         value={form.type}
                                         onChange={e => setForm({ ...form, type: e.target.value })}
@@ -334,7 +346,7 @@ const VendorServices = () => {
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest px-4 italic mb-2 block">Description</label>
+                                    <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest px-4 mb-2 block">Description</label>
                                     <textarea
                                         placeholder="Describe the tactical advantages of this service..."
                                         value={form.description}
@@ -344,7 +356,7 @@ const VendorServices = () => {
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest px-4 italic mb-2 block">Time Estimate</label>
+                                    <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest px-4 mb-2 block">Time Estimate</label>
                                     <div className="grid grid-cols-3 gap-2">
                                         {['30 mins', '1 hour', '2 hours', '4 hours', '1 day'].map(d => (
                                             <button
@@ -388,7 +400,7 @@ const VendorServices = () => {
                                 <AlertTriangle size={36} />
                             </div>
                             <div>
-                                <h3 className="text-xl font-black text-content italic uppercase tracking-tighter">Termination confirmed?</h3>
+                                <h3 className="text-xl font-black text-content uppercase tracking-tighter">Termination confirmed?</h3>
                                 <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-2 px-4">This will permanently remove the service from your active studio catalog.</p>
                             </div>
                             <div className="flex gap-4">

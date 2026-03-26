@@ -24,9 +24,10 @@ const AdminProductDashboard = () => {
     const { theme } = useTheme();
     const [stats, setStats] = useState(null);
     const [inventory, setInventory] = useState([]);
+    const [missions, setMissions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeTab, setActiveTab] = useState('overview'); // overview, inventory, disputes
+    const [activeTab, setActiveTab] = useState('overview'); // overview, missions, inventory, disputes
 
     useEffect(() => {
         fetchData();
@@ -35,18 +36,22 @@ const AdminProductDashboard = () => {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [statsRes, invRes] = await Promise.all([
+            const [statsRes, invRes, missionsRes] = await Promise.all([
                 adminAPI.getProductStats(),
-                adminAPI.getMasterInventory()
+                adminAPI.getMasterInventory(),
+                adminAPI.getLiveMissions()
             ]);
             setStats(statsRes.data);
             setInventory(invRes.data.inventory);
+            setMissions(missionsRes.data.missions);
         } catch (error) {
+            console.error(error);
             toast.error('Failed to load product analytics');
         } finally {
             setLoading(false);
         }
     };
+
 
     const handleResolveDispute = async (orderId, itemId, action) => {
         try {
@@ -93,25 +98,29 @@ const AdminProductDashboard = () => {
                     isUp={false}
                 />
                 <StatCard
-                    title="Low Stock Items"
-                    value={inventory.filter(i => i.isLowStock).length}
-                    icon={<AlertTriangle className="w-6 h-6 text-amber-500" />}
-                    trend="Check"
-                    isUp={false}
-                    warning={inventory.some(i => i.isLowStock)}
+                    title="Avg Pickup Time"
+                    value={`${stats?.overview?.avgPickupTime || 0}h`}
+                    icon={<Zap className="w-6 h-6 text-amber-500" />}
+                    trend="Express"
+                    isUp={true}
+                    warning={parseFloat(stats?.overview?.avgPickupTime) > 2}
                 />
             </div>
+
 
             {/* Main Content Tabs */}
             <div className="bg-white rounded-2xl shadow-sm border border-onyx-100 overflow-hidden">
                 <div className="flex border-b border-onyx-100">
-                    {['overview', 'inventory', 'disputes'].map(tab => (
+                    {['overview', 'missions', 'inventory', 'disputes'].map(tab => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`px-6 py-4 text-sm font-medium transition-colors relative ${activeTab === tab ? 'text-gold-600' : 'text-onyx-500 hover:text-onyx-700'
                                 }`}
                         >
+                            {tab === 'missions' && missions.length > 0 && (
+                                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                            )}
                             {tab.charAt(0).toUpperCase() + tab.slice(1)}
                             {activeTab === tab && (
                                 <motion.div
@@ -127,6 +136,9 @@ const AdminProductDashboard = () => {
                     {activeTab === 'overview' && (
                         <VendorPerformanceTable vendors={stats?.vendorPerformance || []} />
                     )}
+                    {activeTab === 'missions' && (
+                        <LiveMissionsTable missions={missions} />
+                    )}
                     {activeTab === 'inventory' && (
                         <InventoryTable
                             inventory={inventory}
@@ -138,6 +150,7 @@ const AdminProductDashboard = () => {
                         <DisputesPanel onResolve={handleResolveDispute} />
                     )}
                 </div>
+
             </div>
         </div>
     );
@@ -250,4 +263,63 @@ const DisputesPanel = ({ onResolve }) => (
     </div>
 );
 
+const LiveMissionsTable = ({ missions }) => (
+    <div className="admin-table-container">
+        {missions.length === 0 ? (
+            <div className="text-center py-12">
+                <Package className="w-12 h-12 text-onyx-200 mx-auto mb-4" />
+                <p className="text-onyx-500 font-medium">No live missions currently active.</p>
+            </div>
+        ) : (
+            <table className="w-full text-left">
+                <thead>
+                    <tr className="text-onyx-500 text-sm font-medium border-b border-onyx-50">
+                        <th className="pb-4 px-4">Order / Product</th>
+                        <th className="pb-4">Status</th>
+                        <th className="pb-4">Roles (V/C/P)</th>
+                        <th className="pb-4">Timeline</th>
+                        <th className="pb-4 text-right">Activity</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-onyx-50">
+                    {missions.map((mission, idx) => (
+                        <tr key={idx} className="group hover:bg-onyx-50/50 transition-colors">
+                            <td className="py-4 px-4">
+                                <span className="text-xs font-bold text-gold-600 uppercase">#{mission.orderNumber}</span>
+                                <p className="text-sm font-bold text-onyx-900 mt-0.5">{mission.productName}</p>
+                            </td>
+                            <td className="py-4">
+                                <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                                    mission.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                                    mission.status === 'pick_up_broadcasted' ? 'bg-blue-100 text-blue-700' :
+                                    mission.status === 'picked_up' ? 'bg-purple-100 text-purple-700' :
+                                    'bg-green-100 text-green-700'
+                                }`}>
+                                    {mission.status.replace(/_/g, ' ')}
+                                </span>
+                            </td>
+                            <td className="py-4">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-full bg-onyx-100 flex items-center justify-center text-[10px] font-black" title={`Vendor: ${mission.vendor?.name}`}>V</div>
+                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${mission.captain ? 'bg-gold-500 text-white' : 'bg-red-100 text-red-500'}`} title={mission.captain ? `Captain: ${mission.captain.name}` : 'Waiting for Captain'}>C</div>
+                                    <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-[10px] font-black text-emerald-700" title={`Consumer: ${mission.consumer?.name}`}>P</div>
+                                </div>
+                            </td>
+                            <td className="py-4">
+                                <p className="text-xs text-onyx-500 font-medium">Started {new Date(mission.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                            </td>
+                            <td className="py-4 text-right">
+                                <button className="p-2 text-gold-600 hover:bg-gold-50 rounded-lg transition-colors">
+                                    <ArrowUpRight size={18} />
+                                </button>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        )}
+    </div>
+);
+
 export default AdminProductDashboard;
+

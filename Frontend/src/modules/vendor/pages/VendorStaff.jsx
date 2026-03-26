@@ -139,7 +139,7 @@ const VendorStaff = () => {
                     <div className="absolute top-0 right-0 w-64 h-64 bg-brand/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
                     <div className="relative z-10 max-w-2xl">
-                        <h2 className="text-2xl font-black text-content italic tracking-tighter uppercase mb-2">Deploy <span className="text-brand">New Staff</span></h2>
+                        <h2 className="text-2xl font-black text-content tracking-tighter uppercase mb-2">Deploy <span className="text-brand">New Staff</span></h2>
                         <p className="text-[11px] font-bold text-content-subtle uppercase tracking-widest mb-8">Onboard personnel via mobile number to assign service missions</p>
 
                         <form onSubmit={handleSearchStaff} className="flex gap-4">
@@ -231,7 +231,7 @@ const VendorStaff = () => {
                                     </div>
                                     <div className="flex-1 space-y-4 w-full">
                                         <div>
-                                            <h3 className="text-lg font-black text-content tracking-tight italic uppercase">Personnel <span className="text-brand">Not Found</span></h3>
+                                            <h3 className="text-lg font-black text-content tracking-tight uppercase">Personnel <span className="text-brand">Not Found</span></h3>
                                             <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest">Register this agent directly to your studio registry</p>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -284,23 +284,25 @@ const VendorStaff = () => {
                 </div>
 
                 {/* Team Roster */}
-                <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h3 className="text-xl font-black text-content italic tracking-tighter uppercase leading-none">Studio <span className="text-brand">Roster</span></h3>
-                            <p className="text-[10px] text-content-subtle font-bold uppercase tracking-widest mt-1">Active field agents & personnel</p>
+                <div className="space-y-6 pb-20 md:pb-0">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="pl-2">
+                            <h3 className="text-xl font-black text-content tracking-tighter uppercase leading-none">Elite Studio <span className="text-brand">Registry</span></h3>
+                            <p className="text-[10px] text-content-subtle font-bold uppercase tracking-widest mt-1.5 opacity-60">Active field operatives & tactical personnel</p>
                         </div>
                         <div className="flex gap-2">
-                            <button className="w-10 h-10 bg-surface border border-gray-100/10 rounded-xl flex items-center justify-center text-content-muted hover:text-brand transition-all">
-                                <Filter size={18} />
+                            <button className="h-11 px-5 bg-surface border border-gray-100/10 rounded-2xl flex items-center justify-center gap-2 text-content-subtle hover:text-brand transition-all shadow-sm">
+                                <Filter size={14} className="opacity-60" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">Filter Agents</span>
                             </button>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         {loading ? (
-                            <div className="col-span-full flex justify-center py-10">
-                                <div className="w-8 h-8 border-4 border-brand/30 border-t-brand rounded-full animate-spin" />
+                            <div className="col-span-full flex flex-col items-center gap-4 justify-center py-20 bg-gray-50/5 rounded-[3rem] border border-gray-100/5">
+                                <div className="w-10 h-10 border-4 border-brand/20 border-t-brand rounded-full animate-spin shadow-lg shadow-brand/20" />
+                                <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em]">Accessing Personnel Registry...</p>
                             </div>
                         ) : staffList.map((staff, idx) => (
                             <motion.div
@@ -308,64 +310,68 @@ const VendorStaff = () => {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: idx * 0.05 }}
                                 key={staff._id}
-                                className="bg-surface rounded-[2.5rem] border border-gray-100/10 p-8 shadow-soft space-y-6 group hover:border-brand/20 transition-all"
+                                className="bg-surface rounded-[2.5rem] border border-gray-100/10 p-7 md:p-8 shadow-soft space-y-7 group hover:border-brand/30 transition-all relative overflow-hidden"
                             >
-                                <div className="flex items-center justify-between">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-brand/10 transition-colors" />
+
+                                <div className="flex items-center justify-between relative z-10">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-xl bg-background flex items-center justify-center text-content-muted relative">
-                                            <User size={22} />
-                                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-surface animate-pulse" />
+                                        <div className="w-14 h-14 rounded-2xl bg-background border border-gray-100/10 flex items-center justify-center text-content-muted relative shadow-inner">
+                                            <User size={24} className="group-hover:text-brand transition-colors" />
+                                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-surface shadow-sm animate-pulse" />
                                         </div>
                                         <div>
-                                            <h4 className="text-sm font-black text-content tracking-tight">{staff.name || 'Agent'}</h4>
-                                            <p className="text-[9px] font-bold text-content-subtle uppercase tracking-widest font-mono">{staff.phone}</p>
+                                            <h4 className="text-base font-black text-content tracking-tight uppercase leading-none mb-1.5">{staff.name || 'Agent'}</h4>
+                                            <p className="text-[10px] font-black text-brand uppercase tracking-tighter opacity-80 font-mono">{staff.phone}</p>
                                         </div>
                                     </div>
                                     <button
                                         onClick={() => handleUnlinkStaff(staff._id)}
-                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-content-subtle hover:bg-red-500/10 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
+                                        className="w-9 h-9 rounded-xl flex items-center justify-center text-content-subtle bg-gray-50/5 border border-gray-100/5 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all opacity-0 group-hover:opacity-100 shadow-sm"
                                     >
                                         <Trash2 size={16} />
                                     </button>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="bg-background rounded-2xl p-4 border border-gray-100/5">
-                                        <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest italic mb-1">Status</p>
+                                <div className="grid grid-cols-2 gap-3 relative z-10">
+                                    <div className="bg-background rounded-2xl p-4 border border-gray-100/5 shadow-inner">
+                                        <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-1.5 opacity-50">Logistics</p>
                                         <div className="flex items-center gap-2">
-                                            <div className="w-1 h-1 bg-green-500 rounded-full" />
-                                            <p className="text-[10px] font-black text-green-500 uppercase">Available</p>
+                                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full shadow-sm shadow-green-500/50" />
+                                            <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">Active Duty</p>
                                         </div>
                                     </div>
-                                    <div className="bg-background rounded-2xl p-4 border border-gray-100/5">
-                                        <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest italic mb-1">Rating</p>
+                                    <div className="bg-background rounded-2xl p-4 border border-gray-100/5 shadow-inner">
+                                        <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-1.5 opacity-50">Tactical Grade</p>
                                         <div className="flex items-center gap-1.5">
                                             <Star size={10} className="text-yellow-500" fill="currentColor" />
-                                            <p className="text-[10px] font-black text-content">{staff.rating || '5.0'}</p>
+                                            <p className="text-[11px] font-black text-content">{staff.rating || '5.0'}</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center justify-between pt-4 border-t border-gray-100/5">
+                                <div className="flex items-center justify-between pt-5 border-t border-gray-100/5 relative z-10">
                                     <div className="flex flex-col">
-                                        <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest">Completed Jobs</p>
-                                        <p className="text-xs font-black text-content italic mt-0.5">{staff.completedJobs || 0} <span className="text-[9px] text-content-subtle uppercase tracking-tighter not-italic">Missions</span></p>
+                                        <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-0.5 opacity-50">Operation Count</p>
+                                        <p className="text-sm font-black text-content leading-none">{staff.completedJobs || 0} <span className="text-[9px] text-content-subtle uppercase tracking-tighter opacity-40">Tactical Ops</span></p>
                                     </div>
                                     <button
-                                        className="h-10 px-5 bg-background border border-gray-100/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:border-brand hover:text-brand transition-all flex items-center gap-2"
+                                        className="h-11 px-5 bg-background border border-gray-100/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:border-brand hover:text-brand hover:shadow-lg hover:shadow-brand/5 transition-all flex items-center gap-2 group active:scale-[0.97]"
                                     >
-                                        <Zap size={12} /> Assign Duty
+                                        <Zap size={12} className="group-hover:fill-current" /> Assign Ops
                                     </button>
                                 </div>
                             </motion.div>
                         ))}
 
                         {!loading && staffList.length === 0 && (
-                            <div className="col-span-full py-20 flex flex-col items-center gap-4 text-center bg-surface/50 border border-dashed border-gray-100/20 rounded-[3rem]">
-                                <UserPlus size={40} className="text-content-subtle/10" />
+                            <div className="col-span-full py-24 flex flex-col items-center gap-6 text-center bg-gray-50/5 border border-dashed border-gray-100/20 rounded-[3.5rem] shadow-inner">
+                                <div className="w-20 h-20 bg-background rounded-[2rem] flex items-center justify-center text-content-subtle/10 border border-gray-100/10">
+                                    <UserPlus size={36} />
+                                </div>
                                 <div>
-                                    <h3 className="text-base font-black text-content italic uppercase tracking-tighter">No Active Agents</h3>
-                                    <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-1">Use the search registry above to build your team</p>
+                                    <h3 className="text-lg font-black text-content uppercase tracking-tighter">Registry Depleted</h3>
+                                    <p className="text-[11px] font-bold text-content-subtle uppercase tracking-widest mt-1 opacity-60">Use the tactical search above to deploy field agents</p>
                                 </div>
                             </div>
                         )}

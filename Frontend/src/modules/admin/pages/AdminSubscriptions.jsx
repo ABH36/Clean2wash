@@ -25,6 +25,11 @@ const AdminSubscriptions = () => {
     const [formData, setFormData] = useState({ name: '', price: '', interval: 'Monthly', status: 'Live', features: '', accent: 'brand', applicableServices: [], credits: 0 });
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, id: null });
 
+    // Active Subscriptions State
+    const [activeTab, setActiveTab] = useState('plans'); // 'plans' or 'active'
+    const [subscriptions, setSubscriptions] = useState([]);
+    const [subLoading, setSubLoading] = useState(false);
+
     // Global Pass Config States
     const [passConfig, setPassConfig] = useState({ discount: 0.3, marketingLine: '' });
     const [savingConfig, setSavingConfig] = useState(false);
@@ -67,10 +72,29 @@ const AdminSubscriptions = () => {
         }
     };
 
+    const fetchSubscriptions = async () => {
+        setSubLoading(true);
+        try {
+            const res = await adminAPI.getSubscriptions({ status: 'active' });
+            if (res.status === 'success') {
+                setSubscriptions(res.data.subscriptions || []);
+            }
+        } catch (err) {
+            console.error("Failed to load subscriptions", err);
+            toast.error("Failed to sync live subscriptions");
+        } finally {
+            setSubLoading(false);
+        }
+    };
+
     useEffect(() => {
-        fetchPlans();
-        fetchGlobalConfig();
-    }, []);
+        if (activeTab === 'plans') {
+            fetchPlans();
+            fetchGlobalConfig();
+        } else {
+            fetchSubscriptions();
+        }
+    }, [activeTab]);
 
     const handleOpenAdd = () => {
         setEditingPlan(null);
@@ -188,81 +212,196 @@ const AdminSubscriptions = () => {
                         </div>
                     </div>
                 </motion.div>
-                {/* Header Actions */}
-                <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-brand/10 text-brand rounded-2xl flex items-center justify-center shadow-sm">
-                            <Crown size={24} />
-                        </div>
-                        <div>
-                            <h3 className="text-xl font-black text-content uppercase tracking-tighter leading-none">Subscription Matrix</h3>
-                            <p className="text-[10px] font-black text-brand uppercase tracking-widest mt-1.5">Model Node Deployment</p>
-                        </div>
-                    </div>
+                {/* Tabs */}
+                <div className="flex items-center gap-1 bg-gray-50 p-1.5 rounded-[2rem] w-fit border border-gray-100">
                     <button
-                        onClick={handleOpenAdd}
-                        className="h-12 px-8 bg-brand text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-brand/20 flex items-center gap-3 hover:scale-105 transition-all"
+                        onClick={() => setActiveTab('plans')}
+                        className={`px-8 py-3.5 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'plans' ? 'bg-black text-white shadow-xl' : 'text-content-subtle hover:bg-white'}`}
                     >
-                        <Plus size={18} /> Deploy New Model
+                        Plan Models
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('active')}
+                        className={`px-8 py-3.5 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'active' ? 'bg-black text-white shadow-xl' : 'text-content-subtle hover:bg-white'}`}
+                    >
+                        Live Subscriptions
                     </button>
                 </div>
 
-                {/* Plan Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {loading && (
-                        <div className="col-span-full py-20 text-center bg-white rounded-[2.5rem] border border-gray-100 font-black text-content-subtle uppercase text-xs tracking-widest">
-                            <div className="w-8 h-8 mx-auto border-4 border-brand/30 border-t-brand rounded-full animate-spin mb-4" />
-                            Loading Neural Models...
+                {/* Header Actions */}
+                <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
+                    <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 ${activeTab === 'plans' ? 'bg-brand/10 text-brand' : 'bg-emerald-50 text-emerald-500'} rounded-2xl flex items-center justify-center shadow-sm`}>
+                            <Crown size={24} />
                         </div>
-                    )}
-                    {!loading && plans.map((plan, i) => (
-                        <motion.div
-                            key={plan._id || plan.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.1 }}
-                            className="bg-white rounded-[2.5rem] border border-gray-100 shadow-soft p-10 relative overflow-hidden group hover:border-brand transition-all"
+                        <div>
+                            <h3 className="text-xl font-black text-content uppercase tracking-tighter leading-none">
+                                {activeTab === 'plans' ? 'Subscription Matrix' : 'Subscribed Userbase'}
+                            </h3>
+                            <p className="text-[10px] font-black text-brand uppercase tracking-widest mt-1.5">
+                                {activeTab === 'plans' ? 'Model Node Deployment' : 'Active Operational Instances'}
+                            </p>
+                        </div>
+                    </div>
+                    {activeTab === 'plans' && (
+                        <button
+                            onClick={handleOpenAdd}
+                            className="h-12 px-8 bg-brand text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-brand/20 flex items-center gap-3 hover:scale-105 transition-all"
                         >
-                            <div className="flex justify-between items-start mb-8 relative z-10">
-                                <div className={`w-14 h-14 bg-${plan.accent}/10 text-${plan.accent} rounded-2xl flex items-center justify-center transition-all group-hover:bg-brand group-hover:text-white`}>
-                                    <Sparkles size={28} />
-                                </div>
-                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100">
-                                    <button onClick={() => handleOpenEdit(plan)} className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-content-subtle hover:bg-brand hover:text-white shadow-sm"><Edit2 size={14} /></button>
-                                    <button onClick={() => setDeleteConfirm({ isOpen: true, id: plan._id || plan.id })} className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-content-subtle hover:bg-red-500 hover:text-white shadow-sm"><Trash2 size={14} /></button>
-                                </div>
-                            </div>
-
-                            <div className="mb-8 relative z-10">
-                                <h4 className="text-xl font-black text-content uppercase tracking-tighter leading-none mb-1 group-hover:text-brand transition-colors">{plan.name}</h4>
-                                <div className="flex items-baseline gap-1 mt-4">
-                                    <span className="text-4xl font-black text-content tracking-tighter leading-none">₹{plan.price}</span>
-                                    <span className="text-[10px] font-black text-content-subtle uppercase tracking-widest">/mo</span>
-                                </div>
-                            </div>
-
-                            <div className="space-y-4 mb-10 relative z-10 border-t border-gray-50 pt-8">
-                                {plan.features.map((feat, idx) => (
-                                    <div key={idx} className="flex items-center gap-3">
-                                        <div className="w-5 h-5 rounded-full bg-green-50 flex items-center justify-center shrink-0">
-                                            <CheckCircle2 size={10} className="text-green-500" strokeWidth={4} />
-                                        </div>
-                                        <span className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-none">{feat}</span>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className="absolute -bottom-10 -right-10 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
-                                <Crown size={200} className="text-content" />
-                            </div>
-                        </motion.div>
-                    ))}
-                    {!loading && plans.length === 0 && (
-                        <div className="col-span-full py-20 text-center bg-gray-50 rounded-[2.5rem] border border-dashed border-gray-200 font-black text-content-subtle uppercase text-xs tracking-widest">
-                            No subscription protocols found in system.
-                        </div>
+                            <Plus size={18} /> Deploy New Model
+                        </button>
                     )}
                 </div>
+
+                {activeTab === 'plans' ? (
+                    /* Plan Grid */
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {loading && (
+                            <div className="col-span-full py-20 text-center bg-white rounded-[2.5rem] border border-gray-100 font-black text-content-subtle uppercase text-xs tracking-widest">
+                                <div className="w-8 h-8 mx-auto border-4 border-brand/30 border-t-brand rounded-full animate-spin mb-4" />
+                                Loading Neural Models...
+                            </div>
+                        )}
+                        {!loading && plans.map((plan, i) => (
+                            <motion.div
+                                key={plan._id || plan.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: i * 0.1 }}
+                                className="bg-white rounded-[2.5rem] border border-gray-100 shadow-soft p-10 relative overflow-hidden group hover:border-brand transition-all"
+                            >
+                                <div className="flex justify-between items-start mb-8 relative z-10">
+                                    <div className={`w-14 h-14 bg-${plan.accent}/10 text-${plan.accent} rounded-2xl flex items-center justify-center transition-all group-hover:bg-brand group-hover:text-white`}>
+                                        <Sparkles size={28} />
+                                    </div>
+                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100">
+                                        <button onClick={() => handleOpenEdit(plan)} className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-content-subtle hover:bg-brand hover:text-white shadow-sm"><Edit2 size={14} /></button>
+                                        <button onClick={() => setDeleteConfirm({ isOpen: true, id: plan._id || plan.id })} className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-content-subtle hover:bg-red-500 hover:text-white shadow-sm"><Trash2 size={14} /></button>
+                                    </div>
+                                </div>
+
+                                <div className="mb-8 relative z-10">
+                                    <h4 className="text-xl font-black text-content uppercase tracking-tighter leading-none mb-1 group-hover:text-brand transition-colors">{plan.name}</h4>
+                                    <div className="flex items-baseline gap-1 mt-4">
+                                        <span className="text-4xl font-black text-content tracking-tighter leading-none">₹{plan.price}</span>
+                                        <span className="text-[10px] font-black text-content-subtle uppercase tracking-widest">/mo</span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4 mb-10 relative z-10 border-t border-gray-50 pt-8">
+                                    {plan.features.map((feat, idx) => (
+                                        <div key={idx} className="flex items-center gap-3">
+                                            <div className="w-5 h-5 rounded-full bg-green-50 flex items-center justify-center shrink-0">
+                                                <CheckCircle2 size={10} className="text-green-500" strokeWidth={4} />
+                                            </div>
+                                            <span className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-none">{feat}</span>
+                                        </div>
+                                    ))}
+                                    {plan.applicableServices?.length > 0 && (
+                                        <div className="flex flex-wrap gap-1.5 pt-4 border-t border-gray-50 mt-4">
+                                            {plan.applicableServices.map((service, idx) => (
+                                                <span key={idx} className="px-2 py-1 bg-brand/5 text-brand rounded text-[7px] font-black uppercase tracking-widest border border-brand/10">
+                                                    {service}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="absolute -bottom-10 -right-10 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
+                                    <Crown size={200} className="text-content" />
+                                </div>
+                            </motion.div>
+                        ))}
+                        {!loading && plans.length === 0 && (
+                            <div className="col-span-full py-20 text-center bg-gray-50 rounded-[2.5rem] border border-dashed border-gray-200 font-black text-content-subtle uppercase text-xs tracking-widest">
+                                No subscription protocols found in system.
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    /* Active Subscriptions List */
+                    <div className="space-y-4">
+                        {subLoading ? (
+                            <div className="py-20 text-center bg-white rounded-[2.5rem] border border-gray-100 font-black text-content-subtle uppercase text-xs tracking-widest">
+                                <div className="w-8 h-8 mx-auto border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mb-4" />
+                                Syncing Userbase Instances...
+                            </div>
+                        ) : subscriptions.length > 0 ? (
+                            <div className="bg-white rounded-[2.5rem] border border-gray-100 overflow-hidden shadow-soft">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-gray-50/50 border-b border-gray-100">
+                                            <th className="px-8 py-6 text-[10px] font-black text-content-subtle uppercase tracking-widest">Subscriber</th>
+                                            <th className="px-8 py-6 text-[10px] font-black text-content-subtle uppercase tracking-widest">Asset & Plan</th>
+                                            <th className="px-8 py-6 text-[10px] font-black text-content-subtle uppercase tracking-widest">Society / Hub</th>
+                                            <th className="px-8 py-6 text-[10px] font-black text-content-subtle uppercase tracking-widest">Parking Details</th>
+                                            <th className="px-8 py-6 text-[10px] font-black text-content-subtle uppercase tracking-widest">Status / Expiry</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50">
+                                        {subscriptions.map(sub => (
+                                            <tr key={sub._id} className="hover:bg-gray-50/30 transition-colors group">
+                                                <td className="px-8 py-6">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center font-black text-xs text-content-subtle uppercase">
+                                                            {sub.user?.name?.charAt(0) || 'U'}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[12px] font-black text-black uppercase tracking-tight">{sub.user?.name || 'Anonymous'}</p>
+                                                            <p className="text-[9px] font-bold text-content-subtle mt-0.5">{sub.user?.phone}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-8 py-6">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-xl border border-gray-100 flex items-center justify-center text-content-subtle">
+                                                            <RefreshCcw size={16} />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[11px] font-[1000] text-emerald-600 uppercase tracking-tight">{sub.plan}</p>
+                                                            <p className="text-[9px] font-black text-black/30 uppercase mt-0.5">{sub.vehicle?.brand} {sub.vehicle?.model || 'Car'}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-8 py-6">
+                                                    <div>
+                                                        <p className="text-[11px] font-[1000] text-black uppercase tracking-tight">{sub.hub?.name || 'Hub/City'}</p>
+                                                        <p className="text-[9px] font-black text-black/30 uppercase mt-0.5">{sub.hub?.city || (sub.user?.profile?.address?.city || 'Roam')}</p>
+                                                    </div>
+                                                </td>
+                                                <td className="px-8 py-6">
+                                                    {sub.parkingDetails?.block ? (
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            <span className="px-2 py-1 bg-gray-100 rounded-md text-[8px] font-black text-content-subtle uppercase tracking-widest">{sub.parkingDetails.block}</span>
+                                                            <span className="px-2 py-1 bg-gray-100 rounded-md text-[8px] font-black text-content-subtle uppercase tracking-widest">{sub.parkingDetails.basement}</span>
+                                                            <span className="px-2 py-1 bg-brand/10 rounded-md text-[8px] font-black text-brand uppercase tracking-widest">Pillar: {sub.parkingDetails.pillar}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-[9px] font-bold text-content-subtle uppercase italic">Universal Access</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-8 py-6">
+                                                    <div className="flex flex-col items-end">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                            <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">ACTIVE</span>
+                                                        </div>
+                                                        <p className="text-[9px] font-black text-black/20 uppercase mt-1">EXPIRES: {sub.endDate ? new Date(sub.endDate).toLocaleDateString('en-GB') : 'N/A'}</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <div className="py-20 text-center bg-gray-50 rounded-[2.5rem] border border-dashed border-gray-200 font-black text-content-subtle uppercase text-xs tracking-widest">
+                                No active subscription instances found.
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Modal */}

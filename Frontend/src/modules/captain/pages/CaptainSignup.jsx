@@ -102,7 +102,7 @@ const CaptainSignup = () => {
                     <div className="w-16 h-16 bg-surface border border-gray-100/10 text-brand rounded-[2rem] flex items-center justify-center shadow-2xl mb-6">
                         <Zap size={32} />
                     </div>
-                    <h1 className="text-3xl font-black text-content italic tracking-tighter uppercase leading-none">Captain <br /><span className="text-brand">Signup</span></h1>
+                    <h1 className="text-3xl font-black text-content tracking-tighter uppercase leading-none">Captain <br /><span className="text-brand">Signup</span></h1>
                     <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em] mt-3">Join the Elite Cleaning Force</p>
                 </div>
 
@@ -154,7 +154,7 @@ const CaptainSignup = () => {
                                     onChange={e => setFormData({ ...formData, city: e.target.value })}
                                 />
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic flex items-center gap-2 px-1">
+                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest flex items-center gap-2 px-1">
                                         <Briefcase size={14} /> Experience
                                     </label>
                                     <select
@@ -175,7 +175,7 @@ const CaptainSignup = () => {
                             <h3 className="text-[12px] font-black tracking-widest uppercase mb-4 text-brand">Work Equipment</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic flex items-center gap-2 px-1">
+                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest flex items-center gap-2 px-1">
                                         <Car size={14} /> Vehicle
                                     </label>
                                     <select
@@ -196,7 +196,7 @@ const CaptainSignup = () => {
                                     onChange={e => setFormData({ ...formData, plate: e.target.value })}
                                 />
                                 <div className="space-y-1.5 md:col-span-2">
-                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic flex items-center gap-2 px-1">
+                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest flex items-center gap-2 px-1">
                                         <Zap size={14} /> Equipment Kit
                                     </label>
                                     <select
@@ -251,7 +251,7 @@ const CaptainSignup = () => {
                     <div className="mt-8 text-center">
                         <p className="text-[11px] font-bold text-content-subtle uppercase tracking-widest">
                             Already a Captain?{' '}
-                            <Link to="/captain/login" className="text-brand font-black italic">LOGIN HERE</Link>
+                            <Link to="/captain/login" className="text-brand font-black">LOGIN HERE</Link>
                         </p>
                     </div>
                 </div>
@@ -269,7 +269,7 @@ const CaptainSignup = () => {
 
 const InputField = ({ label, icon, required = true, ...props }) => (
     <div className="space-y-1.5">
-        <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic flex items-center gap-2 px-1">
+        <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest flex items-center gap-2 px-1">
             {icon} {label}
         </label>
         <input
@@ -282,7 +282,7 @@ const InputField = ({ label, icon, required = true, ...props }) => (
 
 const FileUpload = ({ label, onFileChange, fileData, icon = <FileText size={24} className="text-content-subtle group-hover:text-brand mb-2" /> }) => (
     <div className="space-y-2">
-        <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest italic text-center block">
+        <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest text-center block">
             {label}
         </label>
         <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-100/10 rounded-2xl hover:border-brand/50 hover:bg-brand/5 cursor-pointer bg-background transition-all group shadow-sm">
@@ -300,7 +300,7 @@ const FileUpload = ({ label, onFileChange, fileData, icon = <FileText size={24} 
         {fileData && (
             <div className="flex items-center justify-center gap-1.5 mt-1 bg-green-500/10 rounded-lg border border-green-500/20 py-1">
                 <ShieldCheck size={12} className="text-green-600" />
-                <span className="text-[8px] font-black text-green-700 uppercase italic">Attached</span>
+                <span className="text-[8px] font-black text-green-700 uppercase">Attached</span>
             </div>
         )}
     </div>

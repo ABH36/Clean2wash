@@ -208,8 +208,9 @@ exports.updateTaskStatus = async (req, res) => {
         }
 
         // Security PIN logic
-        // For studio pickups, PIN is required at 'picked-up' (custody transfer from consumer)
-        if (['arrived', 'picked-up', 'at-studio', 'completed'].includes(status)) {
+        // PIN is required at 'picked-up' (custody transfer from consumer) 
+        // and 'completed' (final delivery back to consumer)
+        if (['picked-up', 'completed'].includes(status)) {
             if (!pin) return res.status(400).json({ status: 'error', message: 'Security PIN verification required' });
             if (pin !== booking.securityPin) return res.status(400).json({ status: 'error', message: 'Invalid Security PIN' });
         }
@@ -228,15 +229,17 @@ exports.updateTaskStatus = async (req, res) => {
 
             // Credit Staff Wallet (Phase 4)
             try {
-                await walletHelper.executeWalletTransaction({
-                    user: staffId,
-                    amount: commission,
-                    type: 'credit',
-                    category: 'COMMISSION',
-                    description: `Commission for Service #${booking.bookingId || booking._id}`,
-                    referenceId: booking._id,
-                    referenceType: 'booking'
-                });
+                await walletHelper.executeWalletTransaction(
+                    staffId,
+                    commission,
+                    'credit',
+                    {
+                        category: 'COMMISSION',
+                        description: `Commission for Service #${booking.bookingId || booking._id}`,
+                        referenceId: booking._id,
+                        referenceType: 'booking'
+                    }
+                );
 
                 // Trigger Referral Reward (Phase 4)
                 await referralService.processReferralReward(booking.consumer._id, booking._id);
@@ -290,6 +293,17 @@ exports.updateTaskStatus = async (req, res) => {
 
         await booking.save();
 
+        const statusMap = {
+            'en_route': 'On the way to your location!',
+            'arrived': 'Staff has arrived!',
+            'picked-up': 'Vehicle picked up for service!',
+            'at-studio': 'Your car has reached our Hub!',
+            'washing': 'Wash in progress...',
+            'quality-check': 'Quality check active.',
+            'ready-for-delivery': 'Service finalized! Check your profile for photos.',
+            'completed': 'Task completed!'
+        };
+
         // Real-time Socket Sync
         const socketService = require('../../../socketService');
         const io = socketService.getIO();
@@ -311,12 +325,6 @@ exports.updateTaskStatus = async (req, res) => {
 
         // Notify Consumer
         const { sendNotification } = require('../../../utils/notificationService');
-        const statusMap = {
-            'en_route': 'On the way to your location!',
-            'arrived': 'Staff has arrived!',
-            'at-studio': 'Your car has reached our Hub!',
-            'completed': 'Service finalized! Check your profile for photos.'
-        };
 
         if (statusMap[status] && booking.consumer) {
             await sendNotification(booking.consumer._id, {

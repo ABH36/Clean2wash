@@ -229,16 +229,19 @@ const Profile = () => {
 
                     {/* ── METRICS ── */}
                     <div className="grid grid-cols-3 gap-3">
-                        {[
-                            { label: 'Washes', val: stats?.completed || stats?.totalBookings || bookings.length || '0', icon: Car },
-                            { label: 'Upcoming', val: stats?.upcomingBookings || '0', icon: Clock },
-                            { label: 'Points', val: stats?.walletBalance || '0', icon: Wallet }
-                        ].map((m, i) => (
-                            <div key={i} className="bg-white rounded-xl border border-gray-50 p-3 flex flex-col items-center justify-center gap-1">
-                                <span className="text-xs font-[1000] text-content italic">{m.val}</span>
-                                <span className="text-[8px] font-black text-content-subtle uppercase tracking-widest">{m.label}</span>
-                            </div>
-                        ))}
+                        <div className="bg-white rounded-xl border border-gray-50 p-3 flex flex-col items-center justify-center gap-1">
+                            <span className="text-xs font-[1000] text-content italic">{user?.loyalty?.completedBookingsCount || '0'}</span>
+                            <span className="text-[8px] font-black text-content-subtle uppercase tracking-widest">Washes</span>
+                        </div>
+                        <div className="bg-white rounded-xl border border-gray-50 p-3 flex flex-col items-center justify-center gap-1 border-brand/20 relative overflow-hidden">
+                            <div className="absolute top-0 left-0 h-1 bg-brand" style={{ width: `${((user?.loyalty?.completedBookingsCount || 0) % 10) * 10}%` }} />
+                            <span className="text-xs font-[1000] text-brand italic">{(user?.loyalty?.completedBookingsCount || 0) % 10}/10</span>
+                            <span className="text-[8px] font-black text-content-subtle uppercase tracking-widest text-center">Reward Goal</span>
+                        </div>
+                        <div className="bg-white rounded-xl border border-gray-50 p-3 flex flex-col items-center justify-center gap-1">
+                            <span className="text-xs font-[1000] text-emerald-600 italic">{user?.loyalty?.rewardsAvailable || '0'}</span>
+                            <span className="text-[8px] font-black text-content-subtle uppercase tracking-widest">Free Washes</span>
+                        </div>
                     </div>
 
                     {/* ── RECENT INSTANT HISTORY ── */}

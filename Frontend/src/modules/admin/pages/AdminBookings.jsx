@@ -504,6 +504,32 @@ const AdminBookings = () => {
                                             selectedBooking.location?.address?.street,
                                             selectedBooking.location?.address?.city
                                         ].filter(Boolean).join(', ') || '—'} />
+                                        {selectedBooking.location?.parkingDetails && (
+                                            <div className="mx-1 mt-1 p-3 rounded-xl bg-brand/5 border border-brand/10 space-y-2">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <Car size={12} className="text-brand" />
+                                                    <span className="text-[9px] font-black uppercase text-brand tracking-widest">Parking Logistics</span>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[7px] font-black uppercase text-black/20">Basement</span>
+                                                        <span className="text-[11px] font-[1000] text-black uppercase">{selectedBooking.location.parkingDetails.basement || '—'}</span>
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[7px] font-black uppercase text-black/20">Block</span>
+                                                        <span className="text-[11px] font-[1000] text-black uppercase">{selectedBooking.location.parkingDetails.block || '—'}</span>
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[7px] font-black uppercase text-black/20">Pillar</span>
+                                                        <span className="text-[11px] font-[1000] text-black uppercase">{selectedBooking.location.parkingDetails.pillar || '—'}</span>
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[7px] font-black uppercase text-black/20">Slot</span>
+                                                        <span className="text-[11px] font-[1000] text-black uppercase">{selectedBooking.location.parkingDetails.slotNumber || '—'}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                         {selectedBooking.schedule?.type === 'scheduled' ? (
                                             <>
                                                 <DetailItem icon={<Calendar size={14} />} label="Date" value={selectedBooking.schedule?.date ? new Date(selectedBooking.schedule.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'} />
@@ -770,7 +796,7 @@ const LiveMapView = ({ bookings, onSelectBooking }) => {
 
         const initMap = async () => {
             const mapInstance = new window.google.maps.Map(mapRef.current, {
-                center: { lat: 12.9716, lng: 77.5946 }, // Default Bengaluru
+                center: { lat: 28.6139, lng: 77.2090 }, // Default fallback
                 zoom: 12,
                 styles: [
                     { "elementType": "geometry", "stylers": [{ "color": "#f5f5f5" }] },

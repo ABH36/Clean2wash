@@ -52,7 +52,8 @@ const captainSchema = new mongoose.Schema({
         accountName: String,
         accountNumber: String,
         ifscCode: String,
-        bankName: String
+        bankName: String,
+        upiId: String
     },
     rating: {
         type: Number,

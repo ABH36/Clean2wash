@@ -22,8 +22,8 @@ const StaffNewJobOverlay = ({ isVisible, onAccept, onReject, jobData }) => {
                         <div className={`p-8 pb-12 relative overflow-hidden ${isDarkMode ? 'bg-gradient-to-r from-brand/90 to-orange-500/90' : 'bg-gradient-to-r from-brand to-orange-400'}`}>
                             <div className="relative z-10 flex justify-between items-start">
                                 <div>
-                                    <p className="text-[10px] uppercase tracking-[0.3em] mb-2 font-black italic text-white/60">Invitation</p>
-                                    <h2 className="text-3xl font-black text-white italic tracking-tighter leading-none uppercase">New Pickup <br /> Assignment</h2>
+                                    <p className="text-[10px] uppercase tracking-[0.3em] mb-2 font-black text-white/60">Invitation</p>
+                                    <h2 className="text-3xl font-black text-white tracking-tighter leading-none uppercase">New Pickup <br /> Assignment</h2>
                                 </div>
                                 <button
                                     onClick={onReject}
@@ -43,12 +43,12 @@ const StaffNewJobOverlay = ({ isVisible, onAccept, onReject, jobData }) => {
                                         <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=200" className="w-full h-full object-cover" alt="User" />
                                     </div>
                                     <div className="flex-1">
-                                        <h3 className={`text-lg font-black italic leading-none mb-1 uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>Rajesh M.</h3>
+                                        <h3 className={`text-lg font-black leading-none mb-1 uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>Rajesh M.</h3>
                                         <p className="text-[10px] font-black text-brand-light uppercase tracking-widest leading-none">Indirapuram Hub · 1.2km away</p>
                                     </div>
                                     <div className="text-right">
                                         <p className={`text-[8px] font-black uppercase tracking-widest mb-1 ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Time Limit</p>
-                                        <p className={`text-sm font-black italic ${isDarkMode ? 'text-white' : 'text-content'}`}>01:45</p>
+                                        <p className={`text-sm font-black ${isDarkMode ? 'text-white' : 'text-content'}`}>01:45</p>
                                     </div>
                                 </div>
 
@@ -58,7 +58,7 @@ const StaffNewJobOverlay = ({ isVisible, onAccept, onReject, jobData }) => {
                                             <MapPin size={20} className="text-brand" />
                                         </div>
                                         <div>
-                                            <p className={`text-[8px] font-black uppercase tracking-widest mb-1 italic ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Pickup Address</p>
+                                            <p className={`text-[8px] font-black uppercase tracking-widest mb-1 ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Pickup Address</p>
                                             <p className={`text-xs font-black leading-snug uppercase ${isDarkMode ? 'text-white/80' : 'text-content'}`}>Flat 402, Shipra Krishna Mall, Indirapuram</p>
                                         </div>
                                     </div>
@@ -67,8 +67,8 @@ const StaffNewJobOverlay = ({ isVisible, onAccept, onReject, jobData }) => {
                                             <Clock size={20} className="text-brand" />
                                         </div>
                                         <div>
-                                            <p className={`text-[8px] font-black uppercase tracking-widest mb-1 italic ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Scheduled Slot</p>
-                                            <p className={`text-xs font-black italic leading-none uppercase ${isDarkMode ? 'text-white/80' : 'text-content'}`}>Today · 02:00 PM - 03:00 PM</p>
+                                            <p className={`text-[8px] font-black uppercase tracking-widest mb-1 ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Scheduled Slot</p>
+                                            <p className={`text-xs font-black leading-none uppercase ${isDarkMode ? 'text-white/80' : 'text-content'}`}>Today · 02:00 PM - 03:00 PM</p>
                                         </div>
                                     </div>
                                 </div>

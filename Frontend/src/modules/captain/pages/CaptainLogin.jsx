@@ -83,7 +83,7 @@ const CaptainLogin = () => {
                             </div>
                             <span className="text-brand text-[10px] font-black uppercase tracking-[0.2em]">Captain Partner App</span>
                         </div>
-                        <h1 className="text-white text-3xl font-black tracking-tighter leading-tight italic">
+                        <h1 className="text-white text-3xl font-black tracking-tighter leading-tight">
                             Welcome Back.<br />Ready to Earn?
                         </h1>
                         <p className="text-white/40 text-[11px] font-bold uppercase tracking-widest mt-1">Sign in to view new requests</p>
@@ -104,7 +104,7 @@ const CaptainLogin = () => {
                 >
                     <form onSubmit={handleLogin} className="space-y-4">
                         <div className="space-y-1.5">
-                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic flex items-center gap-2 px-1">
+                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest flex items-center gap-2 px-1">
                                 <Phone size={14} /> Registered Phone
                             </label>
                             <input
@@ -118,7 +118,7 @@ const CaptainLogin = () => {
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic flex items-center gap-2 px-1">
+                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest flex items-center gap-2 px-1">
                                 <Lock size={14} /> Password / PIN
                             </label>
                             <input
@@ -135,8 +135,8 @@ const CaptainLogin = () => {
                             disabled={!phone || !password || loading || otpLoading}
                             whileTap={{ scale: 0.97 }}
                             className={`w-full h-14 rounded-2xl font-black text-base flex items-center justify-center gap-3 transition-all mt-6 ${phone && password
-                                    ? 'bg-brand text-white shadow-xl shadow-brand/20'
-                                    : 'bg-white/5 text-white/10 border border-white/5 pointer-events-none'
+                                ? 'bg-brand text-white shadow-xl shadow-brand/20'
+                                : 'bg-white/5 text-white/10 border border-white/5 pointer-events-none'
                                 }`}
                         >
                             {loading ? (
@@ -158,8 +158,8 @@ const CaptainLogin = () => {
                             disabled={phone.length !== 10 || loading || otpLoading}
                             whileTap={{ scale: 0.97 }}
                             className={`w-full h-14 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 transition-all border ${phone.length === 10
-                                    ? 'border-brand text-brand bg-brand/5 hover:bg-brand hover:text-white'
-                                    : 'border-white/5 text-white/10 pointer-events-none'
+                                ? 'border-brand text-brand bg-brand/5 hover:bg-brand hover:text-white'
+                                : 'border-white/5 text-white/10 pointer-events-none'
                                 }`}
                         >
                             {otpLoading ? (
@@ -173,19 +173,19 @@ const CaptainLogin = () => {
                     <div className="mt-8 text-center border-t border-gray-100/10 pt-8">
                         <p className="text-[11px] font-bold text-content-subtle uppercase tracking-widest">
                             New to CarWash?{' '}
-                            <Link to="/captain/signup" className="text-brand font-black italic">JOIN FLEET</Link>
+                            <Link to="/captain/signup" className="text-brand font-black">JOIN FLEET</Link>
                         </p>
                     </div>
 
                     <div className="mt-auto grid grid-cols-2 gap-4 pt-10">
                         <div className="bg-white/5 border border-white/5 p-4 rounded-2xl transition-all">
                             <Star size={16} className="text-yellow-400 mb-2" fill="currentColor" />
-                            <p className="text-sm font-black italic tracking-tight text-white">4.9/5 Avg</p>
+                            <p className="text-sm font-black tracking-tight text-white">4.9/5 Avg</p>
                             <p className="text-white/30 text-[9px] font-black uppercase tracking-widest leading-none mt-1">Provider Rating</p>
                         </div>
                         <div className="bg-white/5 border border-white/5 p-4 rounded-2xl transition-all">
                             <ShieldCheck size={16} className="text-blue-400 mb-2" />
-                            <p className="text-sm font-black italic tracking-tight text-white">Verified</p>
+                            <p className="text-sm font-black tracking-tight text-white">Verified</p>
                             <p className="text-white/30 text-[9px] font-black uppercase tracking-widest leading-none mt-1">Partners Hub</p>
                         </div>
                     </div>

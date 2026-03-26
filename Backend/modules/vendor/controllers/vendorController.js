@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Booking = require('../../../models/Booking');
 const Product = require('../../../models/Product');
 const ProductOrder = require('../../../models/ProductOrder');
@@ -10,6 +11,7 @@ const { sendVendorNotification } = require('../../../utils/notificationService')
 const auditHelper = require('../../../utils/auditHelper');
 const walletHelper = require('../../../utils/walletHelper');
 const referralService = require('../../../utils/referralService');
+const socketService = require('../../../socketService');
 
 exports.getDashboard = async (req, res) => {
     try {
@@ -140,20 +142,152 @@ exports.getOrders = async (req, res) => {
     }
 };
 
+/**
+ * Lead Board: Fetch all unassigned 'Studio/Vendor' type bookings
+ * Optional: Filter by Vendor's city
+ */
+exports.getAvailableLeads = async (req, res) => {
+    try {
+        const vendorCity = req.user.profile?.city || 'Indore'; // Fallback for testing
+
+        // Find bookings that are 'vendor' type, pending, and have no provider
+        const leads = await Booking.find({
+            'service.type': 'vendor',
+            status: 'pending',
+            'provider.id': null,
+            isActive: true,
+            // $or: [
+            //     { 'location.address.city': new RegExp(vendorCity, 'i') },
+            //     { 'location.type': 'studio' } // Global studio requests
+            // ]
+        })
+            .populate('consumer', 'name phone profile')
+            .populate('vehicle', 'brand model plate type')
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            status: 'success',
+            results: leads.length,
+            data: { leads }
+        });
+    } catch (error) {
+        console.error('Error fetching leads:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to fetch leads board' });
+    }
+};
+
+/**
+ * Accept Lead: Vendor claims an open booking
+ */
+exports.acceptLead = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const vendorId = req.user._id;
+
+        // Find the lead and update it Atomically to prevent race conditions
+        const booking = await Booking.findOneAndUpdate(
+            {
+                _id: orderId,
+                status: 'pending',
+                'provider.id': null,
+                'service.type': 'vendor'
+            },
+            {
+                $set: {
+                    'provider.id': vendorId,
+                    'provider.type': 'vendor',
+                    status: 'accepted', // Unified with captain flow for 'claimed' state
+                    updatedAt: new Date()
+                }
+            },
+            { new: true }
+        ).populate('consumer', 'name phone').populate('vehicle', 'brand model plate');
+
+        if (!booking) {
+            return res.status(404).json({ 
+                status: 'error', 
+                message: 'Lead no longer available or already claimed by another studio.' 
+            });
+        }
+
+        // Audit Log
+        const auditHelper = require('../../../utils/auditHelper');
+        await auditHelper.logAction({
+            userId: vendorId,
+            action: 'LEAD_ACCEPTED',
+            resource: 'Booking',
+            resourceId: booking._id,
+            newValue: { vendorId: vendorId, status: 'accepted' },
+            req
+        });
+
+        // Notify Consumer via Push/In-app
+        const { sendNotification } = require('../../../utils/notificationService');
+        await sendNotification(booking.consumer._id, {
+            title: 'Studio Found! 💎',
+            message: `A studio has accepted your request. They will assign a staff member for pickup soon.`,
+            type: 'booking',
+            priority: 'high'
+        });
+
+        // 💎 Real-time Socket Notification 💎
+        // Ensures the consumer app transitions from 'Searching' to 'Live Track' phase immediately.
+        try {
+            const io = socketService.getIO();
+            if (io) {
+                console.log(`[Socket] Notifying consumer ${booking.consumer._id} about accepted studio lead ${booking._id}`);
+                
+                // 1. Notify to specific booking room
+                io.to(booking._id.toString()).emit('booking_status_updated', {
+                    status: 'accepted',
+                    bookingId: booking._id,
+                    booking: booking
+                });
+                
+                // 2. Notify to consumer's personal room as fallback
+                io.to(booking.consumer._id.toString()).emit('booking_status_updated', {
+                    status: 'accepted',
+                    bookingId: booking._id,
+                    booking: booking
+                });
+            }
+        } catch (socketErr) {
+            console.error('[Socket Error] Failed to emit status update in acceptLead:', socketErr);
+        }
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Lead accepted successfully. It is now in your active orders.',
+            data: { order: booking }
+        });
+    } catch (error) {
+        console.error('Error accepting lead:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to claim lead' });
+    }
+};
+
 exports.getOrderById = async (req, res) => {
     try {
         const { orderId } = req.params;
         const vendorId = req.user._id;
 
-        const booking = await Booking.findOne({
-            _id: orderId,
+        // Support both MongoDB _id and custom bookingId (CW...)
+        const query = {
             'provider.id': vendorId,
             'provider.type': 'vendor'
-        })
+        };
+
+        if (mongoose.Types.ObjectId.isValid(orderId)) {
+            query._id = orderId;
+        } else {
+            query.bookingId = orderId;
+        }
+
+        const booking = await Booking.findOne(query)
             .populate('consumer', 'name phone profile')
-            .populate('vehicle', 'brand model plate')
-            .populate('pickupStaff', 'name phone profile')
-            .populate('deliveryStaff', 'name phone profile');
+            .populate('vehicle', 'brand model plate color type')
+            .populate('pickupStaff', 'name phone profile.photo')
+            .populate('deliveryStaff', 'name phone profile.photo');
 
         if (!booking) {
             return res.status(404).json({ status: 'error', message: 'Order not found' });
@@ -175,11 +309,18 @@ exports.updateOrderStatus = async (req, res) => {
         const { status, staffId, type, photos } = req.body; // type: 'pickup' or 'delivery'
         const vendorId = req.user._id;
 
-        const booking = await Booking.findOne({
-            _id: orderId,
+        const query = {
             'provider.id': vendorId,
             'provider.type': 'vendor'
-        });
+        };
+
+        if (mongoose.Types.ObjectId.isValid(orderId)) {
+            query._id = orderId;
+        } else {
+            query.bookingId = orderId;
+        }
+
+        const booking = await Booking.findOne(query);
 
         if (!booking) {
             return res.status(404).json({ status: 'error', message: 'Order not found or not assigned to you' });
@@ -307,6 +448,14 @@ exports.updateOrderStatus = async (req, res) => {
             bookingId: booking._id,
             status: booking.status,
             serviceImages: booking.serviceImages
+        });
+
+        // Notify Admin Room for real-time dashboard sync
+        io.to('admin_room').emit('global_status_update', {
+            type: 'status_changed',
+            bookingId: booking._id,
+            status: booking.status,
+            actor: 'vendor'
         });
 
         res.status(200).json({
@@ -949,15 +1098,27 @@ exports.assignStaff = async (req, res) => {
         const { orderId } = req.params;
         const { staffId, type } = req.body;
 
-        const targetBooking = await Booking.findById(orderId);
+        const query = {
+            'provider.id': req.user._id,
+            'provider.type': 'vendor'
+        };
+
+        if (mongoose.Types.ObjectId.isValid(orderId)) {
+            query._id = orderId;
+        } else {
+            query.bookingId = orderId;
+        }
+
+        const targetBooking = await Booking.findOne(query);
         if (targetBooking) {
+            const currentOrderId = targetBooking._id; // Use the actual ObjectId for conflict checks
             const buffer = 90 * 60000;
             const jobD = targetBooking.schedule?.date || new Date();
             const startW = new Date(jobD.getTime() - buffer);
             const endW = new Date(jobD.getTime() + buffer);
 
             const q = {
-                _id: { $ne: orderId },
+                _id: { $ne: currentOrderId },
                 isActive: true,
                 status: { $in: ['confirmed', 'assigned', 'pickup-assigned', 'en_route', 'at-studio', 'in_progress', 'washing', 'quality-check'] },
                 $or: [{ pickupStaff: staffId }, { deliveryStaff: staffId }, { assignedStaff: staffId }],
@@ -973,11 +1134,7 @@ exports.assignStaff = async (req, res) => {
         const updateField = type === 'pickup' ? 'pickupStaff' : (type === 'delivery' ? 'deliveryStaff' : 'assignedStaff');
 
         const booking = await Booking.findOneAndUpdate(
-            {
-                _id: orderId,
-                'provider.id': req.user._id,
-                'provider.type': 'vendor'
-            },
+            query,
             { [updateField]: staffId },
             { new: true }
         )
@@ -998,10 +1155,17 @@ exports.assignStaff = async (req, res) => {
         const io = socketService.getIO();
 
         // Auto-update status if staff is assigned for the first time
-        if (type === 'pickup' && booking.status === 'accepted') {
-            booking.status = 'pickup-assigned';
-            if (!booking.tracking) booking.tracking = {}; // Initialize tracking if it doesn't exist
+        if (type === 'pickup' && ['accepted', 'confirmed'].includes(booking.status)) {
+            const isInstant = booking.schedule?.type === 'instant';
+            booking.status = isInstant ? 'en_route' : 'pickup-assigned';
+            
+            if (!booking.tracking) booking.tracking = {};
             booking.tracking.assignedAt = new Date();
+            
+            if (isInstant) {
+                booking.tracking.startedAt = new Date(); // Start the mission clock for instant washes
+            }
+            
             await booking.save();
         }
 
@@ -1015,15 +1179,28 @@ exports.assignStaff = async (req, res) => {
             }
         });
 
+        // 2.5 Notify Admin Room for real-time dashboard sync
+        io.to('admin_room').emit('global_status_update', {
+            type: 'status_changed',
+            bookingId: booking._id,
+            status: booking.status,
+            actor: 'vendor'
+        });
+
         // 3. New: Direct Push to Staff Terminal
         const { sendStaffNotification } = require('../../../utils/notificationService');
         await sendStaffNotification(staffId, {
             title: `New Assignment: ${type.toUpperCase()}`,
-            message: `You've been assigned for ${type} of ${booking.vehicle?.brand} (C2W-${booking._id.toString().slice(-4)})`,
+            message: `Dispatch for ${booking.consumer?.name || 'Customer'}'s ${booking.vehicle?.brand || 'Vehicle'} (ID: ${booking._id.toString().slice(-6).toUpperCase()})`,
             type: 'order-assigned',
             priority: 'urgent',
             actionUrl: `/staff/tasks/${booking._id}`,
-            metaData: { bookingId: booking._id, type }
+            metaData: { 
+                bookingId: booking._id, 
+                type,
+                customer: booking.consumer?.name,
+                vehicle: `${booking.vehicle?.brand} ${booking.vehicle?.model}`
+            }
         });
 
         res.status(200).json({
@@ -1092,11 +1269,18 @@ exports.verifyBookingPin = async (req, res) => {
         const { pin } = req.body;
         const vendorId = req.user._id;
 
-        const booking = await Booking.findOne({
-            _id: orderId,
+        const query = {
             'provider.id': vendorId,
             'provider.type': 'vendor'
-        });
+        };
+
+        if (mongoose.Types.ObjectId.isValid(orderId)) {
+            query._id = orderId;
+        } else {
+            query.bookingId = orderId;
+        }
+
+        const booking = await Booking.findOne(query);
 
         if (!booking) {
             return res.status(404).json({ status: 'error', message: 'Order not found' });

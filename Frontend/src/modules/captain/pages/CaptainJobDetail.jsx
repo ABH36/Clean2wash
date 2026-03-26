@@ -137,7 +137,7 @@ const CaptainJobDetail = () => {
                             </div>
                         </div>
                         <div className="space-y-3 mb-12">
-                            <h2 className={`text-2xl font-black italic uppercase tracking-tighter ${isDarkMode ? 'text-white' : 'text-content'}`}>
+                            <h2 className={`text-2xl font-black uppercase tracking-tighter ${isDarkMode ? 'text-white' : 'text-content'}`}>
                                 {pendingRequest ? 'New Request Found!' : 'Captain Standby'}
                             </h2>
                             <div className="flex items-center justify-center gap-2">
@@ -157,7 +157,7 @@ const CaptainJobDetail = () => {
                                         </div>
                                         <div className="text-right">
                                             <p className={`${isDarkMode ? 'text-white/20' : 'text-content-subtle'} text-[9px] font-black uppercase tracking-widest mb-1`}>Payout</p>
-                                            <p className={`font-black text-xl italic ${isDarkMode ? 'text-white' : 'text-content'}`}>{pendingRequest.price}</p>
+                                            <p className={`font-black text-xl ${isDarkMode ? 'text-white' : 'text-content'}`}>{pendingRequest.price}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3 mb-6">
@@ -322,7 +322,7 @@ const CaptainJobDetail = () => {
                     <MapContainer
                         center={liveBooking.location?.mapCoordinates ? [liveBooking.location.mapCoordinates.lat, liveBooking.location.mapCoordinates.lng] :
                             liveBooking.location?.coordinates?.lat ? [liveBooking.location.coordinates.lat, liveBooking.location.coordinates.lng] :
-                                [12.9716, 77.5946]}
+                                [28.6139, 77.2090]}
                         zoom={15}
                         style={{ height: '100%', width: '100%' }}
                         zoomControl={false}
@@ -333,7 +333,7 @@ const CaptainJobDetail = () => {
                         />
                         <Marker position={liveBooking.location?.mapCoordinates ? [liveBooking.location.mapCoordinates.lat, liveBooking.location.mapCoordinates.lng] :
                             liveBooking.location?.coordinates?.lat ? [liveBooking.location.coordinates.lat, liveBooking.location.coordinates.lng] :
-                                [12.9716, 77.5946]}>
+                                [28.6139, 77.2090]}>
                             <Popup>
                                 <div className="text-[10px] font-bold">Customer Location</div>
                             </Popup>
@@ -362,6 +362,37 @@ const CaptainJobDetail = () => {
                         )}
                     </div>
                 </div>
+
+                {liveBooking.location?.parkingDetails && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: 10 }} 
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`rounded-2xl border px-4 py-4 transition-all duration-500 ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl' : 'bg-brand/5 border-brand/10 shadow-soft'}`}
+                    >
+                        <div className="flex items-center gap-2 mb-3">
+                            <Car size={14} className="text-brand" />
+                            <h4 className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-content'}`}>Parking Logistics</h4>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-0.5">
+                                <p className={`text-[8px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-content-subtle font-sans opacity-50'}`}>Basement</p>
+                                <p className={`font-black text-[13px] uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>{liveBooking.location.parkingDetails.basement || '—'}</p>
+                            </div>
+                            <div className="space-y-0.5">
+                                <p className={`text-[8px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-content-subtle font-sans opacity-50'}`}>Block</p>
+                                <p className={`font-black text-[13px] uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>{liveBooking.location.parkingDetails.block || '—'}</p>
+                            </div>
+                            <div className="space-y-0.5">
+                                <p className={`text-[8px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-content-subtle font-sans opacity-50'}`}>Pillar No.</p>
+                                <p className={`font-black text-[13px] uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>{liveBooking.location.parkingDetails.pillar || '—'}</p>
+                            </div>
+                            <div className="space-y-0.5">
+                                <p className={`text-[8px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-content-subtle font-sans opacity-50'}`}>Slot No.</p>
+                                <p className={`font-black text-[13px] uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>{liveBooking.location.parkingDetails.slotNumber || '—'}</p>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
 
                 <div className={`rounded-2xl border px-4 py-4 transition-all duration-500 ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl' : 'bg-white border-gray-100 shadow-soft'}`}>
                     <div className="flex items-center justify-between mb-3">
@@ -522,7 +553,7 @@ const CaptainJobDetail = () => {
                 >
                     <div className="flex flex-col items-start">
                         <span className="text-white/60 text-[8px] font-black uppercase tracking-widest">{cfg.label}</span>
-                        <span className="text-white font-black text-sm uppercase italic tracking-wider">{cfg.cta}</span>
+                        <span className="text-white font-black text-sm uppercase tracking-wider">{cfg.cta}</span>
                     </div>
                     {isVerifying ? (
                         <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />

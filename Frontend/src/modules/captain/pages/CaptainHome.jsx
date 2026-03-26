@@ -205,14 +205,14 @@ const CaptainHome = () => {
 
     // Function to get initial coordinates based on user city
     const getInitialCoords = () => {
-        if (!userCity) return [12.9716, 77.5946]; // Default to Bangalore if nothing else
+        if (!userCity) return [28.6139, 77.2090]; // Default fallback if nothing else
 
         // Find match in our coordinates map
         const matched = Object.keys(CITY_COORDINATES).find(
             c => c.toLowerCase() === userCity.toLowerCase()
         );
 
-        return matched ? CITY_COORDINATES[matched] : [12.9716, 77.5946];
+        return matched ? CITY_COORDINATES[matched] : [28.6139, 77.2090];
     };
 
     // Dynamic Stats from backend
@@ -480,7 +480,7 @@ const CaptainHome = () => {
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex-1">
                         <p className={`${isDarkMode ? 'text-white/40' : 'text-content-subtle'} text-[9px] font-black uppercase tracking-widest`}>Captain App</p>
-                        <h1 className={`${isDarkMode ? 'text-white' : 'text-content'} text-xl font-black tracking-tight mt-0.5 italic`}>{getGreeting()}, {(user?.name || 'Captain').split(' ')[0]} 👋</h1>
+                        <h1 className={`${isDarkMode ? 'text-white' : 'text-content'} text-xl font-black tracking-tight mt-0.5`}>{getGreeting()}, {(user?.name || 'Captain').split(' ')[0]} 👋</h1>
                         <LocationIndicator variant={isDarkMode ? 'dark' : 'light'} className="mt-3 !py-1 !px-2 shadow-none border-none bg-transparent" />
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -659,7 +659,7 @@ const CaptainHome = () => {
                                         <Clock size={20} className="text-white" />
                                     </div>
                                     <div>
-                                        <h4 className={`text-sm font-black italic uppercase italic tracking-tighter ${isDarkMode ? 'text-white' : 'text-content'}`}>High Priority Slot</h4>
+                                        <h4 className={`text-sm font-black uppercase tracking-tighter ${isDarkMode ? 'text-white' : 'text-content'}`}>High Priority Slot</h4>
                                         <p className="text-brand text-[9px] font-black uppercase tracking-widest leading-none">Confim Attendance Now</p>
                                     </div>
                                 </div>
@@ -670,7 +670,7 @@ const CaptainHome = () => {
 
                             <div className={`p-4 rounded-2xl mb-4 border transition-all ${isDarkMode ? 'bg-black/20 border-white/5 shadow-inner' : 'bg-gray-50 border-gray-100'}`}>
                                 <div className="flex justify-between items-start mb-2">
-                                    <h3 className={`font-black text-base italic leading-none ${isDarkMode ? 'text-white' : 'text-content'}`}>{needsCommitment.serviceName}</h3>
+                                    <h3 className={`font-black text-base leading-none ${isDarkMode ? 'text-white' : 'text-content'}`}>{needsCommitment.serviceName}</h3>
                                     <p className="font-black text-sm text-brand">{needsCommitment.price}</p>
                                 </div>
                                 <div className="flex items-center gap-1.5 min-w-0">
@@ -700,7 +700,7 @@ const CaptainHome = () => {
                     <section className="space-y-3">
                         <div className="flex items-center justify-between px-1">
                             <p className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Available Product Gigs</p>
-                            <div className="flex items-center gap-1.5 text-[9px] font-black text-brand italic">
+                            <div className="flex items-center gap-1.5 text-[9px] font-black text-brand">
                                 Flash Gig <Zap size={10} className="fill-brand" />
                             </div>
                         </div>
@@ -844,7 +844,7 @@ const CaptainHome = () => {
                                                     <span className="text-brand font-black text-[9px] uppercase tracking-tighter">Instant Wash</span>
                                                 </div>
                                                 <div className="px-2 py-0.5 bg-black/5 rounded-md">
-                                                    <span className="text-black/40 font-black text-[9px] uppercase tracking-tighter italic">
+                                                    <span className="text-black/40 font-black text-[9px] uppercase tracking-tighter">
                                                         {getJobDistance(pendingRequests[0]) || 'Nearby'}
                                                     </span>
                                                 </div>
@@ -859,7 +859,7 @@ const CaptainHome = () => {
                                         </div>
                                         <div className="text-right">
                                             <p className="text-[10px] font-black text-black/20 uppercase tracking-widest mb-1">Your Earnings</p>
-                                            <p className="text-3xl font-[1000] text-black tracking-tighter italic tabular-nums leading-none">
+                                            <p className="text-3xl font-[1000] text-black tracking-tighter tabular-nums leading-none">
                                                 {pendingRequests[0].price}
                                             </p>
                                         </div>
@@ -945,7 +945,7 @@ const CaptainHome = () => {
                     <section className="space-y-3">
                         <div className="flex items-center justify-between px-1">
                             <p className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Daily Mission Timeline</p>
-                            <div className="flex items-center gap-1.5 text-[9px] font-black text-brand italic">
+                            <div className="flex items-center gap-1.5 text-[9px] font-black text-brand">
                                 Protocols Active <Shield size={10} className="fill-brand" />
                             </div>
                         </div>
@@ -965,7 +965,7 @@ const CaptainHome = () => {
                                             <div className="flex justify-between items-start">
                                                 <div className="flex-1 pr-2">
                                                     <div className="flex items-center gap-2 mb-1">
-                                                        <h4 className={`text-xs font-black italic tracking-tighter uppercase leading-none ${isDarkMode ? 'text-white' : 'text-content'}`}>
+                                                        <h4 className={`text-xs font-black tracking-tighter uppercase leading-none ${isDarkMode ? 'text-white' : 'text-content'}`}>
                                                             {job.serviceName}
                                                         </h4>
                                                         {job.schedule?.type === 'scheduled' && (
@@ -1024,7 +1024,7 @@ const CaptainHome = () => {
                             </div>
                         )) : (
                             <div className="px-4 py-10 text-center opacity-40">
-                                <p className={`text-[10px] font-black uppercase tracking-widest italic ${isDarkMode ? 'text-white' : 'text-content'}`}>No jobs completed today</p>
+                                <p className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-content'}`}>No jobs completed today</p>
                             </div>
                         )}
                     </div>

@@ -355,7 +355,12 @@ class ApiClient {
         });
     }
 
+    async getLiveMissions() {
+        return this.request('/products/live-missions');
+    }
+
     async get(endpoint, options = {}) {
+
         return this.request(endpoint, { ...options, method: 'GET' });
     }
 
@@ -399,6 +404,11 @@ export const adminAPI = {
     createPlan: (data) => apiClient.createPlan(data),
     updatePlan: (id, data) => apiClient.updatePlan(id, data),
     deletePlan: (id) => apiClient.deletePlan(id),
+    // User Subscriptions (Active Instances)
+    getSubscriptions: (params = {}) => {
+        const query = new URLSearchParams(params).toString();
+        return apiClient.request(`/subscriptions${query ? `?${query}` : ''}`);
+    },
     // Services
     getServices: (category) => apiClient.getServices(category),
     createService: (data) => apiClient.createService(data),
@@ -442,7 +452,9 @@ export const adminAPI = {
     // Global Product Stats
     getProductStats: () => apiClient.getProductStats(),
     getMasterInventory: () => apiClient.getMasterInventory(),
+    getLiveMissions: () => apiClient.getLiveMissions(),
     resolveProductDispute: (data) => apiClient.resolveProductDispute(data),
+
 
     // Notifications
     getNotifications: (params) => {

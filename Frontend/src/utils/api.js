@@ -623,6 +623,7 @@ export const subscriptionAPI = {
     cancelSubscription: () => apiClient.cancelSubscription(),
     pauseSubscription: () => apiClient.pauseSubscription(),
     resumeSubscription: () => apiClient.resumeSubscription(),
+    useSubscriptionCredit: () => apiClient.post('/subscription/use-credit', {}),
 };
 
 export const vehicleAPI = {
@@ -650,6 +651,7 @@ export const productAPI = {
         method: 'POST',
         body: JSON.stringify(data)
     }),
+    getTrendingProducts: () => apiClient.request('/products/trending'),
     getProductReviews: (productId) => apiClient.request(`/products/${productId}/reviews`),
 };
 

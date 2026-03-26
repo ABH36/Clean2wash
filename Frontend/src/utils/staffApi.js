@@ -145,7 +145,10 @@ export const staffAPI = {
     getTasks: () => apiClient.getTasks(),
     getTaskById: (id) => apiClient.getTaskById(id),
     uploadProof: (images, type) => apiClient.uploadProof(images, type),
-    updateTaskStatus: (id, data) => apiClient.updateTaskStatus(id, data),
+    updateTaskStatus: (id, data) => apiClient.request(`/tasks/${id}/status`, {
+        method: 'PATCH',
+        body: data, // Spread the full payload (status, pin, photos)
+    }),
     commitToSlot: (id) => apiClient.request(`/tasks/${id}/commit`, { method: 'POST' }),
     getNotifications: () => apiClient.getNotifications(),
     toggleAvailability: () => apiClient.toggleAvailability(),

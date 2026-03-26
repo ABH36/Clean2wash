@@ -38,7 +38,7 @@ const VendorSignup = () => {
 
     const handleSendOTP = async (e) => {
         e.preventDefault();
-        
+
         // 1. Validation
         if (formData.password !== formData.confirmPassword) {
             return toast.error('Passcodes do not match!');
@@ -102,7 +102,7 @@ const VendorSignup = () => {
                         <div className="absolute inset-0 bg-brand/10 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
                         <Building2 size={32} className="relative z-10" />
                     </div>
-                    <h1 className="text-3xl font-[1000] text-content italic tracking-tighter uppercase leading-none">Partner <br /><span className="text-brand">Signup</span></h1>
+                    <h1 className="text-3xl font-[1000] text-content tracking-tighter uppercase leading-none">Partner <br /><span className="text-brand">Signup</span></h1>
                     <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em] mt-3">Elite Hub Onboarding</p>
                 </div>
 
@@ -172,7 +172,7 @@ const VendorSignup = () => {
 
                             {/* ID Verification Section */}
                             <div className="space-y-3 pt-2">
-                                <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic flex items-center gap-2 px-1">
+                                <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest flex items-center gap-2 px-1">
                                     <FileText size={14} /> Identity Document (KYC)
                                 </label>
                                 <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-100/10 rounded-[2rem] hover:border-brand/50 hover:bg-brand/5 cursor-pointer bg-background transition-all group shadow-sm">
@@ -206,9 +206,9 @@ const VendorSignup = () => {
                             </div>
 
                             <label className="flex items-start gap-3 cursor-pointer group px-1">
-                                <input 
-                                    type="checkbox" 
-                                    className="mt-1 w-4 h-4 rounded border-gray-200 text-brand focus:ring-brand" 
+                                <input
+                                    type="checkbox"
+                                    className="mt-1 w-4 h-4 rounded border-gray-200 text-brand focus:ring-brand"
                                     checked={formData.agreeToTerms}
                                     onChange={e => setFormData({ ...formData, agreeToTerms: e.target.checked })}
                                 />
@@ -229,10 +229,10 @@ const VendorSignup = () => {
                             </button>
                         </form>
                     ) : (
-                        <motion.form 
+                        <motion.form
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
-                            onSubmit={handleFinalSignup} 
+                            onSubmit={handleFinalSignup}
                             className="space-y-8 py-4"
                         >
                             <div className="text-center space-y-2">
@@ -274,7 +274,7 @@ const VendorSignup = () => {
                     <div className="mt-8 text-center">
                         <p className="text-[11px] font-bold text-content-subtle uppercase tracking-widest">
                             Already a Partner?{' '}
-                            <Link to="/vendor/login" className="text-brand font-black italic">LOGIN HERE</Link>
+                            <Link to="/vendor/login" className="text-brand font-black">LOGIN HERE</Link>
                         </p>
                     </div>
                 </div>
@@ -292,7 +292,7 @@ const VendorSignup = () => {
 
 const InputField = ({ label, icon, ...props }) => (
     <div className="space-y-1.5">
-        <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic flex items-center gap-2 px-1">
+        <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest flex items-center gap-2 px-1">
             {icon} {label}
         </label>
         <input

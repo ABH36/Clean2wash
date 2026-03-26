@@ -1,4 +1,5 @@
 const SubscriptionPlan = require('../../../models/SubscriptionPlan');
+const Subscription = require('../../../models/Subscription');
 
 // Get all subscription plans
 exports.getPlans = async (req, res) => {
@@ -11,6 +12,32 @@ exports.getPlans = async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });
+    }
+};
+
+// Get all user subscriptions (Active/Expired) - New for Admin Visibility
+exports.getAllSubscriptions = async (req, res) => {
+    try {
+        const { status, hubId } = req.query;
+        const query = {};
+        
+        if (status) query.status = status;
+        if (hubId) query.hub = hubId;
+
+        const subscriptions = await Subscription.find(query)
+            .populate('user', 'name email phone profile')
+            .populate('vehicle', 'brand model plate type')
+            .populate('hub', 'name city location')
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            status: 'success',
+            results: subscriptions.length,
+            data: { subscriptions }
+        });
+    } catch (error) {
+        console.error('Error fetching subscriptions for admin:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to fetch subscriptions' });
     }
 };
 

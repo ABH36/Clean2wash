@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Calendar, ChevronRight, Filter, Search
+    Calendar, ChevronRight, Filter, Search, ArrowRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import VendorLayout from '../components/VendorLayout';
@@ -149,88 +149,94 @@ const VendorOrders = () => {
                 </div>
 
                 {/* Desktop Table View */}
-                <div className="hidden md:block bg-surface rounded-2xl border border-gray-100/10 shadow-sm overflow-hidden transition-colors">
-                    <table className="w-full text-left">
-                        <thead className="bg-background border-b border-gray-100/10 text-[10px] font-black uppercase tracking-widest text-content-subtle">
-                            <tr>
-                                <th className="px-6 py-4">Order ID</th>
-                                <th className="px-6 py-4">Customer</th>
-                                <th className="px-6 py-4">{viewMode === 'services' ? 'Car & Service' : 'Products'}</th>
-                                <th className="px-6 py-4">{viewMode === 'services' ? 'Scheduled' : 'Date'}</th>
-                                <th className="px-6 py-4">Amount</th>
-                                <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4 text-right">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100/5">
-                            {loading && (
+                <div className="hidden md:block bg-surface rounded-[2.5rem] border border-gray-100/10 shadow-soft overflow-hidden transition-colors">
+                    <div className="admin-table-container">
+                        <table className="w-full text-left">
+                            <thead className="bg-gray-50/5 border-b border-gray-100/10">
                                 <tr>
-                                    <td colSpan="7" className="px-6 py-20 text-center">
-                                        <div className="w-8 h-8 mx-auto border-4 border-brand/30 border-t-brand rounded-full animate-spin" />
-                                        <p className="text-[10px] mt-4 font-black text-content-subtle uppercase italic">Loading Orders...</p>
-                                    </td>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-content-subtle">Registry ID</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-content-subtle">Customer Profile</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-content-subtle">{viewMode === 'services' ? 'Command & Ops' : 'Tactical Units'}</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-content-subtle">{viewMode === 'services' ? 'Scheduled' : 'Registry Date'}</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-content-subtle">Total Sum</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-content-subtle">Status</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-content-subtle text-right">Dispatch</th>
                                 </tr>
-                            )}
-                            {!loading && filteredOrders.length === 0 && (
-                                <tr>
-                                    <td colSpan="7" className="px-6 py-20 text-center text-[10px] font-black uppercase tracking-widest text-content-subtle italic bg-surface-hover/30">
-                                        No Orders in {activeTab} Tab
-                                    </td>
-                                </tr>
-                            )}
-                            {!loading && filteredOrders.map(order => (
-                                <tr
-                                    key={order.id}
-                                    onClick={() => navigate(viewMode === 'services' ? `/vendor/order/${order.id}` : `/vendor/product-order/${order.id}`)}
-                                    className="hover:bg-background/50 transition-colors cursor-pointer group"
-                                >
-                                    <td className="px-6 py-4">
-                                        <span className="text-xs font-black text-brand tracking-wider">{order.id.substring(0, 8)}</span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex flex-col">
-                                            <span className="text-sm font-black text-content tracking-tight">{order.customer}</span>
-                                            <span className="text-[10px] font-bold text-content-subtle">{order.location}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex flex-col">
-                                            {viewMode === 'services' ? (
-                                                <>
-                                                    <span className="text-xs font-black text-content">{order.car}</span>
-                                                    <span className="text-[10px] font-black text-brand uppercase tracking-tight">{order.type}</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <span className="text-xs font-black text-content truncate max-w-[200px]">{order.type}</span>
-                                                    <span className="text-[10px] font-black text-brand uppercase tracking-tight">{order.itemsCount} Items</span>
-                                                </>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2">
-                                            <Calendar size={13} className="text-content-subtle" />
-                                            <span className="text-xs font-bold text-content">{order.date}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className="text-sm font-black text-green-500 tracking-tight">{order.amount}</span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className={`w-fit px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${order.status === 'COMPLETED' || order.status === 'DELIVERED' ? 'bg-green-500/10 text-green-500' :
-                                            order.status === 'CANCELLED' ? 'bg-red-500/10 text-red-500' : 'bg-blue-500/10 text-blue-500'
-                                            }`}>
-                                            {order.status}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <ChevronRight size={16} className="inline text-content-subtle group-hover:text-brand transition-colors" />
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100/5">
+                                {loading && (
+                                    <tr>
+                                        <td colSpan="7" className="px-6 py-24 text-center">
+                                            <div className="flex flex-col items-center gap-4">
+                                                <div className="w-10 h-10 border-4 border-brand/20 border-t-brand rounded-full animate-spin shadow-lg shadow-brand/20" />
+                                                <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em]">Accessing Encrypted Registry...</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                                {!loading && filteredOrders.length === 0 && (
+                                    <tr>
+                                        <td colSpan="7" className="px-6 py-24 text-center text-[10px] font-black uppercase tracking-[0.3em] text-content-subtle bg-surface-hover/10">
+                                            No tactical data in {activeTab} sector
+                                        </td>
+                                    </tr>
+                                )}
+                                {!loading && filteredOrders.map(order => (
+                                    <tr
+                                        key={order.id}
+                                        onClick={() => navigate(viewMode === 'services' ? `/vendor/order/${order.id}` : `/vendor/product-order/${order.id}`)}
+                                        className="hover:bg-gray-50/5 transition-all cursor-pointer group active:scale-[0.995]"
+                                    >
+                                        <td className="px-6 py-5">
+                                            <span className="text-[11px] font-black text-brand tracking-[0.15em] uppercase">#{order.id.substring(0, 8)}</span>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-black text-content tracking-tight uppercase leading-none mb-1">{order.customer}</span>
+                                                <span className="text-[10px] font-bold text-content-subtle uppercase tracking-tight opacity-60">{order.location}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="flex flex-col">
+                                                {viewMode === 'services' ? (
+                                                    <>
+                                                        <span className="text-xs font-black text-content tracking-tight uppercase mb-0.5">{order.car}</span>
+                                                        <span className="text-[9px] font-black text-brand uppercase tracking-widest leading-none">{order.type}</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span className="text-xs font-black text-content truncate max-w-[180px] tracking-tight uppercase mb-0.5">{order.type}</span>
+                                                        <span className="text-[9px] font-black text-brand uppercase tracking-widest leading-none">{order.itemsCount} Tactical Items</span>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center gap-2">
+                                                <Calendar size={12} className="text-content-subtle opacity-40" />
+                                                <span className="text-[11px] font-black text-content uppercase tracking-tight">{order.date}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <span className="text-sm font-black text-content tracking-tight">{order.amount}</span>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className={`w-fit px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-[0.2em] shadow-sm ${order.status === 'COMPLETED' || order.status === 'DELIVERED' ? 'bg-green-500/10 text-green-500' :
+                                                order.status === 'CANCELLED' ? 'bg-red-500/10 text-red-500' : 'bg-blue-500/10 text-blue-500'
+                                                }`}>
+                                                {order.status}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5 text-right">
+                                            <div className="w-9 h-9 ml-auto rounded-2xl bg-gray-50/5 flex items-center justify-center text-content-subtle group-hover:bg-brand group-hover:text-white transition-all shadow-sm">
+                                                <ArrowRight size={14} />
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 {/* Mobile Card View */}
@@ -243,7 +249,7 @@ const VendorOrders = () => {
                         <>
                             {filteredOrders.length === 0 && (
                                 <div className="bg-surface p-10 rounded-2xl border border-gray-100/10 flex justify-center text-center">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-content-subtle italic">No Orders in {activeTab} Tab</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-content-subtle">No Orders in {activeTab} Tab</p>
                                 </div>
                             )}
                             {filteredOrders.map(order => (

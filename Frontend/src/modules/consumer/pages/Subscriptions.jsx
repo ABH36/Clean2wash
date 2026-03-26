@@ -9,7 +9,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import MobileLayout from '../components/layout/MobileLayout';
 import { useAuth } from '../../../context/AuthContext';
-import api, { serviceAPI } from '../../../utils/api';
+import api, { serviceAPI, subscriptionAPI } from '../../../utils/api';
 import { toast } from 'react-hot-toast';
 
 const Subscriptions = () => {
@@ -50,18 +50,24 @@ const Subscriptions = () => {
         }
     }, [userSubscription, flow]);
 
-    // Dashboard Info — Use a wash credit (log to backend in future)
-    const handleDeductWash = () => {
+    // Dashboard Info — Use a wash credit via real API
+    const handleDeductWash = async () => {
         if (!userSubscription || userSubscription.status !== 'active') return;
-        const washesLeft = userSubscription.washesLeft ?? 0;
-        if (washesLeft <= 0) {
-            setError('No washes left! Please renew or upgrade.');
-            return;
+        
+        setIsProcessing(true);
+        setError(null);
+        try {
+            const res = await subscriptionAPI.useSubscriptionCredit();
+            if (res.status === 'success') {
+                setUserSubscription(res.data.subscription);
+                toast.success('Credit used successfully!');
+            }
+        } catch (err) {
+            setError(err.message || 'Failed to use credit.');
+            toast.error('Credit usage failed');
+        } finally {
+            setIsProcessing(false);
         }
-        setUserSubscription({
-            ...userSubscription,
-            washesLeft: washesLeft - 1
-        });
     };
 
     // Pause or Resume subscription via real API
@@ -69,7 +75,6 @@ const Subscriptions = () => {
         setIsProcessing(true);
         setError(null);
         try {
-            const { subscriptionAPI } = await import('../../../utils/api');
             let res;
             if (userSubscription.status === 'active') {
                 res = await subscriptionAPI.pauseSubscription();
@@ -204,7 +209,6 @@ const Subscriptions = () => {
                             setIsProcessing(true);
                             setError(null);
                             try {
-                                const { subscriptionAPI } = await import('../../../utils/api');
                                 await subscriptionAPI.cancelSubscription();
                                 setUserSubscription(null);
                                 setFlow('SELECT_PLAN');

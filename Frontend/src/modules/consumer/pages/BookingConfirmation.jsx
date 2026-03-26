@@ -14,8 +14,8 @@ import VerifiedBadge from '../components/ui/VerifiedBadge';
 const BookingConfirmation = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { bookingId, provider, type, plan, society } = location.state || {};
-    const [loading, setLoading] = useState(!!bookingId);
+    const { bookingId, provider, type, plan, society, parking, slot } = location.state || {};
+    const [loading, setLoading] = useState(!!bookingId && type !== 'subscription');
 
     // Standard Job State Machine (as per document)
     const JOB_STATES = {
@@ -41,7 +41,7 @@ const BookingConfirmation = () => {
         type: type || 'scheduled',
         status: type === 'subscription' ? 'ACTIVE' : JOB_STATES.ASSIGNED, // Using proper job state machine
         timestamp: new Date().toISOString(),
-        location: type === 'subscription' ? society : '123, Sector 15, Gurgaon, Haryana 122001',
+        location: type === 'subscription' ? (society || 'Your Apartment') : '123, Sector 15, Gurgaon, Haryana 122001',
         coordinates: { lat: 28.4526, lng: 77.0345 }, // GPS coordinates for tracking
         provider: provider || 'vendor',
         scheduledDate: 'Monthly',
@@ -161,17 +161,18 @@ const BookingConfirmation = () => {
 
     // Apartment Module Data
     const apartmentData = {
-        societyId: 'SOC001',
-        societyName: 'Green Valley Apartments',
-        totalResidents: 150,
+        societyId: 'SOC' + (society?.substring(0, 3)?.toUpperCase() || '001'),
+        societyName: society || 'Green Valley Apartments',
+        totalResidents: 150, // This could be dynamic later
         activeResidents: 89,
         routeClustering: true,
-        dedicatedSlots: ['9AM-11AM', '2PM-4PM'],
+        dedicatedSlots: slot ? [slot] : ['9AM-11AM', '2PM-4PM'],
         demandHeatmap: {
             morning: 45,
             afternoon: 32,
             evening: 12
-        }
+        },
+        parking: parking || {}
     };
 
     // Route & Cluster Optimization
@@ -842,6 +843,12 @@ const BookingConfirmation = () => {
                                         </div>
                                     </div>
                                     <div className="space-y-2">
+                                        <div className="flex items-center justify-between py-2 border-b border-gray-50">
+                                            <span className="text-[9px] font-semibold text-content-subtle">Parking Spot</span>
+                                            <span className="text-[8px] font-black text-brand">
+                                                {apartmentData.parking.basement} â€¢ {apartmentData.parking.block} â€¢ P-{apartmentData.parking.pillar}
+                                            </span>
+                                        </div>
                                         <div className="flex items-center justify-between py-2 border-b border-gray-50">
                                             <span className="text-[9px] font-semibold text-content-subtle">Route Clustering</span>
                                             <span className={`text-[8px] font-black ${apartmentData.routeClustering ? 'text-green-600' : 'text-red-600'}`}>

@@ -26,8 +26,16 @@ const promotionSchema = new mongoose.Schema({
         type: String, // Percentage, Flat, Freebie
         enum: ['Percentage', 'Flat', 'Freebie']
     },
-    val: String, // "50%", "₹100", etc.
-    expiry: String, // simplified to match frontend date string
+    val: {
+        type: Number, // Numeric value without symbols
+        required: true
+    },
+    valUnit: {
+        type: String,
+        enum: ['PERCENT', 'FLAT'],
+        default: 'FLAT'
+    },
+    expiry: Date,
 
     // Referral specific
     name: String,

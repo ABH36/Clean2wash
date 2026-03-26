@@ -123,3 +123,19 @@ exports.getEshopMetadata = catchAsync(async (req, res, next) => {
         }
     });
 });
+
+/**
+ * @desc    Get trending products (based on salesCount and ratings)
+ * @route   GET /api/consumer/products/trending
+ */
+exports.getTrendingProducts = catchAsync(async (req, res, next) => {
+    const products = await Product.find({ status: 'Approved' })
+        .sort('-salesCount -ratingsAverage')
+        .limit(8);
+
+    res.status(200).json({
+        status: 'success',
+        data: { products }
+    });
+});
+

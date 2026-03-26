@@ -36,14 +36,14 @@ const StaffSecurity = () => {
                         <div className="absolute inset-0 bg-brand/5 blur-xl group-hover:scale-150 transition-transform" />
                     </div>
                     <div className="text-center mb-4">
-                        <h2 className={`text-2xl font-black italic leading-none mb-3 uppercase tracking-tighter ${isDarkMode ? 'text-white' : 'text-content'}`}>Access Protocol</h2>
+                        <h2 className={`text-2xl font-black leading-none mb-3 uppercase tracking-tighter ${isDarkMode ? 'text-white' : 'text-content'}`}>Access Protocol</h2>
                         <p className={`text-[10px] font-bold uppercase tracking-[0.2em] ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Maintain secure terminal entry</p>
                     </div>
                 </div>
 
                 <form onSubmit={handleUpdate} className="space-y-5">
                     <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} p-6 rounded-[2.5rem] border focus-within:border-brand/40 transition-all group`}>
-                        <p className={`text-[8px] font-black uppercase tracking-widest mb-3 italic group-focus-within:text-brand transition-colors ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Current 4-Digit Pin</p>
+                        <p className={`text-[8px] font-black uppercase tracking-widest mb-3 group-focus-within:text-brand transition-colors ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Current 4-Digit Pin</p>
                         <div className="flex items-center gap-4">
                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 text-white/40 group-focus-within:bg-brand group-focus-within:text-white' : 'bg-gray-50 text-content-subtle group-focus-within:bg-brand group-focus-within:text-white'}`}>
                                 <Lock size={18} />
@@ -60,7 +60,7 @@ const StaffSecurity = () => {
                     </div>
 
                     <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} p-6 rounded-[2.5rem] border focus-within:border-brand/40 transition-all group`}>
-                        <p className={`text-[8px] font-black uppercase tracking-widest mb-3 italic group-focus-within:text-brand transition-colors ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>New 4-Digit Pin</p>
+                        <p className={`text-[8px] font-black uppercase tracking-widest mb-3 group-focus-within:text-brand transition-colors ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>New 4-Digit Pin</p>
                         <div className="flex items-center gap-4">
                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 text-white/40 group-focus-within:bg-brand group-focus-within:text-white' : 'bg-gray-50 text-content-subtle group-focus-within:bg-brand group-focus-within:text-white'}`}>
                                 <KeyRound size={18} />
@@ -77,7 +77,7 @@ const StaffSecurity = () => {
                     </div>
 
                     <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} p-6 rounded-[2.5rem] border focus-within:border-brand/40 transition-all group`}>
-                        <p className={`text-[8px] font-black uppercase tracking-widest mb-3 italic group-focus-within:text-brand transition-colors ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Verify Protocol</p>
+                        <p className={`text-[8px] font-black uppercase tracking-widest mb-3 group-focus-within:text-brand transition-colors ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Verify Protocol</p>
                         <div className="flex items-center gap-4">
                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 text-white/40 group-focus-within:bg-brand group-focus-within:text-white' : 'bg-gray-50 text-content-subtle group-focus-within:bg-brand group-focus-within:text-white'}`}>
                                 <KeyRound size={18} />
@@ -95,7 +95,7 @@ const StaffSecurity = () => {
 
                     <div className={`p-6 rounded-[2rem] flex items-start gap-4 mt-6 border transition-all ${isDarkMode ? 'bg-amber-500/5 border-amber-500/10' : 'bg-amber-50/50 border-amber-100/30'}`}>
                         <AlertCircle size={20} className="text-amber-500 flex-shrink-0 mt-0.5" />
-                        <p className={`text-[9px] font-bold uppercase leading-[1.8] tracking-wider italic ${isDarkMode ? 'text-amber-200/50' : 'text-amber-700'}`}>
+                        <p className={`text-[9px] font-bold uppercase leading-[1.8] tracking-wider ${isDarkMode ? 'text-amber-200/50' : 'text-amber-700'}`}>
                             Never share your CarWash Access Pin. Hub managers will never request authentication keys via insecure channels.
                         </p>
                     </div>

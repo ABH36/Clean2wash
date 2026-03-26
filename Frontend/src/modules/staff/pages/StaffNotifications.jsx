@@ -49,7 +49,7 @@ const StaffNotifications = () => {
         <StaffLayout title="Alert Stream" subtitle="Communication Node">
             <div className="space-y-6">
                 <div className="flex items-center justify-between px-2">
-                    <p className={`text-[10px] font-black uppercase tracking-[0.2em] italic ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Operational Feed</p>
+                    <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Operational Feed</p>
                     <button className="text-[9px] font-black text-brand uppercase tracking-widest border-b border-brand/20 transition-all hover:border-brand">Mark read</button>
                 </div>
 
@@ -70,13 +70,13 @@ const StaffNotifications = () => {
                             </div>
                             <div className="flex-1">
                                 <div className="flex items-center justify-between mb-1.5">
-                                    <h3 className={`text-sm font-black italic leading-none uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>{notif.title}</h3>
+                                    <h3 className={`text-sm font-black leading-none uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>{notif.title}</h3>
                                     {!notif.read && <div className="w-2.5 h-2.5 bg-brand rounded-full shadow-lg shadow-brand/40 animate-pulse" />}
                                 </div>
                                 <p className={`text-[10px] font-bold leading-relaxed mb-3 uppercase tracking-widest ${isDarkMode ? 'text-white/40' : 'text-content-subtle'}`}>
                                     {notif.desc}
                                 </p>
-                                <div className={`flex items-center gap-2 text-[9px] font-black uppercase italic opacity-60 ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>
+                                <div className={`flex items-center gap-2 text-[9px] font-black uppercase opacity-60 ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>
                                     <Clock size={10} /> {notif.time}
                                 </div>
                             </div>

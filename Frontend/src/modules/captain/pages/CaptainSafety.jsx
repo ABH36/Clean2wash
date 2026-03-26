@@ -37,7 +37,7 @@ const CaptainSafety = () => {
                         <button onClick={() => navigate(-1)} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isDarkMode ? 'bg-white/10 text-white' : 'bg-white border border-gray-100 shadow-sm text-content'}`}>
                             <ArrowLeft size={20} />
                         </button>
-                        <h1 className={`text-xl font-black italic tracking-tight uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>Safety & Trust</h1>
+                        <h1 className={`text-xl font-black tracking-tight uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>Safety & Trust</h1>
                     </div>
                 </div>
 
@@ -53,9 +53,9 @@ const CaptainSafety = () => {
                                 <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md">
                                     <ShieldCheck size={28} />
                                 </div>
-                                <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-lg italic ${isDarkMode ? 'bg-white text-brand' : 'bg-[#0F172A] text-white'}`}>Active Policy</span>
+                                <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-lg ${isDarkMode ? 'bg-white text-brand' : 'bg-[#0F172A] text-white'}`}>Active Policy</span>
                             </div>
-                            <h3 className="text-2xl font-black italic tracking-tighter leading-none mb-1">On-Duty Insurance</h3>
+                            <h3 className="text-2xl font-black tracking-tighter leading-none mb-1">On-Duty Insurance</h3>
                             <p className="text-white/70 text-[10px] font-black uppercase tracking-widest leading-relaxed">Covered up to ₹2,00,000 against accidents and accidental damage while on mission.</p>
 
                             <div className="mt-8 flex items-center justify-between">
@@ -75,7 +75,7 @@ const CaptainSafety = () => {
                             <Phone size={24} fill="currentColor" />
                         </div>
                         <div>
-                            <h4 className="text-red-500 font-black italic uppercase tracking-tight text-base">Emergency SOS</h4>
+                            <h4 className="text-red-500 font-black uppercase tracking-tight text-base">Emergency SOS</h4>
                             <p className={`${isDarkMode ? 'text-red-500/60' : 'text-red-600/80'} text-[10px] font-black uppercase tracking-tight mt-1 truncate`}>Direct line to Safety Ops & Hub Manager.</p>
                         </div>
                         <button className={`ml-auto w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-red-500/20 text-red-500' : 'bg-red-100 text-red-600'}`}>
@@ -85,7 +85,7 @@ const CaptainSafety = () => {
 
                     {/* Safety Checklist */}
                     <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/40' : 'bg-white border-gray-100 shadow-soft'} border rounded-[2.5rem] p-8 transition-all`}>
-                        <h4 className={`font-black italic uppercase tracking-tight text-lg mb-6 flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-content'}`}>
+                        <h4 className={`font-black uppercase tracking-tight text-lg mb-6 flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-content'}`}>
                             <Info size={18} className="text-brand" />
                             Safety Protocols
                         </h4>
@@ -106,7 +106,7 @@ const CaptainSafety = () => {
                         <div className={`w-16 h-16 rounded-3xl flex items-center justify-center text-brand mb-4 transition-colors ${isDarkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
                             <FileText size={32} />
                         </div>
-                        <h4 className={`font-black italic uppercase tracking-tight text-base ${isDarkMode ? 'text-white' : 'text-content'}`}>Captain Certification</h4>
+                        <h4 className={`font-black uppercase tracking-tight text-base ${isDarkMode ? 'text-white' : 'text-content'}`}>Captain Certification</h4>
                         <p className={`${isDarkMode ? 'text-white/40' : 'text-content-subtle'} text-[10px] font-bold mt-1 mb-6`}>You've completed all safety modules. Refresh training is due in 14 days.</p>
                         <button className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${isDarkMode ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' : 'bg-white border border-gray-100 text-content-subtle hover:bg-gray-50 shadow-sm'}`}>
                             Retake Safety Training

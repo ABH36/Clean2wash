@@ -60,7 +60,7 @@ const CaptainOTPVerification = () => {
                 toast.success('Identity Verified!');
                 setTimeout(() => {
                     if (isSignup) {
-                        navigate('/captain/status');
+                        navigate('/captain');
                     } else {
                         navigate('/captain');
                     }
@@ -112,7 +112,7 @@ const CaptainOTPVerification = () => {
                         <Zap size={32} />
                     </div>
 
-                    <h1 className="text-3xl font-[1000] text-white tracking-tighter leading-tight mb-2 uppercase italic">
+                    <h1 className="text-3xl font-[1000] text-white tracking-tighter leading-tight mb-2 uppercase">
                         Confirm <span className="text-brand">Protocol.</span>
                     </h1>
                     <p className="text-white/40 text-[9px] font-black mb-10 leading-relaxed uppercase tracking-[0.3em]">
@@ -143,8 +143,8 @@ const CaptainOTPVerification = () => {
                                 }
                             }}
                             className={`w-14 h-16 text-center text-2xl font-[1000] rounded-2xl border-2 transition-all outline-none shadow-sm placeholder:opacity-20 ${otp[i]
-                                    ? 'border-brand bg-white/10 text-brand ring-4 ring-brand/5'
-                                    : 'border-white/5 bg-white/5 text-white/40 focus:border-brand/30'
+                                ? 'border-brand bg-white/10 text-brand ring-4 ring-brand/5'
+                                : 'border-white/5 bg-white/5 text-white/40 focus:border-brand/30'
                                 }`}
                             placeholder="0"
                         />
@@ -167,8 +167,8 @@ const CaptainOTPVerification = () => {
                         whileTap={{ scale: 0.97 }}
                         onClick={handleVerify}
                         className={`w-full h-16 rounded-2xl font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center transition-all shadow-xl ${otp.join('').length === 4
-                                ? 'bg-brand text-white shadow-brand/20 hover:scale-[1.02]'
-                                : 'bg-white/5 text-white/10 border border-white/5 pointer-events-none'
+                            ? 'bg-brand text-white shadow-brand/20 hover:scale-[1.02]'
+                            : 'bg-white/5 text-white/10 border border-white/5 pointer-events-none'
                             }`}
                     >
                         {status === 'verifying' ? (

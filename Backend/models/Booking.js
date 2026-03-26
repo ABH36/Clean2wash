@@ -31,7 +31,7 @@ const bookingSchema = new mongoose.Schema({
         category: {
             type: String,
             required: [true, 'Service category is required'],
-            enum: ['Doorstep', 'Studio', 'Studio Detailing', 'Add-ons', 'Prestige', 'Chauffeur']
+            enum: ['Doorstep', 'Studio', 'Studio Detailing', 'Add-ons', 'Prestige', 'Chauffeur', 'Apartment']
         },
         type: {
             type: String,
@@ -63,6 +63,12 @@ const bookingSchema = new mongoose.Schema({
             type: Number,
             required: [true, 'Total amount is required']
         },
+        breakdown: [{
+            type: { type: String },
+            name: String,
+            amount: Number,
+            description: String
+        }],
         currency: {
             type: String,
             default: 'INR'
@@ -93,7 +99,7 @@ const bookingSchema = new mongoose.Schema({
     location: {
         type: {
             type: String,
-            enum: ['home', 'office', 'other', 'studio'],
+            enum: ['home', 'office', 'other', 'studio', 'Apartment'],
             default: 'home'
         },
         address: {
@@ -111,13 +117,24 @@ const bookingSchema = new mongoose.Schema({
             }
         },
         landmark: String,
-        instructions: String
+        instructions: String,
+        hubId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Hub'
+        },
+        parkingDetails: {
+            basement: String,
+            block: String,
+            pillar: String,
+            slotNumber: String,
+            area: String // e.g. "Visitor Parking", "Resident Level 1"
+        }
     },
     status: {
         type: String,
         enum: [
             'pending', 'confirmed', 'accepted', 'assigned', 'pickup-assigned',
-            'en_route', 'arrived', 'before_photo', 'at-studio', 'washing',
+            'en_route', 'arrived', 'picked-up', 'before_photo', 'at-studio', 'washing',
             'in_progress', 'after_photo', 'quality-check', 'ready-for-delivery',
             'delivery-assigned', 'completed', 'cancelled', 'refunded'
         ],
@@ -291,7 +308,11 @@ const bookingSchema = new mongoose.Schema({
         timestamp: { type: Date, default: Date.now },
         description: String,
         metadata: mongoose.Schema.Types.Map
-    }]
+    }],
+    loyaltyProcessed: {
+        type: Boolean,
+        default: false
+    }
 }, {
     timestamps: true,
     toJSON: { virtuals: true },
@@ -494,6 +515,29 @@ bookingSchema.statics.getBookingHistory = function (userId, page = 1, limit = 10
         .skip(skip)
         .limit(limit);
 };
+
+// Post-save hook to handle loyalty rewards when a booking is completed
+bookingSchema.post('save', async function (doc) {
+    if (doc.status === 'completed' && !doc.loyaltyProcessed) {
+        try {
+            const PricingEngine = require('../utils/pricingHelper');
+            const User = require('./User'); // In Clean2Wash, Consumer is ref 'User' in Booking
+            
+            const user = await User.findById(doc.consumer);
+            if (user) {
+                await PricingEngine.processLoyaltyCompletion(user);
+                
+                // Mark as processed to avoid duplicate increments
+                await mongoose.model('Booking').updateOne(
+                    { _id: doc._id },
+                    { $set: { loyaltyProcessed: true } }
+                );
+            }
+        } catch (err) {
+            console.error('Loyalty processing failed:', err);
+        }
+    }
+});
 
 const Booking = mongoose.model('Booking', bookingSchema);
 

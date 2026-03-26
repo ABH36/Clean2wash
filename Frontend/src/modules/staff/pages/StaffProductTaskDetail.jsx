@@ -102,8 +102,8 @@ const StaffProductTaskDetail = () => {
                         <ChevronLeft size={20} className="text-content dark:text-white" />
                     </button>
                     <div className="text-center">
-                        <p className="text-[10px] font-black text-brand uppercase tracking-[0.2em] italic">Operation ID</p>
-                        <h1 className="text-sm font-black text-content dark:text-white uppercase italic">#{task.orderNumber?.slice(-8)}</h1>
+                        <p className="text-[10px] font-black text-brand uppercase tracking-[0.2em]">Operation ID</p>
+                        <h1 className="text-sm font-black text-content dark:text-white uppercase">#{task.orderNumber?.slice(-8)}</h1>
                     </div>
                     <div className="w-10" />
                 </div>
@@ -117,8 +117,8 @@ const StaffProductTaskDetail = () => {
                             <Package size={32} />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black text-brand uppercase tracking-widest italic mb-1">Package Content</p>
-                            <h2 className="text-xl font-black text-content dark:text-white uppercase italic leading-none">{task.product?.name}</h2>
+                            <p className="text-[10px] font-black text-brand uppercase tracking-widest mb-1">Package Content</p>
+                            <h2 className="text-xl font-black text-content dark:text-white uppercase leading-none">{task.product?.name}</h2>
                             <p className="text-[10px] font-bold text-content-subtle mt-1">Quantity: {task.quantity} Units</p>
                         </div>
                     </div>
@@ -128,14 +128,14 @@ const StaffProductTaskDetail = () => {
                             <p className="text-[8px] font-black text-content-subtle dark:text-white/20 uppercase tracking-widest mb-1">Status</p>
                             <div className="flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-brand animate-pulse" />
-                                <span className="text-[10px] font-black text-content dark:text-white uppercase italic">{task.status}</span>
+                                <span className="text-[10px] font-black text-content dark:text-white uppercase">{task.status}</span>
                             </div>
                         </div>
                         <div className="bg-gray-50 dark:bg-white/5 rounded-2xl p-4">
                             <p className="text-[8px] font-black text-content-subtle dark:text-white/20 uppercase tracking-widest mb-1">Dispatched</p>
                             <div className="flex items-center gap-2">
                                 <Clock size={12} className="text-brand" />
-                                <span className="text-[10px] font-black text-content dark:text-white uppercase italic">Recently</span>
+                                <span className="text-[10px] font-black text-content dark:text-white uppercase">Recently</span>
                             </div>
                         </div>
                     </div>
@@ -144,9 +144,9 @@ const StaffProductTaskDetail = () => {
                 {/* Consumer Details */}
                 <div className="bg-white dark:bg-[#1E293B] rounded-[2.5rem] p-6 border border-gray-100 dark:border-white/5 shadow-soft">
                     <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-[10px] font-black text-content-subtle dark:text-white/20 uppercase tracking-widest italic">Target Destination</h3>
+                        <h3 className="text-[10px] font-black text-content-subtle dark:text-white/20 uppercase tracking-widest">Target Destination</h3>
                         <div className="flex items-center gap-1 bg-brand/10 px-2 py-0.5 rounded-lg">
-                            <span className="text-[8px] font-black text-brand uppercase italic">Consumer</span>
+                            <span className="text-[8px] font-black text-brand uppercase">Consumer</span>
                         </div>
                     </div>
 
@@ -155,7 +155,7 @@ const StaffProductTaskDetail = () => {
                             <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${task.consumer?._id}`} alt="Consumer" />
                         </div>
                         <div className="flex-1">
-                            <h4 className="text-base font-black text-content dark:text-white uppercase italic leading-none mb-1">{task.consumer?.name}</h4>
+                            <h4 className="text-base font-black text-content dark:text-white uppercase leading-none mb-1">{task.consumer?.name}</h4>
                             <p className="text-[10px] font-bold text-content-subtle">{task.consumer?.phone}</p>
                         </div>
                         <a href={`tel:${task.consumer?.phone}`} className="w-12 h-12 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center shadow-sm">
@@ -199,7 +199,7 @@ const StaffProductTaskDetail = () => {
                                 <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center">
                                     <ShieldCheck size={22} />
                                 </div>
-                                <h3 className="text-lg font-black uppercase italic tracking-widest">Handover Protocol</h3>
+                                <h3 className="text-lg font-black uppercase tracking-widest">Handover Protocol</h3>
                             </div>
 
                             <p className="text-xs font-bold text-white/80 mb-6 leading-relaxed">
@@ -231,7 +231,7 @@ const StaffProductTaskDetail = () => {
                             <button
                                 onClick={handleVerifyPin}
                                 disabled={isVerifying || pin.length !== 4}
-                                className="w-full h-16 bg-white text-brand rounded-2xl flex items-center justify-center gap-3 font-black uppercase italic tracking-widest disabled:opacity-50 transition-all hover:bg-white/90"
+                                className="w-full h-16 bg-white text-brand rounded-2xl flex items-center justify-center gap-3 font-black uppercase tracking-widest disabled:opacity-50 transition-all hover:bg-white/90"
                             >
                                 {isVerifying ? (
                                     <Loader2 className="animate-spin" size={24} />
@@ -249,7 +249,7 @@ const StaffProductTaskDetail = () => {
                         <button
                             onClick={() => handleUpdateStatus('arrived')}
                             disabled={updatingStatus}
-                            className={`w-full h-18 rounded-3xl flex items-center justify-center gap-3 font-black uppercase italic tracking-widest shadow-lg transition-all active:scale-[0.98] ${isDarkMode ? 'bg-white text-brand' : 'bg-brand text-white'
+                            className={`w-full h-18 rounded-3xl flex items-center justify-center gap-3 font-black uppercase tracking-widest shadow-lg transition-all active:scale-[0.98] ${isDarkMode ? 'bg-white text-brand' : 'bg-brand text-white'
                                 }`}
                         >
                             {updatingStatus ? <Loader2 className="animate-spin" /> : (
@@ -271,7 +271,7 @@ const StaffProductTaskDetail = () => {
                 <button className={`w-full p-6 rounded-[2.5rem] border border-dashed flex items-center justify-center gap-3 ${isDarkMode ? 'border-white/10 bg-white/5' : 'border-gray-200 bg-gray-50'
                     }`}>
                     <AlertCircle size={18} className="text-red-500" />
-                    <span className={`text-xs font-black uppercase italic ${isDarkMode ? 'text-white/60' : 'text-content-subtle'}`}>Report Delivery Issue</span>
+                    <span className={`text-xs font-black uppercase ${isDarkMode ? 'text-white/60' : 'text-content-subtle'}`}>Report Delivery Issue</span>
                 </button>
             </div>
         </div>

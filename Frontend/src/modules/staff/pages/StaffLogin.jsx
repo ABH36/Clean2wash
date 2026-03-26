@@ -10,7 +10,7 @@ const StaffLogin = () => {
     const navigate = useNavigate();
     const { isDarkMode } = useTheme();
     const { staffLogin, staffSendOTP } = useAuth();
-    
+
     const [step, setStep] = useState(1); // 1: Phone, 2: OTP
     const [loading, setLoading] = useState(false);
     const [phone, setPhone] = useState('');
@@ -82,7 +82,7 @@ const StaffLogin = () => {
             <div className="relative z-10 w-full max-w-sm mx-auto">
                 {/* Back Button for Step 2 */}
                 {step === 2 && (
-                    <button 
+                    <button
                         onClick={() => setStep(1)}
                         className={`mb-6 p-3 rounded-2xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 text-white/40 hover:text-white' : 'bg-gray-100 text-content-subtle hover:text-content'}`}
                     >
@@ -100,22 +100,22 @@ const StaffLogin = () => {
                 </motion.div>
 
                 <div className="text-center mb-10">
-                    <p className={`text-[9px] font-black uppercase tracking-[0.4em] mb-3 italic ${isDarkMode ? 'text-brand-light' : 'text-brand'}`}>Authorized Personnel Only</p>
-                    <h1 className={`text-3xl font-black italic leading-none uppercase tracking-tighter ${isDarkMode ? 'text-white' : 'text-content'}`}>Terminal <br /> Handshake</h1>
+                    <p className={`text-[9px] font-black uppercase tracking-[0.4em] mb-3 ${isDarkMode ? 'text-brand-light' : 'text-brand'}`}>Authorized Personnel Only</p>
+                    <h1 className={`text-3xl font-black leading-none uppercase tracking-tighter ${isDarkMode ? 'text-white' : 'text-content'}`}>Terminal <br /> Handshake</h1>
                 </div>
 
                 <AnimatePresence mode="wait">
                     {step === 1 ? (
-                        <motion.form 
+                        <motion.form
                             key="step1"
                             initial={{ x: 20, opacity: 0 }}
                             animate={{ x: 0, opacity: 1 }}
                             exit={{ x: -20, opacity: 0 }}
-                            className="space-y-6" 
+                            className="space-y-6"
                             onSubmit={handleSendOTP}
                         >
                             <div className="space-y-2">
-                                <label className={`text-[9px] font-black uppercase tracking-[0.25em] px-4 italic ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Mobile Identity</label>
+                                <label className={`text-[9px] font-black uppercase tracking-[0.25em] px-4 ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Mobile Identity</label>
                                 <div className="relative group">
                                     <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none transition-colors group-focus-within:text-brand">
                                         <PhoneIcon size={18} className={isDarkMode ? 'text-white/10' : 'text-content-subtle'} />
@@ -140,17 +140,17 @@ const StaffLogin = () => {
                             </motion.button>
                         </motion.form>
                     ) : (
-                        <motion.form 
+                        <motion.form
                             key="step2"
                             initial={{ x: 20, opacity: 0 }}
                             animate={{ x: 0, opacity: 1 }}
                             exit={{ x: -20, opacity: 0 }}
-                            className="space-y-6" 
+                            className="space-y-6"
                             onSubmit={handleVerifyAndLogin}
                         >
                             <div className="space-y-2">
                                 <div className="flex justify-between px-4">
-                                    <label className={`text-[9px] font-black uppercase tracking-[0.25em] italic ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Security Token</label>
+                                    <label className={`text-[9px] font-black uppercase tracking-[0.25em] ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Security Token</label>
                                     <p className="text-[9px] font-black text-brand uppercase tracking-widest">{phone}</p>
                                 </div>
                                 <div className="relative group">
@@ -191,7 +191,7 @@ const StaffLogin = () => {
                 <div className="mt-12 text-center">
                     <p className={`text-[9px] font-bold uppercase tracking-widest leading-none ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>
                         New Personnel?{' '}
-                        <Link to="/staff/signup" className="text-brand font-black italic border-b border-brand/20 ml-2">Register Terminal</Link>
+                        <Link to="/staff/signup" className="text-brand font-black border-b border-brand/20 ml-2">Register Terminal</Link>
                     </p>
                 </div>
             </div>

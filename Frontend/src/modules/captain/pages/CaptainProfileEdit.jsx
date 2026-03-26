@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Camera, User, Mail, Phone, MapPin, Truck, Save, Briefcase } from 'lucide-react';
+import { ChevronLeft, Camera, User, Mail, Phone, MapPin, Truck, Save, Briefcase, CreditCard } from 'lucide-react';
 import CaptainLayout from '../components/CaptainLayout';
 import { useAuth } from '../../../context/AuthContext';
 import { useCaptain } from '../../../hooks/useCaptain';
@@ -22,7 +22,11 @@ const CaptainProfileEdit = () => {
         vehicle: user.profile?.plate || user.plate || '',
         city: user.profile?.city || user.city || 'Bengaluru',
         experience: user.profile?.experience || user.experience || 'Fresher',
-        photo: user.profile?.avatar || user.profile?.photo || user.photo || null
+        photo: user.profile?.avatar || user.profile?.photo || user.photo || null,
+        upiId: user.bankDetails?.upiId || '',
+        accountNumber: user.bankDetails?.accountNumber || '',
+        ifscCode: user.bankDetails?.ifscCode || '',
+        bankName: user.bankDetails?.bankName || ''
     });
     const [saving, setSaving] = useState(false);
 
@@ -56,6 +60,12 @@ const CaptainProfileEdit = () => {
                     city: formData.city,
                     experience: formData.experience,
                     avatar: formData.photo
+                },
+                bankDetails: {
+                    upiId: formData.upiId,
+                    accountNumber: formData.accountNumber,
+                    ifscCode: formData.ifscCode,
+                    bankName: formData.bankName
                 }
             };
 
@@ -73,6 +83,12 @@ const CaptainProfileEdit = () => {
                         city: formData.city,
                         experience: formData.experience,
                         avatar: formData.photo
+                    },
+                    bankDetails: {
+                        upiId: formData.upiId,
+                        accountNumber: formData.accountNumber,
+                        ifscCode: formData.ifscCode,
+                        bankName: formData.bankName
                     }
                 });
                 toast.success('Profile updated successfully! ✅');
@@ -89,12 +105,12 @@ const CaptainProfileEdit = () => {
 
     const InputField = ({ label, icon: Icon, value, onChange, placeholder, type = 'text', readOnly = false }) => (
         <div className="space-y-2">
-            <label className={`text-[10px] uppercase tracking-[0.2em] font-black italic ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>
+            <label className={`text-[10px] uppercase tracking-[0.2em] font-black ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>
                 {label}
             </label>
             <div className={`relative flex items-center border rounded-2xl px-4 transition-all focus-within:border-brand ${readOnly
-                    ? isDarkMode ? 'bg-white/3 border-white/5' : 'bg-gray-100 border-gray-200'
-                    : isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white border-gray-100 shadow-sm'
+                ? isDarkMode ? 'bg-white/3 border-white/5' : 'bg-gray-100 border-gray-200'
+                : isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white border-gray-100 shadow-sm'
                 }`}>
                 <Icon size={16} className={`${isDarkMode ? 'text-brand/40' : 'text-brand/50'} mr-3 flex-shrink-0`} />
                 <input
@@ -104,8 +120,8 @@ const CaptainProfileEdit = () => {
                     placeholder={placeholder}
                     readOnly={readOnly}
                     className={`flex-1 py-4 bg-transparent outline-none text-sm font-black ${readOnly
-                            ? isDarkMode ? 'text-white/30 cursor-not-allowed' : 'text-gray-400 cursor-not-allowed'
-                            : isDarkMode ? 'text-white' : 'text-content'
+                        ? isDarkMode ? 'text-white/30 cursor-not-allowed' : 'text-gray-400 cursor-not-allowed'
+                        : isDarkMode ? 'text-white' : 'text-content'
                         } placeholder:opacity-30`}
                 />
                 {readOnly && (
@@ -124,7 +140,7 @@ const CaptainProfileEdit = () => {
                         <ChevronLeft size={18} strokeWidth={2.5} />
                     </button>
                     <div>
-                        <h1 className={`text-lg font-black italic uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>Edit Profile</h1>
+                        <h1 className={`text-lg font-black uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>Edit Profile</h1>
                         <p className={`text-[9px] font-black uppercase tracking-widest text-brand`}>Update your details</p>
                     </div>
                 </header>
@@ -155,7 +171,7 @@ const CaptainProfileEdit = () => {
 
                     {/* Editable Fields */}
                     <div>
-                        <p className={`text-[10px] font-black uppercase tracking-[0.2em] italic px-2 mb-4 ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Personal Details</p>
+                        <p className={`text-[10px] font-black uppercase tracking-[0.2em] px-2 mb-4 ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Personal Details</p>
                         <div className="space-y-4">
                             <InputField
                                 label="Full Name"
@@ -185,7 +201,7 @@ const CaptainProfileEdit = () => {
 
                     {/* Professional Details */}
                     <div>
-                        <p className={`text-[10px] font-black uppercase tracking-[0.2em] italic px-2 mb-4 ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Work Details</p>
+                        <p className={`text-[10px] font-black uppercase tracking-[0.2em] px-2 mb-4 ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Work Details</p>
                         <div className="space-y-4">
                             <InputField
                                 label="Vehicle Number"
@@ -202,7 +218,7 @@ const CaptainProfileEdit = () => {
                                 placeholder="Bengaluru"
                             />
                             <div className="space-y-2">
-                                <label className={`text-[10px] uppercase tracking-[0.2em] font-black italic ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>
+                                <label className={`text-[10px] uppercase tracking-[0.2em] font-black ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>
                                     Experience Level
                                 </label>
                                 <div className={`relative flex items-center border rounded-2xl px-4 transition-all focus-within:border-brand ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white border-gray-100 shadow-sm'}`}>
@@ -220,6 +236,43 @@ const CaptainProfileEdit = () => {
                             </div>
                         </div>
                     </div>
+
+                    {/* Payout Details */}
+                    <div>
+                        <p className={`text-[10px] font-black uppercase tracking-[0.2em] px-2 mb-4 ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Payout Details (Settlements)</p>
+                        <div className="space-y-4">
+                            <InputField
+                                label="UPI ID (Highly Recommended)"
+                                icon={CreditCard}
+                                value={formData.upiId}
+                                onChange={(e) => setFormData({ ...formData, upiId: e.target.value.toLowerCase() })}
+                                placeholder="captain@upi"
+                            />
+                            <InputField
+                                label="Bank Account Number"
+                                icon={CreditCard}
+                                value={formData.accountNumber}
+                                onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
+                                placeholder="Enter account number"
+                            />
+                            <div className="grid grid-cols-2 gap-4">
+                                <InputField
+                                    label="IFSC Code"
+                                    icon={Briefcase}
+                                    value={formData.ifscCode}
+                                    onChange={(e) => setFormData({ ...formData, ifscCode: e.target.value.toUpperCase() })}
+                                    placeholder="IFSC000123"
+                                />
+                                <InputField
+                                    label="Bank Name"
+                                    icon={Truck}
+                                    value={formData.bankName}
+                                    onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                                    placeholder="e.g. HDFC Bank"
+                                />
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Fixed Save Button */}
@@ -229,7 +282,7 @@ const CaptainProfileEdit = () => {
                         whileTap={{ scale: 0.98 }}
                         onClick={handleSave}
                         disabled={saving}
-                        className={`w-full h-14 bg-brand text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] italic shadow-2xl shadow-brand/40 flex items-center justify-center gap-3 transition-all ${saving ? 'opacity-70' : ''}`}
+                        className={`w-full h-14 bg-brand text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-brand/40 flex items-center justify-center gap-3 transition-all ${saving ? 'opacity-70' : ''}`}
                     >
                         {saving ? (
                             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

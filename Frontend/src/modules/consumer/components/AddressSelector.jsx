@@ -2,13 +2,16 @@ import React, { useState } from 'react';
 import { MapPin, Plus, Home, Briefcase, Navigation, ChevronRight, Check } from 'lucide-react';
 import MapPicker from './MapPicker';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useGeoLocation } from '../../../hooks/useGeoLocation';
 
 const AddressSelector = ({ addresses, onSelect, onClose, autoDetect = false }) => {
+    const { setSelectedAddress, currentLocation } = useGeoLocation();
     const [showMap, setShowMap] = useState(autoDetect && addresses.length === 0);
     const [selectedId, setSelectedId] = useState(addresses.find(a => a.isPrimary)?.id || addresses[0]?.id);
 
     const handleSelectSaved = (addr) => {
         setSelectedId(addr.id);
+        setSelectedAddress(addr); // Global sync
         onSelect(addr);
         onClose();
     };
@@ -23,9 +26,10 @@ const AddressSelector = ({ addresses, onSelect, onClose, autoDetect = false }) =
             city: mapDetails?.city || 'Bengaluru',
             state: mapDetails?.state || 'Karnataka',
             pincode: mapDetails?.pincode || '',
-            coordinates: mapDetails?.coordinates || { lat: 12.9716, lng: 77.5946 },
+            coordinates: mapDetails?.coordinates || currentLocation || { lat: 28.6139, lng: 77.2090 }, // Default to Delhi if absolute zero
             isCustom: true
         };
+        setSelectedAddress(newAddr); // Global sync
         onSelect(newAddr);
         onClose();
     };

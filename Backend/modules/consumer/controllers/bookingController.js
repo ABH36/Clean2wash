@@ -7,6 +7,7 @@ const { sendNotification, sendVendorNotification } = require('../../../utils/not
 const socketService = require('../../../socketService');
 const catchAsync = require('../../../utils/catchAsync');
 const AppError = require('../../../utils/AppError');
+const PricingEngine = require('../../../utils/pricingHelper');
 
 /**
  * Elite Hardening: Clean up bookings that stayed 'pending' for too long
@@ -147,6 +148,7 @@ exports.getBooking = catchAsync(async (req, res, next) => {
 });
 
 // Create new booking
+// Create new booking
 exports.createBooking = catchAsync(async (req, res, next) => {
     const {
         vehicleId,
@@ -159,7 +161,9 @@ exports.createBooking = catchAsync(async (req, res, next) => {
         paymentMethod = 'online',
         paymentId,
         orderId,
-        couponCode // New field for coupon support
+        couponCode,
+        hubId,
+        parkingDetails 
     } = req.body;
 
     // Extract effective vehicleId
@@ -182,14 +186,32 @@ exports.createBooking = catchAsync(async (req, res, next) => {
     }
 
     // 1. Prevent overlapping active bookings for the same vehicle
+    // Refined: Only block if the vehicle is CURRENTLY in a session, or has a booking scheduled for TODAY.
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
     const activeBooking = await Booking.findOne({
         vehicle: effectiveVehicleId,
-        status: { $in: ['pending', 'confirmed', 'assigned', 'en_route', 'in_progress'] },
-        isActive: true
+        status: { $in: ['pending', 'confirmed', 'assigned', 'en_route', 'in_progress', 'arrived', 'washing'] },
+        isActive: true,
+        $or: [
+            { 'schedule.type': 'instant' },
+            { 
+                'schedule.type': 'scheduled',
+                'schedule.date': { $gte: todayStart, $lte: todayEnd }
+            },
+            { 'status': { $in: ['assigned', 'en_route', 'arrived', 'washing', 'in_progress'] } } // Any ongoing work blocks
+        ]
     });
 
     if (activeBooking) {
-        return next(new AppError('An active booking already exists for this vehicle. Please complete it first.', 400));
+        const isScheduled = activeBooking.schedule?.type === 'scheduled';
+        const msg = isScheduled 
+            ? `This vehicle already has a booking scheduled for today (${new Date(activeBooking.schedule.date).toLocaleDateString()}). Please complete or cancel it first.`
+            : 'An ongoing booking already exists for this vehicle. Please complete it first.';
+        return next(new AppError(msg, 400));
     }
 
     // 2. Idempotency Check: If paymentId provided, check for existing booking
@@ -207,78 +229,107 @@ exports.createBooking = catchAsync(async (req, res, next) => {
     // Get vehicle type multiplier
     const vehicleMultiplier = Vehicle.getTypeMultiplier(vehicle.type);
 
-    // Calculate pricing
+    // Calculate base pricing
     const baseAmount = parseInt(service.basePrice || String(service.price).replace(/[^\d]/g, '') || 299);
     const addonAmount = Array.isArray(addons) ? addons.reduce((sum, addon) => {
-        // Handle if addons are just IDs or objects
-        if (typeof addon === 'string') return sum; // If string, we'd need to look up price, but assuming objects for now
+        if (typeof addon === 'string') return sum; 
         return sum + (addon.included ? 0 : (addon.price || 0));
     }, 0) : 0;
 
-    const totalAmountBeforeDiscount = Math.round((baseAmount * vehicleMultiplier) + addonAmount);
-
-    // 2a. Black Pass Synchronization (Standardization)
-    let blackPassDiscount = 0;
-    const Subscription = require('../../../models/Subscription');
-    const Setting = require('../../../models/Setting');
-
-    // Check for active "Black Pass" subscription
-    const activeSub = await Subscription.findOne({
-        user: req.user.id,
-        status: 'active',
-        endDate: { $gt: new Date() }
+    // Resolve Location
+    const bookingLocation = location || (address ? {
+        type: address.label?.toLowerCase() || 'home',
+        address: {
+            street: address.street,
+            city: address.city,
+            state: address.state,
+            pincode: address.pincode,
+            coordinates: address.coordinates
+        },
+        landmark: address.landmark
+    } : {
+        type: 'home',
+        address: req.user.profile?.address
     });
 
-    if (activeSub && (activeSub.plan || '').toLowerCase().includes('black')) {
-        const passConfig = await Setting.findOne({ key: 'WASH_PASS_CONFIG' });
-        const discountRate = passConfig?.value?.discount || 0.3; // Default to 30%
-        blackPassDiscount = Math.round(totalAmountBeforeDiscount * discountRate);
+    // Link Hub and Parking Details if provided
+    if (bookingLocation) {
+        if (hubId) bookingLocation.hubId = hubId;
+        if (parkingDetails) bookingLocation.parkingDetails = parkingDetails;
     }
 
-    // 3. Coupon Logic
-    let discountAmount = 0;
+    // Sanitization & Mapping
+    const validCategories = ['Doorstep', 'Studio', 'Studio Detailing', 'Add-ons', 'Prestige', 'Chauffeur'];
+    const validServiceTypes = ['captain', 'vendor', 'sparedriver'];
+    const validPaymentMethods = ['cash', 'online', 'wallet', 'subscription'];
+    const validLocationTypes = ['home', 'office', 'other', 'studio'];
+
+    const sanitizedCategory = validCategories.includes(service.category) ? service.category :
+        (service.category === 'Express' ? 'Doorstep' : 'Doorstep');
+
+    const sanitizedServiceType = validServiceTypes.includes(service.type?.toLowerCase()) ? service.type.toLowerCase() : 'captain';
+    const sanitizedPaymentMethod = validPaymentMethods.includes(paymentMethod) ? paymentMethod : 'online';
+
+    if (bookingLocation && !validLocationTypes.includes(bookingLocation.type)) {
+        bookingLocation.type = bookingLocation.type === 'work' ? 'office' : 'home';
+    }
+
+    // Coordinates requirement check
+    if (sanitizedCategory === 'Doorstep' && (!bookingLocation.address?.coordinates || !bookingLocation.address?.coordinates?.lat)) {
+        throw new AppError('Precise GPS coordinates are required for doorstep service. Please select a pinned location.', 400);
+    }
+
+    // Prepare schedule
+    const bookingSchedule = {
+        type: schedule?.type || (req.body.scheduledTime ? 'scheduled' : 'instant'),
+        date: schedule?.date ? new Date(schedule.date) : (req.body.scheduledTime ? new Date(req.body.scheduledTime) : new Date()),
+        timeSlot: schedule?.timeSlot || req.body.timeSlot || null,
+        estimatedDuration: service.duration || '40 min'
+    };
+
+    // 3. Centralized Pricing Engine (Industrial Eligibility Aware)
+    const pricingResult = await PricingEngine.calculate({
+        servicePrice: baseAmount,
+        vehicleMultiplier,
+        addonAmount,
+        couponCode,
+        paymentMethod: sanitizedPaymentMethod,
+        isCombo: Array.isArray(addons) && addons.filter(a => !a.included).length > 0,
+        service: { 
+            category: sanitizedCategory, 
+            schedule: bookingSchedule 
+        },
+        hub: hubId || req.body.hub || null,
+        location: bookingLocation
+    }, req.user);
+
+    const { totalAmount, discounts, appliedBenefit, breakdown } = pricingResult;
+
+    // Resolve coupon record
     let appliedCouponRecord = null;
     if (couponCode) {
         const Promotion = require('../../../models/Promotion');
-        const coupon = await Promotion.findOne({
-            code: couponCode.toUpperCase(),
-            isActive: true,
-            startDate: { $lte: new Date() },
-            endDate: { $gte: new Date() }
-        });
-
-        if (coupon) {
-            // Secondary Security Check: Ensure user hasn't exploited this protocol already
-            if (req.user.usedPromotions && req.user.usedPromotions.includes(coupon._id)) {
-                return next(new AppError('This coupon code has already been consumed by your account.', 400));
-            }
-
-            if (coupon.reductionType === 'PERCENT') {
-                discountAmount = Math.round((totalAmountBeforeDiscount * coupon.val) / 100);
-            } else {
-                discountAmount = coupon.val;
-            }
-            // Cap discount at total amount
-            discountAmount = Math.min(discountAmount, totalAmountBeforeDiscount);
+        const promo = await Promotion.findOne({ code: couponCode, isActive: true });
+        if (promo) {
             appliedCouponRecord = {
-                code: coupon.code,
-                id: coupon._id,
-                amount: discountAmount
+                id: promo._id,
+                code: promo.code,
+                val: promo.val,
+                valUnit: promo.valUnit || 'FLAT'
             };
         }
     }
-
-    // Calculate final total
-    const totalAmount = Math.max(0, totalAmountBeforeDiscount - blackPassDiscount - discountAmount);
 
     // --- ATOMIC SESSION START ---
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-        // Wallet Payment Flow (Atomic)
-        let walletTransactionId = null;
-        if (paymentMethod === 'wallet') {
+        let paymentStatus = 'pending';
+        let transactionId = paymentId || orderId;
+
+        // Wallet Flow
+        if (sanitizedPaymentMethod === 'wallet') {
             const walletHelper = require('../../../utils/walletHelper');
             const transaction = await walletHelper.executeWalletTransaction(
                 req.user.id,
@@ -292,76 +343,28 @@ exports.createBooking = catchAsync(async (req, res, next) => {
                 },
                 session
             );
-            walletTransactionId = transaction.transaction.referenceId;
-        }
-
-        // Prepare location/address
-        const bookingLocation = location || (address ? {
-            type: address.label?.toLowerCase() || 'home',
-            address: {
-                street: address.street,
-                city: address.city,
-                state: address.state,
-                pincode: address.pincode,
-                coordinates: address.coordinates
-            },
-            landmark: address.landmark
-        } : {
-            type: 'home',
-            address: req.user.profile?.address
-        });
-
-        // Backend Sanitization & Enum Mapping
-        const validCategories = ['Doorstep', 'Studio', 'Studio Detailing', 'Add-ons', 'Prestige', 'Chauffeur'];
-        const validServiceTypes = ['captain', 'vendor', 'sparedriver'];
-        const validPaymentMethods = ['cash', 'online', 'wallet', 'subscription'];
-        const validLocationTypes = ['home', 'office', 'other', 'studio'];
-
-        const sanitizedCategory = validCategories.includes(service.category) ? service.category :
-            (service.category === 'Express' ? 'Doorstep' : 'Doorstep');
-
-        const sanitizedServiceType = validServiceTypes.includes(service.type?.toLowerCase()) ? service.type.toLowerCase() : 'captain';
-        const sanitizedPaymentMethod = validPaymentMethods.includes(paymentMethod) ? paymentMethod : 'online';
-
-        if (bookingLocation && !validLocationTypes.includes(bookingLocation.type)) {
-            bookingLocation.type = bookingLocation.type === 'work' ? 'office' : 'home';
-        }
-
-        // 3. Validation: Coordinates are required for doorstep services
-        if (sanitizedCategory === 'Doorstep' && (!bookingLocation.address?.coordinates || !bookingLocation.address?.coordinates?.lat)) {
-            throw new AppError('Precise GPS coordinates are required for doorstep service. Please select a pinned location.', 400);
-        }
-
-        // Prepare schedule
-        const bookingSchedule = {
-            type: schedule?.type || (req.body.scheduledTime ? 'scheduled' : 'instant'),
-            date: schedule?.date ? new Date(schedule.date) : (req.body.scheduledTime ? new Date(req.body.scheduledTime) : new Date()),
-            timeSlot: schedule?.timeSlot || req.body.timeSlot || null,
-            estimatedDuration: service.duration || '40 min'
-        };
-
-        // Payment status enforcement
-        let paymentStatus = 'pending';
-        const transactionId = paymentId || orderId || walletTransactionId;
-
-        if (sanitizedPaymentMethod === 'online') {
-            if (!transactionId) throw new AppError('Payment verification failed. No transaction reference found.', 400);
+            transactionId = transaction.transaction.referenceId;
             paymentStatus = 'paid';
-        } else if (paymentMethod === 'wallet' && walletTransactionId) {
-            paymentStatus = 'paid';
-        } else if (paymentMethod === 'subscription') {
+        } else if (sanitizedPaymentMethod === 'subscription') {
             const Subscription = require('../../../models/Subscription');
             const activeSub = await Subscription.getActiveSubscription(req.user.id);
-            if (!activeSub) throw new AppError('No active subscription found for your account.', 404);
+            if (!activeSub) throw new AppError('No active subscription found.', 404);
+
+            // eligibility audit
+            if (!activeSub.isServiceEligible({ service: { category: sanitizedCategory, schedule: bookingSchedule }, hub: req.body.hubId || req.body.hub || null, location: bookingLocation })) {
+                throw new AppError('Service not covered by your subscription plan.', 400);
+            }
+
             if (activeSub.getAvailableCredits() <= 0) throw new AppError('Insufficient subscription credits.', 400);
 
-            // Use credits within the session
-            activeSub.usedCredits += 1;
-            await activeSub.save({ session });
+            await activeSub.useCredits(1, session);
+            paymentStatus = 'paid';
+            transactionId = `SUB-${activeSub._id}-${Date.now()}`;
+        } else if (sanitizedPaymentMethod === 'online' && transactionId) {
             paymentStatus = 'paid';
         }
 
-        // Create booking within session
+        // Create booking
         const [newBooking] = await Booking.create([{
             consumer: req.user.id,
             vehicle: effectiveVehicleId,
@@ -378,8 +381,9 @@ exports.createBooking = catchAsync(async (req, res, next) => {
                 baseAmount,
                 vehicleMultiplier,
                 addonAmount,
-                discountAmount,
-                totalAmount
+                discountAmount: (breakdown || []).reduce((sum, d) => sum + (d.amount || 0), 0),
+                totalAmount,
+                breakdown: breakdown || []
             },
             addons: Array.isArray(addons) ? addons.map(a => typeof a === 'string' ? { id: a } : a) : [],
             schedule: bookingSchedule,
@@ -397,7 +401,7 @@ exports.createBooking = catchAsync(async (req, res, next) => {
             status: 'pending'
         }], { session });
 
-        // Audit Log (Atomic)
+        // Audit Log
         const auditHelper = require('../../../utils/auditHelper');
         await auditHelper.logAction({
             userId: req.user.id,
@@ -408,24 +412,20 @@ exports.createBooking = catchAsync(async (req, res, next) => {
             req
         }, session);
 
-        // Record used promotion to prevent re-use
         if (appliedCouponRecord?.id) {
             await User.findByIdAndUpdate(req.user.id, {
                 $addToSet: { usedPromotions: appliedCouponRecord.id }
             }, { session });
         }
 
-        // COMMIT EVERYTHING
         await session.commitTransaction();
 
-        // --- Post-Transaction Side Effects ---
+        // Broadcasts (Outside transaction)
         try {
-            // Populate booking details
             const populatedBooking = await Booking.findById(newBooking._id)
                 .populate('vehicle', 'brand model type plate image')
                 .populate('consumer', 'name phone');
 
-            // Send persistent notification
             await sendNotification(req.user.id, {
                 title: 'Order Received! 🚀',
                 message: `Your booking for ${service.name || service.title} has been placed successfully.`,
@@ -433,111 +433,53 @@ exports.createBooking = catchAsync(async (req, res, next) => {
                 priority: 'medium',
             });
 
-            // Broadcast to nearby online captains via Socket.io (Only for Captain bookings)
             if (sanitizedServiceType === 'captain') {
-                try {
-                    const io = socketService.getIO();
-                    const broadcastPayload = {
-                        bookingId: newBooking._id,
-                        serviceName: service.name || service.title,
+                const io = socketService.getIO();
+                const broadcastPayload = {
+                    bookingId: newBooking._id,
+                    serviceName: service.name || service.title,
+                    location: bookingLocation,
+                    vehicle: { brand: vehicle.brand, model: vehicle.model, plate: vehicle.plate },
+                    pricing: { total: totalAmount },
+                    timestamp: new Date()
+                };
+
+                if (bookingLocation.address?.coordinates?.lat) {
+                    const nearbyCaptains = await Captain.find({
+                        isOnline: true, isActive: true, isVerified: true,
                         location: {
-                            address: bookingLocation.address,
-                            type: bookingLocation.type,
-                            landmark: bookingLocation.landmark
-                        },
-                        vehicle: {
-                            brand: vehicle.brand,
-                            model: vehicle.model,
-                            plate: vehicle.plate
-                        },
-                        pricing: {
-                            total: totalAmount
-                        },
-                        timestamp: new Date()
-                    };
-
-                    // Calculate matching captains if precise coordinates exist
-                    if (bookingLocation.address && bookingLocation.address.coordinates && bookingLocation.address.coordinates.lat) {
-                        const lng = parseFloat(bookingLocation.address.coordinates.lng);
-                        const lat = parseFloat(bookingLocation.address.coordinates.lat);
-
-                        // Find captains within 5km radius (Elite Hardening)
-                        const nearbyCaptains = await Captain.find({
-                            isOnline: true,
-                            isActive: true,
-                            isVerified: true,
-                            location: {
-                                $nearSphere: {
-                                    $geometry: {
-                                        type: 'Point',
-                                        coordinates: [lng, lat]
-                                    },
-                                    $maxDistance: 5000 // Tightened to 5km in meters
-                                }
+                            $nearSphere: {
+                                $geometry: { type: 'Point', coordinates: [parseFloat(bookingLocation.address.coordinates.lng), parseFloat(bookingLocation.address.coordinates.lat)] },
+                                $maxDistance: 5000 
                             }
-                        });
-
-                        if (nearbyCaptains.length > 0) {
-                            nearbyCaptains.forEach(captain => {
-                                io.to(captain._id.toString()).emit('new_booking_broadcast', broadcastPayload);
-                            });
-                        } else {
-                            io.emit('new_booking_broadcast', broadcastPayload);
                         }
-                    } else {
-                        io.emit('new_booking_broadcast', broadcastPayload);
-                    }
-                } catch (socketErr) {
-                    console.error('Socket broadcast failed (non-blocking):', socketErr.message);
+                    });
+                    nearbyCaptains.forEach(c => io.to(c._id.toString()).emit('new_booking_broadcast', broadcastPayload));
+                } else {
+                    io.emit('new_booking_broadcast', broadcastPayload);
                 }
             } else if (sanitizedServiceType === 'vendor') {
-                // STUDIO WASH: Dispatch to Vendors
-                try {
-                    const vendors = await User.find({ role: 'vendor', isActive: true });
-                    const notificationData = {
-                        title: 'New Studio Lead! 💎',
-                        message: `A new ${service.name || service.title} booking is available for your studio.`,
-                        type: 'order-assigned',
-                        priority: 'high',
-                        metaData: {
-                            bookingId: newBooking._id,
-                            serviceName: service.name || service.title,
-                            totalAmount
-                        }
-                    };
-                    for (const vendor of vendors) {
-                        await sendVendorNotification(vendor._id, notificationData);
-                    }
-                    const io = socketService.getIO();
-                    if (io) {
-                        io.emit('new_studio_booking', {
-                            bookingId: newBooking._id,
-                            serviceName: service.name || service.title,
-                            location: bookingLocation,
-                            vehicle: { brand: vehicle.brand, model: vehicle.model, plate: vehicle.plate },
-                            pricing: { total: totalAmount },
-                            timestamp: new Date()
-                        });
-                    }
-                } catch (vendorErr) {
-                    console.error('Vendor notification failed (non-blocking):', vendorErr.message);
+                const vendors = await User.find({ role: 'vendor', isActive: true });
+                const io = socketService.getIO();
+                
+                for (const v of vendors) {
+                    await sendVendorNotification(v._id, { 
+                        title: 'New Studio Lead! 💎', 
+                        message: 'New studio booking available in your hub.', 
+                        type: 'order-assigned', 
+                        metaData: { bookingId: newBooking._id } 
+                    });
                 }
+                
+                // Real-time Dashboard Refresh for ALL Vendors (or Hub Specific)
+                io.emit('new_studio_booking', { bookingId: newBooking._id });
             }
 
-            return res.status(201).json({
-                status: 'success',
-                message: 'Booking created successfully',
-                data: { booking: populatedBooking }
-            });
+            return res.status(201).json({ status: 'success', message: 'Booking created successfully', data: { booking: populatedBooking } });
 
-        } catch (sideEffectError) {
-            console.error('Post-transaction side-effects failed:', sideEffectError);
-            // The booking IS created, so we return 201 even if notification failed
-            return res.status(201).json({
-                status: 'success',
-                message: 'Booking created, but some notifications might be delayed.',
-                data: { bookingId: newBooking._id }
-            });
+        } catch (sideErr) {
+            console.error('Post-transaction side-effects error:', sideErr);
+            return res.status(201).json({ status: 'success', message: 'Booking created, notifications may delay.', data: { bookingId: newBooking._id } });
         }
 
     } catch (error) {

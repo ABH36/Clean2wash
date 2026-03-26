@@ -10,6 +10,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { toast } from 'react-hot-toast';
 import { useCaptain } from '../../../hooks/useCaptain';
+import { geocodingService } from '../../../utils/geocoding';
 
 // Fix Leaflet marker icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -81,16 +82,13 @@ const CaptainLocationSelector = () => {
     useEffect(() => {
         const reverseGeocode = async () => {
             setIsGeocoding(true);
-            try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${selectedPos[0]}&lon=${selectedPos[1]}&addressdetails=1`);
-                const data = await res.json();
-                setAddressName(data.display_name || 'Unnamed Location');
-            } catch (err) {
-                console.error('Geocoding error:', err);
+            const data = await geocodingService.reverse(selectedPos[0], selectedPos[1]);
+            if (data) {
+                setAddressName(data.display_name);
+            } else {
                 setAddressName('Location selected');
-            } finally {
-                setIsGeocoding(false);
             }
+            setIsGeocoding(false);
         };
         const timer = setTimeout(reverseGeocode, 1000);
         return () => clearTimeout(timer);
@@ -101,21 +99,15 @@ const CaptainLocationSelector = () => {
         if (!searchQuery.trim()) return;
 
         setIsGeocoding(true);
-        try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`);
-            const data = await res.json();
-            if (data && data.length > 0) {
-                const newPos = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
-                setMapCenter(newPos);
-                setSelectedPos(newPos);
-            } else {
-                toast.error("Area not found");
-            }
-        } catch (err) {
-            toast.error("Search failed");
-        } finally {
-            setIsGeocoding(false);
+        const results = await geocodingService.search(searchQuery);
+        if (results && results.length > 0) {
+            const newPos = [results[0].lat, results[0].lng];
+            setMapCenter(newPos);
+            setSelectedPos(newPos);
+        } else {
+            toast.error("Area not found");
         }
+        setIsGeocoding(false);
     };
 
     const handleConfirm = async () => {
@@ -147,7 +139,7 @@ const CaptainLocationSelector = () => {
                         <ChevronLeft size={20} strokeWidth={3} className="text-black" />
                     </button>
                     <div>
-                        <h1 className="text-[17px] font-[1000] tracking-tight text-black uppercase italic leading-none">Working Area</h1>
+                        <h1 className="text-[17px] font-[1000] tracking-tight text-black uppercase leading-none">Working Area</h1>
                         <p className="text-[9px] text-brand font-black uppercase tracking-[0.2em] mt-1.5">Set Your Location</p>
                     </div>
                 </div>
@@ -233,7 +225,7 @@ const CaptainLocationSelector = () => {
                             whileTap={{ scale: 0.95 }}
                             disabled={isSaving || isGeocoding}
                             onClick={handleConfirm}
-                            className={`w-full py-5 rounded-[1.8rem] font-black text-[13px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-2xl transition-all ${isSaving ? 'bg-gray-100 text-black/20 italic' : 'bg-black text-white active:bg-brand active:shadow-brand/20'
+                            className={`w-full py-5 rounded-[1.8rem] font-black text-[13px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-2xl transition-all ${isSaving ? 'bg-gray-100 text-black/20' : 'bg-black text-white active:bg-brand active:shadow-brand/20'
                                 }`}
                         >
                             {isSaving ? (

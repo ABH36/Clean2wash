@@ -234,6 +234,31 @@ exports.verifyOrderPayment = catchAsync(async (req, res, next) => {
         return next(new AppError('Order not found', 404));
     }
 
+    // 1. Increment salesCount for all products in the order
+    const Product = require('../../../models/Product');
+    for (const item of order.items) {
+        await Product.findByIdAndUpdate(item.product, { $inc: { salesCount: item.quantity } });
+    }
+
+    // 2. Automate Fulfillment: Broadcast pickup for EACH item to Captains
+    const { broadcastProductPickup } = require('../../vendor/controllers/productLogisticsController');
+    
+    for (const item of order.items) {
+        try {
+            // Mocking req for broadcast function
+            const mockReq = {
+                params: { orderId: order._id, itemId: item._id },
+                user: { _id: item.vendor } // Acting as the vendor
+            };
+            const mockRes = {
+                status: () => ({ json: () => {} })
+            };
+            await broadcastProductPickup(mockReq, mockRes);
+        } catch (bridgeErr) {
+            console.error(`Automation Bridge Failure for Item ${item._id}:`, bridgeErr);
+        }
+    }
+
     // Notify user
     await sendNotification(req.user.id, {
         title: 'Order Confirmed! 📦',
@@ -241,6 +266,7 @@ exports.verifyOrderPayment = catchAsync(async (req, res, next) => {
         type: 'payment',
         priority: 'medium'
     });
+
 
     res.status(200).json({
         status: 'success',

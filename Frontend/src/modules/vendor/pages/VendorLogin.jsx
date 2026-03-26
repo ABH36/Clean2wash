@@ -50,7 +50,7 @@ const VendorLogin = () => {
                     <div className="w-16 h-16 bg-surface border border-gray-100/10 text-brand rounded-[2rem] flex items-center justify-center shadow-2xl mb-6">
                         <Building2 size={32} />
                     </div>
-                    <h1 className="text-3xl font-black text-content italic tracking-tighter uppercase leading-none">Vendor <br /><span className="text-brand">Workspace</span></h1>
+                    <h1 className="text-3xl font-black text-content tracking-tighter uppercase leading-none">Vendor <br /><span className="text-brand">Workspace</span></h1>
                     <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em] mt-3">Studio & Hub Management Port</p>
                 </div>
 
@@ -59,7 +59,7 @@ const VendorLogin = () => {
                     <form onSubmit={handleLogin} className="space-y-6">
                         <div className="space-y-4">
                             <div className="space-y-1.5 px-1">
-                                <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic flex items-center gap-2">
+                                <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest flex items-center gap-2">
                                     <Mail size={12} /> Registered Email
                                 </label>
                                 <input
@@ -72,7 +72,7 @@ const VendorLogin = () => {
                                 />
                             </div>
                             <div className="space-y-1.5 px-1">
-                                <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic flex items-center gap-2">
+                                <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest flex items-center gap-2">
                                     <Lock size={12} /> Passcode
                                 </label>
                                 <input
@@ -94,7 +94,7 @@ const VendorLogin = () => {
                                 <input type="checkbox" className="w-4 h-4 rounded border-gray-200 text-brand focus:ring-brand" />
                                 <span className="text-[10px] font-bold text-content-subtle uppercase tracking-widest">Remember</span>
                             </label>
-                            <button type="button" className="text-[10px] font-black text-brand uppercase tracking-widest italic">Forgot Entry?</button>
+                            <button type="button" className="text-[10px] font-black text-brand uppercase tracking-widest">Forgot Entry?</button>
                         </div>
 
                         <button
@@ -117,12 +117,12 @@ const VendorLogin = () => {
                 <div className="mt-8 flex flex-col items-center gap-6">
                     <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest">
                         New Partner?{' '}
-                        <Link to="/vendor/signup" className="text-brand font-black italic">REGISTER NOW</Link>
+                        <Link to="/vendor/signup" className="text-brand font-black">REGISTER NOW</Link>
                     </p>
 
                     <button
                         onClick={() => navigate('/')}
-                        className="flex items-center gap-2 text-content-subtle hover:text-content transition-colors font-black text-[10px] uppercase tracking-widest italic"
+                        className="flex items-center gap-2 text-content-subtle hover:text-content transition-colors font-black text-[10px] uppercase tracking-widest"
                     >
                         <ArrowLeft size={14} /> Back to Consumer Port
                     </button>

@@ -9,9 +9,16 @@ import {
 } from 'lucide-react';
 import MobileLayout from '../components/layout/MobileLayout';
 import { useCart } from '../../../context/CartContext';
+import { Crown } from 'lucide-react';
+
 import { useWishlist } from '../../../context/WishlistContext';
 import { productAPI } from '../../../utils/api';
 import VerifiedBadge from '../components/ui/VerifiedBadge';
+import { useGeoLocation } from '../../../hooks/useGeoLocation';
+import { useAuth } from '../../../context/AuthContext';
+
+
+
 
 const ProductDetail = () => {
     const { id } = useParams();
@@ -25,6 +32,19 @@ const ProductDetail = () => {
     const [reviews, setReviews] = useState([]);
     const [reviewsLoading, setReviewsLoading] = useState(false);
     const [toast, setToast] = useState(false);
+    const { user } = useAuth();
+    const { selectedAddress } = useGeoLocation();
+    const isBlackPassMember = user?.subscription?.plan === 'black';
+    const [deliveryEta, setDeliveryEta] = useState('2-3 Days');
+
+    useEffect(() => {
+        if (product && selectedAddress) {
+            // Simple distance-based ETA logic
+            // In a real app, this would use OSRM or Google Maps API
+            setDeliveryEta('Delivering in 24-48 Hours');
+        }
+    }, [product, selectedAddress]);
+
 
     useEffect(() => {
         const fetchProduct = async () => {
@@ -91,10 +111,10 @@ const ProductDetail = () => {
         <MobileLayout hideNav={true}>
             <div className="bg-white min-h-screen pb-32">
                 {/* ── STICKY TOP NAV ── */}
-                <div className="fixed top-0 left-0 right-0 z-50 bg-[#FFF6E9]/90 backdrop-blur-xl px-5 pt-8 pb-4 flex items-center justify-between border-b border-black/[0.03]">
+                <div className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl px-5 pt-8 pb-4 flex items-center justify-between border-b border-black/[0.03]">
                     <button
                         onClick={() => navigate(-1)}
-                        className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-content shadow-sm active:scale-90 transition-transform"
+                        className="w-10 h-10 bg-white border border-gray-100 rounded-xl flex items-center justify-center text-content shadow-sm active:scale-90 transition-transform"
                     >
                         <ArrowLeft size={20} />
                     </button>
@@ -168,13 +188,23 @@ const ProductDetail = () => {
                         <h1 className="text-2xl font-[1000] text-content leading-tight uppercase tracking-tight">{product.name}</h1>
                     </div>
 
-                    <div className="flex items-center justify-between py-2 border-y border-gray-50">
+                    <div className="flex items-center justify-between py-6 border-y border-gray-50">
                         <div className="flex flex-col">
                             <div className="flex items-baseline gap-3">
-                                <span className="text-3xl font-[1000] text-content tracking-tighter">₹{product.salePrice.toLocaleString()}</span>
+                                <span className={`text-4xl font-[1000] tracking-tighter ${isBlackPassMember ? 'text-brand' : 'text-content'}`}>
+                                    ₹{(isBlackPassMember ? (product.salePrice * 0.7) : product.salePrice)?.toLocaleString()}
+                                </span>
                                 <span className="text-sm font-bold text-content-subtle line-through opacity-40">₹{product.price.toLocaleString()}</span>
                             </div>
-                            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mt-1">Inclusive of all taxes</p>
+                            {isBlackPassMember && (
+                                <div className="mt-2 flex items-center gap-2">
+                                    <div className="px-2 py-1 bg-black rounded-lg flex items-center gap-1.5 shadow-lg shadow-black/10">
+                                        <Crown size={10} className="text-brand" fill="currentColor" />
+                                        <span className="text-[9px] font-black text-brand uppercase tracking-widest">Exclusive Member Price</span>
+                                    </div>
+                                </div>
+                            )}
+                            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mt-2">Inclusive of all taxes</p>
                         </div>
 
                         <div className="flex items-center h-12 bg-gray-50 rounded-2xl p-1 border border-gray-100">
@@ -198,7 +228,9 @@ const ProductDetail = () => {
                     <div className="grid grid-cols-3 gap-3">
                         <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 flex flex-col items-center text-center gap-2">
                             <Truck size={18} className="text-content-subtle" />
-                            <span className="text-[8px] font-black text-content uppercase tracking-widest leading-none">Fast<br />Delivery</span>
+                            <span className="text-[8px] font-black text-content uppercase tracking-widest leading-none mx-[-10px]">
+                                {deliveryEta.split(' ')[0]}<br />{deliveryEta.split(' ').slice(1).join(' ')}
+                            </span>
                         </div>
                         <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 flex flex-col items-center text-center gap-2">
                             <RefreshCw size={18} className="text-content-subtle" />
@@ -209,6 +241,7 @@ const ProductDetail = () => {
                             <span className="text-[8px] font-black text-content uppercase tracking-widest leading-none">Safe<br />Payment</span>
                         </div>
                     </div>
+
 
                     {/* Tabs Section */}
                     <div className="space-y-4 pt-4">
@@ -233,22 +266,29 @@ const ProductDetail = () => {
                                     {product.description} Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
                                 </p>
                             )}
-                            {activeTab === 'specifications' && (
+                             {activeTab === 'specifications' && (
                                 <div className="space-y-3">
                                     <div className="flex justify-between py-2 border-b border-gray-50">
                                         <span className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Model Number</span>
-                                        <span className="text-[10px] font-black text-content uppercase tracking-widest">{product.id}</span>
-                                    </div>
-                                    <div className="flex justify-between py-2 border-b border-gray-50">
-                                        <span className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Brand</span>
-                                        <span className="text-[10px] font-black text-content uppercase tracking-widest">Clean2Wash Pro</span>
+                                        <span className="text-[10px] font-black text-content uppercase tracking-widest">{product._id?.substring(0, 8) || 'N/A'}</span>
                                     </div>
                                     <div className="flex justify-between py-2 border-b border-gray-50">
                                         <span className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Category</span>
                                         <span className="text-[10px] font-black text-content uppercase tracking-widest">{product.category}</span>
                                     </div>
+                                    {product.specifications?.length > 0 ? (
+                                        product.specifications.map((spec, i) => (
+                                            <div key={i} className="flex justify-between py-2 border-b border-gray-50">
+                                                <span className="text-[10px] font-black text-content-subtle uppercase tracking-widest">{spec.key}</span>
+                                                <span className="text-[10px] font-black text-content uppercase tracking-widest">{spec.value}</span>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-[10px] font-bold text-content-subtle py-4">No detailed specifications provided.</p>
+                                    )}
                                 </div>
                             )}
+
                             {activeTab === 'delivery' && (
                                 <div className="space-y-4">
                                     <div className="flex gap-4">

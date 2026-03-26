@@ -47,6 +47,7 @@ router.get('/services/vehicle-models', serviceController.getVehicleModels);
 
 // Product routes
 router.get('/products', productController.getProducts);
+router.get('/products/trending', productController.getTrendingProducts);
 router.get('/eshop/metadata', productController.getEshopMetadata);
 router.get('/products/:id', productController.getProductDetails);
 
@@ -157,6 +158,7 @@ router.post('/subscription', profileController.createSubscription);
 router.patch('/subscription/pause', profileController.pauseSubscription);
 router.patch('/subscription/resume', profileController.resumeSubscription);
 router.delete('/subscription', profileController.cancelSubscription);
+router.post('/subscription/use-credit', profileController.useSubscriptionCredit);
 router.delete('/account', profileController.deleteAccount);
 
 module.exports = router;

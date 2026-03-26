@@ -84,15 +84,31 @@ const ApartmentWash = () => {
     // Filtered apartments
     const filteredApartments = useMemo(() => {
         if (!searchQuery) return apartments;
-        return apartments.filter(apt =>
-            apt?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            apt?.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (apt?.location && apt.location.toLowerCase().includes(searchQuery.toLowerCase()))
-        );
+        const q = searchQuery.toLowerCase();
+        return apartments.filter(apt => {
+            const name = apt?.name?.toLowerCase() || '';
+            const city = (typeof apt?.city === 'object' ? apt.city.name : apt?.city)?.toLowerCase() || '';
+            const location = (typeof apt?.location === 'object' ? (apt.location.address || apt.location.full) : apt?.location)?.toLowerCase() || '';
+            
+            return name.includes(q) || city.includes(q) || location.includes(q);
+        });
     }, [apartments, searchQuery]);
 
     const handleApartmentClick = (apt) => {
         setSelectedApartment(apt);
+        
+        // Auto-select or reset parking details based on metadata
+        const metadata = apt?.metadata || {};
+        const levels = metadata.parkingLevels || [];
+        const blocks = metadata.blocks || [];
+        
+        setParkingDetails({
+            ...parkingDetails,
+            basement: levels.length === 1 ? levels[0] : '',
+            block: blocks.length === 1 ? blocks[0] : '',
+            pillar: ''
+        });
+        
         setStep(2);
     };
 
@@ -170,7 +186,7 @@ const ApartmentWash = () => {
                                 <div className="flex items-center gap-1.5 mt-1.5">
                                     <MapPin size={10} className="text-brand" strokeWidth={3} />
                                     <span className="text-[9px] font-black text-black/30 uppercase tracking-[0.15em] leading-none font-outfit">
-                                        {apt.location || 'Premium Complex'}, {apt.city}
+                                        {typeof apt.location === 'object' ? (apt.location.address || apt.location.full) : (apt.location || 'Premium Complex')}, {typeof apt.city === 'object' ? apt.city.name : (apt.city || 'City')}
                                     </span>
                                 </div>
                             </div>
@@ -258,32 +274,66 @@ const ApartmentWash = () => {
                                     onChange={(e) => setParkingDetails({ ...parkingDetails, basement: e.target.value })}
                                 >
                                     <option value="">Select Level</option>
-                                    <option value="B1">Basement 1</option>
-                                    <option value="B2">Basement 2</option>
-                                    <option value="Ground">Ground Floor</option>
+                                    {selectedApartment.metadata?.parkingLevels && selectedApartment.metadata.parkingLevels.length > 0 ? (
+                                        selectedApartment.metadata.parkingLevels.map(level => (
+                                            <option key={level} value={level}>{level}</option>
+                                        ))
+                                    ) : (
+                                        <>
+                                            <option value="B1">Basement 1</option>
+                                            <option value="B2">Basement 2</option>
+                                            <option value="Ground">Ground Floor</option>
+                                        </>
+                                    )}
                                 </select>
                                 <ChevronDown size={14} className="absolute right-5 top-1/2 -translate-y-1/2 text-black/20 pointer-events-none" />
                             </div>
                         </div>
                         <div className="space-y-2">
                             <label className="text-[9px] font-black text-black/30 uppercase tracking-[0.2em] ml-2">Block / Tower</label>
-                            <input
-                                required placeholder="e.g. Tower A"
-                                className="w-full bg-gray-50/50 border border-black/[0.03] px-5 py-4 rounded-2xl text-[11px] font-[1000] text-black outline-none focus:border-brand/20 shadow-sm uppercase placeholder:text-black/10 font-outfit"
-                                value={parkingDetails.block}
-                                onChange={(e) => setParkingDetails({ ...parkingDetails, block: e.target.value })}
-                            />
+                            {selectedApartment.metadata?.blocks && selectedApartment.metadata.blocks.length > 0 ? (
+                                <div className="relative">
+                                    <select
+                                        required
+                                        className="w-full bg-gray-50/50 border border-black/[0.03] px-5 py-4 rounded-2xl text-[11px] font-[1000] text-black outline-none focus:border-brand/20 shadow-sm appearance-none font-outfit"
+                                        value={parkingDetails.block}
+                                        onChange={(e) => setParkingDetails({ ...parkingDetails, block: e.target.value })}
+                                    >
+                                        <option value="">Select Block</option>
+                                        {selectedApartment.metadata.blocks.map(block => (
+                                            <option key={block} value={block}>{block}</option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown size={14} className="absolute right-5 top-1/2 -translate-y-1/2 text-black/20 pointer-events-none" />
+                                </div>
+                            ) : (
+                                <input
+                                    required placeholder="e.g. Tower A"
+                                    className="w-full bg-gray-50/50 border border-black/[0.03] px-5 py-4 rounded-2xl text-[11px] font-[1000] text-black outline-none focus:border-brand/20 shadow-sm uppercase placeholder:text-black/10 font-outfit"
+                                    value={parkingDetails.block}
+                                    onChange={(e) => setParkingDetails({ ...parkingDetails, block: e.target.value })}
+                                />
+                            )}
                         </div>
                     </div>
 
                     <div className="space-y-2">
                         <label className="text-[9px] font-black text-black/30 uppercase tracking-[0.2em] ml-2">Pillar / Slot No.</label>
                         <input
-                            required placeholder="e.g. P-102"
+                            required 
+                            placeholder={selectedApartment.metadata?.pillarRange ? `Pillar Range: ${selectedApartment.metadata.pillarRange.min} - ${selectedApartment.metadata.pillarRange.max}` : "e.g. P-102"}
+                            type={selectedApartment.metadata?.pillarRange ? "number" : "text"}
+                            min={selectedApartment.metadata?.pillarRange?.min}
+                            max={selectedApartment.metadata?.pillarRange?.max}
                             className="w-full bg-gray-50/50 border border-black/[0.03] px-5 py-4 rounded-2xl text-[11px] font-[1000] text-black outline-none focus:border-brand/20 shadow-sm uppercase placeholder:text-black/10 font-outfit"
                             value={parkingDetails.pillar}
                             onChange={(e) => setParkingDetails({ ...parkingDetails, pillar: e.target.value })}
                         />
+                        {selectedApartment.metadata?.pillarRange && (
+                            <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest ml-2">
+                                Valid Range: {selectedApartment.metadata.pillarRange.min} to {selectedApartment.metadata.pillarRange.max}
+                            </p>
+                        )}
                     </div>
 
                     {!parkingDetails.vehicleId && (
@@ -630,10 +680,12 @@ const ApartmentWash = () => {
                                             navigate('/booking-confirmation', {
                                                 state: {
                                                     type: 'subscription',
+                                                    bookingId: subRes.data?.subscription?._id || subRes.data?._id,
                                                     service: apartmentService?.title || 'Apartment Car Wash',
                                                     plan: selectedPlan.name,
                                                     society: selectedApartment.name,
-                                                    slot: selectedSlot.label
+                                                    slot: selectedSlot.label,
+                                                    parking: parkingDetails
                                                 }
                                             });
                                             resolve(true);

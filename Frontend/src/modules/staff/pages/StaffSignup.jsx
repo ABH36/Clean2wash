@@ -7,7 +7,7 @@ import { useTheme } from '../../../context/ThemeContext';
 const StaffSignup = () => {
     const navigate = useNavigate();
     const { isDarkMode } = useTheme();
-    
+
     return (
         <div className={`min-h-screen px-8 pt-16 pb-12 flex flex-col relative overflow-hidden transition-colors duration-500 ${isDarkMode ? 'bg-[#0F172A]' : 'bg-white'}`}>
             {/* Background elements */}
@@ -31,12 +31,12 @@ const StaffSignup = () => {
                         <ShieldCheck size={44} className="text-brand group-hover:scale-110 transition-transform" />
                         <div className="absolute inset-0 bg-brand/10 rounded-[3rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
-                    <p className={`text-[10px] font-black uppercase tracking-[0.4em] mb-3 italic ${isDarkMode ? 'text-brand-light' : 'text-brand'}`}>Inventory & Personnel</p>
-                    <h1 className={`text-4xl font-black italic leading-tight uppercase tracking-tighter mb-6 ${isDarkMode ? 'text-white' : 'text-content'}`}>Managed <br /> Onboarding</h1>
-                    
+                    <p className={`text-[10px] font-black uppercase tracking-[0.4em] mb-3 ${isDarkMode ? 'text-brand-light' : 'text-brand'}`}>Inventory & Personnel</p>
+                    <h1 className={`text-4xl font-black leading-tight uppercase tracking-tighter mb-6 ${isDarkMode ? 'text-white' : 'text-content'}`}>Managed <br /> Onboarding</h1>
+
                     <div className={`p-8 rounded-[2.5rem] border backdrop-blur-sm ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-100'}`}>
                         <p className={`text-xs font-bold leading-relaxed mb-6 ${isDarkMode ? 'text-white/60' : 'text-content-subtle'}`}>
-                            Staff and Field Agent accounts are strictly managed by <span className="text-brand font-black italic uppercase">Hub Managers</span> & <span className="text-brand font-black italic uppercase">Vendors</span>.
+                            Staff and Field Agent accounts are strictly managed by <span className="text-brand font-black uppercase">Hub Managers</span> & <span className="text-brand font-black uppercase">Vendors</span>.
                         </p>
                         <p className={`text-[11px] font-medium leading-relaxed opacity-80 ${isDarkMode ? 'text-white/40' : 'text-content-subtle'}`}>
                             If you have been recruited, please contact your supervisor for your <span className="font-bold underline decoration-brand/30">Security Access PIN</span> and System ID.
@@ -47,7 +47,7 @@ const StaffSignup = () => {
                         <Link to="/staff/login" className={`w-full h-16 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-xl flex items-center justify-center gap-3 transition-all ${isDarkMode ? 'bg-white text-[#0F172A] hover:bg-brand hover:text-white' : 'bg-content text-white hover:bg-brand'}`}>
                             Go to Terminal Login <ArrowRight size={18} />
                         </Link>
-                        
+
                         <Link to="/vendor/signup" className={`w-full h-16 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] border flex items-center justify-center gap-3 transition-all ${isDarkMode ? 'border-white/10 text-white/40 hover:text-brand hover:border-brand' : 'border-gray-200 text-content-subtle hover:text-brand hover:border-brand'}`}>
                             Become a Partner <Briefcase size={18} />
                         </Link>

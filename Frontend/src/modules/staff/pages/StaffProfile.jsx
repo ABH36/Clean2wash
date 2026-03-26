@@ -66,18 +66,18 @@ const StaffProfile = () => {
                             <Camera size={18} />
                         </button>
                     </div>
-                    <h2 className={`text-2xl font-black italic leading-none mb-1 ${isDarkMode ? 'text-white' : 'text-content'}`}>{STAFF_DATA.name}</h2>
+                    <h2 className={`text-2xl font-black leading-none mb-1 ${isDarkMode ? 'text-white' : 'text-content'}`}>{STAFF_DATA.name}</h2>
                     <p className="text-[10px] font-black text-brand uppercase tracking-[0.2em]">{STAFF_DATA.id}</p>
 
                     <div className={`flex gap-4 mt-8 pt-8 border-t ${isDarkMode ? 'border-white/5' : 'border-gray-50'}`}>
                         <div className="flex-1">
-                            <p className={`text-[8px] font-black uppercase tracking-widest mb-1 italic ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Attached Hub</p>
-                            <p className={`text-xs font-black italic uppercase tracking-tighter ${isDarkMode ? 'text-white' : 'text-content'}`}>{STAFF_DATA.hub}</p>
+                            <p className={`text-[8px] font-black uppercase tracking-widest mb-1 ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Attached Hub</p>
+                            <p className={`text-xs font-black uppercase tracking-tighter ${isDarkMode ? 'text-white' : 'text-content'}`}>{STAFF_DATA.hub}</p>
                         </div>
                         <div className={`w-px h-8 self-center ${isDarkMode ? 'bg-white/5' : 'bg-gray-100'}`} />
                         <div className="flex-1">
-                            <p className={`text-[8px] font-black uppercase tracking-widest mb-1 italic ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Clearance</p>
-                            <p className="text-xs font-black text-brand italic uppercase tracking-tighter">{STAFF_DATA.role}</p>
+                            <p className={`text-[8px] font-black uppercase tracking-widest mb-1 ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Clearance</p>
+                            <p className="text-xs font-black text-brand uppercase tracking-tighter">{STAFF_DATA.role}</p>
                         </div>
                     </div>
 
@@ -86,7 +86,7 @@ const StaffProfile = () => {
 
                 {/* Menu List */}
                 <div className="space-y-4">
-                    <p className={`text-[10px] font-black uppercase tracking-[0.2em] px-4 italic ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Security & Ops</p>
+                    <p className={`text-[10px] font-black uppercase tracking-[0.2em] px-4 ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Security & Ops</p>
                     {MENU_ITEMS.map((item, i) => (
                         <button
                             key={i}
@@ -98,7 +98,7 @@ const StaffProfile = () => {
                                     {item.icon}
                                 </div>
                                 <div className="text-left">
-                                    <h4 className={`text-sm font-black italic uppercase leading-none mb-1.5 ${isDarkMode ? 'text-white' : 'text-content'}`}>{item.label}</h4>
+                                    <h4 className={`text-sm font-black uppercase leading-none mb-1.5 ${isDarkMode ? 'text-white' : 'text-content'}`}>{item.label}</h4>
                                     <p className={`text-[10px] font-bold uppercase tracking-widest leading-none ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>{item.sub}</p>
                                 </div>
                             </div>

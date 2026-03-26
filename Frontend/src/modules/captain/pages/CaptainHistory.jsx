@@ -51,7 +51,7 @@ const CaptainHistory = () => {
                         <button onClick={() => navigate(-1)} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isDarkMode ? 'bg-white/10 text-white' : 'bg-white border border-gray-100 text-content'}`}>
                             <ArrowLeft size={20} />
                         </button>
-                        <h1 className={`text-xl font-black italic tracking-tight uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>Wash History</h1>
+                        <h1 className={`text-xl font-black tracking-tight uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>Wash History</h1>
                     </div>
 
                     <div className={`${isDarkMode ? 'bg-white/5' : 'bg-gray-100'} flex gap-2 p-1 rounded-2xl overflow-x-auto scrollbar-hide transition-colors`}>
@@ -82,8 +82,8 @@ const CaptainHistory = () => {
                         >
                             <div className="flex justify-between items-start mb-4">
                                 <div>
-                                    <p className="text-[10px] font-black text-brand uppercase tracking-widest italic mb-1">{item.id}</p>
-                                    <h3 className={`font-black text-base italic uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>{item.serviceName}</h3>
+                                    <p className="text-[10px] font-black text-brand uppercase tracking-widest mb-1">{item.id}</p>
+                                    <h3 className={`font-black text-base uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>{item.serviceName}</h3>
                                 </div>
                                 <div className={`px-3 py-1 rounded-lg flex items-center gap-1.5 ${item.status === 'completed'
                                     ? (isDarkMode ? 'bg-green-500/10 text-green-400' : 'bg-green-50 text-green-600')
@@ -110,7 +110,7 @@ const CaptainHistory = () => {
                             <div className="pt-4 flex items-center justify-between">
                                 <div>
                                     <p className={`text-[8px] font-black uppercase tracking-widest mb-1 ${isDarkMode ? 'text-white/40' : 'text-content-subtle'}`}>PPL Share</p>
-                                    <p className={`text-xl font-black italic ${isDarkMode ? 'text-white' : 'text-content'}`}>{item.price}</p>
+                                    <p className={`text-xl font-black ${isDarkMode ? 'text-white' : 'text-content'}`}>{item.price}</p>
                                 </div>
                                 <button onClick={() => navigate(`/captain/job?id=${item.id}`)}
                                     className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 text-white/40' : 'bg-gray-50 text-content-subtle'} group-hover:bg-brand group-hover:text-white`}>
@@ -129,7 +129,7 @@ const CaptainHistory = () => {
                     {filteredJobs.length === 0 && (
                         <div className="py-20 text-center">
                             <Clock size={48} className={`${isDarkMode ? 'text-white/10' : 'text-gray-200'} mx-auto mb-4`} />
-                            <p className={`${isDarkMode ? 'text-white/40' : 'text-content-subtle'} font-black uppercase text-xs tracking-widest italic`}>No history found</p>
+                            <p className={`${isDarkMode ? 'text-white/40' : 'text-content-subtle'} font-black uppercase text-xs tracking-widest`}>No history found</p>
                         </div>
                     )}
                 </div>

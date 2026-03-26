@@ -37,7 +37,7 @@ const NotificationBell = () => {
             const newNotif = data.notification;
             setNotifications(prev => [newNotif, ...prev]);
             setUnreadCount(prev => prev + 1);
-            
+
             // Custom Toast for real-time alert
             toast.custom((t) => (
                 <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-surface shadow-2xl rounded-[2rem] pointer-events-auto flex ring-1 ring-black ring-opacity-5 p-5 border border-brand/20 backdrop-blur-xl`}>
@@ -49,7 +49,7 @@ const NotificationBell = () => {
                                 </div>
                             </div>
                             <div className="ml-4 flex-1">
-                                <p className="text-sm font-black text-content uppercase tracking-tighter italic">
+                                <p className="text-sm font-black text-content uppercase tracking-tighter">
                                     {newNotif.title}
                                 </p>
                                 <p className="mt-1 text-xs font-bold text-content-subtle lowercase leading-tight">
@@ -78,7 +78,7 @@ const NotificationBell = () => {
     const handleMarkAsRead = async (id) => {
         try {
             await vendorAPI.markNotificationRead(id);
-            setNotifications(prev => 
+            setNotifications(prev =>
                 prev.map(n => n.id === id || n._id === id ? { ...n, isRead: true } : n)
             );
             setUnreadCount(prev => Math.max(0, prev - 1));
@@ -119,7 +119,7 @@ const NotificationBell = () => {
     return (
         <div className="relative">
             {/* Bell Icon */}
-            <button 
+            <button
                 onClick={() => setIsOpen(!isOpen)}
                 className="relative w-9 h-9 bg-background rounded-xl flex items-center justify-center border border-gray-100/10 hover:bg-surface transition-all group"
             >
@@ -138,7 +138,7 @@ const NotificationBell = () => {
             <AnimatePresence>
                 {isOpen && (
                     <>
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -155,20 +155,20 @@ const NotificationBell = () => {
                             {/* Header */}
                             <div className="px-6 py-5 border-b border-gray-100/10 flex items-center justify-between bg-background/50">
                                 <div>
-                                    <h3 className="text-sm font-black text-content uppercase tracking-widest italic leading-none">Intelligence Feed</h3>
+                                    <h3 className="text-sm font-black text-content uppercase tracking-widest leading-none">Intelligence Feed</h3>
                                     <p className="text-[9px] text-content-subtle font-bold uppercase tracking-widest mt-1">
                                         {unreadCount} Unread Alerts Received
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <button 
+                                    <button
                                         onClick={handleMarkAllRead}
                                         className="p-2 bg-background hover:bg-brand/10 text-content-subtle hover:text-brand rounded-xl transition-all"
                                         title="Clear All"
                                     >
                                         <Check size={14} />
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={() => setIsOpen(false)}
                                         className="p-2 bg-background hover:bg-red-500/10 text-content-subtle hover:text-red-500 rounded-xl transition-all"
                                     >

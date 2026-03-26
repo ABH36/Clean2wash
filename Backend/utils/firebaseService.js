@@ -19,8 +19,8 @@ try {
 
     console.log('✅ Firebase Admin Initialized'.green.bold);
 } catch (error) {
-    console.warn('⚠️ Firebase Admin Initialization Failed: Push notifications will be disabled.'.yellow.bold);
-    console.warn('Reason:', error.message);
+    console.warn('⚠️  Firebase Admin: serviceAccountKey.json not found or invalid. Push notifications will be disabled.'.yellow);
+    // Silent fail for optional service
 }
 
 /**

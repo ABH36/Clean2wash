@@ -84,114 +84,133 @@ const VendorSettings = () => {
             subtitle="Manage your business identity"
         >
 
-            <div className="flex flex-col lg:flex-row gap-8">
+            <div className="flex flex-col lg:flex-row gap-8 pb-24 lg:pb-0">
                 {/* Settings Sidebar */}
-                <aside className="w-full lg:w-72 space-y-2">
+                <aside className="w-full lg:w-80 flex lg:flex-col overflow-x-auto lg:overflow-x-visible pb-4 lg:pb-0 gap-3 scrollbar-hide">
                     {SECTIONS.map((section) => (
                         <button
                             key={section.id}
                             onClick={() => setActiveSection(section.id)}
-                            className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all duration-300 text-left ${activeSection === section.id
-                                ? 'bg-surface border-brand shadow-lg shadow-brand/10'
-                                : 'bg-transparent border-transparent hover:bg-surface hover:border-gray-100/10'
+                            className={`flex-shrink-0 lg:flex-shrink flex items-center gap-4 p-5 rounded-[2rem] border transition-all duration-300 text-left relative overflow-hidden group ${activeSection === section.id
+                                ? 'bg-surface border-brand shadow-xl shadow-brand/10 ring-1 ring-brand/20'
+                                : 'bg-surface/40 border-gray-100/5 hover:border-gray-100/20'
                                 }`}
                         >
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${activeSection === section.id ? 'bg-brand text-white' : 'bg-background text-content-muted border border-gray-100/10'}`}>
-                                <section.icon size={18} />
+                            {activeSection === section.id && (
+                                <motion.div layoutId="activeBG" className="absolute left-0 w-1.5 h-full bg-brand" />
+                            )}
+                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${activeSection === section.id ? 'bg-brand text-white rotate-6' : 'bg-background text-content-subtle border border-gray-100/10'}`}>
+                                <section.icon size={20} strokeWidth={1.5} />
                             </div>
-                            <div className="flex-1">
-                                <p className={`text-sm font-black tracking-tight ${activeSection === section.id ? 'text-content' : 'text-content-muted'}`}>{section.label}</p>
-                                <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest">{section.sub}</p>
+                            <div className="flex-1 pr-4">
+                                <p className={`text-[13px] font-black tracking-tighter uppercase leading-none mb-1.5 ${activeSection === section.id ? 'text-content' : 'text-content-muted'}`}>{section.label}</p>
+                                <p className="text-[9px] font-black text-content-subtle uppercase tracking-[0.2em] opacity-60 truncate">{section.sub}</p>
                             </div>
                         </button>
                     ))}
                 </aside>
 
                 {/* Settings Form */}
-                <div className="flex-1 bg-surface rounded-[2rem] border border-gray-100/10 shadow-soft p-8 space-y-8">
-                    <div className="flex items-center justify-between">
+                <div className="flex-1 bg-surface rounded-[3rem] border border-gray-100/10 shadow-soft p-6 md:p-10 space-y-10 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-brand/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
+
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
                         <div>
-                            <h2 className="text-xl font-black text-content italic tracking-tight">{activeSection} Settings</h2>
-                            <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] mt-1">Updates reflect across the customer app</p>
+                            <h2 className="text-2xl font-black text-content tracking-tighter uppercase leading-none mb-2">{activeSection} <span className="text-brand">Protocol</span></h2>
+                            <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em] opacity-60">System-wide operational adjustments</p>
                         </div>
                         {activeSection === 'Profile' && (
                             <button
                                 onClick={handleSave}
                                 disabled={saving}
-                                className="bg-brand text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-brand/20 flex items-center gap-2 hover:scale-105 transition-all disabled:opacity-50"
+                                className="h-12 px-8 bg-brand text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-brand/20 flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
                             >
-                                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save size={16} /> Save Changes</>}
+                                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save size={16} strokeWidth={2.5} /> Update Registry</>}
                             </button>
                         )}
                     </div>
 
                     {loading ? (
-                        <div className="py-20 flex justify-center">
-                            <Loader2 className="w-10 h-10 text-brand animate-spin" />
+                        <div className="py-32 flex flex-col items-center gap-4">
+                            <div className="w-12 h-12 border-4 border-brand/20 border-t-brand rounded-full animate-spin shadow-lg shadow-brand/20" />
+                            <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.4em] leading-none">Accessing Central Data...</p>
                         </div>
                     ) : activeSection === 'Verification' ? (
-                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                            <div className="bg-background rounded-[2rem] p-8 border border-gray-100/10 flex flex-col md:flex-row items-center gap-8">
-                                <div className={`w-24 h-24 rounded-[2rem] flex items-center justify-center shadow-2xl ${(vendor.profile?.verificationStatus === 'verified' || vendor.verificationStatus === 'verified') ? 'bg-green-500 text-white shadow-green-500/20' :
+                        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 relative z-10">
+                            <div className="bg-background/80 backdrop-blur-sm rounded-[2.5rem] p-8 md:p-12 border border-gray-100/10 flex flex-col md:flex-row items-center gap-10 shadow-inner group">
+                                <div className={`w-32 h-32 rounded-[2.5rem] flex items-center justify-center shadow-2xl transition-transform group-hover:scale-105 duration-500 ${(vendor.profile?.verificationStatus === 'verified' || vendor.verificationStatus === 'verified') ? 'bg-green-500 text-white shadow-green-500/20' :
                                     (vendor.profile?.verificationStatus === 'rejected' || vendor.verificationStatus === 'rejected') ? 'bg-red-500 text-white shadow-red-500/20' :
                                         'bg-brand text-white shadow-brand/20'
                                     }`}>
-                                    {(vendor.profile?.verificationStatus === 'verified' || vendor.verificationStatus === 'verified') ? <CheckCircle2 size={40} /> :
-                                        (vendor.profile?.verificationStatus === 'rejected' || vendor.verificationStatus === 'rejected') ? <AlertCircle size={40} /> : <Clock size={40} />}
+                                    {(vendor.profile?.verificationStatus === 'verified' || vendor.verificationStatus === 'verified') ? <CheckCircle2 size={56} strokeWidth={1} /> :
+                                        (vendor.profile?.verificationStatus === 'rejected' || vendor.verificationStatus === 'rejected') ? <AlertCircle size={56} strokeWidth={1} /> : <Clock size={56} strokeWidth={1} />}
                                 </div>
-                                <div className="text-center md:text-left">
-                                    <p className="text-[10px] font-black text-brand uppercase tracking-[0.3em] mb-2 italic">Official Registry Status</p>
-                                    <h3 className="text-3xl font-black text-content italic leading-none uppercase tracking-tighter">
+                                <div className="text-center md:text-left space-y-3">
+                                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand/10 rounded-full border border-brand/20">
+                                        <Shield size={12} className="text-brand" />
+                                        <p className="text-[9px] font-black text-brand uppercase tracking-[0.2em]">Official Audit Trail</p>
+                                    </div>
+                                    <h3 className="text-4xl font-black text-content leading-none uppercase tracking-tighter">
                                         {(vendor.profile?.verificationStatus === 'verified' || vendor.verificationStatus === 'verified') ? 'Identity Verified' :
-                                            (vendor.profile?.verificationStatus === 'rejected' || vendor.verificationStatus === 'rejected') ? 'Clearance Rejected' : 'Verification Pending'}
+                                            (vendor.profile?.verificationStatus === 'rejected' || vendor.verificationStatus === 'rejected') ? 'Clearance Denied' : 'Audit In Progress'}
                                     </h3>
-                                    <p className="text-[11px] font-bold text-content-subtle uppercase mt-3 tracking-widest">
-                                        {(vendor.profile?.verificationStatus === 'verified' || vendor.verificationStatus === 'verified') ? 'Your studio is fully cleared for all marketplace operations.' :
-                                            (vendor.profile?.verificationStatus === 'rejected' || vendor.verificationStatus === 'rejected') ? 'Discrepancies found in your documentation. Please re-apply.' :
-                                                'Our tactical team is currently auditing your submitted documents.'}
+                                    <p className="text-xs font-black text-content-subtle uppercase tracking-[0.1em] leading-relaxed max-w-md opacity-60">
+                                        {(vendor.profile?.verificationStatus === 'verified' || vendor.verificationStatus === 'verified') ? 'Proprietary studio clearance achieved. All marketplace channels are active.' :
+                                            (vendor.profile?.verificationStatus === 'rejected' || vendor.verificationStatus === 'rejected') ? 'Critical discrepancies detected in tactical registry. Please re-submit credentials.' :
+                                                'Central intelligence is currently auditing your operational documentation. Stay on standby.'}
                                     </p>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="bg-background border border-gray-100/10 rounded-[2rem] p-6 shadow-sm">
-                                    <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest mb-4 italic flex items-center gap-2">
-                                        <FileText size={14} className="text-brand" /> Document Registry
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="bg-background/40 backdrop-blur-sm border border-gray-100/10 rounded-[2.5rem] p-8 shadow-inner group/card">
+                                    <p className="text-[10px] font-black text-content uppercase tracking-[0.3em] mb-6 flex items-center gap-3">
+                                        <FileText size={16} className="text-brand" /> Registry Proof
                                     </p>
-                                    <div className="aspect-video bg-surface rounded-2xl overflow-hidden border border-gray-100/10 group relative">
-                                        <img src={vendor.profile?.idProof} alt="ID Proof" className="w-full h-full object-cover opacity-60 grayscale group-hover:opacity-100 group-hover:grayscale-0 transition-all duration-500" />
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="aspect-[4/3] bg-surface rounded-[2rem] overflow-hidden border border-gray-100/10 group relative shadow-2xl">
+                                        <img src={vendor.profile?.idProof} alt="ID Proof" className="w-full h-full object-cover opacity-40 grayscale group-hover:opacity-100 group-hover:grayscale-0 transition-all duration-700 active:scale-110" />
+                                        <div className="absolute inset-0 bg-brand/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-6">
                                             <button
                                                 onClick={() => window.open(vendor.profile?.idProof, '_blank')}
-                                                className="bg-white/90 backdrop-blur px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl flex items-center gap-2 text-black"
+                                                className="w-full h-14 bg-white text-black rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all"
                                             >
-                                                <Eye size={14} /> View Document
+                                                <Eye size={18} /> Inspect Asset
                                             </button>
                                         </div>
                                     </div>
-                                    <p className="text-[9px] font-bold text-content-subtle uppercase tracking-widest mt-4 text-center">Submitted on: {new Date(vendor.createdAt).toLocaleDateString()}</p>
+                                    <div className="mt-6 flex items-center justify-center gap-2 py-3 bg-surface/50 rounded-xl border border-gray-100/5">
+                                        <Clock size={12} className="text-content-subtle/40" />
+                                        <p className="text-[9px] font-black text-content-subtle uppercase tracking-widest opacity-40">Submitted: {new Date(vendor.createdAt).toLocaleDateString()}</p>
+                                    </div>
                                 </div>
-                                <div className="bg-background border border-gray-100/10 rounded-[2rem] p-6 shadow-sm flex flex-col justify-between">
-                                    <div>
-                                        <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest mb-4 italic flex items-center gap-2">
-                                            <Shield size={14} className="text-brand" /> Operational Limits
+                                <div className="bg-background/40 backdrop-blur-sm border border-gray-100/10 rounded-[2.5rem] p-8 shadow-inner flex flex-col justify-between">
+                                    <div className="space-y-8">
+                                        <p className="text-[10px] font-black text-content uppercase tracking-[0.3em] flex items-center gap-3">
+                                            <Shield size={16} className="text-brand" /> Operational Clearance
                                         </p>
-                                        <ul className="space-y-3">
+                                        <div className="space-y-4">
                                             {[
-                                                { label: 'Marketplace Listing', ok: vendor.profile?.verificationStatus === 'verified' || vendor.verificationStatus === 'verified' },
-                                                { label: 'Revenue Withdrawals', ok: vendor.profile?.verificationStatus === 'verified' || vendor.verificationStatus === 'verified' },
-                                                { label: 'Booking Management', ok: vendor.profile?.verificationStatus === 'verified' || vendor.verificationStatus === 'verified' },
-                                                { label: 'Fleet Integration', ok: vendor.profile?.verificationStatus === 'verified' || vendor.verificationStatus === 'verified' }
+                                                { label: 'Marketplace Dominance', ok: vendor.profile?.verificationStatus === 'verified' || vendor.verificationStatus === 'verified' },
+                                                { label: 'Revenue Extractions', ok: vendor.profile?.verificationStatus === 'verified' || vendor.verificationStatus === 'verified' },
+                                                { label: 'Tactical Dispatch', ok: vendor.profile?.verificationStatus === 'verified' || vendor.verificationStatus === 'verified' }
                                             ].map((item, i) => (
-                                                <li key={i} className="flex items-center gap-3">
-                                                    {item.ok ? <CheckCircle2 size={14} className="text-green-500" /> : <Clock size={14} className="text-orange-400" />}
-                                                    <span className={`text-[11px] font-bold uppercase tracking-tight ${item.ok ? 'text-content' : 'text-content-subtle'}`}>{item.label}</span>
-                                                </li>
+                                                <div key={i} className="flex items-center justify-between p-4 bg-surface/30 rounded-2xl border border-gray-100/5">
+                                                    <span className={`text-[10px] font-black uppercase tracking-widest ${item.ok ? 'text-content' : 'text-content-subtle'}`}>{item.label}</span>
+                                                    {item.ok ? (
+                                                        <div className="w-6 h-6 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center justify-center text-green-500">
+                                                            <CheckCircle2 size={14} strokeWidth={3} />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="w-6 h-6 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-center justify-center text-amber-500">
+                                                            <Clock size={14} strokeWidth={3} />
+                                                        </div>
+                                                    )}
+                                                </div>
                                             ))}
-                                        </ul>
+                                        </div>
                                     </div>
 
-                                    <div className="relative mt-6">
+                                    <div className="relative mt-10">
                                         <input
                                             type="file"
                                             className="hidden"
@@ -209,11 +228,11 @@ const VendorSettings = () => {
                                                             });
                                                             if (res.status === 'success') {
                                                                 setVendor(res.data.vendor);
-                                                                toast.success('ID Proof uploaded for re-verification');
+                                                                toast.success('Credentials uploaded for audit');
                                                             }
                                                         } catch (err) {
                                                             console.error('Upload failed', err);
-                                                            toast.error('Upload failed. Please try again.');
+                                                            toast.error('Tactical failure during upload.');
                                                         } finally {
                                                             setSaving(false);
                                                         }
@@ -224,111 +243,124 @@ const VendorSettings = () => {
                                         />
                                         <label
                                             htmlFor="id-upload"
-                                            className="w-full py-3 bg-surface border border-gray-100/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-content-subtle hover:text-brand transition-colors flex items-center justify-center cursor-pointer"
+                                            className="w-full h-14 bg-surface border border-brand/20 rounded-2xl text-[10px] font-black uppercase tracking-widest text-brand hover:bg-brand hover:text-white transition-all flex items-center justify-center cursor-pointer shadow-sm active:scale-95"
                                         >
-                                            {saving ? <Loader2 size={12} className="animate-spin" /> : 'Re-upload Documents'}
+                                            {saving ? <Loader2 size={16} className="animate-spin" /> : 'Re-Submit Credentials'}
                                         </label>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     ) : activeSection === 'Payments' ? (
-                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                            <div className="bg-background rounded-[2rem] p-8 border border-gray-100/10">
-                                <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] mb-3">Available Balance</p>
-                                <h3 className="text-4xl font-black text-content italic">₹{vendor.wallet?.balance?.toLocaleString('en-IN') || '0'}.<span className="text-brand">00</span></h3>
-                                <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-4">Synced with Financial Forge</p>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="p-6 bg-background rounded-3xl border border-gray-100/10">
-                                    <p className="text-[9px] font-black text-content-subtle uppercase tracking-widest mb-1 opacity-60">Settlement Method</p>
-                                    <p className="text-sm font-black text-content uppercase italic tracking-tighter">Bank Transfer (IMPS/NEFT)</p>
+                        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 relative z-10">
+                            <div className="bg-background/60 backdrop-blur-sm rounded-[3rem] p-10 md:p-14 border border-gray-100/10 relative overflow-hidden group">
+                                <div className="absolute bottom-0 right-0 w-80 h-80 bg-brand/5 rounded-full blur-[100px] translate-y-1/2 translate-x-1/2" />
+                                <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.4em] mb-4 opacity-60">Liquid Asset Balance</p>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-4xl font-black text-content opacity-30">₹</span>
+                                    <h3 className="text-6xl font-black text-content tracking-tighter leading-none">{vendor.wallet?.balance?.toLocaleString('en-IN') || '0'}<span className="text-brand opacity-60">.00</span></h3>
                                 </div>
-                                <div className="p-6 bg-background rounded-3xl border border-gray-100/10">
-                                    <p className="text-[9px] font-black text-content-subtle uppercase tracking-widest mb-1 opacity-60">Processing Time</p>
-                                    <p className="text-sm font-black text-content uppercase italic tracking-tighter">24 - 48 Tactical Hours</p>
+                                <div className="mt-10 inline-flex items-center gap-3 px-5 py-2.5 bg-brand/10 border border-brand/20 rounded-2xl">
+                                    <div className="w-2 h-2 bg-brand rounded-full animate-pulse" />
+                                    <p className="text-[10px] font-black text-brand uppercase tracking-[0.2em]">Secured by Financial Ledger</p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="p-8 bg-background/40 backdrop-blur-sm rounded-[2.5rem] border border-gray-100/10 shadow-inner group hover:border-brand/30 transition-all">
+                                    <p className="text-[9px] font-black text-content-subtle uppercase tracking-[0.3em] mb-3 opacity-60">Settlement Method</p>
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center text-brand">
+                                            <CreditCard size={18} strokeWidth={2.5} />
+                                        </div>
+                                        <p className="text-base font-black text-content uppercase tracking-tighter">Bank Wire <span className="text-brand">(IMPS)</span></p>
+                                    </div>
+                                </div>
+                                <div className="p-8 bg-background/40 backdrop-blur-sm rounded-[2.5rem] border border-gray-100/10 shadow-inner group hover:border-brand/30 transition-all">
+                                    <p className="text-[9px] font-black text-content-subtle uppercase tracking-[0.3em] mb-3 opacity-60">Liquidity Window</p>
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center text-brand">
+                                            <Clock size={18} strokeWidth={2.5} />
+                                        </div>
+                                        <p className="text-base font-black text-content uppercase tracking-tighter">Instant <span className="opacity-40">Extractions</span></p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     ) : activeSection === 'Notifications' ? (
-                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 relative z-10">
                             {[
-                                { id: 'email', label: 'Email Tactical Alerts', sub: 'Receive order updates via registered email' },
-                                { id: 'sms', label: 'SMS Response Unit', sub: 'Critical alerts delivered to mobile' }
+                                { id: 'email', label: 'Tactical Email Logs', sub: 'Master dispatch and audit records via email', icon: FileText },
+                                { id: 'sms', label: 'SMS Response Unit', sub: 'Critical field alerts delivered to mobile', icon: Bell }
                             ].map((opt) => (
-                                <div key={opt.id} className="flex items-center justify-between p-6 bg-background rounded-3xl border border-gray-100/10">
-                                    <div>
-                                        <p className="text-[13px] font-black text-content tracking-tight">{opt.label}</p>
-                                        <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest">{opt.sub}</p>
+                                <div key={opt.id} className="flex items-center justify-between p-8 bg-background/40 backdrop-blur-sm rounded-[2.5rem] border border-gray-100/10 shadow-inner group">
+                                    <div className="flex items-center gap-6">
+                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${form.notifications?.[opt.id] ? 'bg-brand text-white shadow-lg shadow-brand/20' : 'bg-surface/50 text-content-subtle border border-gray-100/5'}`}>
+                                            <opt.icon size={24} strokeWidth={1.5} />
+                                        </div>
+                                        <div>
+                                            <p className="text-base font-black text-content tracking-tighter uppercase leading-none mb-2">{opt.label}</p>
+                                            <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] opacity-60">{opt.sub}</p>
+                                        </div>
                                     </div>
                                     <button
                                         onClick={() => {
                                             const newNotifs = { ...form.notifications, [opt.id]: !form.notifications[opt.id] };
                                             setForm({ ...form, notifications: newNotifs });
                                         }}
-                                        className={`w-14 h-8 rounded-full relative transition-all duration-300 ${form.notifications?.[opt.id] ? 'bg-brand' : 'bg-white/10'}`}
+                                        className={`w-16 h-9 rounded-full relative transition-all duration-500 shadow-inner ${form.notifications?.[opt.id] ? 'bg-brand shadow-brand/40' : 'bg-white/5'}`}
                                     >
-                                        <div className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow-lg transition-all duration-300 ${form.notifications?.[opt.id] ? 'left-7' : 'left-1'}`} />
+                                        <div className={`absolute top-1.5 w-6 h-6 rounded-full bg-white shadow-2xl transition-all duration-500 flex items-center justify-center ${form.notifications?.[opt.id] ? 'left-8.5' : 'left-1.5'}`}>
+                                            <div className={`w-1 h-1 rounded-full ${form.notifications?.[opt.id] ? 'bg-brand' : 'bg-gray-200'}`} />
+                                        </div>
                                     </button>
                                 </div>
                             ))}
-                            <div className="pt-4">
+                            <div className="pt-6">
                                 <button
                                     onClick={handleSave}
                                     disabled={saving}
-                                    className="w-full h-14 bg-brand text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-lg shadow-brand/20 flex items-center justify-center gap-2"
+                                    className="w-full h-16 bg-content text-white rounded-[2rem] font-black uppercase text-xs tracking-[0.3em] shadow-2xl shadow-content/20 flex items-center justify-center gap-4 hover:bg-brand transition-all active:scale-95 disabled:opacity-50"
                                 >
-                                    {saving ? <Loader2 size={14} className="animate-spin" /> : 'Confirm Preferences'}
+                                    {saving ? <Loader2 size={18} className="animate-spin" /> : <><Save size={18} strokeWidth={2.5} /> Deploy Configurations</>}
                                 </button>
                             </div>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest block italic">Studio Name</label>
-                                <input
-                                    type="text"
-                                    value={form.studioName}
-                                    onChange={e => setForm({ ...form, studioName: e.target.value })}
-                                    className="w-full h-14 bg-background border border-gray-100/10 rounded-2xl px-4 text-[13px] font-bold text-content outline-none focus:border-brand transition-all"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest block italic">Primary Contact</label>
-                                <input
-                                    type="text"
-                                    value={form.phone}
-                                    onChange={e => setForm({ ...form, phone: e.target.value })}
-                                    className="w-full h-14 bg-background border border-gray-100/10 rounded-2xl px-4 text-[13px] font-bold text-content outline-none focus:border-brand transition-all font-mono"
-                                />
-                            </div>
-                            <div className="md:col-span-2 space-y-2">
-                                <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest mb-2 block italic">Studio Address</label>
-                                <textarea
-                                    value={form.address}
-                                    onChange={e => setForm({ ...form, address: e.target.value })}
-                                    className="w-full bg-background border border-gray-100/10 rounded-2xl p-4 text-[13px] font-bold text-content outline-none focus:border-brand transition-all resize-none h-32"
-                                    placeholder="Enter physical studio location"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest block italic">Operating City</label>
-                                <input
-                                    type="text"
-                                    value={form.city}
-                                    onChange={e => setForm({ ...form, city: e.target.value })}
-                                    className="w-full h-14 bg-background border border-gray-100/10 rounded-2xl px-4 text-[13px] font-bold text-content outline-none focus:border-brand transition-all"
-                                    placeholder="e.g. Noida, Delhi"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest block italic">Platform Email</label>
-                                <input
-                                    type="email"
-                                    value={form.email}
-                                    onChange={e => setForm({ ...form, email: e.target.value })}
-                                    className="w-full h-14 bg-background border border-gray-100/10 rounded-2xl px-4 text-[13px] font-bold text-content outline-none focus:border-brand transition-all"
-                                />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 pt-4 animate-in fade-in slide-in-from-bottom-4 duration-700 relative z-10">
+                            {[
+                                { id: 'studioName', label: 'Studio Identity', icon: Store, type: 'text' },
+                                { id: 'phone', label: 'Battle-Line Contact', icon: Clock, type: 'text', font: 'font-mono' },
+                                { id: 'email', label: 'Command Email', icon: FileText, type: 'email' },
+                                { id: 'city', label: 'Sector Location', icon: Shield, type: 'text' }
+                            ].map((field) => (
+                                <div key={field.id} className="space-y-3 group">
+                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em] block px-4 group-focus-within:text-brand transition-colors">{field.label}</label>
+                                    <div className="relative">
+                                        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-content-subtle/30 group-focus-within:text-brand transition-colors">
+                                            <field.icon size={16} />
+                                        </div>
+                                        <input
+                                            type={field.type}
+                                            value={form[field.id]}
+                                            onChange={e => setForm({ ...form, [field.id]: e.target.value })}
+                                            className={`w-full h-16 bg-background/60 backdrop-blur-sm border border-gray-100/10 rounded-2xl pl-14 pr-6 text-sm font-black text-content outline-none focus:border-brand/50 focus:bg-background transition-all shadow-inner ${field.font || ''} uppercase tracking-tight`}
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                            <div className="md:col-span-2 space-y-3 group">
+                                <label className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em] mb-2 block px-4 group-focus-within:text-brand transition-colors">Tactical Base Address</label>
+                                <div className="relative">
+                                    <textarea
+                                        value={form.address}
+                                        onChange={e => setForm({ ...form, address: e.target.value })}
+                                        className="w-full bg-background/60 backdrop-blur-sm border border-gray-100/10 rounded-[2rem] p-6 text-sm font-black text-content outline-none focus:border-brand/50 focus:bg-background transition-all resize-none h-40 shadow-inner uppercase tracking-tight leading-relaxed placeholder:text-content-subtle/20"
+                                        placeholder="EXPLAIN PHYSICAL COMMAND HUB LOCATION..."
+                                    />
+                                    <div className="absolute right-6 bottom-6 opacity-5 group-focus-within:opacity-20 transition-opacity">
+                                        <Store size={48} />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}

@@ -36,7 +36,7 @@ const CaptainRewards = () => {
                         <button onClick={() => navigate(-1)} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isDarkMode ? 'bg-white/10 text-white' : 'bg-white border border-gray-100 shadow-sm text-content'}`}>
                             <ArrowLeft size={20} />
                         </button>
-                        <h1 className={`text-xl font-black italic tracking-tight uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>Rewards & Levels</h1>
+                        <h1 className={`text-xl font-black tracking-tight uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>Rewards & Levels</h1>
                     </div>
                 </div>
 
@@ -48,11 +48,11 @@ const CaptainRewards = () => {
                                 <div className="p-3 bg-brand/20 rounded-2xl text-brand shadow-lg">
                                     <Award size={28} />
                                 </div>
-                                <h2 className={`text-2xl font-black italic tracking-tighter uppercase leading-none ${isDarkMode ? 'text-white' : 'text-content'}`}>Elite Level</h2>
+                                <h2 className={`text-2xl font-black tracking-tighter uppercase leading-none ${isDarkMode ? 'text-white' : 'text-content'}`}>Elite Level</h2>
                             </div>
 
                             <div className="space-y-2 mb-8">
-                                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest italic">
+                                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
                                     <span className={isDarkMode ? 'text-white/40' : 'text-content-subtle'}>Progress to Legend</span>
                                     <span className="text-brand">85%</span>
                                 </div>
@@ -63,7 +63,7 @@ const CaptainRewards = () => {
                                         className="h-full bg-brand shadow-[0_0_15px_rgba(var(--brand-rgb),0.5)]"
                                     />
                                 </div>
-                                <p className={`text-[9px] font-bold text-right italic uppercase tracking-tighter ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>420 washes to go</p>
+                                <p className={`text-[9px] font-bold text-right uppercase tracking-tighter ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>420 washes to go</p>
                             </div>
 
                             <button className="w-full py-4 bg-brand text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-brand/30 hover:brightness-110 active:scale-[0.98] transition-all">
@@ -75,19 +75,19 @@ const CaptainRewards = () => {
 
                     {/* Level Roadmap */}
                     <div className="space-y-4">
-                        <p className="px-4 text-[10px] font-black text-brand uppercase tracking-[0.2em] italic">Level Roadmap</p>
+                        <p className="px-4 text-[10px] font-black text-brand uppercase tracking-[0.2em]">Level Roadmap</p>
                         <div className="space-y-3">
                             {LEVELS.map((L, i) => (
                                 <div key={i} className={`p-5 rounded-3xl border transition-all ${L.current
-                                        ? (isDarkMode ? 'bg-brand/5 border-brand' : 'bg-brand/5 border-brand ring-1 ring-brand/20 shadow-sm')
-                                        : (isDarkMode ? 'bg-[#1E293B]/50 border-white/5' : 'bg-white border-gray-100 shadow-soft')
+                                    ? (isDarkMode ? 'bg-brand/5 border-brand' : 'bg-brand/5 border-brand ring-1 ring-brand/20 shadow-sm')
+                                    : (isDarkMode ? 'bg-[#1E293B]/50 border-white/5' : 'bg-white border-gray-100 shadow-soft')
                                     } flex items-center gap-4`}>
                                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${L.bg} ${L.color}`}>
                                         <Award size={24} />
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2">
-                                            <h4 className={`text-sm font-black italic uppercase tracking-tight ${L.current ? 'text-brand' : (isDarkMode ? (L.color || 'text-white') : 'text-content')}`}>{L.name}</h4>
+                                            <h4 className={`text-sm font-black uppercase tracking-tight ${L.current ? 'text-brand' : (isDarkMode ? (L.color || 'text-white') : 'text-content')}`}>{L.name}</h4>
                                             {L.current && <span className="bg-brand text-white text-[7px] font-black px-1.5 py-0.5 rounded uppercase">Current</span>}
                                         </div>
                                         <p className={`${isDarkMode ? 'text-white/30' : 'text-content-subtle'} text-[9px] font-bold mt-0.5`}>{L.range}</p>
@@ -106,7 +106,7 @@ const CaptainRewards = () => {
 
                     {/* Active Perks */}
                     <div className={`${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white border-gray-100 shadow-soft'} border rounded-[2.5rem] p-8 transition-all`}>
-                        <h4 className={`font-black italic uppercase tracking-tight text-lg mb-6 flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-content'}`}>
+                        <h4 className={`font-black uppercase tracking-tight text-lg mb-6 flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-content'}`}>
                             <Zap size={18} className="text-brand" />
                             Elite Perks
                         </h4>
@@ -119,7 +119,7 @@ const CaptainRewards = () => {
                             ].map((p, i) => (
                                 <div key={i} className={`${isDarkMode ? 'bg-[#0F172A]/50 border-white/5' : 'bg-gray-50 border-gray-100'} p-4 rounded-2xl border transition-all hover:border-brand/30`}>
                                     <div className="text-brand mb-2">{React.cloneElement(p.icon, { size: 16 })}</div>
-                                    <p className={`font-black text-[10px] uppercase italic leading-none ${isDarkMode ? 'text-white' : 'text-content'}`}>{p.label}</p>
+                                    <p className={`font-black text-[10px] uppercase leading-none ${isDarkMode ? 'text-white' : 'text-content'}`}>{p.label}</p>
                                     <p className={`${isDarkMode ? 'text-white/30' : 'text-content-subtle'} text-[8px] font-bold mt-1`}>{p.sub}</p>
                                 </div>
                             ))}

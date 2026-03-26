@@ -512,8 +512,8 @@ const BookingStatus = () => {
                                             <span className="text-[8px] font-black text-brand uppercase">Active</span>
                                         </div>
                                     </div>
-                                    <p className="text-[10px] text-white font-black italic">
-                                        {liveBooking.pickupStaff ? 'Specialist Committed — Preparing Protocol' : 'Finalizing Specialist Assignment...'}
+                                    <p className="text-[10px] text-white font-black italic uppercase tracking-tighter">
+                                        {liveBooking.pickupStaff ? 'Specialist Assigned — Preparing Protocol' : 'Finalizing Specialist Assignment...'}
                                     </p>
                                 </div>
                             )}

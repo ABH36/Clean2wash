@@ -602,8 +602,20 @@ exports.withdrawPayout = async (req, res) => {
         }
 
         if (withdrawAmount > balance) {
-            return res.status(400).json({ status: 'fail', message: 'Insufficient balance.' });
+            console.warn(`Insufficient balance for withdrawal. Captain: ${captainId}, Request: ${withdrawAmount}, Balance: ${balance}`);
+            return res.status(400).json({
+                status: 'fail',
+                message: `Insufficient balance. Current: ₹${balance.toFixed(2)}, Requested: ₹${withdrawAmount.toFixed(2)}`
+            });
         }
+
+        const payoutDetails = {
+            upiId: bankDetails?.upiId || captain.bankDetails?.upiId,
+            accountNumber: bankDetails?.accountNumber || captain.bankDetails?.accountNumber,
+            bankName: bankDetails?.bankName || captain.bankDetails?.bankName
+        };
+
+        const targetRef = payoutDetails.upiId ? `UPI: ${payoutDetails.upiId}` : `Bank: ${payoutDetails.accountNumber || 'Stored'}`;
 
         // 1. Atomic Debit & Create Record (Status PENDING Override)
         const result = await executeWalletTransaction(
@@ -612,7 +624,7 @@ exports.withdrawPayout = async (req, res) => {
             'debit',
             {
                 category: 'WITHDRAWAL',
-                description: `Bank Withdrawal Request. Account: ${bankDetails?.accountNumber || 'Stored Bank'}`,
+                description: `Settlement Request via ${targetRef}`,
                 referenceId: `WD-CAP-${Date.now()}`,
                 referenceType: 'withdrawal',
                 paymentMethod: 'bank',

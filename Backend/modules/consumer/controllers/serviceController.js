@@ -12,6 +12,7 @@ const Service = require('../../../models/Service');
 const Subscription = require('../../../models/Subscription');
 const catchAsync = require('../../../utils/catchAsync');
 const AppError = require('../../../utils/AppError');
+const User = require('../../../models/User');
 
 const normalizeToken = (value = '') => String(value)
     .toLowerCase()
@@ -1035,11 +1036,13 @@ exports.validateCoupon = catchAsync(async (req, res, next) => {
     let discountAmount = 0;
     const baseAmount = parseFloat(amount) || 0;
 
-    if (coupon.reductionType === 'Percentage') {
-        const percent = parseFloat(coupon.val.replace('%', '')) || 0;
+    const isPercentage = coupon.valUnit === 'PERCENT' || coupon.reductionType === 'Percentage';
+    
+    if (isPercentage) {
+        const percent = coupon.val || 0;
         discountAmount = (baseAmount * percent) / 100;
-    } else if (coupon.reductionType === 'Flat') {
-        discountAmount = parseFloat(coupon.val.replace(/[^\d.]/g, '')) || 0;
+    } else {
+        discountAmount = coupon.val || 0;
     }
 
     res.status(200).json({
@@ -1130,7 +1133,7 @@ exports.getHomeData = catchAsync(async (req, res, next) => {
             cta: doc.cta || 'Explore',
             path: doc.path || '/',
             theme: doc.theme || 'dark',
-            badge: doc.val || 'NEW',
+            badge: String(doc.val || 'NEW'),
             val: doc.val || ''
         }));
 

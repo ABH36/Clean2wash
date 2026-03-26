@@ -28,6 +28,8 @@ router.get('/profile', vendorAuthController.getProfile);
 router.patch('/profile', vendorAuthController.updateProfile);
 router.get('/dashboard', vendorController.getDashboard);
 router.get('/orders', vendorController.getOrders);
+router.get('/leads', vendorController.getAvailableLeads); // Lead Board
+router.post('/leads/:orderId/accept', vendorController.acceptLead); // Accept Lead
 router.get('/orders/:orderId', vendorController.getOrderById);
 router.patch('/orders/:orderId/status', vendorController.updateOrderStatus);
 router.post('/orders/:orderId/verify-pin', vendorController.verifyBookingPin);

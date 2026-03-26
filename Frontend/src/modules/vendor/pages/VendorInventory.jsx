@@ -78,7 +78,7 @@ const SupplyDrawer = ({ open, onClose, initial, onSave }) => {
                                 <h2 className="text-base font-black text-content tracking-tight uppercase">
                                     {initial ? 'Edit Supply' : 'Add New Supply'}
                                 </h2>
-                                <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-1 italic">Resource Logging</p>
+                                <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-1">Resource Logging</p>
                             </div>
                             <button onClick={onClose} className="p-2 hover:bg-background rounded-xl transition-all border border-gray-100/10">
                                 <X size={18} className="text-content-muted" />
@@ -303,7 +303,7 @@ const VendorInventory = () => {
 
                 {/* Controls */}
                 <div className="flex flex-col md:flex-row gap-4 justify-between bg-surface p-4 rounded-3xl border border-gray-100/10 shadow-soft">
-                    <div className="flex gap-2 bg-background p-1.5 rounded-2xl border border-gray-100/10 overflow-x-auto no-scrollbar">
+                    <div className="flex gap-2 bg-background p-1.5 rounded-2xl border border-gray-100/10 overflow-x-auto scrollbar-hide">
                         {['All', ...CATEGORIES].map(c => (
                             <button
                                 key={c}
@@ -323,7 +323,7 @@ const VendorInventory = () => {
                                 placeholder="Locate supply..."
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
-                                className="w-64 h-12 bg-background border border-gray-100/10 rounded-2xl pl-12 pr-6 text-[11px] font-black text-content italic outline-none focus:border-brand transition-all"
+                                className="w-64 h-12 bg-background border border-gray-100/10 rounded-2xl pl-12 pr-6 text-[11px] font-black text-content outline-none focus:border-brand transition-all"
                             />
                         </div>
                         <button
@@ -337,10 +337,13 @@ const VendorInventory = () => {
 
                 {/* Inventory List */}
                 <div className="bg-surface rounded-[2.5rem] border border-gray-100/10 overflow-hidden shadow-soft">
-                    <div className="p-8 border-b border-gray-100/10 flex items-center justify-between">
-                        <h3 className="text-xl font-black text-content italic uppercase tracking-tighter">Tactical <span className="text-brand">Stock</span></h3>
+                    <div className="p-6 md:p-8 border-b border-gray-100/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h3 className="text-lg md:text-xl font-black text-content uppercase tracking-tighter leading-none">Tactical <span className="text-brand">Stock Registry</span></h3>
+                            <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-1.5 opacity-60">Real-time resource allocation</p>
+                        </div>
                         <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2 text-[10px] font-black text-content-subtle uppercase">
+                            <div className="flex items-center gap-2 text-[9px] font-black text-content-subtle uppercase tracking-widest">
                                 <span className="w-2 h-2 rounded-full bg-green-500" /> Healthy
                                 <span className="w-2 h-2 rounded-full bg-amber-500 ml-4" /> Low
                                 <span className="w-2 h-2 rounded-full bg-red-500 ml-4" /> Exhausted
@@ -349,26 +352,29 @@ const VendorInventory = () => {
                     </div>
 
                     {loading ? (
-                        <div className="py-20 flex justify-center">
-                            <div className="w-10 h-10 border-4 border-brand/20 border-t-brand rounded-full animate-spin" />
+                        <div className="py-24 flex flex-col items-center gap-4 justify-center bg-gray-50/5">
+                            <div className="w-12 h-12 border-4 border-brand/20 border-t-brand rounded-full animate-spin shadow-lg shadow-brand/20" />
+                            <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em]">Synchronizing Tactical Assets...</p>
                         </div>
                     ) : filtered.length === 0 ? (
-                        <div className="py-20 flex flex-col items-center gap-4 text-center">
-                            <Droplets size={40} className="text-content-subtle/10" />
+                        <div className="py-24 flex flex-col items-center gap-6 text-center bg-gray-50/5">
+                            <div className="w-16 h-16 bg-background rounded-[1.5rem] flex items-center justify-center text-content-subtle/10 border border-gray-100/10 shadow-inner">
+                                <Droplets size={32} />
+                            </div>
                             <div>
-                                <p className="text-base font-black text-content italic uppercase">Registry Empty</p>
-                                <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-1">No supplies found matching your criteria</p>
+                                <p className="text-base font-black text-content uppercase tracking-tight">Registry Empty</p>
+                                <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-1 opacity-60">No supplies found in sector registry</p>
                             </div>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto">
+                        <div className="admin-table-container">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="border-b border-gray-100/5">
-                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Item Identity</th>
-                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest italic text-center">In-Stock</th>
-                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest italic">Inventory Health</th>
-                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest italic text-right">Strategic Actions</th>
+                                    <tr className="border-b border-gray-100/5 bg-gray-50/5">
+                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-[0.2em]">Item Identity</th>
+                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] text-center">Tactical Unit Count</th>
+                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-[0.2em]">Logistics Health</th>
+                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] text-right">Strategic Command</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -376,35 +382,37 @@ const VendorInventory = () => {
                                         <motion.tr
                                             layout
                                             key={i.id}
-                                            className="border-b border-gray-100/5 group hover:bg-background/40 transition-all font-black"
+                                            className="border-b border-gray-100/5 group hover:bg-gray-50/5 transition-all font-black relative active:scale-[0.995]"
                                         >
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 bg-background border border-gray-100/10 rounded-xl flex items-center justify-center text-content-muted">
-                                                        <Droplets size={18} />
+                                                    <div className="w-11 h-11 bg-background border border-gray-100/10 rounded-2xl flex items-center justify-center text-brand shadow-inner">
+                                                        <Droplets size={20} />
                                                     </div>
                                                     <div>
-                                                        <p className="text-sm font-black text-content tracking-tight">{i.name}</p>
-                                                        <p className="text-[9px] font-bold text-brand uppercase tracking-widest italic">{i.category}</p>
+                                                        <p className="text-sm font-black text-content tracking-tight uppercase leading-none mb-1.5">{i.name}</p>
+                                                        <p className="text-[9px] font-black text-brand uppercase tracking-widest opacity-80">{i.category}</p>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6 text-center">
-                                                <p className="text-base font-black italic tracking-tighter text-content">{i.stock} <span className="text-[10px] uppercase font-black not-italic opacity-40">{i.unit}</span></p>
-                                                <div className="w-20 mx-auto h-1.5 bg-background border border-gray-100/10 rounded-full mt-2 overflow-hidden">
+                                                <p className="text-base font-black tracking-tighter text-content leading-none mb-2.5">
+                                                    {i.stock} <span className="text-[10px] uppercase font-black opacity-40">{i.unit}</span>
+                                                </p>
+                                                <div className="w-24 mx-auto h-1.5 bg-background border border-gray-100/10 rounded-full overflow-hidden shadow-inner">
                                                     <motion.div
                                                         initial={{ width: 0 }}
                                                         animate={{ width: `${Math.min((i.stock / (i.threshold * 2)) * 100, 100)}%` }}
-                                                        className={`h-full ${i.status === 'Healthy' ? 'bg-green-500' : i.status === 'Low Stock' ? 'bg-amber-500' : 'bg-red-500'}`}
+                                                        className={`h-full shadow-lg ${i.status === 'Healthy' ? 'bg-green-500 shadow-green-500/20' : i.status === 'Low Stock' ? 'bg-amber-500 shadow-amber-500/20' : 'bg-red-500 shadow-red-500/20'}`}
                                                     />
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6">
-                                                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[9px] font-black uppercase tracking-widest
-                                                    ${i.status === 'Healthy' ? 'bg-green-500/10 border-green-500/20 text-green-500' :
-                                                        i.status === 'Low Stock' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' :
-                                                            'bg-red-500/10 border-red-500/20 text-red-500'}`}>
-                                                    <div className={`w-1.5 h-1.5 rounded-full ${i.status === 'Healthy' ? 'bg-green-500' : i.status === 'Low Stock' ? 'bg-amber-500' : 'bg-red-500'}`} />
+                                                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-[0.15em] shadow-sm
+                                                    ${i.status === 'Healthy' ? 'bg-green-500/10 border-green-500/20 text-green-500 shadow-green-500/5' :
+                                                        i.status === 'Low Stock' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500 shadow-amber-500/5' :
+                                                            'bg-red-500/10 border-red-500/20 text-red-500 shadow-red-500/5'}`}>
+                                                    <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${i.status === 'Healthy' ? 'bg-green-500' : i.status === 'Low Stock' ? 'bg-amber-500' : 'bg-red-500'}`} />
                                                     {i.status}
                                                 </div>
                                             </td>
@@ -412,20 +420,20 @@ const VendorInventory = () => {
                                                 <div className="flex items-center justify-end gap-3 translate-x-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all">
                                                     <button
                                                         onClick={() => handleRefill(i.id)}
-                                                        className="p-2.5 bg-background border border-gray-100/10 rounded-xl text-content-muted hover:text-brand hover:border-brand/40 transition-all font-bold"
+                                                        className="w-10 h-10 bg-background border border-gray-100/10 rounded-xl text-content-muted hover:text-brand hover:border-brand/40 transition-all font-bold shadow-sm flex items-center justify-center"
                                                         title="Quick Refill (+10)"
                                                     >
                                                         <RefreshCw size={15} />
                                                     </button>
                                                     <button
                                                         onClick={() => { setEditingItem(i); setDrawerOpen(true); }}
-                                                        className="p-2.5 bg-background border border-gray-100/10 rounded-xl text-content-muted hover:text-blue-500 hover:border-blue-500/40 transition-all font-bold"
+                                                        className="w-10 h-10 bg-background border border-gray-100/10 rounded-xl text-content-muted hover:text-blue-500 hover:border-blue-500/40 transition-all font-bold shadow-sm flex items-center justify-center"
                                                     >
                                                         <Edit2 size={15} />
                                                     </button>
                                                     <button
                                                         onClick={() => handleDelete(i.id)}
-                                                        className="p-2.5 bg-background border border-gray-100/10 rounded-xl text-content-muted hover:text-red-500 hover:border-red-500/40 transition-all font-bold"
+                                                        className="w-10 h-10 bg-background border border-gray-100/10 rounded-xl text-content-muted hover:text-red-500 hover:border-red-500/40 transition-all font-bold shadow-sm flex items-center justify-center"
                                                     >
                                                         <Trash2 size={15} />
                                                     </button>

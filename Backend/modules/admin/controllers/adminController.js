@@ -633,6 +633,10 @@ exports.updateUser = async (req, res) => {
             }
         } else if (user.role === 'staff') {
             if (updates.role) user.profile.role = updates.role;
+            if (updates.hub) {
+                if (!user.profile) user.profile = {};
+                user.profile.hub = updates.hub;
+            }
         }
 
         await user.save({ validateBeforeSave: false });

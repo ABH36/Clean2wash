@@ -75,6 +75,10 @@ const subscriptionSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    applicableServices: {
+        type: [String],
+        default: []
+    },
     price: {
         amount: {
             type: Number,
@@ -113,7 +117,13 @@ const subscriptionSchema = new mongoose.Schema({
     orderId: String,
     paymentId: String,
     lastPaymentDate: Date,
-    nextBillingDate: Date
+    nextBillingDate: Date,
+    lastPauseDate: Date,
+    pauseHistory: [{
+        pausedAt: { type: Date, required: true },
+        resumedAt: { type: Date },
+        durationMs: { type: Number, default: 0 }
+    }]
 }, {
     timestamps: true
 });
@@ -158,13 +168,40 @@ subscriptionSchema.methods.getAvailableCredits = function () {
 };
 
 // Instance method to use credits
-subscriptionSchema.methods.useCredits = async function (amount) {
+subscriptionSchema.methods.useCredits = async function (amount, session = null) {
     if (this.getAvailableCredits() < amount) {
         throw new Error('Insufficient credits');
     }
 
     this.usedCredits += amount;
-    return this.save();
+    return this.save({ session });
+};
+
+// Instance method to check service eligibility
+subscriptionSchema.methods.isServiceEligible = function (bookingData) {
+    // If no restrictions, everything is eligible
+    if (!this.applicableServices || this.applicableServices.length === 0) return true;
+
+    const { service = {}, hub = null, location = {} } = bookingData;
+    const category = service.category;
+    const isInstant = (bookingData.schedule?.type || service.schedule?.type) === 'instant';
+    const isApartment = !!hub || (location.type !== 'studio' && !!location.hub);
+
+    return this.applicableServices.some(serviceName => {
+        if (serviceName === 'Instant Wash') {
+            return category === 'Doorstep' && isInstant && !isApartment;
+        }
+        if (serviceName === 'Studio Wash') {
+            return category === 'Studio' || category === 'Studio Detailing';
+        }
+        if (serviceName === 'Apartment Wash') {
+            return (category === 'Doorstep' || category === 'Apartment') && isApartment;
+        }
+        if (serviceName === 'Spare Driver') {
+            return category === 'Chauffeur';
+        }
+        return false;
+    });
 };
 
 // Instance method to renew subscription

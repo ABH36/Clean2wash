@@ -88,7 +88,7 @@ const CaptainPortfolio = () => {
                             <ChevronLeft size={18} strokeWidth={2.5} />
                         </button>
                         <div className="flex-1">
-                            <h1 className={`text-xl font-black tracking-tight leading-none uppercase italic ${isDarkMode ? 'text-white' : 'text-content'}`}>Work Portfolio</h1>
+                            <h1 className={`text-xl font-black tracking-tight leading-none uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>Work Portfolio</h1>
                             <p className={`text-[9px] font-black uppercase tracking-widest mt-1 ${isDarkMode ? 'text-white/40' : 'text-content-subtle'}`}>Showcase of Excellence</p>
                         </div>
                     </div>
@@ -173,7 +173,7 @@ const CaptainPortfolio = () => {
                             <div className={`w-20 h-20 rounded-[30px] flex items-center justify-center mb-6 shadow-xl ${isDarkMode ? 'bg-[#1E293B] border border-white/10' : 'bg-white border border-gray-100'}`}>
                                 <Camera size={32} className={isDarkMode ? 'text-white/20' : 'text-gray-300'} />
                             </div>
-                            <h3 className={`text-lg font-black uppercase tracking-tight italic mb-2 ${isDarkMode ? 'text-white' : 'text-content'}`}>No Portfolio Items Yet</h3>
+                            <h3 className={`text-lg font-black uppercase tracking-tight mb-2 ${isDarkMode ? 'text-white' : 'text-content'}`}>No Portfolio Items Yet</h3>
                             <p className={`text-[11px] font-bold max-w-[220px] leading-relaxed mx-auto uppercase tracking-widest ${isDarkMode ? 'text-white/40' : 'text-content-subtle'}`}>Complete jobs with before and after photos to build your showcase here.</p>
                         </div>
                     )}

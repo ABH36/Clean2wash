@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 
 const LocationIndicator = ({ variant = 'light', className = '' }) => {
     const navigate = useNavigate();
-    const { primaryAddress } = useGeoLocation();
+    const { primaryAddress, selectedAddress } = useGeoLocation();
 
     const handleClick = () => {
         navigate('/addresses');
@@ -24,7 +24,7 @@ const LocationIndicator = ({ variant = 'light', className = '' }) => {
             >
                 <MapPin size={12} className="text-brand" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-content-subtle truncate max-w-[120px]">
-                    {primaryAddress?.city || 'Set Location'}
+                    {selectedAddress?.street || primaryAddress?.city || 'Set Location'}
                 </span>
             </motion.button>
         );
@@ -50,7 +50,7 @@ const LocationIndicator = ({ variant = 'light', className = '' }) => {
                 </p>
                 <div className="flex items-center gap-1">
                     <span className="text-[11px] font-black truncate max-w-[100px] uppercase italic">
-                        {primaryAddress?.label || primaryAddress?.city || 'Select Location'}
+                        {selectedAddress?.street || primaryAddress?.label || primaryAddress?.city || 'Select Location'}
                     </span>
                     <ChevronRight size={12} className={isDark ? 'text-white/20' : 'text-gray-300'} />
                 </div>

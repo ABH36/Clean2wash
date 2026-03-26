@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { 
-    ChevronLeft, User, Mail, Phone, MapPin, 
+import {
+    ChevronLeft, User, Mail, Phone, MapPin,
     Truck, Award, ShieldCheck, ShieldAlert,
     CreditCard, FileText, Camera
 } from 'lucide-react';
@@ -33,6 +33,14 @@ const CaptainPersonalInfo = () => {
                 { label: 'Experience', value: user.profile?.experience || 'Not set', icon: Award },
                 { label: 'Verification Status', value: user.isVerified ? 'Fully Verified' : 'Pending Review', icon: user.isVerified ? ShieldCheck : ShieldAlert, status: user.isVerified ? 'success' : 'warning' },
             ]
+        },
+        {
+            title: 'Payout Information',
+            items: [
+                { label: 'UPI ID', value: user.bankDetails?.upiId || 'Not connected', icon: CreditCard },
+                { label: 'Account number', value: user.bankDetails?.accountNumber?.length > 4 ? `XXXX${user.bankDetails.accountNumber.slice(-4)}` : (user.bankDetails?.accountNumber || 'Not linked'), icon: CreditCard },
+                { label: 'IFSC Code', value: user.bankDetails?.ifscCode || 'N/A', icon: FileText },
+            ]
         }
     ];
 
@@ -45,7 +53,7 @@ const CaptainPersonalInfo = () => {
                         <ChevronLeft size={18} strokeWidth={2.5} />
                     </button>
                     <div>
-                        <h1 className={`text-lg font-black italic uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>Personal Info</h1>
+                        <h1 className={`text-lg font-black uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>Personal Info</h1>
                         <p className={`text-[9px] font-black text-brand uppercase tracking-widest`}>Manage your identity</p>
                     </div>
                 </header>
@@ -59,7 +67,7 @@ const CaptainPersonalInfo = () => {
                             </div>
                             <div className="absolute -inset-2 bg-brand/10 rounded-[3rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
-                        <h2 className={`text-xl font-black italic uppercase italic ${isDarkMode ? 'text-white' : 'text-content'}`}>{user.name}</h2>
+                        <h2 className={`text-xl font-black uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>{user.name}</h2>
                         <div className={`mt-2 px-3 py-1 rounded-lg border text-[9px] font-black uppercase tracking-widest ${user.isVerified ? 'bg-green-500/10 border-green-500/20 text-green-500' : 'bg-orange-500/10 border-orange-500/20 text-orange-500'}`}>
                             {user.isVerified ? 'IDENTITY VERIFIED' : 'VERIFICATION PENDING'}
                         </div>
@@ -73,7 +81,7 @@ const CaptainPersonalInfo = () => {
                     {/* Info Groups */}
                     {infoGroups.map(group => (
                         <div key={group.title} className="space-y-4">
-                            <p className={`text-[10px] font-black uppercase tracking-[0.2em] italic px-2 ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>{group.title}</p>
+                            <p className={`text-[10px] font-black uppercase tracking-[0.2em] px-2 ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>{group.title}</p>
                             <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} rounded-[2.5rem] border overflow-hidden`}>
                                 {group.items.map((item, i, arr) => (
                                     <div key={item.label} className={`flex items-center gap-4 px-6 py-5 ${i < arr.length - 1 ? (isDarkMode ? 'border-b border-white/5' : 'border-b border-gray-50') : ''}`}>
@@ -82,7 +90,7 @@ const CaptainPersonalInfo = () => {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className={`${isDarkMode ? 'text-white/30' : 'text-content-subtle'} text-[9px] font-black uppercase tracking-widest mb-1`}>{item.label}</p>
-                                            <p className={`font-black text-sm italic uppercase tracking-tight ${item.status === 'warning' ? 'text-orange-500' : item.status === 'success' ? 'text-green-500' : isDarkMode ? 'text-white' : 'text-content'}`}>
+                                            <p className={`font-black text-sm uppercase tracking-tight ${item.status === 'warning' ? 'text-orange-500' : item.status === 'success' ? 'text-green-500' : isDarkMode ? 'text-white' : 'text-content'}`}>
                                                 {item.value || 'N/A'}
                                             </p>
                                         </div>
@@ -99,7 +107,7 @@ const CaptainPersonalInfo = () => {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => navigate('/captain/profile/edit')}
-                        className={`w-full h-14 bg-brand text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] italic shadow-2xl shadow-brand/40 flex items-center justify-center gap-3`}
+                        className={`w-full h-14 bg-brand text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-brand/40 flex items-center justify-center gap-3`}
                     >
                         <Camera size={16} strokeWidth={3} /> Update Profile Info
                     </motion.button>

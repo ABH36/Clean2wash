@@ -13,6 +13,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { toast } from 'react-hot-toast';
 import { apiClient } from '../../../utils/api';
+import { geocodingService } from '../../../utils/geocoding';
 
 // Fix Leaflet marker icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -56,7 +57,10 @@ const AddressManager = () => {
         updateAddress,
         removeAddress,
         setPrimary: setPrimaryAddress,
-        loading: addressLoading
+        loading: addressLoading,
+        selectedAddress,
+        currentLocation,
+        setSelectedAddress
     } = useGeoLocation();
     const [showSheet, setShowSheet] = useState(false);
     const [editing, setEditing] = useState(null);
@@ -71,8 +75,8 @@ const AddressManager = () => {
     });
 
     // Map States
-    const [mapCenter, setMapCenter] = useState([12.9716, 77.5946]); // Bengaluru default
-    const [selectedPos, setSelectedPos] = useState([12.9716, 77.5946]);
+    const [mapCenter, setMapCenter] = useState(selectedAddress?.coordinates ? [selectedAddress.coordinates.lat, selectedAddress.coordinates.lng] : (currentLocation ? [currentLocation.lat, currentLocation.lng] : [28.6139, 77.2090]));
+    const [selectedPos, setSelectedPos] = useState(selectedAddress?.coordinates ? [selectedAddress.coordinates.lat, selectedAddress.coordinates.lng] : (currentLocation ? [currentLocation.lat, currentLocation.lng] : [28.6139, 77.2090]));
     const [isLocating, setIsLocating] = useState(false);
     const [geocodedAddress, setGeocodedAddress] = useState('');
     const [isGeocoding, setIsGeocoding] = useState(false);
@@ -105,26 +109,42 @@ const AddressManager = () => {
             if (!selectedPos || selectedPos[0] === 0) return;
             try {
                 setIsGeocoding(true);
-                const data = await apiClient.request(`/maps/proxy/reverse?lat=${selectedPos[0]}&lon=${selectedPos[1]}`);
+                // 🛰️ Dual Geocoding Strategy: Try Proxy first, then Fallback to JS Service
+                let addr = null;
+                let parts = null;
 
-                if (data && data.status === 'success') {
-                    const addr = data.data.display_name;
+                try {
+                    const data = await apiClient.request(`/maps/proxy/reverse?lat=${selectedPos[0]}&lon=${selectedPos[1]}`);
+                    if (data?.status === 'success') {
+                        addr = data.data.display_name;
+                        parts = data.data.address;
+                    }
+                } catch (proxyErr) {
+                    console.warn("Proxy geocoding failed, falling back to Service...");
+                }
+
+                if (!addr) {
+                    const data = await geocodingService.reverse(selectedPos[0], selectedPos[1]);
+                    if (data) {
+                        addr = data.display_name;
+                        parts = data.raw?.address;
+                    }
+                }
+
+                if (addr) {
                     setGeocodedAddress(addr);
-
-                    // Pre-fill form if not editing
                     if (!editing) {
-                        const parts = data.data.address || {};
                         setForm(f => ({
                             ...f,
                             full: addr,
-                            city: parts.city || parts.town || parts.village || 'Bengaluru',
-                            state: parts.state || 'Karnataka',
-                            pincode: parts.postcode || '560001'
+                            city: parts?.city || parts?.town || parts?.village || 'Bengaluru',
+                            state: parts?.state || 'Karnataka',
+                            pincode: parts?.postcode || '560001'
                         }));
                     }
                 }
             } catch (err) {
-                console.error("Geocoding failed", err);
+                console.error("Critical geocoding failure", err);
             } finally {
                 setIsGeocoding(false);
             }
@@ -225,10 +245,14 @@ const AddressManager = () => {
 
         try {
             if (editing) {
-                await updateAddress(editing, addressData);
+                const updated = await updateAddress(editing, addressData);
+                if (updated && (selectedAddress?._id === editing || selectedAddress?.id === editing)) {
+                    setSelectedAddress(updated);
+                }
                 toast.success("Address updated");
             } else {
-                await addAddress(addressData);
+                const saved = await addAddress(addressData);
+                if (saved) setSelectedAddress(saved);
                 toast.success("Address saved");
             }
             setShowSheet(false);
@@ -238,7 +262,10 @@ const AddressManager = () => {
     };
 
     const handleConfirmReturn = (addr) => {
-        // Save to session storage for booking flows
+        // Global sync for persistence across modules
+        setSelectedAddress(addr);
+        
+        // Save to session storage for legacy booking flows
         sessionStorage.setItem('iw_location', JSON.stringify(addr));
         toast.success("Location selected for booking!");
         if (returnPath) {
@@ -267,7 +294,8 @@ const AddressManager = () => {
 
         try {
             setIsSavingInstant(true);
-            await addAddress(addressData);
+            const saved = await addAddress(addressData);
+            if (saved) setSelectedAddress(saved); // Sync global selection
             toast.success("Location saved to profile!");
         } catch (err) {
             toast.error(err.message || "Failed to save location");

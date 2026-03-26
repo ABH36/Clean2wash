@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import LocationContext from '../../../context/LocationContextBase';
 import { serviceAPI } from '../../../utils/api';
+import { geocodingService } from '../../../utils/geocoding';
+import { toast } from 'react-hot-toast';
 
 // Fix Leaflet marker icon issue
 const studioIcon = new L.Icon({
@@ -31,33 +33,40 @@ const userIcon = new L.Icon({
 const RecenterMap = ({ lat, lng }) => {
     const map = useMap();
     useEffect(() => {
-        if (lat && lng) map.setView([lat, lng], 13);
+        if (lat && lng) map.setView([lat, lng], 16);
     }, [lat, lng, map]);
     return null;
 };
 
-const SAVED_PLACES = [
-    { id: 'home', label: 'Home', address: 'HSR Layout, Sector 2, Bengaluru 560102', icon: Home, type: 'residential' },
-    { id: 'work', label: 'Office', address: 'Koramangala 5th Block, Bengaluru 560095', icon: Briefcase, type: 'commercial' },
-];
+const MapEvents = ({ onMove }) => {
+    useMapEvents({
+        moveend: (e) => {
+            const center = e.target.getCenter();
+            onMove([center.lat, center.lng]);
+        },
+    });
+    return null;
+};
 
-const RECENT_LOCATIONS = [
-    { id: 'r1', label: 'Indiranagar 100ft Road', address: 'Near Starbucks, Indiranagar, Bengaluru' },
-    { id: 'r2', label: 'Phoenix Marketcity', address: 'Whitefield Main Road, Bengaluru' },
-    { id: 'r3', label: 'MG Road Metro', address: 'Church Street, Bengaluru' },
-];
+// Removed hardcoded SAVED_PLACES and RECENT_LOCATIONS
 
 const MapScreen = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const type = searchParams.get('type');
     const context = searchParams.get('from') || 'wash';
-    const { currentLocation, detectCurrentLocation } = useContext(LocationContext);
+    const { currentLocation, detectCurrentLocation, saveLocation } = useContext(LocationContext);
 
     const searchInputRef = useRef(null);
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedLocation, setSelectedLocation] = useState(SAVED_PLACES[0]);
+    const [selectedLocation, setSelectedLocation] = useState({
+        label: 'Locating...',
+        address: 'Fetching address details...',
+        coordinates: { lat: 28.7041, lng: 77.1025 }
+    });
     const [searchResults, setSearchResults] = useState([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [isGeocoding, setIsGeocoding] = useState(false);
     const [mapOpacity, setMapOpacity] = useState(0.8); // Default to full opacity for real map
     const [studios, setStudios] = useState([]);
 
@@ -92,28 +101,63 @@ const MapScreen = () => {
         }
     }, [type, currentLocation]);
 
-    // Filter results based on search query
-    useEffect(() => {
-        if (searchQuery.trim().length > 0) {
-            const results = RECENT_LOCATIONS.filter(loc =>
-                loc.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                loc.address.toLowerCase().includes(searchQuery.toLowerCase())
-            );
-            setSearchResults(results);
-        } else {
-            setSearchResults([]);
+    // Reverse geocode when map center changes
+    const handleMapMove = useCallback(async (pos) => {
+        setIsGeocoding(true);
+        const geocoded = await geocodingService.reverse(pos[0], pos[1]);
+        if (geocoded) {
+            setSelectedLocation({
+                label: geocoded.street,
+                address: geocoded.display_name,
+                coordinates: { lat: pos[0], lng: pos[1] }
+            });
         }
+        setIsGeocoding(false);
+    }, []);
+
+    // 🔍 Real-time Search Integration
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(async () => {
+            if (searchQuery.trim().length > 2) {
+                setIsSearching(true);
+                const results = await geocodingService.search(searchQuery);
+                setSearchResults(results);
+                setIsSearching(false);
+            } else {
+                setSearchResults([]);
+            }
+        }, 500);
+
+        return () => clearTimeout(delayDebounceFn);
     }, [searchQuery]);
 
-    const handleLocateMe = () => {
-        setMapOpacity(0.8);
-        setTimeout(() => setMapOpacity(0.4), 1000);
-        const myLocation = { id: 'current', label: 'Current Location', address: 'Lavelle Road, Near UB City, Bengaluru', icon: Navigation };
-        setSelectedLocation(myLocation);
+    const handleLocateMe = async () => {
+        try {
+            const pos = await detectCurrentLocation();
+            if (pos) {
+                setMapOpacity(0.8);
+                setTimeout(() => setMapOpacity(0.4), 1000);
+            }
+        } catch (err) {
+            toast.error('Location Access Denied');
+        }
     };
 
-    const handleConfirm = () => {
-        navigate(-1);
+    const handleConfirm = async () => {
+        if (!selectedLocation.coordinates) return;
+        
+        try {
+            toast.loading('Saving location...', { id: 'save-loc' });
+            await saveLocation(
+                selectedLocation.coordinates.lat, 
+                selectedLocation.coordinates.lng,
+                selectedLocation.label
+            );
+            toast.success('Location synchronized', { id: 'save-loc' });
+            navigate(-1);
+        } catch (err) {
+            toast.error('Failed to save location', { id: 'save-loc' });
+        }
     };
 
     const handleEdit = () => {
@@ -134,6 +178,7 @@ const MapScreen = () => {
                 >
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                     <RecenterMap lat={currentLocation?.lat} lng={currentLocation?.lng} />
+                    <MapEvents onMove={handleMapMove} />
 
                     {currentLocation && (
                         <Marker position={[currentLocation.lat, currentLocation.lng]} icon={userIcon}>
@@ -232,7 +277,13 @@ const MapScreen = () => {
                                 <button
                                     key={loc.id}
                                     onClick={() => {
-                                        setSelectedLocation(loc);
+                                        setSelectedLocation({
+                                            label: loc.label,
+                                            address: loc.address,
+                                            coordinates: { lat: loc.lat, lng: loc.lng }
+                                        });
+                                        // Update currentLocation to center map
+                                        detectCurrentLocation(); // Silently trigger center update if needed
                                         setSearchQuery('');
                                     }}
                                     className="w-full flex items-center gap-5 p-4 hover:bg-black/[0.02] rounded-[2rem] transition-all group"
@@ -299,9 +350,12 @@ const MapScreen = () => {
                         <motion.button
                             whileTap={{ scale: 0.96 }}
                             onClick={handleConfirm}
-                            className="w-full bg-black text-white h-14 rounded-2xl font-black text-[14px] uppercase tracking-[0.3em] shadow-[0_20px_40px_rgba(0,0,0,0.15)] flex items-center justify-center relative group overflow-hidden"
+                            disabled={isGeocoding}
+                            className="w-full bg-black text-white h-14 rounded-2xl font-black text-[14px] uppercase tracking-[0.3em] shadow-[0_20px_40px_rgba(0,0,0,0.15)] flex items-center justify-center relative group overflow-hidden disabled:opacity-50"
                         >
-                            <span className="relative z-10 pl-4">Confirm Location</span>
+                            <span className="relative z-10 pl-4">
+                                {isGeocoding ? 'Locating...' : 'Confirm Location'}
+                            </span>
                             <div className="absolute right-6 opacity-30 group-hover:translate-x-1 transition-transform relative z-10">
                                 <ChevronRight size={22} strokeWidth={3} />
                             </div>

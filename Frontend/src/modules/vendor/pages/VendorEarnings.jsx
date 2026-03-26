@@ -101,7 +101,7 @@ const VendorEarnings = () => {
                                 <h2 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-white leading-none">
                                     ₹{stats.walletBalance?.toLocaleString('en-IN') || '0'}.<span className="text-brand">00</span>
                                 </h2>
-                                <div className="flex items-center gap-2 mt-4 text-[10px] font-bold text-green-400 italic">
+                                <div className="flex items-center gap-2 mt-4 text-[10px] font-bold text-green-400">
                                     <TrendingUp size={12} />
                                     <span>Tracking {stats.completedJobs} completed jobs</span>
                                 </div>
@@ -132,40 +132,58 @@ const VendorEarnings = () => {
                 </div>
 
                 {/* Transaction Ledger */}
-                <div className="space-y-4">
+                <div className="space-y-4 pb-20 md:pb-0">
                     <div className="flex items-center justify-between px-2">
-                        <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-[0.15em]">Transaction Registry</h3>
-                        <button className="text-[10px] font-black text-brand uppercase tracking-widest border-b-2 border-brand/20">Full Ledger</button>
+                        <div>
+                            <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] opacity-60">Transaction Registry</h3>
+                            <p className="text-[8px] font-bold text-content-subtle uppercase tracking-widest mt-1 opacity-40">Financial audit log</p>
+                        </div>
+                        <button className="text-[10px] font-black text-brand uppercase tracking-widest border-b border-brand/20 hover:border-brand transition-all">Full Tactical Ledger</button>
                     </div>
 
-                    <div className="bg-surface rounded-3xl border border-gray-100/10 shadow-sm overflow-hidden transition-colors">
+                    <div className="bg-surface rounded-[2.5rem] border border-gray-100/10 shadow-soft overflow-hidden transition-colors">
                         {loading ? (
-                            <div className="p-20 flex justify-center">
-                                <Loader2 className="w-8 h-8 text-brand animate-spin" />
+                            <div className="py-24 flex flex-col items-center gap-4 bg-gray-50/5">
+                                <div className="w-10 h-10 border-4 border-brand/20 border-t-brand rounded-full animate-spin shadow-lg shadow-brand/20" />
+                                <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em]">Accessing Financial Vault...</p>
                             </div>
-                        ) : (stats.transactions && stats.transactions.length > 0) ? stats.transactions.map((txn, i) => (
-                            <div key={txn.id} className={`p-5 flex items-center justify-between hover:bg-background/50 transition-colors ${i < stats.transactions.length - 1 ? 'border-b border-gray-100/5' : ''}`}>
-                                <div className="flex items-center gap-4">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${txn.amount.startsWith('+') ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
-                                        {txn.amount.startsWith('+') ? <ArrowDownLeft size={18} strokeWidth={2.5} /> : <ArrowUpRight size={18} strokeWidth={2.5} />}
-                                    </div>
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-0.5">
-                                            <span className="text-sm font-black text-content tracking-tight uppercase tracking-widest">{txn.status === 'Payout' ? 'Studio Withdrawal' : `Order #${txn.orderId}`}</span>
-                                            <span className="text-[9px] font-bold text-content-subtle uppercase tracking-widest bg-background px-2 py-0.5 rounded-md border border-gray-100/5">{txn.method}</span>
+                        ) : (stats.transactions && stats.transactions.length > 0) ? (
+                            <div className="admin-table-container">
+                                <div className="divide-y divide-gray-100/5">
+                                    {stats.transactions.map((txn, i) => (
+                                        <div key={txn.id} className="p-6 md:p-7 flex items-center justify-between hover:bg-gray-50/5 transition-all group active:scale-[0.995]">
+                                            <div className="flex items-center gap-5">
+                                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner ${txn.amount.toString().startsWith('+') ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                                                    {txn.amount.toString().startsWith('+') ? <ArrowDownLeft size={20} strokeWidth={3} /> : <ArrowUpRight size={20} strokeWidth={3} />}
+                                                </div>
+                                                <div>
+                                                    <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-3 mb-1.5">
+                                                        <span className="text-sm font-black text-content tracking-tight uppercase leading-none">{txn.status === 'Payout' ? 'Studio Withdrawal' : `Order Operational Unit #${txn.orderId}`}</span>
+                                                        <span className="w-fit text-[9px] font-black text-brand uppercase tracking-[0.15em] bg-brand/5 px-2 py-0.5 rounded-lg border border-brand/10">{txn.method}</span>
+                                                    </div>
+                                                    <p className="text-[10px] font-black text-content-subtle uppercase tracking-tighter opacity-70 font-mono">Registry: {txn.date} · ID: {txn.id}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className={`text-base font-black tracking-tighter ${txn.amount.toString().startsWith('+') ? 'text-green-500' : 'text-content'}`}>{txn.amount}</p>
+                                                <div className={`inline-flex items-center gap-1.5 mt-1.5 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest ${txn.status === 'Pending' ? 'bg-amber-500/10 text-amber-500' : 'bg-green-500/10 text-green-500'}`}>
+                                                    <div className={`w-1 h-1 rounded-full ${txn.status === 'Pending' ? 'bg-amber-500 animate-pulse' : 'bg-green-500'}`} />
+                                                    {txn.status}
+                                                </div>
+                                            </div>
                                         </div>
-                                        <p className="text-[10px] font-bold text-content-subtle uppercase tracking-tighter opacity-70">{txn.date} · {txn.id}</p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className={`text-sm font-black tracking-tight ${txn.amount.startsWith('+') ? 'text-green-500' : 'text-content'}`}>{txn.amount}</p>
-                                    <p className={`text-[8px] font-black uppercase tracking-widest ${txn.status === 'Pending' ? 'text-amber-500' : 'text-green-500'}`}>{txn.status}</p>
+                                    ))}
                                 </div>
                             </div>
-                        )) : (
-                            <div className="p-20 text-center space-y-3">
-                                <Wallet size={32} className="mx-auto text-content-subtle/20" />
-                                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic opacity-50">No settlement history found</p>
+                        ) : (
+                            <div className="py-24 text-center space-y-4 bg-gray-50/5">
+                                <div className="w-16 h-16 bg-background rounded-[1.5rem] flex items-center justify-center mx-auto text-content-subtle/10 border border-gray-100/10 shadow-inner">
+                                    <Wallet size={32} />
+                                </div>
+                                <div>
+                                    <p className="text-base font-black text-content uppercase tracking-tight">Vault Empty</p>
+                                    <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-1 opacity-60">No settlement history found in registry</p>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -189,12 +207,12 @@ const VendorEarnings = () => {
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
                             className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 relative z-10 border border-gray-100 shadow-2xl"
                         >
-                            <h3 className="text-xl font-black text-content italic leading-none uppercase tracking-tighter mb-2">Request Payout</h3>
-                            <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mb-6 italic">Enter transfer amount to bank</p>
-                            
+                            <h3 className="text-xl font-black text-content leading-none uppercase tracking-tighter mb-2">Request Payout</h3>
+                            <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mb-6">Enter transfer amount to bank</p>
+
                             <div className="space-y-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest ml-1 italic">Amount (₹)</label>
+                                    <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest ml-1">Amount (₹)</label>
                                     <input
                                         type="number"
                                         placeholder="e.g. 5000"
@@ -203,7 +221,7 @@ const VendorEarnings = () => {
                                         onChange={e => setPayoutAmount(e.target.value)}
                                     />
                                 </div>
-                                
+
                                 <button
                                     onClick={handlePayout}
                                     className="w-full bg-content text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl hover:bg-brand transition-all flex items-center justify-center gap-2"

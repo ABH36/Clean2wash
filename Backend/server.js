@@ -63,9 +63,19 @@ app.use(cors({
 }));
 
 // Database connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/carwash')
+const mongoOptions = {
+    serverSelectionTimeoutMS: 10000, // 10s timeout
+    socketTimeoutMS: 45000,
+    connectTimeoutMS: 10000,
+    heartbeatFrequencyMS: 10000,
+};
+
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/carwash', mongoOptions)
     .then(() => console.log('✅ MongoDB Connected'.green.bold))
-    .catch((err) => console.log('❌ MongoDB Connection Error:'.red.bold, err));
+    .catch((err) => {
+        console.log('❌ MongoDB Connection Error:'.red.bold, err);
+        // Do not exit, allow server to heart-beat and try re-connecting
+    });
 
 // Security middleware
 app.use(helmet());

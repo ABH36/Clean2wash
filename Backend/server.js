@@ -43,23 +43,29 @@ const maintenanceMiddleware = require('./middleware/maintenanceMiddleware');
 const app = express();
 
 // CORS configuration
-const allowedOrigins = process.env.ALLOWED_ORIGINS
+// CORS configuration
+const rawOrigins = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',')
     : ['http://localhost:5173', 'http://localhost:3000'];
 
+const allowedOrigins = rawOrigins.map(origin => origin.trim().replace(/\/$/, ""));
+
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) === -1) {
-            const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+        
+        const normalizedOrigin = origin.trim().replace(/\/$/, "");
+        if (allowedOrigins.includes(normalizedOrigin) || process.env.NODE_ENV === 'development') {
+            return callback(null, true);
+        } else {
+            console.warn(`🚨 CORS Blocked for: ${origin}`);
+            const msg = 'Origin not allowed by Clean2Wash Security Policy';
             return callback(new Error(msg), false);
         }
-        return callback(null, true);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
 
 // Database connection

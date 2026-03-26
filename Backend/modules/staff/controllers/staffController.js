@@ -159,6 +159,20 @@ exports.uploadProof = async (req, res) => {
         }
 
         const cloudinary = require('../../../utils/cloudinary');
+        
+        // 🧪 Development Bypass: If Cloudinary keys are missing, we mock success
+        const isCloudinaryConfigured = process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_KEY !== 'undefined';
+        
+        if (!isCloudinaryConfigured) {
+            console.warn('⚠️  Cloudinary Bypass Active: Returning mock URLs for development');
+            // Mocking URLs based on current time to distinguish between before/after
+            const mockUrls = images.map((_, i) => `https://placehold.co/600x400?text=Evidency_${type}_${i}_${Date.now()}`);
+            return res.status(200).json({
+                status: 'success',
+                data: { urls: mockUrls }
+            });
+        }
+
         const uploadPromises = images.map(img =>
             cloudinary.uploadImage(img, `clean2wash/staff/proofs/${req.user.id}/${type}`)
         );

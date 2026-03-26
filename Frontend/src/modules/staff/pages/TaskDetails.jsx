@@ -249,7 +249,7 @@ const TaskDetails = () => {
     };
 
     const handleActionTrigger = (nextStatus) => {
-        if (['arrived', 'picked-up', 'at-studio', 'completed'].includes(nextStatus)) {
+        if (['picked-up', 'completed'].includes(nextStatus)) {
             setPendingStatus(nextStatus);
             setShowPinModal(true);
         } else {

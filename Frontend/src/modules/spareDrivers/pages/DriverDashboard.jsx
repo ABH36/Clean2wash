@@ -3,6 +3,16 @@ import { TrendingUp, Star, Clock, MapPin, ChevronRight, AlertCircle, Zap } from 
 import DriverLayout from '../components/DriverLayout';
 import { spareDriverAPI } from '../../../utils/spareDriverApi';
 import { socketService } from '../../../utils/socket';
+import GoogleMapBox from '../../../components/common/GoogleMapBox';
+
+// 🛠️ Specialist Identity Protocol
+const SERVICE_ASSETS = {
+    'point': { icon: 'https://cdn-icons-png.flaticon.com/512/3721/3721619.png', color: '#3B82F6' },
+    'hourly': { icon: 'https://cdn-icons-png.flaticon.com/512/2830/2830305.png', color: '#10B981' },
+    'full': { icon: 'https://cdn-icons-png.flaticon.com/512/3202/3202926.png', color: '#F29F05' },
+    'outstation': { icon: 'https://cdn-icons-png.flaticon.com/512/2330/2330453.png', color: '#A855F7' },
+    'specialist': 'https://cdn-icons-png.flaticon.com/512/2436/2436874.png' // Specialist Driver Icon
+};
 
 const DriverDashboard = () => {
     const [isOnline, setIsOnline] = useState(false);
@@ -74,6 +84,7 @@ const DriverDashboard = () => {
         return {
             customer: job.consumer?.name || 'Customer',
             pickup: job.location?.address?.street || 'Pick up location',
+            destination: job.destination?.address?.street || job.destination?.street || null,
             time: job.status === 'pending' ? 'Immediate' : 'In Progress',
             type: job.service?.name || 'Chauffeur Service',
             reward: `₹${job.pricing?.totalAmount || 0}`
@@ -121,6 +132,35 @@ const DriverDashboard = () => {
             alert(error.message || 'Failed to cancel booking');
         }
     };
+
+    // ── Real-time Dispatch Pulse ──
+    useEffect(() => {
+        socketService.connect();
+        const socket = socketService.getSocket();
+        
+        if (socket) {
+            socket.on('new_booking_broadcast', (payload) => {
+                console.log('[Driver Pulse] New Job Received:', payload);
+                toast.success(`⚡ New Mission Arrived: ${payload.serviceName}`, {
+                    duration: 10000,
+                    style: { background: '#F29F05', color: '#000', fontWeight: 'bold' }
+                });
+                // Refresh list automatically
+                spareDriverAPI.getBookings().then(res => setBookings(res.data.bookings || []));
+            });
+
+            socket.on('booking_status_updated', () => {
+                spareDriverAPI.getBookings().then(res => setBookings(res.data.bookings || []));
+            });
+        }
+
+        return () => {
+            if (socket) {
+                socket.off('new_booking_broadcast');
+                socket.off('booking_status_updated');
+            }
+        };
+    }, []);
 
     const jobInfo = getJobDisplay(activeJob);
 
@@ -176,20 +216,104 @@ const DriverDashboard = () => {
                             <span className={`text-[9px] font-black uppercase tracking-widest ${activeJob.status === 'pending' ? 'text-black/30' : 'text-[#F29F05]'}`}>
                                 {activeJob.status === 'pending' ? 'Available Request' : 'Active Mission'}
                             </span>
-                            <span className="text-[9px] font-black text-black/30 uppercase">{jobInfo.reward}</span>
-                        </div>
-
-                        <div>
-                            <p className="text-sm font-black text-black uppercase">{jobInfo.type}</p>
-                            <div className="flex items-center gap-1.5 mt-1 text-black/40">
-                                <Clock size={11} />
-                                <span className="text-[10px] font-black uppercase">{jobInfo.time} ({activeJob.status})</span>
+                            <div className="flex flex-col items-end">
+                                <p className="text-[12px] font-black text-black leading-none">₹{activeJob.pricing?.totalAmount || 0}</p>
+                                <p className="text-[7px] font-bold text-black/25 uppercase tracking-widest mt-0.5">Current Fare</p>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2 pt-2 border-t border-black/5">
-                            <MapPin size={12} className="text-black/30 shrink-0" />
-                            <span className="text-[10px] font-black text-black/60 uppercase truncate">{jobInfo.pickup}</span>
+                        {activeJob.service?.name?.toLowerCase().includes('outstation') && (
+                            <div className="bg-blue-600 text-white px-3 py-1.5 rounded-md flex items-center gap-2 w-fit">
+                                <Zap size={10} fill="currentColor" />
+                                <span className="text-[9px] font-black uppercase tracking-widest">Outstation Mission</span>
+                            </div>
+                        )}
+
+                        <div>
+                            <p className="text-sm font-black text-black uppercase">{jobInfo.type}</p>
+                            <div className="flex items-center justify-between mt-1">
+                                <div className="flex items-center gap-1.5 text-black/40">
+                                    <Clock size={11} />
+                                    <span className="text-[10px] font-black uppercase">{jobInfo.time} ({activeJob.status})</span>
+                                </div>
+                                {activeJob.notes?.internal?.includes('[WAITING]') && (
+                                    <span className="text-[7px] font-black text-[#F29F05] bg-[#F29F05]/10 px-1.5 py-0.5 rounded-sm uppercase tracking-widest animate-pulse">
+                                        Wait Charge Applied
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 💰 Live Payout Breakdown for Driver 💰 */}
+                        {['active', 'arrived'].includes(activeJob.status) && activeJob.pricing?.breakdown?.filter(b => b.amount > 0).length > 0 && (
+                            <div className="px-3 py-2 bg-black/[0.02] border border-black/5 rounded-lg space-y-1">
+                                <p className="text-[7px] font-black text-black/20 uppercase tracking-widest mb-1">Fare Breakdown</p>
+                                {activeJob.pricing.breakdown.filter(b => b.amount > 0).map((item, idx) => (
+                                    <div key={idx} className="flex items-center justify-between">
+                                        <span className="text-[8px] font-bold text-black/40 uppercase">{item.name}</span>
+                                        <span className="text-[8px] font-black text-black">+₹{item.amount}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* 🗺️ Mission Critical Navigation */}
+                        {['en_route', 'arrived', 'active'].includes(activeJob.status) && activeJob.location?.address?.coordinates && (
+                            <div className="h-[220px] w-full rounded-xl overflow-hidden border border-black/[0.03] shadow-inner mt-2">
+                                <GoogleMapBox
+                                    center={{
+                                        lat: activeJob.location.address.coordinates.lat,
+                                        lng: activeJob.location.address.coordinates.lng
+                                    }}
+                                    zoom={15}
+                                    markers={[
+                                        {
+                                            position: {
+                                                lat: activeJob.location.address.coordinates.lat,
+                                                lng: activeJob.location.address.coordinates.lng
+                                            },
+                                            icon: {
+                                                url: 'https://cdn-icons-png.flaticon.com/512/7077/7077313.png', // Customer
+                                                scaledSize: new window.google.maps.Size(28, 28)
+                                            },
+                                            infoContent: <div className="p-1 font-black text-[9px] uppercase text-brand tracking-widest text-center">Customer Terminal</div>
+                                        },
+                                        ...(driver?.location?.coordinates ? [{
+                                            position: driver.location.coordinates,
+                                            icon: {
+                                                url: SERVICE_ASSETS.specialist,
+                                                scaledSize: new window.google.maps.Size(32, 32),
+                                                anchor: new window.google.maps.Point(16, 16)
+                                            },
+                                            infoContent: <div className="p-1 font-black text-[9px] uppercase text-green-600 tracking-widest text-center">Your Position</div>
+                                        }] : []),
+                                        ...(activeJob.destination?.address?.coordinates || activeJob.destination?.coordinates ? [{
+                                            position: activeJob.destination.address?.coordinates || activeJob.destination.coordinates,
+                                            icon: {
+                                                url: 'https://cdn-icons-png.flaticon.com/512/3202/3202926.png', // Point B Icon (Red aspect)
+                                                scaledSize: new window.google.maps.Size(28, 28)
+                                            },
+                                            infoContent: <div className="p-1 font-black text-[9px] uppercase text-red-600 tracking-widest text-center">Drop Point Terminal</div>
+                                        }] : [])
+                                    ]}
+                                    darkMode={true}
+                                />
+                            </div>
+                        )}
+
+                        <div className="space-y-1 pt-2 border-t border-black/5">
+                            <div className="flex items-center gap-2 whitespace-nowrap overflow-hidden">
+                                <MapPin size={12} className="text-brand shrink-0" />
+                                <span className="text-[10px] font-black text-black/60 uppercase truncate">{jobInfo.pickup}</span>
+                                <span className="text-[7px] font-black text-brand uppercase ml-auto">Pickup</span>
+                            </div>
+                            {jobInfo.destination && (
+                                <div className="flex items-center gap-2 whitespace-nowrap overflow-hidden">
+                                    <MapPin size={12} className="text-red-500 shrink-0" />
+                                    <span className="text-[10px] font-black text-black/60 uppercase truncate">{jobInfo.destination}</span>
+                                    <span className="text-[7px] font-black text-red-500 uppercase ml-auto">Drop</span>
+                                </div>
+                            )}
                         </div>
 
                         <div className="space-y-2">

@@ -30,6 +30,7 @@ router.get('/transactions', authMiddleware.protect, authMiddleware.restrictTo('s
 router.get('/notifications', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.getNotifications);
 router.patch('/notifications/:id/read', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.markNotificationRead);
 router.post('/fcm-token', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.updateFCMToken);
+router.post('/emergency', authMiddleware.protect, ctrl.reportEmergency);
 
 // ── Admin-Only Routes ──
 router.get('/admin/drivers', authMiddleware.protect, authMiddleware.restrictTo('admin'), ctrl.adminListDrivers);

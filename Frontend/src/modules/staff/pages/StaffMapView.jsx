@@ -6,40 +6,18 @@ import {
     Locate, Search, Activity, Shield, Zap, Info,
     ArrowUpRight, Clock, User
 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import GoogleMapBox from '../../../components/common/GoogleMapBox';
 import { staffAPI } from '../../../utils/staffApi';
 import { useTheme } from '../../../context/ThemeContext';
 import { toast } from 'react-hot-toast';
 
-// 🛠️ Hub Asset Protocol: Custom Markers
-const createIcon = (color, Icon) => {
-    return L.divIcon({
-        html: `<div class="w-10 h-10 rounded-2xl flex items-center justify-center border-2 border-white/20 shadow-2xl transition-all duration-300 transform hover:scale-110" style="background: ${color}; color: white;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    ${Icon}
-                </svg>
-              </div>`,
-        className: 'custom-div-icon',
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
-        popupAnchor: [0, -20]
-    });
-};
-
-const staffIcon = createIcon('#4F46E5', '<circle cx="12" cy="12" r="10"/><path d="M12 2v20"/><path d="M2 12h20"/>'); // Crosshair/Pulse
-const pickupIcon = createIcon('#3B82F6', '<path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-5l-4-4h-3"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>'); // Truck
-const deliveryIcon = createIcon('#10B981', '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>'); // Package
-const productIcon = createIcon('#8B5CF6', '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>'); // Package reuse
-
-// Helper to recenter map
-const RecenterMap = ({ center }) => {
-    const map = useMap();
-    useEffect(() => {
-        if (center) map.setView(center, 14);
-    }, [center, map]);
-    return null;
+// 🛠️ Hub Asset Protocol: Elite Marker Assets
+const ASSETS = {
+    USER_BIKE: 'https://cdn-icons-png.flaticon.com/512/3721/3721619.png', // Specialist/Bike
+    APARTMENT: 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png', // Building
+    PICKUP: 'https://cdn-icons-png.flaticon.com/512/2769/2769339.png',    // Truck
+    DELIVERY: 'https://cdn-icons-png.flaticon.com/512/1670/1670915.png', // Package/Delivery
+    PRODUCT: 'https://cdn-icons-png.flaticon.com/512/1554/1554591.png'    // Box
 };
 
 const StaffMapView = () => {
@@ -48,7 +26,7 @@ const StaffMapView = () => {
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [currentPos, setCurrentPos] = useState(null);
-    const [mapCenter, setMapCenter] = useState([20.5937, 78.9629]); // Default India center
+    const [mapCenter, setMapCenter] = useState({ lat: 20.5937, lng: 78.9629 }); // Default India center
     const [searchQuery, setSearchQuery] = useState('');
 
     const fetchTasks = useCallback(async () => {
@@ -60,20 +38,22 @@ const StaffMapView = () => {
                     id: t._id,
                     isProduct: false,
                     type: ['quality-check', 'ready-for-delivery', 'delivery-assigned'].includes(t.status) ? 'Delivery' : 'Pickup',
-                    coords: [t.location?.address?.coordinates?.lat || 0, t.location?.address?.coordinates?.lng || 0]
+                    coords: { 
+                        lat: t.location?.address?.coordinates?.lat || 0, 
+                        lng: t.location?.address?.coordinates?.lng || 0 
+                    }
                 }));
                 const productTasks = (res.data.productTasks || []).map(t => ({
                     ...t,
                     id: t._id,
                     isProduct: true,
                     type: 'Product',
-                    coords: [0, 0] // Geolocation for product tasks might be different or center of hub
+                    coords: { lat: 0, lng: 0 }
                 }));
                 // Filter out tasks without valid coordinates
-                const validTasks = [...serviceTasks, ...productTasks].filter(t => t.coords[0] !== 0);
+                const validTasks = [...serviceTasks, ...productTasks].filter(t => t.coords.lat !== 0);
                 setTasks(validTasks);
 
-                // If we have tasks but no current position, center on the first task
                 if (validTasks.length > 0 && !currentPos) {
                     setMapCenter(validTasks[0].coords);
                 }
@@ -89,13 +69,13 @@ const StaffMapView = () => {
     useEffect(() => {
         fetchTasks();
 
-        // 🛰️ Initialize Geolocation Tracking
         if ("geolocation" in navigator) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     const { latitude, longitude } = position.coords;
-                    setCurrentPos([latitude, longitude]);
-                    setMapCenter([latitude, longitude]);
+                    const pos = { lat: latitude, lng: longitude };
+                    setCurrentPos(pos);
+                    setMapCenter(pos);
                 },
                 (error) => console.error('GPS Fatal:', error),
                 { enableHighAccuracy: true }
@@ -106,7 +86,7 @@ const StaffMapView = () => {
     const handleLocateMe = () => {
         if ("geolocation" in navigator) {
             navigator.geolocation.getCurrentPosition((pos) => {
-                const coords = [pos.coords.latitude, pos.coords.longitude];
+                const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
                 setCurrentPos(coords);
                 setMapCenter(coords);
                 toast.success('Terminal Position Synchronized');
@@ -119,68 +99,86 @@ const StaffMapView = () => {
         t.location?.address?.street?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    const mapMarkers = [
+        ...(currentPos ? [{
+            position: currentPos,
+            icon: {
+                url: ASSETS.USER_BIKE,
+                scaledSize: new window.google.maps.Size(42, 42),
+                anchor: new window.google.maps.Point(21, 42)
+            },
+            infoContent: (
+                <div className="text-center p-2">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-brand">Your Terminal</p>
+                    <p className="text-xs font-bold mt-1 text-black">Active Pulse</p>
+                </div>
+            )
+        }] : []),
+        ...filteredTasks.map(task => ({
+            position: task.coords,
+            icon: {
+                url: task.service?.category === 'Apartment' ? ASSETS.APARTMENT : 
+                     (task.type === 'Pickup' ? ASSETS.PICKUP : 
+                      task.type === 'Delivery' ? ASSETS.DELIVERY : ASSETS.PRODUCT),
+                scaledSize: new window.google.maps.Size(38, 38),
+                anchor: new window.google.maps.Point(19, 38)
+            },
+            infoContent: (
+                <div className="p-0 min-w-[200px] bg-white rounded-2xl overflow-hidden font-outfit shadow-2xl border border-gray-100">
+                    <div className="p-3 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between">
+                        <div className={`px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${
+                            task.type === 'Pickup' ? 'bg-blue-500 text-white' :
+                            task.type === 'Delivery' ? 'bg-green-500 text-white' : 'bg-purple-500 text-white'
+                        }`}>
+                            {task.type} Mission
+                        </div>
+                        <p className="text-[9px] font-black text-brand uppercase tracking-tighter">#{String(task.id).slice(-4)}</p>
+                    </div>
+
+                    <div className="p-4">
+                        <div className="mb-3">
+                            <h4 className="text-[11px] font-black uppercase tracking-tight text-black mb-0.5 truncate">{task.consumer?.name || 'Protocol Client'}</h4>
+                            <div className="flex items-center gap-1 opacity-40">
+                                <MapPin size={8} />
+                                <p className="text-[8px] font-bold uppercase truncate">{task.location?.address?.street || 'Assigned Node'}</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-6 h-6 rounded-lg bg-gray-100 flex items-center justify-center">
+                                    <Clock size={10} className="text-brand" />
+                                </div>
+                                <p className="text-[9px] font-black text-black">{task.schedule?.timeSlot?.start || 'Instant'}</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[7px] font-black text-gray-400 uppercase leading-none">Status</p>
+                                <p className="text-[9px] font-black text-brand uppercase">{task.status}</p>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => navigate(task.isProduct ? `/staff/product-task/${task.orderId}/${task.id}` : `/staff/task/${task.id}`)}
+                            className="w-full h-10 bg-black text-white rounded-xl font-black text-[9px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-lg shadow-black/10 active:scale-95 transition-all"
+                        >
+                            Execute Protocol <ArrowUpRight size={14} />
+                        </button>
+                    </div>
+                </div>
+            )
+        }))
+    ];
+
     return (
         <div className={`h-screen w-screen relative overflow-hidden flex flex-col ${isDarkMode ? 'bg-[#0F172A]' : 'bg-[#FAFBFF]'}`}>
-            {/* 🛰️ Background Tactical Map */}
+            {/* 🛰️ Background Google Map */}
             <div className={`absolute inset-0 z-0 transition-opacity duration-1000 ${loading ? 'opacity-0' : 'opacity-100'}`}>
-                <MapContainer
+                <GoogleMapBox 
                     center={mapCenter}
                     zoom={13}
-                    zoomControl={false}
-                    style={{ height: '100%', width: '100%', filter: isDarkMode ? 'invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%)' : 'none' }}
-                >
-                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                    <RecenterMap center={mapCenter} />
-
-                    {currentPos && (
-                        <Marker position={currentPos} icon={staffIcon}>
-                            <Popup className="premium-popup">
-                                <div className="text-center p-2">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-brand">Your Terminal</p>
-                                    <p className="text-xs font-bold mt-1">Active Pulse</p>
-                                </div>
-                            </Popup>
-                        </Marker>
-                    )}
-
-                    {filteredTasks.map(task => (
-                        <Marker
-                            key={task.id}
-                            position={task.coords}
-                            icon={task.type === 'Pickup' ? pickupIcon : task.type === 'Delivery' ? deliveryIcon : productIcon}
-                        >
-                            <Popup className="premium-popup">
-                                <div className="p-4 min-w-[200px] flex flex-col gap-3">
-                                    <div className="flex items-center justify-between">
-                                        <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${task.type === 'Pickup' ? 'bg-blue-500/10 text-blue-500' :
-                                                task.type === 'Delivery' ? 'bg-green-500/10 text-green-500' : 'bg-purple-500/10 text-purple-500'
-                                            }`}>
-                                            {task.type} Mission
-                                        </div>
-                                        <p className="text-[9px] font-black text-brand uppercase">#{String(task.id).slice(-4)}</p>
-                                    </div>
-
-                                    <div>
-                                        <h4 className="text-sm font-black uppercase tracking-tight leading-none mb-1">{task.consumer?.name || 'Protocol Client'}</h4>
-                                        <p className="text-[10px] text-content-subtle font-bold truncate">{task.location?.address?.street || 'Assigned Node'}</p>
-                                    </div>
-
-                                    <div className="flex items-center gap-2 py-2 border-y border-gray-100/10">
-                                        <Clock size={12} className="text-brand" />
-                                        <p className="text-[10px] font-black">{task.schedule?.timeSlot?.start || 'Instant'}</p>
-                                    </div>
-
-                                    <button
-                                        onClick={() => navigate(task.isProduct ? `/staff/product-task/${task.orderId}/${task.id}` : `/staff/task/${task.id}`)}
-                                        className="w-full h-10 bg-brand text-white rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-brand/20 active:scale-95 transition-all"
-                                    >
-                                        Execute Protocol <ArrowUpRight size={14} />
-                                    </button>
-                                </div>
-                            </Popup>
-                        </Marker>
-                    ))}
-                </MapContainer>
+                    darkMode={isDarkMode}
+                    markers={mapMarkers}
+                />
             </div>
 
             {/* 🛡️ HUD: Overlays */}
@@ -284,31 +282,6 @@ const StaffMapView = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            <style dangerouslySetInnerHTML={{
-                __html: `
-                .premium-popup .leaflet-popup-content-wrapper {
-                    background: ${isDarkMode ? '#1E293B' : '#FFFFFF'} !important;
-                    color: ${isDarkMode ? '#FFFFFF' : '#0F172A'} !important;
-                    border-radius: 2rem !important;
-                    padding: 0 !important;
-                    border: 1px solid ${isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'} !important;
-                    box-shadow: 0 30px 60px -15px rgba(0,0,0,0.3) !important;
-                }
-                .premium-popup .leaflet-popup-content {
-                    margin: 0 !important;
-                }
-                .premium-popup .leaflet-popup-tip {
-                    background: ${isDarkMode ? '#1E293B' : '#FFFFFF'} !important;
-                }
-                .custom-div-icon {
-                    background: none !important;
-                    border: none !important;
-                    display: flex !important;
-                    align-items: center !important;
-                    justify-content: center !important;
-                }
-            `}} />
         </div>
     );
 };

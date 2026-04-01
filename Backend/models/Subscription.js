@@ -185,7 +185,7 @@ subscriptionSchema.methods.isServiceEligible = function (bookingData) {
     const { service = {}, hub = null, location = {} } = bookingData;
     const category = service.category;
     const isInstant = (bookingData.schedule?.type || service.schedule?.type) === 'instant';
-    const isApartment = !!hub || (location.type !== 'studio' && !!location.hub);
+    const isApartment = !!hub || (location.type !== 'studio' && !!location.hubId);
 
     return this.applicableServices.some(serviceName => {
         if (serviceName === 'Instant Wash') {

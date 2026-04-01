@@ -2,7 +2,7 @@ const cron = require('node-cron');
 const Subscription = require('../models/Subscription');
 const Booking = require('../models/Booking');
 const Hub = require('../models/Hub');
-const { sendNotification, sendStaffNotification } = require('./notificationService');
+const { sendNotification, sendStaffNotification, sendVendorNotification } = require('./notificationService');
 
 const User = require('../models/User');
 
@@ -198,12 +198,93 @@ const generateDailySubscriptionJobs = async () => {
 };
 
 /**
+ * Subscription Lifecycle Manager
+ * Handles expiring subscriptions and notifying users/staff.
+ */
+const processSubscriptionExpiries = async () => {
+    console.log('[Cron] 🕒 Checking for expired subscriptions and sending alerts...');
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // 1. Find subscriptions ending TODAY or already ended but still 'active'
+        const expiringNow = await Subscription.find({
+            status: 'active',
+            endDate: { $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000) }
+        }).populate('user hub vehicle');
+
+        for (const sub of expiringNow) {
+            const isFullyEnded = sub.endDate < today;
+            
+            if (isFullyEnded) {
+                sub.status = 'expired';
+                await sub.save();
+
+                // Notify User
+                await sendNotification(sub.user?._id, {
+                    title: 'Subscription Ended ⌛',
+                    message: `Your Apartment Wash subscription for ${sub.vehicle?.plate || 'your car'} has ended today. Renew to continue services.`,
+                    type: 'subscription_expired'
+                });
+
+                // Notify Hub/Staff
+                if (sub.hub?.vendor) {
+                    await sendVendorNotification(sub.hub.vendor, {
+                        title: 'Client Subscription Ended',
+                        message: `Subscription for ${sub.user?.name} (${sub.vehicle?.plate}) at ${sub.hub.name} has expired.`,
+                        type: 'system_alert'
+                    });
+                }
+            } else {
+                // Ending Today - Final Warning
+                await sendNotification(sub.user?._id, {
+                    title: 'Last Day of Service 🔔',
+                    message: `Today is the final day of your current subscription. Don't forget to renew for uninterrupted service!`,
+                    type: 'subscription_warning'
+                });
+            }
+        }
+
+        // 2. Pre-expiry Alerts (e.g., 3 days before)
+        const threeDaysFromNow = new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000);
+        const warningDateStart = new Date(threeDaysFromNow);
+        warningDateStart.setHours(0, 0, 0, 0);
+        const warningDateEnd = new Date(threeDaysFromNow);
+        warningDateEnd.setHours(23, 59, 59, 999);
+
+        const expiringSoon = await Subscription.find({
+            status: 'active',
+            endDate: { $gte: warningDateStart, $lte: warningDateEnd }
+        }).populate('user');
+
+        for (const sub of expiringSoon) {
+            await sendNotification(sub.user?._id, {
+                title: 'Renewal Reminder 🗓️',
+                message: `Your subscription expires in 3 days. Renew now to keep your sparkling mornings!`,
+                type: 'subscription_warning'
+            });
+        }
+
+    } catch (error) {
+        console.error('[Cron] ❌ Error in processSubscriptionExpiries:', error);
+    }
+};
+
+/**
  * Robust Scheduler Initialization
  */
 const initCronService = () => {
-    console.log('[Cron] 🚀 Cron Service Initialized (Scheduled for 2:00 AM Daily)');
+    console.log('[Cron] 🚀 Cron Service Initialized (Scheduled for 1:00 AM & 2:00 AM Daily)');
 
-    // Schedule: 0 2 * * * (At 2:00 AM every day)
+    // Task 1: Lifecycle Management (Expiry/Alerts) at 1:00 AM
+    cron.schedule('0 1 * * *', () => {
+        processSubscriptionExpiries();
+    }, {
+        scheduled: true,
+        timezone: "Asia/Kolkata"
+    });
+
+    // Task 2: Job Generation at 2:00 AM
     cron.schedule('0 2 * * *', () => {
         generateDailySubscriptionJobs();
     }, {
@@ -213,8 +294,11 @@ const initCronService = () => {
 
     // For development/immediate testing, trigger once on start
     if (process.env.NODE_ENV === 'development') {
-        console.log('[Cron] 🧪 Dev Mode: Triggering immediate job generation...');
-        setTimeout(generateDailySubscriptionJobs, 3000);
+        console.log('[Cron] 🧪 Dev Mode: Triggering lifecycle & job generation...');
+        setTimeout(async () => {
+            await processSubscriptionExpiries();
+            await generateDailySubscriptionJobs();
+        }, 3000);
     }
 };
 

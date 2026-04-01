@@ -3,16 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronLeft, Phone, MessageSquare, ShieldCheck, MapPin,
     CheckCircle2, Navigation, Star, Clock, Zap, Info,
-    AlertTriangle, Droplets, Trash2, Truck, ChevronRight, ShieldAlert
+    AlertTriangle, Droplets, Trash2, Truck, ChevronRight, ShieldAlert,
+    Car
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import MobileLayout from '../components/layout/MobileLayout';
 import { useAuth } from '../../../context/AuthContext';
 import { toast } from 'react-hot-toast';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import GoogleMapBox from '../../../components/common/GoogleMapBox';
 import VerifiedBadge from '../components/ui/VerifiedBadge';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
 import { socketService } from '../../../utils/socket';
 
 const playStatusDing = () => {
@@ -39,27 +38,7 @@ const vibrateProtocol = (type) => {
     else navigator.vibrate(100);
 };
 
-// 🛠️ Protocol Config: Smooth Marker Movement
-const personIcon = new L.Icon({
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/1048/1048313.png',
-    iconSize: [32, 32],
-    iconAnchor: [16, 32],
-    className: 'leaflet-smooth-marker'
-});
-
-const homeIcon = new L.Icon({
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/619/619153.png',
-    iconSize: [32, 32],
-    iconAnchor: [16, 32]
-});
-
-const RecenterMap = ({ coords }) => {
-    const map = useMap();
-    useEffect(() => {
-        if (coords) map.setView(coords, 14, { animate: true });
-    }, [coords, map]);
-    return null;
-};
+// smooth marker movement handled by Google Map state updates
 
 const CountdownTimer = ({ targetTime }) => {
     const [timeLeft, setTimeLeft] = useState('');
@@ -99,6 +78,17 @@ const CAPTAIN_STEPS = [
     { id: 'completed', label: 'Completed', desc: 'Spotless! Enjoy your ride', Icon: CheckCircle2, activeColor: 'text-green-600', activeBg: 'bg-green-50', activeBorder: 'border-green-200' },
 ];
 
+const APARTMENT_STEPS = [
+    { id: 'pending', label: 'Plan Active', desc: 'Subscription wash scheduled', Icon: Zap, activeColor: 'text-violet-500', activeBg: 'bg-violet-50', activeBorder: 'border-violet-200' },
+    { id: 'assigned', label: 'Specialist Assigned', desc: 'Building supervisor ready', Icon: ShieldCheck, activeColor: 'text-blue-500', activeBg: 'bg-blue-50', activeBorder: 'border-blue-200' },
+    { id: 'en_route', label: 'Specialist In-Park', desc: 'Heading to your parking slot', Icon: Navigation, activeColor: 'text-blue-600', activeBg: 'bg-blue-100', activeBorder: 'border-blue-300' },
+    { id: 'arrived', label: 'At Vehicle', desc: 'Specialist reached the vehicle', Icon: MapPin, activeColor: 'text-brand', activeBg: 'bg-brand/10', activeBorder: 'border-brand/20' },
+    { id: 'before_photo', label: 'Inspection Done', desc: 'Initial state documented', Icon: CheckCircle2, activeColor: 'text-orange-500', activeBg: 'bg-orange-50', activeBorder: 'border-orange-200' },
+    { id: 'in_progress', label: 'Wash in Progress', desc: 'Premium detailing active', Icon: Droplets, activeColor: 'text-sky-500', activeBg: 'bg-sky-50', activeBorder: 'border-sky-200' },
+    { id: 'after_photo', label: 'Final Inspection', desc: 'Quality audit completed', Icon: CheckCircle2, activeColor: 'text-emerald-500', activeBg: 'bg-emerald-50', activeBorder: 'border-emerald-200' },
+    { id: 'completed', label: 'Service Done', desc: 'Spotless! Ready to drive', Icon: CheckCircle2, activeColor: 'text-green-600', activeBg: 'bg-green-50', activeBorder: 'border-green-200' },
+];
+
 const VENDOR_STEPS = [
     { id: 'pending', label: 'Studio Request', desc: 'Awaiting studio confirmation', Icon: Zap, activeColor: 'text-violet-500', activeBg: 'bg-violet-50', activeBorder: 'border-violet-200' },
     { id: 'accepted', label: 'Studio Confirmed', desc: 'Premium studio assigned', Icon: ShieldCheck, activeColor: 'text-blue-500', activeBg: 'bg-blue-50', activeBorder: 'border-blue-200' },
@@ -122,10 +112,16 @@ const BookingStatus = () => {
 
     const type = searchParams.get('type') || 'captain';
     const bookingId = searchParams.get('id');
-    const STEPS = type === 'vendor' ? VENDOR_STEPS : CAPTAIN_STEPS;
-
+    
     // Find live booking
-    const liveBooking = bookings.find(b => (b.bookingId === bookingId || b._id === bookingId || b.id === bookingId)) || { id: 'CarWash-8821', serviceName: 'Eco Doorstep Wash', price: '₹473', status: 'CREATED' };
+    const liveBooking = bookings.find(b => (b.bookingId === bookingId || b._id === bookingId || b.id === bookingId)) || { id: 'CarWash-8821', serviceName: 'Eco Doorstep Wash', price: '₹473', status: 'pending' };
+
+    const isApartment = type === 'apartment' || 
+                       liveBooking.service?.type === 'apartment' || 
+                       liveBooking.serviceName?.toLowerCase().includes('apartment') ||
+                       liveBooking.service?.name?.toLowerCase().includes('apartment');
+
+    const STEPS = isApartment ? APARTMENT_STEPS : (type === 'vendor' ? VENDOR_STEPS : CAPTAIN_STEPS);
 
     const [step, setStep] = useState(0);
     const [staffLocation, setStaffLocation] = useState(null);
@@ -151,7 +147,8 @@ const BookingStatus = () => {
             // Priority 2: Status Synchronization
             socket.on('booking_status_updated', (data) => {
                 if (data.bookingId === bookingId) {
-                    toast.success(`Protocol Updated: ${data.status}`);
+                    const statusMsg = typeof data.status === 'string' ? data.status.replace(/[-_]/g, ' ') : 'Updated';
+                    toast.success(`Protocol Updated: ${statusMsg}`);
                     playStatusDing();
                     if (data.status === 'arrived') vibrateProtocol('arrived');
                     else if (data.status === 'completed') vibrateProtocol('completed');
@@ -171,8 +168,8 @@ const BookingStatus = () => {
 
     // Sync step with booking status
     useEffect(() => {
-        const status = liveBooking.status || 'CREATED';
-        const index = STEPS.findIndex(s => s.id === status);
+        const currentStatus = (liveBooking.status || 'pending').toLowerCase();
+        const index = STEPS.findIndex(s => s.id.toLowerCase() === currentStatus);
         setStep(index !== -1 ? index : 0);
     }, [liveBooking.status, type, STEPS]);
 
@@ -182,33 +179,37 @@ const BookingStatus = () => {
     const performerName = performer?.name || (type === 'vendor' ? 'Service Hub' : 'Matching…');
 
     const handleCancel = () => {
+        const isSkip = isApartment;
         toast((t) => (
             <div className="flex flex-col gap-3">
-                <p className="text-xs font-bold text-content uppercase tracking-tight">Are you sure you want to cancel this booking?</p>
+                <p className="text-xs font-bold text-content uppercase tracking-tight">
+                    {isSkip ? 'Skip today\'s scheduled wash?' : 'Are you sure you want to cancel this booking?'}
+                </p>
                 <div className="flex gap-2">
                     <button
                         onClick={() => {
                             toast.dismiss(t.id);
-                            updateBookingStatus(bookingId, 'cancelled');
-                            navigate('/');
-                            toast.success('Booking cancelled');
+                            const newStatus = isSkip ? 'skipped' : 'cancelled';
+                            updateBookingStatus(bookingId, newStatus);
+                            if (!isSkip) navigate('/');
+                            toast.success(isSkip ? 'Wash skipped for today. Staff notified.' : 'Booking cancelled');
                         }}
                         className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase"
                     >
-                        Cancel Booking
+                        {isSkip ? 'Skip Today' : 'Cancel Booking'}
                     </button>
                     <button
                         onClick={() => toast.dismiss(t.id)}
                         className="bg-gray-100 text-content px-3 py-1.5 rounded-lg text-[10px] font-black uppercase"
                     >
-                        Keep Booking
+                        {isSkip ? 'Don\'t Skip' : 'Keep Booking'}
                     </button>
                 </div>
             </div>
         ), { duration: 5000 });
     };
 
-    if (liveBooking.status === 'cancelled') {
+    if (liveBooking.status?.toLowerCase() === 'cancelled') {
         return (
             <MobileLayout hideNav>
                 <div className="flex flex-col items-center justify-center min-h-screen px-6 text-center">
@@ -223,7 +224,42 @@ const BookingStatus = () => {
         );
     }
 
-    if (liveBooking.status === 'pending') {
+    if (liveBooking.status?.toLowerCase() === 'skipped') {
+        return (
+            <MobileLayout hideNav>
+                <div className="flex flex-col items-center justify-center min-h-screen px-6 text-center">
+                    <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center mb-4">
+                        <motion.div animate={{ rotate: [0, -10, 10, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
+                            <Navigation size={40} className="text-gray-400 rotate-[225deg]" />
+                        </motion.div>
+                    </div>
+                    <h2 className="text-2xl font-black text-content tracking-tight uppercase italic italic-black">Wash Skipped</h2>
+                    <p className="text-content-subtle font-bold mt-2">Today's session has been skipped. Your regular schedule will continue from the next slot.</p>
+                    <button onClick={() => navigate('/')} className="mt-8 w-full h-14 bg-content text-white rounded-[2rem] font-black uppercase tracking-widest">Back to Dashboard</button>
+                </div>
+            </MobileLayout>
+        );
+    }
+
+    if (liveBooking.status?.toLowerCase() === 'vehicle_not_available') {
+        return (
+            <MobileLayout hideNav>
+                <div className="flex flex-col items-center justify-center min-h-screen px-6 text-center">
+                    <div className="w-20 h-20 bg-orange-50 rounded-3xl flex items-center justify-center mb-4">
+                        <Car size={40} className="text-orange-500" />
+                    </div>
+                    <h2 className="text-2xl font-black text-content tracking-tight uppercase italic">Vehicle Not Found</h2>
+                    <p className="text-content-subtle font-bold mt-2">Our specialist couldn't locate your vehicle at the designated spot. The session has been marked as incomplete.</p>
+                    <div className="mt-6 flex flex-col gap-3 w-full">
+                        <button onClick={() => navigate('/support')} className="w-full h-14 bg-brand text-white rounded-[2rem] font-black uppercase tracking-widest">Contact Support</button>
+                        <button onClick={() => navigate('/')} className="w-full h-14 bg-gray-100 text-content rounded-[2rem] font-black uppercase tracking-widest">Back to Home</button>
+                    </div>
+                </div>
+            </MobileLayout>
+        );
+    }
+
+    if (liveBooking.status?.toLowerCase() === 'pending') {
         return (
             <MobileLayout hideNav>
                 <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center bg-white">
@@ -297,29 +333,44 @@ const BookingStatus = () => {
 
                 {/* ── Map ────────────────────────────────────── */}
                 <div className="relative rounded-3xl overflow-hidden border border-gray-100 shadow-2xl" style={{ height: 280 }}>
-                    <MapContainer
-                        center={[staffLocation?.lat || liveBooking.location?.address?.coordinates?.lat || 20.5937, staffLocation?.lng || liveBooking.location?.address?.coordinates?.lng || 78.9629]}
-                        zoom={14}
-                        zoomControl={false}
-                        style={{ height: '100%', width: '100%' }}
-                    >
-                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                        <RecenterMap coords={staffLocation ? [staffLocation.lat, staffLocation.lng] : null} />
-
-                        {/* Home/Hub Marker */}
-                        <Marker
-                            position={[liveBooking.location?.address?.coordinates?.lat || 20.5937, liveBooking.location?.address?.coordinates?.lng || 78.9629]}
-                            icon={homeIcon}
-                        />
-
-                        {/* Staff/Live Marker */}
-                        {staffLocation && (
-                            <Marker
-                                position={[staffLocation.lat, staffLocation.lng]}
-                                icon={personIcon}
-                            />
-                        )}
-                    </MapContainer>
+                    <GoogleMapBox
+                        center={staffLocation || liveBooking.location?.address?.coordinates || { lat: 20.5937, lng: 78.9629 }}
+                        zoom={15}
+                        markers={[
+                            {
+                                position: liveBooking.location?.address?.coordinates || { lat: 20.5937, lng: 78.9629 },
+                                icon: {
+                                    url: 'https://cdn-icons-png.flaticon.com/512/3202/3202926.png', // Premium Car icon
+                                    scaledSize: { width: 32, height: 32 },
+                                    anchor: { x: 16, y: 32 }
+                                },
+                                infoContent: (
+                                    <div className="p-2 font-outfit text-center">
+                                        <p className="text-[10px] font-black uppercase text-brand">Wash Location</p>
+                                        <p className="text-[9px] font-bold text-gray-400 mt-1 truncate max-w-[120px]">{liveBooking.location?.address?.label || 'Target Site'}</p>
+                                    </div>
+                                )
+                            },
+                            ...(staffLocation ? [{
+                                position: staffLocation,
+                                icon: {
+                                    url: type === 'vendor' 
+                                        ? 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png' // Studio Hub
+                                        : 'https://cdn-icons-png.flaticon.com/512/2966/2966327.png', // Specialist Bike
+                                    scaledSize: { width: 42, height: 42 },
+                                    anchor: { x: 21, y: 42 }
+                                },
+                                infoContent: (
+                                    <div className="p-2 font-outfit text-center">
+                                        <p className="text-[10px] font-black uppercase text-brand">
+                                            {type === 'vendor' ? 'Service Hub' : 'Specialist'}
+                                        </p>
+                                        <p className="text-[9px] font-bold text-gray-400 mt-1">Live Tracking Active</p>
+                                    </div>
+                                )
+                            }] : [])
+                        ]}
+                    />
 
                     {/* Overlay gradient for aesthetics */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none z-[400]" />
@@ -600,7 +651,9 @@ const BookingStatus = () => {
                         )}
                         <div className="pt-2 border-t border-gray-50 flex justify-between items-center">
                             <span className="text-[11px] font-black text-content uppercase tracking-tight">Total Paid</span>
-                            <span className="text-base font-[1000] text-brand">₹{liveBooking.pricing?.totalAmount || liveBooking.amount || liveBooking.price || '0'}</span>
+                            <span className="text-base font-[1000] text-brand">
+                                {isApartment ? 'Subscription Plan' : `₹${liveBooking.pricing?.totalAmount || liveBooking.amount || liveBooking.price || '0'}`}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -647,34 +700,28 @@ const BookingStatus = () => {
                         </motion.button>
                         <motion.button
                             whileTap={{ scale: 0.97 }}
-                            onClick={() => navigate(`/sos?id=${bookingId}`)}
+                            onClick={() => navigate(`/safety/sos?id=${bookingId}`)}
                             className="w-14 h-14 bg-red-600 text-white rounded-2xl font-black text-sm flex items-center justify-center shadow-lg shadow-red-200"
                         >
                             <ShieldAlert size={20} />
                         </motion.button>
-                        {(liveBooking.status === 'pending' || liveBooking.status === 'confirmed') && (
+                        {(liveBooking.status === 'pending' || liveBooking.status === 'confirmed' || liveBooking.status === 'assigned') && (
                             <motion.button
                                 whileTap={{ scale: 0.97 }}
                                 onClick={handleCancel}
-                                className="w-14 h-14 bg-red-50 border-2 border-red-100 text-red-500 rounded-2xl font-black text-sm flex items-center justify-center"
+                                className="w-14 h-14 bg-red-50 border-2 border-red-100 text-red-500 rounded-2xl font-black text-sm flex items-center justify-center group relative"
                             >
                                 <Trash2 size={20} />
+                                {isApartment && (
+                                    <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-content text-white text-[8px] font-black px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                        SKIP TODAY
+                                    </span>
+                                )}
                             </motion.button>
                         )}
                     </div>
                 )}
             </div>
-
-            {/* Floating SOS for quick access if header is scrolled */}
-            <motion.button
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                onClick={() => navigate(`/sos?id=${bookingId}`)}
-                className="fixed bottom-32 right-6 w-14 h-14 bg-red-600 text-white rounded-full shadow-2xl flex items-center justify-center z-[100] border-4 border-white active:scale-90 transition-transform"
-            >
-                <div className="absolute inset-0 bg-red-600 rounded-full animate-ping opacity-25" />
-                <ShieldAlert size={24} strokeWidth={2.5} />
-            </motion.button>
 
         </MobileLayout>
     );

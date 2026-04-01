@@ -13,11 +13,16 @@ const PricingEngine = require('../../../utils/pricingHelper');
  * Elite Hardening: Clean up bookings that stayed 'pending' for too long
  * without finding a captain. Prevents zombie search loops.
  */
+let lastCleanupRun = 0;
 const cleanupExpiredBookings = async () => {
     try {
+        const now = Date.now();
+        // ⚡ Elite Throttling: Only run cleanup at most once every 5 minutes
+        if (now - lastCleanupRun < 5 * 60 * 1000) return;
+        lastCleanupRun = now;
+
         const standardTimeout = 5 * 60 * 1000; // 5 Minutes for finding
         const eliteStagnantTimeout = 30 * 60 * 1000; // 30 Minutes for assigned but idle
-        const now = Date.now();
 
         // 1. Clean up 'pending' bookings (Finding phase)
         const expiredPending = await Booking.find({
@@ -163,15 +168,28 @@ exports.createBooking = catchAsync(async (req, res, next) => {
         orderId,
         couponCode,
         hubId,
-        parkingDetails 
+        parkingDetails,
+        destination 
     } = req.body;
 
-    // Extract effective vehicleId
-    const effectiveVehicleId = vehicleId || (vehicleObj && (vehicleObj._id || vehicleObj.id));
+    // 🛡️ Phase 2 Hardening: Debt Guard (Arrears Protocol)
+    if (req.user.wallet?.balance < -100) {
+        return next(new AppError(`Access Denied! You have an outstanding arrears of ₹${Math.abs(req.user.wallet.balance)}. Please recharge your wallet to clear the debt before booking again.`, 403));
+    }
+
+    // Extract effective vehicleId and cast to ObjectId for robust querying
+    let effectiveVehicleId = vehicleId || (vehicleObj && (vehicleObj._id || vehicleObj.id));
 
     // Validate required fields
     if (!effectiveVehicleId || !service) {
         return next(new AppError('Please provide vehicle and service details', 400));
+    }
+
+    // Ensure it's a valid ObjectId
+    try {
+        effectiveVehicleId = new mongoose.Types.ObjectId(effectiveVehicleId);
+    } catch (err) {
+        return next(new AppError('Invalid vehicle ID format', 400));
     }
 
     // Check if vehicle belongs to consumer
@@ -192,8 +210,11 @@ exports.createBooking = catchAsync(async (req, res, next) => {
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
 
-    const activeBooking = await Booking.findOne({
-        vehicle: effectiveVehicleId,
+    const isIncomingChauffeur = service.category === 'Chauffeur' || service.type === 'sparedriver' || (service.name && service.name.toLowerCase().includes('driver'));
+
+    const searchFilter = {
+        consumer: req.user.id, // 🛡️ Triple Guard: Scoped to User
+        vehicle: effectiveVehicleId, // 🛡️ Triple Guard: Scoped to specific Vehicle
         status: { $in: ['pending', 'confirmed', 'assigned', 'en_route', 'in_progress', 'arrived', 'washing'] },
         isActive: true,
         $or: [
@@ -202,16 +223,73 @@ exports.createBooking = catchAsync(async (req, res, next) => {
                 'schedule.type': 'scheduled',
                 'schedule.date': { $gte: todayStart, $lte: todayEnd }
             },
-            { 'status': { $in: ['assigned', 'en_route', 'arrived', 'washing', 'in_progress'] } } // Any ongoing work blocks
+            { 'status': { $in: ['assigned', 'en_route', 'arrived', 'washing', 'in_progress'] } } 
         ]
-    });
+    };
+
+    // 🕊️ Multi-Protocol Tolerance: Do not block if the existing booking is of a DIFFERENT category 
+    // (e.g., a Driver booking should not be blocked by a Wash booking)
+    if (isIncomingChauffeur) {
+        searchFilter['service.type'] = { $ne: 'captain' }; // Don't block if existing is a standard wash
+        searchFilter['service.category'] = { $nin: ['Doorstep', 'Apartment', 'Cleaning'] };
+    } else {
+        // If incoming is a Wash, don't block based on existing Spare Driver bookings
+        searchFilter['service.type'] = { $ne: 'sparedriver' };
+        searchFilter['service.category'] = { $ne: 'Chauffeur' };
+    }
+
+    const activeBooking = await Booking.findOne(searchFilter);
+
+    // 🕊️ Phase 6 Hardening: Instant vs Upcoming Scheduled Collision Guard 🕊️
+    if (schedule?.type === 'instant') {
+        const twoHoursFromNow = new Date(Date.now() + 2 * 60 * 60 * 1000);
+        const upcomingScheduled = await Booking.findOne({
+            consumer: req.user.id,
+            vehicle: effectiveVehicleId,
+            status: { $in: ['confirmed', 'assigned', 'pending'] },
+            'schedule.type': 'scheduled',
+            'schedule.date': { $gte: new Date(), $lte: twoHoursFromNow },
+            isActive: true
+        });
+
+        if (upcomingScheduled) {
+            const upTime = upcomingScheduled.schedule?.timeSlot?.start || 'soon';
+            return next(new AppError(`Conflict detected! You have a scheduled booking for this car at ${upTime}. An instant wash now would cause a delay. Please cancel the upcoming booking first or wait.`, 400));
+        }
+    }
 
     if (activeBooking) {
-        const isScheduled = activeBooking.schedule?.type === 'scheduled';
-        const msg = isScheduled 
-            ? `This vehicle already has a booking scheduled for today (${new Date(activeBooking.schedule.date).toLocaleDateString()}). Please complete or cancel it first.`
-            : 'An ongoing booking already exists for this vehicle. Please complete it first.';
-        return next(new AppError(msg, 400));
+        // 💎 Phase 5 Hardening: Timeslot Overlap Logic 💎
+        // If both are scheduled, check if they are at DIFFERENT TIIMES
+        if (activeBooking.schedule?.type === 'scheduled' && schedule?.type === 'scheduled') {
+            const existingTime = activeBooking.schedule?.timeSlot?.start;
+            const incomingTime = schedule?.timeSlot?.start; // Input from req.body
+
+            if (existingTime && incomingTime && existingTime !== incomingTime) {
+                // Determine a safety buffer (e.g., 2 hours)
+                const toMinutes = (t) => {
+                    const [h, m] = t.split(':').map(Number);
+                    return h * 60 + m;
+                };
+                const diff = Math.abs(toMinutes(existingTime) - toMinutes(incomingTime));
+                
+                // If the gap is > 120 minutes, we allow it! 🕊️
+                if (diff < 120) {
+                    return next(new AppError(`Vehicle busy during this slot. Existing booking at ${existingTime}. Please choose a slot at least 2 hours apart.`, 400));
+                }
+                // Else diff >= 120, we fall through and allow the booking
+            } else {
+                const msg = `This vehicle already has a booking scheduled for today (${new Date(activeBooking.schedule.date).toLocaleDateString()}) at ${existingTime || 'this time'}. Please complete or cancel it first.`;
+                return next(new AppError(msg, 400));
+            }
+        } else {
+            // One of them is instant or already in progress
+            const isScheduled = activeBooking.schedule?.type === 'scheduled';
+            const msg = isScheduled 
+                ? `This vehicle already has a booking scheduled for today (${new Date(activeBooking.schedule.date).toLocaleDateString()}). Please complete or cancel it first.`
+                : 'An ongoing booking already exists for this vehicle. Please complete it first.';
+            return next(new AppError(msg, 400));
+        }
     }
 
     // 2. Idempotency Check: If paymentId provided, check for existing booking
@@ -251,6 +329,15 @@ exports.createBooking = catchAsync(async (req, res, next) => {
         type: 'home',
         address: req.user.profile?.address
     });
+    
+    // Resolve Destination (New for Point-to-Point)
+    const bookingDestination = destination ? {
+        street: destination.street,
+        city: destination.city,
+        state: destination.state,
+        pincode: destination.pincode,
+        coordinates: destination.coordinates
+    } : null;
 
     // Link Hub and Parking Details if provided
     if (bookingLocation) {
@@ -259,16 +346,23 @@ exports.createBooking = catchAsync(async (req, res, next) => {
     }
 
     // Sanitization & Mapping
-    const validCategories = ['Doorstep', 'Studio', 'Studio Detailing', 'Add-ons', 'Prestige', 'Chauffeur'];
+    const validCategories = ['Doorstep', 'Studio', 'Studio Detailing', 'Add-ons', 'Prestige', 'Chauffeur', 'Apartment'];
     const validServiceTypes = ['captain', 'vendor', 'sparedriver'];
     const validPaymentMethods = ['cash', 'online', 'wallet', 'subscription'];
-    const validLocationTypes = ['home', 'office', 'other', 'studio'];
+    const validLocationTypes = ['home', 'office', 'other', 'studio', 'Apartment'];
 
     const sanitizedCategory = validCategories.includes(service.category) ? service.category :
         (service.category === 'Express' ? 'Doorstep' : 'Doorstep');
 
-    const sanitizedServiceType = validServiceTypes.includes(service.type?.toLowerCase()) ? service.type.toLowerCase() : 'captain';
+    let sanitizedServiceType = validServiceTypes.includes(service.type?.toLowerCase()) ? service.type.toLowerCase() : 'captain';
     const sanitizedPaymentMethod = validPaymentMethods.includes(paymentMethod) ? paymentMethod : 'online';
+
+    // Elite Hardening: Apartment Hub Protocol routing
+    // If a hubId is provided (or implied via location), the service MUST be routed to the Vendor/Staff
+    // even if the base service normally defaults to Captain (e.g., Express at an Apartment).
+    if (hubId || (bookingLocation && bookingLocation.hubId)) {
+        sanitizedServiceType = 'vendor';
+    }
 
     if (bookingLocation && !validLocationTypes.includes(bookingLocation.type)) {
         bookingLocation.type = bookingLocation.type === 'work' ? 'office' : 'home';
@@ -277,6 +371,10 @@ exports.createBooking = catchAsync(async (req, res, next) => {
     // Coordinates requirement check
     if (sanitizedCategory === 'Doorstep' && (!bookingLocation.address?.coordinates || !bookingLocation.address?.coordinates?.lat)) {
         throw new AppError('Precise GPS coordinates are required for doorstep service. Please select a pinned location.', 400);
+    }
+    
+    if (sanitizedCategory === 'Chauffeur' && bookingDestination && (!bookingDestination.coordinates || !bookingDestination.coordinates.lat)) {
+        throw new AppError('Destination GPS coordinates are required for Point-to-Point service.', 400);
     }
 
     // Prepare schedule
@@ -351,7 +449,12 @@ exports.createBooking = catchAsync(async (req, res, next) => {
             if (!activeSub) throw new AppError('No active subscription found.', 404);
 
             // eligibility audit
-            if (!activeSub.isServiceEligible({ service: { category: sanitizedCategory, schedule: bookingSchedule }, hub: req.body.hubId || req.body.hub || null, location: bookingLocation })) {
+            if (!activeSub.isServiceEligible({ 
+                service: { category: sanitizedCategory, schedule: bookingSchedule }, 
+                hub: req.body.hubId || req.body.hub || null, 
+                location: bookingLocation,
+                destination: bookingDestination
+            })) {
                 throw new AppError('Service not covered by your subscription plan.', 400);
             }
 
@@ -383,11 +486,15 @@ exports.createBooking = catchAsync(async (req, res, next) => {
                 addonAmount,
                 discountAmount: (breakdown || []).reduce((sum, d) => sum + (d.amount || 0), 0),
                 totalAmount,
+                initialPaidAmount: totalAmount, // 💎 Arrears Protocol Reference 💎
                 breakdown: breakdown || []
             },
             addons: Array.isArray(addons) ? addons.map(a => typeof a === 'string' ? { id: a } : a) : [],
             schedule: bookingSchedule,
-            location: bookingLocation,
+            location: {
+                ...bookingLocation,
+                destination: bookingDestination
+            },
             payment: {
                 method: sanitizedPaymentMethod,
                 status: paymentStatus,
@@ -433,8 +540,17 @@ exports.createBooking = catchAsync(async (req, res, next) => {
                 priority: 'medium',
             });
 
+            // ➕ Phase 3: Global Admin Parity
+            const io = socketService.getIO();
+            io.to('admin_room').emit('global_status_update', {
+                type: 'new_booking',
+                bookingId: newBooking._id,
+                userName: req.user.name,
+                serviceName: service.name || service.title,
+                totalAmount
+            });
+
             if (sanitizedServiceType === 'captain') {
-                const io = socketService.getIO();
                 const broadcastPayload = {
                     bookingId: newBooking._id,
                     serviceName: service.name || service.title,
@@ -458,21 +574,80 @@ exports.createBooking = catchAsync(async (req, res, next) => {
                 } else {
                     io.emit('new_booking_broadcast', broadcastPayload);
                 }
+            } else if (sanitizedServiceType === 'sparedriver') {
+                const SpareDriver = require('../../../models/SpareDriver');
+                const broadcastPayload = {
+                    bookingId: newBooking._id,
+                    serviceName: service.name || service.title,
+                    location: bookingLocation,
+                    vehicle: { brand: vehicle.brand, model: vehicle.model, plate: vehicle.plate },
+                    pricing: { total: totalAmount },
+                    timestamp: new Date()
+                };
+
+                if (bookingLocation.address?.coordinates?.lat) {
+                    const nearbyDrivers = await SpareDriver.find({
+                        isOnline: true, status: 'active',
+                        currentLocation: {
+                            $nearSphere: {
+                                $geometry: { type: 'Point', coordinates: [parseFloat(bookingLocation.address.coordinates.lng), parseFloat(bookingLocation.address.coordinates.lat)] },
+                                $maxDistance: 7000 // Slightly wider range for drivers
+                            }
+                        }
+                    });
+                    nearbyDrivers.forEach(d => io.to(d._id.toString()).emit('new_booking_broadcast', broadcastPayload));
+                } else {
+                    io.emit('new_booking_broadcast', broadcastPayload);
+                }
             } else if (sanitizedServiceType === 'vendor') {
-                const vendors = await User.find({ role: 'vendor', isActive: true });
-                const io = socketService.getIO();
+                // If a specific hub was assigned, notify that vendor primarily
+                const targetVendorId = bookingLocation?.hubId ? (await mongoose.model('Hub').findById(bookingLocation.hubId))?.vendor : null;
                 
-                for (const v of vendors) {
-                    await sendVendorNotification(v._id, { 
+                if (targetVendorId) {
+                    await sendVendorNotification(targetVendorId, { 
                         title: 'New Studio Lead! 💎', 
-                        message: 'New studio booking available in your hub.', 
+                        message: `New booking for ${service.name || 'Studio service'} at your Hub.`, 
                         type: 'order-assigned', 
                         metaData: { bookingId: newBooking._id } 
                     });
+                    io.to(targetVendorId.toString()).emit('new_studio_booking', { bookingId: newBooking._id });
+                } else {
+                    const vendors = await User.find({ role: 'vendor', isActive: true });
+                    for (const v of vendors) {
+                        await sendVendorNotification(v._id, { 
+                            title: 'New Studio Lead! 💎', 
+                            message: 'New studio booking available in your hub.', 
+                            type: 'order-assigned', 
+                            metaData: { bookingId: newBooking._id } 
+                        });
+                    }
+                    io.emit('new_studio_booking', { bookingId: newBooking._id });
                 }
-                
-                // Real-time Dashboard Refresh for ALL Vendors (or Hub Specific)
-                io.emit('new_studio_booking', { bookingId: newBooking._id });
+            } else if (sanitizedServiceType === 'sparedriver') {
+                // Elite Protocol: Broadcast to nearby Spare Drivers
+                const broadcastPayload = {
+                    bookingId: newBooking._id,
+                    serviceName: service.name || 'Spare Driver service',
+                    location: bookingLocation,
+                    vehicle: { brand: vehicle.brand, model: vehicle.model, plate: vehicle.plate },
+                    pricing: { total: totalAmount },
+                    timestamp: new Date()
+                };
+
+                if (bookingLocation.address?.coordinates?.lat) {
+                    const nearbyDrivers = await mongoose.model('SpareDriver').find({
+                        isOnline: true, status: 'active',
+                        currentLocation: {
+                            $nearSphere: {
+                                $geometry: { type: 'Point', coordinates: [parseFloat(bookingLocation.address.coordinates.lng), parseFloat(bookingLocation.address.coordinates.lat)] },
+                                $maxDistance: 10000 // 10km for drivers
+                            }
+                        }
+                    });
+                    nearbyDrivers.forEach(d => io.to(d._id.toString()).emit('new_booking_broadcast', broadcastPayload));
+                } else {
+                    io.emit('new_booking_broadcast', broadcastPayload);
+                }
             }
 
             return res.status(201).json({ status: 'success', message: 'Booking created successfully', data: { booking: populatedBooking } });
@@ -493,19 +668,132 @@ exports.createBooking = catchAsync(async (req, res, next) => {
 
 // Update booking
 exports.updateBooking = catchAsync(async (req, res, next) => {
-    const { schedule, location, addons } = req.body;
+    const { status, schedule, location, addons } = req.body;
 
     const booking = await Booking.findOne({
         _id: req.params.id,
         consumer: req.user.id,
         isActive: true
-    });
+    }).populate('consumer', 'name phone');
 
     if (!booking) {
         return next(new AppError('Booking not found', 404));
     }
 
-    // Check if booking can be modified
+    // Special handling for 'skipped' status (Subscription/Apartment Wash feature)
+    if (status === 'skipped') {
+        const isApartment = booking.service?.category === 'Doorstep' || 
+                           booking.service?.name?.toLowerCase().includes('apartment') ||
+                           booking.serviceName?.toLowerCase().includes('apartment');
+        
+        if (!isApartment) {
+            return next(new AppError('Only subscription-based apartment washes can be skipped.', 400));
+        }
+
+        // Allow skipping if not already in progress
+        const diableSkipStatuses = ['washing', 'before_photo', 'after_photo', 'completed', 'cancelled'];
+        if (diableSkipStatuses.includes(booking.status)) {
+            return next(new AppError('Cannot skip wash while it is already in progress or finalized.', 400));
+        }
+
+        const oldStatus = booking.status;
+        const providerId = booking.provider?.id;
+
+        booking.status = 'skipped';
+        booking.notes = booking.notes || {};
+        booking.notes.internal = `User skipped this wash on ${new Date().toLocaleDateString()}`;
+        await booking.save();
+
+        // Handle Financial Reversion (Refund for Skip)
+        if (booking.payment.status === 'paid') {
+            try {
+                if (booking.payment.method === 'wallet') {
+                    const walletHelper = require('../../../utils/walletHelper');
+                    await walletHelper.executeWalletTransaction(
+                        booking.consumer._id,
+                        booking.pricing.totalAmount,
+                        'credit',
+                        {
+                            category: 'REFUND',
+                            description: `Refund: Skipped Apartment Wash (#${booking.bookingId || booking._id})`,
+                            referenceId: booking._id,
+                            referenceType: 'booking'
+                        }
+                    );
+                    booking.payment.status = 'refunded';
+                } else if (booking.payment.method === 'subscription') {
+                    const Subscription = require('../../../models/Subscription');
+                    const activeSub = await Subscription.getActiveSubscription(booking.consumer._id);
+                    if (activeSub) {
+                        await activeSub.addCredits(1); // Return the wash credit
+                    }
+                    booking.payment.status = 'refunded';
+                }
+                await booking.save();
+            } catch (refundErr) {
+                console.error('Skip Refund Error:', refundErr);
+            }
+        }
+
+        // Notify assigned provider and synchronize ecosystem via Socket.io
+        try {
+            const io = socketService.getIO();
+            
+            // 1. Specific Booking Room Sync (for everyone tracking this booking)
+            io.to(booking._id.toString()).emit('booking_status_updated', {
+                bookingId: booking._id,
+                status: 'skipped',
+                message: 'The user has skipped today\'s wash request.'
+            });
+
+            // 2. Provider/Captain Sync
+            if (providerId) {
+                io.to(providerId.toString()).emit('booking_status_updated', {
+                    bookingId: booking._id,
+                    status: 'skipped',
+                    message: 'The user has skipped today\'s wash request.'
+                });
+                
+                // Also notify via FCM
+                await sendNotification(providerId, {
+                    title: 'Wash Skipped ⏭️',
+                    message: `Booking #${booking.bookingId || booking._id} was skipped by the user.`,
+                    type: 'booking_update',
+                    priority: 'high',
+                    metaData: { bookingId: booking._id, status: 'skipped' }
+                });
+            }
+
+            // 3. Vendor Sync (If Apartment Wash)
+            const vendorId = booking.location?.hubId?.vendor;
+            if (vendorId) {
+                io.to(vendorId.toString()).emit('booking_status_updated', {
+                    bookingId: booking._id,
+                    status: 'skipped',
+                    message: `User ${booking.consumer?.name} skipped their wash.`
+                });
+            }
+
+            // 4. Admin Sync
+            io.to('admin_room').emit('global_status_update', {
+                type: 'task_update',
+                bookingId: booking._id,
+                status: 'skipped',
+                userName: booking.consumer?.name
+            });
+
+        } catch (notifyErr) {
+            console.error('Failed to notify ecosystem of skipped wash:', notifyErr);
+        }
+
+        return res.status(200).json({
+            status: 'success',
+            message: 'Booking skipped successfully',
+            data: { booking }
+        });
+    }
+
+    // Check if booking can be modified for other updates
     if (!['pending', 'confirmed'].includes(booking.status)) {
         return next(new AppError('Cannot modify booking after it has been assigned', 400));
     }
@@ -516,7 +804,8 @@ exports.updateBooking = catchAsync(async (req, res, next) => {
         {
             schedule: schedule || booking.schedule,
             location: location || booking.location,
-            addons: addons || booking.addons
+            addons: addons || booking.addons,
+            status: status || booking.status
         },
         { new: true, runValidators: true }
     ).populate('vehicle', 'brand model type plate image');
@@ -532,7 +821,7 @@ exports.updateBooking = catchAsync(async (req, res, next) => {
 
 // Cancel booking
 exports.cancelBooking = catchAsync(async (req, res, next) => {
-    const { reason } = req.body;
+    const { reason } = req.body || {};
 
     const booking = await Booking.findOne({
         _id: req.params.id,
@@ -567,12 +856,93 @@ exports.cancelBooking = catchAsync(async (req, res, next) => {
         req
     });
 
-    // Process refund if payment was made
+    // Process refund with Potential Cancellation Fee (Elite Hardening)
     if (booking.payment.status === 'paid') {
-        booking.payment.status = 'refunded';
-        booking.payment.refundAmount = booking.pricing.totalAmount;
-        booking.payment.refundedAt = new Date();
+        try {
+            let refundAmount = booking.pricing.totalAmount;
+            let penaltyAmount = 0;
+
+            // SOP Rule: If Spare Driver is En Route or Arrived, deduct ₹50 convenience fee for the driver
+            const isLateCancellation = ['en_route', 'arrived'].includes(oldStatus);
+            const isSpareDriver = booking.provider?.type === 'sparedriver';
+
+            if (isLateCancellation && isSpareDriver) {
+                penaltyAmount = 100; // Increased to ₹100 for Chauffeur (Elite Protocol)
+                refundAmount = Math.max(0, refundAmount - penaltyAmount);
+
+                // Credit penalty to Driver's wallet immediately
+                if (booking.provider?.id) {
+                    const walletHelper = require('../../../utils/walletHelper');
+                    await walletHelper.executeWalletTransaction(
+                        booking.provider.id,
+                        penaltyAmount,
+                        'credit',
+                        {
+                            category: 'PENALTY_INCOME',
+                            description: `Compensation for cancelled booking: #${booking.bookingId || booking._id}`,
+                            referenceId: booking._id,
+                            referenceType: 'booking'
+                        },
+                        'sparedriver' // Use sparedriver model context
+                    );
+                }
+            }
+
+            if (booking.payment.method === 'wallet') {
+                const walletHelper = require('../../../utils/walletHelper');
+                await walletHelper.executeWalletTransaction(
+                    booking.consumer,
+                    refundAmount,
+                    'credit',
+                    {
+                        category: 'REFUND',
+                        description: `Refund for Cancelled Booking: #${booking.bookingId || booking._id} ${penaltyAmount > 0 ? `(After ₹${penaltyAmount} cancellation fee)` : ''}`,
+                        referenceId: booking._id,
+                        referenceType: 'booking'
+                    }
+                );
+                booking.payment.status = 'refunded';
+            } else if (booking.payment.method === 'subscription') {
+                const Subscription = require('../../../models/Subscription');
+                const activeSub = await Subscription.getActiveSubscription(booking.consumer);
+                if (activeSub) {
+                    await activeSub.addCredits(1);
+                }
+                booking.payment.status = 'refunded';
+            } else {
+                booking.payment.status = 'refund_pending';
+            }
+            booking.payment.refundAmount = refundAmount;
+            booking.payment.refundedAt = new Date();
         await booking.save();
+
+        // 🔊 Phase 7: Real-time Ecosystem Sync
+        try {
+            const io = socketService.getIO();
+            if (io) {
+                // 1. Notify Booking Room (Consumer & Staff)
+                io.to(booking._id.toString()).emit('booking_status_updated', {
+                    bookingId: booking._id,
+                    status: 'cancelled',
+                    message: reason || 'Booking cancelled by consumer'
+                });
+
+                // 2. Notify Admin Control Tower
+                io.to('admin_room').emit('global_status_update', {
+                    type: 'task_update',
+                    bookingId: booking._id,
+                    status: 'cancelled',
+                    reason: reason || 'N/A'
+                });
+            }
+        } catch (e) {
+            console.error('[Socket] Cancellation broadcast failed:', e.message);
+        }
+        } catch (refundErr) {
+            console.error('Cancellation Refund Error:', refundErr);
+            booking.payment.status = 'refund_failed';
+            await booking.save();
+        }
     }
 
     res.status(200).json({

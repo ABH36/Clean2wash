@@ -21,8 +21,8 @@ const BookingType = () => {
     // Get initial values from URL params
     const { addBooking, user, vehicles, addresses } = useAuth();
 
-    const primaryVehicle = vehicles.find(v => v.isPrimary) || vehicles[0] || { brand: 'Honda', model: 'City', plate: 'KA 05 MR 7821' };
-    const primaryAddress = addresses.find(a => a.isPrimary) || addresses[0] || { label: 'Home', address: 'HSR Layout, Sector 2, Bengaluru' };
+    const primaryVehicle = vehicles.find(v => v.isPrimary) || vehicles[0] || { brand: 'Vehicle', model: 'Not Found', plate: 'XX 00 XX 0000' };
+    const primaryAddress = addresses.find(a => a.isPrimary) || addresses[0] || { label: 'Location', address: 'Address not set' };
 
     const initialMode = searchParams.get('mode') || 'instant';
     const initialDate = searchParams.get('date') || 'Today';

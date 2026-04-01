@@ -1,5 +1,6 @@
 const SpareDriver = require('../../../models/SpareDriver');
 const Booking = require('../../../models/Booking');
+const User = require('../../../models/User');
 const Setting = require('../../../models/Setting');
 const WalletTransaction = require('../../../models/WalletTransaction');
 const Notification = require('../../../models/Notification');
@@ -7,6 +8,46 @@ const commissionHelper = require('../../../utils/commissionHelper');
 const { socketService } = require('../../../socketService');
 const cloudinary = require('../../../utils/cloudinary');
 const jwt = require('jsonwebtoken');
+// 🚨 SOS Emergency Protocol (Phase 4 Hardening) 🚨
+exports.reportEmergency = async (req, res) => {
+    try {
+        const { bookingId, reason, latitude, longitude } = req.body;
+        const driverId = getDriverIdFromRequest(req);
+
+        const booking = await Booking.findById(bookingId).populate('consumer', 'name phone');
+        if (!booking) return res.status(404).json({ status: 'fail', message: 'Booking context missing' });
+
+        // 1. Log incident in audit & security log
+        const securityNote = `SOS ALERT: Triggered by ${req.user.role} for Booking #${bookingId}. Reason: ${reason || 'Not specified'}. Location: [${latitude}, ${longitude}]`;
+        console.error(securityNote);
+
+        // 2. Immediate Broadcast to Admin Room
+        const io = socketService.getIO();
+        if (io) {
+            io.to('admin_room').emit('SOS_EMERGENCY_ALERT', {
+                bookingId,
+                actor: req.user.role,
+                location: { lat: latitude, lng: longitude },
+                consumer: booking.consumer?.name,
+                phone: booking.consumer?.phone,
+                timestamp: new Date()
+            });
+        }
+
+        // 3. Notify Emergency Contacts (Future integration)
+        // ... mailer or SMS integration here
+
+        res.status(200).json({
+            status: 'success',
+            message: 'SOS Alert received. Emergency protocols activated.'
+        });
+
+    } catch (err) {
+        console.error('SOS Protocol Failure:', err);
+        res.status(500).json({ status: 'error', message: 'Emergency dispatch failed' });
+    }
+};
+
 const multer = require('multer');
 const path = require('path');
 const { executeWalletTransaction } = require('../../../utils/walletHelper');
@@ -259,6 +300,27 @@ exports.acceptBooking = async (req, res) => {
         );
         if (!booking) return res.status(404).json({ status: 'fail', message: 'Booking not found or already accepted' });
 
+        // 🛡️ Elite Handover Protocol: Reveal OTP to Consumer via Socket
+        try {
+            const io = socketService.getIO();
+            if (io) {
+                // 1. Notify Consumer Room (Private)
+                io.to(booking.consumer.toString()).emit('otp_revealed', {
+                    bookingId: booking._id,
+                    pin: booking.securityPin
+                });
+
+                // 2. Notify Booking Room (Sync UI)
+                io.to(booking._id.toString()).emit('booking_status_updated', {
+                    bookingId: booking._id,
+                    status: 'en_route',
+                    pin: booking.securityPin // Also include in status update for immediate reveal
+                });
+            }
+        } catch (socketErr) {
+            console.error('Handover Pulse Failed:', socketErr.message);
+        }
+
         res.status(200).json({ status: 'success', data: { booking } });
     } catch (err) {
         res.status(400).json({ status: 'fail', message: err.message });
@@ -279,10 +341,19 @@ exports.updateLocation = async (req, res) => {
         const driver = await SpareDriver.findById(driverId);
         if (!driver) return res.status(404).json({ status: 'fail', message: 'Driver not found' });
 
-        // If updated in last 30 seconds, skip DB write (but return success)
+        // Throttling: Check status to determine frequency
+        const activeTrip = await Booking.findOne({
+            'provider.id': driverId,
+            'provider.type': 'sparedriver',
+            status: { $in: ['en_route', 'active'] }
+        });
+
+        // SOP Protocol: 10s for active/en-route trips, 30s for idle online drivers
+        const throttleLimit = activeTrip ? 10000 : 30000;
+        
         const lastUpdate = driver.updatedAt || 0;
         const diff = Date.now() - new Date(lastUpdate).getTime();
-        if (diff < 30000) {
+        if (diff < throttleLimit) {
             return res.status(200).json({
                 status: 'success',
                 message: 'Update skipped (throttled)',
@@ -407,6 +478,21 @@ exports.updateBookingStatus = async (req, res) => {
                 });
             }
             booking.tracking = booking.tracking || {};
+            
+            // 🕊️ Phase 11: Waiting Charge Calculation 🕊️
+            if (booking.tracking.arrivedAt) {
+                const waitMs = new Date() - new Date(booking.tracking.arrivedAt);
+                const waitMins = Math.floor(waitMs / (1000 * 60));
+                const freeWaitMins = 15;
+                if (waitMins > freeWaitMins) {
+                    const extraWait = waitMins - freeWaitMins;
+                    const waitCharge = extraWait * 2; // ₹2/min
+                    booking.pricing.totalAmount += waitCharge;
+                    booking.pricing.breakdown = booking.pricing.breakdown || [];
+                    booking.pricing.breakdown.push({ name: 'Waiting Charge', amount: waitCharge, type: 'surcharge' });
+                    booking.notes.internal = `${booking.notes.internal || ''}\n[WAITING] Client delayed by ${waitMins}m. Charge: ₹${waitCharge}`.trim();
+                }
+            }
             booking.tracking.startedAt = new Date();
         }
 
@@ -418,31 +504,129 @@ exports.updateBookingStatus = async (req, res) => {
         if (status === 'completed') {
             booking.tracking = booking.tracking || {};
             booking.tracking.completedAt = new Date();
+
+            // 💎 Phase 8 Hardening: Trip Extension & Arrears Engine 💎
+            let finalPrice = booking.pricing?.totalAmount || 0;
+            const isChauffeur = booking.service?.category === 'Chauffeur' || booking.service?.type === 'sparedriver';
+            const isHourly = isChauffeur && (
+                booking.service?.name?.toLowerCase().includes('hourly') || 
+                booking.service?.name?.toLowerCase().includes('full day') || 
+                booking.service?.name?.toLowerCase().includes('outstation') ||
+                booking.service?.name?.toLowerCase().includes('point')
+            );
+            
+            if (isHourly && booking.tracking.startedAt) {
+                const actualDurationMs = booking.tracking.completedAt - booking.tracking.startedAt;
+                
+                // Parse booked duration from string (e.g. "4 Hours" -> 4)
+                let bookedDurationHrs = 1;
+                const serviceName = booking.service?.name?.toLowerCase() || '';
+                const durationStr = String(booking.service?.duration || '').toLowerCase();
+
+                if (serviceName.includes('outstation')) {
+                    bookedDurationHrs = 24;
+                } else if (serviceName.includes('full day')) {
+                    bookedDurationHrs = 8;
+                } else {
+                    const match = durationStr.match(/(\d+)/);
+                    if (match) {
+                        bookedDurationHrs = parseInt(match[1]);
+                    }
+                }
+
+                // 🛡️ Phase 2 Hardening: 15-Minute Grace Period Pulse 🛡️
+                const bookedDurationMs = bookedDurationHrs * 60 * 60 * 1000;
+                const gracePeriodMs = 15 * 60 * 1000;
+
+                if (actualDurationMs > (bookedDurationMs + gracePeriodMs)) {
+                    const actualDurationHrs = Math.max(1, Math.ceil(actualDurationMs / (1000 * 60 * 60)));
+                    const extraHrs = actualDurationHrs - bookedDurationHrs;
+                    
+                    // Derived hourly rate from the original total amount paid
+                    const hourlyRate = Math.round((booking.pricing.initialPaidAmount || booking.pricing.totalAmount) / bookedDurationHrs) || 180;
+                    const extensionFee = extraHrs * hourlyRate;
+                    
+                    // 🏨 Phase 12: Multi-Day Outstation Allowance Engine 🏨
+                    if (booking.service?.name?.toLowerCase().includes('outstation')) {
+                        const extraDays = Math.floor(extraHrs / 24);
+                        if (extraDays > 0) {
+                            const extraAllowance = extraDays * 500;
+                            finalPrice += extraAllowance;
+                            booking.pricing.breakdown.push({ name: `Stay & Food (Day ${extraDays + 1}+)`, amount: extraAllowance, type: 'arrears' });
+                            booking.notes.internal = `${booking.notes.internal || ''}\n[AUTO-ALOWANCE] Multi-day outstation detected. Added ₹${extraAllowance} for ${extraDays} extra nights.`.trim();
+                        }
+                    }
+
+                    finalPrice += extensionFee;
+                    
+                    booking.pricing.totalAmount = finalPrice;
+                    booking.pricing.breakdown = booking.pricing.breakdown || [];
+                    booking.pricing.breakdown.push({ name: `Trip Extension (${extraHrs}h)`, amount: extensionFee, type: 'arrears' });
+                    booking.notes.internal = `${booking.notes.internal || ''}\n[ARREARS] Trip extended by ${extraHrs}h. Extension Fee: ₹${extensionFee} (Rate: ₹${hourlyRate}/h).`.trim();
+                }
+            }
+
+            // 🌙 Phase 11: Real-World Night Allowance Sync 🌙
+            // If trip ends in night hours (11 PM - 5 AM) and no Night Allowance was charged yet
+            const completeHour = new Date(booking.tracking.completedAt).getHours();
+            const isNightEnd = completeHour >= 23 || completeHour < 5;
+            const hasNightAllowance = (booking.pricing.breakdown || []).some(b => b.name?.includes('Night Shift Allowance')) || 
+                                     booking.notes.internal?.includes('Night Shift Allowance');
+
+            if (isNightEnd && !hasNightAllowance) {
+                const nightAllowance = 300;
+                finalPrice += nightAllowance;
+                booking.pricing.totalAmount = finalPrice;
+                booking.notes.internal = `${booking.notes.internal || ''}\n[NIGHT] Trip ended late (${completeHour}:00). Night Shift Allowance added: ₹${nightAllowance}`.trim();
+                booking.pricing.breakdown = booking.pricing.breakdown || [];
+                booking.pricing.breakdown.push({ name: 'Night Shift Allowance (Sync)', amount: nightAllowance, type: 'surcharge' });
+            }
+
             booking.payment = booking.payment || {};
             booking.payment.status = 'paid';
             booking.payment.paidAt = new Date();
 
             // 💰 Phase 3: Real Payout Engine
-            const totalAmount = booking.pricing?.totalAmount || 0;
-            if (totalAmount > 0) {
-                const { adminCut, providerPayout } = await commissionHelper.calculatePayout(totalAmount, 'sparedriver');
+            if (finalPrice > 0) {
+                const { adminCut, providerPayout } = await commissionHelper.calculatePayout(finalPrice, 'sparedriver');
 
                 const driver = await SpareDriver.findById(driverId);
-                if (driver) {
-                    // 1. Credit Driver Wallet (Atomic)
-                    await executeWalletTransaction(
+                const consumer = await User.findById(booking.consumer);
+
+                if (driver && consumer) {
+                    // Force Transaction (Allow Negative Balance for User if needed - Arrears Protocol)
+                    const walletHelper = require('../../../utils/walletHelper');
+                    await walletHelper.executeWalletTransaction(
                         driver._id,
                         providerPayout,
                         'credit',
                         {
                             category: 'SERVICE_BOOKING',
-                            description: `Payout for booking ${booking.bookingId || booking._id} (Commission: ₹${adminCut})`,
+                            description: `Payout for booking ${booking.bookingId || booking._id} (Duration: ${booking.service?.duration || '1'}h+)`,
                             referenceId: booking._id.toString(),
                             referenceType: 'booking_payout'
                         },
                         null,
                         SpareDriver
                     );
+
+                    // If it was a wallet payment, we might need to deduct the extension fee from user
+                    if (booking.payment.method === 'wallet' && finalPrice > (booking.pricing.initialPaidAmount || 0)) {
+                        const extraToDeduct = finalPrice - (booking.pricing.initialPaidAmount || 0);
+                        await walletHelper.executeWalletTransaction(
+                            consumer._id,
+                            extraToDeduct,
+                            'debit',
+                            {
+                                category: 'SERVICE_CHARGE',
+                                description: `Trip Extension Fee for #${booking.bookingId || booking._id}`,
+                                referenceId: booking._id.toString(),
+                                referenceType: 'booking_extension'
+                            }
+                        ).catch(e => {
+                            console.error('Arrears Protocol: User balance went negative/insufficient but payout to driver remains atomic.');
+                        });
+                    }
                 }
             }
         }
@@ -454,9 +638,19 @@ exports.updateBookingStatus = async (req, res) => {
         try {
             const io = socketService.getIO();
             if (io) {
+                // 1. Notify Booking Room (Consumer & Driver)
                 io.to(booking._id.toString()).emit('booking_status_updated', {
                     bookingId: booking._id,
                     status: booking.status
+                });
+
+                // 2. Notify Admin Control Tower
+                io.to('admin_room').emit('global_status_update', {
+                    type: 'task_update',
+                    bookingId: booking._id,
+                    status: booking.status,
+                    userName: consumer.name,
+                    serviceType: 'sparedriver'
                 });
             }
         } catch (e) {

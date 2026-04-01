@@ -1356,6 +1356,27 @@ export const AuthProvider = ({ children }) => {
         });
     }, []);
 
+    const refreshUser = useCallback(async (role = 'consumer') => {
+        try {
+            const response = await authAPI.getProfile();
+            if (response.status === 'success') {
+                const updatedUser = response.data.consumer;
+                updateUser(role, updatedUser._id, updatedUser);
+                return { success: true, data: updatedUser };
+            }
+            return { success: false };
+        } catch (error) {
+            console.error('Failed to refresh user profile:', error);
+            return { success: false, error: error.message };
+        }
+    }, [updateUser]);
+
+    // Alias for compatibility with components expecting refreshStats or loadProfile
+    const loadProfile = refreshUser;
+    const refreshStats = async () => {
+        await Promise.all([refreshUser('consumer'), loadStats()]);
+    };
+
     // Global unauthorized handler
     useEffect(() => {
         console.log('AuthContext: Attaching auth:unauthorized listener');
@@ -1397,6 +1418,9 @@ export const AuthProvider = ({ children }) => {
             loadProductOrders,
             addProductOrder,
             verifyProductOrderPayment,
+            refreshStats,
+            refreshUser,
+            loadProfile,
             assignStaffToBooking,
             vehicles,
             vehiclesLoading,

@@ -7,9 +7,7 @@ import {
     Navigation, Shield, Car, ArrowRight, Sun, Moon,
     Locate, X, Compass
 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Circle, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+// Leaflet remnants removed
 
 import CaptainLayout from '../components/CaptainLayout';
 import LocationIndicator from '../../../components/Location/LocationIndicator';
@@ -20,27 +18,6 @@ import { toast } from 'react-hot-toast';
 import { socketService } from '../../../utils/socket';
 
 // Fix Leaflet default icon
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({ iconRetinaUrl: markerIcon2x, iconUrl: markerIcon, shadowUrl: markerShadow });
-
-// Custom pulse icon for captain's own position
-const captainIcon = L.divIcon({
-    className: '',
-    html: `
-        <div style="position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;">
-            <div style="position:absolute;width:40px;height:40px;border-radius:50%;background:rgba(255,107,0,0.2);animation:ping 1.5s infinite;"></div>
-            <div style="position:absolute;width:28px;height:28px;border-radius:50%;background:rgba(255,107,0,0.35);"></div>
-            <div style="position:relative;width:18px;height:18px;border-radius:50%;background:#FF6B00;border:3px solid white;box-shadow:0 2px 10px rgba(255,107,0,0.6);"></div>
-        </div>
-        <style>@keyframes ping{0%{transform:scale(1);opacity:1}75%,100%{transform:scale(2.5);opacity:0}}</style>
-    `,
-    iconSize: [40, 40],
-    iconAnchor: [20, 20],
-});
-
 /**
  * Suppress browser intervention warnings for vibration
  */
@@ -53,31 +30,6 @@ const safeVibrate = (pattern) => {
             // Silently fail
         }
     }
-};
-
-// Custom job request marker
-const jobIcon = L.divIcon({
-    className: '',
-    html: `
-        <div style="position:relative;width:36px;height:36px;display:flex;align-items:center;justify-content:center;">
-            <div style="position:absolute;width:36px;height:36px;border-radius:50%;background:rgba(59,130,246,0.2);animation:ping2 2s infinite;"></div>
-            <div style="width:22px;height:22px;border-radius:50%;background:#3B82F6;border:3px solid white;box-shadow:0 2px 10px rgba(59,130,246,0.5);display:flex;align-items:center;justify-content:center;">
-                <span style="color:white;font-size:10px;font-weight:900;">★</span>
-            </div>
-        </div>
-        <style>@keyframes ping2{0%{transform:scale(1);opacity:1}75%,100%{transform:scale(2.5);opacity:0}}</style>
-    `,
-    iconSize: [36, 36],
-    iconAnchor: [18, 18],
-});
-
-// Live recenter map to captain position
-const LiveRecenterer = ({ position }) => {
-    const map = useMap();
-    useEffect(() => {
-        if (position) map.setView(position, map.getZoom(), { animate: true });
-    }, [position]);
-    return null;
 };
 
 const CITY_COORDINATES = {
@@ -140,6 +92,8 @@ const CountdownTimer = ({ targetTime }) => {
 
     return <span>{timeLeft}</span>;
 };
+
+import GoogleMapBox from '../../../components/common/GoogleMapBox';
 
 const CaptainHome = () => {
     const navigate = useNavigate();
@@ -205,14 +159,15 @@ const CaptainHome = () => {
 
     // Function to get initial coordinates based on user city
     const getInitialCoords = () => {
-        if (!userCity) return [28.6139, 77.2090]; // Default fallback if nothing else
+        if (!userCity) return { lat: 28.6139, lng: 77.2090 }; // Default fallback if nothing else
 
         // Find match in our coordinates map
         const matched = Object.keys(CITY_COORDINATES).find(
             c => c.toLowerCase() === userCity.toLowerCase()
         );
 
-        return matched ? CITY_COORDINATES[matched] : [28.6139, 77.2090];
+        const coords = matched ? CITY_COORDINATES[matched] : [28.6139, 77.2090];
+        return { lat: coords[0], lng: coords[1] };
     };
 
     // Dynamic Stats from backend
@@ -252,7 +207,7 @@ const CaptainHome = () => {
         const jobLat = job.location?.coordinates?.[1] || job.location?.address?.coordinates?.lat;
         const jobLng = job.location?.coordinates?.[0] || job.location?.address?.coordinates?.lng;
         if (!jobLat || !jobLng) return null;
-        const [capLat, capLng] = captainPosition;
+        const { lat: capLat, lng: capLng } = captainPosition;
         return calcDistance(capLat, capLng, jobLat, jobLng);
     }, [captainPosition, calcDistance]);
 
@@ -287,7 +242,7 @@ const CaptainHome = () => {
         const watchId = navigator.geolocation.watchPosition(
             (position) => {
                 const { latitude, longitude } = position.coords;
-                setCaptainPosition([latitude, longitude]);
+                setCaptainPosition({ lat: latitude, lng: longitude });
                 setPositionReady(true);
             },
             (err) => {
@@ -305,11 +260,35 @@ const CaptainHome = () => {
             // Prefer stored working location from backend if online, otherwise live GPS
             const storedCoords = user.location?.coordinates;
             const pos = (online && storedCoords && (storedCoords[0] !== 0 || storedCoords[1] !== 0))
-                ? [storedCoords[1], storedCoords[0]]
+                ? { lat: storedCoords[1], lng: storedCoords[0] }
                 : captainPosition;
 
+            // Try Google Geocoding first (Native)
+            if (window.google?.maps?.Geocoder) {
+                const geocoder = new window.google.maps.Geocoder();
+                try {
+                    const response = await geocoder.geocode({ location: pos });
+                    if (response && response.results && response.results[0]) {
+                        const result = response.results[0];
+                        const components = result.address_components;
+                        // Find the most specific region (sublocality, neighborhood, or locality)
+                        const regionName = components.find(c => c.types.includes('sublocality_level_1'))?.long_name || 
+                                         components.find(c => c.types.includes('sublocality'))?.long_name ||
+                                         components.find(c => c.types.includes('neighborhood'))?.long_name ||
+                                         components.find(c => c.types.includes('locality'))?.long_name ||
+                                         'Selected Region';
+                        
+                        setCurrentRegion(online && storedCoords ? `Working in ${regionName}` : regionName);
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Google Geocoding error:', error);
+                }
+            }
+
+            // Fallback to OSM Nominatim if Google fails/not loaded yet
             try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos[0]}&lon=${pos[1]}&zoom=14`);
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.lat}&lon=${pos.lng}&zoom=14`);
                 const data = await res.json();
                 const regionName = data.address?.suburb || data.address?.neighbourhood || data.address?.city_district || data.address?.city || 'Selected Region';
                 setCurrentRegion(online && storedCoords ? `Working in ${regionName}` : regionName);
@@ -533,54 +512,53 @@ const CaptainHome = () => {
             {/* ── Full-Screen Rapido-Style Map Layer ── */}
             <div className="relative w-full shadow-md z-30" style={{ height: 320 }}>
                 {positionReady && (
-                    <MapContainer
+                    <GoogleMapBox
                         center={captainPosition}
                         zoom={14}
-                        style={{ height: '100%', width: '100%' }}
-                        zoomControl={false}
-                        attributionControl={false}
-                    >
-                        <TileLayer
-                            url={isDarkMode
-                                ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                                : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-                            }
-                        />
-
-                        {/* Captain's own position */}
-                        <Marker position={captainPosition} icon={captainIcon} />
-
-                        {/* Radius circle for working area when online or area is selected */}
-                        {online && (
-                            <Circle
-                                center={
-                                    (user.location?.coordinates && (user.location.coordinates[0] !== 0 || user.location.coordinates[1] !== 0))
-                                        ? [user.location.coordinates[1], user.location.coordinates[0]]
-                                        : captainPosition
+                        darkMode={isDarkMode}
+                        markers={[
+                            // Captain's own position
+                            {
+                                id: 'captain',
+                                position: captainPosition,
+                                icon: {
+                                    path: 'M 0,0 m -10,0 a 10,10 0 1,0 20,0 a 10,10 0 1,0 -20,0',
+                                    fillColor: '#FF6B00',
+                                    fillOpacity: 1,
+                                    strokeWeight: 2,
+                                    strokeColor: '#FFFFFF',
+                                    scale: 1,
                                 }
-                                radius={5000} // Matches backend limit of 5km
-                                pathOptions={{
-                                    color: '#FF6B00',
+                            },
+                            // Pending job markers
+                            ...jobsWithLocation.map(job => ({
+                                id: job.id || job._id,
+                                position: {
+                                    lat: job.location.coordinates[1],
+                                    lng: job.location.coordinates[0]
+                                },
+                                icon: {
+                                    url: 'https://cdn-icons-png.flaticon.com/512/3003/3003984.png',
+                                    scaledSize: { width: 32, height: 32 }
+                                }
+                            }))
+                        ]}
+                        circles={online ? [
+                            {
+                                center: (user.location?.coordinates && (user.location.coordinates[0] !== 0 || user.location.coordinates[1] !== 0))
+                                    ? { lat: user.location.coordinates[1], lng: user.location.coordinates[0] }
+                                    : captainPosition,
+                                radius: 5000,
+                                options: {
                                     fillColor: '#FF6B00',
                                     fillOpacity: 0.04,
-                                    weight: 1.5,
-                                    dashArray: '6 4',
-                                    opacity: 0.5
-                                }}
-                            />
-                        )}
-
-                        {/* Pending job markers */}
-                        {jobsWithLocation.map(job => (
-                            <Marker
-                                key={job.id || job._id}
-                                position={[job.location.coordinates[1], job.location.coordinates[0]]}
-                                icon={jobIcon}
-                            />
-                        ))}
-
-                        {recenter && <LiveRecenterer position={captainPosition} />}
-                    </MapContainer>
+                                    strokeWeight: 1,
+                                    strokeColor: '#FF6B00',
+                                    strokeOpacity: 0.3,
+                                }
+                            }
+                        ] : []}
+                    />
                 )}
 
                 {/* Map Loading State */}

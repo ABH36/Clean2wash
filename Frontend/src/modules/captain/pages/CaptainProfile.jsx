@@ -83,7 +83,7 @@ const CaptainProfile = () => {
                         <h2 className={`text-2xl font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>{user.name}</h2>
                         <div className="flex items-center gap-2 mt-1 opacity-60">
                             <MapPin size={12} className="text-brand" />
-                            <span className={`${isDarkMode ? 'text-white' : 'text-content-subtle'} text-[10px] font-black uppercase tracking-[0.2em]`}>{user.profile?.city || 'Bengaluru'} | ID: {user.id || user._id}</span>
+                            <span className={`${isDarkMode ? 'text-white' : 'text-content-subtle'} text-[10px] font-black uppercase tracking-[0.2em]`}>{user.profile?.city || 'City not set'} | ID: {user.id || user._id}</span>
                         </div>
 
                         <div className="mt-6 flex gap-3 w-full max-w-xs">

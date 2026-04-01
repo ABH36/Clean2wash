@@ -43,15 +43,15 @@ exports.reverseGeocodeProxy = catchAsync(async (req, res, next) => {
         clearTimeout(timeout);
         console.error('Map Proxy Error (Reverse):', err);
 
-        // Graceful Fallback for UI
+        // Graceful Fallback for UI - Removed hardcoded Bengaluru
         res.status(200).json({
             status: 'success',
             isFallback: true,
             data: {
                 display_name: `Location at ${req.query.lat}, ${req.query.lon}`,
                 address: {
-                    city: 'Bengaluru',
-                    state: 'Karnataka',
+                    city: 'Unknown City',
+                    state: 'Unknown State',
                     country: 'India'
                 }
             }

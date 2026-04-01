@@ -11,18 +11,8 @@ import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
 import { staffAPI } from '../../../utils/staffApi';
 import { socketService } from '../../../utils/socket';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
 import { toast } from 'react-hot-toast';
-
-// 🛠️ Asset Protocol: Fix default marker icons
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
+import GoogleMapBox from '../../../components/common/GoogleMapBox';
 
 const PinModal = ({ isOpen, onConfirm, onCancel, title, isDarkMode }) => {
     const [pin, setPin] = useState('');
@@ -274,11 +264,17 @@ const TaskDetails = () => {
     }
 
     const taskData = task || {};
+    const isApartment = taskData.service?.category === 'Apartment';
+    
     const isDelivery = ['quality-check', 'ready-for-delivery', 'delivery-assigned', 'out_for_delivery', 'at_delivery_address', 'completed'].includes(taskData.status);
-    const statusIdx = {
-        'pickup-assigned': 1, 'confirmed': 1, 'accepted': 1, 'en_route': 2, 'arrived': 3, 'picked-up': 4, 'at-studio': 5, 'washing': 5, 'quality-check': 5,
-        'ready-for-delivery': 6, 'delivery-assigned': 7, 'out_for_delivery': 8, 'at_delivery_address': 9, 'completed': 10
-    }[taskData.status] || 0;
+    
+    // 📊 Dynamic Protocol Progress Logic
+    const statusIdx = isApartment 
+        ? { 'confirmed': 1, 'washing': 5, 'completed': 10 }[taskData.status] || 1
+        : {
+            'pickup-assigned': 1, 'confirmed': 1, 'accepted': 1, 'en_route': 2, 'arrived': 3, 'picked-up': 4, 'at-studio': 5, 'washing': 5, 'quality-check': 5,
+            'ready-for-delivery': 6, 'delivery-assigned': 7, 'out_for_delivery': 8, 'at_delivery_address': 9, 'completed': 10
+        }[taskData.status] || 0;
 
     return (
         <div className={`min-h-screen ${isDarkMode ? 'bg-[#0F172A]' : 'bg-[#FAFBFF]'} pb-40 transition-colors duration-500`}>
@@ -425,17 +421,34 @@ const TaskDetails = () => {
                 {/* 🗺️ Live Tactical Map Node */}
                 <div className={`relative h-72 rounded-[3.5rem] overflow-hidden border shadow-2xl transition-all ${isDarkMode ? 'border-white/5 bg-[#0F172A]' : 'border-gray-100 bg-white'}`}>
                     <div className="absolute inset-0 z-0">
-                        <MapContainer
-                            center={[taskData.location?.address?.coordinates?.lat || 20.5937, taskData.location?.address?.coordinates?.lng || 78.9629]}
+                        <GoogleMapBox 
+                            center={{
+                                lat: taskData.location?.address?.coordinates?.lat || 20.5937,
+                                lng: taskData.location?.address?.coordinates?.lng || 78.9629
+                            }}
                             zoom={13}
-                            zoomControl={false}
-                            style={{ height: '100%', width: '100%', filter: isDarkMode ? 'invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%)' : 'none' }}
-                        >
-                            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                            <Marker position={[taskData.location?.address?.coordinates?.lat || 20.5937, taskData.location?.address?.coordinates?.lng || 78.9629]}>
-                                <Popup>Consumer Location</Popup>
-                            </Marker>
-                        </MapContainer>
+                            markers={[
+                                {
+                                    position: {
+                                        lat: taskData.location?.address?.coordinates?.lat || 20.5937,
+                                        lng: taskData.location?.address?.coordinates?.lng || 78.9629
+                                    },
+                                    icon: {
+                                        url: taskData.service?.category === 'Apartment' 
+                                            ? 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png' // Building
+                                            : 'https://cdn-icons-png.flaticon.com/512/2769/2769339.png',  // Truck
+                                        scaledSize: new window.google.maps.Size(48, 48),
+                                        anchor: new window.google.maps.Point(24, 48)
+                                    },
+                                    infoContent: (
+                                        <div className="p-1 font-outfit">
+                                            <p className="text-[10px] font-black uppercase text-brand tracking-widest">{taskData.service?.name}</p>
+                                            <p className="text-[9px] font-bold text-gray-400 mt-1 uppercase">{taskData.location?.address?.street || 'Assigned Node'}</p>
+                                        </div>
+                                    )
+                                }
+                            ]}
+                        />
                     </div>
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent pointer-events-none z-10" />
 
@@ -629,9 +642,13 @@ const TaskDetails = () => {
                     <div className="flex items-center justify-between px-3">
                         <div className="flex items-center gap-2">
                             <Camera size={12} className="text-brand" />
-                            <h4 className={`text-[10px] font-black uppercase tracking-[0.3em] ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>{isDelivery ? 'Delivery Sync Media' : 'Media Evidence Log'}</h4>
+                            <h4 className={`text-[10px] font-black uppercase tracking-[0.3em] ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>
+                                {isApartment ? 'Service Evidence' : (isDelivery ? 'Delivery Sync Media' : 'Media Evidence Log')}
+                            </h4>
                         </div>
-                        <span className={`text-[10px] font-black ${photos.length >= 2 ? 'text-green-500' : 'text-brand'}`}>{photos.length}/4 Captured</span>
+                        <span className={`text-[10px] font-black ${photos.length >= (isApartment ? 1 : 2) ? 'text-green-500' : 'text-brand'}`}>
+                            {photos.length}/{isApartment ? 2 : 4} Captured
+                        </span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -646,7 +663,7 @@ const TaskDetails = () => {
                                 </button>
                             </motion.div>
                         ))}
-                        {photos.length < 4 && (
+                        {photos.length < (isApartment ? 2 : 4) && (
                             <label className={`h-44 rounded-[2.5rem] border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all cursor-pointer ${isDarkMode ? 'bg-white/5 border-white/10 text-white/20 hover:border-brand/40 hover:text-brand' : 'bg-white border-gray-100 text-gray-300 hover:border-brand hover:text-brand'}`}>
                                 <Camera size={32} strokeWidth={1.5} />
                                 <p className="text-[9px] font-black uppercase tracking-widest">Initialize Camera</p>
@@ -656,47 +673,49 @@ const TaskDetails = () => {
                     </div>
                 </div>
 
-                {/* 🛡️ Operational Checklist (Digital VCR) */}
-                <div className={`p-8 rounded-[3rem] border transition-all ${isVcrReady ? (isDarkMode ? 'bg-green-500/5 border-green-500/20' : 'bg-green-50 border-green-100') : (isDarkMode ? 'bg-amber-500/5 border-amber-500/10' : 'bg-white border-gray-100 shadow-soft')}`}>
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-3">
-                            <ShieldAlert size={20} className={isVcrReady ? 'text-green-500' : 'text-amber-500'} />
-                            <h4 className={`text-[11px] font-black uppercase tracking-widest ${isVcrReady ? 'text-green-500' : 'text-amber-500'}`}>
-                                {isVcrReady ? 'VCR Protocol Verified' : 'Liability Handshake: VCR'}
-                            </h4>
+                {/* 🛡️ Operational Checklist (Digital VCR) - Hidden for Apartment Wash */}
+                {!isApartment && (
+                    <div className={`p-8 rounded-[3rem] border transition-all ${isVcrReady ? (isDarkMode ? 'bg-green-500/5 border-green-500/20' : 'bg-green-50 border-green-100') : (isDarkMode ? 'bg-amber-500/5 border-amber-500/10' : 'bg-white border-gray-100 shadow-soft')}`}>
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-3">
+                                <ShieldAlert size={20} className={isVcrReady ? 'text-green-500' : 'text-amber-500'} />
+                                <h4 className={`text-[11px] font-black uppercase tracking-widest ${isVcrReady ? 'text-green-500' : 'text-amber-500'}`}>
+                                    {isVcrReady ? 'VCR Protocol Verified' : 'Liability Handshake: VCR'}
+                                </h4>
+                            </div>
+                            {isVcrReady && <CheckCircle2 size={18} className="text-green-500 animate-bounce" />}
                         </div>
-                        {isVcrReady && <CheckCircle2 size={18} className="text-green-500 animate-bounce" />}
-                    </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                        {Object.keys(vcrChecklist).map((key) => (
-                            <button
-                                key={key}
-                                onClick={() => setVcrChecklist(prev => ({ ...prev, [key]: !prev[key] }))}
-                                className={`p-4 rounded-2xl border flex items-center gap-3 transition-all ${vcrChecklist[key]
-                                    ? (isDarkMode ? 'bg-brand/20 border-brand/40 text-white' : 'bg-brand/5 border-brand/20 text-brand')
-                                    : (isDarkMode ? 'bg-white/5 border-white/5 text-white/30' : 'bg-gray-50 border-gray-100 text-content-subtle')
-                                    }`}
-                            >
-                                <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${vcrChecklist[key] ? 'bg-brand border-brand text-white' : 'border-current'}`}>
-                                    {vcrChecklist[key] && <Check size={12} strokeWidth={4} />}
-                                </div>
-                                <span className="text-[10px] font-black uppercase tracking-tighter">
-                                    {key === 'scratches' ? 'Scratches Checked' : 
-                                     key === 'dents' ? 'Dents Checked' : 
-                                     key === 'valuables' ? 'Valuables Checked' : 
-                                     'Fuel Checked'}
-                                </span>
-                            </button>
-                        ))}
-                    </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            {Object.keys(vcrChecklist).map((key) => (
+                                <button
+                                    key={key}
+                                    onClick={() => setVcrChecklist(prev => ({ ...prev, [key]: !prev[key] }))}
+                                    className={`p-4 rounded-2xl border flex items-center gap-3 transition-all ${vcrChecklist[key]
+                                        ? (isDarkMode ? 'bg-brand/20 border-brand/40 text-white' : 'bg-brand/5 border-brand/20 text-brand')
+                                        : (isDarkMode ? 'bg-white/5 border-white/5 text-white/30' : 'bg-gray-50 border-gray-100 text-content-subtle')
+                                        }`}
+                                >
+                                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${vcrChecklist[key] ? 'bg-brand border-brand text-white' : 'border-current'}`}>
+                                        {vcrChecklist[key] && <Check size={12} strokeWidth={4} />}
+                                    </div>
+                                    <span className="text-[10px] font-black uppercase tracking-tighter">
+                                        {key === 'scratches' ? 'Scratches Checked' : 
+                                         key === 'dents' ? 'Dents Checked' : 
+                                         key === 'valuables' ? 'Valuables Checked' : 
+                                         'Fuel Checked'}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
 
-                    {!isVcrReady && (
-                        <p className={`mt-5 text-[9px] font-bold leading-relaxed ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>
-                            Terminal Alert: Confirm all vehicle condition parameters to unlock the custody handshake protocol.
-                        </p>
-                    )}
-                </div>
+                        {!isVcrReady && (
+                            <p className={`mt-5 text-[9px] font-bold leading-relaxed ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>
+                                Terminal Alert: Confirm all vehicle condition parameters to unlock the custody handshake protocol.
+                            </p>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* ⌨️ Terminal Dock */}
@@ -708,74 +727,92 @@ const TaskDetails = () => {
                     ))}
                 </div>
 
-                {['accepted', 'confirmed', 'pickup-assigned'].includes(taskData.status) && (
-                    <motion.button whileTap={{ scale: 0.98 }} onClick={() => handleUpdateStatus('en_route')} disabled={isSubmitting} className="w-full h-20 bg-brand text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-[0_20px_40px_-12px_rgba(75,135,255,0.4)]">
-                        {isSubmitting ? 'Syncing...' : 'Initialize Pickup'} <Truck size={22} />
-                    </motion.button>
-                )}
-                {taskData.status === 'en_route' && (
-                    <motion.button whileTap={{ scale: 0.98 }} onClick={() => handleUpdateStatus('arrived')} disabled={isSubmitting} className="w-full h-20 bg-black text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-2xl">
-                        {isSubmitting ? 'Syncing...' : 'Confirm Arrival'} <Navigation2 size={22} />
-                    </motion.button>
-                )}
-                {taskData.status === 'arrived' && (
-                    <motion.button
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => handleActionTrigger('picked-up')}
-                        disabled={isSubmitting || !isVcrReady}
-                        className="w-full h-20 bg-brand text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-xl disabled:opacity-30 disabled:grayscale transition-all"
-                    >
-                        {isSubmitting ? 'Syncing...' : (isVcrReady ? 'Begin Handover Handshake' : 'Complete VCR Protocol')}
-                        {isVcrReady ? <Lock size={22} /> : <ShieldAlert size={22} />}
-                    </motion.button>
-                )}
-                {taskData.status === 'picked-up' && (
-                    <motion.button
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => handleActionTrigger('at-studio')}
-                        disabled={isSubmitting || photos.length < 2}
-                        className="w-full h-20 bg-indigo-600 text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-xl disabled:opacity-30 transition-all"
-                    >
-                        {isSubmitting ? 'Syncing...' : (photos.length >= 2 ? 'Finalize Hub Entry' : 'Capture Hub Receipt Proofs')}
-                        <ArrowUpRight size={22} />
-                    </motion.button>
-                )}
-                {['ready-for-delivery', 'delivery-assigned'].includes(taskData.status) && (
-                    <motion.button whileTap={{ scale: 0.98 }} onClick={() => handleUpdateStatus('out_for_delivery')} disabled={isSubmitting} className="w-full h-20 bg-brand text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-xl">
-                        {isSubmitting ? 'Syncing...' : 'Initialize Delivery'} <Package size={22} />
-                    </motion.button>
-                )}
-                {taskData.status === 'out_for_delivery' && (
-                    <motion.button whileTap={{ scale: 0.98 }} onClick={() => handleUpdateStatus('at_delivery_address')} disabled={isSubmitting} className="w-full h-20 bg-black text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-2xl">
-                        {isSubmitting ? 'Syncing...' : 'Confirm Arrival'} <Navigation2 size={22} />
-                    </motion.button>
-                )}
-                {taskData.status === 'at_delivery_address' && (
-                    <motion.button
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => handleActionTrigger('completed')}
-                        disabled={isSubmitting || photos.length === 0}
-                        className="w-full h-20 bg-brand text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-xl disabled:opacity-30 transition-all"
-                    >
-                        {isSubmitting ? 'Syncing...' : (photos.length > 0 ? 'Deliver Vehicle' : 'Capture Delivery Proof')}
-                        <CheckCircle2 size={22} />
-                    </motion.button>
-                )}
-                {taskData.status === 'completed' ? (
-                    <div className="w-full h-20 bg-green-500/10 text-green-500 border border-green-500/20 rounded-3xl flex items-center justify-center gap-4 font-black text-xs uppercase tracking-[0.4em]">
-                        <CheckCircle2 size={24} /> Protocol Finalized
-                    </div>
+                {isApartment ? (
+                    // 🏢 Apartment Logic Dock
+                    <>
+                        {taskData.status === 'confirmed' && (
+                            <motion.button whileTap={{ scale: 0.98 }} onClick={() => handleUpdateStatus('washing')} disabled={isSubmitting} className="w-full h-20 bg-brand text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-xl">
+                                {isSubmitting ? 'Syncing...' : 'Start Dry Wash'} <Zap size={22} />
+                            </motion.button>
+                        )}
+                        {taskData.status === 'washing' && (
+                            <motion.button whileTap={{ scale: 0.98 }} onClick={() => handleUpdateStatus('completed')} disabled={isSubmitting || photos.length === 0} className="w-full h-20 bg-green-500 text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-xl disabled:opacity-30">
+                                {isSubmitting ? 'Syncing...' : (photos.length > 0 ? 'Complete Mission' : 'Capture After-Wash Proof')} <CheckCircle2 size={22} />
+                            </motion.button>
+                        )}
+                    </>
                 ) : (
-                    ['at-studio', 'washing', 'quality-check'].includes(taskData.status) && (
-                        <div className="flex flex-col items-center gap-3 py-2">
-                            <p className={`text-[10px] font-black uppercase tracking-[0.5em] ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Studio Node Active</p>
-                            <div className="flex gap-2">
-                                <span className="w-1.5 h-1.5 bg-brand rounded-full animate-bounce" />
-                                <span className="w-1.5 h-1.5 bg-brand rounded-full animate-bounce [animation-delay:0.2s]" />
-                                <span className="w-1.5 h-1.5 bg-brand rounded-full animate-bounce [animation-delay:0.4s]" />
+                    // 🏥 Standard Studio/Doorstep Logic Dock
+                    <>
+                        {['accepted', 'confirmed', 'pickup-assigned'].includes(taskData.status) && (
+                            <motion.button whileTap={{ scale: 0.98 }} onClick={() => handleUpdateStatus('en_route')} disabled={isSubmitting} className="w-full h-20 bg-brand text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-[0_20px_40px_-12px_rgba(75,135,255,0.4)]">
+                                {isSubmitting ? 'Syncing...' : 'Initialize Pickup'} <Truck size={22} />
+                            </motion.button>
+                        )}
+                        {taskData.status === 'en_route' && (
+                            <motion.button whileTap={{ scale: 0.98 }} onClick={() => handleUpdateStatus('arrived')} disabled={isSubmitting} className="w-full h-20 bg-black text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-2xl">
+                                {isSubmitting ? 'Syncing...' : 'Confirm Arrival'} <Navigation2 size={22} />
+                            </motion.button>
+                        )}
+                        {taskData.status === 'arrived' && (
+                            <motion.button
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => handleActionTrigger('picked-up')}
+                                disabled={isSubmitting || !isVcrReady}
+                                className="w-full h-20 bg-brand text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-xl disabled:opacity-30 disabled:grayscale transition-all"
+                            >
+                                {isSubmitting ? 'Syncing...' : (isVcrReady ? 'Begin Handover Handshake' : 'Complete VCR Protocol')}
+                                {isVcrReady ? <Lock size={22} /> : <ShieldAlert size={22} />}
+                            </motion.button>
+                        )}
+                        {taskData.status === 'picked-up' && (
+                            <motion.button
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => handleActionTrigger('at-studio')}
+                                disabled={isSubmitting || photos.length < 2}
+                                className="w-full h-20 bg-indigo-600 text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-xl disabled:opacity-30 transition-all"
+                            >
+                                {isSubmitting ? 'Syncing...' : (photos.length >= 2 ? 'Finalize Hub Entry' : 'Capture Hub Receipt Proofs')}
+                                <ArrowUpRight size={22} />
+                            </motion.button>
+                        )}
+                        {['ready-for-delivery', 'delivery-assigned'].includes(taskData.status) && (
+                            <motion.button whileTap={{ scale: 0.98 }} onClick={() => handleUpdateStatus('out_for_delivery')} disabled={isSubmitting} className="w-full h-20 bg-brand text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-xl">
+                                {isSubmitting ? 'Syncing...' : 'Initialize Delivery'} <Package size={22} />
+                            </motion.button>
+                        )}
+                        {taskData.status === 'out_for_delivery' && (
+                            <motion.button whileTap={{ scale: 0.98 }} onClick={() => handleUpdateStatus('at_delivery_address')} disabled={isSubmitting} className="w-full h-20 bg-black text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-2xl">
+                                {isSubmitting ? 'Syncing...' : 'Confirm Arrival'} <Navigation2 size={22} />
+                            </motion.button>
+                        )}
+                        {taskData.status === 'at_delivery_address' && (
+                            <motion.button
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => handleActionTrigger('completed')}
+                                disabled={isSubmitting || photos.length === 0}
+                                className="w-full h-20 bg-brand text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-xl disabled:opacity-30 transition-all"
+                            >
+                                {isSubmitting ? 'Syncing...' : (photos.length > 0 ? 'Deliver Vehicle' : 'Capture Delivery Proof')}
+                                <CheckCircle2 size={22} />
+                            </motion.button>
+                        )}
+                        {taskData.status === 'completed' && (
+                            <div className="w-full h-20 bg-green-500/10 text-green-500 border border-green-500/20 rounded-3xl flex items-center justify-center gap-4 font-black text-xs uppercase tracking-[0.4em]">
+                                <CheckCircle2 size={24} /> Protocol Finalized
                             </div>
-                        </div>
-                    )
+                        )}
+                        {['at-studio', 'washing', 'quality-check'].includes(taskData.status) && (
+                            <div className="flex flex-col items-center gap-3 py-2">
+                                <p className={`text-[10px] font-black uppercase tracking-[0.5em] ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Studio Node Active</p>
+                                <div className="flex gap-2">
+                                    <span className="w-1.5 h-1.5 bg-brand rounded-full animate-bounce" />
+                                    <span className="w-1.5 h-1.5 bg-brand rounded-full animate-bounce [animation-delay:0.2s]" />
+                                    <span className="w-1.5 h-1.5 bg-brand rounded-full animate-bounce [animation-delay:0.4s]" />
+                                </div>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 

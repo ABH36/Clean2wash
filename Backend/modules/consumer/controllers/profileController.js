@@ -519,7 +519,24 @@ exports.clearNotifications = catchAsync(async (req, res, next) => {
 
 // Get subscription details
 exports.getSubscription = catchAsync(async (req, res, next) => {
-    const subscription = await Subscription.getActiveSubscription(req.user.id);
+    // If an ID is provided in query, fetch that specific one, otherwise get the user's active one
+    const { id } = req.query;
+    
+    let subscription;
+    if (id) {
+        subscription = await Subscription.findOne({ _id: id, user: req.user.id }).populate({
+            path: 'hub',
+            populate: { path: 'vendor', select: 'name phone' }
+        });
+    } else {
+        subscription = await Subscription.getActiveSubscription(req.user.id);
+        if (subscription && subscription.populate) {
+            await subscription.populate({
+                path: 'hub',
+                populate: { path: 'vendor', select: 'name phone' }
+            });
+        }
+    }
 
     if (!subscription) {
         return res.status(200).json({
@@ -744,6 +761,45 @@ exports.createSubscription = catchAsync(async (req, res, next) => {
             await existingSubscription.save();
         }
         subscription = await Subscription.createSubscription(subscriptionPayload);
+    }
+
+    // --- NEW: FINANCIAL SETTLEMENT FLOW ---
+    // If it's an Apartment/Hub subscription, settle the payout to the Vendor
+    if (hubId && !isRenewal) {
+        try {
+            const hub = await Hub.findById(hubId);
+            if (hub && hub.vendor) {
+                const commissionHelper = require('../../../utils/commissionHelper');
+                const walletHelper = require('../../../utils/walletHelper');
+                
+                // Calculate split (Platform Commission vs Vendor Payout)
+                const { adminCut, providerPayout } = await commissionHelper.calculatePayout(planObj.price, 'vendor');
+                
+                // Credit Vendor Wallet
+                await walletHelper.executeWalletTransaction(
+                    hub.vendor,
+                    providerPayout,
+                    'credit',
+                    {
+                        category: 'PAYOUT',
+                        description: `Payout for ${planObj.name} subscription by customer #${req.user.name || req.user.id.toString().slice(-4)}`,
+                        referenceId: subscription._id,
+                        referenceType: 'subscription'
+                    }
+                );
+
+                // Notify Vendor
+                await sendNotification(hub.vendor, {
+                    title: 'New Subscription Payout! 💳',
+                    message: `₹${providerPayout.toFixed(0)} credited for a new ${planObj.name} in Hubbard Hub: ${hub.name}`,
+                    type: 'payout',
+                    priority: 'medium'
+                });
+            }
+        } catch (settlementError) {
+            console.error('Financial settlement failed for subscription:', settlementError);
+            // We don't fail the whole request since sub is already created, but log it
+        }
     }
 
     if (!isRenewal) {

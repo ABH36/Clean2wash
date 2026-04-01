@@ -1,8 +1,6 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import GoogleMapBox from '../../../components/common/GoogleMapBox';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronLeft, ShieldAlert, Phone, ShieldCheck,
@@ -13,44 +11,16 @@ import { useAuth } from '../../../context/AuthContext';
 import MobileLayout from '../components/layout/MobileLayout';
 import { toast } from 'react-hot-toast';
 
-// Fix Leaflet marker icons
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
-
-// Custom Icons
-const userIcon = L.divIcon({
-    className: 'custom-div-icon',
-    html: `<div class="w-8 h-8 bg-red-600 rounded-full border-4 border-white shadow-lg animate-pulse flex items-center justify-center text-white"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg></div>`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16]
-});
-
-const responderIcon = (role) => L.divIcon({
-    className: 'custom-div-icon',
-    html: `<div class="w-8 h-8 ${role === 'captain' ? 'bg-brand' : 'bg-orange-500'} rounded-full border-4 border-white shadow-lg flex items-center justify-center text-white"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v20"/><path d="M2 12h20"/></svg></div>`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16]
-});
-
-const RecenterMap = ({ coords }) => {
-    const map = useMap();
-    useEffect(() => {
-        if (coords) map.flyTo(coords, 15);
-    }, [coords, map]);
-    return null;
-};
-
 const SOSActive = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { activeSOS, getSOSStatus, resolveSOS, user } = useAuth();
-    const [timeLeft, setTimeLeft] = useState(0);
-    const [userCoords, setUserCoords] = useState(activeSOS?.location?.coordinates || [77.1025, 28.7041]);
+    const [userCoords, setUserCoords] = useState({ 
+        lat: activeSOS?.location?.coordinates?.[1] || 28.7041, 
+        lng: activeSOS?.location?.coordinates?.[0] || 77.1025 
+    });
     const [isResolving, setIsResolving] = useState(false);
+    const [map, setMap] = useState(null);
 
     // Sync SOS status every 5 seconds
     useEffect(() => {
@@ -68,14 +38,15 @@ const SOSActive = () => {
         const watchId = navigator.geolocation.watchPosition(
             (pos) => {
                 const { longitude, latitude } = pos.coords;
-                setUserCoords([longitude, latitude]);
-                // Note: In a full implementation, we'd emit this to the backend SOS room
+                const newCoords = { lat: latitude, lng: longitude };
+                setUserCoords(newCoords);
+                if (map) map.panTo(newCoords);
             },
             (err) => console.error('Map location tracking blocked'),
             { enableHighAccuracy: true }
         );
         return () => navigator.geolocation.clearWatch(watchId);
-    }, []);
+    }, [map]);
 
     const handleResolve = async () => {
         if (!confirm('Verify: Are you safe now? This will call off the rescue network.')) return;
@@ -107,11 +78,57 @@ const SOSActive = () => {
 
     const responders = activeSOS.responders || [];
 
+    const mapMarkers = [
+        {
+            position: userCoords,
+            icon: {
+                url: 'https://cdn-icons-png.flaticon.com/512/7077/7077313.png',
+                scaledSize: { width: 32, height: 32 },
+                anchor: { x: 16, y: 16 }
+            },
+            infoContent: <div className="p-1 font-bold text-xs font-outfit text-red-600">EMERGENCY: YOU ARE HERE</div>
+        },
+        ...responders.map(res => ({
+            position: { 
+                lat: userCoords.lat + 0.002, 
+                lng: userCoords.lng + 0.002 
+            }, // Simulated offset
+            icon: {
+                url: res.role === 'captain' 
+                    ? 'https://cdn-icons-png.flaticon.com/512/2966/2966327.png' 
+                    : 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png',
+                scaledSize: { width: 32, height: 32 },
+                anchor: { x: 16, y: 16 }
+            },
+            infoContent: (
+                <div className="text-xs font-bold font-outfit p-1">
+                    <p className={`uppercase ${res.role === 'captain' ? 'text-brand' : 'text-orange-500'}`}>{res.role} DISPATCHED</p>
+                    <p className="mt-1 text-black">{res.user?.name || 'Responder'}</p>
+                </div>
+            )
+        }))
+    ];
+
+    const mapCircles = [
+        {
+            center: userCoords,
+            radius: 500,
+            options: {
+                fillColor: '#dc2626',
+                fillOpacity: 0.1,
+                strokeColor: '#dc2626',
+                strokeOpacity: 0.5,
+                strokeWeight: 1,
+                clickable: false,
+                editable: false,
+                zIndex: 1
+            }
+        }
+    ];
+
     return (
         <MobileLayout hideNav>
             <div className="bg-[#FAFAFA] min-h-screen font-outfit relative">
-                <style dangerouslySetInnerHTML={{ __html: `.leaflet-container { height: 100vh; width: 100%; z-index: 1; } .custom-div-icon { background: none; border: none; }` }} />
-
                 {/* ── Overlay Header ── */}
                 <div className="absolute top-0 left-0 right-0 z-[100] p-5">
                     <header className="bg-white/95 backdrop-blur-md rounded-3xl border border-white shadow-2xl p-4 flex items-center justify-between">
@@ -132,34 +149,15 @@ const SOSActive = () => {
                     </header>
                 </div>
 
-                {/* ── Leaflet Map ── */}
+                {/* ── Google Map ── */}
                 <div className="absolute inset-0">
-                    <MapContainer center={[userCoords[1], userCoords[0]]} zoom={15} zoomControl={false}>
-                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="http://osm.org/copyright">OSM</a>' />
-                        <RecenterMap coords={[userCoords[1], userCoords[0]]} />
-
-                        {/* User Location */}
-                        <Marker position={[userCoords[1], userCoords[0]]} icon={userIcon}>
-                            <Popup minWidth={90}>You are here</Popup>
-                        </Marker>
-                        <Circle center={[userCoords[1], userCoords[0]]} radius={500} pathOptions={{ color: '#dc2626', fillColor: '#dc2626', fillOpacity: 0.1, weight: 1, dashArray: '5, 5' }} />
-
-                        {/* Responders */}
-                        {responders.map(res => (
-                            <Marker
-                                key={res._id}
-                                position={[userCoords[1] + 0.002, userCoords[0] + 0.002]} // Simulated nearby offset for demo
-                                icon={responderIcon(res.role)}
-                            >
-                                <Popup>
-                                    <div className="text-xs font-bold font-outfit">
-                                        <p className="uppercase text-brand">{res.role.toUpperCase()} HELP</p>
-                                        <p className="mt-1">{res.user?.name || 'Responder'}</p>
-                                    </div>
-                                </Popup>
-                            </Marker>
-                        ))}
-                    </MapContainer>
+                    <GoogleMapBox 
+                        center={userCoords}
+                        zoom={15}
+                        onLoad={setMap}
+                        markers={mapMarkers}
+                        circles={mapCircles}
+                    />
                 </div>
 
                 {/* ── Bottom HUD ── */}
@@ -202,9 +200,9 @@ const SOSActive = () => {
                                 <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-inner">
                                     <Navigation size={24} className="animate-pulse" />
                                 </div>
-                                <h3 className="text-base font-black uppercase italic tracking-tight">Signal Broadcasted</h3>
+                                <h3 className="text-base font-black uppercase italic tracking-tight">Rescue Network Alerted</h3>
                                 <p className="text-white/60 text-[9px] font-bold uppercase tracking-[0.2em] mt-2 leading-relaxed">
-                                    Alerting nearest captains, vendors and trusted contacts within 5KM...
+                                    Alerting nearest captains, Hub Managers, and Admin Control Room...
                                 </p>
                             </motion.div>
                         )}

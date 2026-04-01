@@ -5,47 +5,20 @@ import {
     ChevronLeft, MapPin, Navigation, Search,
     Check, Locate, ArrowRight, X, Compass
 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import GoogleMapBox from '../../../components/common/GoogleMapBox';
 import { toast } from 'react-hot-toast';
 import { useCaptain } from '../../../hooks/useCaptain';
 import { geocodingService } from '../../../utils/geocoding';
 
-// Fix Leaflet marker icons
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
-
-// --- Map Components ---
-const MapEvents = ({ onMove }) => {
-    useMapEvents({
-        moveend: (e) => {
-            const center = e.target.getCenter();
-            onMove([center.lat, center.lng]);
-        },
-    });
-    return null;
-};
-
-const ChangeView = ({ center }) => {
-    const map = useMap();
-    useEffect(() => {
-        if (center) map.setView(center, map.getZoom());
-    }, [center, map]);
-    return null;
-};
+// Leaflet map helpers removed
 
 const CaptainLocationSelector = () => {
     const navigate = useNavigate();
     const { updateLocation } = useCaptain();
 
     // Default to a central location (Delhi) if GPS fails
-    const [mapCenter, setMapCenter] = useState([28.6139, 77.2090]);
-    const [selectedPos, setSelectedPos] = useState([28.6139, 77.2090]);
+    const [mapCenter, setMapCenter] = useState({ lat: 28.6139, lng: 77.2090 });
+    const [selectedPos, setSelectedPos] = useState({ lat: 28.6139, lng: 77.2090 });
     const [isLocating, setIsLocating] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [addressName, setAddressName] = useState('Fetching location...');
@@ -66,7 +39,7 @@ const CaptainLocationSelector = () => {
         navigator.geolocation.getCurrentPosition(
             (pos) => {
                 const { latitude, longitude } = pos.coords;
-                const newPos = [latitude, longitude];
+                const newPos = { lat: latitude, lng: longitude };
                 setMapCenter(newPos);
                 setSelectedPos(newPos);
                 setIsLocating(false);
@@ -82,7 +55,7 @@ const CaptainLocationSelector = () => {
     useEffect(() => {
         const reverseGeocode = async () => {
             setIsGeocoding(true);
-            const data = await geocodingService.reverse(selectedPos[0], selectedPos[1]);
+            const data = await geocodingService.reverse(selectedPos.lat, selectedPos.lng);
             if (data) {
                 setAddressName(data.display_name);
             } else {
@@ -101,7 +74,7 @@ const CaptainLocationSelector = () => {
         setIsGeocoding(true);
         const results = await geocodingService.search(searchQuery);
         if (results && results.length > 0) {
-            const newPos = [results[0].lat, results[0].lng];
+            const newPos = { lat: results[0].lat, lng: results[0].lng };
             setMapCenter(newPos);
             setSelectedPos(newPos);
         } else {
@@ -113,7 +86,7 @@ const CaptainLocationSelector = () => {
     const handleConfirm = async () => {
         setIsSaving(true);
         try {
-            const result = await updateLocation(selectedPos[0], selectedPos[1]);
+            const result = await updateLocation(selectedPos.lat, selectedPos.lng);
             if (result.success) {
                 toast.success("Working area set successfully!", {
                     icon: '📍',
@@ -169,12 +142,21 @@ const CaptainLocationSelector = () => {
 
                 {/* Map Interface */}
                 <div className="flex-1 relative m-5 rounded-[2.5rem] overflow-hidden border-2 border-white shadow-2xl z-0 bg-gray-100">
-                    <MapContainer center={mapCenter} zoom={15} style={{ height: '100%', width: '100%' }} zoomControl={false}>
-                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                        <ChangeView center={mapCenter} />
-                        <MapEvents onMove={setSelectedPos} />
-                        <Marker position={selectedPos} />
-                    </MapContainer>
+                    <GoogleMapBox 
+                        center={mapCenter} 
+                        zoom={15} 
+                        onIdle={setSelectedPos}
+                        markers={[
+                            {
+                                id: 'center-marker',
+                                position: selectedPos,
+                                icon: {
+                                    path: window.google?.maps?.SymbolPath?.CIRCLE,
+                                    scale: 0 // Hide actual marker, we use the crosshair overlay
+                                }
+                            }
+                        ]}
+                    />
 
                     {/* Overlay Buttons */}
                     <div className="absolute top-4 right-4 flex flex-col gap-2 z-[400]">

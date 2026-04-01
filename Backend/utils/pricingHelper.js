@@ -24,7 +24,34 @@ class PricingEngine {
             isCombo = false
         } = data;
 
+        // Extract duration from schedule for hourly calculations
+        let hours = 1;
+        const durationStr = String(data.service?.schedule?.estimatedDuration || '1 Hour');
+        if (durationStr) {
+            const match = durationStr.match(/(\d+)/);
+            if (match) hours = parseInt(match[1]);
+        }
+
+        const isChauffeur = data.service?.category === 'Chauffeur' || data.service?.type === 'sparedriver' || data.service?.name?.toLowerCase().includes('driver') || data.service?.title?.toLowerCase().includes('driver');
+        const isHourly = isChauffeur && (
+            data.service?.name?.toLowerCase().includes('hourly') || 
+            data.service?.title?.toLowerCase().includes('hourly') ||
+            data.service?.name?.toLowerCase().includes('full day') ||
+            data.service?.name?.toLowerCase().includes('outstation')
+        );
+
+        const isTrueHourly = isChauffeur && (
+            data.service?.name?.toLowerCase().includes('hourly') || 
+            data.service?.title?.toLowerCase().includes('hourly')
+        );
+
         let baseAmount = Math.round(servicePrice * vehicleMultiplier) + addonAmount;
+        
+        // Multiplier for True Hourly Chauffeur (Package rates like Full Day/Outstation are excluded from base multiplication)
+        if (isTrueHourly && hours > 1) {
+            baseAmount = Math.round((servicePrice * hours) * vehicleMultiplier) + addonAmount;
+        }
+
         let totalAmount = baseAmount;
         let discounts = {
             blackPass: 0,
@@ -34,6 +61,59 @@ class PricingEngine {
         };
 
         let breakdown = [];
+        
+        // 0. LAYER ZERO: Specific Spare Driver (Chauffeur) Rate Mapping
+        if (isChauffeur) {
+            const activeChauffeurSub = await Subscription.findOne({
+                user: user._id || user.id,
+                status: 'active',
+                $or: [
+                    { plan: /chauffeur/i },
+                    { plan: /driver/i },
+                    { 'service.title': /driver/i }
+                ],
+                endDate: { $gt: new Date() }
+            });
+
+            if (activeChauffeurSub) {
+                // SOP Override: Subscriber rate ₹150 vs Standard ₹180 (or provided base)
+                // We apply a targeted discount to reach the ₹150/hr target if it's an hourly service
+                if (data.service?.name?.toLowerCase().includes('hourly')) {
+                    const sopTargetRate = 150;
+                    const sopDiscount = Math.max(0, baseAmount - sopTargetRate);
+                    if (sopDiscount > 0) {
+                        totalAmount -= sopDiscount;
+                        breakdown.push({ name: 'Chauffeur Member Rate', amount: sopDiscount, type: 'subscription' });
+                    }
+                }
+            }
+
+            // 🌙 Phase 7 Hardening: Night Allowance (11 PM - 5 AM)
+            const scheduleTime = data.schedule?.timeSlot?.start;
+            const isOutstation = data.service?.name?.toLowerCase().includes('outstation');
+            
+            if (scheduleTime) {
+                const hour = parseInt(scheduleTime.split(':')[0]);
+                const isNightStart = hour >= 23 || hour < 5;
+                
+                // standard duration from data.schedule or durationStr
+                const estEndHour = (hour + hours) % 24;
+                const isNightEnd = (estEndHour >= 23 || estEndHour < 5) && hours > 0;
+
+                if (isNightStart || isNightEnd) {
+                    const nightAllowance = 300; 
+                    totalAmount += nightAllowance;
+                    breakdown.push({ name: 'Night Shift Allowance', amount: nightAllowance, type: 'surcharge' });
+                }
+            }
+
+            // 🏨 Real-World: Outstation Stay & Food Allowance
+            if (isOutstation) {
+                const allowance = 500; // Standard daily subsistence for driver
+                totalAmount += allowance;
+                breakdown.push({ name: 'Stay & Food Allowance', amount: allowance, type: 'surcharge' });
+            }
+        }
 
         // 1. LAYER ONE: Subscription Credit (Zero Pricing)
         if (paymentMethod === 'subscription') {

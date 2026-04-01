@@ -11,7 +11,7 @@ import { toast } from 'react-hot-toast';
 const VendorHome = () => {
     const navigate = useNavigate();
     const { getUser } = useAuth();
-    const user = getUser('vendor') || { studioName: 'CarWash Studio', city: 'Bengaluru' };
+    const user = getUser('vendor') || { studioName: 'Studio Partner', city: '' };
 
     const [stats, setStats] = useState({
         totalRevenue: 0,
@@ -114,7 +114,7 @@ const VendorHome = () => {
     return (
         <VendorLayout
             title={user.studioName || "Studio Dashboard"}
-            subtitle={`${user.city || 'Bengaluru'} · Active Session`}
+            subtitle={`${user.city || 'Hub Active'} · Live Monitoring`}
         >
             <div className="space-y-8">
                 {/* Market Opportunities - Lead Board */}
@@ -304,7 +304,7 @@ const VendorHome = () => {
                                     <span className="text-brand text-2xl">★</span>
                                 </div>
                                 <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] mb-8 leading-relaxed">
-                                    Maintaining elite standards across <span className="text-white">Bengaluru Hub</span>
+                                    Maintaining elite standards across <span className="text-white">{user.city || 'Active Territory'}</span>
                                 </p>
                                 <button
                                     onClick={() => navigate('/vendor/reports')}

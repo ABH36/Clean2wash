@@ -131,7 +131,7 @@ const userSchema = new mongoose.Schema({
         balance: {
             type: Number,
             default: 0,
-            min: [0, 'Wallet balance cannot be negative']
+            min: [-1000, 'Wallet balance cannot go below -1000']
         },
         lastUpdated: {
             type: Date,

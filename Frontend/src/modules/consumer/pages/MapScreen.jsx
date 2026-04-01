@@ -1,9 +1,7 @@
-import React, { useState, useEffect, useRef, useContext } from 'react';
+import React, { useState, useEffect, useRef, useContext, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import GoogleMapBox from '../../../components/common/GoogleMapBox';
 import {
     MapPin, ChevronLeft, Search, Navigation, Home, Briefcase,
     Plus, ChevronRight, Check, Zap, Calendar, Clock,
@@ -11,44 +9,7 @@ import {
 } from 'lucide-react';
 import LocationContext from '../../../context/LocationContextBase';
 import { serviceAPI } from '../../../utils/api';
-import { geocodingService } from '../../../utils/geocoding';
 import { toast } from 'react-hot-toast';
-
-// Fix Leaflet marker icon issue
-const studioIcon = new L.Icon({
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png',
-    iconSize: [38, 38],
-    iconAnchor: [19, 38],
-    popupAnchor: [0, -38]
-});
-
-const userIcon = new L.Icon({
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/7077/7077313.png',
-    iconSize: [30, 30],
-    iconAnchor: [15, 30],
-    popupAnchor: [0, -30]
-});
-
-// Helper component to center map
-const RecenterMap = ({ lat, lng }) => {
-    const map = useMap();
-    useEffect(() => {
-        if (lat && lng) map.setView([lat, lng], 16);
-    }, [lat, lng, map]);
-    return null;
-};
-
-const MapEvents = ({ onMove }) => {
-    useMapEvents({
-        moveend: (e) => {
-            const center = e.target.getCenter();
-            onMove([center.lat, center.lng]);
-        },
-    });
-    return null;
-};
-
-// Removed hardcoded SAVED_PLACES and RECENT_LOCATIONS
 
 const MapScreen = () => {
     const navigate = useNavigate();
@@ -67,8 +28,8 @@ const MapScreen = () => {
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
     const [isGeocoding, setIsGeocoding] = useState(false);
-    const [mapOpacity, setMapOpacity] = useState(0.8); // Default to full opacity for real map
     const [studios, setStudios] = useState([]);
+    const [map, setMap] = useState(null);
 
     // Fetch studios if type=vendor
     useEffect(() => {
@@ -86,7 +47,10 @@ const MapScreen = () => {
                         const mapped = response.data.hubs.map(hub => ({
                             id: hub._id,
                             name: hub.vendor?.profile?.studioName || hub.name,
-                            coordinates: hub.location?.coordinates?.coordinates || [77.1025, 28.7041],
+                            coordinates: {
+                                lat: hub.location?.coordinates?.coordinates?.[1] || 28.7041,
+                                lng: hub.location?.coordinates?.coordinates?.[0] || 77.1025
+                            },
                             rating: hub.vendor?.rating || 4.8,
                             image: hub.vendor?.profile?.avatar || 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=600&q=80',
                             price: '₹899'
@@ -102,26 +66,51 @@ const MapScreen = () => {
     }, [type, currentLocation]);
 
     // Reverse geocode when map center changes
-    const handleMapMove = useCallback(async (pos) => {
+    const handleMapIdle = useCallback(async (pos) => {
+        if (!window.google?.maps?.Geocoder) return;
+        
         setIsGeocoding(true);
-        const geocoded = await geocodingService.reverse(pos[0], pos[1]);
-        if (geocoded) {
-            setSelectedLocation({
-                label: geocoded.street,
-                address: geocoded.display_name,
-                coordinates: { lat: pos[0], lng: pos[1] }
-            });
+        const geocoder = new window.google.maps.Geocoder();
+        
+        try {
+            const response = await geocoder.geocode({ location: pos });
+            if (response?.results?.[0]) {
+                const result = response.results[0];
+                const street = result.address_components.find(c => c.types.includes('route'))?.long_name || 
+                             result.address_components.find(c => c.types.includes('neighborhood'))?.long_name || 
+                             'Selected Location';
+                
+                setSelectedLocation({
+                    label: street,
+                    address: result.formatted_address,
+                    coordinates: pos
+                });
+            }
+        } catch (err) {
+            console.error("MapScreen Geocoding error:", err);
+        } finally {
+            setIsGeocoding(false);
         }
-        setIsGeocoding(false);
     }, []);
 
-    // 🔍 Real-time Search Integration
+    // 🔍 Real-time Search Integration (Google Autocomplete fallback or manual)
     useEffect(() => {
         const delayDebounceFn = setTimeout(async () => {
             if (searchQuery.trim().length > 2) {
                 setIsSearching(true);
-                const results = await geocodingService.search(searchQuery);
-                setSearchResults(results);
+                if (window.google?.maps?.places?.AutocompleteService) {
+                    const service = new window.google.maps.places.AutocompleteService();
+                    service.getPlacePredictions({ input: searchQuery }, (predictions) => {
+                        if (predictions) {
+                            setSearchResults(predictions.map(p => ({
+                                id: p.place_id,
+                                label: p.structured_formatting.main_text,
+                                address: p.description,
+                                placeId: p.place_id
+                            })));
+                        }
+                    });
+                }
                 setIsSearching(false);
             } else {
                 setSearchResults([]);
@@ -134,12 +123,33 @@ const MapScreen = () => {
     const handleLocateMe = async () => {
         try {
             const pos = await detectCurrentLocation();
-            if (pos) {
-                setMapOpacity(0.8);
-                setTimeout(() => setMapOpacity(0.4), 1000);
+            if (pos && map) {
+                map.panTo(pos);
             }
         } catch (err) {
             toast.error('Location Access Denied');
+        }
+    };
+
+    const handleSearchResultSelect = async (loc) => {
+        if (loc.placeId && window.google?.maps?.places?.PlacesService) {
+            const service = new window.google.maps.places.PlacesService(document.createElement('div'));
+            service.getDetails({ placeId: loc.placeId }, (place, status) => {
+                if (status === window.google.maps.places.PlacesServiceStatus.OK && place.geometry?.location) {
+                    const pos = {
+                        lat: place.geometry.location.lat(),
+                        lng: place.geometry.location.lng()
+                    };
+                    setSelectedLocation({
+                        label: loc.label,
+                        address: loc.address,
+                        coordinates: pos
+                    });
+                    if (map) map.panTo(pos);
+                    setSearchQuery('');
+                    setSearchResults([]);
+                }
+            });
         }
     };
 
@@ -166,59 +176,70 @@ const MapScreen = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    const mapMarkers = [
+        ...(currentLocation ? [{
+            position: currentLocation,
+            icon: {
+                url: 'https://cdn-icons-png.flaticon.com/512/7077/7077313.png',
+                scaledSize: new window.google.maps.Size(30, 30)
+            }
+        }] : []),
+        ...(type === 'vendor' ? studios.map(studio => ({
+            position: studio.coordinates,
+            icon: {
+                url: 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png',
+                scaledSize: new window.google.maps.Size(42, 42),
+                anchor: new window.google.maps.Point(21, 42)
+            },
+            infoContent: (
+                <div className="p-0 min-w-[180px] bg-white rounded-2xl overflow-hidden font-outfit shadow-2xl border border-gray-100">
+                    <div className="relative h-24">
+                        <img src={studio.image} className="w-full h-full object-cover" alt={studio.name} />
+                        <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-md px-1.5 py-0.5 rounded-lg flex items-center gap-1">
+                            <Star size={10} className="text-amber-400" fill="currentColor" />
+                            <span className="text-[10px] font-black">{studio.rating}</span>
+                        </div>
+                    </div>
+                    <div className="p-3">
+                        <h4 className="font-black text-[11px] uppercase tracking-tight mb-1 text-black truncate">{studio.name}</h4>
+                        <div className="flex items-center justify-between mt-2">
+                            <div>
+                                <p className="text-[7px] font-black text-gray-400 uppercase tracking-widest leading-none">Starting from</p>
+                                <p className="text-brand font-black text-sm italic">{studio.price}</p>
+                            </div>
+                            <button
+                                onClick={() => navigate(`/service/${studio.id}`)}
+                                className="bg-black text-white text-[9px] px-3 py-2 rounded-xl font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-black/10"
+                            >
+                                Book Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )
+        })) : [])
+    ];
+
     return (
         <div className="h-screen w-full bg-white relative overflow-hidden flex flex-col font-sans">
             {/* ── Background Map Surface ── */}
             <div className="absolute inset-0 z-0">
-                <MapContainer
-                    center={[currentLocation?.lat || 28.7041, currentLocation?.lng || 77.1025]}
+                <GoogleMapBox 
+                    center={currentLocation || { lat: 28.7041, lng: 77.1025 }}
                     zoom={13}
-                    zoomControl={false}
-                    className="h-full w-full"
-                >
-                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                    <RecenterMap lat={currentLocation?.lat} lng={currentLocation?.lng} />
-                    <MapEvents onMove={handleMapMove} />
-
-                    {currentLocation && (
-                        <Marker position={[currentLocation.lat, currentLocation.lng]} icon={userIcon}>
-                            <Popup>You are here</Popup>
-                        </Marker>
-                    )}
-
-                    {type === 'vendor' && studios.map(studio => (
-                        <Marker
-                            key={studio.id}
-                            position={[studio.coordinates[1], studio.coordinates[0]]}
-                            icon={studioIcon}
-                        >
-                            <Popup>
-                                <div className="p-1 min-w-[150px]">
-                                    <img src={studio.image} className="w-full h-20 object-cover rounded-lg mb-2" alt={studio.name} />
-                                    <h4 className="font-black text-xs uppercase mb-1">{studio.name}</h4>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-brand font-black italic">{studio.price}</span>
-                                        <button
-                                            onClick={() => navigate(`/service/${studio.id}`)}
-                                            className="bg-black text-white text-[8px] px-2 py-1 rounded-md font-black uppercase"
-                                        >
-                                            Book
-                                        </button>
-                                    </div>
-                                </div>
-                            </Popup>
-                        </Marker>
-                    ))}
-                </MapContainer>
+                    onLoad={setMap}
+                    onIdle={handleMapIdle}
+                    markers={mapMarkers}
+                />
 
                 <div className="absolute inset-0 bg-gradient-to-b from-white via-transparent to-white/90 pointer-events-none" />
                 <div className="absolute inset-0 opacity-[0.05] pointer-events-none"
                     style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
 
                 {!type && (
-                    <div className="absolute top-[38%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10">
+                    <div className="absolute top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10">
                         <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="relative">
-                            <div className="w-14 h-14 bg-black rounded-[1.25rem] flex items-center justify-center shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-2 border-white relative z-10">
+                            <div className="w-14 h-14 bg-black rounded-[2rem] flex items-center justify-center shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-2 border-white relative z-10">
                                 <MapPin size={28} className="text-brand" fill="currentColor" strokeWidth={1} />
                             </div>
                             <div className="w-2 h-2 bg-black rounded-full mx-auto mt-1 shadow-2xl" />
@@ -276,16 +297,7 @@ const MapScreen = () => {
                             {searchResults.map((loc) => (
                                 <button
                                     key={loc.id}
-                                    onClick={() => {
-                                        setSelectedLocation({
-                                            label: loc.label,
-                                            address: loc.address,
-                                            coordinates: { lat: loc.lat, lng: loc.lng }
-                                        });
-                                        // Update currentLocation to center map
-                                        detectCurrentLocation(); // Silently trigger center update if needed
-                                        setSearchQuery('');
-                                    }}
+                                    onClick={() => handleSearchResultSelect(loc)}
                                     className="w-full flex items-center gap-5 p-4 hover:bg-black/[0.02] rounded-[2rem] transition-all group"
                                 >
                                     <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-black/15 group-hover:text-brand transition-all">
@@ -304,8 +316,6 @@ const MapScreen = () => {
 
             {/* ── Bottom Section ── */}
             <div className="mt-auto relative z-50">
-                {/* Saved Places section removed as requested */}
-
                 <div className="bg-white rounded-t-[2.5rem] p-6 pt-5 shadow-[0_-30px_60px_rgba(0,0,0,0.1)] border-t border-black/[0.03]">
                     <div className="w-12 h-1 bg-gray-100 rounded-full mx-auto mb-6" />
 

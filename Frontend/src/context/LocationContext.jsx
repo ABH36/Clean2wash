@@ -75,7 +75,7 @@ export const LocationProvider = ({ children }) => {
                 return;
             }
 
-            const options = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 };
+            const highAccOptions = { enableHighAccuracy: true, timeout: 7000, maximumAge: 10000 };
 
             const success = (pos) => {
                 const location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -83,19 +83,29 @@ export const LocationProvider = ({ children }) => {
                 resolve(location);
             };
 
+            // Keep track of whether we are in the fallback phase
+            let isFallback = false;
+
             const error = (err) => {
+                console.warn(`Geolocation error (code ${err.code}): ${err.message}`);
+                
                 // If high accuracy failed/timeout, try one more time with standard accuracy
-                if (options.enableHighAccuracy) {
+                if (!isFallback) {
+                    isFallback = true;
                     console.warn('High accuracy location failed, retrying with standard accuracy...');
-                    options.enableHighAccuracy = false;
-                    options.timeout = 10000;
-                    navigator.geolocation.getCurrentPosition(success, (err2) => reject(err2), options);
+                    
+                    // Standard accuracy with a generous maximumAge to allow cached Wi-Fi/IP location
+                    const lowAccOptions = { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 };
+                    navigator.geolocation.getCurrentPosition(success, (err2) => {
+                        console.error('Standard accuracy fallback also failed:', err2);
+                        reject(err2);
+                    }, lowAccOptions);
                 } else {
                     reject(err);
                 }
             };
 
-            navigator.geolocation.getCurrentPosition(success, error, options);
+            navigator.geolocation.getCurrentPosition(success, error, highAccOptions);
         });
     }, []);
 

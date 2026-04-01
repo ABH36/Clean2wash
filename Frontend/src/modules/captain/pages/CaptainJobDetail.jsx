@@ -6,26 +6,14 @@ import {
     Zap, ArrowRight, XCircle
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import GoogleMapBox from '../../../components/common/GoogleMapBox';
 
 import CaptainLayout from '../components/CaptainLayout';
 import { useAuth } from '../../../context/AuthContext';
 import { useCaptain } from '../../../hooks/useCaptain';
 import { useTheme } from '../../../context/ThemeContext';
 
-// Fix for Leaflet marker icons in React
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: markerIcon2x,
-    iconUrl: markerIcon,
-    shadowUrl: markerShadow,
-});
+// Leaflet icon fix removed
 
 const STEPS_ORDER = ['Confirmed', 'En Route', 'Arrived', 'Before Wash', 'Washing', 'After Wash', 'Completed'];
 
@@ -281,6 +269,25 @@ const CaptainJobDetail = () => {
         'Washing': { bg: 'bg-brand', label: 'Wash in Progress', cta: 'Finish & Verify' },
         'After Wash': { bg: 'bg-emerald-600', label: 'Quality Verification', cta: 'Complete & Payout' },
         'Completed': { bg: 'bg-green-500', label: 'Job Finished!', cta: 'Back to Home' },
+        'vehicle_not_available': { bg: 'bg-red-500', label: 'Vehicle Missing', cta: 'Back to Home' },
+        'skipped': { bg: 'bg-gray-500', label: 'Wash Skipped', cta: 'Back to Home' },
+    };
+
+    const handleReportIssue = async () => {
+        const reason = prompt("Why is the vehicle not available? (e.g. Not found, gate locked, owner cancelled)");
+        if (!reason) return;
+
+        setIsVerifying(true);
+        try {
+            const result = await updateJobStatus(liveBooking.id, 'vehicle_not_available', { reason });
+            if (result.success) {
+                navigate('/captain');
+            }
+        } catch (error) {
+            console.error("Report Error:", error);
+        } finally {
+            setIsVerifying(false);
+        }
     };
     const cfg = stepConfig[step] || stepConfig['Done'];
 
@@ -319,26 +326,21 @@ const CaptainJobDetail = () => {
                 </div>
 
                 <div className={`relative rounded-2xl overflow-hidden border shadow-soft transition-colors ${isDarkMode ? 'border-white/5 shadow-2xl shadow-black/40' : 'border-gray-100 shadow-sm'}`} style={{ height: 280 }}>
-                    <MapContainer
-                        center={liveBooking.location?.mapCoordinates ? [liveBooking.location.mapCoordinates.lat, liveBooking.location.mapCoordinates.lng] :
-                            liveBooking.location?.coordinates?.lat ? [liveBooking.location.coordinates.lat, liveBooking.location.coordinates.lng] :
-                                [28.6139, 77.2090]}
+                    <GoogleMapBox
+                        center={liveBooking.location?.mapCoordinates ? { lat: liveBooking.location.mapCoordinates.lat, lng: liveBooking.location.mapCoordinates.lng } :
+                            liveBooking.location?.coordinates?.lat ? { lat: liveBooking.location.coordinates.lat, lng: liveBooking.location.coordinates.lng } :
+                                { lat: 28.6139, lng: 77.2090 }}
                         zoom={15}
-                        style={{ height: '100%', width: '100%' }}
-                        zoomControl={false}
-                    >
-                        <TileLayer
-                            url={isDarkMode ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"}
-                            attribution='&copy; OpenStreetMap'
-                        />
-                        <Marker position={liveBooking.location?.mapCoordinates ? [liveBooking.location.mapCoordinates.lat, liveBooking.location.mapCoordinates.lng] :
-                            liveBooking.location?.coordinates?.lat ? [liveBooking.location.coordinates.lat, liveBooking.location.coordinates.lng] :
-                                [28.6139, 77.2090]}>
-                            <Popup>
-                                <div className="text-[10px] font-bold">Customer Location</div>
-                            </Popup>
-                        </Marker>
-                    </MapContainer>
+                        markers={[
+                            {
+                                id: 'customer',
+                                position: liveBooking.location?.mapCoordinates ? { lat: liveBooking.location.mapCoordinates.lat, lng: liveBooking.location.mapCoordinates.lng } :
+                                    liveBooking.location?.coordinates?.lat ? { lat: liveBooking.location.coordinates.lat, lng: liveBooking.location.coordinates.lng } :
+                                        { lat: 28.6139, lng: 77.2090 },
+                                title: 'Customer Location'
+                            }
+                        ]}
+                    />
                     <button
                         onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(liveBooking.address)}`, '_blank')}
                         className="absolute bottom-3 right-3 bg-brand text-white flex items-center gap-2 px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-md hover:brightness-110 active:scale-95 transition-all z-[1000]"
@@ -545,6 +547,16 @@ const CaptainJobDetail = () => {
             </div>
 
             <div className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md backdrop-blur-md border-t px-4 py-4 z-50 transition-all duration-500 ${isDarkMode ? 'bg-[#1E293B]/90 border-white/5 shadow-[0_-15px_50px_rgba(0,0,0,0.4)]' : 'bg-white/90 border-gray-100 shadow-[0_-15px_40px_rgba(0,0,0,0.05)]'}`}>
+                {step === 'Arrived' && (
+                    <motion.button
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        onClick={handleReportIssue}
+                        className="w-full h-12 mb-3 rounded-2xl border-2 border-red-500/30 text-red-500 font-black text-[10px] uppercase tracking-widest bg-red-500/5 hover:bg-red-500/10 transition-colors"
+                    >
+                        Vehicle Not Found / Issue
+                    </motion.button>
+                )}
                 <motion.button
                     whileTap={{ scale: 0.98 }}
                     onClick={handleNext}

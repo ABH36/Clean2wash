@@ -96,11 +96,21 @@ module.exports = {
                 const { bookingId, location } = data;
                 if (!bookingId || !location) return;
 
-                // Production Logic: Only allow 'captain' or 'staff' or 'vendor' to update location
-                if (userRole === 'captain' || userRole === 'staff' || userRole === 'vendor') {
+                // Production Logic: Only allow 'captain' or 'staff' or 'vendor' or 'sparedriver' to update location
+                if (userRole === 'captain' || userRole === 'staff' || userRole === 'vendor' || userRole === 'sparedriver') {
+                    // 1. Notify Consumer (Booking Room)
                     socket.to(bookingId).emit('location_updated', {
                         bookingId,
                         location,
+                        timestamp: new Date()
+                    });
+
+                    // 2. Notify Admin Control Tower (Elite Protocol)
+                    io.to('admin_room').emit('specialist_location_pulse', {
+                        bookingId,
+                        lat: location.lat,
+                        lng: location.lng,
+                        role: userRole,
                         timestamp: new Date()
                     });
                 }

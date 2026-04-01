@@ -241,9 +241,14 @@ exports.updateTaskStatus = async (req, res) => {
             $or: [
                 { pickupStaff: staffId },
                 { deliveryStaff: staffId },
-                { assignedStaff: staffId }
+                { assignedStaff: staffId },
+                { 'provider.id': staffId }
             ]
-        }).populate('consumer', 'name phone');
+        }).populate('consumer', 'name phone')
+          .populate({
+              path: 'location.hubId',
+              select: 'vendor name'
+          });
 
         if (!booking) {
             return res.status(404).json({ status: 'error', message: 'Resource Locked or Not Found' });
@@ -252,7 +257,9 @@ exports.updateTaskStatus = async (req, res) => {
         // Security PIN logic
         // PIN is required at 'picked-up' (custody transfer from consumer) 
         // and 'completed' (final delivery back to consumer)
-        if (['picked-up', 'completed'].includes(status)) {
+        // Skip PIN for Apartment Wash as it's an unattended service protocol
+        const isApartmentProtocol = !!booking.location?.hubId || booking.service?.category === 'Apartment';
+        if (['picked-up', 'completed'].includes(status) && !isApartmentProtocol) {
             if (!pin) return res.status(400).json({ status: 'error', message: 'Security PIN verification required' });
             if (pin !== booking.securityPin) return res.status(400).json({ status: 'error', message: 'Invalid Security PIN' });
         }
@@ -263,33 +270,65 @@ exports.updateTaskStatus = async (req, res) => {
         }
 
         if (status === 'completed') {
-            if (photos) booking.serviceImages.after = photos;
+            if (photos) {
+                if (booking.service?.category === 'Apartment') {
+                    // For apartment, first set of photos can be after-wash proof
+                    booking.serviceImages.after = photos;
+                    booking.serviceImages.capturedAt = new Date();
+                } else {
+                    booking.serviceImages.after = photos;
+                }
+            }
             booking.payment.status = 'paid';
-            // Calculate 10% commission for staff member
-            const commission = Math.round(booking.pricing.totalAmount * 0.1);
+            
+            // --- ENHANCED COMMISSION LOGIC ---
+            // If it's a subscription wash (totalAmount is 0), use a fixed rate (₹10 per wash)
+            // Otherwise use the standard 10% of the total bill
+            let commission = 0;
+            if (booking.payment?.method === 'subscription') {
+                const isApartmentProtocol = !!booking.location?.hubId || booking.service?.category === 'Apartment';
+                if (isApartmentProtocol) {
+                    commission = 10; // Standard Apartment Hub per-car payout protocol
+                } else {
+                    // Standard Doorstep Instant Wash Subscription: Standard commission from base price
+                    commission = Math.round((booking.pricing?.baseAmount || 0) * 0.1);
+                }
+            } else {
+                commission = Math.round((booking.pricing?.totalAmount || 0) * 0.1);
+            }
+            
             booking.payment.commission = commission;
 
-            // Credit Staff Wallet (Phase 4)
+            // Credit Service Provider Wallet (Phase 4 Hardening)
             try {
-                await walletHelper.executeWalletTransaction(
-                    staffId,
-                    commission,
-                    'credit',
-                    {
-                        category: 'COMMISSION',
-                        description: `Commission for Service #${booking.bookingId || booking._id}`,
-                        referenceId: booking._id,
-                        referenceType: 'booking'
-                    }
-                );
+                // Elite Protocol: For Studio and Apartment Hub bookings, payout goes to the Vendor's Wallet.
+                // For direct independent assignments (Captains), it goes to the Staff/Captain wallet.
+                const isVendorService = booking.service?.type === 'vendor';
+                const hubVendorId = booking.location?.hubId?.vendor;
+                const targetWalletUserId = isVendorService ? (hubVendorId || booking.provider?.id) : staffId;
+
+                if (!targetWalletUserId) {
+                    console.error('Financial Stall: No valid recipient found for payout.');
+                } else {
+                    await walletHelper.executeWalletTransaction(
+                        targetWalletUserId,
+                        commission,
+                        'credit',
+                        {
+                            category: 'COMMISSION',
+                            description: `Commission for Service #${booking.bookingId || booking._id} (${booking.service?.name})`,
+                            referenceId: booking._id,
+                            referenceType: 'booking'
+                        }
+                    );
+                }
 
                 // Trigger Referral Reward (Phase 4)
-                await referralService.processReferralReward(booking.consumer._id, booking._id);
+                if (booking.consumer?._id) {
+                    await referralService.processReferralReward(booking.consumer._id, booking._id);
+                }
             } catch (walletError) {
                 console.error('Financial Handshake Failure:', walletError);
-                // We proceed with saving the booking status even if wallet fails for now, 
-                // but ideally this should be atomic. 
-                // Since this is not in a session here, we at least log it.
             }
         }
 
@@ -343,19 +382,21 @@ exports.updateTaskStatus = async (req, res) => {
             'washing': 'Wash in progress...',
             'quality-check': 'Quality check active.',
             'ready-for-delivery': 'Service finalized! Check your profile for photos.',
-            'completed': 'Task completed!'
+            'completed': 'Task completed!',
+            'skipped': 'Wash skipped for today.',
+            'vehicle_not_available': 'Vehicle was not available at location.'
         };
 
-        // Real-time Socket Sync
-        const socketService = require('../../../socketService');
-        const io = socketService.getIO();
+        // ➕ Phase 3: Total Ecosystem Synchronization
+        
+        // 1. Specific Task Detail Sync (Anyone in the room)
         io.to(booking._id.toString()).emit('booking_status_updated', {
             bookingId: booking._id,
             status: booking.status,
             tracking: booking.tracking
         });
 
-        // ➕ Phase 3: Global Notification Sync
+        // 2. Consumer Personal Sync
         if (booking.consumer) {
             io.to(booking.consumer._id.toString()).emit('booking_status_updated', {
                 bookingId: booking._id,
@@ -364,6 +405,25 @@ exports.updateTaskStatus = async (req, res) => {
                 message: `Service status: ${statusMap[status] || status}`
             });
         }
+
+        // 3. Vendor Personal Sync (via Hub)
+        const vendorId = booking.location.hubId?.vendor;
+        if (vendorId) {
+            io.to(vendorId.toString()).emit('booking_status_updated', {
+                bookingId: booking._id,
+                status: booking.status,
+                tracking: booking.tracking,
+                message: `Staff ${req.user.name} updated task to: ${status}`
+            });
+        }
+
+        // 4. Global Admin Protocol Sync
+        io.to('admin_room').emit('global_status_update', {
+            type: 'task_update',
+            bookingId: booking._id,
+            status: booking.status,
+            staffName: req.user.name
+        });
 
         // Notify Consumer
         const { sendNotification } = require('../../../utils/notificationService');
@@ -532,7 +592,8 @@ exports.commitToSlot = async (req, res) => {
             $or: [
                 { pickupStaff: staffId },
                 { deliveryStaff: staffId },
-                { assignedStaff: staffId }
+                { assignedStaff: staffId },
+                { 'provider.id': staffId }
             ],
             isActive: true
         });
@@ -562,10 +623,27 @@ exports.commitToSlot = async (req, res) => {
 
         // ➕ Phase 3: Global Notification Sync
         if (booking.consumer) {
-            io.to(booking.consumer.toString()).emit('booking_status_updated', {
+            io.to(booking.consumer._id.toString()).emit('booking_status_updated', {
                 bookingId: booking._id,
                 isStaffCommitted: true,
                 message: `Our specialist ${req.user.name} has committed to your scheduled slot.`
+            });
+        }
+
+        // 3. Admin Protocol Sync
+        io.to('admin_room').emit('global_status_update', {
+            type: 'staff_committed',
+            bookingId: booking._id,
+            status: booking.status,
+            staffName: req.user.name
+        });
+
+        // 4. Vendor Protocol Sync
+        const vendorId = booking.location.hubId?.vendor;
+        if (vendorId) {
+            io.to(vendorId.toString()).emit('booking_status_updated', {
+                bookingId: booking._id,
+                isStaffCommitted: true
             });
         }
 
@@ -588,7 +666,8 @@ exports.handleMissedWash = async (req, res) => {
             $or: [
                 { pickupStaff: staffId },
                 { deliveryStaff: staffId },
-                { assignedStaff: staffId }
+                { assignedStaff: staffId },
+                { 'provider.id': staffId }
             ],
             isActive: true
         }).populate('consumer', 'name wallet');
@@ -651,6 +730,25 @@ exports.handleMissedWash = async (req, res) => {
             });
         }
 
+        // 3. Admin Visibility Protocol (Critical for troubleshooting)
+        io.to('admin_room').emit('global_status_update', {
+            type: 'status_changed',
+            bookingId: booking._id,
+            status: 'cancelled',
+            reason: reason || 'Vehicle not available',
+            actor: 'staff'
+        });
+
+        // 4. Vendor Visibility Protocol
+        const vendorId = booking.location.hubId?.vendor;
+        if (vendorId) {
+            io.to(vendorId.toString()).emit('booking_status_updated', {
+                bookingId: booking._id,
+                status: 'cancelled',
+                message: `Task cancelled: ${reason || 'Vehicle Not Found'}`
+            });
+        }
+
         res.status(200).json({
             status: 'success',
             message: 'Missed wash reported and consumer refunded successfully'
@@ -697,11 +795,31 @@ exports.updateProductItemStatus = async (req, res) => {
         const socketService = require('../../../socketService');
         const io = socketService.getIO();
         if (io) {
+            // 1. Order Room
             io.to(order._id.toString()).emit('product_order_status_updated', {
                 orderId: order._id,
                 itemId: item._id,
                 status
             });
+
+            // 2. Admin Global Protocol
+            io.to('admin_room').emit('global_status_update', {
+                type: 'product_status_changed',
+                orderId: order._id,
+                itemId: item._id,
+                status,
+                actor: 'staff'
+            });
+
+            // 3. Vendor Protocol Sync
+            const vendorId = item.vendor; // Populated or present on item level
+            if (vendorId) {
+                io.to(vendorId.toString()).emit('product_order_status_updated', {
+                    orderId: order._id,
+                    itemId: item._id,
+                    status
+                });
+            }
         }
 
         res.status(200).json({ status: 'success', data: { item } });

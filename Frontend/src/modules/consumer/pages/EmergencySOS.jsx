@@ -55,7 +55,7 @@ const EmergencySOS = () => {
             const res = await dispatchSOS({
                 coordinates: coords,
                 address: "Emergency Location (Instant Help)",
-                description: "INSTANT SOS ALERT: User requested immediate assistance via Instant Help button.",
+                description: `INSTANT SOS ALERT: User requested immediate assistance for Order ${liveBooking.bookingId || liveBooking.id}.`,
                 photo: null
             });
 
@@ -99,7 +99,7 @@ const EmergencySOS = () => {
             const res = await dispatchSOS({
                 coordinates: coords,
                 address: "Emergency Location",
-                description: description,
+                description: `[Order: ${liveBooking.bookingId || liveBooking.id}] ${description}`,
                 photo: photo || null
             });
 
@@ -129,10 +129,11 @@ const EmergencySOS = () => {
                     >
                         <ShieldCheck size={48} className="text-green-500" strokeWidth={3} />
                     </motion.div>
-                    <h2 className="text-2xl font-black text-content italic mb-2">SOS ALERT ACTIVE</h2>
-                    <p className="text-sm font-bold text-content-subtle mb-8 uppercase tracking-widest leading-relaxed">
-                        The Admin Command Center & Police<br />Network have been notified.<br />
-                        <span className="text-red-600">STAY IN A SAFE LOCATION.</span>
+                    <h2 className="text-2xl font-black text-content italic mb-2 uppercase">SOS RESPONSE DISPATCHED</h2>
+                    <p className="text-sm font-bold text-content-subtle mb-10 uppercase tracking-widest leading-relaxed">
+                        The <span className="text-brand">Society Hub Manager</span> & <span className="text-red-600">Admin Control Room</span><br />
+                        have been notified of your emergency.<br />
+                        <span className="text-red-700 font-extrabold mt-4 block underline decoration-red-200">STAY IN A SAFE LOCATION.</span>
                     </p>
 
                     <div className="w-full space-y-4">

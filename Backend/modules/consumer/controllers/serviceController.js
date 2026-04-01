@@ -851,7 +851,9 @@ exports.getHubs = catchAsync(async (req, res, next) => {
 
 // Get apartment wash flow data in one payload
 exports.getApartmentFlowData = catchAsync(async (req, res, next) => {
-    const { city = '', serviceKey = 'APARTMENT_WASH' } = req.query;
+    const { city = '', serviceKey = 'APARTMENT_WASH', q = '' } = req.query;
+    console.log(`🏙️ Apartment Discovery Request - City: [${city}], ServiceKey: [${serviceKey}], Search: [${q}]`);
+
     const serviceDoc = await MasterData.findOne({
         type: 'SERVICE',
         isActive: true,
@@ -889,17 +891,39 @@ exports.getApartmentFlowData = catchAsync(async (req, res, next) => {
     serviceAliases.add('apartment-wash');
     serviceAliases.add('apartments');
 
+    const hubQuery = {
+        isActive: true,
+        type: 'Hub'
+    };
+
+    // If search query 'q' is provided, we search globally across all hubs
+    if (q) {
+        hubQuery.$or = [
+            { name: { $regex: q, $options: 'i' } },
+            { city: { $regex: q, $options: 'i' } },
+            { 'location.address': { $regex: q, $options: 'i' } }
+        ];
+    } 
+    // Otherwise, we strictly filter by the user's city
+    else if (city) {
+        hubQuery.city = { $regex: new RegExp(`^${city}$`, 'i') };
+    }
+    // If no city and no query, we return nothing to prevent listing all hubs unnecessarily
+    else {
+        hubQuery._id = null;
+    }
+
+    const hubsPromise = Hub.find(hubQuery)
+        .populate('vendor', 'name profile.studioName profile.avatar rating')
+        .sort({ name: 1 })
+        .lean();
+
     const [dbPlans, dbHubs] = await Promise.all([
         SubscriptionPlan.find({ isActive: true, status: 'Live' }).sort({ price: 1 }).lean(),
-        Hub.find({
-            isActive: true,
-            type: 'Hub',
-            ...(city ? { city } : {})
-        })
-            .populate('vendor', 'name profile.studioName profile.avatar rating')
-            .sort({ name: 1 })
-            .lean()
+        hubsPromise
     ]);
+
+    console.log(`🔍 Hubs found for [${city || 'Global Search'}]: ${dbHubs.length} hubs. Names: ${dbHubs.map(h => h.name).join(', ')}`);
 
     const plans = dbPlans
         .filter((plan) => isPlanApplicableToService(plan, serviceAliases))

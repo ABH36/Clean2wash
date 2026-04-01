@@ -180,6 +180,8 @@ exports.acceptJob = async (req, res) => {
         // Notify via Socket.io (Instantly updates UI from "Finding" to "Tracking")
         try {
             const io = socketService.getIO();
+            
+            // 1. Specific Booking Room Sync (UI transitions to tracking)
             io.to(booking._id.toString()).emit('booking_status_updated', {
                 bookingId: booking._id,
                 status: 'confirmed',
@@ -191,13 +193,30 @@ exports.acceptJob = async (req, res) => {
                 }
             });
 
-            // ➕ Phase 3: Global Notification Sync
-            // Emit to Consumer's personal room for list-view updates
+            // 2. Consumer Personal Sync (List view updates)
             io.to(booking.consumer._id.toString()).emit('booking_status_updated', {
                 bookingId: booking._id,
                 status: 'confirmed',
                 message: `Captain ${req.captain.name} has accepted your booking.`,
                 updatedFields: { 'provider.id': captainId, 'provider.type': 'captain' }
+            });
+
+            // 3. Hub Vendor Sync
+            const vendorId = booking.location?.hubId?.vendor;
+            if (vendorId) {
+                io.to(vendorId.toString()).emit('booking_status_updated', {
+                    bookingId: booking._id,
+                    status: 'confirmed',
+                    message: `Captain ${req.captain.name} assigned to booking reaching your Hub.`
+                });
+            }
+
+            // 4. Global Admin Sync
+            io.to('admin_room').emit('global_status_update', {
+                type: 'captain_assigned',
+                bookingId: booking._id,
+                captainName: req.captain.name,
+                status: 'confirmed'
             });
 
             // Clear other captains' screens
@@ -236,7 +255,7 @@ exports.updateJobStatus = async (req, res) => {
         const { id } = req.params;
         const { status } = req.body;
 
-        const validStatuses = ['confirmed', 'en_route', 'arrived', 'before_photo', 'washing', 'after_photo', 'completed', 'cancelled'];
+        const validStatuses = ['confirmed', 'en_route', 'arrived', 'before_photo', 'washing', 'after_photo', 'completed', 'cancelled', 'vehicle_not_available', 'skipped'];
         if (!status || !validStatuses.includes(status)) {
             return res.status(400).json({
                 status: 'fail',
@@ -265,8 +284,10 @@ exports.updateJobStatus = async (req, res) => {
             console.log(`Status skip detected: ${booking.status} -> ${status}`);
         }
 
-        // Elite Hardening: Security PIN Verification
-        if (status === 'washing' && (booking.status === 'before_photo' || booking.status === 'arrived')) {
+        // Elite Hardening: Security PIN Verification 
+        // Note: Skip PIN for Apartment Wash as it's an unattended service protocol (Consistent with staffController)
+        const isApartmentProtocol = !!booking.location?.hubId || booking.service?.category === 'Apartment';
+        if (status === 'washing' && (booking.status === 'before_photo' || booking.status === 'arrived') && !isApartmentProtocol) {
             const providedPin = req.body.securityPin || req.body.pin;
             if (!providedPin || providedPin !== booking.securityPin) {
                 return res.status(403).json({
@@ -330,12 +351,37 @@ exports.updateJobStatus = async (req, res) => {
         } else if (status === 'completed') {
             booking.tracking.completedAt = new Date();
             if (booking.payment) booking.payment.status = 'paid';
+            
             const amount = booking.pricing?.totalAmount || 0;
-            if (amount > 0) {
-                // Fetch Dynamic Payout details via helper
-                const commissionHelper = require('../../../utils/commissionHelper');
-                const { adminCut, providerPayout, rate } = await commissionHelper.calculatePayout(amount, 'captain');
+            let providerPayout = 0;
+            let adminCut = 0;
 
+            if (booking.payment?.method === 'subscription') {
+                const isApartmentProtocol = !!booking.location?.hubId || booking.service?.category === 'Apartment';
+                if (isApartmentProtocol) {
+                    // Apartment HUB protocol: Fixed payout for subscription service
+                    providerPayout = 10;
+                    adminCut = 0;
+                    booking.payment.commission = providerPayout;
+                } else {
+                    // Standard Doorstep Instant Wash Subscription: Standard payout from base price
+                    const baseAmount = booking.pricing?.baseAmount || 0;
+                    const commissionHelper = require('../../../utils/commissionHelper');
+                    const calc = await commissionHelper.calculatePayout(baseAmount, 'captain');
+                    providerPayout = calc.providerPayout;
+                    adminCut = calc.adminCut;
+                    booking.payment.commission = adminCut;
+                }
+            } else if (amount > 0) {
+                // Fetch Dynamic Payout details via helper (Standard Doorstep/Studio flow)
+                const commissionHelper = require('../../../utils/commissionHelper');
+                const calc = await commissionHelper.calculatePayout(amount, 'captain');
+                providerPayout = calc.providerPayout;
+                adminCut = calc.adminCut;
+                booking.payment.commission = adminCut;
+            }
+
+            if (providerPayout > 0) {
                 // 1. Credit Captain Wallet
                 await executeWalletTransaction(
                     req.captain._id,
@@ -343,7 +389,7 @@ exports.updateJobStatus = async (req, res) => {
                     'credit',
                     {
                         category: 'SERVICE_BOOKING',
-                        description: `Payout for booking ${booking.bookingId || booking._id} (Commission: ₹${adminCut.toFixed(2)})`,
+                        description: `Payout for booking ${booking.bookingId || booking._id}${adminCut > 0 ? ` (Commission: ₹${adminCut.toFixed(2)})` : ''}`,
                         referenceId: booking._id.toString(),
                         referenceType: 'booking_payout'
                     },
@@ -354,23 +400,56 @@ exports.updateJobStatus = async (req, res) => {
                 // --- Referral Reward Logic (Phase 4) ---
                 await referralService.processReferralReward(booking.consumer, booking._id);
             }
+        } else if (status === 'vehicle_not_available') {
+            booking.notes.internal = 'Specialist reported vehicle not available at the location.';
+            booking.notes.provider = req.body.reason || 'Vehicle not found at designated parking.';
+        } else if (status === 'skipped') {
+            booking.notes.internal = 'Specialist reported user skipped the service locally.';
         }
         await booking.save();
 
-        const io = socketService.getIO();
+        // ➕ Phase 3: Global Notification Sync (Ecosystem Synchronization)
+        
+        // 1. Sync for specific booking room (for everyone currently viewing this job)
         io.to(booking._id.toString()).emit('booking_status_updated', {
             bookingId: booking._id,
             status: booking.status,
             tracking: booking.tracking
         });
 
-        // ➕ Phase 3: Global Notification Sync
-        // Emit to Consumer's personal room for list-view updates
-        io.to(booking.consumer.toString()).emit('booking_status_updated', {
+        // 2. Sync for Consumer (User) personal room
+        if (booking.consumer) {
+            io.to(booking.consumer.toString()).emit('booking_status_updated', {
+                bookingId: booking._id,
+                status: booking.status,
+                tracking: booking.tracking,
+                message: `Booking status changed to ${booking.status}`
+            });
+        }
+
+        // 3. Sync for Vendor personal room (via Hub for Apartment/Staff job categories)
+        // Note: Populate the vendor field if not already present
+        const populatedBooking = await Booking.findById(booking._id).populate({
+            path: 'location.hubId',
+            select: 'vendor name'
+        });
+
+        const vendorId = populatedBooking?.location?.hubId?.vendor;
+        if (vendorId) {
+            io.to(vendorId.toString()).emit('booking_status_updated', {
+                bookingId: booking._id,
+                status: booking.status,
+                tracking: booking.tracking,
+                message: `Captain ${req.captain.name} updated task at ${populatedBooking.location.hubId.name} to: ${booking.status}`
+            });
+        }
+
+        // 4. Sync for Global Admin protocol
+        io.to('admin_room').emit('global_status_update', {
+            type: 'task_update',
             bookingId: booking._id,
             status: booking.status,
-            tracking: booking.tracking,
-            message: `Booking status changed to ${booking.status}`
+            staffName: req.captain.name
         });
 
         // Send notification to consumer on status change
@@ -380,17 +459,24 @@ exports.updateJobStatus = async (req, res) => {
 
         if (status === 'en_route') {
             notifTitle = 'Captain En Route! 🚚';
-            notifMsg = `Captain ${req.captain.name} is on the way to your location.`;
-        } else if (status === 'in_progress') {
+            notifMsg = 'Captain is on the way to your location.';
+        } else if (status === 'washing' || status === 'in_progress') {
             notifTitle = 'Wash Started ✨';
-            notifMsg = `Your ${booking.service?.name || 'car wash'} has officially started.`;
+            notifMsg = 'Your car wash has officially started.';
         } else if (status === 'completed') {
             notifTitle = 'Your Car is Clean! ✨';
-            notifMsg = `Captain ${req.captain.name} has finished the wash. Order #${booking.bookingId || booking._id} is complete.`;
+            notifMsg = 'Captain has finished the wash. Order is complete.';
             priority = 'high';
         } else if (status === 'cancelled') {
             notifTitle = 'Booking Cancelled';
-            notifMsg = `Your booking was cancelled. If payment was made, it will be refunded.`;
+            notifMsg = 'Your booking was cancelled. If payment was made, it will be refunded.';
+        } else if (status === 'vehicle_not_available') {
+            notifTitle = 'Vehicle Not Found 🔍';
+            notifMsg = 'Specialist could not find your vehicle at the location.';
+            priority = 'high';
+        } else if (status === 'skipped') {
+            notifTitle = 'Wash Skipped ⏭️';
+            notifMsg = 'Today\'s wash session was skipped as requested.';
         }
 
         if (notifTitle) {

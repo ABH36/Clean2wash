@@ -23,8 +23,8 @@ const AddressSelector = ({ addresses, onSelect, onClose, autoDetect = false }) =
             label: 'Pinned Location',
             street: str.substring(0, 50) + (str.length > 50 ? '...' : ''),
             fullStreet: str,
-            city: mapDetails?.city || 'Bengaluru',
-            state: mapDetails?.state || 'Karnataka',
+            city: mapDetails?.city || '',
+            state: mapDetails?.state || '',
             pincode: mapDetails?.pincode || '',
             coordinates: mapDetails?.coordinates || currentLocation || { lat: 28.6139, lng: 77.2090 }, // Default to Delhi if absolute zero
             isCustom: true

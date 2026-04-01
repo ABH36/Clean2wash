@@ -114,12 +114,21 @@ const AdminBookings = () => {
         socketService.on('new_booking', handleBookingUpdate);
         socketService.on('new_booking_broadcast', handleBookingUpdate);
         socketService.on('specialist_location_pulse', handleLocationPulse);
+        socketService.on('SOS_EMERGENCY_ALERT', (data) => {
+            console.log('[Admin SOS] 🚨 Emergency received:', data);
+            toast.error(`🚨 SOS ALERT: Booking #${data.bookingId}`, { 
+                duration: 10000, 
+                position: 'top-right' 
+            });
+            fetchBookings(true);
+        });
 
         return () => {
             socketService.off('booking_status_updated', handleBookingUpdate);
             socketService.off('new_booking', handleBookingUpdate);
             socketService.off('new_booking_broadcast', handleBookingUpdate);
             socketService.off('specialist_location_pulse', handleLocationPulse);
+            socketService.off('SOS_EMERGENCY_ALERT');
         };
     }, []);
 
@@ -301,7 +310,7 @@ const AdminBookings = () => {
                                         return (
                                             <tr
                                                 key={booking._id}
-                                                className={`hover:bg-gray-50/30 transition-all cursor-pointer group ${hasSOS ? 'bg-red-50/30' : ''}`}
+                                                className={`hover:bg-gray-50/30 transition-all cursor-pointer group ${hasSOS ? 'bg-red-50/30' : serviceName.toLowerCase().includes('outstation') ? 'bg-blue-50/30' : ''}`}
                                                 onClick={() => setSelectedBooking(booking)}
                                             >
                                                 <td className="px-8 py-5">
@@ -417,6 +426,11 @@ const AdminBookings = () => {
                                     {selectedBooking.issues?.some(i => i.type === 'SOS' && i.status === 'open') && (
                                         <span className="text-[9px] font-black text-white bg-red-600 px-3 py-1.5 rounded-full animate-pulse flex items-center gap-1">
                                             <ShieldAlert size={10} /> SOS ACTIVE
+                                        </span>
+                                    )}
+                                    {selectedBooking.service?.name?.toLowerCase().includes('outstation') && (
+                                        <span className="text-[9px] font-black text-white bg-blue-600 px-3 py-1.5 rounded-full flex items-center gap-1 shadow-lg shadow-blue-200">
+                                            <Navigation2 size={10} /> HIGH RISK MISSION
                                         </span>
                                     )}
                                 </div>
@@ -539,9 +553,29 @@ const AdminBookings = () => {
                                             <DetailItem icon={<Zap size={14} />} label="Booked At" value={selectedBooking.createdAt ? new Date(selectedBooking.createdAt).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' }) : '—'} />
                                         )}
                                         <DetailItem icon={<Hash size={14} />} label="Security PIN" value={selectedBooking.securityPin || '—'} />
-                                        <DetailItem icon={<Package size={14} />} label="Amount" value={selectedBooking.price || `₹${selectedBooking.pricing?.totalAmount || 0}`} />
+                                        <DetailItem icon={<Package size={14} />} label="Initial Paid" value={`₹${selectedBooking.pricing?.initialPaidAmount || selectedBooking.pricing?.totalAmount || 0}`} />
+                                        
+                                        {/* ── Pricing Breakdown for Chauffeur ── */}
+                                        {selectedBooking.pricing?.breakdown?.filter(b => b.amount > 0).map((item, idx) => (
+                                            <div key={idx} className="mx-1 p-3 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between">
+                                                <span className="text-[8px] font-black uppercase text-black/30 tracking-widest">{item.name}</span>
+                                                <span className="text-[10px] font-[1000] text-black tracking-tight">+₹{item.amount}</span>
+                                            </div>
+                                        ))}
+
+                                        <DetailItem icon={<Package size={14} />} label="Grand Total" value={selectedBooking.price || `₹${selectedBooking.pricing?.totalAmount || 0}`} />
                                     </div>
                                 </div>
+
+                                {/* Operational Notes (Phase 11 Sync) */}
+                                {selectedBooking.notes?.internal && (
+                                    <div className="space-y-2">
+                                        <h4 className="text-[9px] font-black text-content-subtle uppercase tracking-widest px-1">System Audit Logs</h4>
+                                        <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-100/50">
+                                            <p className="text-[10px] font-bold text-amber-900/60 leading-relaxed whitespace-pre-line">{selectedBooking.notes.internal}</p>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* SOS / Issues Section */}
                                 {selectedBooking.issues?.length > 0 && (

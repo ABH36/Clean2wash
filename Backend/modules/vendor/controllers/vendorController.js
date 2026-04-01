@@ -257,11 +257,25 @@ exports.acceptLead = async (req, res) => {
                     booking: booking
                 });
                 
-                // 2. Notify to consumer's personal room as fallback
+                // 2. Notify to consumer's personal room
                 io.to(booking.consumer._id.toString()).emit('booking_status_updated', {
                     status: 'accepted',
                     bookingId: booking._id,
                     booking: booking
+                });
+
+                // 3. Notify Admin Room for live dashboard sync
+                io.to('admin_room').emit('global_status_update', {
+                    type: 'lead_accepted',
+                    bookingId: booking._id,
+                    status: 'accepted',
+                    actor: 'vendor'
+                });
+
+                // 4. Notify Vendor's own room to sync dashboard
+                io.to(vendorId.toString()).emit('booking_status_updated', {
+                    status: 'accepted',
+                    bookingId: booking._id
                 });
             }
         } catch (socketErr) {
@@ -404,15 +418,17 @@ exports.updateOrderStatus = async (req, res) => {
 
                 try {
                     // ATOMIC WALLET TRANSFER
-                    await walletHelper.executeWalletTransaction({
-                        user: vendorId,
-                        amount: providerPayout,
-                        type: 'credit',
-                        category: 'SERVICE_BOOKING',
-                        description: `Payout for booking ${booking.bookingId || booking._id} (Commission: ₹${adminCut.toFixed(2)})`,
-                        referenceId: booking._id.toString(),
-                        referenceType: 'booking'
-                    });
+                    await walletHelper.executeWalletTransaction(
+                        vendorId,
+                        providerPayout,
+                        'credit',
+                        {
+                            category: 'SERVICE_BOOKING',
+                            description: `Payout for booking ${booking.bookingId || booking._id} (Commission: ₹${adminCut.toFixed(2)})`,
+                            referenceId: booking._id.toString(),
+                            referenceType: 'booking'
+                        }
+                    );
 
                     // Trigger Referral Reward (Phase 4)
                     await referralService.processReferralReward(booking.consumer, booking._id);
@@ -469,22 +485,39 @@ exports.updateOrderStatus = async (req, res) => {
 
         await booking.save();
 
-        // Emit Socket Event
+        // 💎 Dynamic Sync: Comprehensive Socket Broadcast 💎
         const socketService = require('../../../socketService');
         const io = socketService.getIO();
-        io.to(booking._id.toString()).emit('booking_status_updated', {
-            bookingId: booking._id,
-            status: booking.status,
-            serviceImages: booking.serviceImages
-        });
+        if (io) {
+            // 1. Booking Room (Live Track Page)
+            io.to(booking._id.toString()).emit('booking_status_updated', {
+                bookingId: booking._id,
+                status: booking.status,
+                serviceImages: booking.serviceImages
+            });
 
-        // Notify Admin Room for real-time dashboard sync
-        io.to('admin_room').emit('global_status_update', {
-            type: 'status_changed',
-            bookingId: booking._id,
-            status: booking.status,
-            actor: 'vendor'
-        });
+            // 2. Consumer Personal Room (App State Sync)
+            if (booking.consumer) {
+                io.to(booking.consumer.toString()).emit('booking_status_updated', {
+                    bookingId: booking._id,
+                    status: booking.status
+                });
+            }
+
+            // 3. Admin Global Protocol
+            io.to('admin_room').emit('global_status_update', {
+                type: 'status_changed',
+                bookingId: booking._id,
+                status: booking.status,
+                actor: 'vendor'
+            });
+
+            // 4. Vendor Personal Hub (Refresh Dashboard across devices)
+            io.to(vendorId.toString()).emit('booking_status_updated', {
+                bookingId: booking._id,
+                status: booking.status
+            });
+        }
 
         res.status(200).json({
             status: 'success',
@@ -780,25 +813,29 @@ exports.payoutStaff = async (req, res) => {
         // 3. ATOMIC TRANSFER (Phase 4 Refactor)
         const txnId = `PAYROLL-${Date.now()}`;
 
-        await walletHelper.executeWalletTransaction({
-            user: vendorId,
-            amount: amount,
-            type: 'debit',
-            category: 'WITHDRAWAL',
-            description: `Payroll payout to Staff: ${staff.name}. ${note || ''}`,
-            referenceId: txnId,
-            referenceType: 'payout'
-        });
+        await walletHelper.executeWalletTransaction(
+            vendorId,
+            amount,
+            'debit',
+            {
+                category: 'WITHDRAWAL',
+                description: `Payroll payout to Staff: ${staff.name}. ${note || ''}`,
+                referenceId: txnId,
+                referenceType: 'payout'
+            }
+        );
 
-        await walletHelper.executeWalletTransaction({
-            user: staff._id,
-            amount: amount,
-            type: 'credit',
-            category: 'REWARD',
-            description: `Payroll received from Studio. ${note || ''}`,
-            referenceId: txnId,
-            referenceType: 'payout'
-        });
+        await walletHelper.executeWalletTransaction(
+            staff._id,
+            amount,
+            'credit',
+            {
+                category: 'REWARD',
+                description: `Payroll received from Studio. ${note || ''}`,
+                referenceId: txnId,
+                referenceType: 'payout'
+            }
+        );
 
         res.status(200).json({
             status: 'success',
@@ -833,16 +870,18 @@ exports.requestPayout = async (req, res) => {
         }
 
         // Execute atomic debit with transaction logging
-        const txnResult = await walletHelper.executeWalletTransaction({
-            user: vendorId,
+        const txnResult = await walletHelper.executeWalletTransaction(
+            vendorId,
             amount,
-            type: 'debit',
-            category: 'WITHDRAWAL',
-            description: `Bank Withdrawal Request. Account: ${bankDetails?.accountNumber || 'Stored Bank'}`,
-            status: 'pending',
-            referenceType: 'payout',
-            metaData: { bankDetails, requestedAt: new Date() }
-        });
+            'debit',
+            {
+                category: 'WITHDRAWAL',
+                description: `Bank Withdrawal Request. Account: ${bankDetails?.accountNumber || 'Stored Bank'}`,
+                status: 'pending',
+                referenceType: 'payout',
+                metaData: { bankDetails, requestedAt: new Date() }
+            }
+        );
 
         res.status(200).json({
             status: 'success',
@@ -1173,22 +1212,38 @@ exports.assignStaff = async (req, res) => {
             await booking.save();
         }
 
+        // 1. Specific Booking Room (Live tracking status)
         io.to(booking._id.toString()).emit('booking_status_updated', {
             bookingId: booking._id,
             status: booking.status,
             staff: {
-                name: type === 'pickup' ? booking.pickupStaff?.name : booking.deliveryStaff?.name,
-                phone: type === 'pickup' ? booking.pickupStaff?.phone : booking.deliveryStaff?.phone,
+                name: type === 'pickup' ? booking.pickupStaff?.name : (type === 'delivery' ? booking.deliveryStaff?.name : booking.assignedStaff?.name),
+                phone: type === 'pickup' ? booking.pickupStaff?.phone : (type === 'delivery' ? booking.deliveryStaff?.phone : booking.assignedStaff?.phone),
                 type: type
             }
         });
 
-        // 2.5 Notify Admin Room for real-time dashboard sync
+        // 2. Consumer Personal Room (App refresh)
+        if (booking.consumer) {
+            io.to(booking.consumer._id.toString()).emit('booking_status_updated', {
+                bookingId: booking._id,
+                status: booking.status,
+                message: `Specialist assigned for your ${type || 'service'}`
+            });
+        }
+
+        // 3. Admin Global Protocol
         io.to('admin_room').emit('global_status_update', {
             type: 'status_changed',
             bookingId: booking._id,
             status: booking.status,
             actor: 'vendor'
+        });
+
+        // 4. Vendor Personal Hub (Refresh dashboard on other devices)
+        io.to(req.user._id.toString()).emit('booking_status_updated', {
+            bookingId: booking._id,
+            status: booking.status
         });
 
         // 3. New: Direct Push to Staff Terminal
@@ -1261,10 +1316,34 @@ exports.verifyBookingPin = async (req, res) => {
         // Notify via Socket
         const socketService = require('../../../socketService');
         const io = socketService.getIO();
+        // 1. Booking Room
         io.to(booking._id.toString()).emit('booking_status_updated', {
             bookingId: booking._id,
             status: booking.status,
             message: 'PIN Verified! Handover complete.'
+        });
+
+        // 2. Consumer Room
+        if (booking.consumer) {
+            io.to(booking.consumer.toString()).emit('booking_status_updated', {
+                bookingId: booking._id,
+                status: booking.status,
+                message: 'PIN Verified! Your car is now with our specialist.'
+            });
+        }
+
+        // 3. Admin Room
+        io.to('admin_room').emit('global_status_update', {
+            type: 'status_changed',
+            bookingId: booking._id,
+            status: booking.status,
+            actor: 'vendor'
+        });
+
+        // 4. Vendor Hub
+        io.to(vendorId.toString()).emit('booking_status_updated', {
+            bookingId: booking._id,
+            status: booking.status
         });
 
         res.status(200).json({

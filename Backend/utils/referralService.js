@@ -50,26 +50,32 @@ exports.processReferralReward = async (refereeId, bookingId) => {
         try {
             await session.withTransaction(async () => {
                 // Credit Referrer
-                await walletHelper.executeWalletTransaction({
-                    user: referrer._id,
-                    amount: referrerReward,
-                    type: 'credit',
-                    category: 'REFERRAL',
-                    description: `Referral Reward: ${referee.name} completed their first wash!`,
-                    referenceId: bookingId,
-                    referenceType: 'booking'
-                }, session);
+                await walletHelper.executeWalletTransaction(
+                    referrer._id,
+                    referrerReward,
+                    'credit',
+                    {
+                        category: 'REFERRAL',
+                        description: `Referral Reward: ${referee.name} completed their first wash!`,
+                        referenceId: bookingId,
+                        referenceType: 'booking'
+                    },
+                    session
+                );
 
                 // Credit Referee
-                await walletHelper.executeWalletTransaction({
-                    user: referee._id,
-                    amount: refereeReward,
-                    type: 'credit',
-                    category: 'REFERRAL',
-                    description: `Welcome Reward: Referral from ${referrer.name}`,
-                    referenceId: bookingId,
-                    referenceType: 'booking'
-                }, session);
+                await walletHelper.executeWalletTransaction(
+                    referee._id,
+                    refereeReward,
+                    'credit',
+                    {
+                        category: 'REFERRAL',
+                        description: `Welcome Reward: Referral from ${referrer.name}`,
+                        referenceId: bookingId,
+                        referenceType: 'booking'
+                    },
+                    session
+                );
 
                 // Update Referrer stats
                 await User.findByIdAndUpdate(referrer._id, {

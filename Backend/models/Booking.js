@@ -116,6 +116,20 @@ const bookingSchema = new mongoose.Schema({
                 coordinates: { type: [Number], default: [0, 0] } // [lng, lat]
             }
         },
+        destination: {
+            street: String,
+            city: String,
+            state: String,
+            pincode: String,
+            coordinates: {
+                lat: Number,
+                lng: Number
+            },
+            geoPoint: {
+                type: { type: String, default: 'Point' },
+                coordinates: { type: [Number], default: [0, 0] } // [lng, lat]
+            }
+        },
         landmark: String,
         instructions: String,
         hubId: {
@@ -134,9 +148,10 @@ const bookingSchema = new mongoose.Schema({
         type: String,
         enum: [
             'pending', 'confirmed', 'accepted', 'assigned', 'pickup-assigned',
-            'en_route', 'arrived', 'picked-up', 'before_photo', 'at-studio', 'washing',
+            'en_route', 'arrived', 'active', 'picked-up', 'before_photo', 'at-studio', 'washing',
             'in_progress', 'after_photo', 'quality-check', 'ready-for-delivery',
-            'delivery-assigned', 'out_for_delivery', 'at_delivery_address', 'completed', 'cancelled', 'refunded'
+            'delivery-assigned', 'out_for_delivery', 'at_delivery_address', 'completed', 'cancelled', 'refunded',
+            'skipped', 'vehicle_not_available'
         ],
         default: 'pending'
     },
@@ -181,6 +196,10 @@ const bookingSchema = new mongoose.Schema({
         ref: 'User'
     },
     deliveryStaff: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    assignedStaff: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     },
@@ -393,6 +412,16 @@ bookingSchema.pre('save', async function () {
         const { lat, lng } = this.location.address.coordinates;
         if (lat && lng) {
             this.location.address.geoPoint = {
+                type: 'Point',
+                coordinates: [lng, lat]
+            };
+        }
+    }
+
+    if (this.location && this.location.destination && this.location.destination.coordinates) {
+        const { lat, lng } = this.location.destination.coordinates;
+        if (lat && lng) {
+            this.location.destination.geoPoint = {
                 type: 'Point',
                 coordinates: [lng, lat]
             };

@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import GoogleMapBox from '../../../components/common/GoogleMapBox';
 import {
     ChevronLeft, Search, MapPin, Star, Clock,
     Filter, SlidersHorizontal, Navigation, ArrowRight,
@@ -12,30 +10,6 @@ import {
 import MobileLayout from '../components/layout/MobileLayout';
 import LocationContext from '../../../context/LocationContextBase';
 import { serviceAPI } from '../../../utils/api';
-
-// Fix Leaflet marker icon issue in production/Vite
-const studioIcon = new L.Icon({
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png',
-    iconSize: [38, 38],
-    iconAnchor: [19, 38],
-    popupAnchor: [0, -38]
-});
-
-const userIcon = new L.Icon({
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/7077/7077313.png',
-    iconSize: [30, 30],
-    iconAnchor: [15, 30],
-    popupAnchor: [0, -30]
-});
-
-// Helper component to center map
-const RecenterMap = ({ lat, lng }) => {
-    const map = useMap();
-    useEffect(() => {
-        if (lat && lng) map.setView([lat, lng], 13);
-    }, [lat, lng, map]);
-    return null;
-};
 
 const StudioDiscovery = () => {
     const navigate = useNavigate();
@@ -164,44 +138,61 @@ const StudioDiscovery = () => {
                             exit={{ opacity: 0, scale: 0.95 }}
                             className="h-[60vh] rounded-[2.5rem] overflow-hidden border-2 border-white shadow-2xl relative"
                         >
-                            <MapContainer
-                                center={[currentLocation?.lat || 28.7041, currentLocation?.lng || 77.1025]}
+                            <GoogleMapBox 
+                                center={{
+                                    lat: currentLocation?.lat || 28.7041,
+                                    lng: currentLocation?.lng || 77.1025
+                                }}
                                 zoom={13}
-                                className="h-full w-full z-10"
-                            >
-                                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                                <RecenterMap lat={currentLocation?.lat} lng={currentLocation?.lng} />
-
-                                {currentLocation && (
-                                    <Marker position={[currentLocation.lat, currentLocation.lng]} icon={userIcon}>
-                                        <Popup>You are here</Popup>
-                                    </Marker>
-                                )}
-
-                                {studios.map(studio => (
-                                    <Marker
-                                        key={studio.id}
-                                        position={[studio.coordinates[1], studio.coordinates[0]]}
-                                        icon={studioIcon}
-                                    >
-                                        <Popup>
-                                            <div className="p-1 min-w-[150px]">
-                                                <img src={studio.image} className="w-full h-20 object-cover rounded-lg mb-2" alt={studio.name} />
-                                                <h4 className="font-black text-xs uppercase mb-1">{studio.name}</h4>
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-brand font-black italic">{studio.price}</span>
-                                                    <button
-                                                        onClick={() => navigate(`/service/${studio.id}`)}
-                                                        className="bg-black text-white text-[8px] px-2 py-1 rounded-md font-black uppercase"
-                                                    >
-                                                        Details
-                                                    </button>
+                                markers={[
+                                    ...(currentLocation ? [{
+                                        position: { lat: currentLocation.lat, lng: currentLocation.lng },
+                                        icon: {
+                                            url: 'https://cdn-icons-png.flaticon.com/512/7077/7077313.png',
+                                            scaledSize: new window.google.maps.Size(30, 30),
+                                            anchor: new window.google.maps.Point(15, 30)
+                                        },
+                                        infoContent: <div className="p-1 font-bold text-xs uppercase text-brand">You are here</div>
+                                    }] : []),
+                                    ...(studios.map(studio => ({
+                                        position: { 
+                                            lat: studio.coordinates[1], 
+                                            lng: studio.coordinates[0] 
+                                        },
+                                        icon: {
+                                            url: 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png',
+                                            scaledSize: new window.google.maps.Size(42, 42),
+                                            anchor: new window.google.maps.Point(21, 42)
+                                        },
+                                        infoContent: (
+                                            <div className="p-0 min-w-[180px] bg-white rounded-2xl overflow-hidden font-outfit shadow-2xl border border-gray-100">
+                                                <div className="relative h-24">
+                                                    <img src={studio.image} className="w-full h-full object-cover" alt={studio.name} />
+                                                    <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-md px-1.5 py-0.5 rounded-lg flex items-center gap-1">
+                                                        <Star size={10} className="text-amber-400" fill="currentColor" />
+                                                        <span className="text-[10px] font-black">{studio.rating}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="p-3">
+                                                    <h4 className="font-black text-[11px] uppercase tracking-tight mb-1 text-black truncate">{studio.name}</h4>
+                                                    <div className="flex items-center justify-between mt-2">
+                                                        <div>
+                                                            <p className="text-[7px] font-black text-gray-400 uppercase tracking-widest leading-none">Starting from</p>
+                                                            <p className="text-brand font-black text-sm italic">{studio.price}</p>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => navigate(`/service/${studio.id}`)}
+                                                            className="bg-black text-white text-[9px] px-3 py-2 rounded-xl font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-black/10"
+                                                        >
+                                                            Book
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </Popup>
-                                    </Marker>
-                                ))}
-                            </MapContainer>
+                                        )
+                                    })))
+                                ]}
+                            />
 
                             {!currentLocation && (
                                 <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-20 flex flex-col items-center justify-center text-center p-10">

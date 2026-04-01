@@ -19,17 +19,8 @@ import apiClient from '../../../utils/api';
 import { socketService } from '../../../utils/socket';
 import MobileLayout from '../components/layout/MobileLayout';
 import AddressSelector from '../components/AddressSelector';
-import { MapContainer, TileLayer, Marker, useMap, Pane } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
-
-// Leaflet Icon Fix for Vite
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
+import GoogleMapBox from '../../../components/common/GoogleMapBox';
+// Leaflet remnants removed
 
 const PHASES = {
     IDLE: 'IDLE',
@@ -176,7 +167,6 @@ const FullWashBooking = () => {
             setLastWalletLoad(Date.now());
         }
     }, [phase, loadWallet, lastWalletLoad]);
-    const [showAddVehicleModal, setShowAddVehicleModal] = useState(false);
     const [activeVideoUrl, setActiveVideoUrl] = useState('');
     const [videoPlaying, setVideoPlaying] = useState(false);
 
@@ -329,8 +319,8 @@ const FullWashBooking = () => {
 
         // Use the same robust logic as backend Subscription.js
         return plan.applicableServices?.some(serviceName => {
-            if (serviceName === 'Instant Wash') {
-                return service.category === 'Doorstep';
+            if (serviceName === 'Instant Wash' || serviceName === 'Studio Wash') {
+                return service.category === 'Doorstep' || service.category === 'Studio' || service.category === 'Studio Detailing';
             }
             if (serviceName === 'Studio Wash') {
                 return service.category === 'Studio' || service.category === 'Studio Detailing';
@@ -496,7 +486,7 @@ const FullWashBooking = () => {
 
         // 1. Calculate Base Totals
         let baseServiceTotal = servicesAndSubs.reduce((sum, item) => {
-            if (item.type === 'service' && !item.isAddon && (canUseSubscription(item.serviceId) || hasSubscriptionInCart)) {
+            if (item.type === 'service' && !item.isAddon && canUseSubscription(item.serviceId)) {
                 return sum + 0;
             }
             return sum + Number(item.price || 0);
@@ -523,7 +513,7 @@ const FullWashBooking = () => {
             const discountedServiceTotal = servicesAndSubs.reduce((sum, item) => {
                 const itemPrice = Number(item.price || 0);
                 if (item.type === 'subscription') return sum + itemPrice;
-                if (canUseSubscription(item.serviceId) || item.isSubscribedWash || hasSubscriptionInCart) return sum + 0;
+                if (canUseSubscription(item.serviceId) || item.isSubscribedWash) return sum + 0;
                 
                 // Only apply 30% if service is eligible for Black Pass
                 if (isServiceEligibleForBlackPass(item.serviceId)) {
@@ -766,11 +756,28 @@ const FullWashBooking = () => {
 
                         setActiveBookingId(savedId);
                         setActiveBooking(b);
-                        if (['pending'].includes(b.status)) setPhase(PHASES.FINDING);
-                        else if (['confirmed', 'accepted', 'assigned', 'pickup-assigned', 'en_route', 'at-studio', 'in_progress'].includes(b.status)) setPhase(PHASES.LIVE_TRACK);
+
+                        // 🚨 Isolated Recovery: Only transition phase if booking matches selected vehicle
+                        const bookingVid = (b.vehicle?._id || b.vehicle?.id || b.vehicle)?.toString();
+                        const currentVid = (selectedVehicle?._id || selectedVehicle?.id)?.toString();
+
+                        if (bookingVid && currentVid && bookingVid === currentVid) {
+                            if (['pending'].includes(b.status)) setPhase(PHASES.FINDING);
+                            else if (['confirmed', 'accepted', 'assigned', 'pickup-assigned', 'en_route', 'at-studio', 'in_progress'].includes(b.status)) setPhase(PHASES.LIVE_TRACK);
+                        } else {
+                            console.log('Clean-2-Wash: Found active Studio booking for different car, keeping isolated.');
+                        }
                     }
                 } catch (err) {
                     console.error('Session recovery failed:', err);
+                    // Standardize cleanup if the backend forcefully pruned or we hit an invalid state
+                    if (err.message?.includes('404') || err.message?.toLowerCase().includes('not found')) {
+                        console.log('Clean-2-Wash: Clearing stale booking session');
+                        sessionStorage.removeItem('fw_active_booking_id');
+                        sessionStorage.removeItem('fw_phase');
+                        setActiveBookingId(null);
+                        setPhase(PHASES.SELECT_VEHICLE);
+                    }
                 }
             }
         };
@@ -780,7 +787,8 @@ const FullWashBooking = () => {
     // --- Action Handlers ---
     const handleInstantWash = () => {
         if (!selectedVehicle) {
-            setShowAddVehicleModal(true);
+            toast.error('Register your vehicle in Garaj first!');
+            setTimeout(() => navigate('/vehicles?from=full-wash'), 1000);
             return;
         }
 
@@ -808,175 +816,7 @@ const FullWashBooking = () => {
         setPhase(PHASES.CART);
     };
 
-    const renderAddVehicleModal = () => {
-        const filteredCatalog = (globalCatalog || []).filter(item =>
-            item.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.model.toLowerCase().includes(searchQuery.toLowerCase())
-        );
 
-        return (
-            <AnimatePresence>
-                {showAddVehicleModal && (
-                    <div className="fixed inset-0 z-[200] flex items-end justify-center">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setShowAddVehicleModal(false)}
-                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                        />
-                        <motion.div
-                            initial={{ y: '100%' }}
-                            animate={{ y: 0 }}
-                            exit={{ y: '100%' }}
-                            className="relative w-full max-w-lg bg-[#F8FAFC] rounded-t-[3rem] p-6 flex flex-col max-h-[90vh] shadow-2xl overflow-hidden"
-                        >
-                            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6 shrink-0 active:scale-90 transition-transform cursor-pointer" onClick={() => setShowAddVehicleModal(false)} />
-
-                            {!selectedGlobalModel ? (
-                                <>
-                                    <div className="flex items-center justify-between mb-6">
-                                        <h3 className="text-[20px] font-black text-black uppercase tracking-tight">Select Global Model</h3>
-                                        <div className="flex items-center gap-2 bg-brand/10 px-3 py-1 rounded-full">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
-                                            <span className="text-[9px] font-black text-brand uppercase tracking-widest">Admin Catalog</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="relative mb-6">
-                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                                        <input
-                                            type="text"
-                                            placeholder="Search brand or model (e.g. BMW, Baleno)"
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="w-full bg-white border border-gray-100 rounded-2xl py-4 pl-12 pr-4 text-[13px] font-bold shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/20 transition-all"
-                                        />
-                                    </div>
-
-                                    <div className="flex-1 overflow-y-auto space-y-3 pr-1 -mr-1 custom-scrollbar pb-10">
-                                        {filteredCatalog.length > 0 ? (
-                                            filteredCatalog.map((item) => (
-                                                <motion.div
-                                                    key={item._id}
-                                                    whileTap={{ scale: 0.98 }}
-                                                    onClick={() => setSelectedGlobalModel(item)}
-                                                    className="bg-white p-3 rounded-2xl border border-gray-100 flex items-center gap-4 hover:border-brand shadow-sm transition-all"
-                                                >
-                                                    <div className="w-16 h-16 bg-gray-50 rounded-xl overflow-hidden shadow-inner flex-shrink-0">
-                                                        <img
-                                                            src={sanitizeUrl(item.image)}
-                                                            className="w-full h-full object-cover"
-                                                            alt={item.model}
-                                                            onError={handleImageError}
-                                                        />
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <h4 className="text-[14px] font-black text-black leading-tight uppercase">{item.brand} {item.model}</h4>
-                                                        <div className="flex items-center gap-2 mt-1">
-                                                            <span className="text-[8px] font-black text-black/30 uppercase tracking-widest">{item.type}</span>
-                                                            <div className="w-1 h-1 rounded-full bg-brand" />
-                                                            <span className="text-[8px] font-black text-brand uppercase tracking-widest">{item.difficulty} Protocol</span>
-                                                        </div>
-                                                    </div>
-                                                    <ChevronRight size={18} className="text-gray-300" />
-                                                </motion.div>
-                                            ))
-                                        ) : (
-                                            <div className="py-20 text-center">
-                                                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                    <Search size={24} className="text-gray-300" />
-                                                </div>
-                                                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Model not found in Studio Catalog</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="flex flex-col h-full animate-in slide-in-from-right duration-300">
-                                    <button
-                                        onClick={() => setSelectedGlobalModel(null)}
-                                        className="flex items-center gap-2 text-gray-400 mb-6 hover:text-black transition-colors"
-                                    >
-                                        <ChevronLeft size={20} />
-                                        <span className="text-[11px] font-black uppercase tracking-widest">Back to catalog</span>
-                                    </button>
-
-                                    <div className="bg-white border-2 border-brand rounded-[2.5rem] p-6 mb-8 relative overflow-hidden shadow-xl shadow-brand/5">
-                                        <div className="absolute top-0 right-0 w-32 h-full bg-brand/5 skew-x-[-20deg]" />
-                                        <div className="relative z-10 flex items-center gap-6">
-                                            <div className="w-24 h-24 bg-black rounded-2xl overflow-hidden shadow-2xl border border-brand/20">
-                                                <img
-                                                    src={sanitizeUrl(selectedGlobalModel.image)}
-                                                    className="w-full h-full object-cover"
-                                                    alt={selectedGlobalModel.model}
-                                                    onError={handleImageError}
-                                                />
-                                            </div>
-                                            <div>
-                                                <h3 className="text-[22px] font-black text-black leading-none uppercase tracking-tight">{selectedGlobalModel.brand}</h3>
-                                                <h4 className="text-[18px] font-black text-brand leading-none uppercase mt-1">{selectedGlobalModel.model}</h4>
-                                                <div className="inline-flex items-center gap-2 bg-black text-white px-2.5 py-1 rounded-lg mt-3">
-                                                    <LayoutGrid size={12} className="text-brand" />
-                                                    <span className="text-[9px] font-black uppercase tracking-widest">{selectedGlobalModel.type} Protocol</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] ml-2 mb-2 block">Registration Plate</label>
-                                            <input
-                                                type="text"
-                                                placeholder="Enter Plate Number (e.g. DL10CZ4567)"
-                                                value={plateNumber}
-                                                onChange={(e) => setPlateNumber(e.target.value)}
-                                                className="w-full bg-white border border-gray-100 rounded-[1.4rem] py-4 px-6 text-[15px] font-[1000] tracking-wider uppercase shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/20 transition-all placeholder:text-gray-200"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] ml-2 mb-2 block">Body Color</label>
-                                            <input
-                                                type="text"
-                                                placeholder="Vehicle Color (e.g. Black, Pearl White)"
-                                                value={vehicleColor}
-                                                onChange={(e) => setVehicleColor(e.target.value)}
-                                                className="w-full bg-white border border-gray-100 rounded-[1.4rem] py-4 px-6 text-[13px] font-bold shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/20 transition-all"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-auto pt-10 pb-4">
-                                        <button
-                                            onClick={handleRegisterVehicle}
-                                            disabled={isAddingVehicle || !plateNumber || !vehicleColor}
-                                            className={`w-full h-16 rounded-[1.6rem] font-black text-[13px] uppercase tracking-[0.25em] flex items-center justify-center gap-4 shadow-2xl transition-all active:scale-95 ${isAddingVehicle || !plateNumber || !vehicleColor
-                                                ? 'bg-gray-100 text-gray-300'
-                                                : 'bg-[#1A1A1A] text-white shadow-black/20'
-                                                }`}
-                                        >
-                                            {isAddingVehicle ? (
-                                                <>
-                                                    <Loader2 className="animate-spin" size={20} />
-                                                    <span>Registering...</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <span>Activate Protocol</span>
-                                                    <ShieldCheck size={20} className="text-brand" />
-                                                </>
-                                            )}
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-        );
-    };
 
     const handleApplyCoupon = async (specificCode) => {
         const codeToApply = (specificCode || couponCode || '').trim().toUpperCase();
@@ -988,7 +828,7 @@ const FullWashBooking = () => {
             return;
         }
         try {
-            const activeServiceName = effectiveItems.find(i => i.serviceId)?.serviceName || 'Instant Wash';
+            const activeServiceName = effectiveItems.find(i => i.serviceId)?.serviceName || 'Studio Wash';
             const res = await serviceAPI.validateCoupon(codeToApply, totalCartPrice, activeServiceName);
             if (res.status === 'success') {
                 setAppliedCoupon(res.data.coupon);
@@ -1059,7 +899,7 @@ const FullWashBooking = () => {
                     <div>
                         <p className="text-[10px] font-black text-brand uppercase tracking-[0.2em] mb-1">Station 01 / LIVE</p>
                         <h1 className="text-[22px] font-[1000] text-black leading-none uppercase tracking-tighter">
-                            Instant Wash
+                            Studio Wash
                         </h1>
                         <p className="text-[8px] font-black text-black/30 uppercase tracking-[0.15em] mt-1 flex items-center gap-2">
                             Protocol Ready for <span className="text-black font-black">{user?.name || 'Authorized User'}</span>
@@ -1922,99 +1762,78 @@ const FullWashBooking = () => {
         // captainPos is updated via socket in parent useEffect
         const hasCaptain = activeBooking?.provider?.id && captainPos && captainPos.lat !== 30;
 
-        const userIcon = L.divIcon({
-            className: 'custom-user-pin',
-            html: `
-                <div class="relative">
-                    <div class="absolute -inset-4 bg-brand/30 rounded-full animate-ping"></div>
-                    <div class="absolute -inset-2 bg-brand/50 rounded-full animate-pulse"></div>
-                    <div class="relative w-4 h-4 bg-white rounded-full border-2 border-brand shadow-xl"></div>
-                </div>
-            `,
-            iconSize: [16, 16],
-            iconAnchor: [8, 8]
-        });
+        const userMarkers = [
+            {
+                position: userCoords,
+                icon: {
+                    url: 'https://cdn-icons-png.flaticon.com/512/7077/7077313.png',
+                    scaledSize: { width: 30, height: 30 },
+                    anchor: { x: 15, y: 30 }
+                }
+            }
+        ];
 
-        const expertIcon = L.divIcon({
-            className: 'custom-expert-pin',
-            html: `
-                <div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center border-2 border-brand shadow-xl">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
-                    </svg>
-                </div>
-            `,
-            iconSize: [32, 32],
-            iconAnchor: [16, 16]
-        });
+        const captainMarkers = hasCaptain ? [
+            {
+                position: captainPos,
+                icon: {
+                    url: 'https://cdn-icons-png.flaticon.com/512/2966/2966327.png',
+                    scaledSize: { width: 40, height: 40 },
+                    anchor: { x: 20, y: 40 }
+                }
+            }
+        ] : [];
 
         return (
             <div className="flex flex-col min-h-screen bg-[#F8F9FB] relative overflow-hidden font-sans">
                 {/* Map Layer - Rapido Style (Light Navigation) */}
                 <div className="absolute inset-0 z-0">
-                    <MapContainer
-                        center={[userCoords.lat, userCoords.lng]}
+                    <GoogleMapBox
+                        center={userCoords}
                         zoom={15}
-                        style={{ height: '100%', width: '100%' }}
-                        zoomControl={false}
-                        attributionControl={false}
-                    >
-                        <TileLayer
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        />
+                        markers={[...userMarkers, ...captainMarkers]}
+                        options={{
+                            gestureHandling: 'none',
+                            zoomControl: false,
+                            streetViewControl: false,
+                            mapTypeControl: false,
+                            fullscreenControl: false
+                        }}
+                    />
 
-                        {/* 🌊 Pulsing Concentric Waves (10km scale) */}
-                        <Pane name="waves" style={{ zIndex: 300 }}>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                {[0, 1, 2].map(i => (
-                                    <motion.div
-                                        key={i}
-                                        initial={{ scale: 0.1, opacity: 0.6 }}
-                                        animate={{ scale: [1, 4], opacity: [0.6, 0] }}
-                                        transition={{ repeat: Infinity, duration: 4, delay: i * 1.3, ease: "easeOut" }}
-                                        className={`absolute w-64 h-64 rounded-full border-2 ${isBlackPassMember ? 'border-brand/30 bg-brand/5' : 'border-black/5'}`}
-                                        style={{ left: '50%', top: '50%', marginLeft: '-8rem', marginTop: '-8rem' }}
-                                    />
-                                ))}
-                            </div>
-                        </Pane>
-
-                        {/* User Location Pulse */}
-                        <Marker position={[userCoords.lat, userCoords.lng]} icon={userIcon} />
-
-                        {/* Search Area Badge (Floating over user) */}
-                        <Pane name="badges" style={{ zIndex: 600 }}>
-                            {isBlackPassMember && (
-                                <div className="absolute top-[40%] left-1/2 -translate-x-1/2 -translate-y-[60px] pointer-events-none">
-                                    <motion.div
-                                        initial={{ opacity: 0, scale: 0.8 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        className="bg-brand text-black px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-2xl border border-white/20"
-                                    >
-                                        <Crown size={12} fill="currentColor" strokeWidth={3} />
-                                        <span className="text-[9px] font-[1000] uppercase tracking-widest">Black Priority active</span>
-                                    </motion.div>
-                                </div>
-                            )}
-                        </Pane>
-
-                        {/* Real Expert marker — only shown after expert is assigned */}
-                        {hasCaptain && (
-                            <Marker
-                                position={[captainPos.lat, captainPos.lng]}
-                                icon={expertIcon}
+                    {/* 🌊 Pulsing Concentric Waves (UI Layer over map center) */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                        {[0, 1, 2].map(i => (
+                            <motion.div
+                                key={i}
+                                initial={{ scale: 0.1, opacity: 0.6 }}
+                                animate={{ scale: [1, 4], opacity: [0.6, 0] }}
+                                transition={{ repeat: Infinity, duration: 4, delay: i * 1.3, ease: "easeOut" }}
+                                className={`absolute w-64 h-64 rounded-full border-2 ${isBlackPassMember ? 'border-brand/30 bg-brand/5' : 'border-black/5'}`}
                             />
-                        )}
+                        ))}
+                    </div>
 
-                        {/* Scanner Effect */}
-                        {findingTime > 0 && (
-                            <Pane name="scanner" style={{ zIndex: 400 }}>
-                                <div className="absolute inset-0 pointer-events-none">
-                                    <div className="w-full h-full bg-gradient-to-b from-brand/10 via-transparent to-transparent animate-[scan_3s_infinite_linear]" />
-                                </div>
-                            </Pane>
-                        )}
-                    </MapContainer>
+                    {/* Search Area Badge (Floating over user) */}
+                    {isBlackPassMember && (
+                        <div className="absolute top-[40%] left-1/2 -translate-x-1/2 -translate-y-[60px] pointer-events-none z-20">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="bg-brand text-black px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-2xl border border-white/20"
+                            >
+                                <Crown size={12} fill="currentColor" strokeWidth={3} />
+                                <span className="text-[9px] font-[1000] uppercase tracking-widest">Black Priority active</span>
+                            </motion.div>
+                        </div>
+                    )}
+
+                    {/* Scanner Effect */}
+                    {findingTime > 0 && (
+                        <div className="absolute inset-0 pointer-events-none z-10">
+                            <div className="w-full h-full bg-gradient-to-b from-brand/10 via-transparent to-transparent animate-[scan_3s_infinite_linear]" />
+                        </div>
+                    )}
                 </div>
 
                 {/* Top Status - Floating Pill (Maximizes Map View) */}
@@ -2134,57 +1953,42 @@ const FullWashBooking = () => {
 
     const renderLiveTrack = () => {
         const userCoords = selectedLocation?.coordinates || selectedAddress?.coordinates || currentLocation || { lat: 28.6139, lng: 77.2090 };
-        // If captainPos is not set yet, mock it somewhere nearby initially
         const currentCaptainCoords = (captainPos.lat && captainPos.lng)
-            ? [captainPos.lat, captainPos.lng]
-            : [userCoords.lat + 0.015, userCoords.lng + 0.01];
+            ? captainPos
+            : { lat: userCoords.lat + 0.015, lng: userCoords.lng + 0.01 };
 
         const isCompleted = activeBooking?.status === 'completed';
 
-        const expertIcon = L.divIcon({
-            className: 'custom-expert-tracking',
-            html: `
-                <div class="relative">
-                    <div class="absolute -inset-6 bg-indigo-500/20 rounded-full animate-pulse"></div>
-                    <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border-2 border-indigo-600 shadow-[0_10px_30px_rgba(99,102,241,0.4)]">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="3">
-                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
-                        </svg>
-                    </div>
-                </div>
-            `,
-            iconSize: [48, 48],
-            iconAnchor: [24, 24]
-        });
-
-        const userPin = L.divIcon({
-            className: 'user-pin-tracking',
-            html: `<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg"></div>`,
-            iconSize: [16, 16],
-            iconAnchor: [8, 8]
-        });
+        const trackingMarkers = [
+            {
+                position: userCoords,
+                icon: {
+                    url: 'https://cdn-icons-png.flaticon.com/512/7077/7077313.png',
+                    scaledSize: new window.google.maps.Size(30, 30),
+                    anchor: new window.google.maps.Point(15, 30)
+                }
+            },
+            {
+                position: currentCaptainCoords,
+                icon: {
+                    url: 'https://cdn-icons-png.flaticon.com/512/2966/2966327.png',
+                    scaledSize: new window.google.maps.Size(45, 45),
+                    anchor: new window.google.maps.Point(22, 45)
+                }
+            }
+        ];
 
         return (
             <div className="fixed inset-0 bg-[#F8F9FB] z-[100] flex flex-col overflow-hidden font-sans">
                 {/* Navigational Map Layer (Rapido Style) */}
                 <div className="absolute inset-0 z-0">
-                    <MapContainer
-                        center={[userCoords.lat, userCoords.lng]}
+                    <GoogleMapBox 
+                        center={userCoords}
                         zoom={15}
-                        style={{ height: '100%', width: '100%' }}
-                        zoomControl={false}
-                        attributionControl={false}
+                        markers={trackingMarkers}
                     >
-                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-
-                        <Marker position={[userCoords.lat, userCoords.lng]} icon={userPin} />
-
-                        <motion.div key="captain-marker">
-                            <Marker position={currentCaptainCoords} icon={expertIcon} />
-                        </motion.div>
-
-                        <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-white/20 via-transparent to-black/10" />
-                    </MapContainer>
+                        <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-white/20 via-transparent to-black/10 z-10" />
+                    </GoogleMapBox>
                 </div>
 
                 {/* Top Status - Rapido Style (Dynamic Island) */}
@@ -2400,7 +2204,7 @@ const FullWashBooking = () => {
                             if (isSubscription) itemIcon = '/assets/icons/black_pass.png';
                             if (isAddon) itemIcon = '/assets/icons/upgrade.png';
 
-                            let typeTag = 'Instant Wash';
+                            let typeTag = 'Studio Wash';
                             let tagColor = 'text-emerald-600';
                             let isSubscribedWash = false;
 
@@ -3489,18 +3293,19 @@ const FullWashBooking = () => {
                                         } : undefined,
                                         addons: addonObjects,
                                         schedule: bookingType === 'instant'
-                                            ? { type: 'instant', date: new Date().toISOString() }
+                                            ? { type: 'instant', date: new Date().toISOString(), estimatedDuration: firstService?.duration || '40 min' }
                                             : {
                                                 type: 'scheduled',
                                                 date: selectedDate,
-                                                timeSlot: selectedSlot ? { start: selectedSlot, end: '' } : null
+                                                timeSlot: selectedSlot ? { start: selectedSlot, end: '' } : null,
+                                                estimatedDuration: firstService?.duration || '40 min'
                                             },
                                         location: activeAddr ? {
                                             type: locationType,
                                             address: {
                                                 street: activeAddr.street || activeAddr.full || activeAddr.address,
-                                                city: activeAddr.city || user?.profile?.city || 'Bengaluru',
-                                                state: activeAddr.state || user?.profile?.state || 'Karnataka',
+                                                city: activeAddr.city || user?.profile?.city || '',
+                                                state: activeAddr.state || user?.profile?.state || '',
                                                 pincode: activeAddr.pincode,
                                                 coordinates: (activeAddr.coordinates || activeAddr.coords) ? {
                                                     lat: Number((activeAddr.coordinates || activeAddr.coords).lat),
@@ -3711,7 +3516,10 @@ const FullWashBooking = () => {
                 ))}
             </div>
             <button
-                onClick={() => setShowAddVehicleModal(true)}
+                onClick={() => {
+                    toast.success('Opening Garage...');
+                    navigate('/vehicles?from=full-wash');
+                }}
                 className="w-full border-2 border-dashed border-black/[0.06] rounded-2xl p-6 text-black/30 font-black uppercase text-[10px] tracking-[0.3em] bg-gray-50/50 hover:bg-gray-50 hover:border-gray-200 transition-all flex flex-col items-center gap-2"
             >
                 <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm border border-black/[0.03]">
@@ -3804,8 +3612,6 @@ const FullWashBooking = () => {
                 </AnimatePresence>
 
 
-
-                {renderAddVehicleModal()}
 
                 {/* Live tracking uses fullscreen overlay, nav bar hidden */}
             </div>

@@ -80,7 +80,7 @@ const VendorOrders = () => {
                 status: (b.status || 'pending').toUpperCase(),
                 date: new Date(b.createdAt).toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
                 amount: b.price || b.service?.defaultPrice || '₹0',
-                location: b.consumer?.profile?.address?.city || 'Bengaluru',
+                location: b.consumer?.profile?.address?.city || '',
                 isProduct: false
             };
         } else {
@@ -93,7 +93,7 @@ const VendorOrders = () => {
                 status: (b.status || 'pending').toUpperCase(),
                 date: new Date(b.createdAt).toLocaleString([], { day: '2-digit', month: 'short' }),
                 amount: `₹${b.myItems?.reduce((sum, i) => sum + (i.price * i.quantity), 0) || 0}`,
-                location: b.consumer?.profile?.city || 'Bengaluru',
+                location: b.consumer?.profile?.city || '',
                 isProduct: true
             };
         }

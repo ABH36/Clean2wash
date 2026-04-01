@@ -6,9 +6,7 @@ import {
     Zap, ArrowRight, XCircle
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+// Leaflet remnants removed
 
 import CaptainLayout from '../components/CaptainLayout';
 import { useAuth } from '../../../context/AuthContext';
@@ -16,17 +14,7 @@ import { useCaptain } from '../../../hooks/useCaptain';
 import { useTheme } from '../../../context/ThemeContext';
 import { toast } from 'react-hot-toast';
 
-// Fix for Leaflet marker icons in React
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: markerIcon2x,
-    iconUrl: markerIcon,
-    shadowUrl: markerShadow,
-});
+// Leaflet icon fix removed
 
 const MISSION_STEPS = ['Arrived at Studio', 'Picked Up', 'Arrived at Customer', 'Delivered'];
 

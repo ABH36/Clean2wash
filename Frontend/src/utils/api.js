@@ -266,8 +266,8 @@ class ApiClient {
     }
 
     // Subscription methods
-    async getSubscription() {
-        return this.request('/subscription');
+    async getSubscription(id) {
+        return this.request(`/subscription${id ? `?id=${id}` : ''}`);
     }
 
     async createSubscription(planData) {
@@ -378,9 +378,10 @@ class ApiClient {
         });
     }
 
-    async cancelBooking(bookingId) {
+    async cancelBooking(bookingId, reason) {
         return this.request(`/bookings/${bookingId}`, {
             method: 'DELETE',
+            body: reason ? JSON.stringify({ reason }) : undefined
         });
     }
 
@@ -596,6 +597,10 @@ export const captainAPI = {
     updateProductMissionStatus: (orderId, itemId, status, metadata) => captainApiClient.updateProductMissionStatus(orderId, itemId, status, metadata),
 };
 
+export const spareDriverAPI = {
+    reportEmergency: (data) => consumerApiClient.post('/sparedrivers/emergency', data, { baseURL: '/api' }),
+};
+
 export const walletAPI = {
     getBalance: (params) => apiClient.getWallet(params),
     createOrder: (amount) => apiClient.createWalletOrder(amount),
@@ -618,7 +623,7 @@ export const notificationAPI = {
 };
 
 export const subscriptionAPI = {
-    getSubscription: () => apiClient.getSubscription(),
+    getSubscription: (id) => apiClient.getSubscription(id),
     createSubscription: (data) => apiClient.createSubscription(data),
     cancelSubscription: () => apiClient.cancelSubscription(),
     pauseSubscription: () => apiClient.pauseSubscription(),
@@ -640,7 +645,7 @@ export const bookingAPI = {
     getBooking: (id) => apiClient.getBooking(id),
     createBooking: (data) => apiClient.createBooking(data),
     updateBooking: (id, data) => apiClient.updateBooking(id, data),
-    cancelBooking: (id) => apiClient.cancelBooking(id),
+    cancelBooking: (id, reason) => apiClient.cancelBooking(id, reason),
     submitFeedback: (id, data) => apiClient.request(`/bookings/${id}/feedback`, {
         method: 'POST',
         body: JSON.stringify(data),

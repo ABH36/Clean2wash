@@ -20,7 +20,7 @@ const CaptainProfileEdit = () => {
         email: user.email || '',
         phone: user.phone || '',
         vehicle: user.profile?.plate || user.plate || '',
-        city: user.profile?.city || user.city || 'Bengaluru',
+        city: user.profile?.city || user.city || '',
         experience: user.profile?.experience || user.experience || 'Fresher',
         photo: user.profile?.avatar || user.profile?.photo || user.photo || null,
         upiId: user.bankDetails?.upiId || '',
@@ -215,7 +215,7 @@ const CaptainProfileEdit = () => {
                                 icon={MapPin}
                                 value={formData.city}
                                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                                placeholder="Bengaluru"
+                                placeholder="Enter your city"
                             />
                             <div className="space-y-2">
                                 <label className={`text-[10px] uppercase tracking-[0.2em] font-black ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>

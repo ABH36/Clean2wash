@@ -10,10 +10,13 @@ import {
 import MobileLayout from '../components/layout/MobileLayout';
 import { useAuth } from '../../../context/AuthContext';
 import { serviceAPI, subscriptionAPI } from '../../../utils/api';
+import BlackPassModal from '../components/membership/BlackPassModal';
+import GoogleMapBox from '../../../components/common/GoogleMapBox';
+import { Map as MapIcon, List as ListIcon } from 'lucide-react';
 
 const ApartmentWash = () => {
     const navigate = useNavigate();
-    const { vehicles, user, refreshStats, getRazorpayKey, createPaymentOrder, verifyPayment } = useAuth();
+    const { vehicles, user, refreshStats, getRazorpayKey, createPaymentOrder, verifyPayment, isBlackPassMember } = useAuth();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(true);
@@ -26,6 +29,8 @@ const ApartmentWash = () => {
     const [apartmentService, setApartmentService] = useState(null);
     const [fetchError, setFetchError] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
+    const [showBlackPassModal, setShowBlackPassModal] = useState(false);
+    const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
 
     // Form State
     const [selectedApartment, setSelectedApartment] = useState(null);
@@ -51,16 +56,29 @@ const ApartmentWash = () => {
         document.body.appendChild(script);
     });
 
-    // Fetch initial data
+    // Fetch initial and searched data
     useEffect(() => {
+        const primaryAddress = user?.profile?.addresses?.find(a => a.isPrimary) || user?.profile?.addresses?.[0];
+        const currentCity = primaryAddress?.city || user?.profile?.address?.city || '';
+
+        if (!currentCity && refreshStats && !searchQuery) {
+            console.log('🔄 City missing on mount, triggering refreshStats...');
+            refreshStats();
+            return;
+        }
+
         const fetchData = async () => {
             try {
-                setFetching(true);
+                if (searchQuery) setFetching(true); // Only show subtle loading if searching
+                else setFetching(true);
+                
                 setFetchError('');
 
-                const cityHint = user?.profile?.address?.city || '';
+                console.log('🏙️ ApartmentWash Discovery - City Hint:', currentCity, 'Search:', searchQuery);
+                
                 const response = await serviceAPI.getApartmentFlowData({
-                    city: cityHint,
+                    city: searchQuery ? '' : currentCity, // If searching, ignore user city preference
+                    q: searchQuery,
                     serviceKey: 'APARTMENT_WASH'
                 });
 
@@ -78,8 +96,14 @@ const ApartmentWash = () => {
                 setFetching(false);
             }
         };
-        fetchData();
-    }, [user?.profile?.address?.city]);
+
+        // Debounce search
+        const timeoutId = setTimeout(() => {
+            fetchData();
+        }, searchQuery ? 500 : 0);
+
+        return () => clearTimeout(timeoutId);
+    }, [user, user?.profile?.addresses, refreshStats, searchQuery]);
 
     // Filtered apartments
     const filteredApartments = useMemo(() => {
@@ -118,6 +142,17 @@ const ApartmentWash = () => {
     };
 
     const handlePlanSelect = (plan) => {
+        // If the user clicks on the Global Black Pass, handle it via membership modal
+        if (plan.name?.toLowerCase().includes('black') || plan.popular) {
+            console.log('💎 Premium Plan Clicked - Launching Global Pass Modal');
+            if (isBlackPassMember) {
+                toast.success("Welcome back, Premium Member! 🕶️ Checking your status...");
+            }
+            setShowBlackPassModal(true);
+            return;
+        }
+        
+        // Otherwise, proceed with standard apartment wash subscription flow
         setSelectedPlan(plan);
         setStep(4);
     };
@@ -134,8 +169,32 @@ const ApartmentWash = () => {
             className="px-5 pt-4 space-y-6"
         >
             <div className="space-y-1">
-                <h2 className="text-2xl font-[1000] text-content uppercase tracking-tighter">Select Your Apartment</h2>
-                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Available in premium cluster societies</p>
+                <h2 className="text-2xl font-[1000] text-content uppercase tracking-tighter">
+                    {apartments.length > 0 ? 'Select Your Apartment' : 'No Societies Nearby'}
+                </h2>
+                <div className="flex flex-col gap-1">
+                    <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest">
+                        {apartments.length > 0 
+                            ? `Showing premium societies in ${user?.profile?.address?.city || 'your area'}`
+                            : 'We haven\'t reached your sector yet. Request society below.'
+                        }
+                    </p>
+                    {/* 🛠️ Temporary Debug Info */}
+                    <div className="bg-brand/5 border border-brand/10 p-2.5 rounded-xl inline-flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                            <div className={`w-1.5 h-1.5 rounded-full ${user?.profile?.addresses?.find(a => a.isPrimary)?.city || user?.profile?.address?.city ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                            <p className="text-[8px] font-black text-brand uppercase tracking-tighter">
+                                Debug: City = {user?.profile?.addresses?.find(a => a.isPrimary)?.city || user?.profile?.address?.city || 'NOT DETECTED'}
+                            </p>
+                        </div>
+                        <button 
+                            onClick={refreshStats}
+                            className="bg-brand text-black text-[7px] font-black py-1 px-2 rounded-md uppercase tracking-widest active:scale-95 transition-transform"
+                        >
+                            Force Sync Profile
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div className="relative group">
@@ -154,53 +213,130 @@ const ApartmentWash = () => {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 gap-3">
-                {fetching ? (
-                    <div className="py-20 flex flex-col items-center justify-center gap-3">
-                        <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin" />
-                        <span className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Loading Societies...</span>
-                    </div>
-                ) : filteredApartments.length > 0 ? (
-                    filteredApartments.map((apt) => (
-                        <motion.button
-                            key={apt._id}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => handleApartmentClick(apt)}
-                            className="bg-white border border-black/[0.03] rounded-3xl p-4 flex items-center gap-4 text-left shadow-sm active:bg-gray-50 transition-all group relative overflow-hidden"
-                        >
-                            <div className="absolute top-0 right-0 w-24 h-24 bg-brand/5 rounded-full -mr-12 -mt-12 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="w-16 h-16 rounded-2xl bg-gray-50 overflow-hidden flex-shrink-0 border border-black/[0.03] flex items-center justify-center p-3">
-                                {apt.iconUrl ? (
-                                    <img
-                                        src={apt.iconUrl}
-                                        onError={(e) => { e.target.src = '/assets/appartment/default.png'; }}
-                                        alt={apt.name}
-                                        className="w-full h-full object-contain"
-                                    />
-                                ) : (
-                                    <Building className="text-black/10" size={28} />
-                                )}
-                            </div>
-                            <div className="flex-1 relative z-10">
-                                <h3 className="text-[13px] font-[1000] text-black uppercase tracking-tight">{apt.name}</h3>
-                                <div className="flex items-center gap-1.5 mt-1.5">
-                                    <MapPin size={10} className="text-brand" strokeWidth={3} />
-                                    <span className="text-[9px] font-black text-black/30 uppercase tracking-[0.15em] leading-none font-outfit">
-                                        {typeof apt.location === 'object' ? (apt.location.address || apt.location.full) : (apt.location || 'Premium Complex')}, {typeof apt.city === 'object' ? apt.city.name : (apt.city || 'City')}
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-brand group-hover:text-white transition-all">
-                                <ChevronRight size={14} strokeWidth={3} />
-                            </div>
-                        </motion.button>
-                    ))
-                ) : (
-                    <div className="py-20 text-center">
-                        <p className="text-xs font-bold text-content-subtle uppercase">No Societies found matching search</p>
-                    </div>
-                )}
+            <div className="flex gap-2 p-1 bg-gray-100 rounded-2xl">
+                <button
+                    onClick={() => setViewMode('list')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-white shadow-md text-brand' : 'text-content-muted hover:text-content'}`}
+                >
+                    <ListIcon size={16} /> List View
+                </button>
+                <button
+                    onClick={() => setViewMode('map')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'map' ? 'bg-white shadow-md text-brand' : 'text-content-muted hover:text-content'}`}
+                >
+                    <MapIcon size={16} /> Map View
+                </button>
             </div>
+
+            <AnimatePresence mode="wait">
+                {viewMode === 'map' ? (
+                    <motion.div
+                        key="map"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="h-[50vh] rounded-[2.5rem] overflow-hidden border-2 border-white shadow-2xl relative"
+                    >
+                        <GoogleMapBox 
+                            center={apartments[0]?.location?.coordinates || { lat: 28.6139, lng: 77.2090 }}
+                            zoom={13}
+                            markers={filteredApartments.filter(apt => apt.location?.coordinates?.lat).map(apt => ({
+                                position: apt.location.coordinates,
+                                icon: {
+                                    url: 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png', // Building icon
+                                    scaledSize: new window.google.maps.Size(42, 42),
+                                    anchor: new window.google.maps.Point(21, 42)
+                                },
+                                infoContent: (
+                                    <div className="p-0 min-w-[180px] bg-white rounded-2xl overflow-hidden font-outfit shadow-2xl border border-gray-100">
+                                        <div className="p-3 bg-gray-50/50 border-b border-gray-100">
+                                            <h4 className="font-black text-[11px] uppercase text-black leading-none">{apt.name}</h4>
+                                        </div>
+                                        <div className="p-3">
+                                            <div className="flex items-center gap-1.5 mb-3 opacity-60">
+                                                <MapPin size={10} className="text-brand" />
+                                                <p className="text-[9px] font-bold uppercase truncate">{apt.location?.address || 'Premium Complex'}</p>
+                                            </div>
+                                            <button
+                                                onClick={() => handleApartmentClick(apt)}
+                                                className="w-full bg-brand text-white text-[9px] h-9 rounded-lg font-black uppercase tracking-widest active:scale-95 transition-all shadow-md shadow-brand/20 flex items-center justify-center gap-2"
+                                            >
+                                                Select Society <ArrowRight size={12} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )
+                            }))}
+                        />
+                    </motion.div>
+                ) : (
+                    <motion.div
+                        key="list"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="grid grid-cols-1 gap-3"
+                    >
+                        {fetching ? (
+                            <div className="py-20 flex flex-col items-center justify-center gap-3">
+                                <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                                <span className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Loading Societies...</span>
+                            </div>
+                        ) : filteredApartments.length > 0 ? (
+                            filteredApartments.map((apt) => (
+                                <motion.button
+                                    key={apt._id}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => handleApartmentClick(apt)}
+                                    className="bg-white border border-black/[0.03] rounded-3xl p-4 flex items-center gap-4 text-left shadow-sm active:bg-gray-50 transition-all group relative overflow-hidden"
+                                >
+                                    <div className="absolute top-0 right-0 w-24 h-24 bg-brand/5 rounded-full -mr-12 -mt-12 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <div className="w-16 h-16 rounded-2xl bg-gray-50 overflow-hidden flex-shrink-0 border border-black/[0.03] flex items-center justify-center p-3">
+                                        {apt.iconUrl ? (
+                                            <img
+                                                src={apt.iconUrl}
+                                                onError={(e) => { e.target.src = '/assets/appartment/default.png'; }}
+                                                alt={apt.name}
+                                                className="w-full h-full object-contain"
+                                            />
+                                        ) : (
+                                            <Building className="text-black/10" size={28} />
+                                        )}
+                                    </div>
+                                    <div className="flex-1 relative z-10">
+                                        <h3 className="text-[13px] font-[1000] text-black uppercase tracking-tight">{apt.name}</h3>
+                                        <div className="flex items-center gap-1.5 mt-1.5">
+                                            <MapPin size={10} className="text-brand" strokeWidth={3} />
+                                            <span className="text-[9px] font-black text-black/30 uppercase tracking-[0.15em] leading-none font-outfit">
+                                                {typeof apt.location === 'object' ? (apt.location.address || apt.location.full) : (apt.location || 'Premium Complex')}, {typeof apt.city === 'object' ? apt.city.name : (apt.city || 'City')}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-brand group-hover:text-white transition-all">
+                                        <ChevronRight size={14} strokeWidth={3} />
+                                    </div>
+                                </motion.button>
+                            ))
+                        ) : (
+                            <div className="py-20 text-center space-y-4 bg-gray-50/50 rounded-[2.5rem] border border-dashed border-gray-200">
+                                <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto shadow-sm">
+                                    <Building className="text-gray-200" size={32} />
+                                </div>
+                                <div className="space-y-1">
+                                    <h3 className="text-sm font-black text-content uppercase tracking-tight">No Societies Found</h3>
+                                    <p className="text-[9px] font-bold text-content-subtle uppercase tracking-widest px-10 leading-relaxed">We are expanding rapidly. Request your society to be added next.</p>
+                                </div>
+                                <button
+                                    onClick={() => navigate('/support')}
+                                    className="bg-black text-white px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-xl shadow-black/10"
+                                >
+                                    Request Addition
+                                </button>
+                            </div>
+                        )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <div className="bg-brand/5 border border-brand/10 p-5 rounded-xl flex gap-4 items-start">
                 <Info size={18} className="text-brand shrink-0" />
@@ -384,44 +520,62 @@ const ApartmentWash = () => {
                 <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-relaxed">{apartmentService?.description || 'Subscription based recurring care for your vehicle'}</p>
             </div>
 
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
                 {plans.length === 0 ? (
-                    <div className="bg-white border border-dashed border-black/10 rounded-3xl p-8 text-center">
-                        <p className="text-[10px] font-black text-black/40 uppercase tracking-widest">No apartment plans available right now</p>
+                    <div className="bg-white border border-dashed border-black/10 rounded-3xl p-12 text-center flex flex-col items-center gap-4">
+                        <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center text-black/10">
+                            <Calendar size={32} />
+                        </div>
+                        <p className="text-[11px] font-black text-black/30 uppercase tracking-[0.2em]">No local society plans detected</p>
                     </div>
                 ) : plans.map((plan) => (
                     <motion.div
                         key={plan.id}
-                        whileTap={{ scale: 0.98 }}
+                        whileTap={{ scale: 0.97 }}
                         onClick={() => handlePlanSelect(plan)}
-                        className={`relative p-7 rounded-[32px] border-2 cursor-pointer transition-all shadow-xl ${plan.popular ? 'bg-black text-white border-black' : 'bg-white text-black border-black/[0.03]'}`}
+                        className={`relative p-6 rounded-[32px] border-2 cursor-pointer transition-all ${
+                            plan.popular 
+                            ? 'bg-gradient-to-br from-neutral-900 via-black to-neutral-800 text-white border-white/5 shadow-2xl shadow-black/20' 
+                            : 'bg-white text-black border-black/[0.04] shadow-xl shadow-black/[0.02]'
+                        }`}
                     >
                         {plan.popular && (
-                            <div className="absolute -top-3 left-8 px-4 py-1.5 bg-brand text-black text-[9px] font-[1000] uppercase tracking-[0.2em] rounded-full shadow-lg shadow-brand/20 relative z-20">Elite Choice</div>
+                            <div className={`absolute -top-3 left-6 px-4 py-1.5 ${isBlackPassMember ? 'bg-emerald-500 text-white' : 'bg-brand text-black'} text-[9px] font-[1000] uppercase tracking-[0.2em] rounded-full shadow-lg z-20`}>
+                                {isBlackPassMember ? 'Active Member' : 'Elite Choice'}
+                            </div>
                         )}
-                        <div className="flex justify-between items-start mb-6 relative z-10">
-                            <div>
+                        
+                        <div className="flex justify-between items-start mb-6">
+                            <div className="space-y-2">
                                 <h3 className="text-2xl font-[1000] uppercase tracking-tighter leading-none">{plan.name}</h3>
-                                <div className="mt-2.5 flex items-center gap-2">
-                                    <div className={`w-1.5 h-1.5 rounded-full ${plan.popular ? 'bg-brand' : 'bg-brand'}`} />
-                                    <span className={`text-[10px] font-black uppercase tracking-widest ${plan.popular ? 'text-white/40' : 'text-black/30'}`}>{plan.type || 'Society Pass'}</span>
+                                <div className="flex items-center gap-2">
+                                    <div className={`w-1.5 h-1.5 rounded-full ${plan.popular ? 'bg-brand' : 'bg-brand/50'}`} />
+                                    <span className={`text-[10px] font-black uppercase tracking-widest ${plan.popular ? 'text-white/40' : 'text-black/30'}`}>
+                                        {plan.type && String(plan.type).length < 20 ? plan.type : 'Society Pass'}
+                                    </span>
                                 </div>
                             </div>
                             <div className="text-right">
-                                <span className="text-[32px] font-[1000] leading-none tracking-tighter">â‚¹{plan.price}</span>
-                                <p className={`text-[9px] font-black uppercase tracking-widest mt-1.5 font-outfit ${plan.popular ? 'text-white/30' : 'text-black/20'}`}>PER {plan.interval || 'MONTH'}</p>
+                                <div className="flex items-baseline justify-end gap-0.5">
+                                    <span className="text-[32px] font-[1000] leading-none tracking-tighter">₹{plan.price}</span>
+                                </div>
+                                <p className={`text-[9px] font-[1000] uppercase tracking-widest mt-1.5 font-outfit ${plan.popular ? 'text-white/30' : 'text-black/20'}`}>
+                                    PER {String(plan.interval || 'MONTH').toUpperCase().replace('LY', '')}
+                                </p>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3 pt-5 border-t border-black/[0.05] relative z-10">
-                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl ${plan.popular ? 'bg-white/5' : 'bg-gray-50'}`}>
-                                <Calendar size={12} className="text-brand" strokeWidth={3} />
-                                <span className="text-[10px] font-black uppercase tracking-tight">{plan.washes}</span>
+                        <div className={`flex items-center gap-4 pt-5 border-t ${plan.popular ? 'border-white/10' : 'border-black/[0.05]'}`}>
+                            <div className={`flex items-center gap-2 px-3 py-2 rounded-xl ${plan.popular ? 'bg-white/5' : 'bg-gray-50'}`}>
+                                <Calendar size={13} className="text-brand" strokeWidth={3} />
+                                <span className="text-[10px] font-black uppercase tracking-tight">{plan.washes || 10} WOSH</span>
                             </div>
-                            <div className="flex-1">
-                                <span className={`text-[10px] font-[1000] uppercase tracking-[0.05em] block truncate ${plan.popular ? 'text-white/60' : 'text-black/40'}`}>{plan.desc}</span>
+                            <div className="flex-1 overflow-hidden">
+                                <span className={`text-[11px] font-[1000] uppercase tracking-wide block truncate ${plan.popular ? 'text-white/80' : 'text-black/60'}`}>
+                                    {plan.desc || 'Premium door-to-hub care'}
+                                </span>
                             </div>
-                            <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${plan.popular ? 'bg-white/10 text-brand' : 'bg-black text-white'}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${plan.popular ? 'bg-white/10 text-brand group-active:scale-90' : 'bg-black text-white'}`}>
                                 <ArrowRight size={14} strokeWidth={3} />
                             </div>
                         </div>
@@ -472,7 +626,7 @@ const ApartmentWash = () => {
                             </div>
                             <div className="flex flex-col items-end gap-1.5 relative z-10">
                                 <div className="bg-emerald-50 px-3 py-1 rounded-lg text-[9px] font-[1000] text-emerald-600 uppercase tracking-widest shadow-sm shadow-emerald-500/5">Available</div>
-                                <span className="text-[9px] font-black text-black/10 uppercase tracking-widest">Premium Slot</span>
+                                <span className="text-[9px] font-black text-black/40 uppercase tracking-widest">Premium Slot</span>
                             </div>
                         </motion.button>
                     )
@@ -500,7 +654,7 @@ const ApartmentWash = () => {
         <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="px-5 pt-4 space-y-6 pb-20"
+            className="px-5 pt-4 space-y-6 pb-32"
         >
             <div className="flex flex-col items-center text-center py-6">
                 <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center text-green-600 mb-4 border border-green-100 shadow-sm">
@@ -520,7 +674,7 @@ const ApartmentWash = () => {
                         </div>
                         <div className="text-right">
                             <div className="flex items-baseline justify-end gap-1">
-                                <span className="text-2xl font-[1000] text-white tracking-tighter">â‚¹{selectedPlan.price}</span>
+                                <span className="text-2xl font-[1000] text-white tracking-tighter">₹{selectedPlan.price}</span>
                             </div>
                             <p className="text-[9px] font-[1000] text-white/30 uppercase tracking-widest mt-1.5 font-outfit">PER MONTH</p>
                         </div>
@@ -549,7 +703,7 @@ const ApartmentWash = () => {
                                 <MapPin size={12} className="text-brand" strokeWidth={3} />
                                 <p className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] leading-none font-outfit">Parking</p>
                             </div>
-                            <p className="text-[12px] font-[1000] text-black uppercase tracking-tight leading-none">{parkingDetails.basement} â€¢ {parkingDetails.block}</p>
+                            <p className="text-[12px] font-[1000] text-black uppercase tracking-tight leading-none">{parkingDetails.basement} • {parkingDetails.block}</p>
                             <span className="text-[9px] font-black text-black/40 uppercase tracking-widest leading-none font-outfit">Pillar {parkingDetails.pillar}</span>
                         </div>
                         <div className="space-y-2">
@@ -683,6 +837,7 @@ const ApartmentWash = () => {
                                                     bookingId: subRes.data?.subscription?._id || subRes.data?._id,
                                                     service: apartmentService?.title || 'Apartment Car Wash',
                                                     plan: selectedPlan.name,
+                                                    price: selectedPlan.price,
                                                     society: selectedApartment.name,
                                                     slot: selectedSlot.label,
                                                     parking: parkingDetails
@@ -775,6 +930,15 @@ const ApartmentWash = () => {
                     {step === 4 && renderStep4_SlotSelection()}
                     {step === 5 && renderStep5_Confirmation()}
                 </AnimatePresence>
+
+                {/* Global Pass Integration */}
+                <BlackPassModal 
+                    isOpen={showBlackPassModal} 
+                    onClose={() => {
+                        setShowBlackPassModal(false);
+                        if (refreshStats) refreshStats();
+                    }} 
+                />
             </div>
         </MobileLayout>
     );

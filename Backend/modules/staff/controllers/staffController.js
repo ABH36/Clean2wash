@@ -10,17 +10,38 @@ exports.getTasks = async (req, res) => {
     try {
         const staffId = req.user.id;
 
-        // 1. Service Bookings
+        // 1. Service Bookings (Active + Recently Completed/Cancelled for dashboard)
+        const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
         const bookings = await Booking.find({
-            $or: [
-                { pickupStaff: staffId },
-                { deliveryStaff: staffId },
-                { assignedStaff: staffId }
+            $and: [
+                {
+                    $or: [
+                        { pickupStaff: staffId },
+                        { deliveryStaff: staffId },
+                        { assignedStaff: staffId },
+                        { 'provider.id': staffId }
+                    ]
+                },
+                {
+                    $or: [
+                        { status: { $nin: ['completed', 'cancelled'] } },
+                        { status: { $in: ['completed', 'cancelled'] }, updatedAt: { $gte: dayAgo } }
+                    ]
+                }
             ]
         })
             .populate('consumer', 'name phone profile')
-            .populate('vehicle', 'brand model plate')
-            .sort({ createdAt: -1 });
+            .populate('vehicle', 'brand model plate type')
+            .populate('provider', 'name businessName profile phone')
+            .sort({ 
+                'schedule.date': 1, 
+                'location.parkingDetails.basement': 1, 
+                'location.parkingDetails.block': 1, 
+                'location.parkingDetails.pillar': 1,
+                'tracking.assignedAt': -1, 
+                createdAt: -1 
+            });
 
         // 2. Product Orders (Items assigned to this staff)
         const productOrders = await ProductOrder.find({
@@ -76,7 +97,8 @@ exports.getDashboard = async (req, res) => {
             $or: [
                 { pickupStaff: staffId },
                 { deliveryStaff: staffId },
-                { assignedStaff: staffId }
+                { assignedStaff: staffId },
+                { 'provider.id': staffId }
             ]
         });
 
@@ -98,9 +120,12 @@ exports.getDashboard = async (req, res) => {
             });
         });
 
-        const activeCount = bookings.filter(t => !['completed', 'cancelled'].includes(t.status)).length + activeProductCount;
+        const activeTasks = bookings.filter(t => !['completed', 'cancelled'].includes(t.status));
+        const activeCount = activeTasks.length + activeProductCount;
         const completedCount = bookings.filter(t => t.status === 'completed').length + completedProductCount;
-        const recentActivity = bookings.slice(0, 5); // Combined activity could be better but keeping simple for now
+        const recentActivity = bookings
+            .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
+            .slice(0, 5);
 
         res.status(200).json({
             status: 'success',
@@ -129,12 +154,14 @@ exports.getTaskById = async (req, res) => {
             $or: [
                 { pickupStaff: staffId },
                 { deliveryStaff: staffId },
-                { assignedStaff: staffId }
+                { assignedStaff: staffId },
+                { 'provider.id': staffId }
             ]
         })
             .populate('consumer', 'name phone profile')
             .populate('vehicle', 'brand model plate')
-            .populate('provider', 'name businessName profile phone');
+            .populate('provider', 'name businessName profile phone')
+            .populate('pickupStaff', 'name phone photo');
 
         if (!booking) {
             return res.status(404).json({ status: 'error', message: 'Task not found or unauthorized' });
@@ -201,6 +228,7 @@ exports.updateTaskStatus = async (req, res) => {
             'pending', 'confirmed', 'assigned', 'pickup-assigned',
             'en_route', 'arrived', 'picked-up', 'at-studio', 'in_progress', 'washing',
             'quality-check', 'ready-for-delivery', 'delivery-assigned',
+            'out_for_delivery', 'at_delivery_address',
             'completed', 'cancelled'
         ];
 

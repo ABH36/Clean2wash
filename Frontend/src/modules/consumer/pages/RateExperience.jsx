@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ChevronLeft, Star, ThumbsUp, Camera, Award } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
+import { bookingAPI } from '../../../utils/api';
 
 const TAGS = ['On Time', 'Very Clean', 'Friendly', 'Professional', 'Careful', 'Quick & Efficient'];
 
@@ -10,6 +11,7 @@ const RateExperience = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { bookings } = useAuth();
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const bookingId = searchParams.get('id');
     const liveBooking = bookings.find(b => b.id === bookingId) || { id: 'CarWash-8821', serviceName: 'Eco Doorstep Wash', price: '₹473', performerId: null };
@@ -26,32 +28,25 @@ const RateExperience = () => {
         setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
 
     const handleSubmit = async () => {
+        if (!rating || isSubmitting) return;
+
         try {
-            setSubmitted(false);
-            const token = localStorage.getItem('token');
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'}/consumer/bookings/${bookingId}/feedback`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    rating,
-                    review: comment,
-                    tags: selectedTags
-                })
+            setIsSubmitting(true);
+            const res = await bookingAPI.submitFeedback(bookingId, {
+                rating,
+                review: comment,
+                tags: selectedTags
             });
 
-            const data = await response.json();
-            if (data.status === 'success') {
+            if (res.status === 'success') {
                 setSubmitted(true);
                 setTimeout(() => navigate('/bookings'), 2000);
-            } else {
-                alert(data.message || 'Failed to submit feedback');
             }
         } catch (err) {
             console.error('Feedback submission error:', err);
-            alert('Something went wrong. Please try again.');
+            alert(err.message || 'Something went wrong. Please try again.');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 

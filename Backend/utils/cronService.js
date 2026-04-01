@@ -2,7 +2,7 @@ const cron = require('node-cron');
 const Subscription = require('../models/Subscription');
 const Booking = require('../models/Booking');
 const Hub = require('../models/Hub');
-const { sendNotification } = require('./notificationService');
+const { sendNotification, sendStaffNotification } = require('./notificationService');
 
 const User = require('../models/User');
 
@@ -40,6 +40,21 @@ const generateDailySubscriptionJobs = async () => {
         for (const hubId in hubMap) {
             const { hub, subscriptions } = hubMap[hubId];
 
+            // Sort subscriptions by parking hierarchy for efficient crew routing
+            subscriptions.sort((a, b) => {
+                const basementA = a.parkingDetails?.basement || '';
+                const basementB = b.parkingDetails?.basement || '';
+                if (basementA !== basementB) return basementA.localeCompare(basementB);
+                
+                const blockA = a.parkingDetails?.block || '';
+                const blockB = b.parkingDetails?.block || '';
+                if (blockA !== blockB) return blockA.localeCompare(blockB);
+                
+                const pillarA = a.parkingDetails?.pillar || '';
+                const pillarB = b.parkingDetails?.pillar || '';
+                return pillarA.localeCompare(pillarB);
+            });
+
             // 2. Fetch available specialists for this Hub
             // Specialists are users with role 'staff' assigned to this hub
             const specialists = await User.find({
@@ -50,7 +65,9 @@ const generateDailySubscriptionJobs = async () => {
 
             console.log(`[Cron] Hub ${hub.name}: Found ${specialists.length} specialists for ${subscriptions.length} jobs.`);
 
+            const staffLoadCount = {}; // { staffId: count }
             let staffIndex = 0;
+            
             for (const sub of subscriptions) {
                 // Secondary safety check
                 if (!sub.vehicle) {
@@ -69,11 +86,32 @@ const generateDailySubscriptionJobs = async () => {
 
                 if (existingBooking) continue;
 
-                // 3. Assign Specialist (Round-robin load balancing)
+                // 3. Assign Specialist (Round-robin load balancing with CAP)
                 let assignedStaff = null;
                 if (specialists.length > 0) {
-                    assignedStaff = specialists[staffIndex % specialists.length];
-                    staffIndex++;
+                    // Try to find an available specialist within the 10 car limit
+                    let attempts = 0;
+                    while (attempts < specialists.length) {
+                        const potentialStaff = specialists[staffIndex % specialists.length];
+                        const staffId = potentialStaff._id.toString();
+                        
+                        if ((staffLoadCount[staffId] || 0) < 10) {
+                            assignedStaff = potentialStaff;
+                            staffLoadCount[staffId] = (staffLoadCount[staffId] || 0) + 1;
+                            staffIndex++;
+                            break;
+                        }
+                        
+                        staffIndex++; // Move to next specialist
+                        attempts++;
+                    }
+                }
+
+                if (!assignedStaff && specialists.length > 0) {
+                    console.warn(`[Cron] 🚩 CAPACITY ALERT: All specialists for Hub ${hub.name} have reached the 10-car limit.`);
+                    // Depending on policy, we might still assign to hub vendor or leave unassigned
+                    // For now, we'll continue to see if any other cars can be assigned (though unlikely given round-robin)
+                    continue; 
                 }
 
                 const bookingData = {
@@ -83,7 +121,7 @@ const generateDailySubscriptionJobs = async () => {
                     service: {
                         id: sub.service?.id || 'apartment-wash',
                         key: sub.service?.key || 'APARTMENT_WASH',
-                        name: sub.service?.title || 'Apartment Car Wash',
+                        name: 'Apartment Dry Wash', // Explicitly following SOP
                         category: 'Apartment',
                         type: 'vendor'
                     },
@@ -125,7 +163,9 @@ const generateDailySubscriptionJobs = async () => {
                     provider: {
                         id: assignedStaff?._id || sub.hub?.vendor,
                         type: 'vendor'
-                    }
+                    },
+                    // Crucial: Set assignedStaff for dashboard visibility
+                    assignedStaff: assignedStaff?._id
                 };
 
                 await Booking.create(bookingData);
@@ -134,18 +174,18 @@ const generateDailySubscriptionJobs = async () => {
                 // 4. Notify consumer
                 if (sub.user?._id) {
                     await sendNotification(sub.user._id, {
-                        title: 'Service Activated 🧼',
-                        message: `Your daily apartment wash for ${sub.vehicle?.plate || 'your vehicle'} has been initialized. Specialist ${assignedStaff?.name || 'is on the way'}.`,
-                        type: 'booking'
+                        title: 'Daily Wash Activated 🧼',
+                        message: `Your morning wash for ${sub.vehicle?.plate || 'your car'} is initialized. Assigned: ${assignedStaff?.name || 'Authorized Hub'}`,
+                        type: 'subscription' // Fixed from 'booking' to align with subscription flow
                     });
                 }
 
                 // 5. Notify assigned staff (Captain)
                 if (assignedStaff?._id) {
-                    await sendNotification(assignedStaff._id, {
-                        title: 'Morning Duty Assigned 🚗',
-                        message: `You have a new wash scheduled at ${sub.hub?.name}. Slot: ${sub.slot === 'morning' ? '6-9 AM' : '6-8 PM'}.`,
-                        type: 'status-update'
+                    await sendStaffNotification(assignedStaff._id, {
+                        title: 'Mission Assigned 🚗',
+                        message: `You have a new Apartment Wash at ${sub.hub?.name}. Slot: ${sub.slot === 'morning' ? '6-9 AM' : '6-8 PM'}. Order sorted by Parking Hierarchy.`,
+                        type: 'booking' // Fixed from 'status-update'
                     });
                 }
             }

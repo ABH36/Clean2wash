@@ -5,7 +5,7 @@ import {
     ChevronLeft, MapPin, Phone, MessageSquare, Truck,
     ShieldCheck, CheckCircle2, Navigation2, Clock,
     Camera, AlertCircle, ArrowUpRight, Search, User,
-    Package, X, Lock, Trash2, ShieldAlert, Zap, Check
+    Package, X, Lock, Trash2, ShieldAlert, Zap, Check, Calendar
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
@@ -162,7 +162,7 @@ const TaskDetails = () => {
     // 📍 Real-time GPS Telemetry Pulse (Logistic Protocol)
     useEffect(() => {
         let watchId = null;
-        const activeTransitStatuses = ['en_route', 'delivery-assigned'];
+        const activeTransitStatuses = ['en_route', 'out_for_delivery', 'delivery-assigned'];
 
         if (activeTransitStatuses.includes(task?.status) && isConnectionActive) {
             console.log(`[Phase 9] 🛰️ GPS Pulse Mode Engaged for Mission: ${id}`);
@@ -274,9 +274,10 @@ const TaskDetails = () => {
     }
 
     const taskData = task || {};
-    const isDelivery = ['quality-check', 'ready-for-delivery', 'delivery-assigned', 'completed'].includes(taskData.status);
+    const isDelivery = ['quality-check', 'ready-for-delivery', 'delivery-assigned', 'out_for_delivery', 'at_delivery_address', 'completed'].includes(taskData.status);
     const statusIdx = {
-        'pickup-assigned': 1, 'confirmed': 1, 'accepted': 1, 'en_route': 2, 'arrived': 3, 'picked-up': 4, 'at-studio': 5, 'washing': 5, 'quality-check': 5, 'ready-for-delivery': 6, 'completed': 6
+        'pickup-assigned': 1, 'confirmed': 1, 'accepted': 1, 'en_route': 2, 'arrived': 3, 'picked-up': 4, 'at-studio': 5, 'washing': 5, 'quality-check': 5,
+        'ready-for-delivery': 6, 'delivery-assigned': 7, 'out_for_delivery': 8, 'at_delivery_address': 9, 'completed': 10
     }[taskData.status] || 0;
 
     return (
@@ -364,6 +365,61 @@ const TaskDetails = () => {
                     </motion.div>
                 </div>
             )}
+
+            <div className="mt-8 px-6">
+                {/* 🛡️ Mission Context Protocol */}
+                <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} rounded-[3rem] p-8 border relative overflow-hidden group`}>
+                    <div className="flex justify-between items-center relative z-10">
+                        <div className="flex gap-5">
+                            <div className={`w-16 h-16 rounded-[1.8rem] flex items-center justify-center transition-all duration-500 ${
+                                taskData.service?.category === 'Apartment'
+                                ? (isDarkMode ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'bg-indigo-50 text-indigo-600 border border-indigo-100')
+                                : taskData.schedule?.type === 'scheduled'
+                                ? (isDarkMode ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-amber-50 text-amber-600 border border-amber-100')
+                                : (isDarkMode ? 'bg-brand/10 text-brand border border-brand/20' : 'bg-brand/5 text-brand border border-brand/10')
+                                }`}>
+                                {taskData.service?.category === 'Apartment' ? <ShieldCheck size={32} /> : 
+                                 taskData.schedule?.type === 'scheduled' ? <Calendar size={32} /> : <Zap size={32} />}
+                            </div>
+                            <div>
+                                <p className={`text-[10px] font-black uppercase tracking-[0.3em] mb-1.5 ${
+                                    taskData.service?.category === 'Apartment' ? 'text-indigo-500' :
+                                    taskData.schedule?.type === 'scheduled' ? 'text-amber-500' : 'text-brand'}`}>
+                                    {taskData.service?.category === 'Apartment' ? 'Apartment Subscription' :
+                                     taskData.schedule?.type === 'scheduled' ? 'Scheduled Mission' : 'Instant Protocol'}
+                                </p>
+                                <h2 className={`text-2xl font-black uppercase tracking-tighter leading-none ${isDarkMode ? 'text-white' : 'text-content'}`}>
+                                    {taskData.service?.category === 'Apartment' ? 'Daily Wash Route' :
+                                     taskData.schedule?.type === 'scheduled' ? 'Timed Dispatch' : 'Express Delivery'}
+                                </h2>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mt-8 pt-8 border-t border-current/5 relative z-10">
+                        <div className="space-y-1">
+                            <p className={`text-[8px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Target Date</p>
+                            <div className="flex items-center gap-2">
+                                <Calendar size={12} className="text-brand" />
+                                <p className={`text-xs font-black uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>
+                                    {taskData.schedule?.date ? new Date(taskData.schedule.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Today'}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="space-y-1 text-right">
+                            <p className={`text-[8px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Execution Window</p>
+                            <div className="flex items-center gap-2 justify-end">
+                                <Clock size={12} className="text-brand" />
+                                <p className={`text-xs font-black uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>
+                                    {taskData.schedule?.timeSlot?.start || new Date(taskData.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="absolute top-0 right-0 w-40 h-40 bg-brand/5 blur-[80px] -mr-20 -mt-20 rounded-full" />
+                </div>
+            </div>
 
             <div className="mt-8 px-6 space-y-6">
                 {/* 🗺️ Live Tactical Map Node */}
@@ -530,12 +586,35 @@ const TaskDetails = () => {
 
                 {/* 📸 Elite Evidence Core */}
                 <div className="space-y-6">
+                    {/* 📦 Custody Context Node (Who picked it up?) */}
+                    {isDelivery && taskData.pickupStaff && (
+                        <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} rounded-[3rem] p-8 border mt-6`}>
+                            <div className="flex items-center gap-3 mb-6">
+                                <Package size={18} className="text-brand" />
+                                <h4 className={`text-[11px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/80' : 'text-content'}`}>Origin Protocol</h4>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl overflow-hidden border border-brand/20 bg-brand/5 flex items-center justify-center">
+                                    {taskData.pickupStaff.photo ? (
+                                        <img src={taskData.pickupStaff.photo} className="w-full h-full object-cover" alt="pickup-staff" />
+                                    ) : (
+                                        <User size={20} className="text-brand" />
+                                    )}
+                                </div>
+                                <div>
+                                    <p className={`text-[8px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Pickup Specialist</p>
+                                    <h5 className={`text-sm font-black ${isDarkMode ? 'text-white' : 'text-content'}`}>{taskData.pickupStaff.name}</h5>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Previous Handover Photos (for Delivery Staff) */}
                     {taskData.serviceImages?.before?.length > 0 && isDelivery && (
-                        <div className="space-y-4">
+                        <div className="space-y-4 pt-6">
                             <div className="flex items-center gap-2 px-3">
                                 <ShieldCheck size={12} className="text-green-500" />
-                                <h4 className={`text-[10px] font-black uppercase tracking-[0.3em] ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Pickup Handover Proofs</h4>
+                                <h4 className={`text-[10px] font-black uppercase tracking-[0.3em] ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Pickup Evidence Log</h4>
                             </div>
                             <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
                                 {taskData.serviceImages.before.map((img, idx) => (
@@ -624,7 +703,7 @@ const TaskDetails = () => {
             <div className={`fixed bottom-0 left-0 right-0 p-8 pt-4 backdrop-blur-3xl border-t z-50 transition-all ${isDarkMode ? 'bg-[#0F172A]/90 border-white/5 shadow-[0_-30px_60px_-15px_rgba(0,0,0,0.8)]' : 'bg-white/90 border-gray-100 shadow-[0_-30px_60px_-15px_rgba(0,0,0,0.1)]'}`}>
                 {/* Protocol Progress */}
                 <div className="flex gap-1.5 mb-8 px-2">
-                    {[1, 2, 3, 4, 5, 6].map(step => (
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(step => (
                         <div key={step} className={`h-1 flex-1 rounded-full transition-all duration-500 ${step <= statusIdx ? 'bg-brand shadow-[0_0_10px_rgba(75,135,255,0.5)]' : 'bg-brand/10'}`} />
                     ))}
                 </div>
@@ -661,9 +740,25 @@ const TaskDetails = () => {
                         <ArrowUpRight size={22} />
                     </motion.button>
                 )}
-                {taskData.status === 'ready-for-delivery' && (
-                    <motion.button whileTap={{ scale: 0.98 }} onClick={() => handleUpdateStatus('en_route')} disabled={isSubmitting} className="w-full h-20 bg-brand text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-xl">
-                        Initialize Delivery <Package size={22} />
+                {['ready-for-delivery', 'delivery-assigned'].includes(taskData.status) && (
+                    <motion.button whileTap={{ scale: 0.98 }} onClick={() => handleUpdateStatus('out_for_delivery')} disabled={isSubmitting} className="w-full h-20 bg-brand text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-xl">
+                        {isSubmitting ? 'Syncing...' : 'Initialize Delivery'} <Package size={22} />
+                    </motion.button>
+                )}
+                {taskData.status === 'out_for_delivery' && (
+                    <motion.button whileTap={{ scale: 0.98 }} onClick={() => handleUpdateStatus('at_delivery_address')} disabled={isSubmitting} className="w-full h-20 bg-black text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-2xl">
+                        {isSubmitting ? 'Syncing...' : 'Confirm Arrival'} <Navigation2 size={22} />
+                    </motion.button>
+                )}
+                {taskData.status === 'at_delivery_address' && (
+                    <motion.button
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleActionTrigger('completed')}
+                        disabled={isSubmitting || photos.length === 0}
+                        className="w-full h-20 bg-brand text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-xl disabled:opacity-30 transition-all"
+                    >
+                        {isSubmitting ? 'Syncing...' : (photos.length > 0 ? 'Deliver Vehicle' : 'Capture Delivery Proof')}
+                        <CheckCircle2 size={22} />
                     </motion.button>
                 )}
                 {taskData.status === 'completed' ? (

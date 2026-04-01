@@ -110,6 +110,8 @@ const VENDOR_STEPS = [
     { id: 'in_progress', label: 'Wash in Progress', desc: 'Deep cleaning in action', Icon: Droplets, activeColor: 'text-sky-500', activeBg: 'bg-sky-50', activeBorder: 'border-sky-200' },
     { id: 'quality-check', label: 'Quality Check', desc: 'Luxury finishing & audit', Icon: CheckCircle2, activeColor: 'text-emerald-500', activeBg: 'bg-emerald-50', activeBorder: 'border-emerald-200' },
     { id: 'ready-for-delivery', label: 'Ready for Home', desc: 'Wash done, awaiting driver', Icon: ShieldCheck, activeColor: 'text-green-600', activeBg: 'bg-green-50', activeBorder: 'border-green-200' },
+    { id: 'out_for_delivery', label: 'Out for Delivery', desc: 'Specialist heading to you', Icon: Navigation, activeColor: 'text-blue-600', activeBg: 'bg-blue-100', activeBorder: 'border-blue-300' },
+    { id: 'at_delivery_address', label: 'Specialist Arrived', desc: 'Collect your vehicle', Icon: MapPin, activeColor: 'text-brand', activeBg: 'bg-brand/10', activeBorder: 'border-brand/20' },
     { id: 'completed', label: 'Delivered', desc: 'Returned in pristine condition', Icon: CheckCircle2, activeColor: 'text-green-600', activeBg: 'bg-green-50', activeBorder: 'border-green-200' },
 ];
 

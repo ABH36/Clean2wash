@@ -150,17 +150,34 @@ const StaffDashboard = () => {
     }, [fetchDashboard, user.id, user._id]);
 
     const serviceTasks = tasks.map(b => {
-        const isDelivery = ['quality-check', 'ready-for-delivery', 'delivery-assigned'].includes(b.status);
+        const isApartment = b.service?.category === 'Apartment';
+        const isDelivery = [
+            'quality-check', 
+            'ready-for-delivery', 
+            'delivery-assigned', 
+            'out_for_delivery', 
+            'at_delivery_address', 
+            'completed'
+        ].includes(b.status);
+
+        const ongoingStatuses = [
+            'en_route', 'arrived', 'picked-up', 'at-studio', 
+            'in_progress', 'washing', 'quality-check',
+            'out_for_delivery', 'at_delivery_address'
+        ];
+
         return {
             id: b._id || b.id,
-            type: isDelivery ? 'Delivery' : 'Pickup',
+            type: isApartment ? 'Apartment Wash' : (isDelivery ? 'Delivery' : 'Pickup'),
             customer: b.consumer?.name || 'Guest',
-            address: b.consumer?.profile?.address?.street || 'Pick-up point',
-            time: b.scheduledAt ? new Date(b.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'ASAP',
+            address: b.location?.address?.street || b.consumer?.profile?.address?.street || 'Site point',
+            time: b.schedule?.type === 'instant' ? 'ASAP' : (b.schedule?.timeSlot?.start || 'Scheduled'),
+            date: b.schedule?.date ? new Date(b.schedule.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Today',
+            isScheduled: b.schedule?.type === 'scheduled' || isApartment, // Apartment is usually scheduled
             vehicle: b.vehicle?.brand ? `${b.vehicle.brand} ${b.vehicle.model}` : 'Unknown Vehicle',
             plate: b.vehicle?.plate || '--',
             status: ['completed', 'cancelled'].includes(b.status) ? b.status :
-                ['in_progress', 'en_route', 'at-studio', 'washing', 'quality-check'].includes(b.status) ? 'ongoing' : 'assigned',
+                ongoingStatuses.includes(b.status) ? 'ongoing' : 'assigned',
             rawStatus: b.status,
             isProduct: false
         };
@@ -186,7 +203,7 @@ const StaffDashboard = () => {
     const filteredTasks = allMappedTasks.filter(t => {
         if (activeTab === 'assigned') return t.status === 'assigned';
         if (activeTab === 'ongoing') return t.status === 'ongoing';
-        if (activeTab === 'completed') return t.status === 'completed';
+        if (activeTab === 'completed') return t.status === 'completed' || t.status === 'delivered';
         return true;
     });
 
@@ -443,10 +460,19 @@ const StaffDashboard = () => {
                                                     <h3 className={`text-2xl font-black uppercase tracking-tighter leading-none ${isDarkMode ? 'text-white' : 'text-content'}`}>{task.type} Operation</h3>
                                                 </div>
                                             </div>
-                                            <div className={`${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-100'} px-4 py-2 rounded-2xl border transition-colors`}>
-                                                <div className="flex items-center gap-2">
-                                                    <Clock size={12} className="text-brand" />
-                                                    <p className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/80' : 'text-content'}`}>{task.time}</p>
+                                            <div className="flex flex-col items-end gap-2">
+                                                <div className={`${task.isScheduled ? (isDarkMode ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' : 'bg-amber-50 border-amber-100 text-amber-600') : (isDarkMode ? 'bg-brand/10 border-brand/20 text-brand' : 'bg-brand/5 border-brand/10 text-brand')} px-3 py-1 rounded-xl border text-[8px] font-black uppercase tracking-widest`}>
+                                                    {task.isScheduled ? 'Scheduled Mission' : 'Instant Protocol'}
+                                                </div>
+                                                <div className={`${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-100'} px-4 py-2 rounded-2xl border transition-colors flex items-center gap-3`}>
+                                                    <div className="flex items-center gap-2 border-r pr-3 border-current/10">
+                                                        <Calendar size={12} className="text-brand" />
+                                                        <p className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/80' : 'text-content'}`}>{task.date}</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Clock size={12} className="text-brand" />
+                                                        <p className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/80' : 'text-content'}`}>{task.time}</p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

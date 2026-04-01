@@ -136,7 +136,7 @@ const bookingSchema = new mongoose.Schema({
             'pending', 'confirmed', 'accepted', 'assigned', 'pickup-assigned',
             'en_route', 'arrived', 'picked-up', 'before_photo', 'at-studio', 'washing',
             'in_progress', 'after_photo', 'quality-check', 'ready-for-delivery',
-            'delivery-assigned', 'completed', 'cancelled', 'refunded'
+            'delivery-assigned', 'out_for_delivery', 'at_delivery_address', 'completed', 'cancelled', 'refunded'
         ],
         default: 'pending'
     },
@@ -340,12 +340,16 @@ bookingSchema.virtual('timelineStatus').get(function () {
         'assigned': { label: 'Provider Assigned', color: 'blue', step: 3 },
         'pickup-assigned': { label: 'Pickup Assigned', color: 'blue', step: 3 },
         'en_route': { label: 'On the Way', color: 'blue', step: 3.5 },
+        'arrived': { label: 'At Your Door', color: 'blue', step: 3.8 },
+        'picked-up': { label: 'Picked Up', color: 'blue', step: 3.9 },
         'at-studio': { label: 'At Studio', color: 'purple', step: 4 },
         'in_progress': { label: 'Washing', color: 'purple', step: 4 },
         'washing': { label: 'Washing', color: 'purple', step: 4 },
         'quality-check': { label: 'Quality Check', color: 'purple', step: 4.5 },
         'ready-for-delivery': { label: 'Ready for Home', color: 'green', step: 5 },
-        'delivery-assigned': { label: 'Out for Delivery', color: 'green', step: 5 },
+        'delivery-assigned': { label: 'Out for Delivery', color: 'green', step: 5.1 },
+        'out_for_delivery': { label: 'Out for Delivery', color: 'green', step: 5.5 },
+        'at_delivery_address': { label: 'At Delivery Location', color: 'green', step: 5.8 },
         'completed': { label: 'Service Completed', color: 'green', step: 6 },
         'cancelled': { label: 'Booking Cancelled', color: 'red', step: 0 },
         'refunded': { label: 'Refunded', color: 'gray', step: 0 }

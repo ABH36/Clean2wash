@@ -4,12 +4,13 @@ import {
     ArrowLeft, MapPin, Car, User, Clock,
     CheckCircle2, AlertCircle, Phone, MessageSquare,
     Camera, ChevronRight, Package, Truck, Star,
-    ShieldCheck, X, Upload
+    ShieldCheck, X, Upload, Zap, Calendar
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import VendorLayout from '../components/VendorLayout';
 import { vendorAPI } from '../../../utils/vendorApi';
 import { useAuth } from '../../../context/AuthContext';
+import { useTheme } from '../../../context/ThemeContext';
 import { socketService } from '../../../utils/socket';
 import { toast } from 'react-hot-toast';
 
@@ -18,6 +19,7 @@ const VendorOrderDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { getUser } = useAuth();
+    const { isDarkMode } = useTheme();
     const vendor = getUser('vendor');
 
     const [staffList, setStaffList] = useState([]);
@@ -176,7 +178,10 @@ const VendorOrderDetail = () => {
             'at-studio': '70%',
             'in_progress': '80%',
             'quality-check': '90%',
-            'ready-for-delivery': '95%',
+            'ready-for-delivery': '91%',
+            'delivery-assigned': '93%',
+            'out_for_delivery': '95%',
+            'at_delivery_address': '98%',
             'completed': '100%'
         };
         return statusMap[liveBooking.status] || '0%';
@@ -185,10 +190,10 @@ const VendorOrderDetail = () => {
     const timeline = liveBooking ? [
         { label: 'Booking Request', time: new Date(liveBooking.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), status: 'completed' },
         { label: 'Studio Accepted', time: liveBooking.vendor ? 'OK' : '--', status: liveBooking.vendor ? 'completed' : 'pending' },
-        { label: 'Pickup Assigned', time: '--', status: ['pickup-assigned', 'at-studio', 'in_progress', 'quality-check', 'ready-for-delivery', 'completed'].includes(liveBooking.status) ? 'completed' : 'pending' },
-        { label: 'Vehicle at Studio', time: '--', status: ['at-studio', 'in_progress', 'quality-check', 'ready-for-delivery', 'completed'].includes(liveBooking.status) ? 'active' : 'pending' },
-        { label: 'Detaling & QC', time: '--', status: ['quality-check', 'ready-for-delivery', 'completed'].includes(liveBooking.status) ? 'active' : 'pending' },
-        { label: 'Ready for Home', time: '--', status: ['ready-for-delivery', 'completed'].includes(liveBooking.status) ? 'active' : 'pending' },
+        { label: 'Pickup Assigned', time: '--', status: liveBooking.pickupStaff ? 'completed' : 'pending' },
+        { label: 'Vehicle at Studio', time: '--', status: ['at-studio', 'in_progress', 'quality-check', 'ready-for-delivery', 'completed'].includes(liveBooking.status) ? 'completed' : 'pending' },
+        { label: 'Detaling & QC', time: '--', status: ['quality-check', 'ready-for-delivery', 'completed'].includes(liveBooking.status) ? (['ready-for-delivery', 'completed', 'delivery-assigned', 'out_for_delivery', 'at_delivery_address'].includes(liveBooking.status) ? 'completed' : 'active') : 'pending' },
+        { label: 'Ready for Home', time: '--', status: ['ready-for-delivery', 'delivery-assigned', 'out_for_delivery', 'at_delivery_address', 'completed'].includes(liveBooking.status) ? (liveBooking.status === 'ready-for-delivery' ? 'active' : 'completed') : 'pending' },
         { label: 'Handover Complete', time: '--', status: liveBooking.status === 'completed' ? 'completed' : 'pending' },
     ] : [];
 
@@ -246,9 +251,17 @@ const VendorOrderDetail = () => {
 
                                     <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-10">
                                         <div className="space-y-4">
-                                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand/10 border border-brand/20 rounded-full">
-                                                <div className="w-1.5 h-1.5 bg-brand rounded-full animate-pulse" />
-                                                <p className="text-[9px] font-black text-brand uppercase tracking-[0.2em]">Live Telemetry Active</p>
+                                            <div className="flex flex-wrap gap-2 items-center">
+                                                <div className={`inline-flex items-center gap-2 px-3 py-1 ${isDarkMode ? 'bg-brand/10 border-brand/20' : 'bg-brand/5 border-brand/10'} border rounded-full`}>
+                                                    <div className="w-1.5 h-1.5 bg-brand rounded-full animate-pulse" />
+                                                    <p className="text-[9px] font-black text-brand uppercase tracking-[0.2em]">Live Telemetry Active</p>
+                                                </div>
+                                                <div className={`inline-flex items-center gap-2 px-3 py-1 ${liveBooking.schedule?.type === 'scheduled' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' : 'bg-blue-500/10 border-blue-500/20 text-blue-500'} border rounded-full`}>
+                                                    {liveBooking.schedule?.type === 'scheduled' ? <Clock size={10} /> : <Zap size={10} fill="currentColor" />}
+                                                    <p className="text-[9px] font-black uppercase tracking-[0.2em]">
+                                                        {liveBooking.schedule?.type === 'scheduled' ? `Timed Mission: ${new Date(liveBooking.schedule.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} @ ${liveBooking.schedule.timeSlot?.start || 'Scheduled'}` : 'Instant Protocol: ASAP'}
+                                                    </p>
+                                                </div>
                                             </div>
                                             <h2 className="text-5xl font-black tracking-tighter uppercase leading-none text-content transform group-hover:-skew-x-6 transition-transform duration-700">{liveBooking.status.replace(/-/g, ' ')}</h2>
                                             <div className="space-y-2">

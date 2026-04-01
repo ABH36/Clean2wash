@@ -94,6 +94,18 @@ exports.getDashboard = async (req, res) => {
             method: (t.paymentMethod || 'BANK').toUpperCase()
         }));
 
+        // 5.1 Active Subscriptions (Apartment Wash)
+        const Hub = require('../../../models/Hub');
+        const Subscription = require('../../../models/Subscription');
+        
+        const vendorHubs = await Hub.find({ vendor: vendorId }).select('_id');
+        const hubIds = vendorHubs.map(h => h._id);
+        
+        const activeSubscriptionsCount = await Subscription.countDocuments({
+            hub: { $in: hubIds },
+            status: 'active'
+        });
+
         res.status(200).json({
             status: 'success',
             data: {
@@ -102,6 +114,7 @@ exports.getDashboard = async (req, res) => {
                 activeJobs,
                 completedJobs,
                 staffCount,
+                activeSubscriptionsCount,
                 rating: parseFloat(avgRating),
                 inventoryCount: req.user.profile?.inventory?.length || 0,
                 recentActivity,
@@ -328,6 +341,21 @@ exports.updateOrderStatus = async (req, res) => {
 
         // --- Elite Flow Hardening: Status Transition Rules ---
         const eliteStatuses = ['at-studio', 'in_progress', 'quality-check', 'ready-for-delivery'];
+
+        // 🛡️ Integrity Guard: Prevent bypassing staff assignment
+        if (['en_route', 'arrived', 'picked-up', 'at-studio', 'in_progress'].includes(status) && !booking.pickupStaff) {
+            return res.status(403).json({ 
+                status: 'error', 
+                message: 'Integrity Violation: Pickup Staff must be assigned before moving to operational phases.' 
+            });
+        }
+
+        if (['delivery-assigned', 'out_for_delivery', 'at_delivery_address', 'completed'].includes(status) && !booking.deliveryStaff) {
+            return res.status(403).json({ 
+                status: 'error', 
+                message: 'Integrity Violation: Delivery Staff must be assigned before dispatch or completion.' 
+            });
+        }
 
         // Basic Guard: If trying to move to an internal studio status, ensure the order is actually at the studio
         if (['in_progress', 'quality-check'].includes(status) && booking.status !== 'at-studio' && !eliteStatuses.includes(booking.status)) {
@@ -804,20 +832,17 @@ exports.requestPayout = async (req, res) => {
             return res.status(400).json({ status: 'error', message: 'Insufficient balance' });
         }
 
-        const { executeWalletTransaction } = require('../../../utils/walletHelper');
-
         // Execute atomic debit with transaction logging
-        const txnResult = await executeWalletTransaction(
-            vendorId,
+        const txnResult = await walletHelper.executeWalletTransaction({
+            user: vendorId,
             amount,
-            'debit',
-            {
-                category: 'WITHDRAWAL',
-                description: `Bank Withdrawal Request. Account: ${bankDetails?.accountNumber || 'Stored Bank'}`,
-                status: 'pending',
-                metaData: { bankDetails, requestedAt: new Date() }
-            }
-        );
+            type: 'debit',
+            category: 'WITHDRAWAL',
+            description: `Bank Withdrawal Request. Account: ${bankDetails?.accountNumber || 'Stored Bank'}`,
+            status: 'pending',
+            referenceType: 'payout',
+            metaData: { bankDetails, requestedAt: new Date() }
+        });
 
         res.status(200).json({
             status: 'success',
@@ -831,26 +856,6 @@ exports.requestPayout = async (req, res) => {
     }
 };
 
-/**
- * Terminal Handshake: Verify PIN for Studio Handover
- */
-exports.verifyBookingPin = async (req, res) => {
-    try {
-        const { orderId } = req.params;
-        const { pin } = req.body;
-
-        const booking = await Booking.findById(orderId);
-        if (!booking) return res.status(404).json({ status: 'error', message: 'Order not found' });
-
-        if (booking.security?.pin !== pin) {
-            return res.status(400).json({ status: 'error', message: 'Invalid PIN' });
-        }
-
-        res.status(200).json({ status: 'success', message: 'PIN verified' });
-    } catch (error) {
-        res.status(500).json({ status: 'error', message: 'Verification failed' });
-    }
-};
 
 
 // --- Customer Management ---
@@ -1151,7 +1156,6 @@ exports.assignStaff = async (req, res) => {
             });
         }
         // Notify Consumer of assignment / status update
-        const { socketService } = require('../../../socketService');
         const io = socketService.getIO();
 
         // Auto-update status if staff is assigned for the first time
@@ -1189,8 +1193,8 @@ exports.assignStaff = async (req, res) => {
 
         // 3. New: Direct Push to Staff Terminal
         const { sendStaffNotification } = require('../../../utils/notificationService');
-        await sendStaffNotification(staffId, {
-            title: `New Assignment: ${type.toUpperCase()}`,
+        await sendStaffNotification(staffId.toString(), {
+            title: `New Assignment: ${(type || 'Pickup').toUpperCase()}`,
             message: `Dispatch for ${booking.consumer?.name || 'Customer'}'s ${booking.vehicle?.brand || 'Vehicle'} (ID: ${booking._id.toString().slice(-6).toUpperCase()})`,
             type: 'order-assigned',
             priority: 'urgent',
@@ -1218,49 +1222,6 @@ exports.assignStaff = async (req, res) => {
 
 // --- Payout Management ---
 
-exports.requestPayout = async (req, res) => {
-    try {
-        const { amount } = req.body;
-        const User = require('../../../models/User'); // Import User model
-        const WalletTransaction = require('../../../models/WalletTransaction'); // Import WalletTransaction model
-        const vendor = await User.findById(req.user._id);
-
-        if (!amount || amount <= 0) {
-            return res.status(400).json({ status: 'error', message: 'Please provide a valid amount' });
-        }
-
-        if (!vendor) {
-            return res.status(404).json({ status: 'error', message: 'Vendor not found' });
-        }
-
-        if (vendor.wallet.balance < amount) {
-            return res.status(400).json({ status: 'error', message: 'Insufficient balance' });
-        }
-
-        const { executeWalletTransaction } = require('../../../utils/walletHelper');
-
-        const txn = await executeWalletTransaction(
-            vendor._id,
-            amount,
-            'debit',
-            {
-                category: 'WITHDRAWAL',
-                description: 'Bank Transfer Payout Request',
-                status: 'pending',
-                paymentMethod: 'netbanking'
-            }
-        );
-
-        res.status(200).json({
-            status: 'success',
-            message: 'Payout request submitted successfully',
-            data: { balance: txn.balance }
-        });
-    } catch (error) {
-        console.error('Error requesting payout:', error);
-        res.status(500).json({ status: 'error', message: 'Failed to process payout request' });
-    }
-};
 
 // Verify User PIN for Security Handover
 exports.verifyBookingPin = async (req, res) => {

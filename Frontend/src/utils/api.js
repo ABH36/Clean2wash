@@ -641,6 +641,10 @@ export const bookingAPI = {
     createBooking: (data) => apiClient.createBooking(data),
     updateBooking: (id, data) => apiClient.updateBooking(id, data),
     cancelBooking: (id) => apiClient.cancelBooking(id),
+    submitFeedback: (id, data) => apiClient.request(`/bookings/${id}/feedback`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+    }),
 };
 
 export const productAPI = {

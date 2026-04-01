@@ -80,7 +80,7 @@ const VendorHome = () => {
     const STATS = [
         { label: 'Active Jobs', val: stats.activeJobs?.toString().padStart(2, '0') || '00', trend: `Live`, color: 'text-blue-600', bg: 'bg-blue-50' },
         { label: 'Total Revenue', val: `₹${(stats.totalRevenue || 0).toLocaleString()}`, trend: '100%', color: 'text-green-600', bg: 'bg-green-50' },
-        { label: 'Studio Teams', val: stats.staffCount?.toString().padStart(2, '0') || '00', trend: 'Total', color: 'text-brand', bg: 'bg-brand/10' },
+        { label: 'Active Subs', val: stats.activeSubscriptionsCount?.toString().padStart(2, '0') || '00', trend: 'Apartment', color: 'text-brand', bg: 'bg-brand/10' },
     ];
 
     const getStatusStyles = (status) => {

@@ -16,6 +16,8 @@ const DriverDashboard = lazy(() => import('./pages/DriverDashboard'));
 const DriverBookings = lazy(() => import('./pages/DriverBookings'));
 const DriverEarnings = lazy(() => import('./pages/DriverEarnings'));
 const DriverHistory = lazy(() => import('./pages/DriverHistory'));
+const DriverProfile = lazy(() => import('./pages/DriverProfile'));
+const DriverNotifications = lazy(() => import('./pages/DriverNotifications'));
 
 // ─── Consumer-facing booking pages that relate to spare drivers ───
 const SpareDriverBooking = lazy(() => import('../consumer/pages/SpareDriverBooking'));
@@ -42,7 +44,8 @@ const SpareDriverRoutes = () => {
                 <Route path="bookings" element={<DriverProtect><DriverBookings /></DriverProtect>} />
                 <Route path="earnings" element={<DriverProtect><DriverEarnings /></DriverProtect>} />
                 <Route path="history-log" element={<DriverProtect><DriverHistory /></DriverProtect>} />
-                <Route path="profile" element={<DriverProtect><DriverDashboard /></DriverProtect>} />
+                <Route path="profile" element={<DriverProtect><DriverProfile /></DriverProtect>} />
+                <Route path="notifications" element={<DriverProtect><DriverNotifications /></DriverProtect>} />
 
                 {/* ── Consumer-facing Spare Driver pages ── */}
                 <Route path="" element={<SpareDriverBooking />} />

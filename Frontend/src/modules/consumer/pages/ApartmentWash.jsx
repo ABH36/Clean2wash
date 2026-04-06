@@ -1,25 +1,125 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import {
     ArrowLeft, Building, MapPin, Car, ShieldCheck,
     Clock, Check, ChevronRight, ChevronDown, Info, Calendar, CreditCard, Search,
-    ArrowRight
+    ArrowRight, Loader2, PauseCircle, PlayCircle, RefreshCw, PencilLine, SkipForward
 } from 'lucide-react';
 import MobileLayout from '../components/layout/MobileLayout';
 import { useAuth } from '../../../context/AuthContext';
 import { serviceAPI, subscriptionAPI } from '../../../utils/api';
-import BlackPassModal from '../components/membership/BlackPassModal';
 import GoogleMapBox from '../../../components/common/GoogleMapBox';
-import { Map as MapIcon, List as ListIcon } from 'lucide-react';
+import { Map as MapIcon, List as ListIcon, Plus } from 'lucide-react';
+import { geocodingService } from '../../../utils/geocoding';
+
+const formatDate = (value) => {
+    if (!value) return 'Not scheduled';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Not scheduled';
+    return date.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+    });
+};
+
+const getTodayDateString = () => new Date().toISOString().split('T')[0];
+
+const computeNextApartmentWashWindow = (subscription, slots = []) => {
+    if (!subscription || subscription.status === 'paused') {
+        return { label: 'Paused', date: null };
+    }
+
+    if (subscription.status === 'pending') {
+        return { label: 'Awaiting admin verification', date: null, time: 'Captain assignment pending' };
+    }
+
+    if (subscription.status === 'rejected') {
+        return { label: 'Reconfigure request', date: null, time: 'Admin approval not granted' };
+    }
+
+    const slotMap = new Map((slots || []).map((slot) => [slot.id, slot]));
+    const activeSlot = slotMap.get(subscription.slot) || {};
+    const now = new Date();
+    const skipDates = new Set((subscription.skipDates || []).map((value) => new Date(value).toISOString().split('T')[0]));
+    const searchDate = new Date(now);
+
+    for (let offset = 0; offset < 14; offset += 1) {
+        const candidate = new Date(searchDate);
+        candidate.setDate(now.getDate() + offset);
+        candidate.setHours(0, 0, 0, 0);
+
+        const key = candidate.toISOString().split('T')[0];
+        if (skipDates.has(key)) continue;
+
+        return {
+            label: activeSlot.label || subscription.slot || 'Scheduled slot',
+            time: activeSlot.time || '',
+            date: candidate
+        };
+    }
+
+    return {
+        label: activeSlot.label || subscription.slot || 'Scheduled slot',
+        time: activeSlot.time || '',
+        date: null
+    };
+};
+
+const toApartmentSearchCard = (result, index = 0) => ({
+    _id: `search-${index}-${String(result.label || 'apartment').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`,
+    name: result.label || 'Requested Apartment',
+    city: '',
+    location: {
+        address: result.address || result.label || '',
+        coordinates: { lat: result.lat, lng: result.lng }
+    },
+    metadata: {
+        isSociety: true,
+        pendingApproval: true,
+        blocks: [],
+        parkingLevels: [],
+        pillarRange: { min: 1, max: 999 }
+    },
+    iconUrl: '',
+    isSearchFallback: true
+});
+
+const getBuildingMarkerIcon = () => {
+    if (!window.google?.maps?.Size || !window.google?.maps?.Point) return undefined;
+    return {
+        url: 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png',
+        scaledSize: new window.google.maps.Size(42, 42),
+        anchor: new window.google.maps.Point(21, 42)
+    };
+};
 
 const ApartmentWash = () => {
     const navigate = useNavigate();
-    const { vehicles, user, refreshStats, getRazorpayKey, createPaymentOrder, verifyPayment, isBlackPassMember } = useAuth();
+    const location = useLocation();
+    const { vehicles, vehiclesLoading, user, refreshStats, getRazorpayKey, createPaymentOrder, verifyPayment } = useAuth();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(true);
+    const [subscriptionLoading, setSubscriptionLoading] = useState(true);
+    const [activeSubscription, setActiveSubscription] = useState(null);
+    const [manageMode, setManageMode] = useState(false);
+    const [managementSaving, setManagementSaving] = useState(false);
+    const [slotLoading, setSlotLoading] = useState(false);
+    const [activationSummary, setActivationSummary] = useState(location.state?.apartmentActivated || null);
+
+    // 🛡️ Proactive Redirect: Force users with 0 vehicles to Garaj
+    useEffect(() => {
+        if (!vehiclesLoading && vehicles && vehicles.length === 0) {
+            toast.error('Register your vehicle', { icon: '🚗', id: 'vehicle-registration-toast' });
+            const timer = setTimeout(() => navigate('/vehicles?from=apartment-wash&mode=add'), 1200);
+            return () => clearTimeout(timer);
+        }
+    }, [vehicles, vehiclesLoading, navigate]);
+
+
 
     // Dynamic Data State
     const [apartments, setApartments] = useState([]);
@@ -29,7 +129,8 @@ const ApartmentWash = () => {
     const [apartmentService, setApartmentService] = useState(null);
     const [fetchError, setFetchError] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
-    const [showBlackPassModal, setShowBlackPassModal] = useState(false);
+    const [searchFallbackResults, setSearchFallbackResults] = useState([]);
+    const [registeringApartment, setRegisteringApartment] = useState(false);
     const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
 
     // Form State
@@ -44,6 +145,7 @@ const ApartmentWash = () => {
     });
     const [selectedPlan, setSelectedPlan] = useState(null);
     const [selectedSlot, setSelectedSlot] = useState(null);
+    const [skipTodayDate, setSkipTodayDate] = useState(new Date().toISOString().split('T')[0]);
 
     const loadRazorpayScript = () => new Promise((resolve, reject) => {
         if (window.Razorpay) return resolve(true);
@@ -55,6 +157,42 @@ const ApartmentWash = () => {
         script.onerror = () => reject(new Error('Failed to load Razorpay checkout script'));
         document.body.appendChild(script);
     });
+
+    const apartmentSlots = useMemo(() => (
+        slots.length > 0 ? slots : [
+            { id: 'morning', time: '6:00 AM - 9:00 AM', label: 'Morning Primary' },
+            { id: 'evening', time: '6:00 PM - 8:00 PM', label: 'Evening Optional' }
+        ]
+    ), [slots]);
+
+    useEffect(() => {
+        let mounted = true;
+        const fetchActiveSubscription = async () => {
+            try {
+                setSubscriptionLoading(true);
+                const res = await subscriptionAPI.getSubscription({ serviceKey: 'APARTMENT_WASH' });
+                if (!mounted) return;
+                const subscription = res?.data?.subscription || null;
+                setActiveSubscription(subscription);
+                setManageMode(Boolean(subscription));
+            } catch (error) {
+                console.error('Failed to load apartment subscription:', error);
+            } finally {
+                if (mounted) setSubscriptionLoading(false);
+            }
+        };
+
+        fetchActiveSubscription();
+        return () => {
+            mounted = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (location.state?.apartmentActivated) {
+            setActivationSummary(location.state.apartmentActivated);
+        }
+    }, [location.state]);
 
     // Fetch initial and searched data
     useEffect(() => {
@@ -89,6 +227,16 @@ const ApartmentWash = () => {
                     setSlots(response.data?.slots || []);
                     setBusinessRules(response.data?.rules || []);
                 }
+
+                if (searchQuery.trim().length >= 3) {
+                    const geoResults = await geocodingService.search(searchQuery.trim());
+                    const mappedResults = (geoResults || [])
+                        .filter((result) => typeof result.lat === 'number' && typeof result.lng === 'number')
+                        .map((result, index) => toApartmentSearchCard(result, index));
+                    setSearchFallbackResults(mappedResults);
+                } else {
+                    setSearchFallbackResults([]);
+                }
             } catch (err) {
                 console.error("Failed to fetch apartment data:", err);
                 setFetchError(err.message || 'Failed to load apartment wash data');
@@ -105,24 +253,133 @@ const ApartmentWash = () => {
         return () => clearTimeout(timeoutId);
     }, [user, user?.profile?.addresses, refreshStats, searchQuery]);
 
+    useEffect(() => {
+        let mounted = true;
+
+        const syncApartmentSlots = async () => {
+            if (!selectedApartment?._id || !apartmentService?.id) return;
+
+            try {
+                setSlotLoading(true);
+                const response = await serviceAPI.getTimeSlots({
+                    date: getTodayDateString(),
+                    serviceId: apartmentService.id,
+                    hubId: selectedApartment._id
+                });
+
+                if (!mounted) return;
+                const liveSlots = response?.data?.timeSlots || [];
+                if (liveSlots.length > 0) {
+                    setSlots(liveSlots);
+                }
+            } catch (error) {
+                console.error('Failed to sync apartment slots:', error);
+            } finally {
+                if (mounted) setSlotLoading(false);
+            }
+        };
+
+        syncApartmentSlots();
+        return () => {
+            mounted = false;
+        };
+    }, [selectedApartment?._id, apartmentService?.id]);
+
     // Filtered apartments
     const filteredApartments = useMemo(() => {
-        if (!searchQuery) return apartments;
+        const combinedApartments = [...apartments];
+        const existingKeys = new Set(
+            apartments.map((apt) => `${String(apt.name || '').toLowerCase()}|${String(typeof apt.location === 'object' ? (apt.location.address || apt.location.full || '') : apt.location || '').toLowerCase()}`)
+        );
+
+        searchFallbackResults.forEach((apt) => {
+            const key = `${String(apt.name || '').toLowerCase()}|${String(apt.location?.address || '').toLowerCase()}`;
+            if (!existingKeys.has(key)) {
+                combinedApartments.push(apt);
+                existingKeys.add(key);
+            }
+        });
+
+        if (!searchQuery) return combinedApartments;
         const q = searchQuery.toLowerCase();
-        return apartments.filter(apt => {
+        return combinedApartments.filter(apt => {
             const name = apt?.name?.toLowerCase() || '';
             const city = (typeof apt?.city === 'object' ? apt.city.name : apt?.city)?.toLowerCase() || '';
             const location = (typeof apt?.location === 'object' ? (apt.location.address || apt.location.full) : apt?.location)?.toLowerCase() || '';
             
             return name.includes(q) || city.includes(q) || location.includes(q);
         });
-    }, [apartments, searchQuery]);
+    }, [apartments, searchFallbackResults, searchQuery]);
 
-    const handleApartmentClick = (apt) => {
-        setSelectedApartment(apt);
+    useEffect(() => {
+        if (!activeSubscription) return;
+
+        const matchedApartment = apartments.find((apt) => apt._id === activeSubscription.hub?._id || apt._id === activeSubscription.hub);
+        if (matchedApartment) {
+            setSelectedApartment(matchedApartment);
+        }
+
+        setParkingDetails((current) => ({
+            ...current,
+            basement: activeSubscription.parkingDetails?.basement || current.basement,
+            block: activeSubscription.parkingDetails?.block || current.block,
+            pillar: activeSubscription.parkingDetails?.pillar || current.pillar,
+            carNumber: activeSubscription.parkingDetails?.carNumber || activeSubscription.vehicle?.plate || activeSubscription.vehicle?.plateNumber || current.carNumber,
+            carModel: activeSubscription.parkingDetails?.carModel || [activeSubscription.vehicle?.brand, activeSubscription.vehicle?.model].filter(Boolean).join(' ') || current.carModel,
+            vehicleId: activeSubscription.vehicle?._id || activeSubscription.vehicle || current.vehicleId
+        }));
+
+        const matchedSlot = apartmentSlots.find((slot) => slot.id === activeSubscription.slot);
+        if (matchedSlot) {
+            setSelectedSlot(matchedSlot);
+        }
+    }, [activeSubscription, apartments, apartmentSlots]);
+
+    const registerApartmentFromSearch = async (apt) => {
+        setRegisteringApartment(true);
+        try {
+            const reverse = await geocodingService.reverse(apt.location.coordinates.lat, apt.location.coordinates.lng);
+            const payload = {
+                name: apt.name,
+                address: apt.location?.address || reverse?.display_name || apt.name,
+                city: reverse?.city || user?.profile?.address?.city || user?.profile?.addresses?.[0]?.city || 'Unknown City',
+                coordinates: apt.location.coordinates
+            };
+
+            const response = await serviceAPI.requestApartmentLead(payload);
+            const registeredApartment = response?.data?.apartment;
+            if (!registeredApartment) {
+                throw new Error('Failed to register apartment');
+            }
+
+            setApartments((current) => {
+                const exists = current.some((entry) => String(entry._id) === String(registeredApartment._id));
+                return exists ? current : [registeredApartment, ...current];
+            });
+            setSearchFallbackResults([]);
+            toast.success(response?.message || 'Apartment registered. Continue with subscription setup.');
+            return registeredApartment;
+        } catch (error) {
+            console.error('Failed to register searched apartment:', error);
+            toast.error(error.message || 'Unable to register this apartment right now');
+            return null;
+        } finally {
+            setRegisteringApartment(false);
+        }
+    };
+
+    const handleApartmentClick = async (apt) => {
+        let nextApartment = apt;
+        if (apt?.isSearchFallback) {
+            const registeredApartment = await registerApartmentFromSearch(apt);
+            if (!registeredApartment) return;
+            nextApartment = registeredApartment;
+        }
+
+        setSelectedApartment(nextApartment);
         
         // Auto-select or reset parking details based on metadata
-        const metadata = apt?.metadata || {};
+        const metadata = nextApartment?.metadata || {};
         const levels = metadata.parkingLevels || [];
         const blocks = metadata.blocks || [];
         
@@ -142,24 +399,522 @@ const ApartmentWash = () => {
     };
 
     const handlePlanSelect = (plan) => {
-        // If the user clicks on the Global Black Pass, handle it via membership modal
-        if (plan.name?.toLowerCase().includes('black') || plan.popular) {
-            console.log('💎 Premium Plan Clicked - Launching Global Pass Modal');
-            if (isBlackPassMember) {
-                toast.success("Welcome back, Premium Member! 🕶️ Checking your status...");
-            }
-            setShowBlackPassModal(true);
-            return;
-        }
-        
-        // Otherwise, proceed with standard apartment wash subscription flow
         setSelectedPlan(plan);
         setStep(4);
+        /*
+            console.log('💎 Premium Plan Clicked - Launching Global Pass Modal');
+                toast.success("Welcome back, Premium Member! 🕶️ Checking your status...");
+            }
+            setShowGoldPassModal(true);
+            return;
+        */
     };
 
     const handleSlotSelect = (slot) => {
         setSelectedSlot(slot);
         setStep(5);
+    };
+
+    const refreshApartmentSubscription = async () => {
+        const res = await subscriptionAPI.getSubscription({ serviceKey: 'APARTMENT_WASH' });
+        const subscription = res?.data?.subscription || null;
+        setActiveSubscription(subscription);
+        setManageMode(Boolean(subscription));
+        return subscription;
+    };
+
+    const validateSelectedApartmentSlot = async () => {
+        if (!selectedApartment?._id || !selectedSlot?.id || !apartmentService?.id) return true;
+
+        const response = await serviceAPI.getTimeSlots({
+            date: getTodayDateString(),
+            serviceId: apartmentService.id,
+            hubId: selectedApartment._id
+        });
+
+        const liveSlots = response?.data?.timeSlots || [];
+        if (liveSlots.length > 0) {
+            setSlots(liveSlots);
+        }
+
+        const matchedSlot = liveSlots.find((entry) => entry.id === selectedSlot.id);
+        if (matchedSlot && matchedSlot.available === false) {
+            throw new Error('Selected apartment slot is full. Please choose another slot.');
+        }
+
+        return true;
+    };
+
+    const handleUpdateSubscription = async (payload, successMessage) => {
+        try {
+            setManagementSaving(true);
+            await subscriptionAPI.updateSubscription(payload, { serviceKey: 'APARTMENT_WASH' });
+            await refreshApartmentSubscription();
+            if (refreshStats) refreshStats();
+            toast.success(successMessage);
+        } catch (error) {
+            console.error('Failed to update apartment subscription:', error);
+            toast.error(error.message || 'Failed to update apartment wash settings');
+        } finally {
+            setManagementSaving(false);
+        }
+    };
+
+    const handlePauseResume = async () => {
+        if (!activeSubscription) return;
+        try {
+            setManagementSaving(true);
+            if (activeSubscription.status === 'paused') {
+                await subscriptionAPI.resumeSubscription({ serviceKey: 'APARTMENT_WASH' });
+                toast.success('Apartment wash service resumed');
+            } else {
+                await subscriptionAPI.pauseSubscription({ serviceKey: 'APARTMENT_WASH' });
+                toast.success('Apartment wash service paused');
+            }
+            await refreshApartmentSubscription();
+            if (refreshStats) refreshStats();
+        } catch (error) {
+            console.error('Failed to toggle apartment subscription:', error);
+            toast.error(error.message || 'Unable to update subscription status');
+        } finally {
+            setManagementSaving(false);
+        }
+    };
+
+    const handleSkipToday = async () => {
+        if (!activeSubscription) return;
+        try {
+            setManagementSaving(true);
+            await subscriptionAPI.skipSubscription(skipTodayDate, { serviceKey: 'APARTMENT_WASH' });
+            await refreshApartmentSubscription();
+            toast.success('Today\'s apartment wash skipped');
+        } catch (error) {
+            console.error('Failed to skip apartment wash:', error);
+            toast.error(error.message || 'Unable to skip service date');
+        } finally {
+            setManagementSaving(false);
+        }
+    };
+
+    const handleStartRenewFlow = () => {
+        setManageMode(false);
+        setStep(3);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const renderPendingApprovalManager = () => (
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="px-5 pt-4 space-y-6 pb-24"
+        >
+            <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+                    <p className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.24em]">Request Submitted</p>
+                </div>
+                <h2 className="text-2xl font-[1000] text-content uppercase tracking-tighter">Admin Verification Pending</h2>
+                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-relaxed">
+                    Payment receive ho gaya hai. Ab admin apartment verify karke captain mapping confirm karega, phir daily wash live hoga.
+                </p>
+            </div>
+
+            <div className="rounded-[2rem] bg-black p-6 text-white shadow-2xl">
+                <div className="flex items-start justify-between gap-3">
+                    <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-brand">Apartment Request</p>
+                        <h3 className="mt-2 text-2xl font-[1000] uppercase tracking-tighter">{activeSubscription?.plan || 'Apartment Wash'}</h3>
+                        <p className="mt-2 text-[10px] font-black uppercase tracking-[0.18em] text-white/40">
+                            {activeSubscription?.hub?.name || selectedApartment?.name || 'Apartment pending'} • {activeSubscription?.slot || selectedSlot?.label || 'Slot pending'}
+                        </p>
+                    </div>
+                    <div className="rounded-2xl bg-yellow-400 px-3 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-black">
+                        Pending
+                    </div>
+                </div>
+
+                <div className="mt-5 grid grid-cols-2 gap-3">
+                    <div className="rounded-2xl bg-white/5 p-4">
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Vehicle</p>
+                        <p className="mt-2 text-sm font-[1000] tracking-tight">{getTodayDateString() ? (parkingDetails.carNumber || activeSubscription?.vehicle?.plate || activeSubscription?.vehicle?.plateNumber || 'Vehicle pending') : 'Vehicle pending'}</p>
+                    </div>
+                    <div className="rounded-2xl bg-white/5 p-4">
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Parking Route</p>
+                        <p className="mt-2 text-sm font-[1000] uppercase tracking-tight">{[parkingDetails.basement, parkingDetails.block, parkingDetails.pillar].filter(Boolean).join(' • ') || 'Parking pending'}</p>
+                    </div>
+                </div>
+
+                <div className="mt-3 rounded-2xl bg-white/5 p-4">
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">What Happens Next</p>
+                    <div className="mt-3 space-y-2">
+                        {[
+                            'Admin apartment request verify karega',
+                            'Apartment ke liye captain pool map hoga',
+                            'Approved hote hi daily wash jobs captain ko jayengi'
+                        ].map((item) => (
+                            <div key={item} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-white/75">
+                                <Check size={12} className="text-brand" />
+                                <span>{item}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {activationSummary && (
+                <div className="rounded-3xl border border-yellow-100 bg-yellow-50 px-5 py-4 shadow-sm">
+                    <p className="text-[10px] font-black uppercase tracking-[0.24em] text-yellow-700">Request Logged</p>
+                    <p className="mt-2 text-[11px] font-[1000] uppercase tracking-tight text-yellow-900">
+                        {activationSummary.plan || activeSubscription?.plan || 'Apartment Wash'} request admin ke paas pahunch gayi hai.
+                    </p>
+                    <p className="mt-1 text-[9px] font-black uppercase tracking-[0.16em] text-yellow-800/70">
+                        {activationSummary.apartment || activeSubscription?.hub?.name || 'Apartment'} • {activationSummary.slot || activeSubscription?.slot || 'Slot pending'}
+                    </p>
+                </div>
+            )}
+
+            <div className="rounded-3xl border border-black/[0.04] bg-white p-5 shadow-sm space-y-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-2xl bg-gray-50 flex items-center justify-center text-brand">
+                        <PencilLine size={20} />
+                    </div>
+                    <div>
+                        <p className="text-[12px] font-[1000] uppercase tracking-tight text-black">Update Request Details</p>
+                        <p className="text-[9px] font-black uppercase tracking-[0.18em] text-black/30 mt-1">Approval se pehle parking, vehicle aur slot correct kar sakte ho</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3">
+                    <select
+                        value={parkingDetails.vehicleId}
+                        onChange={(e) => {
+                            const matchedVehicle = vehicles.find((v) => v._id === e.target.value);
+                            setParkingDetails((current) => ({
+                                ...current,
+                                vehicleId: e.target.value,
+                                carModel: matchedVehicle ? `${matchedVehicle.brand} ${matchedVehicle.model}` : current.carModel,
+                                carNumber: matchedVehicle ? (matchedVehicle.plate || matchedVehicle.plateNumber) : current.carNumber
+                            }));
+                        }}
+                        className="w-full rounded-2xl border border-black/[0.06] bg-gray-50 px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20"
+                    >
+                        <option value="">Select vehicle</option>
+                        {vehicles.map((vehicle) => (
+                            <option key={vehicle._id} value={vehicle._id}>{vehicle.brand} {vehicle.model} • {vehicle.plate || vehicle.plateNumber}</option>
+                        ))}
+                    </select>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <input value={parkingDetails.basement} onChange={(e) => setParkingDetails((current) => ({ ...current, basement: e.target.value }))} placeholder="Basement / Level" className="w-full rounded-2xl border border-black/[0.06] bg-gray-50 px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20" />
+                        <input value={parkingDetails.block} onChange={(e) => setParkingDetails((current) => ({ ...current, block: e.target.value }))} placeholder="Block / Tower" className="w-full rounded-2xl border border-black/[0.06] bg-gray-50 px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20" />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <input value={parkingDetails.pillar} onChange={(e) => setParkingDetails((current) => ({ ...current, pillar: e.target.value }))} placeholder="Pillar / Slot" className="w-full rounded-2xl border border-black/[0.06] bg-gray-50 px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20" />
+                        <select value={selectedSlot?.id || activeSubscription?.slot || ''} onChange={(e) => {
+                            const slot = apartmentSlots.find((entry) => entry.id === e.target.value);
+                            setSelectedSlot(slot || null);
+                        }} className="w-full rounded-2xl border border-black/[0.06] bg-gray-50 px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20">
+                            <option value="">Select slot</option>
+                            {apartmentSlots.map((slot) => (
+                                <option key={slot.id} value={slot.id}>{slot.label}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <button
+                        onClick={() => handleUpdateSubscription({
+                            vehicleId: parkingDetails.vehicleId || undefined,
+                            slot: selectedSlot?.id || activeSubscription?.slot,
+                            hubId: selectedApartment?._id || activeSubscription?.hub?._id,
+                            parkingDetails: {
+                                basement: parkingDetails.basement,
+                                block: parkingDetails.block,
+                                pillar: parkingDetails.pillar,
+                                carModel: parkingDetails.carModel,
+                                carNumber: parkingDetails.carNumber
+                            }
+                        }, 'Apartment wash request updated')}
+                        disabled={managementSaving}
+                        className="w-full rounded-2xl bg-black py-4 text-[10px] font-black uppercase tracking-[0.2em] text-white disabled:opacity-40"
+                        >
+                            Save Request Details
+                        </button>
+                    </div>
+                </div>
+
+            <div className="grid grid-cols-2 gap-3">
+                <button
+                    onClick={() => navigate('/apartment-wash/history')}
+                    className="w-full rounded-3xl border border-black/[0.05] bg-white px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-black"
+                >
+                    View History
+                </button>
+                <button
+                    onClick={() => navigate('/apartment-wash/support')}
+                    className="w-full rounded-3xl border border-brand/20 bg-brand/5 px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-brand"
+                >
+                    Contact Support
+                </button>
+            </div>
+        </motion.div>
+    );
+
+    const renderRejectedSubscriptionManager = () => (
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="px-5 pt-4 space-y-6 pb-24"
+        >
+            <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-red-500" />
+                    <p className="text-[10px] font-black text-red-600 uppercase tracking-[0.24em]">Approval Required Again</p>
+                </div>
+                <h2 className="text-2xl font-[1000] text-content uppercase tracking-tighter">Request Needs Update</h2>
+                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-relaxed">
+                    Admin ne is request ko approve nahi kiya. Apartment, slot ya parking details update karke dubara request bhejo.
+                </p>
+            </div>
+
+            <div className="rounded-3xl border border-red-100 bg-red-50 px-5 py-5 shadow-sm">
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-600">Request Not Approved</p>
+                <p className="mt-2 text-[11px] font-[1000] uppercase tracking-tight text-red-900">
+                    {activeSubscription?.hub?.name || selectedApartment?.name || 'Apartment'} • {activeSubscription?.slot || selectedSlot?.label || 'Slot pending'}
+                </p>
+            </div>
+
+            <button
+                onClick={handleStartRenewFlow}
+                className="w-full rounded-3xl bg-black px-5 py-4 text-[10px] font-black uppercase tracking-[0.22em] text-white"
+            >
+                Reconfigure Request
+            </button>
+        </motion.div>
+    );
+
+    const renderActiveSubscriptionManager = () => {
+        if (activeSubscription?.status === 'pending') {
+            return renderPendingApprovalManager();
+        }
+
+        if (activeSubscription?.status === 'rejected') {
+            return renderRejectedSubscriptionManager();
+        }
+
+        const todaySkipped = (activeSubscription?.skipDates || []).some((date) => {
+            const normalized = new Date(date).toISOString().split('T')[0];
+            return normalized === skipTodayDate;
+        });
+        const nextWash = computeNextApartmentWashWindow(activeSubscription, apartmentSlots);
+
+        return (
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="px-5 pt-4 space-y-6 pb-24"
+            >
+                <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.24em]">Subscription Active</p>
+                    </div>
+                    <h2 className="text-2xl font-[1000] text-content uppercase tracking-tighter">Manage Apartment Wash</h2>
+                    <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-relaxed">
+                        Jab tak plan active hai, yahin se parking, slot, pause, skip aur renew manage karo.
+                    </p>
+                </div>
+
+                <div className="rounded-[2rem] bg-black p-6 text-white shadow-2xl">
+                    <div className="flex items-start justify-between gap-3">
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-brand">Apartment Pass</p>
+                            <h3 className="mt-2 text-2xl font-[1000] uppercase tracking-tighter">{activeSubscription?.plan || 'Apartment Wash'}</h3>
+                            <p className="mt-2 text-[10px] font-black uppercase tracking-[0.18em] text-white/40">
+                                {activeSubscription?.hub?.name || selectedApartment?.name || 'Apartment pending'} • {activeSubscription?.slot || selectedSlot?.label || 'slot pending'}
+                            </p>
+                        </div>
+                        <div className={`rounded-2xl px-3 py-2 text-[9px] font-black uppercase tracking-[0.2em] ${activeSubscription?.status === 'paused' ? 'bg-yellow-400 text-black' : 'bg-emerald-500 text-white'}`}>
+                            {activeSubscription?.status || 'active'}
+                        </div>
+                    </div>
+
+                    <div className="mt-5 grid grid-cols-2 gap-3">
+                        <div className="rounded-2xl bg-white/5 p-4">
+                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Credits</p>
+                            <p className="mt-2 text-xl font-[1000] tracking-tighter">{Math.max(0, (activeSubscription?.monthlyCredits || 0) - (activeSubscription?.usedCredits || 0))}</p>
+                        </div>
+                        <div className="rounded-2xl bg-white/5 p-4">
+                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Valid Till</p>
+                            <p className="mt-2 text-sm font-[1000] uppercase tracking-tight">{formatDate(activeSubscription?.endDate)}</p>
+                        </div>
+                    </div>
+
+                    <div className="mt-3 rounded-2xl bg-white/5 p-4">
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Next Wash Window</p>
+                        <p className="mt-2 text-sm font-[1000] uppercase tracking-tight">
+                            {nextWash?.date ? formatDate(nextWash.date) : nextWash?.label || 'Pending'}
+                        </p>
+                        <p className="mt-1 text-[9px] font-black uppercase tracking-[0.16em] text-white/40">
+                            {nextWash?.time || nextWash?.label || 'Schedule pending'}
+                        </p>
+                    </div>
+                </div>
+
+                {activationSummary && (
+                    <div className="rounded-3xl border border-emerald-100 bg-emerald-50 px-5 py-4 shadow-sm">
+                        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-600">Subscription Activated</p>
+                        <p className="mt-2 text-[11px] font-[1000] uppercase tracking-tight text-emerald-900">
+                            {activationSummary.plan || activeSubscription?.plan || 'Apartment Wash'} live ho gaya.
+                        </p>
+                        <p className="mt-1 text-[9px] font-black uppercase tracking-[0.16em] text-emerald-800/70">
+                            {activationSummary.apartment || activeSubscription?.hub?.name || 'Apartment'} • {activationSummary.slot || nextWash?.label || 'Slot pending'}
+                        </p>
+                    </div>
+                )}
+
+                <div className="grid grid-cols-1 gap-3">
+                    <button
+                        onClick={handlePauseResume}
+                        disabled={managementSaving}
+                        className="w-full rounded-3xl border border-black/[0.04] bg-white px-5 py-4 text-left shadow-sm"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-brand">
+                                {activeSubscription?.status === 'paused' ? <PlayCircle size={22} /> : <PauseCircle size={22} />}
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-[12px] font-[1000] uppercase tracking-tight text-black">
+                                    {activeSubscription?.status === 'paused' ? 'Resume Daily Service' : 'Pause Service'}
+                                </p>
+                                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-black/30 mt-1">
+                                    {activeSubscription?.status === 'paused' ? 'Reactivate regular apartment washes' : 'Temporarily stop future wash generation'}
+                                </p>
+                            </div>
+                        </div>
+                    </button>
+
+                    <div className="rounded-3xl border border-black/[0.04] bg-white p-5 shadow-sm space-y-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-11 h-11 rounded-2xl bg-gray-50 flex items-center justify-center text-brand">
+                                <SkipForward size={20} />
+                            </div>
+                            <div>
+                                <p className="text-[12px] font-[1000] uppercase tracking-tight text-black">Skip Specific Date</p>
+                                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-black/30 mt-1">Use this when car unavailable ho ya travel par ho</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-3">
+                            <input
+                                type="date"
+                                value={skipTodayDate}
+                                onChange={(e) => setSkipTodayDate(e.target.value)}
+                                className="flex-1 rounded-2xl border border-black/[0.06] bg-gray-50 px-4 py-3 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20"
+                            />
+                            <button
+                                onClick={handleSkipToday}
+                                disabled={managementSaving || todaySkipped}
+                                className="rounded-2xl bg-black px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white disabled:opacity-40"
+                            >
+                                {todaySkipped ? 'Skipped' : 'Skip'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="rounded-3xl border border-black/[0.04] bg-white p-5 shadow-sm space-y-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-2xl bg-gray-50 flex items-center justify-center text-brand">
+                            <PencilLine size={20} />
+                        </div>
+                        <div>
+                            <p className="text-[12px] font-[1000] uppercase tracking-tight text-black">Update Parking & Slot</p>
+                            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-black/30 mt-1">Apartment ke andar gaadi ya parking point change ho to yahin save karo</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3">
+                        <select
+                            value={parkingDetails.vehicleId}
+                            onChange={(e) => {
+                                const matchedVehicle = vehicles.find((v) => v._id === e.target.value);
+                                setParkingDetails((current) => ({
+                                    ...current,
+                                    vehicleId: e.target.value,
+                                    carModel: matchedVehicle ? `${matchedVehicle.brand} ${matchedVehicle.model}` : current.carModel,
+                                    carNumber: matchedVehicle ? (matchedVehicle.plate || matchedVehicle.plateNumber) : current.carNumber
+                                }));
+                            }}
+                            className="w-full rounded-2xl border border-black/[0.06] bg-gray-50 px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20"
+                        >
+                            <option value="">Select vehicle</option>
+                            {vehicles.map((vehicle) => (
+                                <option key={vehicle._id} value={vehicle._id}>{vehicle.brand} {vehicle.model} • {vehicle.plate || vehicle.plateNumber}</option>
+                            ))}
+                        </select>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <input value={parkingDetails.basement} onChange={(e) => setParkingDetails((current) => ({ ...current, basement: e.target.value }))} placeholder="Basement / Level" className="w-full rounded-2xl border border-black/[0.06] bg-gray-50 px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20" />
+                            <input value={parkingDetails.block} onChange={(e) => setParkingDetails((current) => ({ ...current, block: e.target.value }))} placeholder="Block / Tower" className="w-full rounded-2xl border border-black/[0.06] bg-gray-50 px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20" />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <input value={parkingDetails.pillar} onChange={(e) => setParkingDetails((current) => ({ ...current, pillar: e.target.value }))} placeholder="Pillar / Slot" className="w-full rounded-2xl border border-black/[0.06] bg-gray-50 px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20" />
+                            <select value={selectedSlot?.id || activeSubscription?.slot || ''} onChange={(e) => {
+                                const slot = apartmentSlots.find((entry) => entry.id === e.target.value);
+                                setSelectedSlot(slot || null);
+                            }} className="w-full rounded-2xl border border-black/[0.06] bg-gray-50 px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20">
+                                <option value="">Select slot</option>
+                                {apartmentSlots.map((slot) => (
+                                    <option key={slot.id} value={slot.id}>{slot.label}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <button
+                            onClick={() => handleUpdateSubscription({
+                                vehicleId: parkingDetails.vehicleId || undefined,
+                                slot: selectedSlot?.id || activeSubscription?.slot,
+                                hubId: selectedApartment?._id || activeSubscription?.hub?._id,
+                                parkingDetails: {
+                                    basement: parkingDetails.basement,
+                                    block: parkingDetails.block,
+                                    pillar: parkingDetails.pillar,
+                                    carModel: parkingDetails.carModel,
+                                    carNumber: parkingDetails.carNumber
+                                }
+                            }, 'Apartment wash settings updated')}
+                            disabled={managementSaving}
+                            className="w-full rounded-2xl bg-black py-4 text-[10px] font-black uppercase tracking-[0.2em] text-white disabled:opacity-40"
+                        >
+                            Save Parking & Slot
+                        </button>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                    <button
+                        onClick={() => navigate('/apartment-wash/history')}
+                        className="w-full rounded-3xl border border-black/[0.05] bg-white px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-black"
+                    >
+                        Wash History
+                    </button>
+                    <button
+                        onClick={() => navigate('/apartment-wash/support')}
+                        className="w-full rounded-3xl border border-brand/20 bg-brand/5 px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-brand"
+                    >
+                        Support
+                    </button>
+                </div>
+
+                <button
+                    onClick={handleStartRenewFlow}
+                    className="w-full rounded-3xl border border-brand/20 bg-brand/5 px-5 py-4 text-[10px] font-black uppercase tracking-[0.22em] text-brand"
+                >
+                    Renew / Change Plan
+                </button>
+            </motion.div>
+        );
     };
 
     const renderStep1_ApartmentSelection = () => (
@@ -180,20 +935,6 @@ const ApartmentWash = () => {
                         }
                     </p>
                     {/* 🛠️ Temporary Debug Info */}
-                    <div className="bg-brand/5 border border-brand/10 p-2.5 rounded-xl inline-flex flex-col gap-2">
-                        <div className="flex items-center gap-2">
-                            <div className={`w-1.5 h-1.5 rounded-full ${user?.profile?.addresses?.find(a => a.isPrimary)?.city || user?.profile?.address?.city ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                            <p className="text-[8px] font-black text-brand uppercase tracking-tighter">
-                                Debug: City = {user?.profile?.addresses?.find(a => a.isPrimary)?.city || user?.profile?.address?.city || 'NOT DETECTED'}
-                            </p>
-                        </div>
-                        <button 
-                            onClick={refreshStats}
-                            className="bg-brand text-black text-[7px] font-black py-1 px-2 rounded-md uppercase tracking-widest active:scale-95 transition-transform"
-                        >
-                            Force Sync Profile
-                        </button>
-                    </div>
                 </div>
             </div>
 
@@ -238,15 +979,11 @@ const ApartmentWash = () => {
                         className="h-[50vh] rounded-[2.5rem] overflow-hidden border-2 border-white shadow-2xl relative"
                     >
                         <GoogleMapBox 
-                            center={apartments[0]?.location?.coordinates || { lat: 28.6139, lng: 77.2090 }}
+                            center={filteredApartments[0]?.location?.coordinates || { lat: 28.6139, lng: 77.2090 }}
                             zoom={13}
                             markers={filteredApartments.filter(apt => apt.location?.coordinates?.lat).map(apt => ({
                                 position: apt.location.coordinates,
-                                icon: {
-                                    url: 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png', // Building icon
-                                    scaledSize: new window.google.maps.Size(42, 42),
-                                    anchor: new window.google.maps.Point(21, 42)
-                                },
+                                icon: getBuildingMarkerIcon(),
                                 infoContent: (
                                     <div className="p-0 min-w-[180px] bg-white rounded-2xl overflow-hidden font-outfit shadow-2xl border border-gray-100">
                                         <div className="p-3 bg-gray-50/50 border-b border-gray-100">
@@ -261,7 +998,7 @@ const ApartmentWash = () => {
                                                 onClick={() => handleApartmentClick(apt)}
                                                 className="w-full bg-brand text-white text-[9px] h-9 rounded-lg font-black uppercase tracking-widest active:scale-95 transition-all shadow-md shadow-brand/20 flex items-center justify-center gap-2"
                                             >
-                                                Select Society <ArrowRight size={12} />
+                                                {apt.isSearchFallback ? 'Register & Continue' : 'Select Society'} <ArrowRight size={12} />
                                             </button>
                                         </div>
                                     </div>
@@ -288,6 +1025,7 @@ const ApartmentWash = () => {
                                     key={apt._id}
                                     whileTap={{ scale: 0.98 }}
                                     onClick={() => handleApartmentClick(apt)}
+                                    disabled={registeringApartment}
                                     className="bg-white border border-black/[0.03] rounded-3xl p-4 flex items-center gap-4 text-left shadow-sm active:bg-gray-50 transition-all group relative overflow-hidden"
                                 >
                                     <div className="absolute top-0 right-0 w-24 h-24 bg-brand/5 rounded-full -mr-12 -mt-12 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -311,6 +1049,11 @@ const ApartmentWash = () => {
                                                 {typeof apt.location === 'object' ? (apt.location.address || apt.location.full) : (apt.location || 'Premium Complex')}, {typeof apt.city === 'object' ? apt.city.name : (apt.city || 'City')}
                                             </span>
                                         </div>
+                                        {apt.isSearchFallback && (
+                                            <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-[8px] font-black uppercase tracking-[0.18em] text-brand">
+                                                Search Result
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-brand group-hover:text-white transition-all">
                                         <ChevronRight size={14} strokeWidth={3} />
@@ -327,10 +1070,26 @@ const ApartmentWash = () => {
                                     <p className="text-[9px] font-bold text-content-subtle uppercase tracking-widest px-10 leading-relaxed">We are expanding rapidly. Request your society to be added next.</p>
                                 </div>
                                 <button
-                                    onClick={() => navigate('/support')}
+                                    onClick={async () => {
+                                        if (!searchQuery.trim()) {
+                                            toast.error('Search your apartment name or area first');
+                                            return;
+                                        }
+
+                                        const results = await geocodingService.search(searchQuery.trim());
+                                        if (!results?.length) {
+                                            toast.error('Apartment location not found on map');
+                                            return;
+                                        }
+
+                                        const mappedApartment = toApartmentSearchCard(results[0], 0);
+                                        setSearchFallbackResults([mappedApartment]);
+                                        setViewMode('map');
+                                        toast.success('Search result added. Select it from map or list.');
+                                    }}
                                     className="bg-black text-white px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-xl shadow-black/10"
                                 >
-                                    Request Addition
+                                    Search On Map
                                 </button>
                             </div>
                         )}
@@ -342,7 +1101,7 @@ const ApartmentWash = () => {
                 <Info size={18} className="text-brand shrink-0" />
                 <div className="space-y-1">
                     <p className="text-[10px] font-black text-brand uppercase tracking-widest leading-none">Can't find your society?</p>
-                    <p className="text-[9px] font-bold text-content-subtle uppercase tracking-tight leading-relaxed">We clusters apartments for efficiency. Suggest your society for next expansion.</p>
+                    <p className="text-[9px] font-bold text-content-subtle uppercase tracking-tight leading-relaxed">Search any apartment on map, register it, and continue the same apartment wash flow from here.</p>
                 </div>
             </div>
         </motion.div>
@@ -368,32 +1127,64 @@ const ApartmentWash = () => {
                     <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest ml-1">Select Your Registered Vehicle</label>
                     <div className="grid grid-cols-1 gap-2">
                         {vehicles && vehicles.length > 0 ? (
-                            vehicles.map((v) => (
+                            <>
+                                {vehicles.map((v) => (
+                                    <button
+                                        key={v._id}
+                                        type="button"
+                                        onClick={() => setParkingDetails({
+                                            ...parkingDetails,
+                                            carModel: `${v.brand} ${v.model}`,
+                                            carNumber: v.plate || v.plateNumber,
+                                            vehicleId: v._id
+                                        })}
+                                        className={`p-4 rounded-3xl border flex items-center gap-4 transition-all active:scale-[0.98] ${parkingDetails.vehicleId === v._id ? 'border-brand bg-brand/5 shadow-lg shadow-brand/5' : 'border-black/[0.03] bg-white shadow-sm'}`}
+                                    >
+                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${parkingDetails.vehicleId === v._id ? 'bg-brand text-white' : 'bg-gray-50 text-black/20'}`}>
+                                            <Car size={20} strokeWidth={2.5} />
+                                        </div>
+                                        <div className="text-left flex-1">
+                                            <p className="text-[11px] font-[1000] text-black uppercase tracking-tight">{v.brand} {v.model}</p>
+                                            <p className="text-[8.5px] font-black text-black/20 uppercase tracking-[0.2em] mt-1 font-outfit">{v.plate || v.plateNumber}</p>
+                                        </div>
+                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all ${parkingDetails.vehicleId === v._id ? 'border-brand bg-brand text-white' : 'border-black/[0.05] bg-transparent'}`}>
+                                            {parkingDetails.vehicleId === v._id && <Check size={12} strokeWidth={4} />}
+                                        </div>
+                                    </button>
+                                ))}
+                                {/* Add New Option */}
                                 <button
-                                    key={v._id}
                                     type="button"
-                                    onClick={() => setParkingDetails({
-                                        ...parkingDetails,
-                                        carModel: `${v.brand} ${v.model}`,
-                                        carNumber: v.plate || v.plateNumber,
-                                        vehicleId: v._id
-                                    })}
-                                    className={`p-4 rounded-3xl border flex items-center gap-4 transition-all active:scale-[0.98] ${parkingDetails.vehicleId === v._id ? 'border-brand bg-brand/5 shadow-lg shadow-brand/5' : 'border-black/[0.03] bg-white shadow-sm'}`}
+                                    onClick={() => navigate('/profile/vehicles?from=apartment-wash')}
+                                    className="p-4 rounded-3xl border border-dashed border-gray-300 bg-gray-50 flex items-center gap-4 transition-all active:scale-[0.98] hover:border-brand hover:bg-brand/5"
                                 >
-                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${parkingDetails.vehicleId === v._id ? 'bg-brand text-white' : 'bg-gray-50 text-black/20'}`}>
-                                        <Car size={20} strokeWidth={2.5} />
+                                    <div className="w-12 h-12 rounded-2xl bg-white border border-gray-200 flex items-center justify-center text-gray-400">
+                                        <Plus size={20} strokeWidth={2.5} />
                                     </div>
                                     <div className="text-left flex-1">
-                                        <p className="text-[11px] font-[1000] text-black uppercase tracking-tight">{v.brand} {v.model}</p>
-                                        <p className="text-[8.5px] font-black text-black/20 uppercase tracking-[0.2em] mt-1 font-outfit">{v.plate || v.plateNumber}</p>
+                                        <p className="text-[11px] font-[1000] text-gray-400 uppercase tracking-tight">Register New Vehicle</p>
+                                        <p className="text-[8.5px] font-black text-gray-300 uppercase tracking-[0.2em] mt-1">Add a car to your garage</p>
                                     </div>
-                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all ${parkingDetails.vehicleId === v._id ? 'border-brand bg-brand text-white' : 'border-black/[0.05] bg-transparent'}`}>
-                                        {parkingDetails.vehicleId === v._id && <Check size={12} strokeWidth={4} />}
-                                    </div>
+                                    <ChevronRight size={14} className="text-gray-300" />
                                 </button>
-                            ))
+                            </>
                         ) : (
-                            <p className="text-[9px] font-bold text-content-subtle uppercase p-3 bg-gray-50 rounded-xl border border-dashed border-gray-200 text-center">No registered vehicles found</p>
+                            <button
+                                type="button"
+                                onClick={() => navigate('/profile/vehicles?from=apartment-wash')}
+                                className="p-8 rounded-[2.5rem] border-2 border-dashed border-gray-200 bg-white flex flex-col items-center justify-center gap-4 text-center group hover:border-brand hover:bg-brand/5 transition-all"
+                            >
+                                <div className="w-16 h-16 rounded-3xl bg-gray-50 flex items-center justify-center text-black/10 group-hover:bg-brand group-hover:text-white transition-all">
+                                    <Car size={32} />
+                                </div>
+                                <div>
+                                    <p className="text-[12px] font-[1000] text-black uppercase tracking-tighter">No Active Vehicles</p>
+                                    <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mt-1">Please register your vehicle to continue</p>
+                                </div>
+                                <div className="bg-black text-white px-6 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest mt-2">
+                                    Register Car
+                                </div>
+                            </button>
                         )}
                     </div>
                 </div>
@@ -472,28 +1263,8 @@ const ApartmentWash = () => {
                         )}
                     </div>
 
-                    {!parkingDetails.vehicleId && (
-                        <div className="space-y-4 pt-2">
-                            <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest ml-1">Car Model</label>
-                                <input
-                                    required placeholder="e.g. Toyota Fortuner"
-                                    className="w-full bg-gray-50 border border-gray-100 px-4 py-3.5 rounded-xl text-xs font-bold text-black outline-none focus:border-brand/20 shadow-sm uppercase placeholder:text-black/20"
-                                    value={parkingDetails.carModel}
-                                    onChange={(e) => setParkingDetails({ ...parkingDetails, carModel: e.target.value })}
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest ml-1">Car Number Plate</label>
-                                <input
-                                    required placeholder="e.g. MP 09 AB 1234"
-                                    className="w-full bg-gray-50 border border-gray-100 px-4 py-3.5 rounded-xl text-xs font-bold text-black outline-none focus:border-brand/20 shadow-sm uppercase placeholder:text-black/20"
-                                    value={parkingDetails.carNumber}
-                                    onChange={(e) => setParkingDetails({ ...parkingDetails, carNumber: e.target.value })}
-                                />
-                            </div>
-                        </div>
-                    )}
+                    {/* 🛡️ Protocol Security: Forced Garage Selection */}
+                    {/* Manual bypass removed to ensure multiplier-safe bookings */}
                 </div>
 
                 <div className="fixed bottom-8 left-5 right-5 z-50">
@@ -532,7 +1303,10 @@ const ApartmentWash = () => {
                     <motion.div
                         key={plan.id}
                         whileTap={{ scale: 0.97 }}
-                        onClick={() => handlePlanSelect(plan)}
+                        onClick={() => {
+                            setSelectedPlan(plan);
+                            setStep(4);
+                        }}
                         className={`relative p-6 rounded-[32px] border-2 cursor-pointer transition-all ${
                             plan.popular 
                             ? 'bg-gradient-to-br from-neutral-900 via-black to-neutral-800 text-white border-white/5 shadow-2xl shadow-black/20' 
@@ -540,8 +1314,8 @@ const ApartmentWash = () => {
                         }`}
                     >
                         {plan.popular && (
-                            <div className={`absolute -top-3 left-6 px-4 py-1.5 ${isBlackPassMember ? 'bg-emerald-500 text-white' : 'bg-brand text-black'} text-[9px] font-[1000] uppercase tracking-[0.2em] rounded-full shadow-lg z-20`}>
-                                {isBlackPassMember ? 'Active Member' : 'Elite Choice'}
+                            <div className="absolute -top-3 left-6 px-4 py-1.5 bg-brand text-black text-[9px] font-[1000] uppercase tracking-[0.2em] rounded-full shadow-lg z-20">
+                                Elite Choice
                             </div>
                         )}
                         
@@ -598,7 +1372,9 @@ const ApartmentWash = () => {
         >
             <div className="space-y-1">
                 <h2 className="text-2xl font-[1000] text-content uppercase tracking-tighter">Choose Service Slot</h2>
-                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-relaxed">Cluster efficiency target: 10 cars per worker per slot</p>
+                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-relaxed">
+                    {slotLoading ? 'Checking live slot capacity...' : 'Cluster efficiency target: 10 cars per slot per apartment'}
+                </p>
             </div>
 
             <div className="space-y-3">
@@ -611,8 +1387,9 @@ const ApartmentWash = () => {
                         <motion.button
                             key={slot.id}
                             whileTap={{ scale: 0.98 }}
-                            onClick={() => handleSlotSelect(slot)}
-                            className="w-full bg-white border border-black/[0.03] rounded-3xl p-5 flex items-center justify-between shadow-sm active:bg-gray-50 transition-all text-left relative overflow-hidden group"
+                            onClick={() => slot.available !== false && handleSlotSelect(slot)}
+                            disabled={slot.available === false}
+                            className="w-full bg-white border border-black/[0.03] rounded-3xl p-5 flex items-center justify-between shadow-sm active:bg-gray-50 transition-all text-left relative overflow-hidden group disabled:opacity-45 disabled:cursor-not-allowed"
                         >
                             <div className="absolute top-0 right-0 w-24 h-24 bg-brand/5 rounded-full -mr-12 -mt-12 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
                             <div className="flex items-center gap-4 relative z-10">
@@ -625,8 +1402,10 @@ const ApartmentWash = () => {
                                 </div>
                             </div>
                             <div className="flex flex-col items-end gap-1.5 relative z-10">
-                                <div className="bg-emerald-50 px-3 py-1 rounded-lg text-[9px] font-[1000] text-emerald-600 uppercase tracking-widest shadow-sm shadow-emerald-500/5">Available</div>
-                                <span className="text-[9px] font-black text-black/40 uppercase tracking-widest">Premium Slot</span>
+                                <div className={`px-3 py-1 rounded-lg text-[9px] font-[1000] uppercase tracking-widest shadow-sm ${slot.available === false ? 'bg-red-50 text-red-600 shadow-red-500/5' : 'bg-emerald-50 text-emerald-600 shadow-emerald-500/5'}`}>
+                                    {slot.available === false ? 'Full' : `${slot.remaining ?? 10} Left`}
+                                </div>
+                                <span className="text-[9px] font-black text-black/40 uppercase tracking-widest">{slot.time || 'Premium Slot'}</span>
                             </div>
                         </motion.button>
                     )
@@ -746,6 +1525,7 @@ const ApartmentWash = () => {
 
                         try {
                             setLoading(true);
+                            await validateSelectedApartmentSlot();
                             const keyRes = await getRazorpayKey();
                             if (!keyRes.success) {
                                 throw new Error(keyRes.error || 'Failed to load payment gateway');
@@ -805,7 +1585,8 @@ const ApartmentWash = () => {
                                             }
 
                                             const subscriptionPayload = {
-                                                plan: selectedPlan.id || selectedPlan.planKey || selectedPlan.name,
+                                                planId: selectedPlan._id || selectedPlan.id,
+                                                plan: selectedPlan.planKey || selectedPlan.name,
                                                 vehicleId: parkingDetails.vehicleId || undefined,
                                                 hubId: selectedApartment._id,
                                                 serviceKey: apartmentService?.key || 'APARTMENT_WASH',
@@ -821,6 +1602,7 @@ const ApartmentWash = () => {
                                                 paymentMethod: 'razorpay',
                                                 paymentId: response.razorpay_payment_id,
                                                 orderId: response.razorpay_order_id,
+                                                signature: response.razorpay_signature,
                                                 autoRenew: false
                                             };
 
@@ -829,18 +1611,19 @@ const ApartmentWash = () => {
                                                 throw new Error(subRes?.message || 'Subscription activation failed');
                                             }
 
-                                            refreshStats();
-                                            toast.success('Apartment subscription activated successfully');
-                                            navigate('/booking-confirmation', {
+                                            await refreshApartmentSubscription();
+                                            if (refreshStats) refreshStats();
+                                            toast.success('Apartment wash request sent to admin');
+                                            navigate('/apartment-wash', {
+                                                replace: true,
                                                 state: {
-                                                    type: 'subscription',
-                                                    bookingId: subRes.data?.subscription?._id || subRes.data?._id,
-                                                    service: apartmentService?.title || 'Apartment Car Wash',
-                                                    plan: selectedPlan.name,
-                                                    price: selectedPlan.price,
-                                                    society: selectedApartment.name,
-                                                    slot: selectedSlot.label,
-                                                    parking: parkingDetails
+                                                    apartmentActivated: {
+                                                        plan: selectedPlan.name,
+                                                        price: selectedPlan.price,
+                                                        apartment: selectedApartment.name,
+                                                        slot: selectedSlot.label,
+                                                        status: 'pending'
+                                                    }
                                                 }
                                             });
                                             resolve(true);
@@ -876,8 +1659,18 @@ const ApartmentWash = () => {
         </motion.div>
     );
 
+    // 🛡️ Safe Render Guard: Never show Asset Management if redirect is imminent
+    if (!vehiclesLoading && vehicles && vehicles.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-white">
+                <Loader2 className="w-10 h-10 text-brand animate-spin mb-4" strokeWidth={3} />
+                <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.3em] animate-pulse">Initializing Direct Registry...</p>
+            </div>
+        );
+    }
+
     return (
-        <MobileLayout hideNav={step < 5}>
+        <MobileLayout hideNav={manageMode ? false : step < 5}>
             <div className="bg-white min-h-screen font-sans">
                 {/* Header */}
                 <header className="px-5 pt-10 pb-6 bg-white sticky top-0 z-40 border-b border-black/[0.03]">
@@ -924,21 +1717,28 @@ const ApartmentWash = () => {
                 </header>
 
                 <AnimatePresence mode="wait">
-                    {step === 1 && renderStep1_ApartmentSelection()}
-                    {step === 2 && renderStep2_ParkingDetails()}
-                    {step === 3 && renderStep3_PlanSelection()}
-                    {step === 4 && renderStep4_SlotSelection()}
-                    {step === 5 && renderStep5_Confirmation()}
+                    {subscriptionLoading ? (
+                        <motion.div
+                            key="subscription-loader"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="min-h-[50vh] flex flex-col items-center justify-center gap-4"
+                        >
+                            <Loader2 className="w-10 h-10 text-brand animate-spin" strokeWidth={3} />
+                            <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.3em]">Syncing Apartment Pass...</p>
+                        </motion.div>
+                    ) : manageMode ? (
+                        renderActiveSubscriptionManager()
+                    ) : (
+                        <>
+                            {step === 1 && renderStep1_ApartmentSelection()}
+                            {step === 2 && renderStep2_ParkingDetails()}
+                            {step === 3 && renderStep3_PlanSelection()}
+                            {step === 4 && renderStep4_SlotSelection()}
+                            {step === 5 && renderStep5_Confirmation()}
+                        </>
+                    )}
                 </AnimatePresence>
-
-                {/* Global Pass Integration */}
-                <BlackPassModal 
-                    isOpen={showBlackPassModal} 
-                    onClose={() => {
-                        setShowBlackPassModal(false);
-                        if (refreshStats) refreshStats();
-                    }} 
-                />
             </div>
         </MobileLayout>
     );

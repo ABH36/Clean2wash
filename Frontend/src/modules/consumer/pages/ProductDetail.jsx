@@ -32,9 +32,8 @@ const ProductDetail = () => {
     const [reviews, setReviews] = useState([]);
     const [reviewsLoading, setReviewsLoading] = useState(false);
     const [toast, setToast] = useState(false);
-    const { user } = useAuth();
+    const { user, isBlackPassMember } = useAuth();
     const { selectedAddress } = useGeoLocation();
-    const isBlackPassMember = user?.subscription?.plan === 'black';
     const [deliveryEta, setDeliveryEta] = useState('2-3 Days');
 
     useEffect(() => {

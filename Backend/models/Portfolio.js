@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
 const portfolioSchema = new mongoose.Schema({
+    bookingId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Booking'
+    },
     category: {
         type: String,
         required: true,
@@ -40,5 +44,6 @@ const portfolioSchema = new mongoose.Schema({
 });
 
 portfolioSchema.index({ category: 1, isActive: 1, sortOrder: 1 });
+portfolioSchema.index({ bookingId: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Portfolio', portfolioSchema);

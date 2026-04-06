@@ -39,7 +39,7 @@ async function verifyInstantWash() {
         await Subscription.deleteMany({ user: user._id });
         const sub = await Subscription.create({
             user: user._id,
-            plan: 'Black Pass',
+            plan: 'Gold Pass',
             status: 'active',
             startDate: new Date(),
             endDate: endDate,

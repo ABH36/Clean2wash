@@ -85,7 +85,7 @@ const FullWashBooking = () => {
         vehicles, addBooking, updateBookingStatus, bookings,
         userSubscription, setUserSubscription, getRazorpayKey, createPaymentOrder,
         verifyPayment, getUser, walletBalance, updateBalance, loadWallet,
-        isBlackPassMember, globalCatalog, loadGlobalCatalog, catalogLoading,
+        isGoldPassMember, isBlackPassMember, globalCatalog, loadGlobalCatalog, catalogLoading,
         addVehicle, vehiclesLoading
     } = useAuth();
     const { savedAddresses: addresses, selectedAddress, setSelectedAddress, currentLocation } = useGeoLocation();
@@ -98,6 +98,15 @@ const FullWashBooking = () => {
         const saved = sessionStorage.getItem('fw_phase');
         return saved || PHASES.SERVICE_SELECTION;
     });
+
+    // 🛡️ Proactive Redirect: Force users with 0 vehicles to Garaj
+    useEffect(() => {
+        if (!vehiclesLoading && vehicles && vehicles.length === 0) {
+            toast.error('Register your vehicle', { icon: '🚗', id: 'vehicle-registration-toast' });
+            const timer = setTimeout(() => navigate('/vehicles?from=studio-wash&mode=add'), 1200);
+            return () => clearTimeout(timer);
+        }
+    }, [vehicles, vehiclesLoading, navigate]);
 
     // --- Phase History Management ---
     const [phaseHistory, setPhaseHistory] = useState([]);
@@ -287,13 +296,13 @@ const FullWashBooking = () => {
             }
         }
 
-        // 3. Auto-apply Black Pass discount
-        if (isBlackPassMember && passConfig?.discount && isServiceEligibleForBlackPass(id)) {
+        // 3. Auto-apply Gold Pass discount
+        if (isGoldPassMember && passConfig?.discount && isServiceEligibleForGoldPass(id)) {
             basePrice = basePrice * (1 - passConfig.discount);
         }
 
         return Math.floor(basePrice);
-    }, [selectedVehicle, selectedVehicleType, dynamicServices, isBlackPassMember, passConfig, matchedModel]);
+    }, [selectedVehicle, selectedVehicleType, dynamicServices, isGoldPassMember, passConfig, matchedModel]);
 
     const getEstimatedTime = useCallback((service, model) => {
         // High priority: Specific Session Time for this asset from Admin Catalog
@@ -308,7 +317,7 @@ const FullWashBooking = () => {
     }, []);
 
     const canUseSubscription = useCallback((serviceId) => {
-        if (!isBlackPassMember || !userSubscription) return false;
+        if (!isGoldPassMember || !userSubscription) return false;
         
         // Find the service in dynamic services to get its category
         const service = dynamicServices.find(s => s.id === serviceId || s._id === serviceId);
@@ -325,17 +334,14 @@ const FullWashBooking = () => {
             if (serviceName === 'Studio Wash') {
                 return service.category === 'Studio' || service.category === 'Studio Detailing';
             }
-            if (serviceName === 'Apartment Wash') {
-                return service.category === 'Doorstep' || service.category === 'Apartment';
-            }
             if (serviceName === 'Spare Driver') {
                 return service.category === 'Chauffeur';
             }
             return false;
         }) || plan.applicableServices?.includes('all');
-    }, [isBlackPassMember, userSubscription, subscriptionPlans, dynamicServices]);
+    }, [isGoldPassMember, userSubscription, subscriptionPlans, dynamicServices]);
 
-    const isServiceEligibleForBlackPass = useCallback((serviceId) => {
+    const isServiceEligibleForGoldPass = useCallback((serviceId) => {
         if (!passConfig) return true; // Default to true if not loaded
         const service = dynamicServices.find(s => s.id === serviceId || s._id === serviceId);
         if (!service) return true;
@@ -347,8 +353,8 @@ const FullWashBooking = () => {
             return passConfig.applicableCategories.includes(category);
         }
 
-        // Fallback: Black Pass usually applies to Doorstep/Studio by default
-        return ['Doorstep', 'Studio', 'Studio Detailing', 'Apartment'].includes(category);
+        // Fallback: Gold Pass usually applies to Doorstep/Studio by default
+        return ['Doorstep', 'Studio', 'Studio Detailing'].includes(category);
     }, [passConfig, dynamicServices]);
 
     const activeService = useMemo(() => {
@@ -470,8 +476,8 @@ const FullWashBooking = () => {
         });
     }, [subscriptionPlans, searchQuery]);
 
-    const blackPassPlan = useMemo(() =>
-        subscriptionPlans?.find(p => (p.name || p.title || '').toLowerCase().includes('black')),
+    const goldPassPlan = useMemo(() =>
+        subscriptionPlans?.find(p => (p.name || p.title || '').toLowerCase().includes('gold') || (p.name || p.title || '').toLowerCase().includes('black')),
         [subscriptionPlans]
     );
     const finalPrice = useMemo(() => {
@@ -502,11 +508,11 @@ const FullWashBooking = () => {
             comboDiscount = Math.round(washesTotal * (globalSettings.combo_discount_pct / 200));
         }
 
-        // 3. Global Black Pass Benefits
-        const hasBlackPassInCart = effectiveItems.some(item =>
-            item.type === 'subscription' && (item.serviceName?.toLowerCase().includes('black') || item.name?.toLowerCase().includes('black'))
+        // 3. Global Gold Pass Benefits
+        const hasGoldPassInCart = effectiveItems.some(item =>
+            item.type === 'subscription' && (item.serviceName?.toLowerCase().includes('gold') || item.name?.toLowerCase().includes('gold'))
         );
-        const shouldApplyGlobalPass = hasBlackPassInCart || isBlackPassMember;
+        const shouldApplyGlobalPass = hasGoldPassInCart || isGoldPassMember;
         const passDiscountRate = passConfig?.discount || 0.3;
 
         if (shouldApplyGlobalPass) {
@@ -515,8 +521,8 @@ const FullWashBooking = () => {
                 if (item.type === 'subscription') return sum + itemPrice;
                 if (canUseSubscription(item.serviceId) || item.isSubscribedWash) return sum + 0;
                 
-                // Only apply 30% if service is eligible for Black Pass
-                if (isServiceEligibleForBlackPass(item.serviceId)) {
+                // Only apply 30% if service is eligible for Gold Pass
+                if (isServiceEligibleForGoldPass(item.serviceId)) {
                     return sum + (itemPrice * (1 - passDiscountRate));
                 }
                 return sum + itemPrice;
@@ -531,7 +537,7 @@ const FullWashBooking = () => {
         }
 
         return Math.max(0, Math.round(baseServiceTotal + baseProductTotal - comboDiscount - discountAmount));
-    }, [effectiveItems, isBlackPassMember, passConfig, userSubscription, globalSettings]);
+    }, [effectiveItems, isGoldPassMember, passConfig, userSubscription, globalSettings]);
 
     // --- Side Effects ---
 
@@ -696,14 +702,22 @@ const FullWashBooking = () => {
             }
         };
 
+        const handleLocationUpdate = (data) => {
+            const lat = data?.lat ?? data?.location?.lat;
+            const lng = data?.lng ?? data?.location?.lng;
+            if (lat && lng) {
+                setCaptainPos({ lat: parseFloat(lat), lng: parseFloat(lng) });
+            }
+        };
+
         socketService.on('booking_status_updated', handleStatusUpdate);
-        socketService.on('locationUpdate', (data) => {
-            if (data.lat && data.lng) setCaptainPos({ lat: parseFloat(data.lat), lng: parseFloat(data.lng) });
-        });
+        socketService.on('locationUpdate', handleLocationUpdate);
+        socketService.on('location_updated', handleLocationUpdate);
 
         return () => {
             socketService.off('booking_status_updated', handleStatusUpdate);
-            socketService.off('locationUpdate');
+            socketService.off('locationUpdate', handleLocationUpdate);
+            socketService.off('location_updated', handleLocationUpdate);
             socketService.disconnect();
         };
     }, [activeBookingId, user?.id, updateBookingStatus]);
@@ -895,20 +909,23 @@ const FullWashBooking = () => {
         return (
             <div className="bg-gray-100 min-h-screen pb-20 font-sans">
                 {/* Personalized Header Section */}
-                <div className="px-5 pt-8 pb-4 flex items-center justify-between">
-                    <div>
-                        <p className="text-[10px] font-black text-brand uppercase tracking-[0.2em] mb-1">Station 01 / LIVE</p>
-                        <h1 className="text-[22px] font-[1000] text-black leading-none uppercase tracking-tighter">
-                            Studio Wash
-                        </h1>
-                        <p className="text-[8px] font-black text-black/30 uppercase tracking-[0.15em] mt-1 flex items-center gap-2">
-                            Protocol Ready for <span className="text-black font-black">{user?.name || 'Authorized User'}</span>
-                            <span className="w-1 h-1 rounded-full bg-black/10" />
-                            {new Date().toLocaleDateString('en-US', { weekday: 'long' })}
-                        </p>
+                <div className="px-5 pt-10 pb-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={handleBack}
+                            className="w-11 h-11 rounded-2xl bg-white border border-black/[0.04] shadow-lg flex items-center justify-center text-black active:scale-90 transition-all shrink-0"
+                        >
+                            <ChevronLeft size={22} strokeWidth={3} />
+                        </button>
+                        <div>
+                            <p className="text-[9px] font-black text-brand uppercase tracking-[0.2em] mb-1.5">Station 01 / LIVE</p>
+                            <h1 className="text-2xl font-[1000] text-black leading-none uppercase tracking-tighter">
+                                Studio Wash
+                            </h1>
+                        </div>
                     </div>
-                    <div className="w-12 h-12 rounded-2xl bg-white border border-black/[0.03] shadow-sm flex items-center justify-center">
-                        <Stars size={20} className="text-brand" />
+                    <div className="w-11 h-11 rounded-xl bg-white border border-black/[0.03] shadow-sm flex items-center justify-center">
+                        <Stars size={18} className="text-brand" />
                     </div>
                 </div>
 
@@ -956,54 +973,53 @@ const FullWashBooking = () => {
                     )}
                 </div>
 
-                {/* Selected Vehicle Context (Premium Redesign) */}
+                {/* Active Asset HUD (Professional Context) */}
                 <div className="px-5 pt-6 pb-2">
-                    <div className="bg-white rounded-xl p-4 flex items-center justify-between border border-black/[0.03] shadow-[0_20px_50px_rgba(0,0,0,0.06)] relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-brand/10 transition-colors" />
-
+                    <div className="bg-white rounded-[2rem] p-4 flex items-center justify-between border-2 border-brand shadow-[0_15px_40px_rgba(242,159,5,0.12)] relative overflow-hidden group active:scale-[0.98] transition-all duration-300">
                         {selectedVehicle ? (
-                            <div className="flex items-center gap-5 relative z-10">
-                                <div className="w-16 h-16 bg-gray-50 rounded-lg flex items-center justify-center border border-black/[0.02] shadow-inner overflow-hidden">
-                                    {selectedVehicle.img ? (
-                                        <img src={sanitizeUrl(selectedVehicle.img)} className="w-full h-full object-cover grayscale-[0.5] group-hover:grayscale-0 transition-all duration-500" alt={selectedVehicle.model} />
-                                    ) : (
-                                        <Car size={32} className="text-black/80" />
-                                    )}
+                            <div className="flex items-center gap-4 relative z-10 w-full">
+                                <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center border border-black/[0.05] shadow-inner overflow-hidden flex-shrink-0">
+                                    <img 
+                                        src={sanitizeUrl(selectedVehicle.img || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80')} 
+                                        className="w-full h-full object-cover" 
+                                        alt={selectedVehicle.model} 
+                                        onError={(e) => e.target.src = 'https://cdn-icons-png.flaticon.com/512/3003/3003984.png'}
+                                    />
                                 </div>
-                                <div>
-                                    <div className="flex items-center gap-2 mb-1.5">
-                                        <h4 className="text-[14px] font-[1000] text-black tracking-tight leading-none uppercase">
-                                            {matchedModel ? `${matchedModel.brand} ${matchedModel.model}` : `${selectedVehicle.brand} ${selectedVehicle.model}`}
-                                        </h4>
-                                        {matchedModel && (
-                                            <div className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-md flex items-center gap-1 border border-emerald-100/50">
-                                                <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
-                                                <span className="text-[7px] font-black uppercase tracking-widest">Protocol Sync</span>
-                                            </div>
-                                        )}
+                                <div className="flex-1 min-w-0">
+                                    <h4 className="text-[17px] font-[1000] text-black tracking-tighter leading-none uppercase truncate">
+                                        {selectedVehicle.brand} {selectedVehicle.model}
+                                    </h4>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <span className="text-[9px] font-black text-black/30 uppercase tracking-widest">{selectedVehicle.plate || 'No Plate'}</span>
+                                        <div className="w-1 h-1 rounded-full bg-brand animate-pulse" />
+                                        <span className="text-[8px] font-[1000] text-emerald-500 uppercase tracking-tighter">Garaj Sync Active</span>
                                     </div>
-                                    <p className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] leading-none">
-                                        {matchedModel ? `${matchedModel.type} • ${matchedModel.difficulty} Difficulty` : 'Awaiting Studio Asset Sync'}
-                                    </p>
                                 </div>
+                                <button
+                                    onClick={() => navigate('/vehicles?from=studio-wash')}
+                                    className="bg-black text-white px-5 py-3 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] active:scale-90 transition-all shadow-xl shadow-black/10 flex-shrink-0"
+                                >
+                                    CHANGE
+                                </button>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-4 relative z-10 opacity-40 grayscale">
-                                <div className="w-16 h-16 bg-gray-50 rounded-lg flex items-center justify-center border border-black/[0.02] shadow-inner">
-                                    <Car size={32} className="text-black/80" />
+                            <div className="flex items-center gap-4 relative z-10 w-full opacity-60">
+                                <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center border border-black/[0.02]">
+                                    <Car size={32} className="text-black/20" />
                                 </div>
-                                <div>
-                                    <h4 className="text-[14px] font-[1000] text-black tracking-tight leading-none mb-1 uppercase">Select Asset</h4>
-                                    <p className="text-[9px] font-black text-black/10 uppercase tracking-[0.2em] leading-none">Vehicle Protocol Required</p>
+                                <div className="flex-1">
+                                    <h4 className="text-[15px] font-[1000] text-black tracking-tight leading-none uppercase">Select Asset</h4>
+                                    <p className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] mt-1.5">No car selected</p>
                                 </div>
+                                <button
+                                    onClick={() => navigate('/vehicles?from=studio-wash')}
+                                    className="bg-brand text-white px-5 py-3 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] shadow-lg shadow-brand/20"
+                                >
+                                    SELECT
+                                </button>
                             </div>
                         )}
-                        <button
-                            onClick={() => navigate('/vehicles?from=studio-wash')}
-                            className="text-[10px] font-black text-brand uppercase tracking-[0.15em] border border-orange-100 bg-orange-50/30 px-3 py-2 rounded-xl active:scale-95 transition-all shadow-sm hover:bg-brand hover:text-white relative z-10"
-                        >
-                            {selectedVehicle ? 'CHANGE' : 'SELECT'}
-                        </button>
                     </div>
                 </div>
 
@@ -1249,63 +1265,100 @@ const FullWashBooking = () => {
                         </div>
                     </div>
 
-                    {/* Dynamic FAQ Section */}
-                    {dynamicServices.some(s => s.faqs?.length > 0) && (
-                        <div className="px-1 py-8 space-y-6">
-                            <div className="flex items-center justify-between px-4">
-                                <h3 className="text-[11px] font-[1000] text-black uppercase tracking-[0.2em]">Protocol Intelligence</h3>
-                                <div className="flex gap-1">
-                                    <div className="w-1 h-1 rounded-full bg-brand" />
-                                    <div className="w-3 h-1 rounded-full bg-brand/20" />
-                                </div>
+                    {/* Studio Wash Stories - YouTube Shorts Style Video Grid (Full Width) */}
+                    <div className="pt-8 pb-10 overflow-hidden">
+                        <div className="flex items-center justify-between mb-5 px-4">
+                            <div className="flex flex-col">
+                                <h3 className="text-[17px] font-[1000] text-black uppercase tracking-tight leading-none mb-1.5">Studio Wash Stories</h3>
+                                <p className="text-[9px] font-black text-black/20 uppercase tracking-widest leading-none">Elite detailing in motion</p>
                             </div>
-
-                            <div className="space-y-3">
-                                {/* FAQ list */}
-                                {dynamicServices.flatMap(s => s.faqs || []).slice(0, 4).map((faq, i) => (
-                                    <details key={i} className="group bg-white rounded-xl border border-black/[0.02] overflow-hidden shadow-sm transition-all duration-300 open:shadow-md">
-                                        <summary className="list-none px-4 py-3 flex items-center justify-between cursor-pointer active:bg-gray-50 transition-colors">
-                                            <span className="text-[11px] font-black text-black uppercase tracking-tight">{faq.question}</span>
-                                            <ChevronDown size={16} className="text-black/20 group-open:rotate-180 transition-transform" />
-                                        </summary>
-                                        <div className="px-6 pb-6 pt-2">
-                                            <div className="h-px w-full bg-black/[0.02] mb-4" />
-                                            <p className="text-[11px] font-bold text-black/40 leading-relaxed uppercase tracking-tighter">
-                                                {faq.answer}
-                                            </p>
+                            <div className="w-9 h-9 rounded-full bg-black flex items-center justify-center text-white shadow-lg active:scale-90 transition-transform">
+                                <Play size={14} fill="currentColor" className="ml-0.5" />
+                            </div>
+                        </div>
+                        
+                        <div className="flex gap-[6px] overflow-x-auto no-scrollbar snap-x snap-mandatory px-2">
+                            {(dynamicServices && dynamicServices.length > 0 ? dynamicServices : [
+                                { title: 'Premium Wash', videoUrl: 'https://assets.mixkit.io/videos/preview/mixkit-hand-washing-a-car-with-a-sponge-and-foam-1582-large.mp4', image: 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=600&q=80' },
+                                { title: 'Studio Detailing', videoUrl: 'https://assets.mixkit.io/videos/preview/mixkit-hand-washing-a-car-with-a-sponge-and-foam-1582-large.mp4', image: 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=800&q=80' },
+                                { title: 'Eco Armor', videoUrl: 'https://assets.mixkit.io/videos/preview/mixkit-hand-washing-a-car-with-a-sponge-and-foam-1582-large.mp4', image: 'https://images.unsplash.com/photo-1614028674026-a65e31bfd27c?w=600&q=80' }
+                            ]).map((sv, idx) => (
+                                <div 
+                                    key={idx}
+                                    onClick={() => {
+                                        if (sv.videoUrl) {
+                                            setActiveVideoUrl(sv.videoUrl);
+                                            setShowDemoVideo(true);
+                                        } else {
+                                            setActiveVideoUrl('');
+                                            setShowDemoVideo(true);
+                                        }
+                                    }}
+                                    className="relative flex-shrink-0 w-[140px] aspect-[9/16] rounded-2xl overflow-hidden bg-black shadow-xl snap-start group border border-black/[0.05]"
+                                >
+                                    {sv.videoUrl && sv.videoUrl.endsWith('.mp4') ? (
+                                        <video
+                                            autoPlay
+                                            muted
+                                            loop
+                                            playsInline
+                                            className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <source src={sv.videoUrl} type="video/mp4" />
+                                        </video>
+                                    ) : (
+                                        <img 
+                                            src={sanitizeUrl(sv.image)} 
+                                            className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" 
+                                            alt={sv.title} 
+                                        />
+                                    )}
+                                    
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-3">
+                                        <div className="mb-2 flex items-center gap-1.5">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                                            <span className="text-[7px] font-black text-white/50 uppercase tracking-[0.2em]">HD LIVE</span>
                                         </div>
-                                    </details>
-                                ))}
-                            </div>
+                                        <h4 className="text-white text-[11px] font-[1000] uppercase tracking-tight leading-tight mb-2">{sv.title}</h4>
+                                        <div className="flex items-center gap-1.5 opacity-60">
+                                            <div className="w-5 h-5 rounded-lg bg-white/20 flex items-center justify-center backdrop-blur-md">
+                                                <Play size={8} fill="white" className="text-white ml-0.5" />
+                                            </div>
+                                            <span className="text-[8px] font-black text-white uppercase tracking-widest">Watch Short</span>
+                                        </div>
+                                    </div>
+                                    <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-black/40 backdrop-blur-md rounded-md border border-white/10">
+                                        <span className="text-[6px] font-black text-white uppercase tracking-widest">PREVIEW</span>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                    )}
+                    </div>
 
-                    {/* Dynamic 'Why Us' Section */}
-                    {/* ... (as existing) ... */}
-                    <div className="px-1 py-8 space-y-6">
+                    <div className="px-1 py-10 space-y-8">
                         <div className="text-center space-y-1">
-                            <h3 className="text-[10px] font-[1000] text-black uppercase tracking-[0.3em] leading-none mb-2">The Studio Standard</h3>
+                            <h3 className="text-[10px] font-[1000] text-black uppercase tracking-[0.3em] leading-none mb-3">The Studio Standard</h3>
                             <div className="flex items-center justify-center gap-4">
-                                <div className="h-px w-8 bg-black/10" />
-                                <Stars size={14} className="text-brand" />
-                                <div className="h-px w-8 bg-black/10" />
+                                <div className="h-[1.5px] w-12 bg-black/10" />
+                                <Stars size={16} className="text-brand" />
+                                <div className="h-[1.5px] w-12 bg-black/10" />
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-2 gap-3 px-4">
                             {[
                                 { icon: Shield, label: "Studio Grade", sub: "Premium Protocol" },
                                 { icon: Timer, label: "30 Min Avg", sub: "Execution Speed" },
                                 { icon: Zap, label: "Live Track", sub: "Real-time Ops" },
                                 { icon: CreditCard, label: "Secure Pay", sub: "Protocol Ensured" }
                             ].map((item, i) => (
-                                <div key={i} className="bg-white rounded-xl p-3 border border-black/[0.02] shadow-sm flex flex-col items-center text-center gap-3">
-                                    <div className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center">
-                                        <item.icon size={18} className="text-black/80" />
+                                <div key={i} className="bg-white rounded-2xl p-5 border border-black/[0.03] shadow-[0_10px_30px_rgba(0,0,0,0.03)] flex flex-col items-center text-center gap-4 active:scale-95 transition-all">
+                                    <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center">
+                                        <item.icon size={22} className="text-black/80" strokeWidth={1.5} />
                                     </div>
                                     <div>
-                                        <p className="text-[11px] font-black text-black uppercase leading-none tracking-tight mb-1">{item.label}</p>
-                                        <p className="text-[8px] font-bold text-black/30 uppercase tracking-widest">{item.sub}</p>
+                                        <p className="text-[13px] font-[1000] text-black uppercase leading-none tracking-tight mb-1.5">{item.label}</p>
+                                        <p className="text-[9px] font-black text-black/20 uppercase tracking-widest">{item.sub}</p>
                                     </div>
                                 </div>
                             ))}
@@ -1809,13 +1862,13 @@ const FullWashBooking = () => {
                                 initial={{ scale: 0.1, opacity: 0.6 }}
                                 animate={{ scale: [1, 4], opacity: [0.6, 0] }}
                                 transition={{ repeat: Infinity, duration: 4, delay: i * 1.3, ease: "easeOut" }}
-                                className={`absolute w-64 h-64 rounded-full border-2 ${isBlackPassMember ? 'border-brand/30 bg-brand/5' : 'border-black/5'}`}
+                                className={`absolute w-64 h-64 rounded-full border-2 ${isGoldPassMember ? 'border-brand/30 bg-brand/5' : 'border-black/5'}`}
                             />
                         ))}
                     </div>
 
                     {/* Search Area Badge (Floating over user) */}
-                    {isBlackPassMember && (
+                    {isGoldPassMember && (
                         <div className="absolute top-[40%] left-1/2 -translate-x-1/2 -translate-y-[60px] pointer-events-none z-20">
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.8 }}
@@ -1823,7 +1876,7 @@ const FullWashBooking = () => {
                                 className="bg-brand text-black px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-2xl border border-white/20"
                             >
                                 <Crown size={12} fill="currentColor" strokeWidth={3} />
-                                <span className="text-[9px] font-[1000] uppercase tracking-widest">Black Priority active</span>
+                                <span className="text-[9px] font-[1000] uppercase tracking-widest">Gold Priority active</span>
                             </motion.div>
                         </div>
                     )}
@@ -1846,7 +1899,7 @@ const FullWashBooking = () => {
                         <div className="flex items-center gap-3">
                             <div className="relative">
                                 <Radar size={18} className="text-brand animate-pulse" />
-                                {isBlackPassMember && (
+                                {isGoldPassMember && (
                                     <div className="absolute -top-1 -right-1 w-2 h-2 bg-brand rounded-full animate-ping" />
                                 )}
                             </div>
@@ -1882,19 +1935,19 @@ const FullWashBooking = () => {
 
                         <div className="flex items-center justify-between mb-5">
                             <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isBlackPassMember ? 'bg-brand text-black' : 'bg-black text-white'}`}>
+                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isGoldPassMember ? 'bg-brand text-black' : 'bg-black text-white'}`}>
                                     <Zap size={18} fill="currentColor" />
                                 </div>
                                 <div>
                                     <h3 className="text-[13px] font-[1000] text-black uppercase tracking-tight leading-none mb-1">
-                                        {isBlackPassMember ? 'VIP Priority Search' : 'Network Optimization'}
+                                        {isGoldPassMember ? 'VIP Priority Search' : 'Network Optimization'}
                                     </h3>
                                     <p className="text-[9px] font-bold text-black/30 uppercase tracking-widest leading-none">
                                         Connecting to Elite Detailers
                                     </p>
                                 </div>
                             </div>
-                            {isBlackPassMember && (
+                            {isGoldPassMember && (
                                 <div className="px-2 py-1 bg-brand text-black text-[7px] font-black rounded-lg animate-pulse uppercase">Member Benefit</div>
                             )}
                         </div>
@@ -2201,7 +2254,7 @@ const FullWashBooking = () => {
 
                             let itemIcon = selectedVehicle?.img;
                             if (isProduct) itemIcon = item.image;
-                            if (isSubscription) itemIcon = '/assets/icons/black_pass.png';
+                            if (isSubscription) itemIcon = '/assets/icons/gold_pass.png';
                             if (isAddon) itemIcon = '/assets/icons/upgrade.png';
 
                             let typeTag = 'Studio Wash';
@@ -2412,7 +2465,7 @@ const FullWashBooking = () => {
                     <div className="mt-8 space-y-3 px-1">
                         <div className="flex items-center justify-between">
                             <label className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em] ml-1">Voucher Authorization</label>
-                            {isBlackPassMember && (
+                            {isGoldPassMember && (
                                 <motion.div
                                     initial={{ opacity: 0, x: 10 }}
                                     animate={{ opacity: 1, x: 0 }}
@@ -2423,7 +2476,7 @@ const FullWashBooking = () => {
                                 </motion.div>
                             )}
                         </div>
-                        {isBlackPassMember && (
+                        {isGoldPassMember && (
                             <p className="text-[8px] font-bold text-brand uppercase tracking-widest ml-1 mb-2 opacity-60">Membership privileges override standard coupons for maximum value.</p>
                         )}
                         <div className="relative group">
@@ -3120,6 +3173,12 @@ const FullWashBooking = () => {
 
     const renderPayment = () => {
         const paymentOptions = [
+            ...(userSubscription && (userSubscription.monthlyCredits > userSubscription.usedCredits) ? [{ 
+                id: 'subscription', 
+                name: 'Subscription Credit', 
+                icon: <Crown size={20} className="text-brand" fill="currentColor" />, 
+                subtitle: `${userSubscription.monthlyCredits - userSubscription.usedCredits} ${userSubscription.plan || 'Premium'} WASH LEFT` 
+            }] : []),
             { id: 'wallet', name: 'Clean2Wash Wallet', icon: <Wallet size={20} strokeWidth={2.5} />, balance: walletBalance },
             { id: 'googlepay', name: 'Google Pay', icon: 'https://cdn-icons-png.flaticon.com/512/6124/6124998.png' },
             { id: 'phonepe', name: 'PhonePe', icon: 'https://img.icons8.com/color/480/phonepe.png' },
@@ -3319,8 +3378,8 @@ const FullWashBooking = () => {
                                         parkingDetails: activeAddr?.hubId ? parkingDetails : undefined
                                     };
 
-                                    if (paymentMethod === 'wallet') {
-                                        if (walletBalance < finalPrice) {
+                                    if (paymentMethod === 'wallet' || paymentMethod === 'subscription') {
+                                        if (paymentMethod === 'wallet' && walletBalance < finalPrice) {
                                             toast.error(`Insufficient wallet balance. You need ₹${finalPrice - walletBalance} more.`);
                                             setIsProcessing(false);
                                             return;
@@ -3329,7 +3388,7 @@ const FullWashBooking = () => {
                                         const res = await apiClient.createBooking(bookingPayload);
                                         if (res?.status === 'success' && res?.data?.booking) {
                                             handleBookingSuccess(res.data.booking);
-                                            await loadWallet(); // Sync wallet balance from server instead of manual local calculation
+                                            if (paymentMethod === 'wallet') await loadWallet(); // Sync wallet balance from server instead of manual local calculation
 
                                             // Process subscriptions if any
                                             const subscriptionItems = effectiveItems.filter(i => i.type === 'monthly' || i.type === 'subscription');
@@ -3337,7 +3396,8 @@ const FullWashBooking = () => {
                                                 try {
                                                     const subRes = await subscriptionAPI.createSubscription({
                                                         planId: sub.serviceId || sub.planId,
-                                                        paymentMethod: 'wallet'
+                                                        paymentMethod: 'wallet',
+                                                        vehicleId: selectedVehicle?._id || selectedVehicle?.id
                                                     });
                                                     if (subRes?.status === 'success' && (subRes?.data?.subscription || subRes?.subscription)) {
                                                         setUserSubscription(subRes.data?.subscription || subRes.subscription);
@@ -3347,7 +3407,7 @@ const FullWashBooking = () => {
                                                 }
                                             }
                                         } else {
-                                            throw new Error(res?.message || 'Wallet payment failed');
+                                            throw new Error(res?.message || 'Payment failed');
                                         }
                                     } else {
                                         const keyRes = await getRazorpayKey();
@@ -3413,7 +3473,9 @@ const FullWashBooking = () => {
                                                                 const subRes = await subscriptionAPI.createSubscription({
                                                                     planId: sub.serviceId || sub.planId,
                                                                     paymentId: response.razorpay_payment_id,
-                                                                    orderId: response.razorpay_order_id
+                                                                    orderId: response.razorpay_order_id,
+                                                                    signature: response.razorpay_signature,
+                                                                    vehicleId: selectedVehicle?._id || selectedVehicle?.id
                                                                 });
                                                                 // Refresh local user subscription state
                                                                 if (subRes?.status === 'success' && (subRes?.data?.subscription || subRes?.subscription)) {
@@ -3530,11 +3592,21 @@ const FullWashBooking = () => {
         </div>
     );
 
+    // 🛡️ Safe Render Guard: Never show Asset Management if redirect is imminent
+    if (!vehiclesLoading && vehicles && vehicles.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-white font-outfit">
+                <Loader2 className="w-10 h-10 text-brand animate-spin mb-4" strokeWidth={3} />
+                <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.3em] animate-pulse">Initializing Direct Registry...</p>
+            </div>
+        );
+    }
+
     return (
         <MobileLayout hideNav={phase === PHASES.LIVE_TRACK || phase === PHASES.CART || phase === PHASES.SELECT_SLOT || phase === PHASES.PAYMENT}>
-            <div className="bg-[#FFFFFF] min-h-screen font-outfit">
+            <div className="bg-[#FFFFFF] min-h-screen font-outfit relative">
                 <style dangerouslySetInnerHTML={{ __html: `.font-outfit { font-family: 'Outfit', sans-serif; }` }} />
-                {phase !== PHASES.CART && phase !== PHASES.SELECT_SLOT && phase !== PHASES.LIVE_TRACK && phase !== PHASES.PAYMENT && renderHeader()}
+                {phase !== PHASES.CART && phase !== PHASES.SELECT_SLOT && phase !== PHASES.LIVE_TRACK && phase !== PHASES.PAYMENT}
 
                 <AnimatePresence mode="wait">
                     {phase === PHASES.SELECT_VEHICLE && (
@@ -3597,13 +3669,36 @@ const FullWashBooking = () => {
                                 >
                                     <X size={24} />
                                 </button>
-                                <video autoPlay controls playsInline className="w-full h-full object-cover">
-                                    <source src="https://assets.mixkit.io/videos/preview/mixkit-hand-washing-a-car-with-a-sponge-and-foam-1582-large.mp4" type="video/mp4" />
-                                </video>
+
+                                {activeVideoUrl ? (
+                                    <video autoPlay controls playsInline className="w-full h-full object-cover">
+                                        <source src={activeVideoUrl} type="video/mp4" />
+                                    </video>
+                                ) : (
+                                    <div className="w-full h-full bg-[#0A0A0A] flex flex-col items-center justify-center p-12 text-center">
+                                        <div className="relative mb-8">
+                                            <div className="absolute inset-0 bg-brand/20 blur-3xl rounded-full animate-pulse" />
+                                            <div className="relative w-24 h-24 rounded-3xl bg-black border border-white/10 flex items-center justify-center shadow-2xl">
+                                                <Radar size={48} className="text-brand animate-spin-slow" />
+                                            </div>
+                                        </div>
+                                        <h3 className="text-white text-xl font-[1000] uppercase tracking-tighter mb-3">Protocol Stream Unavailable</h3>
+                                        <p className="text-white/40 text-[11px] font-bold uppercase tracking-widest leading-relaxed max-w-xs">
+                                            The live service protocol visualization is currently being calibrated for your location.
+                                        </p>
+                                        <div className="mt-8 flex items-center gap-3 px-4 py-2 bg-white/5 rounded-full border border-white/5">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                            <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">Studio Nodes Online</span>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="absolute bottom-8 left-8 right-8">
                                     <div className="bg-white/10 backdrop-blur-3xl rounded-2xl p-5 border border-white/10">
-                                        <p className="text-white text-[13px] font-[1000] uppercase tracking-[0.2em]">Studio Detailing Protocol</p>
-                                        <p className="text-white/50 text-[10px] font-bold mt-1 uppercase tracking-widest leading-relaxed">Experience precision-engineered car care delivered to your sanctuary.</p>
+                                        <p className="text-white text-[13px] font-[1000] uppercase tracking-[0.2em]">{activeVideoUrl ? 'Studio Detailing Protocol' : 'Protocol Status: Active'}</p>
+                                        <p className="text-white/50 text-[10px] font-bold mt-1 uppercase tracking-widest leading-relaxed">
+                                            {activeVideoUrl ? 'Experience precision-engineered car care delivered to your sanctuary.' : 'Professional teams are standing by for immediate execution.'}
+                                        </p>
                                     </div>
                                 </div>
                             </motion.div>

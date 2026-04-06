@@ -14,7 +14,6 @@ import { toast } from 'react-hot-toast';
 // 🛠️ Hub Asset Protocol: Elite Marker Assets
 const ASSETS = {
     USER_BIKE: 'https://cdn-icons-png.flaticon.com/512/3721/3721619.png', // Specialist/Bike
-    APARTMENT: 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png', // Building
     PICKUP: 'https://cdn-icons-png.flaticon.com/512/2769/2769339.png',    // Truck
     DELIVERY: 'https://cdn-icons-png.flaticon.com/512/1670/1670915.png', // Package/Delivery
     PRODUCT: 'https://cdn-icons-png.flaticon.com/512/1554/1554591.png'    // Box
@@ -33,7 +32,9 @@ const StaffMapView = () => {
         try {
             const res = await staffAPI.getTasks();
             if (res.status === 'success') {
-                const serviceTasks = (res.data.tasks || []).map(t => ({
+                const serviceTasks = (res.data.tasks || [])
+                    .filter((t) => t.service?.category !== 'Apartment' && t.service?.key !== 'APARTMENT_WASH')
+                    .map(t => ({
                     ...t,
                     id: t._id,
                     isProduct: false,
@@ -117,9 +118,8 @@ const StaffMapView = () => {
         ...filteredTasks.map(task => ({
             position: task.coords,
             icon: {
-                url: task.service?.category === 'Apartment' ? ASSETS.APARTMENT : 
-                     (task.type === 'Pickup' ? ASSETS.PICKUP : 
-                      task.type === 'Delivery' ? ASSETS.DELIVERY : ASSETS.PRODUCT),
+                url: task.type === 'Pickup' ? ASSETS.PICKUP : 
+                    (task.type === 'Delivery' ? ASSETS.DELIVERY : ASSETS.PRODUCT),
                 scaledSize: new window.google.maps.Size(38, 38),
                 anchor: new window.google.maps.Point(19, 38)
             },

@@ -5,7 +5,8 @@ import GoogleMapBox from '../../../components/common/GoogleMapBox';
 import {
     ChevronLeft, Search, MapPin, Star, Clock,
     Filter, SlidersHorizontal, Navigation, ArrowRight,
-    Briefcase, ShieldCheck, Zap, Droplets, Map as MapIcon, List
+    Briefcase, ShieldCheck, Zap, Droplets, Map as MapIcon, List,
+    Play, Radar, Stars, X
 } from 'lucide-react';
 import MobileLayout from '../components/layout/MobileLayout';
 import LocationContext from '../../../context/LocationContextBase';
@@ -19,6 +20,8 @@ const StudioDiscovery = () => {
     const [loading, setLoading] = useState(true);
     const { currentLocation, detectCurrentLocation } = useContext(LocationContext);
     const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
+    const [showVideoModal, setShowVideoModal] = useState(false);
+    const [activeVideoUrl, setActiveVideoUrl] = useState('');
 
     useEffect(() => {
         if (!currentLocation) {
@@ -72,13 +75,16 @@ const StudioDiscovery = () => {
         <MobileLayout hideNav>
             {/* ── Header ── */}
             <header className="px-4 pt-10 pb-4 bg-white sticky top-0 z-50 border-b border-gray-100">
-                <div className="flex items-center gap-3 mb-4">
-                    <button onClick={() => navigate(-1)} className="w-9 h-9 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center">
-                        <ChevronLeft size={18} strokeWidth={2.5} className="text-content" />
+                <div className="flex items-center gap-4 mb-5">
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="w-11 h-11 rounded-2xl bg-white border border-black/[0.04] shadow-lg flex items-center justify-center text-black active:scale-90 transition-all shrink-0"
+                    >
+                        <ChevronLeft size={22} strokeWidth={3} />
                     </button>
                     <div>
-                        <h1 className="text-lg font-black tracking-tight text-content leading-none">Nearby Studios</h1>
-                        <p className="text-[9px] text-brand font-black uppercase tracking-widest mt-0.5">Top-rated centers near you</p>
+                        <h1 className="text-xl font-[1000] text-black leading-none uppercase tracking-tighter">Nearby Studios</h1>
+                        <p className="text-[9px] text-brand font-black uppercase tracking-widest mt-1.5">Top-rated centers near you</p>
                     </div>
                 </div>
 
@@ -127,6 +133,51 @@ const StudioDiscovery = () => {
                     >
                         <MapIcon size={16} /> Map View
                     </button>
+                </div>
+
+                {/* ── Studio Wash Stories - YouTube Shorts Style Video Grid ── */}
+                <div className="-mx-4 pt-4 pb-2 overflow-hidden">
+                    <div className="flex items-center justify-between mb-4 px-4">
+                        <div className="flex flex-col">
+                            <h3 className="text-base font-[1000] text-black uppercase tracking-tight leading-none mb-1">Studio Wash Stories</h3>
+                            <p className="text-[8px] font-black text-black/20 uppercase tracking-widest leading-none">Elite detailing in motion</p>
+                        </div>
+                        <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-white shadow-lg active:scale-90 transition-transform">
+                            <Play size={12} fill="currentColor" className="ml-0.5" />
+                        </div>
+                    </div>
+                    
+                    <div className="flex gap-[6px] overflow-x-auto no-scrollbar snap-x snap-mandatory px-2">
+                        {(studios && studios.length > 0 ? studios : [
+                            { name: 'Elite Detailing', image: 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=600&q=80' },
+                            { name: 'Eco Armor', image: 'https://images.unsplash.com/photo-1614028674026-a65e31bfd27c?w=600&q=80' },
+                            { name: 'Precision Gloss', image: 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=600&q=80' }
+                        ]).map((sv, idx) => (
+                            <div 
+                                key={idx}
+                                onClick={() => {
+                                    setActiveVideoUrl(''); // Mocking unavailable protocol for discovery
+                                    setShowVideoModal(true);
+                                }}
+                                className="relative flex-shrink-0 w-[120px] aspect-[9/16] rounded-2xl overflow-hidden bg-black shadow-xl snap-start group border border-black/[0.05]"
+                            >
+                                <img src={sv.image} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt={sv.name} />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-2.5">
+                                    <div className="mb-1.5 flex items-center gap-1">
+                                        <div className="w-1 h-1 rounded-full bg-orange-500 animate-pulse" />
+                                        <span className="text-[6px] font-black text-white/50 uppercase tracking-[0.2em]">HD PREVIEW</span>
+                                    </div>
+                                    <h4 className="text-white text-[9px] font-[1000] uppercase tracking-tight leading-tight mb-1.5">{sv.name}</h4>
+                                    <div className="flex items-center gap-1 opacity-60">
+                                        <div className="w-4 h-4 rounded-lg bg-white/20 flex items-center justify-center backdrop-blur-md">
+                                            <Play size={8} fill="white" className="text-white ml-0.5" />
+                                        </div>
+                                        <span className="text-[7px] font-black text-white uppercase tracking-widest">Watch</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
                 <AnimatePresence mode="wait">
@@ -311,6 +362,66 @@ const StudioDiscovery = () => {
                     )}
                 </AnimatePresence>
             </div>
+
+            {/* Video Demo Modal (Shared) */}
+            <AnimatePresence>
+                {showVideoModal && (
+                    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-5">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowVideoModal(false)}
+                            className="absolute inset-0 bg-black/95 backdrop-blur-md"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="relative w-full max-w-xl aspect-video bg-black rounded-[2.5rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/10"
+                        >
+                            <button
+                                onClick={() => setShowVideoModal(false)}
+                                className="absolute top-6 right-6 z-50 w-12 h-12 rounded-2xl bg-black/60 text-white flex items-center justify-center backdrop-blur-xl border border-white/10 active:scale-90 transition-transform"
+                            >
+                                <X size={24} />
+                            </button>
+
+                            {activeVideoUrl ? (
+                                <video autoPlay controls playsInline className="w-full h-full object-cover">
+                                    <source src={activeVideoUrl} type="video/mp4" />
+                                </video>
+                            ) : (
+                                <div className="w-full h-full bg-[#0A0A0A] flex flex-col items-center justify-center p-12 text-center">
+                                    <div className="relative mb-8">
+                                        <div className="absolute inset-0 bg-brand/20 blur-3xl rounded-full animate-pulse" />
+                                        <div className="relative w-24 h-24 rounded-3xl bg-black border border-white/10 flex items-center justify-center shadow-2xl">
+                                            <Radar size={48} className="text-brand animate-spin-slow" />
+                                        </div>
+                                    </div>
+                                    <h3 className="text-white text-xl font-[1000] uppercase tracking-tighter mb-3">Protocol Stream Unavailable</h3>
+                                    <p className="text-white/40 text-[11px] font-bold uppercase tracking-widest leading-relaxed max-w-xs">
+                                        The live service protocol visualization is currently being calibrated for your location.
+                                    </p>
+                                    <div className="mt-8 flex items-center gap-3 px-4 py-2 bg-white/5 rounded-full border border-white/5">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                        <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">Studio Nodes Online</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="absolute bottom-8 left-8 right-8">
+                                <div className="bg-white/10 backdrop-blur-3xl rounded-2xl p-5 border border-white/10">
+                                    <p className="text-white text-[13px] font-[1000] uppercase tracking-[0.2em]">{activeVideoUrl ? 'Studio Detailing Protocol' : 'Protocol Status: Active'}</p>
+                                    <p className="text-white/50 text-[10px] font-bold mt-1 uppercase tracking-widest leading-relaxed">
+                                        {activeVideoUrl ? 'Experience precision-engineered car care delivered to your sanctuary.' : 'Professional teams are standing by for immediate execution.'}
+                                    </p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </MobileLayout>
     );
 };

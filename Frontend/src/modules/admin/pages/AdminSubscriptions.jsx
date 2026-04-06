@@ -146,6 +146,22 @@ const AdminSubscriptions = () => {
     return (
         <>
             <div className="space-y-12 pb-20">
+                <div className="rounded-[2rem] border border-brand/15 bg-brand/5 px-6 py-5 text-content">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-brand/70">Apartment Wash Ops</p>
+                            <p className="mt-2 text-sm font-bold leading-6 text-content-subtle">
+                                Apartment wash plans aur live apartment subscriptions ab dedicated apartment ops desk me manage honge.
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => window.location.assign('/admin/apartment-wash')}
+                            className="rounded-2xl bg-black px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-brand"
+                        >
+                            Open Apartment Desk
+                        </button>
+                    </div>
+                </div>
                 {/* Global Pass Strategy Command Center */}
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}

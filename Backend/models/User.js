@@ -133,6 +133,11 @@ const userSchema = new mongoose.Schema({
             default: 0,
             min: [-1000, 'Wallet balance cannot go below -1000']
         },
+        heldBalance: {
+            type: Number,
+            default: 0,
+            min: [0, 'Held wallet balance cannot be negative']
+        },
         lastUpdated: {
             type: Date,
             default: Date.now

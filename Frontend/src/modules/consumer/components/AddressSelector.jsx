@@ -1,138 +1,122 @@
-import React, { useState } from 'react';
-import { MapPin, Plus, Home, Briefcase, Navigation, ChevronRight, Check } from 'lucide-react';
-import MapPicker from './MapPicker';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { MapPin, Home, Briefcase, Plus, Check, ChevronRight, Locate } from 'lucide-react';
 import { useGeoLocation } from '../../../hooks/useGeoLocation';
+import { useNavigate } from 'react-router-dom';
 
-const AddressSelector = ({ addresses, onSelect, onClose, autoDetect = false }) => {
-    const { setSelectedAddress, currentLocation } = useGeoLocation();
-    const [showMap, setShowMap] = useState(autoDetect && addresses.length === 0);
-    const [selectedId, setSelectedId] = useState(addresses.find(a => a.isPrimary)?.id || addresses[0]?.id);
+const ICONS = { home: Home, office: Briefcase, other: MapPin };
 
-    const handleSelectSaved = (addr) => {
-        setSelectedId(addr.id);
-        setSelectedAddress(addr); // Global sync
-        onSelect(addr);
-        onClose();
+const AddressSelector = ({ onSelect, currentPath = 'full-wash-booking' }) => {
+    const navigate = useNavigate();
+    const { 
+        savedAddresses: addresses, 
+        selectedAddress, 
+        setSelectedAddress,
+        loading 
+    } = useGeoLocation();
+
+    const handleSelect = (addr) => {
+        setSelectedAddress(addr);
+        if (onSelect) onSelect(addr);
     };
 
-    const handleMapSelect = (mapDetails) => {
-        const str = mapDetails?.street || 'Pinned Location';
-        const newAddr = {
-            id: 'custom-' + Date.now(),
-            label: 'Pinned Location',
-            street: str.substring(0, 50) + (str.length > 50 ? '...' : ''),
-            fullStreet: str,
-            city: mapDetails?.city || '',
-            state: mapDetails?.state || '',
-            pincode: mapDetails?.pincode || '',
-            coordinates: mapDetails?.coordinates || currentLocation || { lat: 28.6139, lng: 77.2090 }, // Default to Delhi if absolute zero
-            isCustom: true
-        };
-        setSelectedAddress(newAddr); // Global sync
-        onSelect(newAddr);
-        onClose();
+    const handleAddNew = () => {
+        navigate(`/addresses?from=${currentPath}`);
     };
-
-    if (showMap) {
-        return (
-            <MapPicker 
-                onSelect={handleMapSelect} 
-                onClose={() => {
-                    if (addresses.length === 0) {
-                        onClose(); // Close entire selector if they cancel map and have no addresses
-                    } else {
-                        setShowMap(false); // Just go back to address list
-                    }
-                }} 
-                autoDetect={autoDetect} 
-            />
-        );
-    }
-
-    // Default to map if no addresses are loaded
-    if (addresses.length === 0 && !showMap) {
-        setShowMap(true);
-        return null;
-    }
 
     return (
-        <div className="fixed inset-0 z-[100] bg-black/60 flex items-end font-outfit">
-            <motion.div
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                exit={{ y: "100%" }}
-                className="w-full bg-white rounded-t-[40px] p-6 pb-12 max-h-[85vh] overflow-y-auto"
-            >
-                {/* Handle */}
-                <div className="w-12 h-1.5 bg-black/10 rounded-full mx-auto mb-8" />
-
-                <div className="flex items-center justify-between mb-8">
-                    <div>
-                        <h2 className="text-[22px] font-black text-black tracking-tight">Wash Location</h2>
-                        <p className="text-[11px] font-bold text-black/30 uppercase tracking-widest mt-1">Select where you want the wash</p>
-                    </div>
-                </div>
-
-                <div className="space-y-3">
-                    {/* Saved Addresses */}
-                    {addresses.map((addr) => (
-                        <button
-                            key={addr.id}
-                            onClick={() => handleSelectSaved(addr)}
-                            className={`w-full p-4 rounded-3xl border transition-all flex items-center gap-4 text-left group
-                                ${selectedId === addr.id
-                                    ? 'bg-black border-black shadow-xl shadow-black/10 scale-[1.02]'
-                                    : 'bg-gray-50 border-black/[0.05] hover:bg-gray-100 hover:scale-[1.01]'}`}
-                        >
-                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors
-                                ${selectedId === addr.id ? 'bg-white/10 text-brand' : 'bg-white text-black/40 shadow-sm'}`}>
-                                {addr.label?.toLowerCase() === 'home' ? <Home size={20} /> :
-                                    addr.label?.toLowerCase() === 'office' ? <Briefcase size={20} /> : <MapPin size={20} />}
-                            </div>
-                            <div className="flex-1">
-                                <span className={`text-[9px] font-black uppercase tracking-widest block mb-0.5
-                                    ${selectedId === addr.id ? 'text-brand' : 'text-black/30'}`}>
-                                    {addr.label || 'Saved Location'}
-                                </span>
-                                <h4 className={`text-[13px] font-black leading-tight
-                                    ${selectedId === addr.id ? 'text-white' : 'text-black'}`}>
-                                    {addr.street}
-                                </h4>
-                            </div>
-                            {selectedId === addr.id && (
-                                <div className="w-6 h-6 rounded-full bg-brand flex items-center justify-center text-black">
-                                    <Check size={14} strokeWidth={3} />
-                                </div>
-                            )}
-                        </button>
-                    ))}
-
-                    {/* Pin on Map option */}
-                    <button
-                        onClick={() => setShowMap(true)}
-                        className="w-full p-5 rounded-3xl bg-brand text-black flex items-center gap-4 group active:scale-[0.98] transition-all shadow-xl shadow-brand/10 border-2 border-transparent hover:border-black/5"
-                    >
-                        <div className="w-12 h-12 rounded-2xl bg-black flex items-center justify-center text-white shadow-lg shadow-black/20 transform group-hover:rotate-12 transition-transform">
-                            <Navigation size={22} fill="currentColor" />
-                        </div>
-                        <div className="flex-1 text-left">
-                            <span className="text-[10px] font-black text-black/40 uppercase tracking-widest block mb-0.5 leading-none">High Precision</span>
-                            <h4 className="text-[14px] font-black leading-none">Pin on Live Map</h4>
-                        </div>
-                        <div className="w-8 h-8 rounded-xl bg-black/5 flex items-center justify-center">
-                            <ChevronRight size={18} strokeWidth={3} />
-                        </div>
-                    </button>
-                </div>
-
-                <button
-                    onClick={onClose}
-                    className="w-full mt-8 py-4 px-6 rounded-2xl border border-black/[0.05] text-[11px] font-black uppercase tracking-[0.2em] text-black/40 hover:bg-gray-50 transition-colors"
+        <div className="space-y-4">
+            <div className="flex items-center justify-between px-1">
+                <h3 className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] italic">Select Service Location</h3>
+                <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleAddNew}
+                    className="flex items-center gap-1.5 text-brand font-black text-[9px] uppercase tracking-widest bg-brand/5 px-3 py-1.5 rounded-xl border border-brand/10"
                 >
-                    Cancel Selection
-                </button>
-            </motion.div>
+                    <Plus size={12} strokeWidth={3} /> Add New
+                </motion.button>
+            </div>
+
+            <div className="grid gap-3">
+                <AnimatePresence mode="popLayout">
+                    {loading ? (
+                        [1, 2].map(i => (
+                            <div key={i} className="h-24 bg-white/5 rounded-[2rem] animate-pulse border border-white/5" />
+                        ))
+                    ) : addresses.length === 0 ? (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-white/5 rounded-[2rem] p-8 text-center border-2 border-dashed border-white/5"
+                        >
+                            <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <Locate size={20} className="text-white/20" />
+                            </div>
+                            <p className="text-[10px] font-black text-white/30 uppercase tracking-widest leading-relaxed">
+                                No addresses found. <br/>
+                                <span className="text-brand">Add one to continue.</span>
+                            </p>
+                        </motion.div>
+                    ) : (
+                        addresses.map((addr) => {
+                            const Icon = ICONS[addr.icon] || MapPin;
+                            const isSelected = selectedAddress?._id === (addr._id || addr.id) || selectedAddress?.id === (addr._id || addr.id);
+
+                            return (
+                                <motion.div
+                                    key={addr._id || addr.id}
+                                    layout
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => handleSelect(addr)}
+                                    className={`relative group flex items-start gap-4 p-5 rounded-[2.2rem] border-2 transition-all cursor-pointer ${
+                                        isSelected 
+                                        ? 'bg-white border-brand shadow-2xl shadow-brand/10' 
+                                        : 'bg-white border-gray-50 hover:border-brand/20 shadow-sm'
+                                    }`}
+                                >
+                                    <div className={`w-12 h-12 rounded-[1.2rem] flex items-center justify-center flex-shrink-0 transition-colors ${
+                                        isSelected ? 'bg-brand text-white shadow-xl shadow-brand/20' : 'bg-gray-50 text-gray-300'
+                                    }`}>
+                                        <Icon size={20} strokeWidth={2.5} />
+                                    </div>
+
+                                    <div className="flex-1 min-w-0 pr-8">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h4 className={`font-black text-[14px] uppercase tracking-tight italic ${isSelected ? 'text-black' : 'text-gray-400'}`}>
+                                                {addr.label}
+                                            </h4>
+                                            {addr.isPrimary && (
+                                                <span className="text-[7px] bg-brand text-white px-1.5 py-0.5 rounded font-black uppercase tracking-widest italic">Default</span>
+                                            )}
+                                        </div>
+                                        <p className={`text-[10px] font-bold leading-relaxed uppercase tracking-wide line-clamp-1 ${isSelected ? 'text-gray-500' : 'text-gray-300'}`}>
+                                            {addr.street || addr.full || addr.address}
+                                        </p>
+                                    </div>
+
+                                    {isSelected && (
+                                        <motion.div 
+                                            initial={{ scale: 0, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            className="absolute top-5 right-5 w-8 h-8 bg-brand text-white rounded-xl shadow-lg flex items-center justify-center"
+                                        >
+                                            <Check size={16} strokeWidth={4} />
+                                        </motion.div>
+                                    )}
+
+                                    {!isSelected && (
+                                        <div className="absolute top-5 right-5 w-8 h-8 flex items-center justify-center text-gray-200 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <ChevronRight size={18} />
+                                        </div>
+                                    )}
+                                </motion.div>
+                            );
+                        })
+                    )}
+                </AnimatePresence>
+            </div>
         </div>
     );
 };

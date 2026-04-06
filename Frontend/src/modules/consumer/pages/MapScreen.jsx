@@ -9,7 +9,36 @@ import {
 } from 'lucide-react';
 import LocationContext from '../../../context/LocationContextBase';
 import { serviceAPI } from '../../../utils/api';
+import { geocodingService } from '../../../utils/geocoding';
 import { toast } from 'react-hot-toast';
+
+const svgToDataUrl = (svg) => `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+
+const USER_AND_CAR_MARKER = svgToDataUrl(`
+<svg width="72" height="84" viewBox="0 0 72 84" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="36" cy="75" rx="18" ry="6" fill="rgba(15,23,42,0.16)"/>
+  <path d="M36 5C23.85 5 14 14.85 14 27C14 43.5 36 64 36 64C36 64 58 43.5 58 27C58 14.85 48.15 5 36 5Z" fill="white" stroke="#F29F05" stroke-width="2.4"/>
+  <circle cx="36" cy="20.2" r="4.6" fill="#F97316"/>
+  <path d="M28 30.6C28 27.9 30.2 25.7 32.9 25.7H39.1C41.8 25.7 44 27.9 44 30.6V33H28V30.6Z" fill="#F29F05"/>
+  <rect x="23" y="34.2" width="26" height="7" rx="3.5" fill="#111827"/>
+  <rect x="27.5" y="28.8" width="17" height="6.1" rx="2.6" fill="#111827"/>
+  <circle cx="29.5" cy="42.8" r="3.1" fill="#111827"/>
+  <circle cx="42.5" cy="42.8" r="3.1" fill="#111827"/>
+</svg>
+`);
+
+const LOCATION_PICKER_PIN = svgToDataUrl(`
+<svg width="82" height="98" viewBox="0 0 82 98" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="41" cy="88" rx="20" ry="7" fill="rgba(15,23,42,0.16)"/>
+  <path d="M41 7C27.193 7 16 18.193 16 32C16 50 41 73 41 73C41 73 66 50 66 32C66 18.193 54.807 7 41 7Z" fill="#101828"/>
+  <path d="M41 11C29.402 11 20 20.402 20 32C20 47.346 41 67.173 41 67.173C41 67.173 62 47.346 62 32C62 20.402 52.598 11 41 11Z" fill="#111827" stroke="#F29F05" stroke-width="2.4"/>
+  <circle cx="41" cy="32" r="15" fill="white"/>
+  <path d="M41 22.5L44.4 29.6L52 30.6L46.5 35.8L47.9 43.2L41 39.4L34.1 43.2L35.5 35.8L30 30.6L37.6 29.6L41 22.5Z" fill="#F29F05"/>
+  <rect x="29.5" y="46.5" width="23" height="6.8" rx="3.4" fill="#111827"/>
+  <circle cx="34" cy="54.8" r="3" fill="#111827"/>
+  <circle cx="48" cy="54.8" r="3" fill="#111827"/>
+</svg>
+`);
 
 const MapScreen = () => {
     const navigate = useNavigate();
@@ -30,6 +59,39 @@ const MapScreen = () => {
     const [isGeocoding, setIsGeocoding] = useState(false);
     const [studios, setStudios] = useState([]);
     const [map, setMap] = useState(null);
+
+    const syncSelectedLocation = useCallback(async (pos, fallbackLabel = 'Selected Location', fallbackAddress = '') => {
+        if (!pos?.lat || !pos?.lng) return;
+
+        setIsGeocoding(true);
+        try {
+            const geocoded = await geocodingService.reverse(pos.lat, pos.lng);
+
+            if (geocoded) {
+                setSelectedLocation({
+                    label: geocoded.area || geocoded.street || fallbackLabel,
+                    address: geocoded.display_name || fallbackAddress || `${geocoded.street}, ${geocoded.city}`,
+                    coordinates: pos
+                });
+                return;
+            }
+
+            setSelectedLocation({
+                label: fallbackLabel,
+                address: fallbackAddress || 'Address unavailable for this point',
+                coordinates: pos
+            });
+        } catch (err) {
+            console.error('MapScreen location sync error:', err);
+            setSelectedLocation({
+                label: fallbackLabel,
+                address: fallbackAddress || 'Address unavailable for this point',
+                coordinates: pos
+            });
+        } finally {
+            setIsGeocoding(false);
+        }
+    }, []);
 
     // Fetch studios if type=vendor
     useEffect(() => {
@@ -65,33 +127,21 @@ const MapScreen = () => {
         }
     }, [type, currentLocation]);
 
+    useEffect(() => {
+        if (currentLocation?.lat && currentLocation?.lng) {
+            syncSelectedLocation(currentLocation, 'Current Location');
+            return;
+        }
+
+        detectCurrentLocation().catch((err) => {
+            console.warn('MapScreen auto-location failed:', err?.message || err);
+        });
+    }, [currentLocation, detectCurrentLocation, syncSelectedLocation]);
+
     // Reverse geocode when map center changes
     const handleMapIdle = useCallback(async (pos) => {
-        if (!window.google?.maps?.Geocoder) return;
-        
-        setIsGeocoding(true);
-        const geocoder = new window.google.maps.Geocoder();
-        
-        try {
-            const response = await geocoder.geocode({ location: pos });
-            if (response?.results?.[0]) {
-                const result = response.results[0];
-                const street = result.address_components.find(c => c.types.includes('route'))?.long_name || 
-                             result.address_components.find(c => c.types.includes('neighborhood'))?.long_name || 
-                             'Selected Location';
-                
-                setSelectedLocation({
-                    label: street,
-                    address: result.formatted_address,
-                    coordinates: pos
-                });
-            }
-        } catch (err) {
-            console.error("MapScreen Geocoding error:", err);
-        } finally {
-            setIsGeocoding(false);
-        }
-    }, []);
+        await syncSelectedLocation(pos, 'Selected Location');
+    }, [syncSelectedLocation]);
 
     // 🔍 Real-time Search Integration (Google Autocomplete fallback or manual)
     useEffect(() => {
@@ -126,6 +176,9 @@ const MapScreen = () => {
             if (pos && map) {
                 map.panTo(pos);
             }
+            if (pos) {
+                await syncSelectedLocation(pos, 'Current Location');
+            }
         } catch (err) {
             toast.error('Location Access Denied');
         }
@@ -146,6 +199,7 @@ const MapScreen = () => {
                         coordinates: pos
                     });
                     if (map) map.panTo(pos);
+                    syncSelectedLocation(pos, loc.label, loc.address);
                     setSearchQuery('');
                     setSearchResults([]);
                 }
@@ -161,7 +215,7 @@ const MapScreen = () => {
             await saveLocation(
                 selectedLocation.coordinates.lat, 
                 selectedLocation.coordinates.lng,
-                selectedLocation.label
+                selectedLocation.label === 'Selected Location' ? 'Home' : selectedLocation.label
             );
             toast.success('Location synchronized', { id: 'save-loc' });
             navigate(-1);
@@ -180,16 +234,17 @@ const MapScreen = () => {
         ...(currentLocation ? [{
             position: currentLocation,
             icon: {
-                url: 'https://cdn-icons-png.flaticon.com/512/7077/7077313.png',
-                scaledSize: new window.google.maps.Size(30, 30)
+                url: USER_AND_CAR_MARKER,
+                scaledSize: window.google?.maps ? new window.google.maps.Size(44, 52) : undefined,
+                anchor: window.google?.maps ? new window.google.maps.Point(22, 44) : undefined
             }
         }] : []),
         ...(type === 'vendor' ? studios.map(studio => ({
             position: studio.coordinates,
             icon: {
                 url: 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png',
-                scaledSize: new window.google.maps.Size(42, 42),
-                anchor: new window.google.maps.Point(21, 42)
+                scaledSize: window.google?.maps ? new window.google.maps.Size(42, 42) : undefined,
+                anchor: window.google?.maps ? new window.google.maps.Point(21, 42) : undefined
             },
             infoContent: (
                 <div className="p-0 min-w-[180px] bg-white rounded-2xl overflow-hidden font-outfit shadow-2xl border border-gray-100">
@@ -225,24 +280,28 @@ const MapScreen = () => {
             {/* ── Background Map Surface ── */}
             <div className="absolute inset-0 z-0">
                 <GoogleMapBox 
-                    center={currentLocation || { lat: 28.7041, lng: 77.1025 }}
+                    center={selectedLocation.coordinates || currentLocation || { lat: 28.7041, lng: 77.1025 }}
                     zoom={13}
                     onLoad={setMap}
                     onIdle={handleMapIdle}
                     markers={mapMarkers}
+                    darkMode={false}
                 />
 
-                <div className="absolute inset-0 bg-gradient-to-b from-white via-transparent to-white/90 pointer-events-none" />
-                <div className="absolute inset-0 opacity-[0.05] pointer-events-none"
-                    style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+                <div className="absolute inset-0 bg-gradient-to-b from-white/86 via-transparent to-white/88 pointer-events-none" />
+                <div
+                    className="absolute inset-0 opacity-[0.03] pointer-events-none"
+                    style={{ backgroundImage: 'radial-gradient(#111827 1px, transparent 1px)', backgroundSize: '28px 28px' }}
+                />
 
                 {!type && (
                     <div className="absolute top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10">
                         <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="relative">
-                            <div className="w-14 h-14 bg-black rounded-[2rem] flex items-center justify-center shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-2 border-white relative z-10">
-                                <MapPin size={28} className="text-brand" fill="currentColor" strokeWidth={1} />
-                            </div>
-                            <div className="w-2 h-2 bg-black rounded-full mx-auto mt-1 shadow-2xl" />
+                            <img
+                                src={LOCATION_PICKER_PIN}
+                                alt="Selected location"
+                                className="w-[4.6rem] h-[5.3rem] drop-shadow-[0_22px_40px_rgba(15,23,42,0.24)]"
+                            />
                         </motion.div>
                     </div>
                 )}

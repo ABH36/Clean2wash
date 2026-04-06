@@ -1,7 +1,46 @@
 const Setting = require('../models/Setting');
 const Promotion = require('../models/Promotion');
 const Subscription = require('../models/Subscription');
+const Vehicle = require('../models/Vehicle');
+const VehicleModel = require('../models/VehicleModel');
+const VehicleType = require('../models/VehicleType');
 const AppError = require('./AppError');
+
+const normalizeCommercialRules = (service = {}) => {
+    const rules = service?.metadata?.commercialRules || {};
+    return {
+        waitingGraceMinutes: Number.isFinite(Number(rules.waitingGraceMinutes)) ? Number(rules.waitingGraceMinutes) : 15,
+        waitChargePerMinute: Number.isFinite(Number(rules.waitChargePerMinute)) ? Number(rules.waitChargePerMinute) : 2,
+        overtimeGraceMinutes: Number.isFinite(Number(rules.overtimeGraceMinutes)) ? Number(rules.overtimeGraceMinutes) : 15,
+        extensionRatePerHour: Number.isFinite(Number(rules.extensionRatePerHour)) ? Number(rules.extensionRatePerHour) : null,
+        nightAllowance: Number.isFinite(Number(rules.nightAllowance)) ? Number(rules.nightAllowance) : 300,
+        outstationAllowancePerDay: Number.isFinite(Number(rules.outstationAllowancePerDay)) ? Number(rules.outstationAllowancePerDay) : 500,
+        subscriptionHourlyRate: Number.isFinite(Number(rules.subscriptionHourlyRate)) ? Number(rules.subscriptionHourlyRate) : 150,
+        commissionPercent: Number.isFinite(Number(rules.commissionPercent)) ? Number(rules.commissionPercent) : null,
+        gstPercent: Number.isFinite(Number(rules.gstPercent)) ? Number(rules.gstPercent) : 0,
+        gstInclusive: Boolean(rules.gstInclusive)
+    };
+};
+
+const normalizeDurationLabel = (value = '') => (
+    String(value || '').trim().toLowerCase().replace(/\s+/g, ' ')
+);
+
+const normalizeDurationPricing = (service = {}) => {
+    const rawPricing = service?.metadata?.durationPricing || {};
+    if (!rawPricing || typeof rawPricing !== 'object' || Array.isArray(rawPricing)) {
+        return {};
+    }
+
+    return Object.entries(rawPricing).reduce((accumulator, [durationLabel, amount]) => {
+        const normalizedLabel = normalizeDurationLabel(durationLabel);
+        const parsedAmount = Number(amount);
+        if (normalizedLabel && Number.isFinite(parsedAmount) && parsedAmount >= 0) {
+            accumulator[normalizedLabel] = parsedAmount;
+        }
+        return accumulator;
+    }, {});
+};
 
 /**
  * Industry-Grade Pricing Engine
@@ -17,12 +56,38 @@ class PricingEngine {
     static async calculate(data, user) {
         const { 
             servicePrice, 
-            vehicleMultiplier = 1.0, 
+            vehicleId, // 🛡️ Zero-Trust: We use vehicleId instead of pre-calculated multiplier
             addonAmount = 0, 
             couponCode, 
             paymentMethod,
             isCombo = false
         } = data;
+
+        // 🛡️ Phase 1: Server-Side Multiplier Resolution
+        let vehicleMultiplier = 1.0;
+        if (vehicleId) {
+            const vehicle = await Vehicle.findById(vehicleId).populate('typeRef');
+            if (vehicle) {
+                // Priority 1: Use specific VehicleType multiplier from DB
+                if (vehicle.typeRef && vehicle.typeRef.multiplier) {
+                    vehicleMultiplier = vehicle.typeRef.multiplier;
+                } 
+                // Priority 2: Catalog Lookup (If typeRef is missing but we have model info)
+                else {
+                    const catalogModel = await VehicleModel.findOne({ 
+                        brand: vehicle.brand, 
+                        model: vehicle.model,
+                        status: 'Verified'
+                    });
+                    
+                    if (catalogModel && catalogModel.type) {
+                        const vType = await VehicleType.findOne({ type: catalogModel.type });
+                        if (vType) vehicleMultiplier = vType.multiplier;
+                    }
+                }
+            }
+        }
+
 
         // Extract duration from schedule for hourly calculations
         let hours = 1;
@@ -44,17 +109,29 @@ class PricingEngine {
             data.service?.name?.toLowerCase().includes('hourly') || 
             data.service?.title?.toLowerCase().includes('hourly')
         );
+        const isPointBased = isChauffeur && (
+            data.service?.name?.toLowerCase().includes('point') ||
+            data.service?.title?.toLowerCase().includes('point')
+        );
+        const commercialRules = normalizeCommercialRules(data.service);
+        const durationPricing = normalizeDurationPricing(data.service);
+        const normalizedDurationLabel = normalizeDurationLabel(durationStr);
+        const slotPrice = Number.isFinite(durationPricing[normalizedDurationLabel]) ? durationPricing[normalizedDurationLabel] : null;
 
-        let baseAmount = Math.round(servicePrice * vehicleMultiplier) + addonAmount;
+        let baseAmount = slotPrice !== null
+            ? Math.round(slotPrice * vehicleMultiplier) + addonAmount
+            : Math.round(servicePrice * vehicleMultiplier) + addonAmount;
         
         // Multiplier for True Hourly Chauffeur (Package rates like Full Day/Outstation are excluded from base multiplication)
-        if (isTrueHourly && hours > 1) {
+        if (slotPrice === null && isTrueHourly && hours > 1) {
+            baseAmount = Math.round((servicePrice * hours) * vehicleMultiplier) + addonAmount;
+        } else if (slotPrice === null && isPointBased && hours > 1) {
             baseAmount = Math.round((servicePrice * hours) * vehicleMultiplier) + addonAmount;
         }
 
         let totalAmount = baseAmount;
         let discounts = {
-            blackPass: 0,
+            goldPass: 0,
             coupon: 0,
             combo: 0,
             loyalty: 0
@@ -79,7 +156,7 @@ class PricingEngine {
                 // SOP Override: Subscriber rate ₹150 vs Standard ₹180 (or provided base)
                 // We apply a targeted discount to reach the ₹150/hr target if it's an hourly service
                 if (data.service?.name?.toLowerCase().includes('hourly')) {
-                    const sopTargetRate = 150;
+                    const sopTargetRate = commercialRules.subscriptionHourlyRate;
                     const sopDiscount = Math.max(0, baseAmount - sopTargetRate);
                     if (sopDiscount > 0) {
                         totalAmount -= sopDiscount;
@@ -101,7 +178,7 @@ class PricingEngine {
                 const isNightEnd = (estEndHour >= 23 || estEndHour < 5) && hours > 0;
 
                 if (isNightStart || isNightEnd) {
-                    const nightAllowance = 300; 
+                    const nightAllowance = commercialRules.nightAllowance;
                     totalAmount += nightAllowance;
                     breakdown.push({ name: 'Night Shift Allowance', amount: nightAllowance, type: 'surcharge' });
                 }
@@ -109,7 +186,7 @@ class PricingEngine {
 
             // 🏨 Real-World: Outstation Stay & Food Allowance
             if (isOutstation) {
-                const allowance = 500; // Standard daily subsistence for driver
+                const allowance = commercialRules.outstationAllowancePerDay;
                 totalAmount += allowance;
                 breakdown.push({ name: 'Stay & Food Allowance', amount: allowance, type: 'surcharge' });
             }
@@ -162,15 +239,15 @@ class PricingEngine {
             breakdown.push({ name: 'Combo Discount', amount: comboAmt, type: 'combo' });
         }
 
-        // 4. LAYER FOUR: Black Pass Membership (Partial Discount)
-        const activeBlackPass = await Subscription.findOne({
+        // 4. LAYER FOUR: Gold Pass Membership (Partial Discount)
+        const activeGoldPass = await Subscription.findOne({
             user: user._id || user.id,
             status: 'active',
-            plan: /black/i,
+            plan: /gold|black/i,
             endDate: { $gt: new Date() }
         });
 
-        if (activeBlackPass) {
+        if (activeGoldPass) {
             const bookingData = { 
                 service: data.service || {}, 
                 hub: data.hub || null, 
@@ -179,13 +256,13 @@ class PricingEngine {
             };
 
             // Only apply 30% discount if the service is eligible for this pass
-            if (activeBlackPass.isServiceEligible(bookingData)) {
+            if (activeGoldPass.isServiceEligible(bookingData)) {
                 const passConfig = await Setting.findOne({ key: 'WASH_PASS_CONFIG' });
                 const passDiscountPct = passConfig?.value?.discount_pct || 30;
                 const passAmt = Math.round(totalAmount * (passDiscountPct / 100));
-                discounts.blackPass = passAmt;
+                discounts.goldPass = passAmt;
                 totalAmount -= passAmt;
-                breakdown.push({ name: 'Black Pass Membership', amount: passAmt, type: 'blackpass' });
+                breakdown.push({ name: 'Gold Pass Membership', amount: passAmt, type: 'goldpass' });
             }
         }
 
@@ -218,11 +295,32 @@ class PricingEngine {
             breakdown.push({ name: `Coupon (${couponCode})`, amount: couponAmt, type: 'coupon' });
         }
 
+        if (isChauffeur && commercialRules.gstPercent > 0) {
+            const rawGstAmount = commercialRules.gstInclusive
+                ? (totalAmount * commercialRules.gstPercent) / (100 + commercialRules.gstPercent)
+                : (totalAmount * commercialRules.gstPercent) / 100;
+            const gstAmount = Math.max(0, Math.round(rawGstAmount));
+
+            if (gstAmount > 0) {
+                breakdown.push({
+                    name: `GST (${commercialRules.gstPercent}%)${commercialRules.gstInclusive ? ' Included' : ''}`,
+                    amount: gstAmount,
+                    type: 'tax',
+                    description: commercialRules.gstInclusive ? 'Already included in displayed fare' : 'Added on top of fare'
+                });
+
+                if (!commercialRules.gstInclusive) {
+                    totalAmount += gstAmount;
+                }
+            }
+        }
+
         return {
             baseAmount,
+            vehicleMultiplier,
             totalAmount: Math.max(0, totalAmount),
             discounts,
-            appliedBenefit: activeBlackPass ? 'BLACK_PASS' : (couponCode ? 'COUPON' : null),
+            appliedBenefit: activeGoldPass ? 'GOLD_PASS' : (couponCode ? 'COUPON' : null),
             breakdown
         };
     }

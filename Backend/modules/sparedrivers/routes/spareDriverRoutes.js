@@ -5,6 +5,7 @@ const authMiddleware = require('../../../middleware/authMiddleware');
 
 // ── Public Driver Routes ──
 router.post('/register', ctrl.register);
+router.post('/login', ctrl.login);
 
 // ── Protected Driver Routes ──
 router.post(
@@ -23,17 +24,23 @@ router.patch('/toggle-online', authMiddleware.protect, authMiddleware.restrictTo
 router.get('/bookings', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.getBookings);
 router.patch('/location', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.updateLocation);
 router.patch('/bookings/:id/accept', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.acceptBooking);
+router.patch('/bookings/:id/reject', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.rejectBooking);
 router.patch('/bookings/:id/status', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.updateBookingStatus);
 router.patch('/bookings/:id/cancel', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.cancelBooking);
 router.get('/history', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.getTripHistory);
 router.get('/transactions', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.getTransactions);
 router.get('/notifications', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.getNotifications);
 router.patch('/notifications/:id/read', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.markNotificationRead);
+router.delete('/notifications/clear', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.clearNotifications);
 router.post('/fcm-token', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.updateFCMToken);
 router.post('/emergency', authMiddleware.protect, ctrl.reportEmergency);
 
 // ── Admin-Only Routes ──
 router.get('/admin/drivers', authMiddleware.protect, authMiddleware.restrictTo('admin'), ctrl.adminListDrivers);
 router.patch('/admin/drivers/:id', authMiddleware.protect, authMiddleware.restrictTo('admin'), ctrl.adminVerifyDriver);
+router.patch('/admin/bookings/:id/assign', authMiddleware.protect, authMiddleware.restrictTo('admin'), ctrl.adminAssignBooking);
+router.patch('/admin/bookings/:id/release', authMiddleware.protect, authMiddleware.restrictTo('admin'), ctrl.adminReleaseBooking);
+router.patch('/admin/bookings/:id/cancel', authMiddleware.protect, authMiddleware.restrictTo('admin'), ctrl.adminCancelBooking);
+router.patch('/admin/bookings/:id/issue', authMiddleware.protect, authMiddleware.restrictTo('admin'), ctrl.adminUpdateBookingIssue);
 
 module.exports = router;

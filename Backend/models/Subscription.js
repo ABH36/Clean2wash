@@ -31,7 +31,7 @@ const subscriptionSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['active', 'expired', 'cancelled', 'paused'],
+        enum: ['pending', 'active', 'expired', 'cancelled', 'paused', 'rejected'],
         default: 'active'
     },
     startDate: {
@@ -79,6 +79,11 @@ const subscriptionSchema = new mongoose.Schema({
         type: [String],
         default: []
     },
+    moduleScope: {
+        type: String,
+        enum: ['general', 'spare-driver', 'apartment-wash', 'all'],
+        default: 'general'
+    },
     price: {
         amount: {
             type: Number,
@@ -90,7 +95,7 @@ const subscriptionSchema = new mongoose.Schema({
         },
         billingCycle: {
             type: String,
-            enum: ['monthly', 'quarterly', 'yearly'],
+            enum: ['monthly', 'quarterly', 'half-yearly', 'yearly', 'annual'],
             default: 'monthly'
         }
     },
@@ -123,6 +128,9 @@ const subscriptionSchema = new mongoose.Schema({
         pausedAt: { type: Date, required: true },
         resumedAt: { type: Date },
         durationMs: { type: Number, default: 0 }
+    }],
+    skipDates: [{
+        type: Date
     }]
 }, {
     timestamps: true
@@ -135,13 +143,69 @@ subscriptionSchema.index({ plan: 1 });
 subscriptionSchema.index({ hub: 1, slot: 1, status: 1 });
 subscriptionSchema.index({ 'service.key': 1, status: 1 });
 
-// Static method to get active subscription
-subscriptionSchema.statics.getActiveSubscription = async function (userId) {
-    return this.findOne({
+// Static method to get active subscription (with Auto-Expiry check)
+const normalizeApplicableValue = (value = '') => String(value)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+const deriveSubscriptionModuleScope = (subscription = {}) => {
+    if (subscription.moduleScope) return subscription.moduleScope;
+
+    const applicable = Array.isArray(subscription.applicableServices) ? subscription.applicableServices : [];
+    const normalized = applicable.map(normalizeApplicableValue);
+    if (normalized.includes('APARTMENT_WASH')) {
+        return 'apartment-wash';
+    }
+    if (normalized.includes('SPARE_DRIVER') || normalized.includes('CHAUFFEUR')) {
+        return 'spare-driver';
+    }
+
+    return 'general';
+};
+
+subscriptionSchema.statics.getActiveSubscription = async function (userId, bookingData = null, options = {}) {
+    const now = new Date();
+
+    const subscriptions = await this.find({
         user: userId,
-        status: 'active',
-        endDate: { $gt: new Date() }
-    }).populate('user', 'name email phone');
+        status: { $in: ['active', 'paused'] }
+    })
+        .sort({ createdAt: -1 })
+        .populate('user', 'name email phone');
+
+    if (!subscriptions.length) return null;
+
+    const validSubscriptions = [];
+    for (const subscription of subscriptions) {
+        if (subscription.endDate < now) {
+            subscription.status = 'expired';
+            await subscription.save();
+            continue;
+        }
+
+        validSubscriptions.push(subscription);
+    }
+
+    if (!validSubscriptions.length) return null;
+
+    const requestedScope = options.moduleScope || bookingData?.moduleScope || null;
+
+    if (requestedScope) {
+        const scoped = validSubscriptions.find((subscription) => {
+            const scope = deriveSubscriptionModuleScope(subscription);
+            return scope === requestedScope || scope === 'all';
+        });
+
+        if (scoped) return scoped;
+    }
+
+    if (bookingData) {
+        const eligible = validSubscriptions.find((subscription) => subscription.isServiceEligible(bookingData));
+        if (eligible) return eligible;
+    }
+
+    return validSubscriptions[0];
 };
 
 // Static method to create subscription
@@ -177,30 +241,42 @@ subscriptionSchema.methods.useCredits = async function (amount, session = null) 
     return this.save({ session });
 };
 
-// Instance method to check service eligibility
+subscriptionSchema.methods.addCredits = async function (amount = 1, session = null) {
+    this.usedCredits = Math.max(0, (this.usedCredits || 0) - amount);
+    return this.save({ session });
+};
+
+// Instance method to check service eligibility (Resilient Logic)
 subscriptionSchema.methods.isServiceEligible = function (bookingData) {
-    // If no restrictions, everything is eligible
+    // If no restrictions (Legacy/Global), everything is eligible
     if (!this.applicableServices || this.applicableServices.length === 0) return true;
 
     const { service = {}, hub = null, location = {} } = bookingData;
-    const category = service.category;
+    const category = service.category || '';
+    const serviceKey = (service.key || '').toUpperCase();
+    
     const isInstant = (bookingData.schedule?.type || service.schedule?.type) === 'instant';
-    const isApartment = !!hub || (location.type !== 'studio' && !!location.hubId);
+    const isApartment = !!hub || (location.type !== 'studio' && !!location.hubId) || serviceKey.includes('APARTMENT');
 
     return this.applicableServices.some(serviceName => {
-        if (serviceName === 'Instant Wash') {
+        const normalized = serviceName.toUpperCase().replace(/\s+/g, '_');
+        
+        // Match by Key (Robust)
+        if (normalized === 'INSTANT_WASH') {
             return category === 'Doorstep' && isInstant && !isApartment;
         }
-        if (serviceName === 'Studio Wash') {
-            return category === 'Studio' || category === 'Studio Detailing';
+        if (normalized === 'STUDIO_WASH' || normalized === 'STUDIO_DETAILING') {
+            return category === 'Studio';
         }
-        if (serviceName === 'Apartment Wash') {
-            return (category === 'Doorstep' || category === 'Apartment') && isApartment;
+        if (normalized === 'APARTMENT_WASH') {
+            return isApartment;
         }
-        if (serviceName === 'Spare Driver') {
-            return category === 'Chauffeur';
+        if (normalized === 'SPARE_DRIVER' || normalized === 'CHAUFFEUR') {
+            return category === 'Chauffeur' || serviceKey.includes('DRIVER');
         }
-        return false;
+        
+        // Fallback to substring match
+        return serviceKey.includes(normalized);
     });
 };
 

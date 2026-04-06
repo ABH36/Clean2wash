@@ -18,7 +18,7 @@ const QUICK_AMOUNTS = [100, 250, 500, 1000];
 
 const Wallet = () => {
     const navigate = useNavigate();
-    const { walletBalance, updateBalance, getUser, getRazorpayKey } = useAuth();
+    const { walletBalance, updateWalletBalance, getUser, getRazorpayKey } = useAuth();
     const user = getUser('consumer');
     const [addMode, setAddMode] = useState(false);
     const [withdrawMode, setWithdrawMode] = useState(false);
@@ -28,9 +28,23 @@ const Wallet = () => {
     const [transactions, setTransactions] = useState([]);
     const [error, setError] = useState('');
     const [referralStats, setReferralStats] = useState(null);
+    const [walletSummary, setWalletSummary] = useState({
+        availableBalance: 0,
+        heldBalance: 0,
+        totalBalance: 0
+    });
 
-    // Fetch wallet data from backend
+    // ⚡ Razorpay SDK Lifecycle: Dynamic Loader
     useEffect(() => {
+        const scriptId = 'razorpay-checkout-js';
+        if (!document.getElementById(scriptId)) {
+            const script = document.createElement('script');
+            script.id = scriptId;
+            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+            script.async = true;
+            document.body.appendChild(script);
+        }
+        
         if (user?.token) {
             fetchWalletData();
             fetchReferralStats();
@@ -55,10 +69,14 @@ const Wallet = () => {
             if (response.status === 'success') {
                 const { wallet, transactions } = response.data;
                 setTransactions(transactions || []);
+                setWalletSummary({
+                    availableBalance: wallet.availableBalance ?? wallet.balance ?? 0,
+                    heldBalance: wallet.heldBalance ?? 0,
+                    totalBalance: wallet.totalBalance ?? ((wallet.availableBalance ?? wallet.balance ?? 0) + (wallet.heldBalance ?? 0))
+                });
 
-                // Calculate difference and sync with global state
-                const diff = wallet.balance - walletBalance;
-                updateBalance(diff);
+                // Absolute sync with global state to prevent fluctuations
+                updateWalletBalance(wallet.availableBalance ?? wallet.balance ?? 0);
             }
         } catch (err) {
             console.error('Failed to fetch wallet data:', err);
@@ -176,32 +194,32 @@ const Wallet = () => {
     return (
         <MobileLayout>
             {/* ── Header ── */}
-            <header className="px-4 pt-10 pb-4 flex items-center gap-3 bg-white sticky top-0 z-50 border-b border-gray-100">
-                <button onClick={() => navigate(-1)} className="w-9 h-9 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center">
-                    <ChevronLeft size={18} strokeWidth={2.5} className="text-content" />
+            <header className="px-5 pt-10 pb-4 flex items-center gap-4 bg-white sticky top-0 z-50 border-b border-gray-100">
+                <button onClick={() => navigate(-1)} className="w-10 h-10 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center active:scale-95 transition-transform">
+                    <ChevronLeft size={22} strokeWidth={3} className="text-content" />
                 </button>
                 <div>
-                    <h1 className="text-lg font-black tracking-tight text-slate-900 leading-none">CarWash Wallet</h1>
-                    <p className="text-[9px] text-brand font-black uppercase tracking-widest mt-0.5">Balance & History</p>
+                    <h1 className="text-xl font-[1000] tracking-tight text-slate-900 leading-none">CarWash Wallet</h1>
+                    <p className="text-[10px] text-brand font-black uppercase tracking-widest mt-1">Balance & History</p>
                 </div>
             </header>
 
             <div className="px-4 pb-24 space-y-4 pt-4">
 
                 {/* ── Balance Card ── */}
-                <div className="bg-content rounded-2xl p-6 relative overflow-hidden border border-white/5 shadow-2xl">
+                <div className="bg-content rounded-2xl p-5 relative overflow-hidden border border-white/5 shadow-2xl">
                     <div className="relative z-10">
-                        <p className="text-white/40 text-[9px] font-black uppercase tracking-widest mb-1">Total Balance</p>
-                        <h2 className="text-4xl font-black text-white tracking-tighter leading-none mb-1">₹{walletBalance.toLocaleString()}</h2>
-                        <p className="text-white/30 text-[9px] font-bold mb-5">Updated just now</p>
+                        <p className="text-white/40 text-[10px] font-[900] uppercase tracking-widest mb-2">Available Balance</p>
+                        <h2 className="text-4xl font-extrabold text-white tracking-tighter leading-none mb-2">₹{walletBalance.toLocaleString()}</h2>
+                        <p className="text-white/30 text-[9px] font-bold mb-4">Held reserve: ₹{(walletSummary.heldBalance || 0).toLocaleString()} · Total funds: ₹{(walletSummary.totalBalance || walletBalance).toLocaleString()}</p>
                         <div className="flex gap-3">
                             <button onClick={() => setAddMode(true)}
-                                className="flex-1 bg-brand text-white h-11 rounded-xl font-black text-sm flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-transform">
-                                <Plus size={16} strokeWidth={3} /> Add Money
+                                className="flex-1 bg-brand text-white h-11 rounded-xl font-black text-sm flex items-center justify-center gap-1.5 shadow-lg active:scale-[0.98] transition-all">
+                                <Plus size={18} strokeWidth={3} /> Add Money
                             </button>
                             <button onClick={() => setWithdrawMode(true)}
-                                className="flex-1 bg-white/10 text-white h-11 rounded-xl font-black text-sm flex items-center justify-center gap-1.5 border border-white/10 active:scale-95 transition-transform">
-                                <ArrowUpRight size={16} strokeWidth={2.5} /> Withdraw
+                                className="flex-1 bg-white/10 text-white h-11 rounded-xl font-black text-sm flex items-center justify-center gap-1.5 border border-white/10 active:scale-[0.98] transition-all">
+                                <ArrowUpRight size={18} strokeWidth={3} /> Withdraw
                             </button>
                         </div>
                     </div>
@@ -267,27 +285,27 @@ const Wallet = () => {
                                     <span>{loading ? 'Processing...' : 'Confirm Withdrawal'}</span>
                                     <span className="font-black">₹{withdrawAmt || '0'}</span>
                                 </button>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center italic">Funds will be credited to your linked bank account</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">Funds will be credited to your linked bank account</p>
                             </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
 
                 {/* ── Referral Banner ── */}
-                <div className="bg-gradient-to-r from-[#6366F1] to-[#818CF8] rounded-2xl p-5 flex items-center gap-4 shadow-xl border border-white/10 relative overflow-hidden group cursor-pointer" onClick={() => navigate('/refer')}>
-                    <div className="relative z-10 w-12 h-12 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center flex-shrink-0 animate-bounce">
+                <div className="bg-gradient-to-r from-[#6366F1] to-[#818CF8] rounded-2xl p-4 flex items-center gap-4 shadow-xl border border-white/10 relative overflow-hidden group cursor-pointer" onClick={() => navigate('/refer')}>
+                    <div className="relative z-10 w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center flex-shrink-0">
                         <Gift size={24} className="text-white" />
                     </div>
                     <div className="relative z-10 flex-1">
-                        <p className="text-white font-black text-[15px] tracking-tight leading-none">
+                        <p className="text-white font-[1000] text-[15px] tracking-tight leading-none uppercase">
                             Refer & Earn {referralStats?.rewardDetails?.userGets || '₹50'}
                         </p>
-                        <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest mt-1.5 leading-none">
-                            Code: <span className="text-white italic">{referralStats?.referralCode || '...'}</span>
+                        <p className="text-white/80 text-[10px] font-[900] uppercase tracking-[0.2em] mt-2 leading-none">
+                            Code: <span className="text-white">{referralStats?.referralCode || '...'}</span>
                         </p>
                     </div>
-                    <div className="relative z-10 bg-white/20 p-2 rounded-lg border border-white/20">
-                        <ChevronRight size={14} className="text-white" strokeWidth={3} />
+                    <div className="relative z-10 bg-white/20 p-2 rounded-xl border border-white/20">
+                        <ChevronRight size={16} className="text-white" strokeWidth={3} />
                     </div>
                     <div className="absolute top-[-20%] right-[-5%] w-24 h-24 bg-white/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
                 </div>
@@ -296,10 +314,10 @@ const Wallet = () => {
                 <section className="space-y-4">
                     <div className="flex justify-between items-center px-1">
                         <div>
-                            <h2 className="text-[17px] font-black tracking-tight text-slate-900 leading-none">Recent Activity</h2>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1 italic">Financial Node Synchronized</p>
+                            <h2 className="text-[19px] font-[1000] tracking-tight text-slate-900 leading-none">Recent Activity</h2>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5">Financial Node Synchronized</p>
                         </div>
-                        <button onClick={fetchWalletData} className="text-brand text-[9px] font-black uppercase tracking-widest bg-brand/5 px-3 py-1.5 rounded-lg border border-brand/10">Refresh</button>
+                        <button onClick={fetchWalletData} className="text-brand text-[10px] font-black uppercase tracking-widest bg-brand/5 px-4 py-2 rounded-xl border border-brand/10 shadow-sm active:scale-95 transition-all">Refresh</button>
                     </div>
 
                     {error && (
@@ -335,23 +353,23 @@ const Wallet = () => {
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="font-black text-sm text-slate-900 tracking-tight leading-none mb-1 group-hover:text-brand transition-colors truncate">{txn.description}</h3>
+                                    <h3 className="font-extrabold text-[15px] text-slate-900 tracking-tight leading-none mb-1.5 group-hover:text-brand transition-colors truncate">{txn.description}</h3>
                                     <div className="flex items-center gap-2">
-                                        <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-md ${txn.type === 'credit' ? 'bg-green-100/50 text-green-600' : 'bg-red-100/50 text-red-600'}`}>
+                                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${txn.type === 'credit' ? 'bg-green-100/50 text-green-600' : 'bg-red-100/50 text-red-600'}`}>
                                             {txn.category.replace('_', ' ')}
                                         </span>
-                                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
                                             {new Date(txn.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
                                         </span>
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className={`font-[1000] text-[17px] tracking-tighter leading-none italic ${txn.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
+                                    <p className={`font-[1000] text-[20px] tracking-tighter leading-none ${txn.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
                                         {txn.type === 'credit' ? '+' : '-'}₹{txn.amount}
                                     </p>
                                     <div className="flex items-center justify-end gap-1 mt-1.5 opacity-40">
                                         <div className={`w-1 h-1 rounded-full ${txn.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'}`} />
-                                        <p className="text-[7px] font-black text-slate-400 uppercase tracking-[0.2em] italic">
+                                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">
                                             {txn.status}
                                         </p>
                                     </div>
@@ -363,7 +381,7 @@ const Wallet = () => {
 
             </div>
         </MobileLayout>
-    );
+);
 };
 
 export default Wallet;

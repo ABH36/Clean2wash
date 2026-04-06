@@ -180,8 +180,12 @@ const CaptainHome = () => {
     const currentRating = captainEarnings.rating || user.rating || 5.0;
 
     const pendingRequests = captainJobs.filter(job => job.status === 'pending');
-    const activeJobs = captainJobs.filter(job => ['accepted', 'confirmed', 'en_route', 'arrived', 'before_photo', 'washing', 'after_photo'].includes(job.status));
+    const activeJobs = captainJobs.filter(job => ['accepted', 'confirmed', 'en_route', 'arrived', 'before_photo', 'washing', 'after_photo', 'in_progress', 'active'].includes(job.status));
     const activeJob = activeJobs[0] || null;
+    const availabilityBlock = captainJobs.find(job => job.availabilityBlock)?.availabilityBlock || null;
+    const getMissionRouteMeta = useCallback((job) => [job?.hubName, job?.apartmentRoute].filter(Boolean).join(' · '), []);
+    const shouldShowProductGigs = online && !activeJob && !availabilityBlock && availableProductMissions.length > 0;
+    const apartmentJobs = captainJobs.filter(job => job.isApartment);
 
     const [acceptedJobId, setAcceptedJobId] = useState(null);
     const [captainPosition, setCaptainPosition] = useState(getInitialCoords());
@@ -450,7 +454,7 @@ const CaptainHome = () => {
     }, [user?.id, navigate, playBeep]);
 
     // Map job locations (jobs with location data)
-    const jobsWithLocation = pendingRequests.filter(j => j.location?.coordinates?.length === 2);
+    const jobsWithLocation = pendingRequests.filter(j => j.location?.address?.coordinates?.lat && j.location?.address?.coordinates?.lng);
 
     return (
         <CaptainLayout>
@@ -534,8 +538,8 @@ const CaptainHome = () => {
                             ...jobsWithLocation.map(job => ({
                                 id: job.id || job._id,
                                 position: {
-                                    lat: job.location.coordinates[1],
-                                    lng: job.location.coordinates[0]
+                                    lat: job.location.address.coordinates.lat,
+                                    lng: job.location.address.coordinates.lng
                                 },
                                 icon: {
                                     url: 'https://cdn-icons-png.flaticon.com/512/3003/3003984.png',
@@ -579,7 +583,11 @@ const CaptainHome = () => {
                         }`}>
                         <span className={`w-2 h-2 rounded-full ${online ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`} />
                         <span className="font-black text-[10px] uppercase tracking-widest">
-                            {online ? `Online · ${pendingRequests.length} requests nearby` : 'Offline'}
+                            {online
+                                ? availabilityBlock
+                                    ? `Locked · ${availabilityBlock.summary}`
+                                    : `Online · ${pendingRequests.length} requests nearby`
+                                : 'Offline'}
                         </span>
                     </div>
 
@@ -655,6 +663,18 @@ const CaptainHome = () => {
                                     <MapPin size={10} className="text-brand" fill="currentColor" />
                                     <p className={`text-[11px] font-bold truncate ${isDarkMode ? 'text-white/40' : 'text-content-subtle'}`}>{needsCommitment.address}</p>
                                 </div>
+                                {needsCommitment.isApartment && (
+                                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                                        <div className="px-2 py-1 rounded-lg bg-brand/10 border border-brand/10">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-brand">Apartment Wash</span>
+                                        </div>
+                                        {getMissionRouteMeta(needsCommitment) && (
+                                            <p className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>
+                                                {getMissionRouteMeta(needsCommitment)}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             <motion.button
@@ -674,7 +694,7 @@ const CaptainHome = () => {
                 )}
 
                 {/* ── Product Gig Board (Phase 33) ── */}
-                {online && availableProductMissions.length > 0 && (
+                {shouldShowProductGigs && (
                     <section className="space-y-3">
                         <div className="flex items-center justify-between px-1">
                             <p className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Available Product Gigs</p>
@@ -750,6 +770,28 @@ const CaptainHome = () => {
                     </motion.div>
                 )}
 
+                {apartmentJobs.length > 0 && (
+                    <motion.button
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => navigate('/captain/apartment-route')}
+                        className={`w-full rounded-[2rem] border p-4 text-left flex items-center justify-between gap-4 ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/20' : 'bg-white border-gray-100 shadow-soft'}`}
+                    >
+                        <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-11 h-11 rounded-2xl bg-brand/10 border border-brand/10 flex items-center justify-center">
+                                <Car size={18} className="text-brand" />
+                            </div>
+                            <div className="min-w-0">
+                                <p className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Apartment Route Desk</p>
+                                <p className={`text-sm font-black uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>{apartmentJobs.length} apartment wash mission{apartmentJobs.length > 1 ? 's' : ''}</p>
+                                <p className="text-brand text-[9px] font-black uppercase tracking-widest mt-1">Open sorted basement-block-pillar route</p>
+                            </div>
+                        </div>
+                        <ChevronRight size={18} className={isDarkMode ? 'text-white/30' : 'text-content-subtle'} />
+                    </motion.button>
+                )}
+
                 {/* ── Active Job Card ── */}
                 {activeJob && (
                     <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
@@ -761,10 +803,15 @@ const CaptainHome = () => {
                             </div>
                             <div className="flex-1 min-w-0">
                                 <p className="text-white/40 text-[9px] font-black uppercase tracking-widest mb-1">
-                                    {activeJob.schedule?.type === 'scheduled' ? 'Scheduled Mission' : 'Active Mission'}
+                                    {activeJob.isApartment ? 'Apartment Mission' : activeJob.schedule?.type === 'scheduled' ? 'Scheduled Mission' : 'Active Mission'}
                                 </p>
                                 <h3 className="text-white font-black text-lg tracking-tight leading-none truncate">{activeJob.serviceName}</h3>
                                 <p className="text-white/60 text-[10px] font-bold mt-1.5">{activeJob.address}</p>
+                                {activeJob.isApartment && (
+                                    <p className="text-brand text-[9px] font-black uppercase tracking-widest mt-2">
+                                        {getMissionRouteMeta(activeJob) || 'Apartment Route Active'}
+                                    </p>
+                                )}
                             </div>
                             <ChevronRight size={18} className="text-white/20" />
                         </div>
@@ -951,6 +998,11 @@ const CaptainHome = () => {
                                                         )}
                                                     </div>
                                                     <p className={`text-[10px] font-bold truncate ${isDarkMode ? 'text-white/40' : 'text-content-subtle'}`}>{job.address}</p>
+                                                    {job.isApartment && (
+                                                        <p className="text-brand text-[9px] font-black uppercase tracking-widest mt-1">
+                                                            {getMissionRouteMeta(job) || 'Apartment Route'}
+                                                        </p>
+                                                    )}
                                                 </div>
                                                 <div className="text-right">
                                                     <p className={`text-[10px] font-black tabular-nums transition-colors ${isCurrent ? 'text-brand' : isDarkMode ? 'text-white/20' : 'text-gray-400'}`}>

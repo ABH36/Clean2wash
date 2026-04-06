@@ -14,6 +14,11 @@ const SpareDriver = require('../../../models/SpareDriver');
 const commissionHelper = require('../../../utils/commissionHelper');
 const walletHelper = require('../../../utils/walletHelper');
 
+const getChauffeurCommissionOverride = (booking = {}) => {
+    const rate = Number(booking?.service?.metadata?.commercialRules?.commissionPercent);
+    return Number.isFinite(rate) && rate >= 0 ? rate : null;
+};
+
 
 // Get Admin Dashboard Stats (P6)
 // Get Admin Dashboard Stats (P6)
@@ -400,7 +405,11 @@ exports.updateBookingStatus = async (req, res) => {
             // Payout Logic for Spare Driver (if not already handled)
             if (booking.provider?.type === 'sparedriver' && booking.provider?.id) {
                 const finalPrice = booking.pricing?.totalAmount || 0;
-                const { providerPayout } = await commissionHelper.calculatePayout(finalPrice, 'sparedriver');
+                const { providerPayout } = await commissionHelper.calculatePayout(
+                    finalPrice,
+                    'sparedriver',
+                    { overrideRate: getChauffeurCommissionOverride(booking) }
+                );
                 
                 await walletHelper.executeWalletTransaction(
                     booking.provider.id,
@@ -711,11 +720,11 @@ exports.updateUser = async (req, res) => {
 
         // Update profile based on role
         if (modelType === 'Captain' || modelType === 'SpareDriver' || user.role === 'captain' || user.role === 'sparedriver') {
-            if (updates.hub) {
+            if (updates.hub !== undefined) {
                 if (!user.profile) user.profile = {};
                 user.profile.hub = updates.hub;
             }
-            if (updates.city) {
+            if (updates.city !== undefined) {
                 if (!user.profile) user.profile = {};
                 user.profile.city = updates.city;
             }
@@ -757,7 +766,7 @@ exports.updateUser = async (req, res) => {
             }
         } else if (user.role === 'staff') {
             if (updates.role) user.profile.role = updates.role;
-            if (updates.hub) {
+            if (updates.hub !== undefined) {
                 if (!user.profile) user.profile = {};
                 user.profile.hub = updates.hub;
             }

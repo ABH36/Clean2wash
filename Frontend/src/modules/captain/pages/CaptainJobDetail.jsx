@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import GoogleMapBox from '../../../components/common/GoogleMapBox';
+import { toast } from 'react-hot-toast';
 
 import CaptainLayout from '../components/CaptainLayout';
 import { useAuth } from '../../../context/AuthContext';
@@ -98,12 +99,18 @@ const CaptainJobDetail = () => {
     const [pinInput, setPinInput] = useState('');
     const [isVerifying, setIsVerifying] = useState(false);
     const [capturedPhoto, setCapturedPhoto] = useState(null);
+    const [capturedPhotoMeta, setCapturedPhotoMeta] = useState(null);
     const fileInputRef = React.useRef(null);
     const pinRefs = [React.useRef(), React.useRef(), React.useRef(), React.useRef()];
 
     useEffect(() => {
         if (liveBooking) setStepIdx(getInitialStep());
     }, [liveBooking?.status]);
+
+    const isApartmentMission = !!liveBooking?.isApartment || !!liveBooking?.location?.parkingDetails || !!liveBooking?.hubName;
+    const missionRouteMeta = [liveBooking?.hubName, liveBooking?.apartmentRoute].filter(Boolean).join(' · ');
+    const hasBeforeProof = (liveBooking?.serviceImages?.before?.length || 0) > 0 || liveBooking?.status === 'before_photo';
+    const hasAfterProof = (liveBooking?.serviceImages?.after?.length || 0) > 0 || liveBooking?.status === 'after_photo';
 
     if (!liveBooking) {
         return (
@@ -190,12 +197,41 @@ const CaptainJobDetail = () => {
     const stepIdx_safe = Math.max(0, Math.min(stepIdx, STEPS_ORDER.length - 1));
     const step = STEPS_ORDER[stepIdx_safe];
 
-    const handleCapture = (e) => {
+    const resetCapturedProof = () => {
+        setCapturedPhoto(null);
+        setCapturedPhotoMeta(null);
+    };
+
+    const captureProofMeta = () => new Promise((resolve) => {
+        const fallbackMeta = {
+            capturedAt: new Date().toISOString(),
+            source: 'captain-app'
+        };
+
+        if (!('geolocation' in navigator)) {
+            resolve(fallbackMeta);
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => resolve({
+                ...fallbackMeta,
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+            }),
+            () => resolve(fallbackMeta),
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+        );
+    });
+
+    const handleCapture = async (e) => {
         const file = e.target.files[0];
         if (file) {
             const reader = new FileReader();
-            reader.onloadend = () => {
+            reader.onloadend = async () => {
                 setCapturedPhoto(reader.result);
+                const meta = await captureProofMeta();
+                setCapturedPhotoMeta(meta);
             };
             reader.readAsDataURL(file);
         }
@@ -214,41 +250,54 @@ const CaptainJobDetail = () => {
                 const result = await updateJobStatus(liveBooking.id, 'arrived');
                 if (result.success) setStepIdx(nextIdx);
             } else if (currentStep === 'Arrived') {
-                // Moving to before_photo status
-                const result = await updateJobStatus(liveBooking.id, 'before_photo', { photo: 'init' }); // Placeholder to bypass strict check if needed
-                if (result.success) {
-                    setStepIdx(nextIdx);
-                    setCapturedPhoto(null);
-                }
+                setStepIdx(nextIdx);
+                resetCapturedProof();
             } else if (currentStep === 'Before Wash') {
-                // Must have photo AND PIN
+                // Apartment wash is an unattended protocol: photo proof only, no PIN handoff.
                 if (!capturedPhoto) {
                     alert('Please capture a "Before Wash" photo to proceed.');
                     return;
                 }
-                if (!pinInput || pinInput.length < 4) {
+                if (!hasBeforeProof) {
+                    const beforeProof = await updateJobStatus(liveBooking.id, 'before_photo', {
+                        photo: capturedPhoto,
+                        photoMeta: capturedPhotoMeta
+                    });
+                    if (!beforeProof.success) {
+                        throw new Error(beforeProof.error || 'Before wash proof upload failed');
+                    }
+                }
+                if (!isApartmentMission && (!pinInput || pinInput.length < 4)) {
                     alert('Please enter the 4-digit Security PIN from the customer.');
                     return;
                 }
-                const result = await updateJobStatus(liveBooking.id, 'washing', {
-                    photo: capturedPhoto,
-                    securityPin: pinInput
-                });
+                const payload = isApartmentMission ? {} : { securityPin: pinInput };
+                const result = await updateJobStatus(liveBooking.id, 'washing', payload);
                 if (result.success) {
                     setStepIdx(nextIdx);
-                    setCapturedPhoto(null);
+                    resetCapturedProof();
                     setPinInput('');
                 }
             } else if (currentStep === 'Washing') {
-                const result = await updateJobStatus(liveBooking.id, 'after_photo', { photo: 'init' });
-                if (result.success) setStepIdx(nextIdx);
+                setStepIdx(nextIdx);
+                resetCapturedProof();
             } else if (currentStep === 'After Wash') {
                 if (!capturedPhoto) {
                     alert('Please capture an "After Wash" photo to verify quality.');
                     return;
                 }
-                const result = await updateJobStatus(liveBooking.id, 'completed', { photo: capturedPhoto });
+                if (!hasAfterProof) {
+                    const afterProof = await updateJobStatus(liveBooking.id, 'after_photo', {
+                        photo: capturedPhoto,
+                        photoMeta: capturedPhotoMeta
+                    });
+                    if (!afterProof.success) {
+                        throw new Error(afterProof.error || 'After wash proof upload failed');
+                    }
+                }
+                const result = await updateJobStatus(liveBooking.id, 'completed');
                 if (result.success) {
+                    resetCapturedProof();
                     navigate('/captain');
                 }
             }
@@ -285,6 +334,24 @@ const CaptainJobDetail = () => {
             }
         } catch (error) {
             console.error("Report Error:", error);
+        } finally {
+            setIsVerifying(false);
+        }
+    };
+
+    const handleSkipService = async () => {
+        const reason = prompt("Why is this apartment wash being skipped? (e.g. owner requested skip, vehicle moved, access restricted)");
+        if (!reason) return;
+
+        setIsVerifying(true);
+        try {
+            const result = await updateJobStatus(liveBooking.id, 'skipped', { reason });
+            if (result.success) {
+                navigate('/captain/apartment-route');
+            }
+        } catch (error) {
+            console.error("Skip Error:", error);
+            toast.error(error.response?.data?.message || error.message || 'Could not skip this apartment wash');
         } finally {
             setIsVerifying(false);
         }
@@ -328,6 +395,7 @@ const CaptainJobDetail = () => {
                 <div className={`relative rounded-2xl overflow-hidden border shadow-soft transition-colors ${isDarkMode ? 'border-white/5 shadow-2xl shadow-black/40' : 'border-gray-100 shadow-sm'}`} style={{ height: 280 }}>
                     <GoogleMapBox
                         center={liveBooking.location?.mapCoordinates ? { lat: liveBooking.location.mapCoordinates.lat, lng: liveBooking.location.mapCoordinates.lng } :
+                            liveBooking.location?.address?.coordinates?.lat ? { lat: liveBooking.location.address.coordinates.lat, lng: liveBooking.location.address.coordinates.lng } :
                             liveBooking.location?.coordinates?.lat ? { lat: liveBooking.location.coordinates.lat, lng: liveBooking.location.coordinates.lng } :
                                 { lat: 28.6139, lng: 77.2090 }}
                         zoom={15}
@@ -335,6 +403,7 @@ const CaptainJobDetail = () => {
                             {
                                 id: 'customer',
                                 position: liveBooking.location?.mapCoordinates ? { lat: liveBooking.location.mapCoordinates.lat, lng: liveBooking.location.mapCoordinates.lng } :
+                                    liveBooking.location?.address?.coordinates?.lat ? { lat: liveBooking.location.address.coordinates.lat, lng: liveBooking.location.address.coordinates.lng } :
                                     liveBooking.location?.coordinates?.lat ? { lat: liveBooking.location.coordinates.lat, lng: liveBooking.location.coordinates.lng } :
                                         { lat: 28.6139, lng: 77.2090 },
                                 title: 'Customer Location'
@@ -354,13 +423,16 @@ const CaptainJobDetail = () => {
                         <MapPin size={16} className="text-brand" fill="currentColor" strokeWidth={1.5} />
                     </div>
                     <div>
-                        <p className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Pickup Address</p>
+                        <p className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>{isApartmentMission ? 'Apartment / Society Location' : 'Pickup Address'}</p>
                         <p className={`font-bold text-[13px] leading-tight mt-1 ${isDarkMode ? 'text-white' : 'text-content'}`}>{liveBooking.address || 'Loading...'}</p>
                         {liveBooking.landmark && (
                             <div className="flex items-center gap-1.5 mt-2">
                                 <Shield size={10} className="text-brand" />
                                 <p className={`text-[10px] font-bold ${isDarkMode ? 'text-white/40' : 'text-content-subtle'}`}>Landmark: {liveBooking.landmark}</p>
                             </div>
+                        )}
+                        {isApartmentMission && missionRouteMeta && (
+                            <p className="mt-2 text-brand text-[10px] font-black uppercase tracking-widest">{missionRouteMeta}</p>
                         )}
                     </div>
                 </div>
@@ -422,13 +494,21 @@ const CaptainJobDetail = () => {
                             )}
                         </div>
                     </div>
-                    {/* OTP Security Notice */}
-                    <div className={`flex items-center gap-3 rounded-xl px-4 py-3 border border-dashed transition-colors ${isDarkMode ? 'bg-orange-500/5 border-orange-500/20' : 'bg-orange-50 border-orange-200'}`}>
-                        <Shield size={14} className="text-orange-500" strokeWidth={2.5} />
-                        <p className={`text-[10px] font-bold leading-tight ${isDarkMode ? 'text-orange-200/60' : 'text-orange-700'}`}>
-                            Ask the customer for the <span className="font-black">4-digit Security PIN</span> to verify and start the service.
-                        </p>
-                    </div>
+                    {isApartmentMission ? (
+                        <div className={`flex items-center gap-3 rounded-xl px-4 py-3 border border-dashed transition-colors ${isDarkMode ? 'bg-brand/10 border-brand/20' : 'bg-brand/5 border-brand/20'}`}>
+                            <Shield size={14} className="text-brand" strokeWidth={2.5} />
+                            <p className={`text-[10px] font-bold leading-tight ${isDarkMode ? 'text-white/70' : 'text-content'}`}>
+                                Apartment wash protocol active. Capture vehicle proof and follow the parking route. No customer PIN is required for this mission.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className={`flex items-center gap-3 rounded-xl px-4 py-3 border border-dashed transition-colors ${isDarkMode ? 'bg-orange-500/5 border-orange-500/20' : 'bg-orange-50 border-orange-200'}`}>
+                            <Shield size={14} className="text-orange-500" strokeWidth={2.5} />
+                            <p className={`text-[10px] font-bold leading-tight ${isDarkMode ? 'text-orange-200/60' : 'text-orange-700'}`}>
+                                Ask the customer for the <span className="font-black">4-digit Security PIN</span> to verify and start the service.
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 {['Before Wash', 'After Wash'].includes(step) && (
@@ -461,19 +541,24 @@ const CaptainJobDetail = () => {
 
                         <div className="text-center">
                             <p className={`font-black text-sm uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>
-                                {capturedPhoto ? 'Verification Photo Ready ✅' : step === 'Before Wash' ? 'Take Mandatory Selfie + Vehicle' : 'After Wash Proof Ready'}
+                                {capturedPhoto ? 'Verification Photo Ready ✅' : step === 'Before Wash' ? (isApartmentMission ? 'Capture Vehicle Proof Photo' : 'Take Mandatory Selfie + Vehicle') : 'After Wash Proof Ready'}
                             </p>
                             <p className={`text-[9px] font-bold max-w-[180px] mx-auto ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>
-                                {capturedPhoto ? 'Click to retake' : `Capture a clear ${step === 'Before Wash' ? 'Selfie with the vehicle' : 'photo of the cleaned vehicle'} to proceed.`}
+                                {capturedPhoto ? 'Click to retake' : `Capture a clear ${step === 'Before Wash' ? (isApartmentMission ? 'photo of the parked vehicle' : 'Selfie with the vehicle') : 'photo of the cleaned vehicle'} to proceed.`}
                             </p>
                         </div>
-                        <div className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'bg-white/5 text-white/40' : 'bg-white text-gray-400'}`}>
-                            Portfolio Check: {step === 'Before Wash' ? 'Identity & Entry' : 'Job Completion'}
+                        <div className="flex items-center gap-2">
+                            <div className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'bg-white/5 text-white/40' : 'bg-white text-gray-400'}`}>
+                                Portfolio Check: {step === 'Before Wash' ? (isApartmentMission ? 'Vehicle Proof & Slot Match' : 'Identity & Entry') : 'Job Completion'}
+                            </div>
+                            <div className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 ${isDarkMode ? 'bg-brand/10 text-brand' : 'bg-brand/5 text-brand'}`}>
+                                <Shield size={10} fill="currentColor" /> Privacy Auto-Protected
+                            </div>
                         </div>
                     </motion.div>
                 )}
 
-                {step === 'Before Wash' && capturedPhoto && (
+                {step === 'Before Wash' && capturedPhoto && !isApartmentMission && (
                     <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
                         className={`rounded-2xl border p-5 space-y-4 transition-all duration-500 ${isDarkMode ? 'bg-orange-500/10 border-orange-500/20 shadow-[0_0_30px_rgba(242,159,5,0.1)]' : 'bg-brand/5 border-brand/10 shadow-soft'}`}>
                         <div className="flex items-center gap-3">
@@ -547,15 +632,27 @@ const CaptainJobDetail = () => {
             </div>
 
             <div className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md backdrop-blur-md border-t px-4 py-4 z-50 transition-all duration-500 ${isDarkMode ? 'bg-[#1E293B]/90 border-white/5 shadow-[0_-15px_50px_rgba(0,0,0,0.4)]' : 'bg-white/90 border-gray-100 shadow-[0_-15px_40px_rgba(0,0,0,0.05)]'}`}>
-                {step === 'Arrived' && (
-                    <motion.button
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        onClick={handleReportIssue}
-                        className="w-full h-12 mb-3 rounded-2xl border-2 border-red-500/30 text-red-500 font-black text-[10px] uppercase tracking-widest bg-red-500/5 hover:bg-red-500/10 transition-colors"
-                    >
-                        Vehicle Not Found / Issue
-                    </motion.button>
+                {['Arrived', 'Before Wash'].includes(step) && (
+                    <div className="grid grid-cols-1 gap-3 mb-3">
+                        <motion.button
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            onClick={handleReportIssue}
+                            className="w-full h-12 rounded-2xl border-2 border-red-500/30 text-red-500 font-black text-[10px] uppercase tracking-widest bg-red-500/5 hover:bg-red-500/10 transition-colors"
+                        >
+                            Vehicle Not Found / Access Issue
+                        </motion.button>
+                        {isApartmentMission && (
+                            <motion.button
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                onClick={handleSkipService}
+                                className="w-full h-12 rounded-2xl border-2 border-gray-300/50 text-gray-700 font-black text-[10px] uppercase tracking-widest bg-gray-100/70 hover:bg-gray-200 transition-colors"
+                            >
+                                Skip Today&apos;s Wash
+                            </motion.button>
+                        )}
+                    </div>
                 )}
                 <motion.button
                     whileTap={{ scale: 0.98 }}

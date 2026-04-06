@@ -1,9 +1,71 @@
 const ProductOrder = require('../../../models/ProductOrder');
 const Captain = require('../../../models/Captain');
 const User = require('../../../models/User');
+const Booking = require('../../../models/Booking');
 const socketService = require('../../../socketService');
 const { sendNotification, sendVendorNotification } = require('../../../utils/notificationService');
 const batchingService = require('../services/batchingService');
+
+const NON_TERMINAL_ACTIVE_STATUSES = ['accepted', 'en_route', 'arrived', 'before_photo', 'washing', 'after_photo', 'in_progress', 'active'];
+const NON_TERMINAL_ASSIGNED_STATUSES = ['confirmed', 'assigned'];
+const NON_TERMINAL_STATUSES = [...NON_TERMINAL_ASSIGNED_STATUSES, ...NON_TERMINAL_ACTIVE_STATUSES];
+
+const isApartmentBooking = (booking) => !!booking?.location?.hubId || booking?.service?.category === 'Apartment';
+
+const parseSlotDateTime = (dateValue, timeValue, fallbackOffsetMinutes = 0) => {
+    if (!dateValue) return null;
+
+    const base = new Date(dateValue);
+    if (Number.isNaN(base.getTime())) return null;
+
+    if (!timeValue) {
+        base.setMinutes(base.getMinutes() + fallbackOffsetMinutes);
+        return base;
+    }
+
+    const parsed = new Date(`${base.toDateString()} ${timeValue}`);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+
+    base.setMinutes(base.getMinutes() + fallbackOffsetMinutes);
+    return base;
+};
+
+const getConflictSummary = (booking) => {
+    const mode = isApartmentBooking(booking) ? 'Apartment Wash' : (booking?.service?.name || 'mission');
+    const start = booking?.schedule?.timeSlot?.start || '';
+    return start ? `${mode} at ${start}` : mode;
+};
+
+const isBlockingMission = (booking, now = new Date()) => {
+    if (!booking) return false;
+
+    if (NON_TERMINAL_ACTIVE_STATUSES.includes(booking.status)) return true;
+    if (!NON_TERMINAL_ASSIGNED_STATUSES.includes(booking.status)) return false;
+    if (booking?.schedule?.type === 'instant') return true;
+
+    const missionStart = parseSlotDateTime(booking?.schedule?.date, booking?.schedule?.timeSlot?.start);
+    const missionEnd = parseSlotDateTime(booking?.schedule?.date, booking?.schedule?.timeSlot?.end, 90);
+    if (!missionStart) return isApartmentBooking(booking);
+
+    const leadWindowMs = (isApartmentBooking(booking) ? 120 : 45) * 60 * 1000;
+    const withinLeadWindow = (missionStart.getTime() - now.getTime()) <= leadWindowMs;
+    const insideMissionWindow = missionEnd ? now <= missionEnd : now >= missionStart;
+
+    return withinLeadWindow || insideMissionWindow;
+};
+
+const findCaptainBlockingMission = async (captainId) => {
+    const candidateMissions = await Booking.find({
+        'provider.id': captainId,
+        isActive: true,
+        status: { $in: NON_TERMINAL_STATUSES }
+    })
+        .select('status schedule service location')
+        .sort({ 'schedule.date': 1, createdAt: 1 })
+        .limit(12);
+
+    return candidateMissions.find((mission) => isBlockingMission(mission)) || null;
+};
 
 /**
  * Get available product pickup broadcasts nearby (with dynamic batching)
@@ -11,6 +73,21 @@ const batchingService = require('../services/batchingService');
 exports.getAvailableProductPickups = async (req, res) => {
     try {
         const captain = req.user;
+        const blockingMission = await findCaptainBlockingMission(captain._id);
+        if (blockingMission) {
+            return res.status(200).json({
+                status: 'success',
+                data: {
+                    missions: [],
+                    blockedBy: {
+                        bookingId: blockingMission._id,
+                        summary: getConflictSummary(blockingMission),
+                        serviceCategory: blockingMission?.service?.category || ''
+                    }
+                }
+            });
+        }
+
         const missions = await batchingService.createDynamicBatches(captain.location);
 
         res.status(200).json({
@@ -31,6 +108,14 @@ exports.acceptProductPickup = async (req, res) => {
     try {
         const { orderId, itemId } = req.params;
         const captainId = req.user._id;
+        const blockingMission = await findCaptainBlockingMission(captainId);
+
+        if (blockingMission) {
+            return res.status(403).json({
+                status: 'error',
+                message: `Mission Conflict: Finish or clear your current ${getConflictSummary(blockingMission)} before claiming another pickup.`
+            });
+        }
 
         const order = await ProductOrder.findById(orderId);
         if (!order) return res.status(404).json({ status: 'error', message: 'Order not found' });
@@ -95,6 +180,14 @@ exports.acceptProductBatch = async (req, res) => {
     try {
         const { batchItems } = req.body; // Array of { orderId, itemId }
         const captainId = req.user._id;
+        const blockingMission = await findCaptainBlockingMission(captainId);
+
+        if (blockingMission) {
+            return res.status(403).json({
+                status: 'error',
+                message: `Mission Conflict: Finish or clear your current ${getConflictSummary(blockingMission)} before claiming another batch.`
+            });
+        }
 
         if (!batchItems || !Array.isArray(batchItems)) {
             return res.status(400).json({ status: 'error', message: 'Invalid batch items' });

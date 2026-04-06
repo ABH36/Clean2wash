@@ -71,13 +71,13 @@ const Portfolio = () => {
                 {/* Header */}
                 <header className="px-5 pt-5 pb-3 bg-white/80 backdrop-blur-xl border-b border-black/[0.04] sticky top-0 z-50">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                            <button onClick={() => navigate(-1)} className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center border border-black/[0.04] active:scale-90 transition-all">
-                                <ChevronLeft size={18} className="text-black" strokeWidth={2.5} />
+                        <div className="flex items-center gap-3">
+                            <button onClick={() => navigate(-1)} className="w-10 h-10 bg-gray-50 rounded-2xl flex items-center justify-center border border-black/[0.04] active:scale-95 transition-all">
+                                <ChevronLeft size={22} className="text-black" strokeWidth={3} />
                             </button>
                             <div>
-                                <h1 className="text-[16px] font-[1000] text-black tracking-tight uppercase leading-none">Glass Gallery</h1>
-                                <p className="text-[8px] font-black text-brand uppercase tracking-[0.2em] mt-1">The Clean2Wash Difference</p>
+                                <h1 className="text-lg font-[1000] text-black tracking-tight uppercase leading-none">Glass Gallery</h1>
+                                <p className="text-[9px] font-black text-brand uppercase tracking-[0.2em] mt-1.5">The Clean2Wash Difference</p>
                             </div>
                         </div>
                         <div className="bg-black/5 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 grayscale opacity-50">
@@ -93,11 +93,11 @@ const Portfolio = () => {
                         <div className="relative bg-[#0A0A0A] rounded-2xl p-6 overflow-hidden shadow-2xl">
                             <div className="absolute right-[-10%] top-[-20%] w-48 h-48 bg-brand/30 rounded-full blur-[80px] pointer-events-none" />
                             <div className="relative z-10">
-                                <span className="inline-flex items-center gap-1.5 bg-brand/20 text-brand px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest mb-3 border border-brand/20">
-                                    <Sparkles size={8} /> Pro Transformation
+                                <span className="inline-flex items-center gap-1.5 bg-brand/20 text-brand px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest mb-4 border border-brand/20">
+                                    <Sparkles size={10} /> Pro Transformation
                                 </span>
-                                <h2 className="text-[22px] font-[1000] text-white uppercase tracking-tighter leading-[1] mb-2">Masterpiece<br />Collection</h2>
-                                <p className="text-[10px] font-medium text-white/50 leading-relaxed max-w-[70%]">Explore the deep cleaning expertise and ceramic glow that defines our work.</p>
+                                <h2 className="text-3xl font-[1000] text-white uppercase tracking-tighter leading-[1] mb-2.5">Masterpiece<br />Collection</h2>
+                                <p className="text-[11px] font-bold text-white/50 leading-relaxed max-w-[70%]">Explore the deep cleaning expertise and ceramic glow that defines our work.</p>
                             </div>
                             <Camera size={140} className="absolute -right-8 -bottom-8 text-white/5 rotate-12 pointer-events-none" />
                         </div>
@@ -109,8 +109,8 @@ const Portfolio = () => {
                             <button
                                 key={category}
                                 onClick={() => setActiveCategory(category)}
-                                className={`flex-shrink-0 px-5 py-2 rounded-xl text-[10px] font-[1000] uppercase tracking-widest transition-all duration-300 ${activeCategory === category
-                                    ? 'bg-black text-white shadow-xl shadow-black/20 translate-y-[-2px]'
+                                className={`flex-shrink-0 px-6 py-2.5 rounded-2xl text-[11px] font-[1000] uppercase tracking-widest transition-all duration-300 ${activeCategory === category
+                                    ? 'bg-black text-white shadow-2xl shadow-black/30 translate-y-[-2px]'
                                     : 'bg-white text-black/40 border border-black/[0.04] hover:bg-gray-50'
                                     }`}
                             >
@@ -150,17 +150,17 @@ const Portfolio = () => {
                                         className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_25px_-5px_rgba(0,0,0,0.05)] border border-black/[0.03]"
                                     >
                                         {/* Card Header */}
-                                        <div className="p-4 flex justify-between items-center">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center border border-black/[0.02]">
-                                                    <Zap size={18} className="text-brand" fill="currentColor" />
+                                        <div className="p-5 flex justify-between items-center">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center border border-black/[0.02] shadow-inner">
+                                                    <Zap size={22} className="text-brand" fill="currentColor" />
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-[15px] font-[1000] text-black uppercase tracking-tight leading-none mb-1">{item.title}</h3>
+                                                    <h3 className="text-[17px] font-[1000] text-black uppercase tracking-tight leading-none mb-1.5">{item.title}</h3>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-[8px] font-black text-black/20 uppercase tracking-widest">{item.vehicle}</span>
+                                                        <span className="text-[9px] font-black text-black/20 uppercase tracking-widest">{item.vehicle}</span>
                                                         <div className="w-1 h-1 rounded-full bg-black/10" />
-                                                        <span className="text-[8px] font-black text-brand/60 uppercase tracking-widest">{item.category}</span>
+                                                        <span className="text-[9px] font-black text-brand/60 uppercase tracking-widest">{item.category}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -182,14 +182,15 @@ const Portfolio = () => {
                                             before={item.beforeImg || item.img} 
                                             after={item.afterImg || item.img} 
                                             title="Transformation Detail" 
+                                            maskPosition={item.plateClass || 'center'}
                                         />
 
                                         {/* Card Footer / Metadata */}
                                         <div className="p-4 bg-gray-50/50 flex items-center justify-between">
                                             <div className="flex items-center gap-2">
-                                                <div className="flex items-center gap-1.5 bg-black/5 px-2 py-1 rounded-lg">
-                                                    <ShieldCheck size={10} className="text-black/30" />
-                                                    <span className="text-[7px] font-black text-black/30 uppercase tracking-widest">Privacy Mask Active</span>
+                                                <div className="flex items-center gap-1.5 bg-brand px-2 py-1 rounded-lg shadow-lg shadow-brand/20">
+                                                    <ShieldCheck size={10} className="text-white" />
+                                                    <span className="text-[7px] font-black text-white uppercase tracking-widest">Privacy Mask Active</span>
                                                 </div>
                                                 <div className="text-[7px] font-black text-black/20 uppercase tracking-widest">
                                                     {item.date ? new Date(item.date).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : 'Recently'}
@@ -227,18 +228,19 @@ const Portfolio = () => {
 
                             <div className="w-full max-w-lg mb-6">
                                 <div className="flex items-center gap-3 mb-6">
-                                    <div className="w-12 h-12 rounded-2xl bg-brand/20 flex items-center justify-center">
-                                        <Sparkles size={24} className="text-brand" />
+                                    <div className="w-14 h-14 rounded-3xl bg-brand/20 flex items-center justify-center">
+                                        <Sparkles size={28} className="text-brand" />
                                     </div>
                                     <div>
-                                        <h2 className="text-white text-xl font-[1000] uppercase tracking-tighter leading-none">{selectedItem.title}</h2>
-                                        <p className="text-white/40 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">{selectedItem.vehicle} • {selectedItem.category}</p>
+                                        <h2 className="text-white text-2xl font-[1000] uppercase tracking-tighter leading-none">{selectedItem.title}</h2>
+                                        <p className="text-white/40 text-[11px] font-black uppercase tracking-widest mt-2">{selectedItem.vehicle} • {selectedItem.category}</p>
                                     </div>
                                 </div>
                                 <BeforeAfterSlider 
                                     before={selectedItem.beforeImg || selectedItem.img} 
                                     after={selectedItem.afterImg || selectedItem.img} 
                                     title="HD Comparison View" 
+                                    maskPosition={selectedItem.plateClass || 'center'}
                                 />
                             </div>
 

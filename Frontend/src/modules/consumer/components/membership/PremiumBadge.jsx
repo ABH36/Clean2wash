@@ -23,7 +23,7 @@ const PremiumBadge = ({ className = "" }) => {
                 <Crown size={10} className="text-[#D4AF37]" fill="#D4AF37" />
             </motion.div>
             <span className="text-[8px] font-black text-[#D4AF37] uppercase tracking-[0.2em] leading-none">
-                Black
+                Gold
             </span>
             
             {/* Sparkle animations */}

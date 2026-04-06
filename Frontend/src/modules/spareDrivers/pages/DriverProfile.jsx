@@ -5,7 +5,7 @@ import { spareDriverAPI } from '../../../utils/spareDriverApi';
 import { toast } from 'react-hot-toast';
 
 const STATUS_CONFIG = {
-    onboarding: { label: 'Onboarding', color: 'bg-blue-50 text-blue-600', icon: <AlertCircle size={14} /> },
+    pending_docs: { label: 'Pending Docs', color: 'bg-blue-50 text-blue-600', icon: <AlertCircle size={14} /> },
     pending_verification: { label: 'Pending Review', color: 'bg-yellow-50 text-yellow-700', icon: <Loader2 size={14} className="animate-spin" /> },
     active: { label: 'Active', color: 'bg-green-50 text-green-700', icon: <CheckCircle2 size={14} /> },
     rejected: { label: 'Rejected', color: 'bg-red-50 text-red-600', icon: <AlertCircle size={14} /> },
@@ -54,7 +54,7 @@ const DriverProfile = () => {
         );
     }
 
-    const status = STATUS_CONFIG[driver?.status] || STATUS_CONFIG.onboarding;
+    const status = STATUS_CONFIG[driver?.status] || STATUS_CONFIG.pending_docs;
 
     return (
         <DriverLayout title="Profile">
@@ -86,7 +86,7 @@ const DriverProfile = () => {
                         </div>
                         <button
                             onClick={handleToggleOnline}
-                            disabled={toggling}
+                            disabled={toggling || driver?.status !== 'active'}
                             className={`w-12 h-6 rounded-full p-1 transition-all flex ${driver?.isOnline ? 'bg-green-600 justify-end' : 'bg-gray-300 justify-start'}`}
                         >
                             <div className="w-4 h-4 rounded-full bg-white shadow-sm" />
@@ -120,7 +120,7 @@ const DriverProfile = () => {
                             <Shield size={16} className="text-black/30" />
                             <div>
                                 <p className="text-[8px] font-black text-black/25 uppercase mb-0.5">Driver ID</p>
-                                <p className="text-[11px] font-black text-black">{driver?._id.slice(-12).toUpperCase()}</p>
+                                <p className="text-[11px] font-black text-black">{driver?._id?.slice(-12)?.toUpperCase() || '--'}</p>
                             </div>
                         </div>
                     </div>
@@ -135,7 +135,7 @@ const DriverProfile = () => {
                             { label: 'Driving License', url: driver?.documents?.drivingLicense?.url },
                             { label: 'Live Selfie', url: driver?.documents?.selfie?.url }
                         ].map((doc, i) => (
-                            <div key={i} className="bg-white border border-gray-100 rounded-lg p-3.5 flex items-center justify-between shadow-sm">
+                            <div key={i} className="bg-white border border-black/[0.04] rounded-[1.35rem] p-3.5 flex items-center justify-between shadow-[0_14px_30px_rgba(15,23,42,0.05)]">
                                 <div className="flex items-center gap-3">
                                     <FileText size={16} className="text-[#F29F05]" />
                                     <span className="text-[10px] font-black text-black uppercase uppercase tracking-wide">{doc.label}</span>
@@ -155,10 +155,10 @@ const DriverProfile = () => {
                 {/* ── Logout ── */}
                 <button
                     onClick={() => {
-                        localStorage.removeItem('chauffeur_token');
+                        spareDriverAPI.clearToken();
                         window.location.href = '/spare-driver/register';
                     }}
-                    className="w-full h-12 border border-black text-black text-[10px] font-black uppercase tracking-widest rounded-lg active:scale-95 transition-all mt-4"
+                    className="w-full h-12 border border-black text-black text-[10px] font-black uppercase tracking-widest rounded-[1.15rem] active:scale-95 transition-all mt-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] bg-white"
                 >
                     Logout Account
                 </button>

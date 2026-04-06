@@ -115,6 +115,11 @@ const TaskDetails = () => {
             try {
                 const res = await staffAPI.getTaskById(id);
                 if (res.status === 'success') {
+                    if (res.data.task?.service?.category === 'Apartment' || res.data.task?.service?.key === 'APARTMENT_WASH') {
+                        toast.error('Apartment wash is no longer handled in the staff panel');
+                        navigate('/staff', { replace: true });
+                        return;
+                    }
                     setTask(res.data.task);
 
                     // 📡 Real-time Synchronization

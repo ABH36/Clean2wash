@@ -13,6 +13,7 @@ const mapController = require('../controllers/mapController');
 const reviewController = require('../controllers/reviewController');
 const sosController = require('../controllers/sosController');
 const webhookController = require('../controllers/webhookController');
+const subscriptionController = require('../controllers/subscriptionController');
 
 // Import Auth Middleware
 const authMiddleware = require('../../../middleware/authMiddleware');
@@ -61,6 +62,7 @@ router.get('/services/:serviceId/plans', serviceController.getServicePlans);
 router.get('/services/:serviceId', serviceController.getServiceDetails);
 
 router.get('/vehicles/types', vehicleController.getVehicleTypes);
+router.get('/vehicles/brands', vehicleController.getUniqueBrands);
 
 // Payment routes (public - for getting key and webhooks)
 router.get('/payment/key', paymentController.getRazorpayKey);
@@ -84,6 +86,7 @@ router.get('/profile/stats', profileController.getStats);
 router.put('/profile', profileController.updateProfile);
 router.put('/profile/address', profileController.updateAddress); // Legacy
 router.put('/profile/avatar', profileController.updateAvatar);
+router.post('/services/apartment-flow/request', serviceController.requestApartmentLead);
 
 // Modern Multi-Address Routes (Phase 1)
 const locationController = require('../controllers/locationController');
@@ -112,6 +115,7 @@ router.post('/bookings', bookingController.createBooking);
 router.get('/bookings/:id', bookingController.getBooking);
 router.put('/bookings/:id', bookingController.updateBooking);
 router.delete('/bookings/:id', bookingController.cancelBooking);
+router.post('/bookings/:id/settle-payment', bookingController.settleAdditionalPayment);
 router.post('/bookings/:id/feedback', bookingController.submitFeedback);
 router.post('/bookings/:id/issues', bookingController.reportIssue);
 
@@ -153,12 +157,14 @@ router.get('/sos/:id', sosController.getSOSStatus);
 router.patch('/sos/:id/resolve', sosController.resolveSOS);
 
 // Account management
-router.get('/subscription', profileController.getSubscription);
-router.post('/subscription', profileController.createSubscription);
-router.patch('/subscription/pause', profileController.pauseSubscription);
-router.patch('/subscription/resume', profileController.resumeSubscription);
-router.delete('/subscription', profileController.cancelSubscription);
-router.post('/subscription/use-credit', profileController.useSubscriptionCredit);
+router.get('/subscription', subscriptionController.getSubscription);
+router.post('/subscription', subscriptionController.createSubscription);
+router.patch('/subscription', subscriptionController.updateSubscriptionSettings);
+router.patch('/subscription/pause', subscriptionController.pauseSubscription);
+router.patch('/subscription/resume', subscriptionController.resumeSubscription);
+router.post('/subscription/skip', subscriptionController.skipSubscriptionServiceDate);
+router.delete('/subscription', subscriptionController.cancelSubscription);
+router.post('/subscription/use-credit', subscriptionController.useSubscriptionCredit);
 router.delete('/account', profileController.deleteAccount);
 
 module.exports = router;

@@ -208,54 +208,38 @@ exports.getProfile = catchAsync(async (req, res, next) => {
 // Update consumer profile
 exports.updateProfile = catchAsync(async (req, res, next) => {
     const { name, email, phone, profile } = req.body;
-    const updateData = {};
+    const user = await User.findById(req.user.id);
+    if (!user) return next(new AppError('Consumer not found', 404));
 
     // Update basic info
-    if (name) updateData.name = name;
+    if (name) user.name = name;
     if (email) {
-        // Check if email is already taken by another user
-        const existingConsumer = await User.findOne({
-            email,
-            _id: { $ne: req.user.id }
-        });
-
-        if (existingConsumer) {
-            return next(new AppError('Email is already taken by another user', 400));
-        }
-        updateData.email = email;
+        const existingEmail = await User.findOne({ email, _id: { $ne: req.user.id } });
+        if (existingEmail) return next(new AppError('Email is already taken', 400));
+        user.email = email;
     }
-
     if (phone) {
-        // Check if phone is already taken by another user
-        const existingConsumer = await User.findOne({
-            phone,
-            _id: { $ne: req.user.id }
-        });
-
-        if (existingConsumer) {
-            return next(new AppError('Phone number is already taken by another user', 400));
-        }
-        updateData.phone = phone;
+        const existingPhone = await User.findOne({ phone, _id: { $ne: req.user.id } });
+        if (existingPhone) return next(new AppError('Phone number is already taken', 400));
+        user.phone = phone;
     }
 
-    // Update profile address
+    // Update profile address (Sync hook in User.js will handle propagation)
     if (profile && profile.address) {
-        updateData['profile.address'] = {
-            ...req.user.profile.address,
+        user.profile.address = {
+            ...user.profile.address,
             ...profile.address
         };
     }
 
     // Update profile avatar
     if (profile && profile.avatar) {
-        updateData['profile.avatar'] = profile.avatar;
+        user.profile.avatar = profile.avatar;
     }
 
-    const updatedConsumer = await User.findByIdAndUpdate(
-        req.user.id,
-        updateData,
-        { new: true, runValidators: true }
-    )
+    await user.save();
+
+    const updatedConsumer = await User.findById(req.user.id)
         .populate('vehicles', 'brand model type plate image isPrimary')
         .populate('primaryVehicle', 'brand model type plate image')
         .populate('subscription');
@@ -281,26 +265,26 @@ exports.updateAddress = catchAsync(async (req, res, next) => {
         return next(new AppError('Please provide all required address fields', 400));
     }
 
-    const updatedConsumer = await User.findByIdAndUpdate(
-        req.user.id,
-        {
-            'profile.address': {
-                street,
-                city,
-                state,
-                pincode,
-                coordinates,
-                landmark
-            }
-        },
-        { new: true, runValidators: true }
-    );
+    const user = await User.findById(req.user.id);
+    if (!user) return next(new AppError('Consumer not found', 404));
+
+    user.profile.address = {
+        street,
+        city,
+        state,
+        pincode,
+        coordinates,
+        landmark
+    };
+
+    // ⚡ Trigger sync hook in User.js pre('save')
+    await user.save();
 
     res.status(200).json({
         status: 'success',
         message: 'Address updated successfully',
         data: {
-            address: updatedConsumer.profile.address
+            address: user.profile.address
         }
     });
 });
@@ -514,433 +498,6 @@ exports.clearNotifications = catchAsync(async (req, res, next) => {
     res.status(200).json({
         status: 'success',
         message: 'All notifications cleared successfully'
-    });
-});
-
-// Get subscription details
-exports.getSubscription = catchAsync(async (req, res, next) => {
-    // If an ID is provided in query, fetch that specific one, otherwise get the user's active one
-    const { id } = req.query;
-    
-    let subscription;
-    if (id) {
-        subscription = await Subscription.findOne({ _id: id, user: req.user.id }).populate({
-            path: 'hub',
-            populate: { path: 'vendor', select: 'name phone' }
-        });
-    } else {
-        subscription = await Subscription.getActiveSubscription(req.user.id);
-        if (subscription && subscription.populate) {
-            await subscription.populate({
-                path: 'hub',
-                populate: { path: 'vendor', select: 'name phone' }
-            });
-        }
-    }
-
-    if (!subscription) {
-        return res.status(200).json({
-            status: 'success',
-            data: { subscription: null }
-        });
-    }
-
-    res.status(200).json({
-        status: 'success',
-        data: { subscription }
-    });
-});
-
-// Create subscription
-exports.createSubscription = catchAsync(async (req, res, next) => {
-    const {
-        plan: planRaw,
-        planId,
-        paymentMethod,
-        autoRenew = false,
-        vehicleId,
-        vehicleIds,
-        hubId,
-        parkingDetails = {},
-        slot,
-        paymentId,
-        orderId,
-        serviceId,
-        serviceKey
-    } = req.body;
-
-    if (!(planRaw || planId) || !paymentMethod) {
-        return next(new AppError('Plan and payment method are required', 400));
-    }
-
-    const normalize = (value = '') => String(value)
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '');
-
-    const resolvedVehicleId = vehicleId || (Array.isArray(vehicleIds) && vehicleIds.length > 0 ? vehicleIds[0] : null);
-    const normalizedServiceHint = normalize(serviceKey || serviceId);
-    const parkingProvided = Boolean(parkingDetails?.basement || parkingDetails?.block || parkingDetails?.pillar);
-    const isApartmentFlow = Boolean(
-        hubId ||
-        slot ||
-        parkingProvided ||
-        normalizedServiceHint.includes('apartment')
-    );
-
-    const existingSubscription = await Subscription.getActiveSubscription(req.user.id);
-
-    const allPlans = await SubscriptionPlan.find({ isActive: true, status: 'Live' });
-    const normalizedRequestedPlan = normalize(planId || planRaw);
-    const planObj = allPlans.find((p) => {
-        const byId = normalize(p._id) === normalizedRequestedPlan;
-        const byName = normalize(p.name) === normalizedRequestedPlan;
-        return byId || byName;
-    });
-
-    if (!planObj) {
-        return next(new AppError('Invalid subscription plan', 400));
-    }
-
-    if (hubId) {
-        const hub = await Hub.findOne({ _id: hubId, isActive: true });
-        if (!hub) {
-            return next(new AppError('Selected apartment society is not available', 400));
-        }
-    }
-
-    if (resolvedVehicleId) {
-        const vehicle = await Vehicle.findOne({
-            _id: resolvedVehicleId,
-            owner: req.user.id,
-            isActive: true
-        });
-
-        if (!vehicle) {
-            return next(new AppError('Selected vehicle is invalid', 400));
-        }
-    }
-
-    if (isApartmentFlow) {
-        if (!hubId) {
-            return next(new AppError('Apartment society selection is required', 400));
-        }
-
-        if (!parkingDetails?.basement || !parkingDetails?.block || !parkingDetails?.pillar) {
-            return next(new AppError('Basement, block and pillar details are required for Apartment Wash', 400));
-        }
-
-        if (!slot || !['morning', 'afternoon', 'evening', 'night'].includes(slot)) {
-            return next(new AppError('Valid apartment slot is required', 400));
-        }
-    }
-
-    const allowedPaymentMethods = ['card', 'upi', 'wallet', 'netbanking', 'razorpay'];
-    const normalizedPaymentMethod = String(paymentMethod).toLowerCase();
-    if (!allowedPaymentMethods.includes(normalizedPaymentMethod)) {
-        return next(new AppError('Invalid payment method', 400));
-    }
-
-    const interval = String(planObj.interval || 'Monthly').toLowerCase();
-    const durationMonths = interval === 'annual' ? 12 : interval === 'quarterly' ? 3 : 1;
-
-    const startDate = new Date();
-    const endDate = new Date(startDate);
-    endDate.setMonth(endDate.getMonth() + durationMonths);
-
-    const monthlyCredits = planObj.credits || 0;
-    const maxVehicles = planObj.maxVehicles || 1;
-    const rollover = planObj.rollover || 0;
-
-    const planBenefits = [];
-    (planObj.features || []).forEach((feature) => {
-        const lower = String(feature).toLowerCase();
-        if (/free wash|complimentary wash/.test(lower)) planBenefits.push('free_wash_monthly');
-        if (/20%/.test(lower)) planBenefits.push('discount_20_percent');
-        if (/30%|40%/.test(lower)) planBenefits.push('discount_30_percent');
-        if (/priority/.test(lower)) planBenefits.push('priority_booking');
-        if (/pickup|drop/.test(lower)) planBenefits.push('free_pickup_drop');
-        if (/vip|support/.test(lower)) planBenefits.push('vip_support');
-        if (/bonus|credit/.test(lower)) planBenefits.push('bonus_credits');
-    });
-
-    const apartmentService = await MasterData.findOne({
-        type: 'SERVICE',
-        isActive: true,
-        $or: [
-            { key: 'APARTMENT_WASH' },
-            { 'metadata.path': '/apartments' },
-            { 'metadata.id': 'apartment-wash' }
-        ]
-    }).lean();
-
-    const servicePayload = isApartmentFlow ? {
-        id: apartmentService?.metadata?.id || serviceId || 'apartment-wash',
-        key: apartmentService?.key || serviceKey || 'APARTMENT_WASH',
-        title: apartmentService?.title || 'Apartment Car Wash',
-        path: apartmentService?.metadata?.path || '/apartments'
-    } : undefined;
-
-    const subscriptionPayload = {
-        user: req.user.id,
-        plan: planObj.name,
-        startDate,
-        endDate,
-        autoRenew,
-        benefits: [...new Set(planBenefits)],
-        monthlyCredits,
-        maxVehicles,
-        rollover,
-        price: {
-            amount: planObj.price,
-            currency: 'INR',
-            billingCycle: interval === 'annual' ? 'yearly' : interval === 'quarterly' ? 'quarterly' : 'monthly'
-        },
-        paymentMethod: normalizedPaymentMethod,
-        lastPaymentDate: new Date(),
-        nextBillingDate: endDate,
-        orderId: orderId || undefined,
-        paymentId: paymentId || undefined
-    };
-
-    if (resolvedVehicleId) {
-        subscriptionPayload.vehicle = resolvedVehicleId;
-    }
-    if (hubId) {
-        subscriptionPayload.hub = hubId;
-    }
-    if (parkingProvided) {
-        subscriptionPayload.parkingDetails = {
-            basement: parkingDetails.basement,
-            block: parkingDetails.block,
-            pillar: parkingDetails.pillar,
-            carModel: parkingDetails.carModel || undefined,
-            carNumber: parkingDetails.carNumber || undefined
-        };
-    }
-    if (slot) {
-        subscriptionPayload.slot = slot;
-    }
-    if (servicePayload) {
-        subscriptionPayload.service = servicePayload;
-    }
-    if (orderId || paymentId) {
-        subscriptionPayload.paymentGateway = {
-            provider: 'razorpay',
-            orderId: orderId || undefined,
-            paymentId: paymentId || undefined
-        };
-    }
-
-    let subscription;
-    let isRenewal = false;
-
-    if (existingSubscription && normalize(existingSubscription.plan) === normalizedRequestedPlan) {
-        // RENEWAL: Extend the existing subscription
-        const currentEndDate = new Date(existingSubscription.endDate);
-        currentEndDate.setMonth(currentEndDate.getMonth() + durationMonths);
-
-        existingSubscription.endDate = currentEndDate;
-        existingSubscription.paymentId = paymentId;
-        existingSubscription.orderId = orderId;
-        existingSubscription.lastPaymentDate = new Date();
-        existingSubscription.status = 'active';
-
-        if (subscriptionPayload.paymentGateway) {
-            existingSubscription.paymentGateway = subscriptionPayload.paymentGateway;
-        }
-
-        subscription = await existingSubscription.save();
-        isRenewal = true;
-    } else {
-        // NEW: Create a new subscription
-        if (existingSubscription) {
-            // Expire the previous one to avoid confusion
-            existingSubscription.status = 'expired';
-            await existingSubscription.save();
-        }
-        subscription = await Subscription.createSubscription(subscriptionPayload);
-    }
-
-    // --- NEW: FINANCIAL SETTLEMENT FLOW ---
-    // If it's an Apartment/Hub subscription, settle the payout to the Vendor
-    if (hubId && !isRenewal) {
-        try {
-            const hub = await Hub.findById(hubId);
-            if (hub && hub.vendor) {
-                const commissionHelper = require('../../../utils/commissionHelper');
-                const walletHelper = require('../../../utils/walletHelper');
-                
-                // Calculate split (Platform Commission vs Vendor Payout)
-                const { adminCut, providerPayout } = await commissionHelper.calculatePayout(planObj.price, 'vendor');
-                
-                // Credit Vendor Wallet
-                await walletHelper.executeWalletTransaction(
-                    hub.vendor,
-                    providerPayout,
-                    'credit',
-                    {
-                        category: 'PAYOUT',
-                        description: `Payout for ${planObj.name} subscription by customer #${req.user.name || req.user.id.toString().slice(-4)}`,
-                        referenceId: subscription._id,
-                        referenceType: 'subscription'
-                    }
-                );
-
-                // Notify Vendor
-                await sendNotification(hub.vendor, {
-                    title: 'New Subscription Payout! 💳',
-                    message: `₹${providerPayout.toFixed(0)} credited for a new ${planObj.name} in Hubbard Hub: ${hub.name}`,
-                    type: 'payout',
-                    priority: 'medium'
-                });
-            }
-        } catch (settlementError) {
-            console.error('Financial settlement failed for subscription:', settlementError);
-            // We don't fail the whole request since sub is already created, but log it
-        }
-    }
-
-    if (!isRenewal) {
-        await User.findByIdAndUpdate(req.user.id, {
-            $inc: { 'stats.totalSubscriptions': 1 }
-        });
-    }
-
-    await sendNotification(req.user.id, {
-        title: isRenewal ? 'Subscription Renewed 🔄' : 'Subscription Activated ✨',
-        message: `${planObj.name} ${isRenewal ? 'extended' : 'activated'} successfully.`,
-        type: 'subscription',
-        priority: 'medium'
-    });
-
-    res.status(201).json({
-        status: 'success',
-        message: 'Subscription created successfully',
-        data: { subscription }
-    });
-});
-
-// Cancel subscription
-exports.cancelSubscription = catchAsync(async (req, res, next) => {
-    const subscription = await Subscription.getActiveSubscription(req.user.id);
-
-    if (!subscription) {
-        return next(new AppError('No active subscription found', 404));
-    }
-
-    subscription.status = 'cancelled';
-    subscription.autoRenew = false;
-    await subscription.save();
-
-    await sendNotification(req.user.id, {
-        title: 'Subscription Cancelled',
-        message: 'Your Clean2Wash Pass has been cancelled. You can resubscribe anytime.',
-        type: 'subscription',
-        priority: 'medium'
-    });
-
-    res.status(200).json({
-        status: 'success',
-        message: 'Subscription cancelled successfully',
-        data: { subscription }
-    });
-});
-
-// Use subscription credit directly (Direct Dash-Usage)
-exports.useSubscriptionCredit = catchAsync(async (req, res, next) => {
-    const subscription = await Subscription.getActiveSubscription(req.user.id);
-
-    if (!subscription) {
-        return next(new AppError('No active subscription found', 404));
-    }
-
-    if (subscription.getAvailableCredits() <= 0) {
-        return next(new AppError('Insufficient subscription credits', 400));
-    }
-
-    // Atomically decrement
-    subscription.usedCredits += 1;
-    await subscription.save();
-
-    await sendNotification(req.user.id, {
-        title: 'Credit Used! 🧼',
-        message: 'One wash credit has been deducted from your active plan.',
-        type: 'subscription',
-        priority: 'medium'
-    });
-
-    res.status(200).json({
-        status: 'success',
-        message: 'Credit deducted successfully',
-        data: {
-            washesLeft: subscription.getAvailableCredits(),
-            subscription
-        }
-    });
-});
-
-// Pause subscription
-exports.pauseSubscription = catchAsync(async (req, res, next) => {
-    const subscription = await Subscription.getActiveSubscription(req.user.id);
-
-    if (!subscription) {
-        return next(new AppError('No active subscription found', 404));
-    }
-
-    if (subscription.status !== 'active') {
-        return next(new AppError('Only active subscriptions can be paused', 400));
-    }
-
-    subscription.status = 'paused';
-    subscription.lastPauseDate = new Date();
-    await subscription.save();
-
-    res.status(200).json({
-        status: 'success',
-        message: 'Subscription paused successfully',
-        data: { subscription }
-    });
-});
-
-// Resume subscription
-exports.resumeSubscription = catchAsync(async (req, res, next) => {
-    const subscription = await Subscription.findOne({
-        user: req.user.id,
-        status: 'paused',
-        endDate: { $gte: new Date() } // Not yet expired
-    });
-
-    if (!subscription) {
-        return next(new AppError('No paused subscription found or subscription has expired', 404));
-    }
-
-    const now = new Date();
-    const pausedAt = subscription.lastPauseDate || now;
-    const durationMs = now.getTime() - pausedAt.getTime();
-
-    // Temporal Extension: Move end date forward by the paused duration
-    subscription.endDate = new Date(subscription.endDate.getTime() + durationMs);
-    if (subscription.nextBillingDate) {
-        subscription.nextBillingDate = new Date(subscription.nextBillingDate.getTime() + durationMs);
-    }
-
-    // Record in history
-    subscription.pauseHistory.push({
-        pausedAt,
-        resumedAt: now,
-        durationMs
-    });
-
-    subscription.status = 'active';
-    subscription.lastPauseDate = null;
-    await subscription.save();
-
-    res.status(200).json({
-        status: 'success',
-        message: `Subscription resumed. Validity extended by ${Math.ceil(durationMs / (1000 * 60 * 60 * 24))} days.`,
-        data: { subscription }
     });
 });
 

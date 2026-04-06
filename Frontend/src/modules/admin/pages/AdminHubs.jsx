@@ -150,6 +150,22 @@ const AdminHubs = () => {
     return (
         <>
             <div className="space-y-6">
+                <div className="rounded-[2rem] border border-brand/15 bg-brand/5 px-6 py-5">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-brand/70">Apartment Wash Ops</p>
+                            <p className="mt-2 text-sm font-bold leading-6 text-content-subtle">
+                                Apartment wash registry aur live apartment operations ab dedicated ops desk me manage honge.
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => window.location.assign('/admin/apartment-wash')}
+                            className="rounded-2xl bg-black px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-brand"
+                        >
+                            Open Apartment Desk
+                        </button>
+                    </div>
+                </div>
                 {/* Infrastructure Control Header */}
                 <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
                     <div className="flex bg-gray-100 p-1 rounded-2xl w-full lg:w-auto overflow-x-auto scrollbar-hide">

@@ -1,5 +1,7 @@
 const Notification = require('../models/Notification');
 const User = require('../models/User');
+const Captain = require('../models/Captain');
+const SpareDriver = require('../models/SpareDriver');
 const socketService = require('../socketService');
 const firebaseService = require('./firebaseService');
 
@@ -49,7 +51,13 @@ const triggerNotification = async (userId, role, data) => {
         const notification = await Notification.create(notificationData);
 
         // 3. Multi-Channel Delivery: Socket.IO (Real-time)
-        const io = socketService.getIO();
+        let io = null;
+        try {
+            io = socketService.getIO();
+        } catch (socketError) {
+            io = null;
+        }
+
         if (io) {
             const socketEventMap = {
                 'consumer': 'new_notification',
@@ -80,9 +88,22 @@ const triggerNotification = async (userId, role, data) => {
         // 4. Multi-Channel Delivery: FCM (Background/Mobile)
         // Only attempt FCM for non-admin roles if user has tokens
         if (field !== 'isAdmin') {
-            const user = await User.findById(userId).select('fcmTokens');
-            if (user && user.fcmTokens && user.fcmTokens.length > 0) {
-                const tokens = user.fcmTokens.map(t => t.token);
+            const recipientModelMap = {
+                consumer: User,
+                vendor: User,
+                staff: User,
+                captain: Captain,
+                sparedriver: SpareDriver
+            };
+
+            const RecipientModel = recipientModelMap[role.toLowerCase()] || User;
+            const recipient = await RecipientModel.findById(userId).select('fcmTokens');
+            if (recipient && recipient.fcmTokens && recipient.fcmTokens.length > 0) {
+                const tokens = recipient.fcmTokens.map((t) => t.token).filter(Boolean);
+                if (tokens.length === 0) {
+                    return notification;
+                }
+
                 await firebaseService.sendMulticastNotification(tokens, {
                     title,
                     body: message,

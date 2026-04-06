@@ -2,9 +2,9 @@ const cron = require('node-cron');
 const Subscription = require('../models/Subscription');
 const Booking = require('../models/Booking');
 const Hub = require('../models/Hub');
-const { sendNotification, sendStaffNotification, sendVendorNotification } = require('./notificationService');
+const { sendNotification, sendCaptainNotification, sendVendorNotification } = require('./notificationService');
 
-const User = require('../models/User');
+const Captain = require('../models/Captain');
 
 /**
  * Apartment Wash Subscription Job Generator
@@ -55,20 +55,30 @@ const generateDailySubscriptionJobs = async () => {
                 return pillarA.localeCompare(pillarB);
             });
 
-            // 2. Fetch available specialists for this Hub
-            // Specialists are users with role 'staff' assigned to this hub
-            const specialists = await User.find({
-                role: 'staff',
-                'profile.hub': hub.name, // Usually stored by name or ID in this schema
-                isActive: true
+            // 2. Fetch apartment captains mapped to this hub
+            const specialists = await Captain.find({
+                isActive: true,
+                isVerified: true,
+                'profile.hub': hub.name
             });
 
-            console.log(`[Cron] Hub ${hub.name}: Found ${specialists.length} specialists for ${subscriptions.length} jobs.`);
+            console.log(`[Cron] Hub ${hub.name}: Found ${specialists.length} captains for ${subscriptions.length} jobs.`);
 
-            const staffLoadCount = {}; // { staffId: count }
+            const staffLoadCount = {}; // { captainId: count }
             let staffIndex = 0;
             
             for (const sub of subscriptions) {
+                const shouldSkipToday = Array.isArray(sub.skipDates) && sub.skipDates.some((skipDate) => {
+                    const normalized = new Date(skipDate);
+                    normalized.setHours(0, 0, 0, 0);
+                    return normalized.getTime() === today.getTime();
+                });
+
+                if (shouldSkipToday) {
+                    console.log(`[Cron] ⏭️ Skipping subscription ${sub._id} for today due to user skip request.`);
+                    continue;
+                }
+
                 // Secondary safety check
                 if (!sub.vehicle) {
                     console.warn(`[Cron] ⚠️ Skipping subscription ${sub._id} - Vehicle data lost during population.`);
@@ -89,7 +99,7 @@ const generateDailySubscriptionJobs = async () => {
                 // 3. Assign Specialist (Round-robin load balancing with CAP)
                 let assignedStaff = null;
                 if (specialists.length > 0) {
-                    // Try to find an available specialist within the 10 car limit
+                    // Try to find an available captain within the 10 car limit
                     let attempts = 0;
                     while (attempts < specialists.length) {
                         const potentialStaff = specialists[staffIndex % specialists.length];
@@ -108,9 +118,12 @@ const generateDailySubscriptionJobs = async () => {
                 }
 
                 if (!assignedStaff && specialists.length > 0) {
-                    console.warn(`[Cron] 🚩 CAPACITY ALERT: All specialists for Hub ${hub.name} have reached the 10-car limit.`);
-                    // Depending on policy, we might still assign to hub vendor or leave unassigned
-                    // For now, we'll continue to see if any other cars can be assigned (though unlikely given round-robin)
+                    console.warn(`[Cron] 🚩 CAPACITY ALERT: All captains for Hub ${hub.name} have reached the 10-car limit.`);
+                    continue;
+                }
+
+                if (!assignedStaff) {
+                    console.warn(`[Cron] 🚩 ASSIGNMENT ALERT: No verified captains mapped to apartment hub ${hub.name}.`);
                     continue; 
                 }
 
@@ -123,7 +136,7 @@ const generateDailySubscriptionJobs = async () => {
                         key: sub.service?.key || 'APARTMENT_WASH',
                         name: 'Apartment Dry Wash', // Explicitly following SOP
                         category: 'Apartment',
-                        type: 'vendor'
+                        type: 'captain'
                     },
                     location: {
                         type: 'Apartment',
@@ -161,11 +174,11 @@ const generateDailySubscriptionJobs = async () => {
                     },
                     status: 'confirmed',
                     provider: {
-                        id: assignedStaff?._id || sub.hub?.vendor,
-                        type: 'vendor'
+                        id: assignedStaff._id,
+                        type: 'captain'
                     },
-                    // Crucial: Set assignedStaff for dashboard visibility
-                    assignedStaff: assignedStaff?._id
+                    // Scheduled apartment missions are captain-operated, not staff-operated.
+                    assignedStaff: null
                 };
 
                 await Booking.create(bookingData);
@@ -180,11 +193,11 @@ const generateDailySubscriptionJobs = async () => {
                     });
                 }
 
-                // 5. Notify assigned staff (Captain)
+                // 5. Notify assigned captain
                 if (assignedStaff?._id) {
-                    await sendStaffNotification(assignedStaff._id, {
+                    await sendCaptainNotification(assignedStaff._id, {
                         title: 'Mission Assigned 🚗',
-                        message: `You have a new Apartment Wash at ${sub.hub?.name}. Slot: ${sub.slot === 'morning' ? '6-9 AM' : '6-8 PM'}. Order sorted by Parking Hierarchy.`,
+                        message: `You have a new Apartment Wash at ${sub.hub?.name}. Slot: ${sub.slot === 'morning' ? '6-9 AM' : '6-8 PM'}. Route sorted by Basement → Block → Pillar.`,
                         type: 'booking' // Fixed from 'status-update'
                     });
                 }

@@ -69,7 +69,11 @@ const StaffDashboard = () => {
     const [isOnline, setIsOnline] = useState(user.isOnline !== false);
     const [isCommitting, setIsCommitting] = useState(null);
 
-    const needsCommitment = tasks.find(t =>
+    const nonApartmentTasks = tasks.filter(
+        (task) => task.service?.category !== 'Apartment' && task.service?.key !== 'APARTMENT_WASH'
+    );
+
+    const needsCommitment = nonApartmentTasks.find(t =>
         t.schedule?.type === 'scheduled' &&
         !t.isStaffCommitted &&
         t.status === 'confirmed'
@@ -149,8 +153,7 @@ const StaffDashboard = () => {
         };
     }, [fetchDashboard, user.id, user._id]);
 
-    const serviceTasks = tasks.map(b => {
-        const isApartment = b.service?.category === 'Apartment';
+    const serviceTasks = nonApartmentTasks.map(b => {
         const isDelivery = [
             'quality-check', 
             'ready-for-delivery', 
@@ -168,12 +171,12 @@ const StaffDashboard = () => {
 
         return {
             id: b._id || b.id,
-            type: isApartment ? 'Apartment Wash' : (isDelivery ? 'Delivery' : 'Pickup'),
+            type: isDelivery ? 'Delivery' : 'Pickup',
             customer: b.consumer?.name || 'Guest',
             address: b.location?.address?.street || b.consumer?.profile?.address?.street || 'Site point',
             time: b.schedule?.type === 'instant' ? 'ASAP' : (b.schedule?.timeSlot?.start || 'Scheduled'),
             date: b.schedule?.date ? new Date(b.schedule.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Today',
-            isScheduled: b.schedule?.type === 'scheduled' || isApartment, // Apartment is usually scheduled
+            isScheduled: b.schedule?.type === 'scheduled',
             vehicle: b.vehicle?.brand ? `${b.vehicle.brand} ${b.vehicle.model}` : 'Unknown Vehicle',
             plate: b.vehicle?.plate || '--',
             status: ['completed', 'cancelled'].includes(b.status) ? b.status :
@@ -331,7 +334,7 @@ const StaffDashboard = () => {
                 </div>
 
                 {/* ── Today's Mission Timeline (Phase 8) ── */}
-                {isOnline && tasks.filter(t => !['completed', 'cancelled'].includes(t.status)).length > 0 && (
+                {isOnline && nonApartmentTasks.filter(t => !['completed', 'cancelled'].includes(t.status)).length > 0 && (
                     <section className="space-y-4">
                         <div className="flex items-center justify-between px-2">
                             <h3 className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Daily Hub Forecast</h3>
@@ -349,7 +352,7 @@ const StaffDashboard = () => {
                             </div>
                         </div>
                         <div className={`rounded-3xl border p-4 transition-all duration-500 overflow-hidden space-y-4 ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/30' : 'bg-white border-gray-100 shadow-soft'}`}>
-                            {tasks.filter(t => !['completed', 'cancelled'].includes(t.status)).map((task, i, arr) => {
+                            {nonApartmentTasks.filter(t => !['completed', 'cancelled'].includes(t.status)).map((task, i, arr) => {
                                 return (
                                     <div key={task._id} className="relative pl-6">
                                         {i < arr.length - 1 && (
@@ -376,30 +379,6 @@ const StaffDashboard = () => {
                         </div>
                     </section>
                 )}
-
-                {/* 🏙️ Society Cluster Entry Point */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    onClick={() => navigate('/staff/society-route')}
-                    className={`p-6 rounded-[2.5rem] border relative overflow-hidden cursor-pointer group bg-[#D4AF37]/10 border-[#D4AF37]/20`}
-                >
-                    <div className="flex items-center justify-between relative z-10">
-                        <div className="flex items-center gap-5">
-                            <div className="w-14 h-14 rounded-2xl bg-[#D4AF37] text-black flex items-center justify-center shadow-lg shadow-[#D4AF37]/30">
-                                <Car size={24} />
-                            </div>
-                            <div>
-                                <h3 className={`text-base font-black uppercase leading-none mb-1.5 ${isDarkMode ? 'text-white' : 'text-content'}`}>Society Cluster</h3>
-                                <p className={`text-[10px] font-black uppercase tracking-widest leading-none text-[#D4AF37]`}>Analyze Society Missions</p>
-                            </div>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-[#D4AF37]/20 transition-all">
-                            <ArrowRight size={18} className="text-[#D4AF37]" />
-                        </div>
-                    </div>
-                    <div className="absolute -bottom-10 -right-10 w-24 h-24 bg-[#D4AF37]/10 rounded-full blur-3xl group-hover:bg-[#D4AF37]/20" />
-                </motion.div>
 
                 <div className={`flex p-2 rounded-[2.2rem] border backdrop-blur-md transition-all ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-100/50 border-gray-200/30'}`}>
                     {['assigned', 'ongoing', 'completed'].map((tab) => (

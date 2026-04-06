@@ -1,5 +1,6 @@
 const Booking = require('../../../models/Booking');
 const Captain = require('../../../models/Captain');
+const Portfolio = require('../../../models/Portfolio');
 const User = require('../../../models/User');
 const Promotion = require('../../../models/Promotion');
 const Setting = require('../../../models/Setting');
@@ -10,11 +11,185 @@ const { executeWalletTransaction } = require('../../../utils/walletHelper');
 const auditHelper = require('../../../utils/auditHelper');
 const referralService = require('../../../utils/referralService');
 
+const NON_TERMINAL_ACTIVE_STATUSES = ['accepted', 'en_route', 'arrived', 'before_photo', 'washing', 'after_photo', 'in_progress', 'active'];
+const NON_TERMINAL_ASSIGNED_STATUSES = ['confirmed', 'assigned'];
+const NON_TERMINAL_STATUSES = [...NON_TERMINAL_ASSIGNED_STATUSES, ...NON_TERMINAL_ACTIVE_STATUSES];
+
+const normalizeCapabilityLabel = (value = '') => {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (!normalized) return '';
+
+    if (/(bus)/i.test(normalized)) return 'bus';
+    if (/(traveler|traveller|van|mpv|muv)/i.test(normalized)) return 'traveler';
+    if (/(truck|pickup|tractor|mini truck)/i.test(normalized)) return 'heavy';
+    if (/(suv|compact suv|luxury suv)/i.test(normalized)) return 'suv';
+    if (/(bike|scooter|superbike|two wheeler)/i.test(normalized)) return 'bike';
+    return 'car';
+};
+
+const getBookingCapability = (booking = {}) => normalizeCapabilityLabel(
+    booking?.vehicle?.typeRef?.type ||
+    booking?.vehicle?.typeRef?.name ||
+    booking?.vehicle?.type ||
+    booking?.vehicleType
+);
+
+const captainMatchesCapability = (captainVehicleType = '', requestedCapability = '') => {
+    const captainCapability = normalizeCapabilityLabel(captainVehicleType);
+    if (!requestedCapability) return true;
+    if (!captainCapability) return false;
+
+    const compatibilityMap = {
+        car: new Set(['car', 'suv']),
+        suv: new Set(['suv']),
+        traveler: new Set(['traveler']),
+        bus: new Set(['bus']),
+        heavy: new Set(['heavy']),
+        bike: new Set(['bike'])
+    };
+
+    return (compatibilityMap[requestedCapability] || new Set([requestedCapability])).has(captainCapability);
+};
+
+const filterJobsByCaptainCapability = (jobs = [], captain = null) => {
+    if (!captain) return jobs;
+
+    const captainCapability = normalizeCapabilityLabel(captain.profile?.vehicleType);
+    if (!captainCapability) return jobs;
+
+    return jobs.filter(job => captainMatchesCapability(captain.profile?.vehicleType, getBookingCapability(job)));
+};
+
+const hasValidProofPhoto = (photo) => (
+    typeof photo === 'string' &&
+    photo.trim().length > 0 &&
+    photo.trim() !== 'init'
+);
+
+const normalizePhotoMeta = (meta = {}) => {
+    if (!meta || typeof meta !== 'object') return null;
+
+    const lat = Number(meta.lat);
+    const lng = Number(meta.lng);
+    const parsedAt = meta.capturedAt ? new Date(meta.capturedAt) : new Date();
+
+    return {
+        capturedAt: Number.isNaN(parsedAt.getTime()) ? new Date() : parsedAt,
+        lat: Number.isFinite(lat) ? lat : null,
+        lng: Number.isFinite(lng) ? lng : null,
+        source: meta.source || 'captain-app'
+    };
+};
+
+const inferPortfolioCategory = (booking) => {
+    const serviceDescriptor = `${booking?.service?.name || ''} ${booking?.service?.category || ''}`.toLowerCase();
+    if (serviceDescriptor.includes('ceramic')) return 'Ceramic';
+    if (serviceDescriptor.includes('interior')) return 'Interior';
+    if (serviceDescriptor.includes('ppf')) return 'PPF';
+    if (serviceDescriptor.includes('detail')) return 'Detailing';
+    return 'Exterior';
+};
+
+const isApartmentBooking = (booking) => !!booking?.location?.hubId || booking?.service?.category === 'Apartment';
+
+const parseSlotDateTime = (dateValue, timeValue, fallbackOffsetMinutes = 0) => {
+    if (!dateValue) return null;
+
+    const base = new Date(dateValue);
+    if (Number.isNaN(base.getTime())) return null;
+
+    if (!timeValue) {
+        base.setMinutes(base.getMinutes() + fallbackOffsetMinutes);
+        return base;
+    }
+
+    const parsed = new Date(`${base.toDateString()} ${timeValue}`);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+
+    base.setMinutes(base.getMinutes() + fallbackOffsetMinutes);
+    return base;
+};
+
+const getConflictSummary = (booking) => {
+    const mode = isApartmentBooking(booking) ? 'Apartment Wash' : (booking?.service?.name || 'mission');
+    const start = booking?.schedule?.timeSlot?.start || '';
+    return start ? `${mode} at ${start}` : mode;
+};
+
+const isBlockingMission = (booking, now = new Date()) => {
+    if (!booking) return false;
+
+    if (NON_TERMINAL_ACTIVE_STATUSES.includes(booking.status)) return true;
+    if (!NON_TERMINAL_ASSIGNED_STATUSES.includes(booking.status)) return false;
+    if (booking?.schedule?.type === 'instant') return true;
+
+    const missionStart = parseSlotDateTime(booking?.schedule?.date, booking?.schedule?.timeSlot?.start);
+    const missionEnd = parseSlotDateTime(booking?.schedule?.date, booking?.schedule?.timeSlot?.end, 90);
+    if (!missionStart) return isApartmentBooking(booking);
+
+    const leadWindowMs = (isApartmentBooking(booking) ? 120 : 45) * 60 * 1000;
+    const withinLeadWindow = (missionStart.getTime() - now.getTime()) <= leadWindowMs;
+    const insideMissionWindow = missionEnd ? now <= missionEnd : now >= missionStart;
+
+    return withinLeadWindow || insideMissionWindow;
+};
+
+const findCaptainBlockingMission = async (captainId) => {
+    const candidateMissions = await Booking.find({
+        'provider.id': captainId,
+        isActive: true,
+        status: { $in: NON_TERMINAL_STATUSES }
+    })
+        .select('status schedule service location')
+        .sort({ 'schedule.date': 1, createdAt: 1 })
+        .limit(12);
+
+    return candidateMissions.find((mission) => isBlockingMission(mission)) || null;
+};
+
+const getBookingCompletionTime = (booking) => (
+    booking?.tracking?.completedAt ||
+    booking?.payment?.paidAt ||
+    booking?.updatedAt ||
+    booking?.createdAt
+);
+
+const getCaptainPayoutAmount = (booking) => {
+    const storedPayout = Number(booking?.payment?.providerPayoutAmount || 0);
+    if (storedPayout > 0) return storedPayout;
+
+    const totalAmount = Number(booking?.pricing?.totalAmount || 0);
+    const baseAmount = Number(booking?.pricing?.baseAmount || 0);
+    const adminCut = Number(
+        booking?.payment?.platformCommissionAmount ??
+        booking?.payment?.commission ??
+        0
+    );
+    const isApartmentProtocol = !!booking?.location?.hubId || booking?.service?.category === 'Apartment';
+    const payoutBaseAmount = booking?.payment?.method === 'subscription' && !isApartmentProtocol
+        ? (baseAmount || totalAmount)
+        : totalAmount;
+
+    if (booking?.payment?.method === 'subscription' && isApartmentProtocol) {
+        return 10;
+    }
+
+    if (payoutBaseAmount > 0) {
+        return Math.max(Math.round((payoutBaseAmount - adminCut) * 100) / 100, 0);
+    }
+
+    return 0;
+};
+
 const formatBookingForCaptain = (b) => {
     const consumer = b.consumer && b.consumer.name ? b.consumer : {};
     const vehicle = b.vehicle && b.vehicle.brand ? b.vehicle : {};
     const addr = b.location?.address;
     const addressStr = addr ? [addr.street, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ') : 'Address not set';
+    const parkingDetails = b.location?.parkingDetails || {};
+    const hubName = b.location?.hubId?.name || '';
+    const providerPayoutAmount = getCaptainPayoutAmount(b);
+    const apartmentRoute = [parkingDetails.basement, parkingDetails.block, parkingDetails.pillar].filter(Boolean).join(' • ');
     return {
         id: b._id.toString(),
         bookingId: b.bookingId || b._id.toString(),
@@ -24,11 +199,35 @@ const formatBookingForCaptain = (b) => {
         userPhone: consumer.phone || '',
         address: addressStr,
         price: `₹${b.pricing?.totalAmount || 0}`,
+        payoutAmount: providerPayoutAmount,
+        payoutPrice: `â‚¹${providerPayoutAmount || 0}`,
         status: b.status,
         type: b.service?.type || 'captain',
+        service: b.service,
+        consumer: b.consumer,
+        vehicleInfo: b.vehicle,
+        pricing: b.pricing,
         schedule: b.schedule,
-        timestamp: b.createdAt,
-        landmark: b.location?.landmark
+        timestamp: getBookingCompletionTime(b),
+        landmark: b.location?.landmark,
+        isApartment: isApartmentBooking(b),
+        hubName,
+        apartmentRoute,
+        parkingDetails,
+        isDoorstepCommitted: !!b.isDoorstepCommitted,
+        location: {
+            type: b.location?.type,
+            coordinates: b.location?.coordinates,
+            mapCoordinates: b.location?.address?.coordinates ? {
+                lat: b.location.address.coordinates.lat,
+                lng: b.location.address.coordinates.lng
+            } : null,
+            address: b.location?.address,
+            landmark: b.location?.landmark,
+            instructions: b.location?.instructions,
+            hubId: b.location?.hubId,
+            parkingDetails
+        }
     };
 };
 
@@ -50,6 +249,22 @@ exports.getPendingJobs = async (req, res) => {
                 status: 'success',
                 results: 0,
                 data: { jobs: [] }
+            });
+        }
+
+        const blockingMission = await findCaptainBlockingMission(captainId);
+        if (blockingMission) {
+            return res.status(200).json({
+                status: 'success',
+                results: 0,
+                data: {
+                    jobs: [],
+                    blockedBy: {
+                        bookingId: blockingMission._id,
+                        summary: getConflictSummary(blockingMission),
+                        serviceCategory: blockingMission?.service?.category || ''
+                    }
+                }
             });
         }
 
@@ -88,9 +303,11 @@ exports.getPendingJobs = async (req, res) => {
             findQuery = findQuery.sort({ createdAt: -1 });
         }
 
-        const pendingJobs = await findQuery;
+        const pendingJobs = await findQuery
+            .populate('location.hubId', 'name city vendor')
+            .populate('vehicle', 'brand model type typeRef');
 
-        const formatted = pendingJobs.map(formatBookingForCaptain);
+        const formatted = filterJobsByCaptainCapability(pendingJobs, captain).map(formatBookingForCaptain);
 
         res.status(200).json({
             status: 'success',
@@ -107,10 +324,20 @@ exports.acceptJob = async (req, res) => {
     try {
         const { id } = req.params;
         const captainId = req.captain?._id || req.auth?.id || req.captain?.id;
+        const blockingMission = await findCaptainBlockingMission(captainId);
+
+        if (blockingMission && String(blockingMission._id) !== String(id)) {
+            return res.status(403).json({
+                status: 'fail',
+                message: `Mission Conflict: Finish or clear your current ${getConflictSummary(blockingMission)} before accepting another request.`,
+                code: 'MISSION_CONFLICT'
+            });
+        }
 
         // Phase 7: Slot Conflict Engine
         // Prevent specialist from accepting an instant job if a scheduled slot is starting soon
-        const targetJob = await Booking.findById(id);
+        const captain = await Captain.findById(captainId);
+        const targetJob = await Booking.findById(id).populate('vehicle', 'brand model type typeRef');
         if (targetJob?.schedule?.type === 'instant') {
             const bufferMinutes = 20; // Re-deployment/Travel buffer
             const estimatedDuration = parseInt(targetJob.service?.duration) || 30; // Default 30 min wash
@@ -137,6 +364,16 @@ exports.acceptJob = async (req, res) => {
                     });
                 }
             }
+        }
+
+        const requestedCapability = getBookingCapability(targetJob);
+        const captainCapability = normalizeCapabilityLabel(captain?.profile?.vehicleType);
+        if (requestedCapability && captainCapability && !captainMatchesCapability(captain.profile?.vehicleType, requestedCapability)) {
+            return res.status(403).json({
+                status: 'fail',
+                message: `Capability mismatch: This ${requestedCapability.toUpperCase()} request is not enabled for your captain profile.`,
+                code: 'CAPABILITY_MISMATCH'
+            });
         }
 
         // Atomically update the booking status from 'pending' to 'confirmed'
@@ -298,16 +535,17 @@ exports.updateJobStatus = async (req, res) => {
         }
 
         // Elite Hardening: Mandatory Service Proofs (Photos)
-        if (status === 'before_photo' && !req.body.photo && (!booking.serviceImages?.before?.length)) {
-            // In a real app, this would be integrated with S3/Cloudinary upload
-            // For this audit, we'll accept a 'photo' string in the body as proof
+        const incomingPhoto = hasValidProofPhoto(req.body.photo) ? req.body.photo.trim() : '';
+        const incomingPhotoMeta = normalizePhotoMeta(req.body.photoMeta);
+
+        if (status === 'before_photo' && !incomingPhoto && (!booking.serviceImages?.before?.length)) {
             return res.status(400).json({
                 status: 'fail',
                 message: 'Before-service photo is mandatory to document vehicle condition.'
             });
         }
 
-        if (status === 'after_photo' && !req.body.photo && (!booking.serviceImages?.after?.length)) {
+        if (status === 'after_photo' && !incomingPhoto && (!booking.serviceImages?.after?.length)) {
             return res.status(400).json({
                 status: 'fail',
                 message: 'After-service photo is mandatory to verify completion quality.'
@@ -315,17 +553,22 @@ exports.updateJobStatus = async (req, res) => {
         }
 
         // Store photos if provided
-        if (req.body.photo) {
-            if (!booking.serviceImages) booking.serviceImages = { before: [], after: [] };
+        if (incomingPhoto) {
+            if (!booking.serviceImages) booking.serviceImages = { before: [], after: [], beforeMeta: [], afterMeta: [] };
+            if (!Array.isArray(booking.serviceImages.beforeMeta)) booking.serviceImages.beforeMeta = [];
+            if (!Array.isArray(booking.serviceImages.afterMeta)) booking.serviceImages.afterMeta = [];
             if (status === 'before_photo') {
-                booking.serviceImages.before.push(req.body.photo);
+                booking.serviceImages.before.push(incomingPhoto);
+                if (incomingPhotoMeta) booking.serviceImages.beforeMeta.push(incomingPhotoMeta);
             } else if (status === 'after_photo') {
-                booking.serviceImages.after.push(req.body.photo);
+                booking.serviceImages.after.push(incomingPhoto);
+                if (incomingPhotoMeta) booking.serviceImages.afterMeta.push(incomingPhotoMeta);
             } else if (status === 'washing' && booking.serviceImages.before.length === 0) {
                 // Also allow storing before photo during PIN verification if not already set
-                booking.serviceImages.before.push(req.body.photo);
+                booking.serviceImages.before.push(incomingPhoto);
+                if (incomingPhotoMeta) booking.serviceImages.beforeMeta.push(incomingPhotoMeta);
             }
-            booking.serviceImages.capturedAt = new Date();
+            booking.serviceImages.capturedAt = incomingPhotoMeta?.capturedAt || new Date();
         }
 
         const oldStatus = booking.status;
@@ -350,7 +593,10 @@ exports.updateJobStatus = async (req, res) => {
             booking.tracking.washingStartedAt = new Date();
         } else if (status === 'completed') {
             booking.tracking.completedAt = new Date();
-            if (booking.payment) booking.payment.status = 'paid';
+            if (booking.payment) {
+                booking.payment.status = 'paid';
+                booking.payment.paidAt = new Date();
+            }
             
             const amount = booking.pricing?.totalAmount || 0;
             let providerPayout = 0;
@@ -362,7 +608,7 @@ exports.updateJobStatus = async (req, res) => {
                     // Apartment HUB protocol: Fixed payout for subscription service
                     providerPayout = 10;
                     adminCut = 0;
-                    booking.payment.commission = providerPayout;
+                    booking.payment.commission = adminCut;
                 } else {
                     // Standard Doorstep Instant Wash Subscription: Standard payout from base price
                     const baseAmount = booking.pricing?.baseAmount || 0;
@@ -379,6 +625,11 @@ exports.updateJobStatus = async (req, res) => {
                 providerPayout = calc.providerPayout;
                 adminCut = calc.adminCut;
                 booking.payment.commission = adminCut;
+            }
+
+            if (booking.payment) {
+                booking.payment.providerPayoutAmount = providerPayout;
+                booking.payment.platformCommissionAmount = adminCut;
             }
 
             if (providerPayout > 0) {
@@ -400,11 +651,41 @@ exports.updateJobStatus = async (req, res) => {
                 // --- Referral Reward Logic (Phase 4) ---
                 await referralService.processReferralReward(booking.consumer, booking._id);
             }
+
+            const shouldPublishToPortfolio = (
+                booking.service?.type === 'captain' &&
+                !isApartmentProtocol &&
+                Array.isArray(booking.serviceImages?.before) &&
+                booking.serviceImages.before.length > 0 &&
+                Array.isArray(booking.serviceImages?.after) &&
+                booking.serviceImages.after.length > 0
+            );
+
+            if (shouldPublishToPortfolio) {
+                const vehicleLabel = [booking.vehicle?.brand, booking.vehicle?.model].filter(Boolean).join(' ').trim() || 'Vehicle';
+                await Portfolio.findOneAndUpdate(
+                    { bookingId: booking._id },
+                    {
+                        bookingId: booking._id,
+                        category: inferPortfolioCategory(booking),
+                        title: booking.service?.name || 'Instant Wash Transformation',
+                        vehicle: vehicleLabel,
+                        description: `Clean2Wash transformation completed on ${new Date().toLocaleDateString('en-IN')}`,
+                        beforeImg: booking.serviceImages.before[0],
+                        afterImg: booking.serviceImages.after[0],
+                        singleImage: false,
+                        isActive: true,
+                        sortOrder: 0
+                    },
+                    { upsert: true, new: true, setDefaultsOnInsert: true }
+                );
+            }
         } else if (status === 'vehicle_not_available') {
             booking.notes.internal = 'Specialist reported vehicle not available at the location.';
             booking.notes.provider = req.body.reason || 'Vehicle not found at designated parking.';
         } else if (status === 'skipped') {
             booking.notes.internal = 'Specialist reported user skipped the service locally.';
+            booking.notes.provider = req.body.reason || 'Apartment wash skipped by local request.';
         }
         await booking.save();
 
@@ -518,7 +799,8 @@ exports.getMyJob = async (req, res) => {
             isActive: true
         })
             .populate('consumer', 'name phone')
-            .populate('vehicle', 'brand model type plate');
+            .populate('vehicle', 'brand model type plate')
+            .populate('location.hubId', 'name city vendor');
 
         if (!booking) {
             return res.status(404).json({
@@ -552,7 +834,14 @@ exports.getMyJobs = async (req, res) => {
         const jobs = await Booking.find(filter)
             .populate('consumer', 'name phone')
             .populate('vehicle', 'brand model type plate')
-            .sort({ createdAt: -1 })
+            .populate('location.hubId', 'name city vendor')
+            .sort({
+                'schedule.date': 1,
+                'location.parkingDetails.basement': 1,
+                'location.parkingDetails.block': 1,
+                'location.parkingDetails.pillar': 1,
+                createdAt: -1
+            })
             .skip(skip)
             .limit(parseInt(limit));
 
@@ -586,7 +875,7 @@ exports.getEarnings = async (req, res) => {
             isActive: true
         }).populate('consumer', 'name').populate('vehicle', 'brand model type');
 
-        const totalEarned = completed.reduce((sum, b) => sum + (b.pricing?.totalAmount || 0), 0);
+        const totalEarned = completed.reduce((sum, b) => sum + getCaptainPayoutAmount(b), 0);
 
         const now = new Date();
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -596,14 +885,14 @@ exports.getEarnings = async (req, res) => {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
         const todayEarned = completed
-            .filter(b => b.createdAt >= startOfToday)
-            .reduce((s, b) => s + (b.pricing?.totalAmount || 0), 0);
+            .filter(b => getBookingCompletionTime(b) >= startOfToday)
+            .reduce((s, b) => s + getCaptainPayoutAmount(b), 0);
         const weekEarned = completed
-            .filter(b => b.createdAt >= startOfWeek)
-            .reduce((s, b) => s + (b.pricing?.totalAmount || 0), 0);
+            .filter(b => getBookingCompletionTime(b) >= startOfWeek)
+            .reduce((s, b) => s + getCaptainPayoutAmount(b), 0);
         const monthEarned = completed
-            .filter(b => b.createdAt >= startOfMonth)
-            .reduce((s, b) => s + (b.pricing?.totalAmount || 0), 0);
+            .filter(b => getBookingCompletionTime(b) >= startOfMonth)
+            .reduce((s, b) => s + getCaptainPayoutAmount(b), 0);
 
         const captain = await Captain.findById(captainId);
         const walletBalance = (captain?.wallet?.balance || 0);
@@ -611,18 +900,19 @@ exports.getEarnings = async (req, res) => {
         res.status(200).json({
             status: 'success',
             data: {
-                today: { earned: todayEarned, jobs: completed.filter(b => b.createdAt >= startOfToday).length },
-                week: { earned: weekEarned, jobs: completed.filter(b => b.createdAt >= startOfWeek).length },
-                month: { earned: monthEarned, jobs: completed.filter(b => b.createdAt >= startOfMonth).length },
+                today: { earned: todayEarned, jobs: completed.filter(b => getBookingCompletionTime(b) >= startOfToday).length },
+                week: { earned: weekEarned, jobs: completed.filter(b => getBookingCompletionTime(b) >= startOfWeek).length },
+                month: { earned: monthEarned, jobs: completed.filter(b => getBookingCompletionTime(b) >= startOfMonth).length },
                 total: totalEarned,
                 walletBalance,
                 recentJobs: completed.slice(0, 5).map(b => ({
                     id: b._id,
                     serviceName: b.service?.name || 'Car Wash',
                     userName: b.consumer?.name || 'Customer',
-                    amount: b.pricing?.totalAmount,
-                    price: `₹${b.pricing?.totalAmount || 0}`,
-                    createdAt: b.createdAt
+                    amount: getCaptainPayoutAmount(b),
+                    price: `₹${getCaptainPayoutAmount(b) || 0}`,
+                    grossAmount: b.pricing?.totalAmount || 0,
+                    createdAt: getBookingCompletionTime(b)
                 }))
             }
         });
@@ -744,19 +1034,36 @@ exports.getDashboard = async (req, res) => {
             'provider.id': captainId,
             status: 'completed',
             isActive: true
-        }).select('pricing.totalAmount createdAt').populate('consumer', 'name');
+        })
+            .select('pricing.totalAmount pricing.baseAmount payment.providerPayoutAmount payment.platformCommissionAmount payment.commission payment.method tracking.completedAt createdAt updatedAt service consumer vehicle location')
+            .populate('consumer', 'name')
+            .populate('vehicle', 'brand model type')
+            .populate('location.hubId', 'name city vendor');
 
         const pending = captain.isOnline ? await Booking.find({
             status: 'pending',
             isActive: true,
             $or: [{ 'service.type': 'captain' }, { 'provider.type': 'captain' }]
-        }).limit(5).populate('consumer', 'name').populate('vehicle', 'brand model type') : [];
+        }).limit(10).populate('consumer', 'name').populate('vehicle', 'brand model type typeRef') : [];
 
         const myActive = await Booking.find({
             'provider.id': captainId,
-            status: { $in: ['accepted', 'confirmed', 'en_route', 'arrived', 'before_photo', 'washing', 'after_photo'] },
+            status: { $in: NON_TERMINAL_STATUSES },
             isActive: true
-        }).populate('consumer', 'name phone').populate('vehicle', 'brand model type');
+        })
+            .populate('consumer', 'name phone')
+            .populate('vehicle', 'brand model type')
+            .populate('location.hubId', 'name city vendor')
+            .sort({
+                'schedule.date': 1,
+                'location.parkingDetails.basement': 1,
+                'location.parkingDetails.block': 1,
+                'location.parkingDetails.pillar': 1,
+                createdAt: -1
+            });
+
+        const blockingMission = await findCaptainBlockingMission(captainId);
+        const visiblePending = blockingMission ? [] : filterJobsByCaptainCapability(pending, captain).slice(0, 5);
 
         const now = new Date();
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -765,15 +1072,15 @@ exports.getDashboard = async (req, res) => {
         startOfWeek.setHours(0, 0, 0, 0);
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-        const todayJobs = completed.filter(b => b.createdAt >= startOfToday);
-        const weekJobs = completed.filter(b => b.createdAt >= startOfWeek);
-        const monthJobs = completed.filter(b => b.createdAt >= startOfMonth);
+        const todayJobs = completed.filter(b => getBookingCompletionTime(b) >= startOfToday);
+        const weekJobs = completed.filter(b => getBookingCompletionTime(b) >= startOfWeek);
+        const monthJobs = completed.filter(b => getBookingCompletionTime(b) >= startOfMonth);
 
-        const todayEarned = todayJobs.reduce((s, b) => s + (b.pricing?.totalAmount || 0), 0);
-        const weekEarned = weekJobs.reduce((s, b) => s + (b.pricing?.totalAmount || 0), 0);
-        const monthEarned = monthJobs.reduce((s, b) => s + (b.pricing?.totalAmount || 0), 0);
+        const todayEarned = todayJobs.reduce((s, b) => s + getCaptainPayoutAmount(b), 0);
+        const weekEarned = weekJobs.reduce((s, b) => s + getCaptainPayoutAmount(b), 0);
+        const monthEarned = monthJobs.reduce((s, b) => s + getCaptainPayoutAmount(b), 0);
 
-        const totalEarned = completed.reduce((s, b) => s + (b.pricing?.totalAmount || 0), 0);
+        const totalEarned = completed.reduce((s, b) => s + getCaptainPayoutAmount(b), 0);
         const walletBalance = captain?.wallet?.balance || 0;
 
         res.status(200).json({
@@ -796,9 +1103,15 @@ exports.getDashboard = async (req, res) => {
                     week: { earned: weekEarned, jobs: weekJobs.length },
                     month: { earned: monthEarned, jobs: monthJobs.length }
                 },
-                pendingJobs: pending.map(b => formatBookingForCaptain(b)),
+                pendingJobs: visiblePending.map(b => formatBookingForCaptain(b)),
+                activeJobs: myActive.map(b => formatBookingForCaptain(b)),
                 activeJob: myActive[0] ? formatBookingForCaptain(myActive[0]) : null,
-                recentCompleted: completed.slice(0, 5).map(b => formatBookingForCaptain(b))
+                recentCompleted: completed.slice(0, 5).map(b => formatBookingForCaptain(b)),
+                availabilityBlock: blockingMission ? {
+                    bookingId: blockingMission._id,
+                    summary: getConflictSummary(blockingMission),
+                    serviceCategory: blockingMission?.service?.category || ''
+                } : null
             }
         });
     } catch (error) {

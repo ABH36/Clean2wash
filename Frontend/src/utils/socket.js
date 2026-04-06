@@ -89,6 +89,12 @@ class SocketService {
             this.socket.off(event, callback);
         }
     }
+
+    emit(event, payload) {
+        if (this.socket && this.socket.connected) {
+            this.socket.emit(event, payload);
+        }
+    }
 }
 
 export const socketService = new SocketService();

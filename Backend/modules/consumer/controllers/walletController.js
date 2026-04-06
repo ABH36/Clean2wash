@@ -2,7 +2,7 @@ const User = require('../../../models/User');
 const WalletTransaction = require('../../../models/WalletTransaction');
 const crypto = require('crypto');
 const razorpay = require('../../../config/razorpay');
-const { executeWalletTransaction } = require('../../../utils/walletHelper');
+const { executeWalletTransaction, getWalletSnapshot } = require('../../../utils/walletHelper');
 const catchAsync = require('../../../utils/catchAsync');
 const AppError = require('../../../utils/AppError');
 
@@ -13,6 +13,9 @@ const ensureWallet = (user) => {
     if (typeof user.wallet.balance !== 'number') {
         user.wallet.balance = 0;
     }
+    if (typeof user.wallet.heldBalance !== 'number') {
+        user.wallet.heldBalance = 0;
+    }
 };
 
 // Get wallet balance and transaction history
@@ -22,6 +25,9 @@ exports.getWallet = catchAsync(async (req, res, next) => {
         return next(new AppError('User not found', 404));
     }
 
+    ensureWallet(user);
+
+    const walletSnapshot = getWalletSnapshot(user.wallet);
     const transactions = await WalletTransaction.find({ user: user._id })
         .sort({ createdAt: -1 })
         .limit(50);
@@ -29,7 +35,13 @@ exports.getWallet = catchAsync(async (req, res, next) => {
     res.status(200).json({
         status: 'success',
         data: {
-            wallet: user.wallet || { balance: 0, lastUpdated: new Date() },
+            wallet: {
+                ...(user.wallet.toObject?.() || user.wallet),
+                balance: walletSnapshot.availableBalance,
+                availableBalance: walletSnapshot.availableBalance,
+                heldBalance: walletSnapshot.heldBalance,
+                totalBalance: walletSnapshot.totalBalance
+            },
             transactions
         }
     });

@@ -1,47 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, Plus, Car, Trash2, Check, Edit3, AlertCircle, CheckCircle2, ShieldAlert, FileSearch, Zap, Calendar, Radar, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Car, Trash2, Check, Edit3, AlertCircle, CheckCircle2, ShieldAlert, FileSearch, Zap, Calendar, Radar, Clock } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { vehicleAPI } from '../../../utils/api';
 import { toast as hotToast } from 'react-hot-toast';
 
-const BRANDS = ['Honda', 'Maruti', 'Hyundai', 'Toyota', 'Tata', 'Mahindra', 'Kia', 'BMW', 'Mercedes', 'Audi', 'Skoda', 'Volkswagen', 'Nissan', 'Renault', 'MG', 'Jeep', 'Land Rover', 'Jaguar', 'Volvo', 'Porsche', 'Ferrari', 'Lamborghini', 'Bentley', 'Rolls Royce', 'Others'];
-const COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#ffffff', '#1a1a1a', '#95a5a6', '#e67e22'];
-const TYPES = [
-    'Hatchback', 'Sedan', 'SUV', 'MUV', 'Compact SUV', 'MPV', 'Pickup',
-    'Luxury Sedan', 'Luxury SUV', 'Coupe', 'Convertible', 'Sports Car', 'Supercar',
-    'EV', 'Mini Truck', 'Truck', 'Van', 'Bus', 'Traveler', 'Tractor', 'Vintage',
-    'Bike', 'Scooter', 'Superbike'
-];
-
 const BLANK_FORM = { brand: '', model: '', type: 'Sedan', color: '#3498db', plate: '', insuranceExpiry: '', pucExpiry: '' };
-
-const TYPE_IMG = {
-    Hatchback: 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=400&q=80',
-    Sedan: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80',
-    SUV: 'https://images.unsplash.com/photo-1518987048-93e29699e79a?w=400&q=80',
-    MUV: 'https://images.unsplash.com/photo-1594731802111-07ee4940d995?w=400&q=80',
-    'Compact SUV': 'https://images.unsplash.com/photo-1517524008410-b44336d29a0c?w=400&q=80',
-    'Luxury Sedan': 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=400&q=80',
-    'Luxury SUV': 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=400&q=80',
-    Coupe: 'https://images.unsplash.com/photo-1502877338535-766e145cca6c?w=400&q=80',
-    Convertible: 'https://images.unsplash.com/photo-1551830820-330a71b99659?w=400&q=80',
-    'Sports Car': 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&q=80',
-    Supercar: 'https://images.unsplash.com/photo-1525609002952-7621bfea801d?w=400&q=80',
-    EV: 'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=400&q=80',
-    'Mini Truck': 'https://images.unsplash.com/photo-1519003722824-194d4455a60c?w=400&q=80',
-    Truck: 'https://images.unsplash.com/photo-1586191582056-a15cd11ec618?w=400&q=80',
-    Van: 'https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?w=400&q=80',
-    Tractor: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=400&q=80',
-    Vintage: 'https://images.unsplash.com/photo-1511919884226-fd3cad34687c?w=400&q=80',
-    Bike: 'https://images.unsplash.com/photo-1558981285-6f0c94958bb6?w=400&q=80',
-    Scooter: 'https://images.unsplash.com/photo-1449495940867-33d54ed0ec84?w=400&q=80',
-    Superbike: 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=400&q=80',
-    Luxury: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400&q=80',
-    MPV: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=400&q=80',
-    Pickup: 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=400&q=80',
-};
 
 const Toast = ({ msg, type = 'success', onDone }) => (
     <motion.div initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
@@ -67,27 +32,43 @@ const VehicleManager = () => {
     const [toast, setToast] = useState(null);
     const [isFetching, setIsFetching] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [dynamicBrands, setDynamicBrands] = useState(['Honda', 'Maruti', 'Hyundai', 'Toyota', 'Tata', 'Others']);
+    const [dynamicTypes, setDynamicTypes] = useState([]);
+    const [loadingResources, setLoadingResources] = useState(true);
     const [globalCatalog, setGlobalCatalog] = useState([]);
     const [loadingCatalog, setLoadingCatalog] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
-        const fetchCatalog = async () => {
+        const fetchResources = async () => {
             try {
-                const res = await vehicleAPI.getVehicleModels();
-                if (res.status === 'success' && res.data?.vehicleModels) {
-                    setGlobalCatalog(res.data.vehicleModels);
-                } else {
-                    setGlobalCatalog([]);
-                }
+                // Fetch All Resources in parallel
+                const [modelsRes, brandsRes, typesRes] = await Promise.all([
+                    vehicleAPI.getVehicleModels(),
+                    vehicleAPI.getVehicleBrands(),
+                    vehicleAPI.getVehicleTypes()
+                ]);
+
+                if (modelsRes.status === 'success') setGlobalCatalog(modelsRes.data.vehicleModels || []);
+                if (brandsRes.status === 'success') setDynamicBrands(brandsRes.data.brands || []);
+                if (typesRes.status === 'success') setDynamicTypes(typesRes.data.vehicleTypes || []);
+
             } catch (err) {
-                console.error('Failed to fetch global catalog:', err);
+                console.error('Failed to fetch resources:', err);
             } finally {
                 setLoadingCatalog(false);
+                setLoadingResources(false);
             }
         };
-        fetchCatalog();
+        fetchResources();
     }, []);
+
+
+
+    const getTypeImage = (typeName) => {
+        const typeObj = dynamicTypes.find(t => t.type === typeName || t.name === typeName);
+        return typeObj?.image || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80';
+    };
 
     // Matching Logic: Find Catalog Models that match User Vehicles
     const matchedCatalogIds = useMemo(() => {
@@ -233,7 +214,9 @@ const VehicleManager = () => {
 
         // Align with Backend Schema requirements
         const cleanedPlate = form.plate.replace(/\s/g, '').toUpperCase();
-        const img = TYPE_IMG[form.type] || TYPE_IMG['Sedan'];
+        
+        // 🧪 Protocol: Use dynamic type image or generic fallback
+        const img = getTypeImage(form.type);
 
         const vehiclePayload = {
             brand: form.brand,
@@ -304,7 +287,16 @@ const VehicleManager = () => {
 
             <header className="px-4 pt-8 pb-4 bg-white/80 backdrop-blur-xl sticky top-0 z-50 border-b border-black/[0.03]">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => navigate(-1)} className="w-10 h-10 bg-gray-50 border border-black/[0.02] rounded-xl flex items-center justify-center active:scale-90 transition-all shadow-sm">
+                    <button 
+                        onClick={() => {
+                            if (fromPage && vehicles.length === 0) {
+                                navigate('/');
+                            } else {
+                                navigate(-1);
+                            }
+                        }} 
+                        className="w-10 h-10 bg-gray-50 border border-black/[0.02] rounded-xl flex items-center justify-center active:scale-90 transition-all shadow-sm"
+                    >
                         <ChevronLeft size={18} className="text-black" />
                     </button>
                     <div className="flex-1">
@@ -332,7 +324,7 @@ const VehicleManager = () => {
                                 className={`group bg-white rounded-xl border overflow-hidden transition-all duration-300 ${v.isPrimary ? 'border-brand/30 shadow-2xl shadow-brand/10' : 'border-black/[0.03] shadow-xl hover:shadow-2xl'}`}>
 
                                 <div className="relative h-56 overflow-hidden">
-                                    <img src={v.image || v.img || TYPE_IMG[v.type]} alt={v.model} className="w-full h-full object-cover transform scale-100 group-hover:scale-110 transition-transform duration-700" />
+                                    <img src={v.image || v.img || getTypeImage(v.type)} alt={v.model} className="w-full h-full object-cover transform scale-100 group-hover:scale-110 transition-transform duration-700" />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
 
                                     <div className="absolute top-4 left-4 flex items-center gap-2">
@@ -351,7 +343,14 @@ const VehicleManager = () => {
                                     <div className="absolute bottom-4 left-4 right-4">
                                         <div className="flex items-end justify-between gap-4">
                                             <div>
-                                                <p className="text-brand text-[9px] font-black uppercase tracking-[0.3em] mb-1 leading-none">{v.brand}</p>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <p className="text-brand text-[9px] font-black uppercase tracking-[0.3em] leading-none">{v.brand}</p>
+                                                    {v.status === 'Pending' && (
+                                                        <div className="flex items-center gap-1 bg-orange-500/20 text-orange-200 border border-orange-500/30 px-1.5 py-0.5 rounded text-[6px] font-black uppercase tracking-tighter animate-pulse backdrop-blur-md">
+                                                            <Clock size={6} /> Pending
+                                                        </div>
+                                                    )}
+                                                </div>
                                                 <h3 className="text-white font-[1000] text-[20px] tracking-tighter leading-none uppercase">
                                                     {v.model}
                                                 </h3>
@@ -575,18 +574,42 @@ const VehicleManager = () => {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Brand</p>
-                                        <select value={form.brand} onChange={e => setField('brand', e.target.value)}
-                                            className={`w-full bg-gray-50 border ${errors.brand ? 'border-red-300' : 'border-gray-100'} rounded-2xl px-4 py-3.5 font-bold text-sm text-gray-900 outline-none appearance-none`}>
-                                            <option value="">Select</option>
-                                            {BRANDS.map(b => <option key={b} value={b}>{b}</option>)}
-                                        </select>
+                                        <div className="relative group">
+                                            <select value={dynamicBrands.includes(form.brand) ? form.brand : (form.brand ? 'Others' : '')} 
+                                                onChange={e => {
+                                                    const val = e.target.value;
+                                                    if (val === 'Others') setField('brand', '');
+                                                    else setField('brand', val);
+                                                }}
+                                                className={`w-full bg-gray-50 border ${errors.brand ? 'border-red-300' : 'border-gray-100'} rounded-2xl px-4 py-3.5 font-bold text-sm text-gray-900 outline-none appearance-none cursor-pointer focus:border-brand/30 transition-all shadow-sm`}>
+                                                <option value="">Select Brand</option>
+                                                {dynamicBrands.filter(b => b !== 'Others').map(b => (
+                                                    <option key={b} value={b}>{b}</option>
+                                                ))}
+                                                <option value="Others">+ Add Different Brand</option>
+                                            </select>
+                                            <div className="absolute right-4 inset-y-0 flex items-center pointer-events-none text-gray-400">
+                                                <ChevronRight size={14} className="rotate-90" />
+                                            </div>
+                                        </div>
+
+                                        {(!dynamicBrands.includes(form.brand) || form.brand === 'Others') && (
+                                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mt-2">
+                                                <input 
+                                                    placeholder="Manual Brand Entry"
+                                                    value={form.brand}
+                                                    onChange={e => setField('brand', e.target.value)}
+                                                    className="w-full bg-white border border-brand/20 rounded-xl px-4 py-3 font-bold text-xs uppercase tracking-widest outline-none focus:border-brand"
+                                                />
+                                            </motion.div>
+                                        )}
                                         {errors.brand && <p className="text-[8px] font-bold text-red-500 ml-1 uppercase">{errors.brand}</p>}
                                     </div>
                                     <div className="space-y-2">
                                         <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Type</p>
                                         <select value={form.type} onChange={e => setField('type', e.target.value)}
                                             className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3.5 font-bold text-sm text-gray-900 outline-none appearance-none">
-                                            {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                                            {dynamicTypes.map(t => <option key={t.type || t.name} value={t.type || t.name}>{t.name || t.type}</option>)}
                                         </select>
                                     </div>
                                 </div>

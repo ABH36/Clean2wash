@@ -12,6 +12,7 @@ const adminTransactionController = require('../controllers/adminTransactionContr
 const adminAuditController = require('../controllers/adminAuditController');
 const adminAnalyticsController = require('../controllers/adminAnalyticsController');
 const adminProductController = require('../controllers/adminProductController');
+const adminApartmentController = require('../controllers/adminApartmentController');
 const authMiddleware = require('../../../middleware/authMiddleware');
 
 // Public Admin Route
@@ -41,11 +42,17 @@ router.get('/captains', adminController.getActiveCaptains);
 router.post('/bookings/:bookingId/assign', adminController.assignCaptain);
 router.get('/spare-drivers', adminController.getSpareDrivers);
 router.get('/bookings/chauffeur', adminController.getSpareDriverBookings);
+router.get('/apartment-wash/console', adminApartmentController.getApartmentWashConsole);
+router.patch('/apartment-wash/subscriptions/:id/review', adminApartmentController.reviewApartmentSubscription);
 
 // ── Services CRUD ──────────────────────────────────────────────
 router.get('/services', adminServiceController.getServices);
 router.get('/services/instant-config', adminServiceController.getInstantWashConfig);
+router.get('/services/chauffeur-config', adminServiceController.getChauffeurServiceConfig);
+router.get('/services/apartment-config', adminServiceController.getApartmentWashConfig);
 router.patch('/services/instant-config/:id', adminServiceController.updateInstantWashService);
+router.patch('/services/chauffeur-config/:id', adminServiceController.updateChauffeurServiceConfig);
+router.patch('/services/apartment-config/:id', adminServiceController.updateApartmentWashServiceConfig);
 router.post('/services', adminServiceController.createService);
 router.patch('/services/:id', adminServiceController.updateService);
 router.delete('/services/:id', adminServiceController.deleteService);
@@ -58,9 +65,11 @@ router.delete('/vehicle-types/:id', adminVehicleController.deleteVehicleType);
 
 // Specific Vehicle Models CRUD
 router.get('/vehicle-models', adminVehicleModelController.getAllVehicleModels);
+router.get('/vehicle-models/suggestions', adminVehicleModelController.getPendingSuggestions);
 router.get('/vehicle-models/:id', adminVehicleModelController.getVehicleModel);
 router.post('/vehicle-models', adminVehicleModelController.createVehicleModel);
 router.patch('/vehicle-models/:id', adminVehicleModelController.updateVehicleModel);
+router.patch('/vehicle-models/:id/review', adminVehicleModelController.reviewSuggestion);
 router.delete('/vehicle-models/:id', adminVehicleModelController.deleteVehicleModel);
 
 // ── Promotions CRUD ───────────────────────────────────────────
@@ -71,9 +80,13 @@ router.delete('/promotions/:id', adminPromotionController.deletePromotion);
 
 // Admin Subscription Plans
 router.get('/plans', adminSubscriptionController.getPlans);
+router.get('/plans/chauffeur', adminSubscriptionController.getChauffeurPlans);
 router.post('/plans', adminSubscriptionController.createPlan);
+router.post('/plans/chauffeur', adminSubscriptionController.createChauffeurPlan);
 router.patch('/plans/:id', adminSubscriptionController.updatePlan);
+router.patch('/plans/chauffeur/:id', adminSubscriptionController.updateChauffeurPlan);
 router.delete('/plans/:id', adminSubscriptionController.deletePlan);
+router.delete('/plans/chauffeur/:id', adminSubscriptionController.deleteChauffeurPlan);
 
 // Admin User Subscriptions (Active Instances)
 router.get('/subscriptions', adminSubscriptionController.getAllSubscriptions);

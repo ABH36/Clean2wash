@@ -8,13 +8,13 @@ import {
     Phone, MessageSquare, Droplets, Camera,
     AlertTriangle, History, Search, X, ChevronLeft,
     Check, Info, ChevronRight, Edit3, Settings, Stars,
-    Plus, Minus, Gift, Bike, Crown, Play, Calendar, Home, Loader2, Radar, Image, Wallet, ExternalLink, CreditCard, LayoutGrid, CheckCircle, ChevronUp, MinusCircle
+    Plus, Minus, Gift, Bike, Crown, Play, Calendar, Home, Loader2, Radar, Image, Wallet, ExternalLink, CreditCard, LayoutGrid, CheckCircle, ChevronUp, MinusCircle, AlertCircle, RotateCw
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { useGeoLocation } from '../../../hooks/useGeoLocation';
 import { useCart } from '../../../context/CartContext';
-import { serviceAPI, vehicleAPI, walletAPI, paymentAPI, subscriptionAPI, productAPI } from '../../../utils/api';
+import { serviceAPI, vehicleAPI, walletAPI, paymentAPI, subscriptionAPI, productAPI, bookingAPI } from '../../../utils/api';
 import apiClient from '../../../utils/api';
 import { socketService } from '../../../utils/socket';
 import MobileLayout from '../components/layout/MobileLayout';
@@ -86,7 +86,7 @@ const InstantWash = () => {
         vehicles, addBooking, updateBookingStatus, bookings,
         userSubscription, setUserSubscription, getRazorpayKey, createPaymentOrder,
         verifyPayment, getUser, walletBalance, updateBalance, loadWallet,
-        isBlackPassMember, globalCatalog, loadGlobalCatalog, catalogLoading,
+        isGoldPassMember, isBlackPassMember, globalCatalog, loadGlobalCatalog, catalogLoading,
         addVehicle, vehiclesLoading
     } = useAuth();
     const { savedAddresses: addresses, loading: addressesLoading, primaryAddress, selectedAddress, setSelectedAddress, currentLocation } = useGeoLocation();
@@ -141,6 +141,15 @@ const InstantWash = () => {
         if (saved) return JSON.parse(saved);
         return null; // Don't auto-select to force awareness
     });
+
+    // 🛡️ Proactive Redirect: Force users with 0 vehicles to Garaj
+    useEffect(() => {
+        if (!vehiclesLoading && vehicles && vehicles.length === 0) {
+            toast.error('Register your vehicle', { icon: '🚗', id: 'vehicle-registration-toast' });
+            const timer = setTimeout(() => navigate('/vehicles?from=instant-wash&mode=add'), 1200);
+            return () => clearTimeout(timer);
+        }
+    }, [vehicles, vehiclesLoading, navigate]);
 
     // Auto-select first vehicle when vehicles list loads if none selected
     useEffect(() => {
@@ -300,13 +309,13 @@ const InstantWash = () => {
             }
         }
 
-        // 3. Auto-apply Black Pass discount
-        if (isBlackPassMember && passConfig?.discount) {
+        // 3. Auto-apply Gold Pass discount
+        if (isGoldPassMember && passConfig?.discount) {
             basePrice = basePrice * (1 - passConfig.discount);
         }
 
         return Math.floor(basePrice);
-    }, [selectedVehicle, selectedVehicleType, dynamicServices, isBlackPassMember, passConfig, matchedModel]);
+    }, [selectedVehicle, selectedVehicleType, dynamicServices, isGoldPassMember, passConfig, matchedModel]);
 
     const getEstimatedTime = useCallback((service, model) => {
         // High priority: Specific Session Time for this asset from Admin Catalog
@@ -321,7 +330,7 @@ const InstantWash = () => {
     }, []);
 
     const canUseSubscription = useCallback((serviceId, category, serviceType = 'instant') => {
-        if (!isBlackPassMember || !userSubscription) return false;
+        if (!isGoldPassMember || !userSubscription) return false;
         
         // Find current plan data
         const plan = subscriptionPlans.find(p => p.id === userSubscription.planId || p._id === userSubscription.planId);
@@ -340,9 +349,6 @@ const InstantWash = () => {
             if (serviceName === 'Instant Wash') {
                 return (category === 'Doorstep' || category === 'Express') && isInstant && !isApartment;
             }
-            if (serviceName === 'Apartment Wash') {
-                return (category === 'Doorstep' || category === 'Apartment' || category === 'Express') && isApartment;
-            }
             if (serviceName === 'Studio Wash') {
                 return category === 'Studio' || category === 'Studio Detailing';
             }
@@ -353,7 +359,7 @@ const InstantWash = () => {
             // Fallback: Check if category or serviceId is directly in list
             return category === serviceName || serviceId === serviceName;
         });
-    }, [isBlackPassMember, userSubscription, subscriptionPlans, selectedAddress, addresses]);
+    }, [isGoldPassMember, userSubscription, subscriptionPlans, selectedAddress, addresses]);
 
     const activeService = useMemo(() => {
         if (!dynamicServices || dynamicServices.length === 0) return null;
@@ -371,6 +377,29 @@ const InstantWash = () => {
         return getEstimatedTime(activeService, matchedModel);
     }, [activeService, matchedModel, getEstimatedTime]);
 
+    const handleCancelBooking = useCallback(async () => {
+        if (!activeBookingId) return;
+        
+        setIsProcessing(true);
+        try {
+            await bookingAPI.cancelBooking(activeBookingId, "User cancelled search");
+            toast.success("Booking cancelled successfully");
+            
+            // Cleanup
+            setActiveBookingId(null);
+            setActiveBooking(null);
+            sessionStorage.removeItem('iw_active_booking_id');
+            setPhase(PHASES.SERVICE_SELECTION);
+            setSearchRetry(0);
+            setFindingTime(0);
+        } catch (err) {
+            console.error('Cancel booking error:', err);
+            toast.error("Failed to cancel booking. Please try again.");
+        } finally {
+            setIsProcessing(false);
+        }
+    }, [activeBookingId]);
+
     const handleBookingSuccess = useCallback((booking) => {
         const newBookingId = booking._id || booking.id;
         setActiveBookingId(newBookingId);
@@ -379,6 +408,9 @@ const InstantWash = () => {
 
         // Persist active booking for session recovery
         sessionStorage.setItem('iw_active_booking_id', newBookingId);
+
+        // Reset timer based on retry count
+        setFindingTime(searchRetry === 0 ? 60 : 120);
 
         // Success state + cart cleanup
         setPhase(PHASES.FINDING);
@@ -394,7 +426,7 @@ const InstantWash = () => {
         } catch (err) {
             console.error('Socket join failed:', err);
         }
-    }, [addBooking, getUser, setCart]);
+    }, [addBooking, getUser, setCart, searchRetry]);
 
     // --- Phase Recovery & UI Logic ---
     const displayModel = useMemo(() => selectedVehicle?.model || 'Select Vehicle', [selectedVehicle]);
@@ -433,9 +465,10 @@ const InstantWash = () => {
         }
     }, [dynamicServices, expandedServiceId]);
 
+
+
     const effectiveItems = useMemo(() => {
         // 🛡️ Data Isolation: ONLY show items currently in the cart for the summary.
-        // We exclude activeBooking to prevent historical/unrelated bookings from appearing in the summary list.
         return [...cart];
     }, [cart]);
 
@@ -465,6 +498,10 @@ const InstantWash = () => {
         });
     }, [subscriptionPlans, searchQuery]);
 
+    const goldPassPlan = useMemo(() =>
+        subscriptionPlans?.find(p => (p.name || p.title || '').toLowerCase().includes('gold')),
+        [subscriptionPlans]
+    );
     const blackPassPlan = useMemo(() =>
         subscriptionPlans?.find(p => (p.name || p.title || '').toLowerCase().includes('black')),
         [subscriptionPlans]
@@ -519,11 +556,11 @@ const InstantWash = () => {
             breakdown.push({ type: 'combo', name: 'Combo Deal', amount: comboSaving, description: `${comboPct}% Multi-service Discount` });
         }
 
-        // 4. Black Pass Membership
-        const hasBlackPassInCart = effectiveItems.some(item =>
-            item.type === 'subscription' && (item.serviceName?.toLowerCase().includes('black') || item.name?.toLowerCase().includes('black'))
+        // 4. Gold Pass Membership
+        const hasGoldPassInCart = effectiveItems.some(item =>
+            item.type === 'subscription' && (item.serviceName?.toLowerCase().includes('gold') || item.name?.toLowerCase().includes('gold'))
         );
-        const shouldApplyGlobalPass = hasBlackPassInCart || isBlackPassMember;
+        const shouldApplyGlobalPass = hasGoldPassInCart || isGoldPassMember;
         const passDiscountRate = passConfig?.discount || 0.3;
 
         if (shouldApplyGlobalPass) {
@@ -531,8 +568,8 @@ const InstantWash = () => {
             currentPrice -= passSaving;
             if (passSaving > 0) {
                 breakdown.push({ 
-                    type: 'blackpass', 
-                    name: 'Black Pass', 
+                    type: 'goldpass', 
+                    name: 'Gold Pass', 
                     amount: passSaving, 
                     description: `${Math.round(passDiscountRate * 100)}% Member Discount` 
                 });
@@ -550,7 +587,7 @@ const InstantWash = () => {
             finalPrice: Math.max(0, Math.round(currentPrice)), 
             pricingBreakdown: breakdown 
         };
-    }, [effectiveItems, isBlackPassMember, passConfig, userSubscription, globalSettings, paymentMethod, discountAmount]);
+    }, [effectiveItems, isGoldPassMember, passConfig, userSubscription, globalSettings, paymentMethod, discountAmount]);
 
     // --- Side Effects ---
 
@@ -762,14 +799,22 @@ const InstantWash = () => {
             }
         };
 
+        const handleLocationUpdate = (data) => {
+            const lat = data?.lat ?? data?.location?.lat;
+            const lng = data?.lng ?? data?.location?.lng;
+            if (lat && lng) {
+                setCaptainPos({ lat: parseFloat(lat), lng: parseFloat(lng) });
+            }
+        };
+
         socketService.on('booking_status_updated', handleStatusUpdate);
-        socketService.on('locationUpdate', (data) => {
-            if (data.lat && data.lng) setCaptainPos({ lat: parseFloat(data.lat), lng: parseFloat(data.lng) });
-        });
+        socketService.on('locationUpdate', handleLocationUpdate);
+        socketService.on('location_updated', handleLocationUpdate);
 
         return () => {
             socketService.off('booking_status_updated', handleStatusUpdate);
-            socketService.off('locationUpdate');
+            socketService.off('locationUpdate', handleLocationUpdate);
+            socketService.off('location_updated', handleLocationUpdate);
             socketService.disconnect();
         };
     }, [activeBookingId, user?.id, updateBookingStatus]);
@@ -777,22 +822,33 @@ const InstantWash = () => {
     // 3. Finding Phase Fallback Timer
     useEffect(() => {
         let timer;
-        if (phase === PHASES.FINDING) {
-            setFindingTime(60);
+        if (phase === PHASES.FINDING && activeBookingId) {
+            // Initialize timer only if it's currently 0 to prevent reset on re-renders
+            if (findingTime === 0 && !isProcessing) {
+                setFindingTime(searchRetry === 0 ? 60 : 120);
+            }
+
             timer = setInterval(() => {
                 setFindingTime(prev => {
                     if (prev <= 1) {
                         clearInterval(timer);
+                        // If it was the second attempt (120s), redirect to home
+                        if (searchRetry > 0) {
+                            setTimeout(() => {
+                                handleCancelBooking(); // Cleanup & sync
+                                navigate('/');
+                            }, 3000);
+                        }
                         return 0;
                     }
                     return prev - 1;
                 });
             }, 1000);
-        } else {
+        } else if (phase !== PHASES.FINDING) {
             setFindingTime(0);
         }
         return () => clearInterval(timer);
-    }, [phase, searchRetry]);
+    }, [phase, searchRetry, activeBookingId]);
 
     // 4. Persistence & Session Recovery
     useEffect(() => {
@@ -902,40 +958,7 @@ const InstantWash = () => {
         }
     };
 
-    const renderHeader = () => {
-        if (phase === PHASES.LIVE_TRACK) return null;
-        return (
-            <header className="px-5 pt-5 pb-3 flex items-center justify-between bg-white border-b border-black/[0.04] sticky top-0 z-[100]">
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={handleBack}
-                        className="p-1 -ml-1 text-black"
-                    >
-                        <ChevronLeft size={22} strokeWidth={2.5} />
-                    </button>
-                    <h1 className="text-[14px] font-[1000] text-black tracking-tight uppercase" style={{ fontFamily: 'Inter, sans-serif' }}>
-                        Instant Car/Bike Wash
-                    </h1>
-                </div>
 
-                <div className="flex items-center gap-2">
-                    <LocationIndicator variant="minimal" className="!bg-transparent !border-none !p-0 mr-1" />
-                    <button
-                        onClick={() => navigate('/wallet')}
-                        className="w-9 h-9 bg-gray-50/80 rounded-xl flex items-center justify-center border border-black/[0.02] active:scale-95 transition-transform"
-                    >
-                        <Wallet size={16} className="text-black/60" />
-                    </button>
-                    <button
-                        onClick={() => navigateToPhase(PHASES.SELECT_VEHICLE)}
-                        className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all duration-500 ${phase === PHASES.LIVE_TRACK || phase === PHASES.FINDING ? 'bg-black border-[#00FF66]/30 shadow-[0_0_10px_rgba(0,255,102,0.15)]' : 'bg-gray-50/80 border-black/[0.02]'}`}
-                    >
-                        <Car size={16} className={phase === PHASES.LIVE_TRACK || phase === PHASES.FINDING ? 'text-[#00FF66]' : 'text-black/80'} />
-                    </button>
-                </div>
-            </header>
-        );
-    };
 
     const renderServiceSelection = () => {
         const currentAddons = serviceAddons[activeServiceId] || [];
@@ -948,17 +971,20 @@ const InstantWash = () => {
         return (
             <div className="bg-gray-100 min-h-screen pb-20 font-sans">
                 {/* Personalized Header Section */}
-                <div className="px-5 pt-8 pb-4 flex items-center justify-between">
-                    <div>
-                        <p className="text-[9px] font-black text-brand uppercase tracking-[0.2em] mb-1.5">Station 01 / LIVE</p>
-                        <h1 className="text-2xl font-[1000] text-black leading-none uppercase tracking-tighter">
-                            Instant Wash
-                        </h1>
-                        <p className="text-[9px] font-black text-black/30 uppercase tracking-[0.15em] mt-1.5 flex items-center gap-2">
-                            Protocol Ready for <span className="text-black font-black">{user?.name || 'Authorized User'}</span>
-                            <span className="w-1 h-1 rounded-full bg-black/10" />
-                            {new Date().toLocaleDateString('en-US', { weekday: 'long' })}
-                        </p>
+                <div className="px-5 pt-10 pb-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={handleBack}
+                            className="w-11 h-11 rounded-2xl bg-white border border-black/[0.04] shadow-lg flex items-center justify-center text-black active:scale-90 transition-all shrink-0"
+                        >
+                            <ChevronLeft size={22} strokeWidth={3} />
+                        </button>
+                        <div>
+                            <p className="text-[9px] font-black text-brand uppercase tracking-[0.2em] mb-1.5">Station 01 / LIVE</p>
+                            <h1 className="text-2xl font-[1000] text-black leading-none uppercase tracking-tighter">
+                                Instant Wash
+                            </h1>
+                        </div>
                     </div>
                     <div className="w-11 h-11 rounded-xl bg-white border border-black/[0.03] shadow-sm flex items-center justify-center">
                         <Stars size={18} className="text-brand" />
@@ -1009,54 +1035,53 @@ const InstantWash = () => {
                     )}
                 </div>
 
-                {/* Selected Vehicle Context (Premium Redesign) */}
+                {/* Selected Vehicle Context (Professional simplified) */}
                 <div className="px-5 pt-6 pb-2">
-                    <div className="bg-white rounded-2xl p-4 flex items-center justify-between border border-black/[0.03] shadow-[0_20px_50px_rgba(0,0,0,0.06)] relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-brand/10 transition-colors" />
-
+                    <div className="bg-white rounded-[2rem] p-4 flex items-center justify-between border-2 border-brand shadow-[0_15px_40px_rgba(242,159,5,0.12)] relative overflow-hidden group active:scale-[0.98] transition-all duration-300">
                         {selectedVehicle ? (
-                            <div className="flex items-center gap-4 relative z-10">
-                                <div className="w-14 h-14 bg-gray-50 rounded-xl flex items-center justify-center border border-black/[0.02] shadow-inner overflow-hidden">
-                                    {selectedVehicle.img ? (
-                                        <img src={sanitizeUrl(selectedVehicle.img)} className="w-full h-full object-cover grayscale-[0.5] group-hover:grayscale-0 transition-all duration-500" alt={selectedVehicle.model} />
-                                    ) : (
-                                        <Car size={28} className="text-black/80" />
-                                    )}
+                            <div className="flex items-center gap-4 relative z-10 w-full">
+                                <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center border border-black/[0.05] shadow-inner overflow-hidden flex-shrink-0">
+                                    <img 
+                                        src={sanitizeUrl(selectedVehicle.img || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80')} 
+                                        className="w-full h-full object-cover" 
+                                        alt={selectedVehicle.model} 
+                                        onError={(e) => e.target.src = 'https://cdn-icons-png.flaticon.com/512/3003/3003984.png'}
+                                    />
                                 </div>
-                                <div>
-                                    <div className="flex items-center gap-1.5 mb-1">
-                                        <h4 className="text-[14px] font-[1000] text-black tracking-tight leading-none uppercase">
-                                            {matchedModel ? `${matchedModel.brand} ${matchedModel.model}` : `${selectedVehicle.brand} ${selectedVehicle.model}`}
-                                        </h4>
-                                        {matchedModel && (
-                                            <div className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-md flex items-center gap-1 border border-emerald-100/50">
-                                                <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
-                                                <span className="text-[7px] font-black uppercase tracking-widest">Protocol Sync</span>
-                                            </div>
-                                        )}
+                                <div className="flex-1 min-w-0">
+                                    <h4 className="text-[17px] font-[1000] text-black tracking-tighter leading-none uppercase truncate">
+                                        {selectedVehicle.brand} {selectedVehicle.model}
+                                    </h4>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <span className="text-[9px] font-black text-black/30 uppercase tracking-widest">{selectedVehicle.plate || 'No Plate'}</span>
+                                        <div className="w-1 h-1 rounded-full bg-brand animate-pulse" />
+                                        <span className="text-[8px] font-[1000] text-emerald-500 uppercase tracking-tighter">Garaj Sync Active</span>
                                     </div>
-                                    <p className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] leading-none">
-                                        {matchedModel ? `${matchedModel.type} • ${matchedModel.difficulty} Difficulty` : 'Awaiting Studio Asset Sync'}
-                                    </p>
                                 </div>
+                                <button
+                                    onClick={() => navigate('/vehicles?from=instant-wash')}
+                                    className="bg-black text-white px-5 py-3 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] active:scale-90 transition-all shadow-xl shadow-black/10 flex-shrink-0"
+                                >
+                                    CHANGE
+                                </button>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-4 relative z-10 opacity-40 grayscale">
-                                <div className="w-16 h-16 bg-gray-50 rounded-[1.25rem] flex items-center justify-center border border-black/[0.02] shadow-inner">
-                                    <Car size={32} className="text-black/80" />
+                            <div className="flex items-center gap-4 relative z-10 w-full opacity-60">
+                                <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center border border-black/[0.02]">
+                                    <Car size={32} className="text-black/20" />
                                 </div>
-                                <div>
-                                    <h4 className="text-[15px] font-[1000] text-black tracking-tight leading-none mb-1.5 uppercase">Select Asset</h4>
-                                    <p className="text-[9px] font-black text-black/10 uppercase tracking-[0.2em] leading-none">Vehicle Protocol Required</p>
+                                <div className="flex-1">
+                                    <h4 className="text-[15px] font-[1000] text-black tracking-tight leading-none uppercase">Select Asset</h4>
+                                    <p className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] mt-1.5">No car selected</p>
                                 </div>
+                                <button
+                                    onClick={() => navigate('/vehicles?from=instant-wash')}
+                                    className="bg-brand text-white px-5 py-3 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] shadow-lg shadow-brand/20"
+                                >
+                                    SELECT
+                                </button>
                             </div>
                         )}
-                        <button
-                            onClick={() => navigate('/vehicles?from=instant-wash')}
-                            className="text-[9px] font-black text-brand uppercase tracking-[0.15em] border border-orange-100 bg-orange-50/30 px-4 py-2.5 rounded-xl active:scale-95 transition-all shadow-sm hover:bg-brand hover:text-white relative z-10"
-                        >
-                            {selectedVehicle ? 'CHANGE' : 'SELECT'}
-                        </button>
                     </div>
                 </div>
 
@@ -1272,33 +1297,76 @@ const InstantWash = () => {
                     )}
 
 
-                    {/* Vehicle Protocol Selector (New) */}
-                    <div className="px-5 pb-8">
-                        <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.3em] mb-4 text-center">Vehicle Protocol</p>
-                        <div className="flex items-center gap-3">
-                            {['Hatch', 'Sedan', 'SUV'].map((type) => {
-                                const isActive = selectedVehicleType === type.toLowerCase();
-                                return (
-                                    <button
-                                        key={type}
-                                        onClick={() => setSelectedVehicleType(type.toLowerCase())}
-                                        className={`flex-1 group relative ${isActive ? 'scale-105' : 'opacity-40'}`}
-                                    >
-                                        <div className={`bg-white rounded-xl p-4 border transition-all ${isActive ? 'border-brand shadow-xl ring-4 ring-brand/5' : 'border-black/[0.05]'}`}>
-                                            <div className="flex items-center justify-between mb-2">
-                                                <h4 className={`text-[10px] font-[1000] uppercase tracking-tight ${isActive ? 'text-black' : 'text-gray-400'}`}>{type}</h4>
-                                                {isActive && (
-                                                    <div className="w-4 h-4 bg-brand rounded-full flex items-center justify-center text-white shadow-sm">
-                                                        <Check size={10} strokeWidth={4} />
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <p className="text-[8px] font-black text-gray-300 uppercase tracking-widest leading-none mb-3">Protocol</p>
-                                            <div className={`h-[2px] w-10 rounded-full transition-all ${isActive ? 'bg-brand' : 'bg-gray-100'}`} />
+                    {/* Studio Shorts - YouTube Shorts Style Video Grid (Full Width) */}
+                    <div className="pt-8 pb-10 overflow-hidden">
+                        <div className="flex items-center justify-between mb-5 px-4">
+                            <div className="flex flex-col">
+                                <h3 className="text-[17px] font-[1000] text-black uppercase tracking-tight leading-none mb-1.5">Instant Wash Stories</h3>
+                                <p className="text-[9px] font-black text-black/20 uppercase tracking-widest leading-none">Elite detailing in motion</p>
+                            </div>
+                            <div className="w-9 h-9 rounded-full bg-black flex items-center justify-center text-white shadow-lg active:scale-90 transition-transform">
+                                <Play size={14} fill="currentColor" className="ml-0.5" />
+                            </div>
+                        </div>
+                        
+                        <div className="flex gap-[6px] overflow-x-auto no-scrollbar snap-x snap-mandatory px-2">
+                            {(dynamicServices && dynamicServices.length > 0 ? dynamicServices : [
+                                { title: 'Premium Wash', videoUrl: 'https://assets.mixkit.io/videos/preview/mixkit-hand-washing-a-car-with-a-sponge-and-foam-1582-large.mp4', image: 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=600&q=80' },
+                                { title: 'Studio Detailing', videoUrl: 'https://assets.mixkit.io/videos/preview/mixkit-hand-washing-a-car-with-a-sponge-and-foam-1582-large.mp4', image: 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=800&q=80' },
+                                { title: 'Eco Armor', videoUrl: 'https://assets.mixkit.io/videos/preview/mixkit-hand-washing-a-car-with-a-sponge-and-foam-1582-large.mp4', image: 'https://images.unsplash.com/photo-1614028674026-a65e31bfd27c?w=600&q=80' }
+                            ]).map((sv, idx) => (
+                                <motion.div
+                                    key={idx}
+                                    whileTap={{ scale: 0.96 }}
+                                    onClick={() => {
+                                        if (sv.videoUrl) {
+                                            setActiveVideoUrl(sv.videoUrl);
+                                            setVideoPlaying(true);
+                                        } else {
+                                            setShowDemoVideo(true);
+                                        }
+                                    }}
+                                    className="flex-shrink-0 w-[145px] aspect-[9/16] bg-black rounded-2xl relative overflow-hidden snap-start group shadow-2xl shadow-black/10 border border-black/[0.05]"
+                                >
+                                    {/* Auto-playing Preview (Consistent with YouTube Shorts) */}
+                                    {sv.videoUrl && sv.videoUrl.includes('.mp4') ? (
+                                        <video 
+                                            autoPlay 
+                                            muted 
+                                            loop 
+                                            playsInline 
+                                            className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-[2s] ease-out"
+                                        >
+                                            <source src={sv.videoUrl} type="video/mp4" />
+                                        </video>
+                                    ) : (
+                                        <img 
+                                            src={sanitizeUrl(sv.image || sv.img || FALLBACK_IMAGES[0])} 
+                                            className="w-full h-full object-cover opacity-80 group-hover:scale-110 transition-transform duration-700" 
+                                            alt={sv.title} 
+                                        />
+                                    )}
+
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+                                    
+                                    <div className="absolute top-3 right-3 bg-black/40 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/10">
+                                        <div className="flex items-center gap-1">
+                                            <div className="w-1 h-1 rounded-full bg-red-500 animate-pulse" />
+                                            <span className="text-[6px] font-black text-white uppercase tracking-widest leading-none">PREVIEW</span>
                                         </div>
-                                    </button>
-                                );
-                            })}
+                                    </div>
+
+                                    <div className="absolute bottom-4 left-3 right-3">
+                                        <h4 className="text-white text-[12px] font-[1000] uppercase tracking-tight leading-tight mb-1 content-center line-clamp-2">{sv.title || sv.serviceName}</h4>
+                                        <div className="flex items-center gap-1.5 opacity-60">
+                                            <Play size={8} fill="white" className="text-white" />
+                                            <span className="text-white text-[7px] font-black uppercase tracking-widest">Watch Full</span>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            ))}
+                            {/* Empty spacer to allow snapping to end correctly */}
+                            <div className="flex-shrink-0 w-3" />
                         </div>
                     </div>
 
@@ -1779,20 +1847,29 @@ const InstantWash = () => {
                                     <X size={24} />
                                 </button>
 
-                                {activeVideoUrl || showDemoVideo ? (
+                                {activeVideoUrl && (activeVideoUrl.includes('youtube.com') || activeVideoUrl.includes('youtu.be') || activeVideoUrl.includes('.mp4')) ? (
                                     <iframe
-                                        src={activeVideoUrl || "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"}
+                                        src={activeVideoUrl}
                                         className="w-full h-full"
                                         title="Service Preview"
                                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                         allowFullScreen
                                     />
                                 ) : (
-                                    <div className="w-full h-full flex flex-col items-center justify-center gap-4">
-                                        <div className="w-16 h-16 rounded-full bg-brand/20 flex items-center justify-center animate-pulse">
-                                            <Play size={32} className="text-brand ml-2" />
+                                    <div className="w-full h-full flex flex-col items-center justify-center gap-6 bg-[#0A0A0A]">
+                                        <div className="w-20 h-20 rounded-full bg-brand/10 flex items-center justify-center border border-brand/20 animate-pulse">
+                                            <Zap size={32} className="text-brand/40" />
                                         </div>
-                                        <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">Protocol Stream Unavailable</p>
+                                        <div className="text-center">
+                                            <h3 className="text-white text-[16px] font-black uppercase tracking-[0.2em] leading-none mb-2">Protocol Stream Unavailable</h3>
+                                            <p className="text-white/30 text-[9px] font-bold uppercase tracking-widest leading-relaxed">
+                                                Currently identifying detailing assets • Network connection optimized
+                                            </p>
+                                            <div className="mt-6 inline-flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/5">
+                                                <div className="w-1 h-1 rounded-full bg-orange-500 animate-ping" />
+                                                <span className="text-white/20 text-[7px] font-black uppercase tracking-widest">Awaiting Studio Upload</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
                             </motion.div>
@@ -1807,181 +1884,159 @@ const InstantWash = () => {
         "Connecting to Bangalore Grid...",
         "Identifying nearby detailing experts...",
         "Optimizing technician proximity...",
-        "Black Pass Priority Enabled...",
+        "Gold Pass Priority Enabled...",
         "Securing premium service slot..."
     ];
 
     const renderFinding = () => {
         const userCoords = selectedAddress?.coordinates || currentLocation || { lat: 28.6139, lng: 77.2090 };
-        const currentMessage = SEARCH_MESSAGES[Math.floor((60 - findingTime) / 10) % SEARCH_MESSAGES.length] || SEARCH_MESSAGES[0];
-        // Real captain position — from socket locationUpdate after booking accepted
-        // captainPos is updated via socket in parent useEffect
-        const hasCaptain = activeBooking?.provider?.id && captainPos && captainPos.lat !== 30;
+        const isTimeUp = findingTime === 0;
+
+        // Rapido-style Ghost Captains (Visual Polish)
+        const ghostCaptains = useMemo(() => {
+            // Static offsets for ghost captains
+            const offsets = [
+                { lat: 0.0015, lng: 0.0025 },
+                { lat: -0.0025, lng: 0.0015 },
+                { lat: 0.0010, lng: -0.0035 },
+                { lat: -0.0015, lng: -0.0020 }
+            ];
+
+            return offsets.map((off, idx) => ({
+                position: {
+                    lat: userCoords.lat + off.lat + (Math.sin(findingTime * 0.4 + idx) * 0.00015),
+                    lng: userCoords.lng + off.lng + (Math.cos(findingTime * 0.4 + idx) * 0.00015)
+                },
+                type: 'captain',
+                icon: {
+                    url: 'https://cdn-icons-png.flaticon.com/128/3448/3448624.png',
+                    scaledSize: { width: 32, height: 32 }
+                }
+            }));
+        }, [userCoords, findingTime]);
 
         return (
-
-            <div className="flex flex-col min-h-screen bg-[#F8F9FB] relative overflow-hidden font-outfit">
-                {/* Map Layer - Google Maps Style */}
-                <div className="absolute inset-0 z-0">
-                    <GoogleMapBox
-                        center={userCoords}
-                        zoom={15}
+            <div className="fixed inset-0 z-[1000] bg-white flex flex-col font-sans">
+                {/* Large Map View (Rapido Style) */}
+                <div className="flex-[3] relative overflow-hidden">
+                    <GoogleMapBox 
+                        center={userCoords} 
+                        zoom={16}
                         markers={[
-                            {
-                                id: 'user',
-                                position: userCoords,
+                            { 
+                                position: userCoords, 
+                                type: 'car',
                                 icon: {
-                                    path: 'M 0,0 m -8,0 a 8,8 0 1,0 16,0 a 8,8 0 1,0 -16,0',
-                                    fillColor: '#F29F05',
-                                    fillOpacity: 1,
-                                    strokeWeight: 2,
-                                    strokeColor: '#FFFFFF',
-                                    scale: 1,
-                                },
+                                    url: 'https://cdn-icons-png.flaticon.com/128/2330/2330453.png',
+                                    scaledSize: { width: 38, height: 38 }
+                                }
                             },
-                            ...(hasCaptain ? [{
-                                id: 'captain',
+                            ...(!isTimeUp ? ghostCaptains : []),
+                            ...(captainPos && captainPos.lat !== 30 ? [{
                                 position: captainPos,
+                                type: 'captain',
                                 icon: {
-                                    url: 'https://cdn-icons-png.flaticon.com/512/3003/3003984.png',
+                                    url: 'https://cdn-icons-png.flaticon.com/128/3448/3448624.png',
                                     scaledSize: { width: 40, height: 40 }
                                 }
                             }] : [])
                         ]}
                     />
-
-                    {/* 🌊 Pulsing Concentric Waves (10km scale) */}
-                    <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-                        {[0, 1, 2].map(i => (
-                            <motion.div
-                                key={i}
-                                initial={{ scale: 0.1, opacity: 0.6 }}
-                                animate={{ scale: [1, 4], opacity: [0.6, 0] }}
-                                transition={{ repeat: Infinity, duration: 4, delay: i * 1.3, ease: "easeOut" }}
-                                className={`absolute w-64 h-64 rounded-full border-2 ${isBlackPassMember ? 'border-brand/30 bg-brand/5' : 'border-black/5'}`}
-                            />
-                        ))}
+                    
+                    {/* Native Overlay HUD */}
+                    <div className="absolute top-6 left-6 right-6 flex items-center justify-between pointer-events-none">
+                        <div className="bg-white/95 backdrop-blur-md px-3 py-2 rounded-xl shadow-2xl border border-black/[0.05] pointer-events-auto">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-1.5 h-1.5 rounded-full bg-brand animate-ping" />
+                                <span className="text-[9px] font-black uppercase tracking-widest text-black/60">Searching Captains...</span>
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Scanner Effect */}
-                    {findingTime > 0 && (
-                        <div className="absolute inset-0 z-20 pointer-events-none overflow-hidden">
-                            <div className="w-full h-full bg-gradient-to-b from-brand/10 via-transparent to-transparent animate-[scan_3s_infinite_linear]" />
+                    {/* Radar Pulse Effect */}
+                    {!isTimeUp && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div className="relative">
+                                <div className="absolute inset-0 w-32 h-32 bg-brand/20 rounded-full animate-ping" />
+                                <div className="absolute inset-0 w-32 h-32 bg-brand/10 rounded-full animate-pulse blur-xl" />
+                            </div>
                         </div>
                     )}
                 </div>
 
-                {/* Top Status - Floating Pill (Maximizes Map View) */}
-                <div className="absolute top-8 left-1/2 -translate-x-1/2 z-[1000] w-full px-5">
-                    <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-black/80 backdrop-blur-2xl border border-white/10 rounded-2xl px-4 py-2.5 flex items-center justify-between shadow-2xl"
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className="relative">
-                                <Radar size={18} className="text-brand animate-pulse" />
-                                {isBlackPassMember && (
-                                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-brand rounded-full animate-ping" />
-                                )}
-                            </div>
-                            <div className="flex flex-col">
-                                <h2 className="text-[11px] font-black text-white uppercase tracking-tighter">
-                                    {findingTime > 0 ? currentMessage : 'No Captain Found'}
-                                </h2>
-                                <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest leading-none">
-                                    Searching within 10km grid
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <div className="w-px h-6 bg-white/10" />
-                            <div className="flex flex-col items-end">
-                                <span className="text-[12px] font-[1000] text-brand tabular-nums">
-                                    {findingTime}s
-                                </span>
-                            </div>
-                        </div>
-                    </motion.div>
-                </div>
-
-                {/* Bottom Sheet - Compact & Premium (Rapido Style) */}
-                <div className="mt-auto relative z-10 p-5 mb-4">
-                    <motion.div
-                        initial={{ opacity: 0, y: 50 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-white rounded-[2.5rem] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-black/5"
-                    >
-                        {/* Pull Bar */}
-                        <div className="w-10 h-1 bg-gray-100 rounded-full mx-auto -mt-2 mb-5" />
-
-                        <div className="flex items-center justify-between mb-5">
-                            <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isBlackPassMember ? 'bg-brand text-black' : 'bg-black text-white'}`}>
-                                    <Zap size={18} fill="currentColor" />
-                                </div>
-                                <div>
-                                    <h3 className="text-[13px] font-[1000] text-black uppercase tracking-tight leading-none mb-1">
-                                        {isBlackPassMember ? 'VIP Priority Search' : 'Network Optimization'}
+                {/* Status Bottom HUD - Ultra Compact */}
+                <div className="bg-white px-5 pb-28 pt-3 rounded-t-[32px] shadow-[0_-15px_50px_rgba(0,0,0,0.08)] border-t border-black/[0.02] relative z-10 -mt-8">
+                    <div className="max-w-lg mx-auto">
+                        <div className="text-center mb-3">
+                            {isTimeUp ? (
+                                <motion.div 
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="space-y-1"
+                                >
+                                    <h3 className="text-[18px] font-[1000] text-black tracking-tighter uppercase leading-none">
+                                        {searchRetry > 0 ? "Captains are Busy" : "Demand is High"}
                                     </h3>
-                                    <p className="text-[9px] font-bold text-black/30 uppercase tracking-widest leading-none">
-                                        Connecting to Elite Detailers
+                                    <p className="text-[9px] font-black text-black/40 uppercase tracking-widest leading-none mt-1">
+                                        {searchRetry > 0 ? "Try again after some time" : "Increasing search radius..."}
                                     </p>
+                                    
+                                    {searchRetry === 0 && (
+                                        <div className="pt-2">
+                                            <button 
+                                                onClick={() => {
+                                                    setSearchRetry(1);
+                                                    setFindingTime(120);
+                                                }}
+                                                className="h-9 bg-black text-white px-6 rounded-xl font-black uppercase tracking-widest text-[9px] shadow-xl active:scale-95 transition-all"
+                                            >
+                                                Try Again (Attempt 2)
+                                            </button>
+                                        </div>
+                                    )}
+                                </motion.div>
+                            ) : (
+                                <div className="flex items-center justify-center gap-6">
+                                    <div className="text-left">
+                                        <h3 className="text-[11px] font-[1000] text-black uppercase tracking-tight leading-none mb-1">Finding Expert</h3>
+                                        <div className="flex items-center gap-1.5 opacity-60">
+                                            <div className="w-1 h-1 bg-brand rounded-full animate-pulse" />
+                                            <p className="text-[8px] font-black text-black/30 uppercase tracking-widest">Awaiting Match...</p>
+                                        </div>
+                                    </div>
+                                    <div className="h-6 w-px bg-black/5" />
+                                    <div className="text-center">
+                                        <div className="text-[20px] font-[1000] text-black tracking-tighter tabular-nums leading-none">
+                                            {Math.floor(findingTime / 60)}:{(findingTime % 60).toString().padStart(2, '0')}
+                                        </div>
+                                        <span className="text-[6px] font-black text-black/20 uppercase tracking-[0.3em]">SEC REMAINING</span>
+                                    </div>
                                 </div>
-                            </div>
-                            {isBlackPassMember && (
-                                <div className="px-2 py-1 bg-brand text-black text-[7px] font-black rounded-lg animate-pulse uppercase">Member Benefit</div>
                             )}
                         </div>
 
-                        <div className="flex flex-col gap-3">
-                            <button
-                                onClick={() => {
-                                    if (findingTime === 0) {
-                                        setSearchRetry(prev => prev + 1);
-                                    } else {
-                                        setPhase(PHASES.SERVICE_SELECTION);
-                                        setActiveBookingId(null);
-                                    }
-                                }}
-                                className={`w-full h-14 rounded-2xl font-black text-[11px] uppercase tracking-[0.25em] flex items-center justify-center gap-3 transition-all active:scale-95 ${findingTime === 0
-                                    ? 'bg-brand text-black shadow-xl shadow-brand/20'
-                                    : 'bg-black text-white shadow-xl shadow-black/10'
-                                    }`}
+                        <div className="flex items-center gap-3">
+                            <motion.button 
+                                whileTap={{ scale: 0.95 }}
+                                onClick={handleCancelBooking}
+                                disabled={isProcessing}
+                                className="flex-1 h-10 rounded-xl bg-red-50 text-red-500 text-[9px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 border border-red-100/50"
                             >
-                                {findingTime === 0 ? (
-                                    <>
-                                        <Rocket size={16} fill="currentColor" />
-                                        Force Retry
-                                    </>
-                                ) : (
-                                    <>
-                                        <X size={16} />
-                                        Cancel Search
-                                    </>
-                                )}
-                            </button>
+                                {isProcessing ? <Loader2 size={12} className="animate-spin" /> : <X size={12} strokeWidth={3} />}
+                                Cancel
+                            </motion.button>
 
-                            {findingTime > 0 && (
-                                <p className="text-[8px] font-black text-black/20 text-center uppercase tracking-widest mt-1">
-                                    High demand in your area • Optimizing dispatch
-                                </p>
-                            )}
+                            <motion.button 
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => navigate('/sos')}
+                                className="flex-1 h-10 rounded-xl bg-black text-white text-[9px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-lg"
+                            >
+                                <AlertCircle size={12} className="text-brand" strokeWidth={3} />
+                                Help (SOS)
+                            </motion.button>
                         </div>
-                    </motion.div>
+                    </div>
                 </div>
-
-                <style dangerouslySetInnerHTML={{
-                    __html: `
-                    @keyframes scan {
-                        from { transform: translateY(-100%); }
-                        to { transform: translateY(100%); }
-                    }
-                    .custom-user-pin, .custom-captain-pin {
-                        background: none !important;
-                        border: none !important;
-                    }
-                `}} />
             </div>
         );
     };
@@ -1997,7 +2052,7 @@ const InstantWash = () => {
 
         return (
 
-            <div className="fixed inset-0 bg-[#F8F9FB] z-[100] flex flex-col overflow-hidden font-outfit">
+            <div className="fixed inset-0 bg-[#F8F9FB] z-[1000] flex flex-col overflow-hidden font-outfit">
                 {/* Navigational Map Layer - Google Maps Style */}
                 <div className="absolute inset-0 z-0">
                     <GoogleMapBox
@@ -3088,16 +3143,22 @@ const InstantWash = () => {
 
     const renderPayment = () => {
         const paymentOptions = [
+            ...(userSubscription && (userSubscription.monthlyCredits > userSubscription.usedCredits) ? [{ 
+                id: 'subscription', 
+                name: 'Subscription Credit', 
+                icon: <Crown size={18} className="text-brand animate-pulse" fill="currentColor" />, 
+                subtitle: `${userSubscription.monthlyCredits - userSubscription.usedCredits} ${userSubscription.plan || 'Premium'} WASH LEFT` 
+            }] : []),
             ...(user?.loyalty?.rewardsAvailable > 0 ? [{ 
                 id: 'subscription', 
                 name: 'Loyalty Reward', 
                 icon: <Crown size={18} className="text-brand" fill="currentColor" />, 
                 subtitle: `${user.loyalty.rewardsAvailable} FREE WASH AVAILABLE` 
             }] : []),
-            { id: 'wallet', name: 'Clean2Wash Wallet', icon: <Wallet size={18} strokeWidth={2.5} />, balance: walletBalance },
-            { id: 'googlepay', name: 'Google Pay', icon: 'https://cdn-icons-png.flaticon.com/512/6124/6124998.png' },
-            { id: 'phonepe', name: 'PhonePe', icon: 'https://img.icons8.com/color/480/phonepe.png' },
-            { id: 'paytm', name: 'Paytm', icon: 'https://img.icons8.com/color/480/paytm.png' },
+            { id: 'wallet', name: 'Clean2Wash Wallet', icon: <Wallet size={18} className="text-brand" strokeWidth={2.5} />, balance: walletBalance },
+            { id: 'googlepay', name: 'Google Pay', icon: 'https://upload.wikimedia.org/wikipedia/commons/b/b5/Google_Pay_%28GPay%29_Logo_%282020%29.svg' },
+            { id: 'phonepe', name: 'PhonePe', icon: 'https://seeklogo.com/images/P/phonepe-logo-DEB60AD14F-seeklogo.com.png' },
+            { id: 'paytm', name: 'Paytm', icon: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo.svg' },
             { id: 'card', name: 'Credit/Debit Card', icon: <CreditCard size={18} strokeWidth={2.5} /> },
             { id: 'netbanking', name: 'Net Banking', icon: <LayoutGrid size={18} strokeWidth={2.5} /> },
         ];
@@ -3166,9 +3227,17 @@ const InstantWash = () => {
                                     }`}
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 bg-gray-50/50 rounded-lg flex items-center justify-center overflow-hidden border border-black/[0.02]">
+                                    <div className="w-9 h-9 bg-gray-50/50 rounded-xl flex items-center justify-center overflow-hidden border border-black/[0.04]">
                                         {typeof opt.icon === 'string' ? (
-                                            <img src={opt.icon} className="w-[70%] h-[70%] object-contain" />
+                                            <img 
+                                                src={opt.icon} 
+                                                className="w-[80%] h-[80%] object-contain" 
+                                                onError={(e) => {
+                                                    e.target.onerror = null;
+                                                    e.target.style.display = 'none';
+                                                    e.target.parentNode.innerHTML = '<div class="text-black/20"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>';
+                                                }}
+                                            />
                                         ) : (
                                             <div className="text-black/60">{opt.icon}</div>
                                         )}
@@ -3176,21 +3245,24 @@ const InstantWash = () => {
                                     <div className="flex flex-col">
                                         <span className="text-[13px] font-[1000] text-black tracking-tight leading-none">{opt.name}</span>
                                         {opt.subtitle && (
-                                            <span className="text-[8px] font-black text-brand mt-1 uppercase tracking-widest">{opt.subtitle}</span>
+                                            <span className="text-[8px] font-black text-brand mt-1.5 uppercase tracking-widest">{opt.subtitle}</span>
                                         )}
                                         {opt.id === 'wallet' && (
-                                            <span className={`text-[9px] font-bold mt-1 uppercase tracking-widest ${opt.balance < finalPrice ? 'text-red-500' : 'text-emerald-600'}`}>
+                                            <span className={`text-[9px] font-bold mt-1.5 uppercase tracking-widest ${opt.balance < finalPrice ? 'text-red-500' : 'text-emerald-600'}`}>
                                                 Balance: ₹{opt.balance}
                                             </span>
                                         )}
                                     </div>
                                 </div>
-                                <span className={`px-2 py-1 ${isBlackPassMember ? 'bg-gradient-to-r from-brand to-amber-400 text-black shadow-lg shadow-brand/20' : 'bg-brand text-white'} text-[9px] font-black rounded-lg uppercase tracking-tighter flex items-center gap-1.5 border border-white/20 transition-all hover:scale-105 active:scale-95`}>
-                                    {isBlackPassMember ? <><Crown size={10} fill="currentColor" /> Black Member Elite</> : 'Verified Plus'}
-                                </span>
-                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${paymentMethod === opt.id ? 'border-brand bg-brand animate-in zoom-in-50' : 'border-black/[0.1]'
-                                    }`}>
-                                    {paymentMethod === opt.id && <Check size={10} className="text-white" strokeWidth={5} />}
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isBlackPassMember ? 'bg-gradient-to-tr from-brand to-amber-300 text-black shadow-lg shadow-brand/20 border-2 border-white/30 active:scale-95' : 'bg-gray-50 text-black/10'
+                                        }`}>
+                                        {isBlackPassMember ? <Crown size={14} className="animate-pulse" fill="currentColor" /> : <ShieldCheck size={14} />}
+                                    </div>
+                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${paymentMethod === opt.id ? 'border-brand bg-brand animate-in zoom-in-50' : 'border-black/[0.1]'
+                                        }`}>
+                                        {paymentMethod === opt.id && <Check size={10} className="text-white" strokeWidth={5} />}
+                                    </div>
                                 </div>
                             </button>
                         ))}
@@ -3327,6 +3399,7 @@ const InstantWash = () => {
                                                         planId: sub.serviceId || sub.planId,
                                                         plan: sub.serviceId || sub.planId,
                                                         paymentMethod: 'wallet',
+                                                        vehicleId: selectedVehicle?._id || selectedVehicle?.id,
                                                         status: 'active'
                                                     });
                                                 } catch (subErr) {
@@ -3405,7 +3478,9 @@ const InstantWash = () => {
                                                                     plan: sub.serviceId || sub.planId,
                                                                     paymentId: response.razorpay_payment_id,
                                                                     orderId: response.razorpay_order_id,
+                                                                    signature: response.razorpay_signature,
                                                                     paymentMethod: 'online',
+                                                                    vehicleId: selectedVehicle?._id || selectedVehicle?.id,
                                                                     status: 'active'
                                                                 });
                                                             } catch (subErr) {
@@ -3518,11 +3593,22 @@ const InstantWash = () => {
         </div>
     );
 
+    // 🛡️ Safe Render Guard: Never show Asset Management if redirect is imminent
+    if (!vehiclesLoading && vehicles && vehicles.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-white">
+                <Loader2 className="w-10 h-10 text-brand animate-spin mb-4" strokeWidth={3} />
+                <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.3em] animate-pulse">Initializing Direct Registry...</p>
+            </div>
+        );
+    }
+
     return (
         <MobileLayout hideNav={phase === PHASES.LIVE_TRACK || phase === PHASES.CART || phase === PHASES.SELECT_SLOT || phase === PHASES.PAYMENT}>
-            <div className="bg-[#FFFFFF] min-h-screen font-outfit">
+            <div className="bg-[#FFFFFF] min-h-screen font-outfit relative">
                 <style dangerouslySetInnerHTML={{ __html: `.font-outfit { font-family: 'Outfit', sans-serif; }` }} />
-                {phase !== PHASES.CART && phase !== PHASES.SELECT_SLOT && phase !== PHASES.LIVE_TRACK && phase !== PHASES.PAYMENT && renderHeader()}
+                
+                {phase !== PHASES.CART && phase !== PHASES.SELECT_SLOT && phase !== PHASES.LIVE_TRACK && phase !== PHASES.PAYMENT}
 
                 <AnimatePresence mode="wait">
                     {phase === PHASES.SELECT_VEHICLE && (

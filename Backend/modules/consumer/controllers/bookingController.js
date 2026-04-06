@@ -1,13 +1,148 @@
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 const Booking = require('../../../models/Booking');
+const MasterData = require('../../../models/MasterData');
 const Vehicle = require('../../../models/Vehicle');
 const User = require('../../../models/User');
 const Captain = require('../../../models/Captain');
-const { sendNotification, sendVendorNotification } = require('../../../utils/notificationService');
+const SpareDriver = require('../../../models/SpareDriver');
+const { sendNotification, sendVendorNotification, sendSpareDriverNotification } = require('../../../utils/notificationService');
 const socketService = require('../../../socketService');
 const catchAsync = require('../../../utils/catchAsync');
 const AppError = require('../../../utils/AppError');
 const PricingEngine = require('../../../utils/pricingHelper');
+const commissionHelper = require('../../../utils/commissionHelper');
+const { executeWalletTransaction, adjustWalletHold } = require('../../../utils/walletHelper');
+const { broadcastBookingToDrivers } = require('../../../utils/spareDriverDispatch');
+
+const CHAUFFEUR_DISPATCH_LEAD_MINUTES = 15;
+
+const normalizeCapabilityLabel = (value = '') => {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (!normalized) return '';
+
+    if (/(bus)/i.test(normalized)) return 'bus';
+    if (/(traveler|traveller|van|mpv|muv)/i.test(normalized)) return 'traveler';
+    if (/(truck|pickup|tractor|mini truck)/i.test(normalized)) return 'heavy';
+    if (/(suv|compact suv|luxury suv)/i.test(normalized)) return 'suv';
+    if (/(bike|scooter|superbike|two wheeler)/i.test(normalized)) return 'bike';
+    return 'car';
+};
+
+const getVehicleCapability = (vehicle = {}) => (
+    normalizeCapabilityLabel(
+        vehicle?.typeRef?.type ||
+        vehicle?.typeRef?.name ||
+        vehicle?.type ||
+        vehicle?.model
+    )
+);
+
+const captainMatchesCapability = (captainVehicleType = '', requestedCapability = '') => {
+    const captainCapability = normalizeCapabilityLabel(captainVehicleType);
+    if (!requestedCapability) return true;
+    if (!captainCapability) return false;
+
+    const compatibilityMap = {
+        car: new Set(['car', 'suv']),
+        suv: new Set(['suv']),
+        traveler: new Set(['traveler']),
+        bus: new Set(['bus']),
+        heavy: new Set(['heavy']),
+        bike: new Set(['bike'])
+    };
+
+    return (compatibilityMap[requestedCapability] || new Set([requestedCapability])).has(captainCapability);
+};
+
+const getScheduledDispatchTime = (schedule = {}) => {
+    if (!schedule?.date) return new Date();
+
+    const scheduledAt = new Date(schedule.date);
+
+    if (schedule?.timeSlot?.start) {
+        const [hours, minutes] = String(schedule.timeSlot.start).split(':').map(Number);
+        scheduledAt.setHours(Number.isFinite(hours) ? hours : 0, Number.isFinite(minutes) ? minutes : 0, 0, 0);
+    }
+
+    return scheduledAt;
+};
+
+const isDispatchReadySchedule = (schedule = {}, leadMinutes = CHAUFFEUR_DISPATCH_LEAD_MINUTES) => {
+    if (!schedule || schedule.type !== 'scheduled') return true;
+    return getScheduledDispatchTime(schedule).getTime() <= (Date.now() + (leadMinutes * 60 * 1000));
+};
+
+const parseServiceDurationHours = (durationValue = '', fallbackHours = 1) => {
+    const matchedHours = String(durationValue || '').match(/(\d+)/);
+    const hours = matchedHours ? parseInt(matchedHours[1], 10) : fallbackHours;
+    return Number.isFinite(hours) && hours > 0 ? hours : fallbackHours;
+};
+
+const getChauffeurReserveAmount = (service = {}, totalAmount = 0, reserveHours = 2) => {
+    const bookedHours = parseServiceDurationHours(service.duration || service.schedule?.estimatedDuration, 1);
+    const effectiveHourlyRate = bookedHours > 0
+        ? Math.max(1, Math.round(Number(totalAmount || 0) / bookedHours))
+        : Math.max(1, Number(totalAmount || 0));
+
+    return {
+        bookedHours,
+        reserveHours,
+        reserveAmount: Math.max(0, Math.round(effectiveHourlyRate * reserveHours))
+    };
+};
+
+const getHeldReserveAmount = (booking = {}) => Math.max(0, Number(booking.payment?.walletReserveHeldAmount || 0));
+
+const getChauffeurCommissionOverride = (booking = {}) => {
+    const rate = Number(booking?.service?.metadata?.commercialRules?.commissionPercent);
+    return Number.isFinite(rate) && rate >= 0 ? rate : null;
+};
+
+const holdChauffeurReserve = async (consumerId, bookingId, amount, session) => {
+    if (!amount || amount <= 0) return null;
+
+    return adjustWalletHold(
+        consumerId,
+        amount,
+        'hold',
+        {
+            category: 'SERVICE_BOOKING',
+            description: `Wallet reserve locked for chauffeur booking #${bookingId}`,
+            referenceId: `${bookingId}-reserve-hold`,
+            referenceType: 'booking_wallet_reserve'
+        },
+        session
+    );
+};
+
+const releaseChauffeurReserve = async (booking, reason = 'reserve released', session = null) => {
+    const heldAmount = getHeldReserveAmount(booking);
+    if (!heldAmount || booking.service?.type !== 'sparedriver') {
+        return 0;
+    }
+
+    await adjustWalletHold(
+        booking.consumer,
+        heldAmount,
+        'release',
+        {
+            category: 'REFUND',
+            description: `Wallet reserve released for chauffeur booking #${booking.bookingId || booking._id}`,
+            referenceId: `${booking._id.toString()}-reserve-release-${booking.payment?.walletReserveReleasedAmount || 0}`,
+            referenceType: 'booking_wallet_reserve_release',
+            metaData: { reason }
+        },
+        session
+    );
+
+    booking.payment.walletReserveHeldAmount = 0;
+    booking.payment.walletReserveReleasedAmount = Number(booking.payment.walletReserveReleasedAmount || 0) + heldAmount;
+    booking.payment.walletReserveStatus = 'released';
+    booking.payment.walletReserveReleasedAt = new Date();
+
+    return heldAmount;
+};
 
 /**
  * Elite Hardening: Clean up bookings that stayed 'pending' for too long
@@ -25,11 +160,12 @@ const cleanupExpiredBookings = async () => {
         const eliteStagnantTimeout = 30 * 60 * 1000; // 30 Minutes for assigned but idle
 
         // 1. Clean up 'pending' bookings (Finding phase)
-        const expiredPending = await Booking.find({
+        const expiredPendingCandidates = await Booking.find({
             status: 'pending',
             isActive: true,
             createdAt: { $lt: new Date(now - standardTimeout) }
         });
+        const expiredPending = expiredPendingCandidates.filter((booking) => isDispatchReadySchedule(booking.schedule));
 
         // 2. Clean up Elite 'pickup-assigned' stagnant bookings (Operational Resilience)
         const stagnantElite = await Booking.find({
@@ -47,6 +183,14 @@ const cleanupExpiredBookings = async () => {
             booking.notes.internal = isStagnant
                 ? 'Auto-cancelled: Protocol Stall (Staff idle for >30min).'
                 : 'Auto-cancelled: Search protocol timeout (No crew found).';
+
+            if (booking.service?.type === 'sparedriver') {
+                try {
+                    await releaseChauffeurReserve(booking, 'auto_cancel_timeout');
+                } catch (reserveError) {
+                    console.error('Failed to release chauffeur reserve on timeout:', reserveError);
+                }
+            }
 
             // Handle Refunds
             if (booking.payment.status === 'paid') {
@@ -137,7 +281,7 @@ exports.getBooking = catchAsync(async (req, res, next) => {
         isActive: true
     })
         .populate('vehicle', 'brand model type plate image compliance')
-        .populate('provider.id', 'name phone rating photo')
+        .populate('provider.id', 'name phone rating photo currentLocation')
         .populate('consumer', 'name phone');
 
     if (!booking) {
@@ -173,8 +317,10 @@ exports.createBooking = catchAsync(async (req, res, next) => {
     } = req.body;
 
     // 🛡️ Phase 2 Hardening: Debt Guard (Arrears Protocol)
+    // We already check if already in DEEP debt (above ₹100).
+    // The walletHelper will later check if this transaction pushes them below the credit limit (-₹500).
     if (req.user.wallet?.balance < -100) {
-        return next(new AppError(`Access Denied! You have an outstanding arrears of ₹${Math.abs(req.user.wallet.balance)}. Please recharge your wallet to clear the debt before booking again.`, 403));
+        return next(new AppError(`Access Denied! You have an outstanding arrears of ₹${Math.abs(req.user.wallet.balance)}. Please recharge your wallet to clear the debt before booking again. You can have a maximum debt of ₹500 across all services.`, 403));
     }
 
     // Extract effective vehicleId and cast to ObjectId for robust querying
@@ -254,7 +400,8 @@ exports.createBooking = catchAsync(async (req, res, next) => {
 
         if (upcomingScheduled) {
             const upTime = upcomingScheduled.schedule?.timeSlot?.start || 'soon';
-            return next(new AppError(`Conflict detected! You have a scheduled booking for this car at ${upTime}. An instant wash now would cause a delay. Please cancel the upcoming booking first or wait.`, 400));
+            const instantServiceLabel = isIncomingChauffeur ? 'instant driver booking' : 'instant booking';
+            return next(new AppError(`Conflict detected! You have a scheduled booking for this car at ${upTime}. Starting an ${instantServiceLabel} now would cause a delay. Please cancel the upcoming booking first or wait.`, 400));
         }
     }
 
@@ -304,8 +451,51 @@ exports.createBooking = catchAsync(async (req, res, next) => {
         }
     }
 
-    // Get vehicle type multiplier
-    const vehicleMultiplier = Vehicle.getTypeMultiplier(vehicle.type);
+    // 🛡️ Zero-Trust Pricing: Multiplier is now resolved server-side in the PricingEngine
+    // using the vehicleId. Local calculation removed to prevent drift/manipulation.
+
+    // Sanitization & Mapping
+    const validCategories = ['Doorstep', 'Studio', 'Studio Detailing', 'Add-ons', 'Prestige', 'Chauffeur', 'Apartment'];
+    const validServiceTypes = ['captain', 'vendor', 'sparedriver'];
+    const validPaymentMethods = ['cash', 'online', 'wallet', 'subscription'];
+    const validLocationTypes = ['home', 'office', 'other', 'studio', 'Apartment'];
+
+    const sanitizedCategory = validCategories.includes(service.category) ? service.category :
+        (service.category === 'Express' ? 'Doorstep' : 'Doorstep');
+
+    let sanitizedServiceType = validServiceTypes.includes(service.type?.toLowerCase()) ? service.type.toLowerCase() : 'captain';
+    const sanitizedPaymentMethod = validPaymentMethods.includes(paymentMethod) ? paymentMethod : 'online';
+
+    let trustedServiceMetadata = service.metadata || {};
+    if (sanitizedServiceType === 'sparedriver' || sanitizedCategory === 'Chauffeur') {
+        const serviceLookup = [];
+        if (service?.id && /^[a-f\d]{24}$/i.test(String(service.id))) {
+            serviceLookup.push({ _id: service.id });
+        }
+        if (service?.id) {
+            serviceLookup.push({ 'metadata.id': service.id });
+            serviceLookup.push({ key: String(service.id).toUpperCase() });
+        }
+        if (service?.key) {
+            serviceLookup.push({ key: String(service.key).toUpperCase() });
+            serviceLookup.push({ 'metadata.id': service.key });
+        }
+        if (service?.name || service?.title) {
+            serviceLookup.push({ title: service.name || service.title });
+        }
+
+        if (serviceLookup.length > 0) {
+            const masterService = await MasterData.findOne({
+                type: 'SERVICE',
+                isActive: true,
+                $or: serviceLookup
+            }).lean();
+
+            if (masterService?.metadata) {
+                trustedServiceMetadata = masterService.metadata;
+            }
+        }
+    }
 
     // Calculate base pricing
     const baseAmount = parseInt(service.basePrice || String(service.price).replace(/[^\d]/g, '') || 299);
@@ -345,18 +535,6 @@ exports.createBooking = catchAsync(async (req, res, next) => {
         if (parkingDetails) bookingLocation.parkingDetails = parkingDetails;
     }
 
-    // Sanitization & Mapping
-    const validCategories = ['Doorstep', 'Studio', 'Studio Detailing', 'Add-ons', 'Prestige', 'Chauffeur', 'Apartment'];
-    const validServiceTypes = ['captain', 'vendor', 'sparedriver'];
-    const validPaymentMethods = ['cash', 'online', 'wallet', 'subscription'];
-    const validLocationTypes = ['home', 'office', 'other', 'studio', 'Apartment'];
-
-    const sanitizedCategory = validCategories.includes(service.category) ? service.category :
-        (service.category === 'Express' ? 'Doorstep' : 'Doorstep');
-
-    let sanitizedServiceType = validServiceTypes.includes(service.type?.toLowerCase()) ? service.type.toLowerCase() : 'captain';
-    const sanitizedPaymentMethod = validPaymentMethods.includes(paymentMethod) ? paymentMethod : 'online';
-
     // Elite Hardening: Apartment Hub Protocol routing
     // If a hubId is provided (or implied via location), the service MUST be routed to the Vendor/Staff
     // even if the base service normally defaults to Captain (e.g., Express at an Apartment).
@@ -374,7 +552,7 @@ exports.createBooking = catchAsync(async (req, res, next) => {
     }
     
     if (sanitizedCategory === 'Chauffeur' && bookingDestination && (!bookingDestination.coordinates || !bookingDestination.coordinates.lat)) {
-        throw new AppError('Destination GPS coordinates are required for Point-to-Point service.', 400);
+        throw new AppError('Destination GPS coordinates are required for chauffeur travel.', 400);
     }
 
     // Prepare schedule
@@ -384,24 +562,48 @@ exports.createBooking = catchAsync(async (req, res, next) => {
         timeSlot: schedule?.timeSlot || req.body.timeSlot || null,
         estimatedDuration: service.duration || '40 min'
     };
+    const chauffeurDispatchReady = sanitizedServiceType !== 'sparedriver' || isDispatchReadySchedule(bookingSchedule);
 
     // 3. Centralized Pricing Engine (Industrial Eligibility Aware)
     const pricingResult = await PricingEngine.calculate({
         servicePrice: baseAmount,
-        vehicleMultiplier,
+        vehicleId: effectiveVehicleId, // 🛡️ Pass ID directly for server-side lookup
         addonAmount,
         couponCode,
         paymentMethod: sanitizedPaymentMethod,
         isCombo: Array.isArray(addons) && addons.filter(a => !a.included).length > 0,
-        service: { 
-            category: sanitizedCategory, 
-            schedule: bookingSchedule 
+        service: {
+            id: service.id || service.key || '',
+            key: service.key || service.id || '',
+            name: service.name || service.title || '',
+            title: service.title || service.name || '',
+            category: sanitizedCategory,
+            type: sanitizedServiceType,
+            metadata: trustedServiceMetadata,
+            schedule: bookingSchedule
         },
         hub: hubId || req.body.hub || null,
         location: bookingLocation
     }, req.user);
 
-    const { totalAmount, discounts, appliedBenefit, breakdown } = pricingResult;
+    const { totalAmount, discounts, appliedBenefit, breakdown, vehicleMultiplier } = pricingResult;
+    const chauffeurReserve = sanitizedServiceType === 'sparedriver'
+        ? getChauffeurReserveAmount({
+            ...service,
+            duration: service.duration || bookingSchedule.estimatedDuration,
+            schedule: bookingSchedule
+        }, totalAmount)
+        : { bookedHours: 0, reserveHours: 0, reserveAmount: 0 };
+
+    if (sanitizedServiceType === 'sparedriver') {
+        const walletBalance = Number(req.user.wallet?.balance || 0);
+        if (walletBalance < chauffeurReserve.reserveAmount) {
+            return next(new AppError(
+                `Please maintain at least ₹${chauffeurReserve.reserveAmount} in your wallet as a 2-hour reserve before booking this driver service.`,
+                400
+            ));
+        }
+    }
 
     // Resolve coupon record
     let appliedCouponRecord = null;
@@ -423,6 +625,7 @@ exports.createBooking = catchAsync(async (req, res, next) => {
     session.startTransaction();
 
     try {
+        const bookingId = new mongoose.Types.ObjectId();
         let paymentStatus = 'pending';
         let transactionId = paymentId || orderId;
 
@@ -445,16 +648,23 @@ exports.createBooking = catchAsync(async (req, res, next) => {
             paymentStatus = 'paid';
         } else if (sanitizedPaymentMethod === 'subscription') {
             const Subscription = require('../../../models/Subscription');
-            const activeSub = await Subscription.getActiveSubscription(req.user.id);
+            const subscriptionBookingContext = {
+                service: {
+                    category: sanitizedCategory,
+                    type: sanitizedServiceType,
+                    key: service.key || service.id || '',
+                    name: service.name || service.title || '',
+                    schedule: bookingSchedule
+                },
+                hub: req.body.hubId || req.body.hub || null,
+                location: bookingLocation,
+                destination: bookingDestination
+            };
+            const activeSub = await Subscription.getActiveSubscription(req.user.id, subscriptionBookingContext);
             if (!activeSub) throw new AppError('No active subscription found.', 404);
 
             // eligibility audit
-            if (!activeSub.isServiceEligible({ 
-                service: { category: sanitizedCategory, schedule: bookingSchedule }, 
-                hub: req.body.hubId || req.body.hub || null, 
-                location: bookingLocation,
-                destination: bookingDestination
-            })) {
+            if (!activeSub.isServiceEligible(subscriptionBookingContext)) {
                 throw new AppError('Service not covered by your subscription plan.', 400);
             }
 
@@ -467,8 +677,13 @@ exports.createBooking = catchAsync(async (req, res, next) => {
             paymentStatus = 'paid';
         }
 
+        if (sanitizedServiceType === 'sparedriver' && chauffeurReserve.reserveAmount > 0) {
+            await holdChauffeurReserve(req.user.id, bookingId.toString(), chauffeurReserve.reserveAmount, session);
+        }
+
         // Create booking
         const [newBooking] = await Booking.create([{
+            _id: bookingId,
             consumer: req.user.id,
             vehicle: effectiveVehicleId,
             service: {
@@ -478,13 +693,18 @@ exports.createBooking = catchAsync(async (req, res, next) => {
                 type: sanitizedServiceType,
                 duration: service.duration || '40 min',
                 basePrice: baseAmount,
-                features: service.features || []
+                features: service.features || trustedServiceMetadata.features || [],
+                metadata: trustedServiceMetadata
             },
             pricing: {
                 baseAmount,
                 vehicleMultiplier,
                 addonAmount,
-                discountAmount: (breakdown || []).reduce((sum, d) => sum + (d.amount || 0), 0),
+                discountAmount: (breakdown || []).reduce((sum, item) => (
+                    ['subscription', 'loyalty', 'combo', 'goldpass', 'coupon'].includes(item?.type)
+                        ? sum + (item.amount || 0)
+                        : sum
+                ), 0),
                 totalAmount,
                 initialPaidAmount: totalAmount, // 💎 Arrears Protocol Reference 💎
                 breakdown: breakdown || []
@@ -499,6 +719,13 @@ exports.createBooking = catchAsync(async (req, res, next) => {
                 method: sanitizedPaymentMethod,
                 status: paymentStatus,
                 transactionId: transactionId,
+                walletReserveAmount: chauffeurReserve.reserveAmount,
+                walletReserveHours: chauffeurReserve.reserveHours,
+                walletReserveHeldAmount: sanitizedServiceType === 'sparedriver' ? chauffeurReserve.reserveAmount : 0,
+                walletReserveConsumedAmount: 0,
+                walletReserveReleasedAmount: 0,
+                walletReserveStatus: sanitizedServiceType === 'sparedriver' && chauffeurReserve.reserveAmount > 0 ? 'held' : 'not_required',
+                walletReserveHeldAt: sanitizedServiceType === 'sparedriver' && chauffeurReserve.reserveAmount > 0 ? new Date() : null,
                 coupon: appliedCouponRecord
             },
             provider: {
@@ -551,11 +778,13 @@ exports.createBooking = catchAsync(async (req, res, next) => {
             });
 
             if (sanitizedServiceType === 'captain') {
+                const requestedCapability = getVehicleCapability(vehicle);
                 const broadcastPayload = {
                     bookingId: newBooking._id,
                     serviceName: service.name || service.title,
                     location: bookingLocation,
                     vehicle: { brand: vehicle.brand, model: vehicle.model, plate: vehicle.plate },
+                    capabilityRequired: requestedCapability || 'car',
                     pricing: { total: totalAmount },
                     timestamp: new Date()
                 };
@@ -570,34 +799,37 @@ exports.createBooking = catchAsync(async (req, res, next) => {
                             }
                         }
                     });
-                    nearbyCaptains.forEach(c => io.to(c._id.toString()).emit('new_booking_broadcast', broadcastPayload));
+
+                    const captainsWithTaggedCapability = nearbyCaptains.filter(c => normalizeCapabilityLabel(c.profile?.vehicleType));
+                    const eligibleCaptains = requestedCapability && captainsWithTaggedCapability.length > 0
+                        ? nearbyCaptains.filter(c => captainMatchesCapability(c.profile?.vehicleType, requestedCapability))
+                        : nearbyCaptains;
+
+                    eligibleCaptains.forEach(c => io.to(c._id.toString()).emit('new_booking_broadcast', broadcastPayload));
                 } else {
                     io.emit('new_booking_broadcast', broadcastPayload);
                 }
             } else if (sanitizedServiceType === 'sparedriver') {
-                const SpareDriver = require('../../../models/SpareDriver');
-                const broadcastPayload = {
-                    bookingId: newBooking._id,
-                    serviceName: service.name || service.title,
-                    location: bookingLocation,
-                    vehicle: { brand: vehicle.brand, model: vehicle.model, plate: vehicle.plate },
-                    pricing: { total: totalAmount },
-                    timestamp: new Date()
-                };
-
-                if (bookingLocation.address?.coordinates?.lat) {
-                    const nearbyDrivers = await SpareDriver.find({
-                        isOnline: true, status: 'active',
-                        currentLocation: {
-                            $nearSphere: {
-                                $geometry: { type: 'Point', coordinates: [parseFloat(bookingLocation.address.coordinates.lng), parseFloat(bookingLocation.address.coordinates.lat)] },
-                                $maxDistance: 7000 // Slightly wider range for drivers
-                            }
+                if (chauffeurDispatchReady) {
+                    await broadcastBookingToDrivers(newBooking, {
+                        serviceName: service.name || service.title || 'Spare Driver service',
+                        vehicle: { brand: vehicle.brand, model: vehicle.model, plate: vehicle.plate },
+                        reason: 'booking_created'
+                    });
+                } else {
+                    await sendNotification(req.user.id, {
+                        title: 'Trip Scheduled',
+                        message: 'Your chauffeur trip is confirmed. Driver matching will begin closer to your booking time.',
+                        type: 'booking',
+                        priority: 'high',
+                        actionUrl: '/spare-driver/history',
+                        actionText: 'View Booking',
+                        metaData: {
+                            bookingId: newBooking._id.toString(),
+                            status: 'pending',
+                            dispatchState: 'scheduled_hold'
                         }
                     });
-                    nearbyDrivers.forEach(d => io.to(d._id.toString()).emit('new_booking_broadcast', broadcastPayload));
-                } else {
-                    io.emit('new_booking_broadcast', broadcastPayload);
                 }
             } else if (sanitizedServiceType === 'vendor') {
                 // If a specific hub was assigned, notify that vendor primarily
@@ -623,38 +855,29 @@ exports.createBooking = catchAsync(async (req, res, next) => {
                     }
                     io.emit('new_studio_booking', { bookingId: newBooking._id });
                 }
-            } else if (sanitizedServiceType === 'sparedriver') {
-                // Elite Protocol: Broadcast to nearby Spare Drivers
-                const broadcastPayload = {
-                    bookingId: newBooking._id,
-                    serviceName: service.name || 'Spare Driver service',
-                    location: bookingLocation,
-                    vehicle: { brand: vehicle.brand, model: vehicle.model, plate: vehicle.plate },
-                    pricing: { total: totalAmount },
-                    timestamp: new Date()
-                };
-
-                if (bookingLocation.address?.coordinates?.lat) {
-                    const nearbyDrivers = await mongoose.model('SpareDriver').find({
-                        isOnline: true, status: 'active',
-                        currentLocation: {
-                            $nearSphere: {
-                                $geometry: { type: 'Point', coordinates: [parseFloat(bookingLocation.address.coordinates.lng), parseFloat(bookingLocation.address.coordinates.lat)] },
-                                $maxDistance: 10000 // 10km for drivers
-                            }
-                        }
-                    });
-                    nearbyDrivers.forEach(d => io.to(d._id.toString()).emit('new_booking_broadcast', broadcastPayload));
-                } else {
-                    io.emit('new_booking_broadcast', broadcastPayload);
-                }
             }
 
-            return res.status(201).json({ status: 'success', message: 'Booking created successfully', data: { booking: populatedBooking } });
+            return res.status(201).json({ 
+                status: 'success', 
+                message: 'Booking created successfully', 
+                data: { 
+                    booking: populatedBooking,
+                    securityPin: populatedBooking.securityPin,
+                    dispatchReady: chauffeurDispatchReady
+                } 
+            });
 
         } catch (sideErr) {
             console.error('Post-transaction side-effects error:', sideErr);
-            return res.status(201).json({ status: 'success', message: 'Booking created, notifications may delay.', data: { bookingId: newBooking._id } });
+            return res.status(201).json({ 
+                status: 'success', 
+                message: 'Booking created, notifications may delay.', 
+                data: { 
+                    bookingId: newBooking._id,
+                    securityPin: newBooking.securityPin,
+                    dispatchReady: chauffeurDispatchReady
+                } 
+            });
         }
 
     } catch (error) {
@@ -723,7 +946,12 @@ exports.updateBooking = catchAsync(async (req, res, next) => {
                     booking.payment.status = 'refunded';
                 } else if (booking.payment.method === 'subscription') {
                     const Subscription = require('../../../models/Subscription');
-                    const activeSub = await Subscription.getActiveSubscription(booking.consumer._id);
+                    const activeSub = await Subscription.getActiveSubscription(booking.consumer._id, {
+                        service: booking.service || {},
+                        hub: booking.location?.hubId || null,
+                        location: booking.location || {},
+                        destination: booking.location?.destination || null
+                    });
                     if (activeSub) {
                         await activeSub.addCredits(1); // Return the wash credit
                     }
@@ -834,7 +1062,7 @@ exports.cancelBooking = catchAsync(async (req, res, next) => {
     }
 
     // Check if booking can be cancelled
-    if (!['pending', 'confirmed'].includes(booking.status)) {
+    if (!['pending', 'confirmed', 'accepted'].includes(booking.status)) {
         return next(new AppError('Cannot cancel booking after it has been assigned', 400));
     }
 
@@ -842,6 +1070,11 @@ exports.cancelBooking = catchAsync(async (req, res, next) => {
     const oldStatus = booking.status;
     booking.status = 'cancelled';
     booking.notes.consumer = reason || 'Cancelled by consumer';
+
+    if (booking.service?.type === 'sparedriver') {
+        await releaseChauffeurReserve(booking, 'consumer_cancelled');
+    }
+
     await booking.save();
 
     // Audit Log: Booking Cancelled
@@ -904,7 +1137,12 @@ exports.cancelBooking = catchAsync(async (req, res, next) => {
                 booking.payment.status = 'refunded';
             } else if (booking.payment.method === 'subscription') {
                 const Subscription = require('../../../models/Subscription');
-                const activeSub = await Subscription.getActiveSubscription(booking.consumer);
+                const activeSub = await Subscription.getActiveSubscription(booking.consumer, {
+                    service: booking.service || {},
+                    hub: booking.location?.hubId || null,
+                    location: booking.location || {},
+                    destination: booking.location?.destination || null
+                });
                 if (activeSub) {
                     await activeSub.addCredits(1);
                 }
@@ -948,6 +1186,175 @@ exports.cancelBooking = catchAsync(async (req, res, next) => {
     res.status(200).json({
         status: 'success',
         message: 'Booking cancelled successfully',
+        data: {
+            booking
+        }
+    });
+});
+
+exports.settleAdditionalPayment = catchAsync(async (req, res, next) => {
+    const {
+        paymentMethod = 'wallet',
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature
+    } = req.body || {};
+
+    const booking = await Booking.findOne({
+        _id: req.params.id,
+        consumer: req.user.id,
+        isActive: true,
+        status: 'completed',
+        'service.type': 'sparedriver'
+    }).populate('provider.id', 'name phone');
+
+    if (!booking) {
+        return next(new AppError('Chauffeur booking not found', 404));
+    }
+
+    const pendingAmount = booking.payment?.pendingAmount || Math.max(
+        0,
+        (booking.pricing?.totalAmount || 0) - (booking.pricing?.initialPaidAmount || 0) - (booking.payment?.settledAmount || 0)
+    );
+
+    if (pendingAmount <= 0 || booking.payment?.status !== 'settlement_pending') {
+        return res.status(200).json({
+            status: 'success',
+            message: 'No additional payment is pending for this trip',
+            data: { booking }
+        });
+    }
+
+    if (!['wallet', 'online'].includes(paymentMethod)) {
+        return next(new AppError('Please choose wallet or online payment for settlement', 400));
+    }
+
+    const consumer = await User.findById(req.user.id).select('wallet');
+    if (!consumer) {
+        return next(new AppError('Consumer account not found', 404));
+    }
+
+    if (paymentMethod === 'wallet') {
+        const walletBalance = consumer.wallet?.balance || 0;
+        if (walletBalance < pendingAmount) {
+            return next(new AppError(`Insufficient wallet balance. Please add ${pendingAmount - walletBalance} or choose online payment.`, 400));
+        }
+
+        await executeWalletTransaction(
+            consumer._id,
+            pendingAmount,
+            'debit',
+            {
+                category: 'SERVICE_CHARGE',
+                description: `Final chauffeur settlement for booking #${booking.bookingId || booking._id}`,
+                referenceId: booking._id.toString(),
+                referenceType: 'booking_settlement',
+                creditLimit: 0
+            }
+        );
+    } else {
+        if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+            return next(new AppError('All online payment details are required', 400));
+        }
+
+        const secret = process.env.RAZORPAY_KEY_SECRET || 'GkxKRQ2B0U63BKBoayuugS3D';
+        const generatedSignature = crypto
+            .createHmac('sha256', secret)
+            .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+            .digest('hex');
+
+        if (generatedSignature !== razorpay_signature) {
+            return next(new AppError('Invalid payment signature', 400));
+        }
+    }
+
+    const previouslySettledAmount = booking.payment?.settledAmount || 0;
+    const newSettledAmount = previouslySettledAmount + pendingAmount;
+    const totalCollectedRevenue = (booking.pricing?.initialPaidAmount || 0) + newSettledAmount;
+    const previousProviderPayout = booking.payment?.providerPayoutAmount || 0;
+
+    const { adminCut, providerPayout } = await commissionHelper.calculatePayout(
+        totalCollectedRevenue,
+        'sparedriver',
+        { overrideRate: getChauffeurCommissionOverride(booking) }
+    );
+    const payoutDelta = Math.max(0, providerPayout - previousProviderPayout);
+
+    if (payoutDelta > 0 && booking.provider?.id?._id) {
+        await executeWalletTransaction(
+            booking.provider.id._id,
+            payoutDelta,
+            'credit',
+            {
+                category: 'SERVICE_BOOKING',
+                description: `Settlement payout for booking ${booking.bookingId || booking._id}`,
+                referenceId: `${booking._id.toString()}-settlement`,
+                referenceType: 'booking_settlement_payout'
+            },
+            null,
+            SpareDriver
+        );
+    }
+
+    booking.payment.pendingAmount = 0;
+    booking.payment.settledAmount = newSettledAmount;
+    booking.payment.status = 'paid';
+    booking.payment.settlementStatus = 'paid';
+    booking.payment.settlementMethod = paymentMethod;
+    booking.payment.settlementTransactionId = paymentMethod === 'online' ? razorpay_payment_id : booking.payment.settlementTransactionId;
+    booking.payment.settlementCollectedAt = new Date();
+    booking.payment.providerPayoutAmount = providerPayout;
+    booking.payment.platformCommissionAmount = adminCut;
+    booking.notes = booking.notes || {};
+    booking.notes.internal = `${booking.notes.internal || ''}\n[SETTLEMENT_CLOSED] Additional ₹${pendingAmount} settled via ${paymentMethod}.`.trim();
+    await booking.save();
+
+    const io = socketService.getIO();
+    io.to(booking._id.toString()).emit('booking_status_updated', {
+        bookingId: booking._id,
+        status: booking.status,
+        paymentStatus: 'paid',
+        pendingAmount: 0,
+        message: 'Additional payment settled successfully.'
+    });
+    io.to('admin_room').emit('global_status_update', {
+        type: 'payment_received',
+        bookingId: booking._id,
+        amount: pendingAmount,
+        paymentStatus: 'paid',
+        serviceType: 'sparedriver'
+    });
+
+    await Promise.all([
+        sendNotification(req.user.id, {
+            title: 'Settlement Completed',
+            message: `Your additional chauffeur payment of ₹${pendingAmount} has been received successfully.`,
+            type: 'payment',
+            priority: 'high',
+            actionUrl: '/spare-driver/history',
+            actionText: 'View Trip',
+            metaData: {
+                bookingId: booking._id.toString(),
+                paymentStatus: 'paid'
+            }
+        }),
+        booking.provider?.id?._id ? sendSpareDriverNotification(booking.provider.id._id, {
+            title: 'Settlement Released',
+            message: `Additional payout for booking ${booking.bookingId || booking._id} has been settled.`,
+            type: 'payout',
+            priority: 'medium',
+            actionUrl: '/spare-driver/earnings',
+            actionText: 'Open Earnings',
+            metaData: {
+                bookingId: booking._id.toString(),
+                payoutDelta
+            }
+        }) : Promise.resolve()
+    ]);
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Additional settlement paid successfully',
         data: {
             booking
         }

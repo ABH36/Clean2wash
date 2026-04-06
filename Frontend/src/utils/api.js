@@ -266,8 +266,9 @@ class ApiClient {
     }
 
     // Subscription methods
-    async getSubscription(id) {
-        return this.request(`/subscription${id ? `?id=${id}` : ''}`);
+    async getSubscription(params = {}) {
+        const queryString = new URLSearchParams(params).toString();
+        return this.request(`/subscription${queryString ? `?${queryString}` : ''}`);
     }
 
     async createSubscription(planData) {
@@ -277,21 +278,40 @@ class ApiClient {
         });
     }
 
-    async cancelSubscription() {
-        return this.request('/subscription', {
+    async cancelSubscription(params = {}) {
+        const queryString = new URLSearchParams(params).toString();
+        return this.request(`/subscription${queryString ? `?${queryString}` : ''}`, {
             method: 'DELETE',
         });
     }
 
-    async pauseSubscription() {
-        return this.request('/subscription/pause', {
+    async pauseSubscription(params = {}) {
+        const queryString = new URLSearchParams(params).toString();
+        return this.request(`/subscription/pause${queryString ? `?${queryString}` : ''}`, {
             method: 'PATCH',
         });
     }
 
-    async resumeSubscription() {
-        return this.request('/subscription/resume', {
+    async resumeSubscription(params = {}) {
+        const queryString = new URLSearchParams(params).toString();
+        return this.request(`/subscription/resume${queryString ? `?${queryString}` : ''}`, {
             method: 'PATCH',
+        });
+    }
+
+    async updateSubscription(data, params = {}) {
+        const queryString = new URLSearchParams(params).toString();
+        return this.request(`/subscription${queryString ? `?${queryString}` : ''}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async skipSubscription(date, params = {}) {
+        const queryString = new URLSearchParams(params).toString();
+        return this.request(`/subscription/skip${queryString ? `?${queryString}` : ''}`, {
+            method: 'POST',
+            body: JSON.stringify({ date }),
         });
     }
 
@@ -385,6 +405,13 @@ class ApiClient {
         });
     }
 
+    async settleBookingPayment(bookingId, settlementData) {
+        return this.request(`/bookings/${bookingId}/settle-payment`, {
+            method: 'POST',
+            body: JSON.stringify(settlementData),
+        });
+    }
+
     // Services methods
     async getServices(params = {}) {
         const queryString = new URLSearchParams(params).toString();
@@ -420,6 +447,13 @@ class ApiClient {
     async getApartmentFlowData(params = {}) {
         const queryString = new URLSearchParams(params).toString();
         return this.request(`/services/apartment-flow${queryString ? `?${queryString}` : ''}`);
+    }
+
+    async requestApartmentLead(data) {
+        return this.request('/services/apartment-flow/request', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
     }
 
     async calculatePricing(serviceData) {
@@ -623,12 +657,17 @@ export const notificationAPI = {
 };
 
 export const subscriptionAPI = {
-    getSubscription: (id) => apiClient.getSubscription(id),
+    getSubscription: (params = {}) => apiClient.getSubscription(params),
     createSubscription: (data) => apiClient.createSubscription(data),
-    cancelSubscription: () => apiClient.cancelSubscription(),
-    pauseSubscription: () => apiClient.pauseSubscription(),
-    resumeSubscription: () => apiClient.resumeSubscription(),
-    useSubscriptionCredit: () => apiClient.post('/subscription/use-credit', {}),
+    updateSubscription: (data, params = {}) => apiClient.updateSubscription(data, params),
+    cancelSubscription: (params = {}) => apiClient.cancelSubscription(params),
+    pauseSubscription: (params = {}) => apiClient.pauseSubscription(params),
+    resumeSubscription: (params = {}) => apiClient.resumeSubscription(params),
+    skipSubscription: (date, params = {}) => apiClient.skipSubscription(date, params),
+    useSubscriptionCredit: (params = {}) => {
+        const queryString = new URLSearchParams(params).toString();
+        return apiClient.post(`/subscription/use-credit${queryString ? `?${queryString}` : ''}`, {});
+    },
 };
 
 export const vehicleAPI = {
@@ -637,6 +676,7 @@ export const vehicleAPI = {
     updateVehicle: (id, data) => apiClient.updateVehicle(id, data),
     deleteVehicle: (id) => apiClient.deleteVehicle(id),
     getVehicleTypes: () => apiClient.getVehicleTypes(),
+    getVehicleBrands: () => apiClient.get("/vehicles/brands"),
     getVehicleModels: (params) => apiClient.getVehicleModels(params),
 };
 
@@ -646,6 +686,11 @@ export const bookingAPI = {
     createBooking: (data) => apiClient.createBooking(data),
     updateBooking: (id, data) => apiClient.updateBooking(id, data),
     cancelBooking: (id, reason) => apiClient.cancelBooking(id, reason),
+    settleBookingPayment: (id, data) => apiClient.settleBookingPayment(id, data),
+    reportIssue: (id, data) => apiClient.request(`/bookings/${id}/issues`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+    }),
     submitFeedback: (id, data) => apiClient.request(`/bookings/${id}/feedback`, {
         method: 'POST',
         body: JSON.stringify(data),
@@ -686,6 +731,7 @@ export const serviceAPI = {
     getCategories: () => apiClient.getServiceCategories(),
     getPlans: (params) => apiClient.getPlans(params),
     getApartmentFlowData: (params) => apiClient.getApartmentFlowData(params),
+    requestApartmentLead: (data) => apiClient.requestApartmentLead(data),
     getServicePlans: (id) => apiClient.getServicePlans(id),
     calculatePricing: (data) => apiClient.calculatePricing(data),
     getTimeSlots: (params) => apiClient.getTimeSlots(params),

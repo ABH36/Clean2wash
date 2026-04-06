@@ -13,7 +13,7 @@ import { serviceAPI } from '../../../utils/api';
 import LocationIndicator from '../../../components/Location/LocationIndicator';
 import MobileLayout from '../components/layout/MobileLayout';
 import PremiumBadge from '../components/membership/PremiumBadge';
-import BlackPassModal from '../components/membership/BlackPassModal';
+import GoldPassModal from '../components/membership/GoldPassModal';
 
 const CountdownTimer = ({ targetTime }) => {
     const [timeLeft, setTimeLeft] = useState('');
@@ -47,8 +47,8 @@ const Home = () => {
     const [showSOS, setShowSOS] = useState(false);
     const [sosCountdown, setSosCountdown] = useState(5);
     const [sosActive, setSosActive] = useState(false);
-    const [showBlackPassModal, setShowBlackPassModal] = useState(false);
-    const { getUser, userSubscription, isBlackPassMember, bookings, dispatchSOS } = useAuth();
+    const [showGoldPassModal, setShowGoldPassModal] = useState(false);
+    const { getUser, userSubscription, isGoldPassMember, bookings, dispatchSOS } = useAuth();
     const user = getUser('consumer');
 
     const triggerSOS = () => {
@@ -72,6 +72,9 @@ const Home = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearching, setIsSearching] = useState(false);
     const [showAllServices, setShowAllServices] = useState(false);
+    const [activePromo, setActivePromo] = useState(0);
+
+    /* --- Dynamic Content Fetching --- */
 
     useEffect(() => {
         const fetchHomeData = async () => {
@@ -127,32 +130,39 @@ const Home = () => {
 
 
     const renderHeader = () => (
-        <header className="px-5 pt-8 pb-4 bg-[#FFF6E9] flex flex-col gap-5">
+        <header className="px-5 pt-3 pb-2 bg-[#FFF6E9] flex flex-col gap-1 shadow-sm shadow-black/[0.02] border-b border-black/[0.03]">
+            {/* Top Row: Logo & Icons */}
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-black">CW</div>
-                    <LocationIndicator variant="minimal" className="ml-1" />
+                <div className="flex flex-col">
+                    <div className="w-10 h-10 bg-brand rounded-2xl flex items-center justify-center text-white font-black text-xs shadow-lg shadow-brand/20 active:scale-95 transition-transform">CW</div>
                 </div>
+                
                 <div className="flex items-center gap-2">
-                    <button onClick={() => navigate('/wallet')} className="w-10 h-10 bg-black/5 rounded-xl flex items-center justify-center relative">
-                        <Wallet size={20} className="text-black" />
+                    <button onClick={() => navigate('/wallet')} className="w-9 h-9 bg-black/5 rounded-xl flex items-center justify-center relative active:scale-95 transition-all hover:bg-black/10 flex-shrink-0">
+                        <Wallet size={19} className="text-black" />
                     </button>
-                    <button onClick={() => navigate('/portfolio')} className="w-10 h-10 bg-black/5 rounded-xl flex items-center justify-center relative">
-                        <Image size={20} className="text-black" />
+                    <button onClick={() => navigate('/portfolio')} className="w-9 h-9 bg-black/5 rounded-xl flex items-center justify-center relative active:scale-95 transition-all hover:bg-black/10 flex-shrink-0">
+                        <Image size={19} className="text-black" />
                     </button>
-                    <button onClick={() => navigate('/notifications')} className="w-10 h-10 bg-black/5 rounded-xl flex items-center justify-center relative">
-                        <Bell size={20} className="text-black" />
+                    <button onClick={() => navigate('/notifications')} className="w-9 h-9 bg-black/5 rounded-xl flex items-center justify-center relative active:scale-95 transition-all hover:bg-black/10 flex-shrink-0">
+                        <Bell size={19} className="text-black" />
                         <span className="absolute top-2 right-2 w-2 h-2 bg-brand border-2 border-[#FFF6E9] rounded-full" />
                     </button>
-                    <button onClick={() => navigate('/profile')} className="w-10 h-10 bg-black/5 rounded-xl flex items-center justify-center overflow-hidden relative">
-                        <User size={20} className="text-black" />
-                        {isBlackPassMember && (
-                            <div className="absolute -top-1 -right-1 z-30 scale-[0.6]">
+                    <button onClick={() => navigate('/profile')} className="w-9 h-9 bg-black/5 rounded-xl flex items-center justify-center overflow-visible relative active:scale-95 transition-all hover:bg-black/10 flex-shrink-0">
+                        <User size={19} className="text-black" />
+                        {isGoldPassMember && (
+                            <div className="absolute -top-1.5 -right-1.5 z-30 scale-[0.55]">
                                 <PremiumBadge />
                             </div>
                         )}
                     </button>
                 </div>
+            </div>
+
+            {/* Bottom Row: Location (Native High Contrast) */}
+            <div className="flex items-center gap-0.5 ml-0.5">
+                <LocationIndicator variant="minimal" className="font-[1000] text-[10px] text-black uppercase tracking-tight max-w-[220px] truncate" />
+                <ChevronDown size={14} className="text-black/40" strokeWidth={3} />
             </div>
         </header>
     );
@@ -508,38 +518,64 @@ const Home = () => {
     const studioServices = useMemo(() => services.filter(s => s.metadata?.category?.toLowerCase() === 'studio' || s.category?.toLowerCase() === 'studio').slice(0, 3), [services]);
     const expansionItems = useMemo(() => promotionalCards.filter(c => c.type === 'Expansion'), [promotionalCards]);
     const sliderCards = useMemo(() => {
-        const dbCards = promotionalCards.filter(c => c.type !== 'Expansion');
+        const dbCards = [...promotionalCards];
 
-        // Inject Premium Black Pass Card if user OR if not a member
-        const blackCard = {
-            id: 'static-black-pass',
-            title: 'Black Pass Membership',
+        // 1. Premium Gold Pass Card (Evergreen)
+        const goldCard = {
+            id: 'static-gold-pass',
+            title: 'Gold Pass Membership',
             subtitle: '30% OFF ON ALL SERVICES FOREVER',
             badge: 'PREMIUM',
             theme: 'dark',
             cta: 'Purchase Now',
-            image: '/assets/carwash/7.png',
-            action: () => setShowBlackPassModal(true)
+            image: '/assets/carwashsubscription/7.png',
+            action: () => setShowGoldPassModal(true)
         };
 
-        return [blackCard, ...dbCards];
-    }, [promotionalCards, isBlackPassMember]);
+        // 2. Refer & Earn Card (Growth Protocol)
+        const referCard = {
+            id: 'static-refer-earn',
+            title: 'Refer & Earn Rewards',
+            subtitle: 'Share the shine and get ₹50 credits',
+            badge: 'REFERRAL',
+            theme: 'light',
+            cta: 'Invite Friends',
+            image: '/assets/carwash/2.png',
+            path: '/profile/referral'
+        };
+
+        // 3. Special Shop Offer (Retention)
+        const shopCard = {
+            id: 'static-shop-offer',
+            title: 'Clean2Wash Flash Sale',
+            subtitle: 'Up to 20% OFF on car care kits',
+            badge: 'MEGA OFFER',
+            theme: 'dark',
+            cta: 'Visit E-Shop',
+            image: '/assets/product-accessories/product.png',
+            path: '/e-shop'
+        };
+
+        return [goldCard, referCard, shopCard, ...dbCards];
+    }, [promotionalCards, isGoldPassMember]);
+
+    // Loop logic for the promotional cards carousel
+    useEffect(() => {
+        if (!sliderCards || sliderCards.length <= 1) return;
+        const timer = setInterval(() => {
+            setActivePromo(prev => (prev + 1) % sliderCards.length);
+        }, 6000); 
+        return () => clearInterval(timer);
+    }, [sliderCards?.length]);
 
     const exploreItems = useMemo(() => {
-        const dbExplore = categories.filter(c => c.metadata?.isExplore);
-        // Add Products link if not present
-        if (!dbExplore.find(i => i.title === 'Products' || i.name === 'Products')) {
-            dbExplore.unshift({ title: 'Products', image: '/assets/product-accessories/product.png', path: '/e-shop' });
-        }
-        return dbExplore.map(item => ({
-            ...item,
-            title: item.title || item.name,
-            icon: item.iconUrl || item.icon,
-            image: item.image || (item.icon?.startsWith('/') ? item.icon : null),
-            color: item.metadata?.color || item.color,
-            action: item.metadata?.action || item.action
-        }));
-    }, [categories]);
+        // High-Fidelity Utility Row (Mission Critical Hub)
+        return [
+            { title: 'Products', image: '/assets/product-accessories/product.png', path: '/e-shop' },
+            { title: 'My Garage', icon: 'car', color: '#3B82F6', path: '/vehicles' },
+            { title: 'Emergency SOS', icon: 'alert-triangle', color: '#EF4444', action: triggerSOS },
+        ];
+    }, []);
 
     const viewMoreServices = [
         { title: 'Instant Wash', icon: Car, color: '#F29F05', path: '/instant-wash' },
@@ -680,73 +716,6 @@ const Home = () => {
         return (
             <div className="pb-6 space-y-8">
                 {/* Everything In Minutes - Rapido Style Bento Grid */}
-                {/* Active Booking Live Tracker Card */}
-                <AnimatePresence>
-                    {activeBooking && (
-                        <motion.section
-                            initial={{ opacity: 0, y: -20, height: 0 }}
-                            animate={{ opacity: 1, y: 0, height: 'auto' }}
-                            className="px-5 pt-3"
-                        >
-                            <div
-                                onClick={() => navigate(`/booking-status?id=${activeBooking._id || activeBooking.id}&type=${activeBooking.service?.type || activeBooking.type || 'captain'}`)}
-                                className="bg-[#0F172A] rounded-3xl p-5 text-white flex flex-col gap-4 relative overflow-hidden shadow-2xl cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform"
-                            >
-                                {/* Decorative Blur */}
-                                <div className="absolute -right-8 -top-8 w-32 h-32 bg-brand/30 rounded-full blur-3xl pointer-events-none" />
-
-                                <div className="relative z-10 flex items-center justify-between">
-                                    <div className="flex items-center gap-2.5">
-                                        <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/10 backdrop-blur-md">
-                                            <Zap size={20} className="text-brand" fill="currentColor" />
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <h3 className="font-[1000] text-[15px] uppercase tracking-tighter leading-none">Live Mission</h3>
-                                                <span className="flex items-center gap-1 bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border border-green-500/30">
-                                                    <span className="w-1 h-1 bg-green-500 rounded-full animate-ping" /> Active
-                                                </span>
-                                            </div>
-                                            <p className="text-white/40 text-[10px] uppercase font-bold tracking-widest mt-1">Tap to track status</p>
-                                        </div>
-                                    </div>
-                                    <div className="bg-white/5 w-10 h-10 rounded-xl flex items-center justify-center border border-white/10">
-                                        <ChevronRight size={20} className="text-white/40" />
-                                    </div>
-                                </div>
-
-                                <div className="relative z-10 bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col gap-3">
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex-1">
-                                            <p className="text-[10px] text-brand font-black uppercase tracking-widest mb-1">Service</p>
-                                            <p className="text-[14px] font-black leading-tight tracking-snug">{activeBooking.service?.name || activeBooking.serviceName || 'Car Wash'}</p>
-                                        </div>
-                                        <div className="w-px h-8 bg-white/10" />
-                                        <div className="flex-1">
-                                            <p className="text-[10px] text-brand font-black uppercase tracking-widest mb-1">Status</p>
-                                            <p className="text-[14px] font-black leading-tight tracking-snug text-green-400 capitalize">{(activeBooking.status || '').replace('_', ' ')}</p>
-                                        </div>
-                                    </div>
-
-                                    {activeBooking.schedule?.type === 'scheduled' && activeBooking.status === 'confirmed' && (
-                                        <div className="border-t border-white/5 pt-3 flex items-center justify-between">
-                                            <div className="flex items-center gap-2 text-white/40">
-                                                <Calendar size={12} />
-                                                <span className="text-[9px] font-black uppercase tracking-widest">{new Date(activeBooking.schedule.date).toLocaleDateString()} @ {activeBooking.schedule.timeSlot?.start}</span>
-                                            </div>
-                                            <div className="bg-brand/20 px-2 py-1 rounded-lg flex items-center gap-1.5 border border-brand/30">
-                                                <Clock size={10} className="text-brand" />
-                                                <span className="text-[10px] font-black tabular-nums text-white">
-                                                    <CountdownTimer targetTime={activeBooking.schedule} />
-                                                </span>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </motion.section>
-                    )}
-                </AnimatePresence>
                 <section className="px-5">
                     <h3 className="text-[14px] font-black text-black opacity-40 uppercase tracking-widest mb-3">Everything In Minutes</h3>
                     <div className="grid grid-cols-2 gap-3">
@@ -894,8 +863,12 @@ const Home = () => {
                                         <div style={{ color: item.color }}>
                                             {item.icon === 'shield-check' ? <ShieldCheck size={22} strokeWidth={2.5} /> :
                                                 item.icon === 'activity' ? <Activity size={22} strokeWidth={2.5} /> :
-                                                    item.icon === 'alert-triangle' ? <AlertTriangle size={22} strokeWidth={2.5} /> :
-                                                        <LayoutGrid size={22} strokeWidth={2.5} />}
+                                                item.icon === 'alert-triangle' ? <AlertTriangle size={22} strokeWidth={2.5} /> :
+                                                item.icon === 'car' ? <Car size={22} strokeWidth={2.5} /> :
+                                                item.icon === 'wallet' ? <Wallet size={22} strokeWidth={2.5} /> :
+                                                item.icon === 'building' ? <Building size={22} strokeWidth={2.5} /> :
+                                                item.icon === 'calendar' ? <Calendar size={22} strokeWidth={2.5} /> :
+                                                <LayoutGrid size={22} strokeWidth={2.5} />}
                                         </div>
                                     )}
                                 </div>
@@ -905,36 +878,55 @@ const Home = () => {
                     </div>
                 </section>
 
-                {/* Dynamic Promotional Cards (Slider) */}
-                <section className="px-5 overflow-x-auto no-scrollbar flex gap-4">
-                    {sliderCards.length > 0 ? sliderCards.map((card, idx) => (
-                        <motion.div
-                            key={idx}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => card.action ? card.action() : navigate(card.path)}
-                            className={`${card.theme === 'dark' ? 'bg-black' : 'bg-brand/5'} relative overflow-hidden group min-w-[300px] h-[160px] rounded-3xl shadow-xl flex items-center px-8 border border-black/5`}
-                        >
-                            <div className={`absolute right-[-5%] top-[-20%] w-48 h-48 ${card.theme === 'dark' ? 'bg-brand/20' : 'bg-brand/10'} rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700`} />
-                            <div className="relative z-10 flex-1">
-                                <span className="text-[11px] font-black text-brand uppercase tracking-[0.3em] mb-2 block">{card.badge}</span>
-                                <h3 className={`text-[20px] font-[1000] uppercase leading-none tracking-tighter ${card.theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                                    {card.title.split(' ').slice(0, 2).join(' ')}<br />{card.title.split(' ').slice(2).join(' ')}
-                                </h3>
-                                <p className={`text-[9px] font-bold uppercase tracking-widest mt-2 ${card.theme === 'dark' ? 'text-white/40' : 'text-black/40'}`}>
-                                    {card.subtitle}
-                                </p>
-                                <div className="mt-4 flex items-center gap-2">
-                                    <span className={`text-[10px] font-black uppercase tracking-tight ${card.theme === 'dark' ? 'text-brand' : 'text-black'}`}>{card.cta}</span>
-                                    <ArrowRight size={14} className={card.theme === 'dark' ? 'text-brand' : 'text-black'} />
+                {/* Dynamic Promotional Cards (Full-Width Continuous Loop) */}
+                <section className="relative overflow-hidden h-[130px] mb-4">
+                    <motion.div 
+                        className="flex h-full w-full"
+                        animate={{ x: `-${activePromo * 100}%` }}
+                        transition={{ duration: 0.8, ease: [0.32, 0.72, 0, 1] }} 
+                    >
+                        {sliderCards.map((card, idx) => (
+                            <motion.div
+                                key={card.id || idx}
+                                whileTap={{ scale: 1 }} // No scaling for full-width banners
+                                onClick={() => card.action ? card.action() : navigate(card.path)}
+                                className={`flex-shrink-0 w-full h-full`}
+                            >
+                                <div className={`${card.theme === 'dark' ? 'bg-black' : 'bg-brand/5'} relative overflow-hidden group w-full h-full flex items-center px-10 border-b border-black/[0.03] cursor-pointer`}>
+                                    <div className={`absolute right-[-2%] top-[-20%] w-56 h-56 ${card.theme === 'dark' ? 'bg-brand/20' : 'bg-brand/10'} rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700`} />
+                                    <div className="relative z-10 flex-1">
+                                        <div className="flex items-center gap-2 mb-1.5">
+                                            <div className="w-1 h-1 bg-brand rounded-full animate-pulse" />
+                                            <span className="text-[10px] font-black text-brand uppercase tracking-[0.3em] block">{card.badge}</span>
+                                        </div>
+                                        <h3 className={`text-[20px] font-[1000] uppercase leading-none tracking-tighter ${card.theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                                            {card.title}
+                                        </h3>
+                                        <p className={`text-[9px] font-bold uppercase tracking-widest mt-1.5 line-clamp-1 ${card.theme === 'dark' ? 'text-white/40' : 'text-black/40'}`}>
+                                            {card.subtitle}
+                                        </p>
+                                        <div className="mt-3 flex items-center gap-2">
+                                            <span className={`text-[9px] font-black uppercase tracking-tight ${card.theme === 'dark' ? 'text-brand' : 'text-black'}`}>{card.cta}</span>
+                                            <ArrowRight size={12} className={card.theme === 'dark' ? 'text-brand' : 'text-black'} />
+                                        </div>
+                                    </div>
+                                    <div className="absolute right-[8%] bottom-[-5%] w-32 h-32 opacity-30 rotate-[10deg] group-hover:rotate-0 transition-transform duration-700">
+                                        <img src={card.image} className="w-full h-full object-contain" alt="" onError={(e) => { e.target.style.display = 'none'; }} />
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="absolute right-[-10%] bottom-[-10%] w-32 h-32 opacity-20 rotate-[15deg]">
-                                <img src={card.image} className="w-full h-full object-contain" alt="" onError={(e) => { e.target.style.display = 'none'; }} />
-                            </div>
-                        </motion.div>
-                    )) : (
-                        <div className="w-full h-32 bg-gray-50 rounded-3xl animate-pulse" />
-                    )}
+                            </motion.div>
+                        ))}
+                    </motion.div>
+
+                    {/* Centered Pagination Dots Indicator */}
+                    <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-20">
+                        {sliderCards.map((_, i) => (
+                            <div 
+                                key={i} 
+                                className={`h-1 rounded-full transition-all duration-300 ${i === activePromo ? 'w-4 bg-brand' : 'w-1 bg-white/20'}`} 
+                            />
+                        ))}
+                    </div>
                 </section>
             </div>
         );
@@ -981,47 +973,46 @@ const Home = () => {
             </div>
 
             {/* Expansion Hype Banner - Showroom, Apartment, Corporate Coming Soon */}
-            <div className="bg-black py-14 relative overflow-hidden group">
-                {/* High-Intensity Radial Glows */}
+            <div className="bg-black py-8 relative overflow-hidden group">
                 <div className="absolute top-[-20%] left-[-10%] w-72 h-72 bg-brand/30 rounded-full blur-[120px] z-0 animate-pulse" />
                 <div className="absolute bottom-[-20%] right-[-10%] w-72 h-72 bg-indigo-600/30 rounded-full blur-[120px] z-0" />
 
                 <div className="relative z-10 px-4">
-                    <div className="flex flex-col items-center text-center mb-10">
-                        <div className="flex items-center gap-3 mb-4">
+                    <div className="flex flex-col items-center text-center mb-6">
+                        <div className="flex items-center gap-3 mb-3">
                             <div className="h-[1px] w-8 bg-brand" />
                             <span className="text-brand text-[10px] font-black uppercase tracking-[0.5em]">Building Success</span>
                             <div className="h-[1px] w-8 bg-brand" />
                         </div>
-                        <h2 className="text-white text-[32px] font-[1000] leading-[0.8] uppercase tracking-tighter mb-4">
+                        <h2 className="text-white text-[28px] font-[1000] leading-[0.8] uppercase tracking-tighter mb-3">
                             WE ARE<br />EXPANDING
                         </h2>
-                        <p className="text-white/40 text-[10px] font-bold uppercase tracking-[0.2em] max-w-[200px]">Next-gen care arriving at new horizons</p>
+                        <p className="text-white/40 text-[9px] font-bold uppercase tracking-[0.2em] max-w-[200px]">Next-gen care arriving at new horizons</p>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-2.5">
+                    <div className="grid grid-cols-1 gap-2">
                         {expansionItems.map((item, idx) => (
                             <motion.div
                                 key={idx}
-                                whileHover={{ scale: 1.02, y: -2 }}
-                                whileTap={{ scale: 0.98 }}
+                                whileHover={{ scale: 1.01, y: -1 }}
+                                whileTap={{ scale: 0.99 }}
                                 onClick={() => item.path && navigate(item.path)}
-                                className={`bg-gradient-to-r ${item.val} backdrop-blur-xl border border-white/20 px-4 py-3 rounded-2xl flex items-center justify-between group/item transition-all duration-300 shadow-xl cursor-pointer`}
+                                className={`bg-gradient-to-r ${item.val} backdrop-blur-xl border border-white/20 px-4 py-2.5 rounded-xl flex items-center justify-between group/item transition-all duration-300 shadow-xl cursor-pointer`}
                             >
-                                <div className="flex items-center gap-4">
-                                    <div className="w-11 h-11 bg-white/10 rounded-xl flex items-center justify-center border border-white/20 shadow-2xl transition-all duration-500 group-hover/item:scale-110 group-hover/item:bg-white/20">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20 shadow-2xl transition-all duration-500 group-hover/item:scale-110 group-hover/item:bg-white/20">
                                         <div className="text-white">
-                                            {item.title === 'Spare Drivers' ? <User size={22} /> :
-                                                item.title === 'Apartments' ? <HomeIcon size={22} /> :
-                                                    <Briefcase size={22} />}
+                                            {item.title === 'Spare Drivers' ? <User size={20} /> :
+                                                item.title === 'Apartments' ? <HomeIcon size={20} /> :
+                                                    <Briefcase size={20} />}
                                         </div>
                                     </div>
                                     <div className="flex flex-col">
-                                        <h4 className="text-white text-[15px] font-[1000] uppercase tracking-tighter leading-none">{item.title}</h4>
-                                        <span className="text-white/40 text-[8px] font-black uppercase mt-1 tracking-widest">{item.subtitle}</span>
+                                        <h4 className="text-white text-[14px] font-[1000] uppercase tracking-tighter leading-none">{item.title}</h4>
+                                        <span className="text-white/40 text-[8px] font-black uppercase mt-0.5 tracking-widest">{item.subtitle}</span>
                                     </div>
                                 </div>
-                                <div className={`bg-white/20 backdrop-blur-md text-white text-[9px] font-black px-3 py-1.5 rounded-xl uppercase tracking-[0.2em] border border-white/20 group-hover/item:bg-white group-hover/item:text-black transition-colors duration-300 ${item.cta === 'Join Now' ? 'bg-white text-black' : ''}`}>
+                                <div className={`bg-white/20 backdrop-blur-md text-white text-[8px] font-black px-3 py-1 rounded-xl uppercase tracking-[0.2em] border border-white/20 group-hover/item:bg-white group-hover/item:text-black transition-colors duration-300 ${item.cta === 'Join Now' ? 'bg-white text-black' : ''}`}>
                                     {item.cta}
                                 </div>
                             </motion.div>
@@ -1031,108 +1022,58 @@ const Home = () => {
             </div>
 
             {/* How it Works - Minimalist Steps */}
-            <div className="mt-8 bg-white/40 p-5 rounded-2xl border border-black/5">
-                <h3 className="text-[11px] font-black text-black uppercase tracking-widest mb-5 text-center opacity-60">Professional Process</h3>
-                <div className="flex justify-between items-start gap-2">
+            <div className="mt-4 bg-white/40 p-5 rounded-2xl border border-black/5">
+                <h3 className="text-[11px] font-black text-black uppercase tracking-widest mb-4 text-center opacity-60">Professional Process</h3>
+                <div className="flex justify-between items-start gap-1">
                     <div className="flex flex-col items-center text-center flex-1">
-                        <div className="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center text-[11px] font-black mb-3">1</div>
-                        <p className="text-[10px] font-black text-black uppercase leading-tight">Book a<br />Service</p>
+                        <div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center text-[10px] font-black mb-2">1</div>
+                        <p className="text-[9px] font-black text-black uppercase leading-tight">Book a<br />Service</p>
                     </div>
-                    <div className="h-px bg-black/10 flex-1 mt-4" />
+                    <div className="h-px bg-black/10 flex-1 mt-3.5" />
                     <div className="flex flex-col items-center text-center flex-1">
-                        <div className="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center text-[11px] font-black mb-3">2</div>
-                        <p className="text-[10px] font-black text-black uppercase leading-tight">Expert<br />Pickup</p>
+                        <div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center text-[10px] font-black mb-2">2</div>
+                        <p className="text-[9px] font-black text-black uppercase leading-tight">Expert<br />Pickup</p>
                     </div>
-                    <div className="h-px bg-black/10 flex-1 mt-4" />
+                    <div className="h-px bg-black/10 flex-1 mt-3.5" />
                     <div className="flex flex-col items-center text-center flex-1">
-                        <div className="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center text-[11px] font-black mb-3">3</div>
-                        <p className="text-[10px] font-black text-black uppercase leading-tight">Studio<br />Shine</p>
+                        <div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center text-[10px] font-black mb-2">3</div>
+                        <p className="text-[9px] font-black text-black uppercase leading-tight">Studio<br />Shine</p>
                     </div>
                 </div>
             </div>
 
             {/* Consolidated Brand Identity Card */}
-            <div className="mt-8 bg-white/80 p-8 rounded-2xl border border-black/10 text-center shadow-sm">
-                <h2 className="text-[20px] font-black text-black/40 tracking-tighter uppercase leading-[0.9] mb-8">
+            <div className="mt-4 bg-white/80 p-6 rounded-2xl border border-black/10 text-center shadow-sm">
+                <h2 className="text-[18px] font-black text-black/40 tracking-tighter uppercase leading-[0.9] mb-6">
                     India's #1<br />Car & Bike Care App
                 </h2>
 
-                <div className="grid grid-cols-3 gap-4 border-b border-black/5 pb-8 mb-8">
+                <div className="grid grid-cols-3 gap-4 border-b border-black/5 pb-6 mb-6">
                     {stats.map((stat, i) => (
                         <div key={i} className={i === 1 ? "border-x border-black/10" : ""}>
-                            <p className="text-[16px] font-black text-black leading-none uppercase">{stat.value}</p>
+                            <p className="text-[14px] font-black text-black leading-none uppercase">{stat.value}</p>
                             <p className="text-[8px] font-black text-black/50 uppercase mt-2 tracking-widest">{stat.label}</p>
                         </div>
                     ))}
-                    {stats.length === 0 && (
-                        [1, 2, 3].map(i => <div key={i} className="h-10 bg-black/5 animate-pulse rounded-lg" />)
-                    )}
                 </div>
 
-                {/* Compact Trust Badges */}
-                <div className="grid grid-cols-3 gap-2 mb-8">
-                    <div className="flex flex-col items-center gap-3">
-                        <ShieldCheck size={18} className="text-black/60" />
+                <div className="grid grid-cols-3 gap-2 mb-6">
+                    <div className="flex flex-col items-center gap-2">
+                        <ShieldCheck size={16} className="text-black/60" />
                         <p className="text-[7px] font-black text-black/70 uppercase tracking-[0.2em] leading-none">Secure</p>
                     </div>
-                    <div className="flex flex-col items-center gap-3">
-                        <Sparkles size={18} className="text-black/60" />
+                    <div className="flex flex-col items-center gap-2">
+                        <Sparkles size={16} className="text-black/60" />
                         <p className="text-[7px] font-black text-black/70 uppercase tracking-[0.2em] leading-none">Premium</p>
                     </div>
-                    <div className="flex flex-col items-center gap-3">
-                        <CreditCard size={18} className="text-black/60" />
+                    <div className="flex flex-col items-center gap-2">
+                        <CreditCard size={16} className="text-black/60" />
                         <p className="text-[7px] font-black text-black/70 uppercase tracking-[0.2em] leading-none">Fair</p>
                     </div>
                 </div>
 
-                <p className="text-[10px] font-black text-black/50 uppercase tracking-[0.3em] font-sans">Designed in India 🇮🇳</p>
+                <p className="text-[9px] font-black text-black/50 uppercase tracking-[0.3em] font-sans">Designed in India 🇮🇳</p>
             </div>
-
-            {/* Premium Footer Section - Ultra Compact & Professional */}
-            <footer className="mt-4 pb-4 border-t border-black/[0.03] pt-6">
-                <div className="flex flex-col items-center">
-                    {/* Socials - Minimalist */}
-                    <div className="flex items-center gap-5 mb-6">
-                        {['Instagram', 'Twitter', 'Facebook'].map((social) => (
-                            <div key={social} className="w-8 h-8 bg-black/[0.02] rounded-lg flex items-center justify-center hover:bg-black/5 transition-colors cursor-pointer active:scale-90">
-                                {social === 'Instagram' && <Instagram size={14} className="text-black/40" />}
-                                {social === 'Twitter' && <Twitter size={14} className="text-black/40" />}
-                                {social === 'Facebook' && <Facebook size={14} className="text-black/40" />}
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Links - Unified Row */}
-                    <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-6 px-8">
-                        {['About', 'Services', 'Studios', 'Terms', 'Privacy', 'Support'].map((link) => (
-                            <span key={link} className="text-[9px] font-black text-black/30 uppercase tracking-[0.15em] hover:text-black transition-colors cursor-pointer">
-                                {link}
-                            </span>
-                        ))}
-                    </div>
-
-                    {/* Legal & Local - Tightened */}
-                    <div className="text-center space-y-1.5 px-10 mb-6">
-                        <p className="text-[8px] font-[900] text-black/25 uppercase tracking-widest leading-none">
-                            contact@clean2wash.com  •  +91 98765 43210
-                        </p>
-                        <p className="text-[8px] font-bold text-black/15 uppercase tracking-[0.1em] leading-none">
-                            © 2026 CLEAN2WASH TECHNOLOGIES PVT LTD
-                        </p>
-                    </div>
-
-                    {/* Signature - Sleek */}
-                    <div className="flex items-center gap-2.5 opacity-40 grayscale group hover:grayscale-0 hover:opacity-100 transition-all duration-500">
-                        <span className="text-[9px] font-black text-black uppercase tracking-tighter">MADE WITH</span>
-                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping" />
-                        <span className="text-[9px] font-black text-black uppercase tracking-tighter">IN INDIA</span>
-                    </div>
-                </div>
-            </footer>
-
-            {/* Tight Spacing for Floating UI */}
-
-
         </section>
     );
 
@@ -1148,9 +1089,9 @@ const Home = () => {
                     {renderAllServicesSheet()}
                     {renderSearchOverlay()}
                     {renderSOSOverlay()}
-                    <BlackPassModal
-                        isOpen={showBlackPassModal}
-                        onClose={() => setShowBlackPassModal(false)}
+                    <GoldPassModal
+                        isOpen={showGoldPassModal}
+                        onClose={() => setShowGoldPassModal(false)}
                     />
                     {renderHeader()}
                     {renderHero()}

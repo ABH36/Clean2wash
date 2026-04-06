@@ -5,6 +5,7 @@ import { Home, Heart, ShoppingCart, User, Gift, Zap, Truck, ShoppingBag, UserChe
 import { useCart } from '../../../../context/CartContext';
 import { useAuth } from '../../../../context/AuthContext';
 import PremiumBadge from '../membership/PremiumBadge';
+import ServiceHUD from './ServiceHUD';
 
 const SHOP_NAV_ITEMS = [
     { id: 'shop', to: '/e-shop', icon: Home, label: 'Shop' },
@@ -40,6 +41,7 @@ const MobileLayout = ({ children, hideNav = false }) => {
         <div className="mobile-container bg-[#FAFAFA]">
             <main className="flex-1 pb-10">
                 {children}
+                <ServiceHUD />
             </main>
 
             {!hideNav && (

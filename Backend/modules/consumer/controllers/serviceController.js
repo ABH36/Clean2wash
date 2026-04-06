@@ -13,6 +13,7 @@ const Subscription = require('../../../models/Subscription');
 const catchAsync = require('../../../utils/catchAsync');
 const AppError = require('../../../utils/AppError');
 const User = require('../../../models/User');
+const VehicleType = require('../../../models/VehicleType');
 
 const normalizeToken = (value = '') => String(value)
     .toLowerCase()
@@ -73,6 +74,31 @@ const isPlanApplicableToService = (plan = {}, serviceAliases = new Set()) => {
     });
 };
 
+const slugifyHubName = (value = '') => String(value)
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+const normalizeHubLocation = (hub = {}) => {
+    const rawCoordinates = hub?.location?.coordinates?.coordinates;
+    const hasGeoJsonCoords = Array.isArray(rawCoordinates) && rawCoordinates.length >= 2;
+
+    return {
+        ...(hub.location || {}),
+        address: hub?.location?.address || `${hub.name || 'Apartment'}, ${hub.city || ''}`.trim(),
+        coordinates: hasGeoJsonCoords
+            ? { lat: rawCoordinates[1], lng: rawCoordinates[0] }
+            : hub?.location?.coordinates || null
+    };
+};
+
+const isStrictPlanApplicableToService = (plan = {}, serviceAliases = new Set()) => {
+    const applicable = Array.isArray(plan.applicableServices) ? plan.applicableServices : [];
+    if (applicable.length === 0 || serviceAliases.size === 0) return false;
+    return isPlanApplicableToService(plan, serviceAliases);
+};
+
 const mapPlanToClient = (plan = {}) => {
     const { washes, maxVehicles, rollover } = parsePlanMetrics(plan);
     const firstFeature = Array.isArray(plan.features) && plan.features.length > 0
@@ -85,6 +111,7 @@ const mapPlanToClient = (plan = {}) => {
         planKey: normalizeToken(plan.name || plan._id),
         price: plan.price,
         interval: plan.interval,
+        moduleScope: plan.moduleScope || 'general',
         features: plan.features || [],
         status: plan.status,
         accent: plan.accent,
@@ -96,7 +123,7 @@ const mapPlanToClient = (plan = {}) => {
         subtitle: firstFeature,
         desc: firstFeature,
         type: firstFeature,
-        popular: /elite|black|premium/i.test(plan.name || '')
+        popular: /elite|gold|black|premium/i.test(plan.name || '')
     };
 };
 
@@ -125,7 +152,10 @@ const getServiceCatalog = async ({ type, category, vehicleType } = {}) => {
     }
 
     if (vehicleType) {
-        const multiplier = Vehicle.getTypeMultiplier(vehicleType);
+        // 🧪 Protocol: Dynamic Multiplier Resolution
+        const typeDoc = await VehicleType.findOne({ type: new RegExp(`^${vehicleType}$`, 'i'), isActive: true });
+        const multiplier = typeDoc ? typeDoc.multiplier : 1.0;
+        
         allServices = allServices.map(service => ({
             ...service,
             adjustedPrice: Math.round((service.basePrice || 0) * multiplier),
@@ -233,8 +263,10 @@ exports.getServices = catchAsync(async (req, res, next) => {
 
     // Apply vehicle type pricing
     if (vehicleType) {
-        const Vehicle = require('../../../models/Vehicle');
-        const multiplier = Vehicle.getTypeMultiplier(vehicleType);
+        // 🕵️ Protocol: Resolve multiplier from database
+        const typeDoc = await VehicleType.findOne({ type: new RegExp(`^${vehicleType}$`, 'i'), isActive: true });
+        const multiplier = typeDoc ? typeDoc.multiplier : 1.0;
+        
         allServices = allServices.map(service => {
             const effectiveMultiplier = service.multiplierEnabled !== false ? multiplier : 1;
             return {
@@ -325,7 +357,9 @@ exports.calculatePricing = catchAsync(async (req, res, next) => {
     }
 
     // Calculate pricing
-    const multiplier = Vehicle.getTypeMultiplier(vehicleType);
+    const typeDoc = await VehicleType.findOne({ type: new RegExp(`^${vehicleType}$`, 'i'), isActive: true });
+    const multiplier = typeDoc ? typeDoc.multiplier : 1.0;
+    
     const baseAmount = service.basePrice;
     const vehicleMultiplier = multiplier;
 
@@ -373,12 +407,77 @@ exports.getTimeSlots = catchAsync(async (req, res, next) => {
         return next(new AppError('Date is required for availability synchronization.', 400));
     }
 
+    const requestedDate = new Date(date);
+    requestedDate.setHours(0, 0, 0, 0);
+
+    let apartmentService = null;
+    if (serviceId) {
+        apartmentService = await MasterData.findOne({
+            type: 'SERVICE',
+            $or: [
+                { 'metadata.id': serviceId },
+                { key: String(serviceId).toUpperCase() }
+            ]
+        }).lean();
+    }
+
+    const isApartmentService = apartmentService
+        && (
+            String(apartmentService.key || '').toUpperCase().includes('APARTMENT')
+            || String(apartmentService.metadata?.category || '').toLowerCase() === 'apartment'
+            || String(apartmentService.metadata?.path || '') === '/apartments'
+        );
+
     // 1. Resolve Hub & Capacity
     let targetHub;
     if (hubId) {
         targetHub = await Hub.findById(hubId);
     } else if (city) {
         targetHub = await Hub.findOne({ city, isActive: true });
+    }
+
+    if (isApartmentService && targetHub) {
+        const apartmentSlots = Array.isArray(apartmentService.metadata?.slots) && apartmentService.metadata.slots.length > 0
+            ? apartmentService.metadata.slots
+            : [
+                { id: 'morning', label: 'Morning Primary', time: '6:00 AM - 9:00 AM' },
+                { id: 'evening', label: 'Evening Optional', time: '6:00 PM - 8:00 PM' }
+            ];
+
+        const activeSubscriptions = await Subscription.find({
+            hub: targetHub._id,
+            status: 'active',
+            endDate: { $gte: requestedDate },
+            $or: [
+                { 'service.key': 'APARTMENT_WASH' },
+                { applicableServices: 'APARTMENT_WASH' }
+            ]
+        }).select('slot');
+
+        const timeSlots = apartmentSlots.map((slot) => {
+            const slotId = String(slot.id || '').toLowerCase();
+            const bookedCount = activeSubscriptions.filter((subscription) => String(subscription.slot || '').toLowerCase() === slotId).length;
+            const remainingCapacity = 10 - bookedCount;
+
+            return {
+                id: slot.id,
+                label: slot.label || slot.id,
+                time: slot.time || '',
+                capacity: 10,
+                booked: bookedCount,
+                available: remainingCapacity > 0,
+                remaining: Math.max(0, remainingCapacity)
+            };
+        });
+
+        return res.status(200).json({
+            status: 'success',
+            data: {
+                date,
+                hub: targetHub.name,
+                timeSlots
+            }
+        });
     }
 
     // Default capacity if no hub found (System fallback)
@@ -401,9 +500,6 @@ exports.getTimeSlots = catchAsync(async (req, res, next) => {
     }
 
     // 4. Query Real-time Bookings for the Hub and Date
-    const requestedDate = new Date(date);
-    requestedDate.setHours(0, 0, 0, 0);
-
     const bookingFilter = {
         'schedule.date': requestedDate,
         status: { $in: ['pending', 'confirmed', 'assigned', 'en_route', 'in_progress'] }
@@ -522,13 +618,18 @@ exports.getPortfolio = catchAsync(async (req, res, next) => {
         }));
     }
 
+    const userBookingIds = new Set(userBookings.map(item => item._id?.toString()).filter(Boolean));
+
     // 2. Fetch Public Showcase Portfolio
     const publicShowcase = await Portfolio.find({ isActive: true }).sort({ sortOrder: 1, createdAt: -1 });
 
     const formattedShowcase = publicShowcase.map(p => ({
         ...p.toObject(),
         isUserBooking: false
-    }));
+    })).filter(item => {
+        const linkedBookingId = item.bookingId?.toString?.() || '';
+        return !linkedBookingId || !userBookingIds.has(linkedBookingId);
+    });
 
     // Combine: User's transformations first, then public showcase
     const consolidatedPortfolio = [...userBookings, ...formattedShowcase];
@@ -681,8 +782,15 @@ exports.getActiveReferral = catchAsync(async (req, res, next) => {
 
 // Get general subscription plans for the Subscriptions page
 exports.getPlans = catchAsync(async (req, res, next) => {
-    const { serviceId, serviceKey, serviceSlug, category } = req.query;
-    let dbPlans = await SubscriptionPlan.find({ isActive: true, status: 'Live' })
+    const { serviceId, serviceKey, serviceSlug, category, moduleScope } = req.query;
+    const planQuery = { isActive: true, status: 'Live' };
+    if (moduleScope) {
+        planQuery.moduleScope = moduleScope;
+    } else {
+        planQuery.moduleScope = { $nin: ['spare-driver', 'apartment-wash'] };
+    }
+
+    let dbPlans = await SubscriptionPlan.find(planQuery)
         .sort({ price: 1 })
         .lean();
 
@@ -926,12 +1034,15 @@ exports.getApartmentFlowData = catchAsync(async (req, res, next) => {
     console.log(`🔍 Hubs found for [${city || 'Global Search'}]: ${dbHubs.length} hubs. Names: ${dbHubs.map(h => h.name).join(', ')}`);
 
     const plans = dbPlans
-        .filter((plan) => isPlanApplicableToService(plan, serviceAliases))
-        .map(mapPlanToClient);
+        .filter((plan) => isStrictPlanApplicableToService(plan, serviceAliases))
+        .map((plan) => ({
+            ...mapPlanToClient(plan),
+            popular: false
+        }));
 
     const apartments = dbHubs.map((hub) => ({
         ...hub,
-        location: hub.location || `${hub.name}, ${hub.city}`,
+        location: normalizeHubLocation(hub),
         iconUrl: hub.iconUrl || hub.metadata?.iconUrl || ''
     }));
 
@@ -960,6 +1071,84 @@ exports.getApartmentFlowData = catchAsync(async (req, res, next) => {
             plans,
             slots,
             rules
+        }
+    });
+});
+
+exports.requestApartmentLead = catchAsync(async (req, res, next) => {
+    const { name, address, city, coordinates } = req.body;
+
+    if (!name || !address || !city || typeof coordinates?.lat !== 'number' || typeof coordinates?.lng !== 'number') {
+        return next(new AppError('Apartment name, address, city, and coordinates are required', 400));
+    }
+
+    const trimmedName = String(name).trim();
+    const trimmedAddress = String(address).trim();
+    const trimmedCity = String(city).trim();
+
+    const existingHub = await Hub.findOne({
+        $or: [
+            { name: new RegExp(`^${trimmedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+            {
+                'metadata.apartmentRequest.slug': slugifyHubName(`${trimmedName}-${trimmedCity}`)
+            }
+        ]
+    }).lean();
+
+    if (existingHub) {
+        return res.status(200).json({
+            status: 'success',
+            message: 'Apartment already available. Continue with the subscription setup.',
+            data: {
+                apartment: {
+                    ...existingHub,
+                    location: normalizeHubLocation(existingHub)
+                }
+            }
+        });
+    }
+
+    const newHub = await Hub.create({
+        name: trimmedName,
+        city: trimmedCity,
+        location: {
+            address: trimmedAddress,
+            coordinates: {
+                type: 'Point',
+                coordinates: [coordinates.lng, coordinates.lat]
+            }
+        },
+        type: 'Hub',
+        status: 'Offline',
+        manager: req.user?.name || req.user?.phone || 'Requested via Consumer App',
+        captains: 0,
+        efficiency: '0%',
+        load: 'Low',
+        isActive: true,
+        serviceTags: ['APARTMENT_WASH'],
+        metadata: {
+            isSociety: true,
+            pendingApproval: true,
+            blocks: [],
+            parkingLevels: [],
+            pillarRange: { min: 1, max: 999 },
+            apartmentRequest: {
+                slug: slugifyHubName(`${trimmedName}-${trimmedCity}`),
+                requestedBy: req.user?._id,
+                requestedAt: new Date(),
+                source: 'consumer-search'
+            }
+        }
+    });
+
+    res.status(201).json({
+        status: 'success',
+        message: 'Apartment registered successfully. You can continue the apartment wash flow now.',
+        data: {
+            apartment: {
+                ...newHub.toObject(),
+                location: normalizeHubLocation(newHub.toObject())
+            }
         }
     });
 });

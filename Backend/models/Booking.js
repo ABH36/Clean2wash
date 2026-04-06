@@ -40,7 +40,11 @@ const bookingSchema = new mongoose.Schema({
         },
         duration: String,
         basePrice: Number,
-        features: [String]
+        features: [String],
+        metadata: {
+            type: mongoose.Schema.Types.Mixed,
+            default: {}
+        }
     },
     pricing: {
         baseAmount: {
@@ -163,10 +167,64 @@ const bookingSchema = new mongoose.Schema({
         },
         status: {
             type: String,
-            enum: ['pending', 'paid', 'failed', 'refunded', 'refund_pending'],
+            enum: ['pending', 'paid', 'failed', 'refunded', 'refund_pending', 'settlement_pending'],
             default: 'pending'
         },
         transactionId: String,
+        pendingAmount: {
+            type: Number,
+            default: 0
+        },
+        settledAmount: {
+            type: Number,
+            default: 0
+        },
+        settlementStatus: {
+            type: String,
+            enum: ['not_required', 'auto_collected', 'pending', 'paid'],
+            default: 'not_required'
+        },
+        walletReserveAmount: {
+            type: Number,
+            default: 0
+        },
+        walletReserveHours: {
+            type: Number,
+            default: 0
+        },
+        walletReserveHeldAmount: {
+            type: Number,
+            default: 0
+        },
+        walletReserveConsumedAmount: {
+            type: Number,
+            default: 0
+        },
+        walletReserveReleasedAmount: {
+            type: Number,
+            default: 0
+        },
+        walletReserveStatus: {
+            type: String,
+            enum: ['not_required', 'held', 'partially_consumed', 'consumed', 'released'],
+            default: 'not_required'
+        },
+        walletReserveHeldAt: Date,
+        walletReserveReleasedAt: Date,
+        settlementMethod: {
+            type: String,
+            default: ''
+        },
+        settlementTransactionId: String,
+        settlementCollectedAt: Date,
+        providerPayoutAmount: {
+            type: Number,
+            default: 0
+        },
+        platformCommissionAmount: {
+            type: Number,
+            default: 0
+        },
         paidAt: Date,
         commission: { type: Number, default: 0 },
         refundAmount: Number,
@@ -240,6 +298,18 @@ const bookingSchema = new mongoose.Schema({
     serviceImages: {
         before: [String],
         after: [String],
+        beforeMeta: [{
+            capturedAt: Date,
+            lat: Number,
+            lng: Number,
+            source: String
+        }],
+        afterMeta: [{
+            capturedAt: Date,
+            lat: Number,
+            lng: Number,
+            source: String
+        }],
         capturedAt: Date
     },
     issues: [{
@@ -390,8 +460,16 @@ bookingSchema.virtual('estimatedCompletion').get(function () {
         scheduleDate.setHours(parseInt(hours) || 0, parseInt(minutes) || 0, 0, 0);
 
         // Add service duration (convert duration string to minutes)
-        const durationMatch = (this.service.duration || '').match(/(\d+)/);
-        const durationMinutes = durationMatch ? parseInt(durationMatch[1]) : 60;
+        const durationValue = String(this.service.duration || this.schedule.estimatedDuration || '');
+        const durationMatch = durationValue.match(/(\d+)/);
+        const durationNumber = durationMatch ? parseInt(durationMatch[1], 10) : 60;
+        let durationMinutes = durationNumber;
+
+        if (/day/i.test(durationValue)) {
+            durationMinutes = durationNumber * 24 * 60;
+        } else if (/hour/i.test(durationValue)) {
+            durationMinutes = durationNumber * 60;
+        }
 
         return new Date(scheduleDate.getTime() + durationMinutes * 60 * 1000);
     }

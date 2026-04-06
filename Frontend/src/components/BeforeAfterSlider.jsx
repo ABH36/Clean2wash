@@ -2,9 +2,22 @@ import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeftRight, ShieldCheck, Lock } from 'lucide-react';
 
-const BeforeAfterSlider = ({ before, after, title = "Service Evidence", showPrivacyShield = true }) => {
+const BeforeAfterSlider = ({ 
+    before, 
+    after, 
+    title = "Service Evidence", 
+    showPrivacyShield = true,
+    maskPosition = 'center'
+}) => {
     const [sliderPos, setSliderPos] = useState(50);
     const containerRef = useRef(null);
+
+    const MASK_POSITIONS = {
+        'center': 'bottom-[25%] left-1/2 -translate-x-1/2 w-[45%]',
+        'left': 'bottom-[25%] left-[10%] w-[40%]',
+        'right': 'bottom-[25%] right-[10%] w-[40%]',
+        'wide': 'bottom-[20%] left-1/2 -translate-x-1/2 w-[70%] h-[12%]'
+    };
 
     const handleMove = (e) => {
         if (!containerRef.current) return;
@@ -59,9 +72,9 @@ const BeforeAfterSlider = ({ before, after, title = "Service Evidence", showPriv
                     <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md text-[8px] font-black text-white uppercase tracking-widest shadow-lg">BEFORE</div>
                     
                     {/* Privacy Shield Overlay */}
-                    {showPrivacyShield && (
+                    {showPrivacyShield && maskPosition !== 'none' && (
                         <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                            <div className="w-[45%] h-[15%] mt-[25%] bg-black/30 backdrop-blur-2xl rounded-lg border border-white/10 flex flex-col items-center justify-center opacity-60">
+                            <div className={`absolute h-[15%] bg-black/30 backdrop-blur-2xl rounded-lg border border-white/10 flex flex-col items-center justify-center opacity-60 transition-all ${MASK_POSITIONS[maskPosition] || MASK_POSITIONS.center}`}>
                                 <Lock size={10} className="text-white/60 mb-0.5" />
                                 <span className="text-[6px] font-black text-white/40 uppercase tracking-[0.2em]">Privacy Mask Active</span>
                             </div>

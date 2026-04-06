@@ -2,6 +2,7 @@ const Booking = require('../models/Booking');
 const Captain = require('../models/Captain');
 const { sendNotification, sendCaptainNotification, sendAdminNotification } = require('./notificationService');
 const socketService = require('../socketService');
+const { broadcastBookingToDrivers } = require('./spareDriverDispatch');
 
 /**
  * Parse "09:00 AM" or "14:30" style time string into hours & minutes
@@ -30,6 +31,47 @@ const getScheduledStartTime = (booking) => {
     const base = new Date(booking.schedule.date);
     base.setHours(parsed.hours, parsed.minutes, 0, 0);
     return base;
+};
+
+const processAutoCancellationRefund = async (booking) => {
+    if (booking.payment?.status !== 'paid') return;
+
+    const refundAmount = booking.pricing?.totalAmount || 0;
+
+    if (booking.payment.method === 'wallet') {
+        const { executeWalletTransaction } = require('./walletHelper');
+        await executeWalletTransaction(
+            booking.consumer?._id || booking.consumer,
+            refundAmount,
+            'credit',
+            {
+                category: 'REFUND',
+                description: `Auto refund for cancelled scheduled booking #${booking.bookingId || booking._id}`,
+                referenceId: booking._id,
+                referenceType: 'booking'
+            }
+        );
+        booking.payment.status = 'refunded';
+    } else if (booking.payment.method === 'subscription') {
+        const Subscription = require('../models/Subscription');
+        const activeSubscription = await Subscription.getActiveSubscription(booking.consumer?._id || booking.consumer, {
+            service: booking.service || {},
+            hub: booking.location?.hubId || null,
+            location: booking.location || {},
+            destination: booking.location?.destination || null
+        });
+
+        if (activeSubscription) {
+            await activeSubscription.addCredits(1);
+        }
+
+        booking.payment.status = 'refunded';
+    } else {
+        booking.payment.status = 'refund_pending';
+    }
+
+    booking.payment.refundAmount = refundAmount;
+    booking.payment.refundedAt = new Date();
 };
 
 /**
@@ -232,29 +274,60 @@ const startBookingMonitor = () => {
                 // Re-broadcast 15 minutes before if still unassigned
                 if (diffMinutes >= 13 && diffMinutes <= 17) {
                     console.log(`[Monitor] Re-broadcasting unassigned scheduled booking: ${booking._id} (${diffMinutes.toFixed(0)} min left)`);
-                    await broadcastScheduledBooking(booking);
 
-                    // Notify admin about unmatched scheduled booking
-                    await sendAdminNotification({
-                        title: '⚠️ Unassigned Scheduled Booking',
-                        message: `Booking #${booking.bookingId || booking._id.toString().slice(-6)} starts in ~15 min with no captain assigned. Broadcasting to captains.`,
-                        type: 'booking',
-                        priority: 'high',
-                        metaData: { bookingId: booking._id }
-                    });
+                    if (booking.service?.type === 'sparedriver') {
+                        if (!booking.provider?.id) {
+                            await broadcastBookingToDrivers(booking, {
+                                serviceName: booking.service?.name || 'Scheduled Chauffeur Trip',
+                                vehicle: {
+                                    brand: booking.vehicle?.brand,
+                                    model: booking.vehicle?.model,
+                                    plate: booking.vehicle?.plate
+                                },
+                                reason: 'scheduled_monitor'
+                            });
+                        }
+
+                        await sendAdminNotification({
+                            title: '⚠️ Unassigned Chauffeur Booking',
+                            message: `Booking #${booking.bookingId || booking._id.toString().slice(-6)} starts in ~15 min with no driver assigned. Broadcasting to spare drivers.`,
+                            type: 'booking',
+                            priority: 'high',
+                            metaData: { bookingId: booking._id, serviceType: 'sparedriver' }
+                        });
+                    } else {
+                        await broadcastScheduledBooking(booking);
+
+                        // Notify admin about unmatched scheduled booking
+                        await sendAdminNotification({
+                            title: '⚠️ Unassigned Scheduled Booking',
+                            message: `Booking #${booking.bookingId || booking._id.toString().slice(-6)} starts in ~15 min with no captain assigned. Broadcasting to captains.`,
+                            type: 'booking',
+                            priority: 'high',
+                            metaData: { bookingId: booking._id }
+                        });
+                    }
                 }
 
                 // Auto-cancel if still unassigned 5 min AFTER scheduled time
                 if (diffMinutes <= -5 && diffMinutes >= -10) {
                     console.log(`[Monitor] Auto-cancelling unmatched scheduled booking: ${booking._id}`);
                     booking.status = 'cancelled';
-                    booking.notes = { ...(booking.notes || {}), admin: 'Auto-cancelled: No captain available at scheduled time' };
+                    booking.notes = {
+                        ...(booking.notes || {}),
+                        admin: booking.service?.type === 'sparedriver'
+                            ? 'Auto-cancelled: No chauffeur available at scheduled time'
+                            : 'Auto-cancelled: No captain available at scheduled time'
+                    };
+                    await processAutoCancellationRefund(booking);
                     await booking.save();
 
                     if (booking.consumer?._id) {
                         await sendNotification(booking.consumer._id, {
                             title: 'Booking Cancelled ❌',
-                            message: `Sorry, we could not find an available captain for your scheduled booking. If payment was made, a refund will be processed.`,
+                            message: booking.service?.type === 'sparedriver'
+                                ? 'Sorry, we could not find an available chauffeur for your scheduled booking. If payment was made, a refund will be processed.'
+                                : 'Sorry, we could not find an available captain for your scheduled booking. If payment was made, a refund will be processed.',
                             type: 'booking',
                             priority: 'high',
                             metaData: { bookingId: booking._id }

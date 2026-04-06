@@ -63,7 +63,8 @@ const DriverEarnings = () => {
             <div className="px-5 py-6 space-y-5">
 
                 {/* ── Balance Card ── */}
-                <div className="bg-black text-white rounded-lg p-5">
+                <div className="bg-[#0D1117] text-white rounded-[2rem] p-5 shadow-[0_24px_55px_rgba(15,23,42,0.2)] border border-white/5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-28 h-28 bg-brand/15 rounded-full blur-3xl -mr-6 -mt-6" />
                     <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-1">Available Balance</p>
                     <p className="text-4xl font-black text-white leading-none mb-5">₹{data.balance.toLocaleString()}</p>
 
@@ -78,15 +79,15 @@ const DriverEarnings = () => {
                 </div>
 
                 {/* ── Stats Row ── */}
-                <div className="grid grid-cols-2 gap-3">
-                    <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-sm">
+                    <div className="grid grid-cols-2 gap-3">
+                    <div className="border border-black/[0.04] rounded-[1.5rem] p-4 bg-white shadow-[0_16px_36px_rgba(15,23,42,0.05)]">
                         <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-2">This Month</p>
                         <p className="text-xl font-black text-black">₹{data.monthlyEarnings.toLocaleString()}</p>
                         <div className="flex items-center gap-1 text-[#F29F05] text-[9px] font-black mt-1">
                             <TrendingUp size={10} /> Live Stats
                         </div>
                     </div>
-                    <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-sm">
+                    <div className="border border-black/[0.04] rounded-[1.5rem] p-4 bg-white shadow-[0_16px_36px_rgba(15,23,42,0.05)]">
                         <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-2">Jobs Done</p>
                         <p className="text-xl font-black text-black">{data.jobsDone}</p>
                         <p className="text-[9px] font-black text-[#F29F05] mt-1">Verified Node</p>
@@ -96,7 +97,7 @@ const DriverEarnings = () => {
                 {/* ── Transactions ── */}
                 <div>
                     <p className="text-[9px] font-black text-black/25 uppercase tracking-widest mb-3">Recent Transactions</p>
-                    <div className="border border-gray-100 rounded-lg divide-y divide-gray-50 overflow-hidden bg-white shadow-sm">
+                    <div className="border border-black/[0.04] rounded-[1.6rem] divide-y divide-gray-50 overflow-hidden bg-white shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
                         {data.transactions.length > 0 ? data.transactions.map((tx, i) => (
                             <div key={tx._id || i} className="flex items-center justify-between px-4 py-3.5">
                                 <div className="flex items-center gap-3">

@@ -20,6 +20,43 @@ import { useAuth } from '../../../context/AuthContext';
 import { notificationAPI } from '../../../utils/api';
 import { socketService } from '../../../utils/socket';
 
+const isChauffeurNotification = (notification = {}) => {
+    const actionUrl = notification.actionUrl || notification.metaData?.actionUrl || '';
+    const meta = notification.metaData || notification.data || {};
+    const type = String(notification.type || '').toLowerCase();
+
+    return meta.moduleScope === 'spare-driver'
+        || meta.serviceType === 'sparedriver'
+        || meta.category === 'Chauffeur'
+        || actionUrl.includes('/spare-driver')
+        || ['sos', 'support', 'verification', 'payout'].includes(type);
+};
+
+const resolveNotificationRoute = (notif) => {
+    const meta = notif.metaData || notif.data || {};
+    const actionUrl = notif.actionUrl || meta.actionUrl || '';
+
+    if (actionUrl) return actionUrl;
+
+    if (isChauffeurNotification(notif)) {
+        if (notif.type === 'payment' || notif.type === 'wallet' || notif.type === 'payout') {
+            return '/wallet';
+        }
+
+        if (notif.type === 'support' || notif.type === 'sos') {
+            return meta.bookingId ? `/spare-driver/support?bookingId=${meta.bookingId}` : '/spare-driver/support';
+        }
+
+        if (meta.status === 'completed') {
+            return '/spare-driver/history';
+        }
+
+        return '/spare-driver';
+    }
+
+    return '';
+};
+
 const Notifications = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -40,7 +77,8 @@ const Notifications = () => {
                     id: data.notification.id || data.notification._id,
                     isNew: true,
                     desc: data.notification.message,
-                    time: 'Just now'
+                    time: 'Just now',
+                    actionUrl: data.notification.actionUrl || data.notification.metaData?.actionUrl || ''
                 };
                 setNotifications(prev => [newNotif, ...prev]);
             });
@@ -61,7 +99,8 @@ const Notifications = () => {
                     id: n._id,
                     isNew: !n.isRead,
                     desc: n.message,
-                    time: formatTime(n.createdAt)
+                    time: formatTime(n.createdAt),
+                    actionUrl: n.actionUrl || n.metaData?.actionUrl || ''
                 }));
                 setNotifications(mapped);
             }
@@ -130,6 +169,12 @@ const Notifications = () => {
             handleMarkAsRead(notif.id);
         }
 
+        const chauffeurRoute = resolveNotificationRoute(notif);
+        if (chauffeurRoute) {
+            navigate(chauffeurRoute);
+            return;
+        }
+
         // Navigate based on type
         const { type, metaData } = notif;
 
@@ -167,34 +212,34 @@ const Notifications = () => {
         <MobileLayout>
             {/* ── Premium Header ── */}
             <header className="px-4 pt-10 pb-4 flex items-center justify-between bg-white/80 backdrop-blur-xl sticky top-0 z-50 border-b border-gray-100/50">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                     <button
                         onClick={() => navigate(-1)}
-                        className="w-10 h-10 bg-white border border-gray-100 rounded-2xl flex items-center justify-center shadow-sm active:scale-95 transition-transform"
+                        className="w-11 h-11 bg-white border border-gray-100 rounded-2xl flex items-center justify-center shadow-md active:scale-95 transition-transform"
                     >
-                        <ChevronLeft size={20} strokeWidth={2.5} className="text-content" />
+                        <ChevronLeft size={24} strokeWidth={3} className="text-content" />
                     </button>
                     <div>
-                        <h1 className="text-xl font-black tracking-tight text-content leading-none">Activity</h1>
-                        <p className="text-[10px] text-brand font-black uppercase tracking-widest mt-1">
+                        <h1 className="text-2xl font-[1000] tracking-tight text-content leading-none">Activity</h1>
+                        <p className="text-[11px] text-brand font-black uppercase tracking-widest mt-1.5">
                             {newN.length > 0 ? `${newN.length} Unread Alerts` : 'System up to date'}
                         </p>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2">
                     <button
                         onClick={fetchNotifications}
-                        className="p-2 text-gray-400 hover:text-brand transition-colors active:rotate-180 duration-500"
+                        className="p-2.5 text-gray-400 hover:text-brand transition-colors active:rotate-180 duration-500"
                     >
-                        <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                        <RefreshCw size={22} className={loading ? 'animate-spin' : ''} />
                     </button>
                     {notifications.length > 0 && (
                         <button
                             onClick={handleClearAll}
-                            className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                            className="p-2.5 text-gray-400 hover:text-red-500 transition-colors"
                         >
-                            <Trash2 size={18} />
+                            <Trash2 size={22} />
                         </button>
                     )}
                 </div>
@@ -208,7 +253,7 @@ const Notifications = () => {
                             className="flex flex-col items-center justify-center py-20"
                         >
                             <div className="w-12 h-12 border-4 border-brand/20 border-t-brand rounded-full animate-spin" />
-                            <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-content-subtle">Refreshing Inbox...</p>
+                            <p className="mt-4 text-[11px] font-black uppercase tracking-widest text-content-subtle">Refreshing Inbox...</p>
                         </motion.div>
                     ) : notifications.length === 0 ? (
                         <motion.div
@@ -225,13 +270,13 @@ const Notifications = () => {
                             </div>
                             <h2 className="text-lg font-black text-content tracking-tight">All Caught Up!</h2>
                             <p className="text-xs font-bold text-content-subtle max-w-[200px] mt-2 leading-relaxed">
-                                No new notifications at the moment. We'll alert you for your next wash!
+                                No new notifications right now. We'll alert you for your next trip, wash, or payment update.
                             </p>
                             <button
                                 onClick={() => navigate('/services')}
                                 className="mt-8 px-8 py-3 bg-brand text-white rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-brand/20 active:scale-95 transition-transform flex items-center gap-2"
                             >
-                                Book a Service <ArrowRight size={14} />
+                                Open Services <ArrowRight size={14} />
                             </button>
                         </motion.div>
                     ) : (
@@ -240,10 +285,10 @@ const Notifications = () => {
                                 <section className="space-y-3">
                                     <div className="flex items-center justify-between px-1">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
-                                            <p className="text-[10px] font-black text-content uppercase tracking-widest">New Priority</p>
+                                            <div className="w-2 h-2 rounded-full bg-brand animate-pulse" />
+                                            <p className="text-[11px] font-black text-content uppercase tracking-widest">New Priority</p>
                                         </div>
-                                        <button onClick={handleMarkAllAsRead} className="text-[10px] font-black text-brand tracking-tight">
+                                        <button onClick={handleMarkAllAsRead} className="text-[11px] font-black text-brand tracking-tight uppercase">
                                             Mark all read
                                         </button>
                                     </div>
@@ -262,7 +307,7 @@ const Notifications = () => {
 
                             {oldN.length > 0 && (
                                 <section className="space-y-3">
-                                    <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest px-1">History</p>
+                                    <p className="text-[11px] font-[1000] text-content-subtle uppercase tracking-[0.2em] px-1">History</p>
                                     <div className="space-y-3">
                                         {oldN.map((n, i) => (
                                             <NotifCard
@@ -287,9 +332,13 @@ const getIconForType = (type) => {
     switch (type) {
         case 'booking': return { icon: <Calendar size={20} className="text-violet-600" />, bg: 'bg-violet-50', color: 'text-violet-600' };
         case 'payment': return { icon: <Wallet size={20} className="text-emerald-600" />, bg: 'bg-emerald-50', color: 'text-emerald-600' };
+        case 'payout': return { icon: <Wallet size={20} className="text-emerald-600" />, bg: 'bg-emerald-50', color: 'text-emerald-600' };
         case 'promotion': return { icon: <Gift size={20} className="text-rose-500" />, bg: 'bg-rose-50', color: 'text-rose-500' };
         case 'service': return { icon: <Sparkles size={20} className="text-brand" />, bg: 'bg-brand/10', color: 'text-brand' };
         case 'vehicle': return { icon: <ShieldCheck size={20} className="text-blue-600" />, bg: 'bg-blue-50', color: 'text-blue-600' };
+        case 'support': return { icon: <ShieldCheck size={20} className="text-red-500" />, bg: 'bg-red-50', color: 'text-red-500' };
+        case 'sos': return { icon: <ShieldCheck size={20} className="text-red-500" />, bg: 'bg-red-50', color: 'text-red-500' };
+        case 'verification': return { icon: <ShieldCheck size={20} className="text-indigo-600" />, bg: 'bg-indigo-50', color: 'text-indigo-600' };
         default: return { icon: <Bell size={20} className="text-gray-500" />, bg: 'bg-gray-50', color: 'text-gray-500' };
     }
 };
@@ -303,34 +352,34 @@ const NotifCard = ({ notif: n, delay, onClick }) => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay, duration: 0.4 }}
             onClick={onClick}
-            className={`group relative flex items-start gap-4 p-4 rounded-3xl border transition-all active:scale-[0.98] ${n.isNew
-                    ? 'bg-white border-brand/20 shadow-lg shadow-brand/5 ring-1 ring-brand/5'
+            className={`group relative flex items-start gap-5 p-5 rounded-[32px] border transition-all active:scale-[0.98] ${n.isNew
+                    ? 'bg-white border-brand/20 shadow-xl shadow-brand/5 ring-1 ring-brand/5'
                     : 'bg-gray-50/50 border-gray-100 hover:bg-white hover:border-gray-200'
                 }`}
         >
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${bg} shadow-inner`}>
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 ${bg} shadow-inner`}>
                 {icon}
             </div>
 
             <div className="flex-1 min-w-0 py-0.5">
-                <div className="flex items-center justify-between gap-2 mb-1">
-                    <h3 className={`font-black text-sm tracking-tight leading-none ${n.isNew ? 'text-content' : 'text-content-subtle'}`}>
+                <div className="flex items-center justify-between gap-3 mb-1.5">
+                    <h3 className={`font-[1000] text-[16px] tracking-tight leading-none ${n.isNew ? 'text-content' : 'text-content-subtle'}`}>
                         {n.title}
                     </h3>
-                    <span className="text-[8px] font-black text-content-subtle/40 uppercase tracking-widest whitespace-nowrap">
+                    <span className="text-[9px] font-black text-content-subtle/50 uppercase tracking-[0.2em] whitespace-nowrap">
                         {n.time}
                     </span>
                 </div>
-                <p className={`text-[11px] leading-relaxed ${n.isNew ? 'text-content-subtle font-bold' : 'text-content-subtle/70 font-medium'}`}>
+                <p className={`text-[13px] leading-relaxed ${n.isNew ? 'text-content-subtle font-bold' : 'text-content-subtle/70 font-medium'}`}>
                     {n.desc}
                 </p>
 
                 {n.isNew && (
                     <div className="mt-3 flex items-center gap-1.5">
-                        <span className={`text-[8px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full ${bg} ${color}`}>
+                        <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${bg} ${color}`}>
                             Tap to view
                         </span>
-                        <ArrowRight size={10} className={color} />
+                        <ArrowRight size={12} className={color} />
                     </div>
                 )}
             </div>

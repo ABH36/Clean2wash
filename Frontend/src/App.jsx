@@ -51,6 +51,8 @@ import IncidentLog from './modules/consumer/pages/IncidentLog';
 import ProductDetail from './modules/consumer/pages/ProductDetail';
 import Portfolio from './modules/consumer/pages/Portfolio';
 import ApartmentWash from './modules/consumer/pages/ApartmentWash';
+import ApartmentWashHistory from './modules/consumer/pages/ApartmentWashHistory';
+import ApartmentWashSupport from './modules/consumer/pages/ApartmentWashSupport';
 import OrderTracking from './modules/consumer/pages/OrderTracking';
 import SOSActive from './modules/consumer/pages/SOSActive';
 import EmergencySOS from './modules/consumer/pages/EmergencySOS';
@@ -71,6 +73,7 @@ import DriverNotifications from './modules/spareDrivers/pages/DriverNotification
 // ── Captain Module ──
 import CaptainHome from './modules/captain/pages/CaptainHome';
 import CaptainJobDetail from './modules/captain/pages/CaptainJobDetail';
+import CaptainApartmentRoute from './modules/captain/pages/CaptainApartmentRoute';
 import CaptainEarnings from './modules/captain/pages/CaptainEarnings';
 import CaptainProfile from './modules/captain/pages/CaptainProfile';
 import CaptainLogin from './modules/captain/pages/CaptainLogin';
@@ -115,7 +118,6 @@ import StaffPersonalInfo from './modules/staff/pages/StaffPersonalInfo';
 import StaffSecurity from './modules/staff/pages/StaffSecurity';
 import StaffSupport from './modules/staff/pages/StaffSupport';
 import StaffNotifications from './modules/staff/pages/StaffNotifications';
-import SocietyRoute from './modules/staff/pages/SocietyRoute';
 import StaffMapView from './modules/staff/pages/StaffMapView';
 import StaffProductTaskDetail from './modules/staff/pages/StaffProductTaskDetail';
 import CaptainProductMission from './modules/captain/pages/CaptainProductMission';
@@ -133,6 +135,7 @@ import AdminSubscriptions from './modules/admin/pages/AdminSubscriptions';
 import AdminLogin from './modules/admin/pages/AdminLogin';
 import AdminProductVerification from './modules/admin/pages/AdminProductVerification';
 import AdminSpareDrivers from './modules/admin/pages/AdminSpareDrivers';
+import AdminApartmentWash from './modules/admin/pages/AdminApartmentWash';
 import AdminTransactions from './modules/admin/pages/AdminTransactions';
 import AdminVehicleCatalog from './modules/admin/pages/AdminVehicleCatalog';
 import AdminAuditLogs from './modules/admin/pages/AdminAuditLogs';
@@ -227,6 +230,8 @@ function App() {
                       <Route path="/wash-and-care" element={P('consumer', <WashAndCare />)} />
                       <Route path="/subscriptions" element={P('consumer', <Subscriptions />)} />
                       <Route path="/apartment-wash" element={P('consumer', <ApartmentWash />)} />
+                      <Route path="/apartment-wash/history" element={P('consumer', <ApartmentWashHistory />)} />
+                      <Route path="/apartment-wash/support" element={P('consumer', <ApartmentWashSupport />)} />
                       <Route path="/wallet" element={P('consumer', <Wallet />)} />
                       <Route path="/refer" element={P('consumer', <ReferEarn />)} />
                       <Route path="/help" element={P('consumer', <HelpSupport />)} />
@@ -254,6 +259,7 @@ function App() {
                       <Route path="/captain" element={P('captain', <CaptainHome />)} />
                       <Route path="/captain/dashboard" element={<Navigate to="/captain" replace />} />
                       <Route path="/captain/job" element={P('captain', <CaptainJobDetail />)} />
+                      <Route path="/captain/apartment-route" element={P('captain', <CaptainApartmentRoute />)} />
                       <Route path="/captain/earnings" element={P('captain', <CaptainEarnings />)} />
                       <Route path="/captain/profile" element={P('captain', <CaptainProfile />)} />
                       <Route path="/captain/history" element={P('captain', <CaptainHistory />)} />
@@ -293,7 +299,6 @@ function App() {
                       <Route path="/staff/profile/security" element={P('staff', <StaffSecurity />)} />
                       <Route path="/staff/profile/support" element={P('staff', <StaffSupport />)} />
                       <Route path="/staff/profile/notifications" element={P('staff', <StaffNotifications />)} />
-                      <Route path="/staff/society-route" element={P('staff', <SocietyRoute />)} />
                       <Route path="/staff/map" element={P('staff', <StaffMapView />)} />
 
                       {/* ── Admin: Protected ── */}
@@ -309,6 +314,7 @@ function App() {
                         <Route path="/admin/products" element={<AdminProductVerification />} />
                         <Route path="/admin/promotions" element={<AdminPromotions />} />
                         <Route path="/admin/spare-drivers" element={<AdminSpareDrivers />} />
+                        <Route path="/admin/apartment-wash" element={<AdminApartmentWash />} />
                         <Route path="/admin/transactions" element={<AdminTransactions />} />
                         <Route path="/admin/vehicle-catalog" element={<AdminVehicleCatalog />} />
                         <Route path="/admin/product-war-room" element={<AdminProductDashboard />} />

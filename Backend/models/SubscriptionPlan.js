@@ -15,7 +15,7 @@ const subscriptionPlanSchema = new mongoose.Schema({
     interval: {
         type: String,
         required: [true, 'Billing interval is required'],
-        enum: ['Monthly', 'Quarterly', 'Annual'],
+        enum: ['Monthly', 'Quarterly', 'Annual', 'monthly', 'quarterly', 'yearly', 'annual'],
         default: 'Monthly'
     },
     features: {
@@ -34,6 +34,11 @@ const subscriptionPlanSchema = new mongoose.Schema({
     applicableServices: {
         type: [String],
         default: []
+    },
+    moduleScope: {
+        type: String,
+        enum: ['general', 'spare-driver', 'apartment-wash', 'all'],
+        default: 'general'
     },
     credits: {
         type: Number,

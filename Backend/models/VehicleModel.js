@@ -21,6 +21,19 @@ const vehicleModelSchema = new mongoose.Schema({
             'Bike', 'Scooter', 'Superbike'
         ]
     },
+    status: {
+        type: String,
+        enum: ['Verified', 'Pending', 'Rejected'],
+        default: 'Verified'
+    },
+    userSuggested: {
+        type: Boolean,
+        default: false
+    },
+    suggestedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
     image: {
         type: String,
         required: [true, 'Vehicle model image is required']

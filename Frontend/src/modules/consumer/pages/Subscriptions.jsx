@@ -6,7 +6,7 @@ import {
     CreditCard, Layout, RefreshCw, Pause, Play, AlertCircle, CheckCircle2,
     Calendar, Wallet, ShieldCheck, ZapOff, Plus
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import MobileLayout from '../components/layout/MobileLayout';
 import { useAuth } from '../../../context/AuthContext';
 import api, { serviceAPI, subscriptionAPI } from '../../../utils/api';
@@ -14,25 +14,51 @@ import { toast } from 'react-hot-toast';
 
 const Subscriptions = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { userSubscription, setUserSubscription, vehicles, createPaymentOrder, verifyPayment, getRazorpayKey } = useAuth();
+    const moduleScope = searchParams.get('moduleScope') || '';
+    const serviceCategory = searchParams.get('category') || '';
+    const isSpareDriverScope = moduleScope === 'spare-driver';
+    const isApartmentScope = moduleScope === 'apartment-wash';
 
     const [plans, setPlans] = useState([]);
     const [loadingPlans, setLoadingPlans] = useState(true);
+    const [scopedSubscription, setScopedSubscription] = useState(null);
 
     // Flow State: 'DASHBOARD' | 'SELECT_VEHICLE' | 'SELECT_PLAN' | 'PAYMENT' | 'SUCCESS'
-    const [flow, setFlow] = useState(userSubscription ? 'DASHBOARD' : 'SELECT_PLAN');
+    const currentSubscription = (isSpareDriverScope || isApartmentScope) ? scopedSubscription : userSubscription;
+    const setCurrentSubscription = (isSpareDriverScope || isApartmentScope) ? setScopedSubscription : setUserSubscription;
+    const [flow, setFlow] = useState(currentSubscription ? 'DASHBOARD' : 'SELECT_PLAN');
     const [selectedPlan, setSelectedPlan] = useState(null);
     const [selectedVehicles, setSelectedVehicles] = useState([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [selectedTab, setSelectedTab] = useState('Monthly'); // Matches API interval
     const [error, setError] = useState(null);
+    const scopeTitle = isSpareDriverScope
+        ? 'Chauffeur Pass'
+        : isApartmentScope
+            ? 'Apartment Pass'
+            : 'clean2wash PASS';
+    const scopeDashboardTitle = isSpareDriverScope
+        ? 'Ride Credits'
+        : isApartmentScope
+            ? 'Wash Credits'
+            : 'Credits';
+    const scopeUpgradeLabel = isSpareDriverScope
+        ? 'Upgrade Chauffeur Plan'
+        : isApartmentScope
+            ? 'Upgrade Apartment Plan'
+            : 'Upgrade Plan';
 
     useEffect(() => {
         const fetchPlans = async () => {
             try {
-                const res = await serviceAPI.getPlans();
-                if (res.data.status === 'success') {
-                    setPlans(res.data.data.plans || []);
+                const res = await serviceAPI.getPlans({
+                    ...(serviceCategory ? { category: serviceCategory } : {}),
+                    ...(moduleScope ? { moduleScope } : {})
+                });
+                if (res.status === 'success') {
+                    setPlans(res.data.plans || []);
                 }
             } catch (err) {
                 console.error('Failed to load dynamic plans:', err);
@@ -41,25 +67,43 @@ const Subscriptions = () => {
             }
         };
         fetchPlans();
-    }, []);
+    }, [moduleScope, serviceCategory]);
+
+    useEffect(() => {
+        if (!moduleScope) return undefined;
+
+        const fetchScopedSubscription = async () => {
+            try {
+                const res = await subscriptionAPI.getSubscription({ moduleScope });
+                if (res?.status === 'success') {
+                    setScopedSubscription(res.data.subscription || null);
+                }
+            } catch (err) {
+                console.error('Failed to load scoped subscription:', err);
+            }
+        };
+
+        fetchScopedSubscription();
+        return undefined;
+    }, [moduleScope]);
 
     // Sync flow with subscription status
     useEffect(() => {
-        if (!userSubscription && flow === 'DASHBOARD') {
+        if (!currentSubscription && flow === 'DASHBOARD') {
             setFlow('SELECT_PLAN');
         }
-    }, [userSubscription, flow]);
+    }, [currentSubscription, flow]);
 
     // Dashboard Info — Use a wash credit via real API
     const handleDeductWash = async () => {
-        if (!userSubscription || userSubscription.status !== 'active') return;
+        if (!currentSubscription || currentSubscription.status !== 'active') return;
         
         setIsProcessing(true);
         setError(null);
         try {
-            const res = await subscriptionAPI.useSubscriptionCredit();
+            const res = await subscriptionAPI.useSubscriptionCredit(moduleScope ? { moduleScope } : {});
             if (res.status === 'success') {
-                setUserSubscription(res.data.subscription);
+                setCurrentSubscription(res.data.subscription);
                 toast.success('Credit used successfully!');
             }
         } catch (err) {
@@ -76,13 +120,13 @@ const Subscriptions = () => {
         setError(null);
         try {
             let res;
-            if (userSubscription.status === 'active') {
-                res = await subscriptionAPI.pauseSubscription();
+            if (currentSubscription.status === 'active') {
+                res = await subscriptionAPI.pauseSubscription(moduleScope ? { moduleScope } : {});
             } else {
-                res = await subscriptionAPI.resumeSubscription();
+                res = await subscriptionAPI.resumeSubscription(moduleScope ? { moduleScope } : {});
             }
             if (res?.status === 'success') {
-                setUserSubscription(res.data.subscription);
+                setCurrentSubscription(res.data.subscription);
             }
         } catch (err) {
             setError(err.message || 'Failed to update subscription status.');
@@ -149,20 +193,22 @@ const Subscriptions = () => {
                             // 5. Create subscription on backend
                             const { subscriptionAPI } = await import('../../../utils/api');
                             const subRes = await subscriptionAPI.createSubscription({
-                                plan: selectedPlan.planKey || selectedPlan.name?.toLowerCase().replace(/\s+/g, '_') || 'basic',
+                                planId: selectedPlan._id || selectedPlan.id,
+                                plan: selectedPlan.name,
                                 paymentMethod: 'razorpay',
                                 vehicleIds: selectedVehicles,
-                                orderId: response.razorpay_order_id,
                                 paymentId: response.razorpay_payment_id,
-                                autoRenew: false
+                                orderId: response.razorpay_order_id,
+                                signature: response.razorpay_signature,
+                                autoRenew: false,
+                                ...(moduleScope ? { moduleScope } : {})
                             });
 
                             if (subRes?.status === 'success') {
-                                setUserSubscription({
+                                setCurrentSubscription({
                                     ...subRes.data.subscription,
                                     planName: selectedPlan.name,
-                                    vehicleIds: selectedVehicles,
-                                    washesLeft: selectedPlan.washes || subRes.data.subscription.monthlyCredits || 0
+                                    vehicleIds: selectedVehicles
                                 });
                                 setFlow('SUCCESS');
                                 resolve();
@@ -209,8 +255,8 @@ const Subscriptions = () => {
                             setIsProcessing(true);
                             setError(null);
                             try {
-                                await subscriptionAPI.cancelSubscription();
-                                setUserSubscription(null);
+                                await subscriptionAPI.cancelSubscription(moduleScope ? { moduleScope } : {});
+                                setCurrentSubscription(null);
                                 setFlow('SELECT_PLAN');
                                 toast.success('Subscription cancelled');
                             } catch (err) {
@@ -242,7 +288,7 @@ const Subscriptions = () => {
                     <button onClick={() => {
                         if (flow === 'SELECT_VEHICLE') setFlow('SELECT_PLAN');
                         else if (flow === 'PAYMENT') setFlow('SELECT_VEHICLE');
-                        else if (flow === 'SELECT_PLAN' && !userSubscription) navigate('/');
+                        else if (flow === 'SELECT_PLAN' && !currentSubscription) navigate('/');
                         else if (flow === 'DASHBOARD') navigate('/');
                         else setFlow('DASHBOARD');
                     }} className="w-8 h-8 flex items-center justify-center bg-gray-50 rounded-lg">
@@ -254,16 +300,16 @@ const Subscriptions = () => {
                 </div>
                 <div className="text-left">
                     <span className="text-[14px] font-[900] text-black uppercase tracking-tight">{title}</span>
-                    <p className="text-[10px] font-bold text-black/30 uppercase tracking-widest leading-none mt-1">clean2wash PASS</p>
+                    <p className="text-[10px] font-bold text-black/30 uppercase tracking-widest leading-none mt-1">{scopeTitle}</p>
                 </div>
             </div>
         </header>
     );
 
     const renderDashboard = () => {
-        if (!userSubscription) return null;
-        const plan = plans.find(p => p.id === userSubscription.planId) || plans[0] || {};
-        const subVehicles = (vehicles || []).filter(v => userSubscription.vehicleIds?.includes(v.id));
+        if (!currentSubscription) return null;
+        const plan = plans.find((p) => (p.id || p._id) === currentSubscription.planId) || plans[0] || {};
+        const subVehicles = (vehicles || []).filter(v => currentSubscription.vehicleIds?.includes(v.id));
 
         return (
             <div className="flex flex-col gap-6 pb-24">
@@ -283,19 +329,19 @@ const Subscriptions = () => {
                         <div className="flex justify-between items-start mb-8 relative z-10">
                             <div>
                                 <div className="bg-[#F29F05] text-black text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 w-fit">
-                                    {userSubscription.status}
+                                    {currentSubscription.status}
                                 </div>
                                 <h2 className="text-white text-2xl font-black italic uppercase tracking-tighter">
-                                    {userSubscription.planName || userSubscription.plan}
+                                    {currentSubscription.planName || currentSubscription.plan}
                                 </h2>
                                 <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest">
-                                    Renews on {userSubscription.endDate ? new Date(userSubscription.endDate).toLocaleDateString() : userSubscription.expiryDate ? new Date(userSubscription.expiryDate).toLocaleDateString() : 'N/A'}
+                                    Renews on {currentSubscription.endDate ? new Date(currentSubscription.endDate).toLocaleDateString() : currentSubscription.expiryDate ? new Date(currentSubscription.expiryDate).toLocaleDateString() : 'N/A'}
                                 </p>
                             </div>
                             <div className="text-right">
-                                <p className="text-white/30 text-[9px] font-black uppercase tracking-widest">Credits</p>
+                                <p className="text-white/30 text-[9px] font-black uppercase tracking-widest">{scopeDashboardTitle}</p>
                                 <div className="text-white text-3xl font-black italic tracking-tighter leading-none mt-1">
-                                    0{userSubscription.washesLeft ?? userSubscription.monthlyCredits ?? 0}/0{plan?.washes || userSubscription.monthlyCredits || 0}
+                                    0{(currentSubscription.monthlyCredits - (currentSubscription.usedCredits || 0)) || 0}/0{currentSubscription.monthlyCredits || 0}
                                 </div>
                             </div>
                         </div>
@@ -303,17 +349,17 @@ const Subscriptions = () => {
                         <div className="grid grid-cols-2 gap-3 relative z-10">
                             <button
                                 onClick={handleDeductWash}
-                                disabled={userSubscription.status !== 'active'}
+                                disabled={currentSubscription.status !== 'active'}
                                 className="bg-white text-black py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
                             >
-                                <Zap size={14} fill="currentColor" /> Use Credit
+                                <Zap size={14} fill="currentColor" /> {isSpareDriverScope ? 'Use Trip Credit' : 'Use Credit'}
                             </button>
                             <button
                                 onClick={handleToggleStatus}
                                 disabled={isProcessing}
-                                className={`${userSubscription.status === 'active' ? 'bg-white/10 text-white' : 'bg-green-500 text-white'} py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all outline-none border border-white/5 disabled:opacity-60`}
+                                className={`${currentSubscription.status === 'active' ? 'bg-white/10 text-white' : 'bg-green-500 text-white'} py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all outline-none border border-white/5 disabled:opacity-60`}
                             >
-                                {isProcessing ? 'Please wait...' : userSubscription.status === 'active' ? <><Pause size={14} /> Pause Plan</> : <><Play size={14} /> Resume Plan</>}
+                                {isProcessing ? 'Please wait...' : currentSubscription.status === 'active' ? <><Pause size={14} /> Pause Plan</> : <><Play size={14} /> Resume Plan</>}
                             </button>
                         </div>
                     </div>
@@ -356,7 +402,7 @@ const Subscriptions = () => {
                         <div>
                             <h4 className="text-[13px] font-black text-blue-900 uppercase">Rollover Cap: {plan.rollover} Washes</h4>
                             <p className="text-[10px] font-bold text-blue-800/60 uppercase mt-1 leading-relaxed">
-                                Any unused washes (up to {plan.rollover}) will automatically transfer to your next billing cycle.
+                                Any unused {isSpareDriverScope ? 'trip credits' : 'washes'} (up to {plan.rollover}) will automatically transfer to your next billing cycle.
                             </p>
                         </div>
                     </div>
@@ -367,7 +413,7 @@ const Subscriptions = () => {
                     <div className="grid grid-cols-2 gap-4">
                         <button onClick={() => setFlow('SELECT_PLAN')} className="bg-white border border-gray-200 p-6 rounded-2xl flex flex-col items-center gap-3 active:scale-95 transition-all shadow-sm">
                             <ArrowRight className="text-black" size={24} />
-                            <span className="text-[10px] font-black uppercase text-black">Upgrade Plan</span>
+                            <span className="text-[10px] font-black uppercase text-black">{scopeUpgradeLabel}</span>
                         </button>
                         <button onClick={() => navigate('/vehicles')} className="bg-white border border-gray-200 p-6 rounded-2xl flex flex-col items-center gap-3 active:scale-95 transition-all shadow-sm">
                             <Layout className="text-black" size={24} />
@@ -475,21 +521,23 @@ const Subscriptions = () => {
 
     const renderVehicleSelect = () => (
         <div className="flex flex-col gap-6 pb-24 px-5 pt-4">
-            <div className="bg-black text-white p-6 rounded-3xl mb-4">
-                <h3 className="text-xl font-black uppercase italic italic tracking-tighter mb-2">{selectedPlan.name} Fleet</h3>
-                <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest">
-                    You can link up to {selectedPlan.maxVehicles} vehicles to this plan.
-                </p>
-                <div className="mt-4 flex items-center gap-2">
-                    <div className="flex-1 bg-white/10 h-2 rounded-full overflow-hidden">
-                        <div
-                            className="bg-[#F29F05] h-full transition-all duration-500"
-                            style={{ width: `${(selectedVehicles.length / selectedPlan.maxVehicles) * 100}%` }}
-                        />
+                <div className="bg-black text-white p-6 rounded-3xl mb-4">
+                    <h3 className="text-xl font-black uppercase italic italic tracking-tighter mb-2">{selectedPlan.name} Fleet</h3>
+                    <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest">
+                        {isSpareDriverScope
+                            ? `You can assign this chauffeur plan to up to ${selectedPlan.maxVehicles} vehicles.`
+                            : `You can link up to ${selectedPlan.maxVehicles} vehicles to this plan.`}
+                    </p>
+                    <div className="mt-4 flex items-center gap-2">
+                        <div className="flex-1 bg-white/10 h-2 rounded-full overflow-hidden">
+                            <div
+                                className="bg-[#F29F05] h-full transition-all duration-500"
+                                style={{ width: `${(selectedVehicles.length / selectedPlan.maxVehicles) * 100}%` }}
+                            />
+                        </div>
+                        <span className="text-[10px] font-black">{selectedVehicles.length}/{selectedPlan.maxVehicles}</span>
                     </div>
-                    <span className="text-[10px] font-black">{selectedVehicles.length}/{selectedPlan.maxVehicles}</span>
                 </div>
-            </div>
 
             <div className="space-y-3">
                 {(vehicles || []).map(v => (
@@ -554,6 +602,15 @@ const Subscriptions = () => {
                     </div>
                 </div>
 
+                {isSpareDriverScope && (
+                    <div className="bg-amber-50 p-4 rounded-2xl mb-6 border border-amber-100">
+                        <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest">Spare Driver Scope</p>
+                        <p className="text-[10px] font-bold text-amber-900/70 uppercase mt-1 leading-relaxed">
+                            This plan applies only to chauffeur bookings and will not affect wash subscriptions.
+                        </p>
+                    </div>
+                )}
+
                 <div className="bg-gray-50 p-4 rounded-2xl mb-8">
                     <div className="flex items-center gap-3 mb-4">
                         <ShieldCheck size={18} className="text-green-500" />
@@ -593,7 +650,9 @@ const Subscriptions = () => {
                 <span className="text-[#F29F05]">PRIME</span> Club
             </h2>
             <p className="text-[11px] font-bold text-black/40 uppercase tracking-widest leading-relaxed mb-10">
-                Your subscription is now active. Your fleet is ready for doorstep grooming.
+                {isSpareDriverScope
+                    ? 'Your chauffeur subscription is now active. Trip credits are ready for spare driver bookings.'
+                    : 'Your subscription is now active. Your fleet is ready for doorstep grooming.'}
             </p>
             <button
                 onClick={() => setFlow('DASHBOARD')}

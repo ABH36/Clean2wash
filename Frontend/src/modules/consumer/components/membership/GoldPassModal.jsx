@@ -4,7 +4,7 @@ import { X, CheckCircle2, Crown, Sparkles, ShieldCheck, Zap, ArrowRight, Loader2
 import { useAuth } from '../../../../context/AuthContext';
 import { serviceAPI, subscriptionAPI, paymentAPI } from '../../../../utils/api';
 
-const BlackPassModal = ({ isOpen, onClose }) => {
+const GoldPassModal = ({ isOpen, onClose }) => {
     const { user, login, userSubscription, setUserSubscription, getRazorpayKey, createPaymentOrder, verifyPayment } = useAuth();
     const [loading, setLoading] = useState(false);
     const [plan, setPlan] = useState(null);
@@ -12,25 +12,25 @@ const BlackPassModal = ({ isOpen, onClose }) => {
 
     useEffect(() => {
         if (isOpen) {
-            fetchBlackPlan();
+            fetchGoldPlan();
         }
     }, [isOpen]);
 
-    const fetchBlackPlan = async () => {
+    const fetchGoldPlan = async () => {
         try {
             setLoading(true);
             const res = await serviceAPI.getPlans();
             if (res.status === 'success' && res.data?.plans) {
-                const blackPass = res.data.plans.find(p => p.name?.toLowerCase().includes('black'));
+                const goldPass = res.data.plans.find(p => p.name?.toLowerCase().includes('gold') || p.name?.toLowerCase().includes('black'));
 
-                if (blackPass) {
-                    setPlan(blackPass);
+                if (goldPass) {
+                    setPlan(goldPass);
                 } else {
                     // Fallback to static mock if not found in DB yet
                     setPlan({
-                        id: 'black-pass-proto',
-                        name: 'Black Pass',
-                        price: 599,
+                        id: 'gold-pass-proto',
+                        name: 'Gold Pass',
+                        price: 399,
                         features: [
                             '30% OFF on All Services',
                             'Zero Pickup & Delivery Fee',
@@ -50,7 +50,7 @@ const BlackPassModal = ({ isOpen, onClose }) => {
 
     const handlePurchase = async () => {
         if (!user) {
-            setError("Please login to purchase Black Pass");
+            setError("Please login to purchase Gold Pass");
             return;
         }
 
@@ -61,8 +61,8 @@ const BlackPassModal = ({ isOpen, onClose }) => {
             // 1. Get Razorpay Key from backend
             const { data: { key_id } } = await getRazorpayKey();
 
-            // 2. Create payment order (599 INR for Black Pass)
-            const orderRes = await createPaymentOrder(599, 'INR', `black_pass_${Date.now()}`);
+            // 2. Create payment order (399 INR for Gold Pass)
+            const orderRes = await createPaymentOrder(399, 'INR', `gold_pass_${Date.now()}`);
             const { order_id, amount, currency } = orderRes.data;
 
             // 3. Initialize Razorpay options
@@ -70,8 +70,8 @@ const BlackPassModal = ({ isOpen, onClose }) => {
                 key: key_id,
                 amount: amount, // Amount in paise as returned by backend
                 currency: currency,
-                name: 'Clean2Wash Black',
-                description: 'Black Pass Premium Membership',
+                name: 'Clean2Wash Gold',
+                description: 'Gold Pass Premium Membership',
                 image: 'https://cdn-icons-png.flaticon.com/512/3003/3003984.png', // Public URL to avoid localhost loopback CORS issues
                 order_id: order_id,
                 handler: async function (response) {
@@ -87,11 +87,12 @@ const BlackPassModal = ({ isOpen, onClose }) => {
                         if (verificationResult.success) {
                             // 5. Create subscription record
                             const subRes = await subscriptionAPI.createSubscription({
-                                plan: plan?.name || plan?.id || 'black',
+                                plan: plan?.name || plan?.id || 'gold',
                                 planId: plan?.id || plan?._id,
                                 paymentMethod: 'razorpay',
                                 paymentId: response.razorpay_payment_id,
-                                orderId: response.razorpay_order_id
+                                orderId: response.razorpay_order_id,
+                                signature: response.razorpay_signature
                             });
 
                             if (subRes.status === 'success') {
@@ -148,20 +149,20 @@ const BlackPassModal = ({ isOpen, onClose }) => {
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        className="bg-white w-full max-w-md rounded-[2.5rem] overflow-hidden relative z-10 shadow-2xl"
+                        className="bg-white w-full max-w-[340px] rounded-[2rem] overflow-hidden relative z-10 shadow-2xl"
                     >
-                        {/* Premium Header */}
-                        <div className="relative h-48 bg-black flex flex-col items-center justify-center overflow-hidden">
+                        {/* Premium Header - Compact Native Style */}
+                        <div className="relative h-36 bg-black flex flex-col items-center justify-center overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-br from-brand/20 to-transparent z-0" />
 
                             {/* Animated Background Sparks */}
-                            {[...Array(6)].map((_, i) => (
+                            {[...Array(5)].map((_, i) => (
                                 <motion.div
                                     key={i}
                                     className="absolute w-1 h-1 bg-brand rounded-full"
                                     animate={{
-                                        y: [-20, -100],
-                                        x: [0, (i - 3) * 20],
+                                        y: [-10, -80],
+                                        x: [0, (i - 2) * 15],
                                         opacity: [0, 1, 0]
                                     }}
                                     transition={{
@@ -170,96 +171,96 @@ const BlackPassModal = ({ isOpen, onClose }) => {
                                         delay: i * 0.3
                                     }}
                                     style={{
-                                        bottom: '20%',
-                                        left: `${40 + i * 5}%`
+                                        bottom: '15%',
+                                        left: `${45 + i * 4}%`
                                     }}
                                 />
                             ))}
 
                             <motion.div
-                                initial={{ y: 20, opacity: 0 }}
+                                initial={{ y: 15, opacity: 0 }}
                                 animate={{ y: 0, opacity: 1 }}
                                 transition={{ delay: 0.2 }}
                                 className="relative z-10 flex flex-col items-center"
                             >
-                                <div className="w-16 h-16 bg-brand/10 rounded-2xl flex items-center justify-center mb-4 border border-brand/20 shadow-2xl">
-                                    <Crown size={32} className="text-brand" fill="#F29F05" />
+                                <div className="w-14 h-14 bg-brand/10 rounded-2xl flex items-center justify-center mb-3 border border-brand/20 shadow-2xl">
+                                    <Crown size={28} className="text-brand" fill="#F29F05" />
                                 </div>
-                                <h2 className="text-2xl font-[1000] text-white uppercase tracking-tighter leading-none">Black Pass</h2>
-                                <p className="text-[10px] font-black text-brand uppercase tracking-[0.4em] mt-2">Lifetime Ecosystem Access</p>
+                                <h2 className="text-xl font-[1000] text-white uppercase tracking-tighter leading-none">Gold Pass</h2>
+                                <p className="text-[9px] font-black text-brand uppercase tracking-[0.4em] mt-1.5 opacity-80">Lifetime Access</p>
                             </motion.div>
 
                             <button
                                 onClick={onClose}
-                                className="absolute top-6 right-6 w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-white/60 hover:text-white transition-colors"
+                                className="absolute top-4 right-4 w-9 h-9 bg-white/10 rounded-full flex items-center justify-center text-white/60 hover:text-white transition-colors"
                             >
-                                <X size={20} />
+                                <X size={18} />
                             </button>
                         </div>
 
-                        {/* Benefits List */}
-                        <div className="p-8 pb-10">
+                        {/* Benefits List - Compact */}
+                        <div className="p-6 pb-8">
                             {loading && !plan ? (
-                                <div className="py-10 flex flex-col items-center justify-center">
+                                <div className="py-8 flex flex-col items-center justify-center">
                                     <Loader2 className="w-8 h-8 text-brand animate-spin mb-4" />
                                     <p className="text-[10px] font-black text-black/40 uppercase tracking-widest">Calibrating Benefits...</p>
                                 </div>
                             ) : (
                                 <>
-                                    <div className="space-y-4 mb-10">
+                                    <div className="space-y-3 mb-8">
                                         {(plan?.features || []).map((feat, i) => (
                                             <motion.div
                                                 key={i}
                                                 initial={{ x: -10, opacity: 0 }}
                                                 animate={{ x: 0, opacity: 1 }}
                                                 transition={{ delay: 0.3 + i * 0.1 }}
-                                                className="flex items-center gap-4"
+                                                className="flex items-center gap-3"
                                             >
-                                                <div className="w-6 h-6 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
-                                                    <CheckCircle2 size={12} className="text-brand" strokeWidth={3} />
+                                                <div className="w-5 h-5 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
+                                                    <CheckCircle2 size={10} className="text-brand" strokeWidth={3} />
                                                 </div>
-                                                <span className="text-[11px] font-[1000] text-black/70 uppercase tracking-tight">{feat}</span>
+                                                <span className="text-[10px] font-[1000] text-black/70 uppercase tracking-tight leading-none">{feat}</span>
                                             </motion.div>
                                         ))}
                                     </div>
 
                                     {error && (
-                                        <div className="mb-6 p-4 bg-red-50 rounded-2xl border border-red-100 flex items-center gap-3">
-                                            <ShieldCheck size={16} className="text-red-500" />
-                                            <p className="text-[10px] font-bold text-red-600 uppercase tracking-tight">{error}</p>
+                                        <div className="mb-5 p-3 bg-red-50 rounded-xl border border-red-100 flex items-center gap-2">
+                                            <ShieldCheck size={14} className="text-red-500" />
+                                            <p className="text-[9px] font-bold text-red-600 uppercase tracking-tight">{error}</p>
                                         </div>
                                     )}
 
-                                    <div className="bg-gray-50 rounded-[2rem] p-6 mb-8 border border-gray-100 flex items-center justify-between">
+                                    <div className="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-100 flex items-center justify-between">
                                         <div>
-                                            <p className="text-[9px] font-black text-black/30 uppercase tracking-[0.2em] mb-1">Standard Price</p>
-                                            <div className="flex items-baseline gap-2">
-                                                <span className="text-2xl font-[1000] text-black italic leading-none">₹{plan?.price || 599}</span>
-                                                <span className="text-[10px] font-black text-black/40 uppercase tracking-widest">/ Month</span>
+                                            <p className="text-[8px] font-black text-black/30 uppercase tracking-[0.2em] mb-0.5">Premium Price</p>
+                                            <div className="flex items-baseline gap-1.5">
+                                                <span className="text-xl font-[1000] text-black italic leading-none">₹{plan?.price || 399}</span>
+                                                <span className="text-[9px] font-black text-black/40 uppercase tracking-widest">/ Limitless</span>
                                             </div>
                                         </div>
-                                        <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border border-gray-100 shadow-sm">
-                                            <Zap size={20} className="text-brand" fill="#F29F05" />
+                                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-gray-100 shadow-sm">
+                                            <Zap size={18} className="text-brand" fill="#F29F05" />
                                         </div>
                                     </div>
 
                                     <motion.button
-                                        whileTap={{ scale: 0.95 }}
+                                        whileTap={{ scale: 0.96 }}
                                         onClick={handlePurchase}
                                         disabled={loading}
-                                        className={`w-full h-16 rounded-[2rem] font-black text-[12px] uppercase tracking-[0.3em] shadow-2xl flex items-center justify-center gap-4 group transition-all duration-300 ${userSubscription ? 'bg-emerald-500 text-white' : 'bg-black text-white hover:bg-brand'}`}
+                                        className={`w-full h-12 rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 group transition-all duration-300 ${userSubscription ? 'bg-emerald-500 text-white' : 'bg-black text-white hover:bg-brand shadow-lg active:shadow-none'}`}
                                     >
                                         {loading ? (
-                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                            <Loader2 className="w-4 h-4 animate-spin" />
                                         ) : (
                                             <>
-                                                {userSubscription ? 'Extend Premium Membership' : 'Unlock Premium Now'}
-                                                <ArrowRight size={18} className="translate-x-0 group-hover:translate-x-1 transition-transform" />
+                                                <span>{userSubscription ? 'Extend Pass' : 'Unlock Gold Pass'}</span>
+                                                <ArrowRight size={14} className="translate-x-0 group-hover:translate-x-1 transition-transform" />
                                             </>
                                         )}
                                     </motion.button>
 
-                                    <p className="text-center text-[8px] font-bold text-black/20 uppercase tracking-[0.2em] mt-6">
+                                    <p className="text-center text-[7px] font-bold text-black/20 uppercase tracking-[0.2em] mt-5">
                                         Powered by Razorpay Secure
                                     </p>
                                 </>
@@ -272,4 +273,4 @@ const BlackPassModal = ({ isOpen, onClose }) => {
     );
 };
 
-export default BlackPassModal;
+export default GoldPassModal;

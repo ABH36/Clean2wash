@@ -9,6 +9,7 @@ import { socketService } from '../../../utils/socket';
 import {
     LayoutDashboard,
     BarChart3,
+    Building2,
     Users,
     User,
     Settings,
@@ -52,6 +53,7 @@ const AdminLayout = ({ title: propTitle }) => {
         if (path === '/admin/notifications') return 'Intelligence Logs';
         if (path === '/admin/bookings') return 'Service Registry';
         if (path === '/admin/users') return 'User Directory';
+        if (path === '/admin/apartment-wash') return 'Apartment Wash Ops';
         return 'Admin Command';
     };
 
@@ -107,6 +109,7 @@ const AdminLayout = ({ title: propTitle }) => {
         { icon: <ShoppingBag size={18} />, label: 'Product Governance', path: '/admin/products' },
         { icon: <TrendingUp size={18} />, label: 'Product War-Room', path: '/admin/product-war-room' },
         { icon: <UserCheck size={18} />, label: 'Chauffeur Drivers', path: '/admin/spare-drivers' },
+        { icon: <Building2 size={18} />, label: 'Apartment Wash Ops', path: '/admin/apartment-wash' },
         { icon: <Package size={18} />, label: 'Operations Hub', path: '/admin/bookings' },
         { icon: <Car size={18} />, label: 'Service Catalog', path: '/admin/services' },
         { icon: <Car size={18} />, label: 'Vehicle Catalog', path: '/admin/vehicle-catalog' },
@@ -348,13 +351,12 @@ const SidebarContent = ({ isSidebarOpen, NAV_ITEMS, location, navigate, onLogout
 );
 
 const BottomNav = ({ NAV_ITEMS, location, navigate, setIsMobileNavOpen }) => {
-    // Top 4 critical nodes for fast access
     const BOTTOM_ITEMS = [
-        NAV_ITEMS[0], // Dashboard
-        NAV_ITEMS[9], // Operations Hub (Bookings)
-        NAV_ITEMS[3], // User Management
-        NAV_ITEMS[10], // Service Catalog
-    ];
+        NAV_ITEMS.find((item) => item.path === '/admin'),
+        NAV_ITEMS.find((item) => item.path === '/admin/bookings'),
+        NAV_ITEMS.find((item) => item.path === '/admin/users'),
+        NAV_ITEMS.find((item) => item.path === '/admin/services'),
+    ].filter(Boolean);
 
     return (
         <nav className="fixed bottom-0 left-0 right-0 h-16 bg-surface/80 backdrop-blur-2xl border-t border-gray-100/10 px-6 flex items-center justify-between lg:hidden z-[60] safe-area-bottom shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">

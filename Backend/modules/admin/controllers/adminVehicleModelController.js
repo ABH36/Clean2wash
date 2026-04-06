@@ -98,3 +98,69 @@ exports.deleteVehicleModel = async (req, res) => {
         res.status(500).json({ status: 'error', message: 'Failed to delete vehicle model' });
     }
 };
+// GET all unique brands in the catalog
+exports.getUniqueBrands = async (req, res) => {
+    try {
+        const brands = await VehicleModel.distinct('brand', { isActive: true });
+        res.status(200).json({
+            status: 'success',
+            data: { brands: brands.sort() }
+        });
+    } catch (error) {
+        console.error('Error fetching unique brands:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to fetch unique brands' });
+    }
+};
+
+// GET all pending vehicle suggestions from users
+exports.getPendingSuggestions = async (req, res) => {
+    try {
+        const pendingModels = await VehicleModel.find({ status: 'Pending' })
+            .populate('suggestedBy', 'name phone email')
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            status: 'success',
+            results: pendingModels.length,
+            data: { pendingModels }
+        });
+    } catch (error) {
+        console.error('Error fetching pending suggestions:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to fetch pending suggestions' });
+    }
+};
+
+// Review (Approve/Reject) a user-suggested vehicle model
+exports.reviewSuggestion = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, type, basePrice, difficulty, baseDuration, protocolSteps } = req.body;
+
+        if (!['Verified', 'Rejected'].includes(status)) {
+            return res.status(400).json({ status: 'error', message: 'Invalid status. Must be Verified or Rejected' });
+        }
+
+        const vehicleModel = await VehicleModel.findByIdAndUpdate(id, {
+            status,
+            type: type || undefined,
+            basePrice: basePrice || undefined,
+            difficulty: difficulty || undefined,
+            baseDuration: baseDuration || undefined,
+            protocolSteps: protocolSteps || undefined,
+            userSuggested: false // Once reviewed, it's no longer just a "suggestion"
+        }, { new: true, runValidators: true });
+
+        if (!vehicleModel) {
+            return res.status(404).json({ status: 'error', message: 'Suggested model not found' });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            message: `Vehicle model ${status.toLowerCase()} successfully`,
+            data: { vehicleModel }
+        });
+    } catch (error) {
+        console.error('Error reviewing suggestion:', error);
+        res.status(400).json({ status: 'error', message: error.message || 'Failed to review suggestion' });
+    }
+};

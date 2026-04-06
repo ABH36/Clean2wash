@@ -396,7 +396,11 @@ export const AuthProvider = ({ children }) => {
 
     // Vehicle management with backend integration
     const [vehicles, setVehicles] = useState([]);
-    const [vehiclesLoading, setVehiclesLoading] = useState(false);
+    const [vehiclesLoading, setVehiclesLoading] = useState(() => {
+        // Assume loading if a consumer session exists but data isn't fetched yet
+        const raw = localStorage.getItem(SESSION_KEYS.consumer);
+        return !!(raw && JSON.parse(raw)?.id);
+    });
     const [globalCatalog, setGlobalCatalog] = useState([]);
     const [catalogLoading, setCatalogLoading] = useState(false);
 
@@ -442,7 +446,7 @@ export const AuthProvider = ({ children }) => {
         } finally {
             setVehiclesLoading(false);
         }
-    }, [sessions.consumer]);
+    }, [sessions.consumer?.id]);
 
     const addVehicle = useCallback(async (vehicleData) => {
         try {
@@ -508,7 +512,7 @@ export const AuthProvider = ({ children }) => {
         } finally {
             setTrustedContactsLoading(false);
         }
-    }, [sessions.consumer]);
+    }, [sessions.consumer?.id]);
 
     // Load contacts on mount/login
     useEffect(() => {
@@ -567,7 +571,7 @@ export const AuthProvider = ({ children }) => {
         } finally {
             setBookingsLoading(false);
         }
-    }, [sessions.consumer]);
+    }, [sessions.consumer?.id]);
 
     const addBooking = useCallback(async (bookingData) => {
         const enrichedData = {
@@ -644,7 +648,7 @@ export const AuthProvider = ({ children }) => {
         } finally {
             setProductOrdersLoading(false);
         }
-    }, [sessions.consumer]);
+    }, [sessions.consumer?.id]);
 
     useEffect(() => {
         if (sessions.consumer?.id) {
@@ -703,11 +707,18 @@ export const AuthProvider = ({ children }) => {
         }
     }, [sessions.consumer?.token]);
 
+    const isGoldPassMember = useMemo(() => {
+        if (!userSubscription) return false;
+        const planName = userSubscription.planName || userSubscription.name || userSubscription.plan || '';
+        const isActive = userSubscription.status === 'active' || userSubscription.status === 'Active';
+        return isActive && (planName.toLowerCase().includes('gold') || planName.toLowerCase().includes('black'));
+    }, [userSubscription]);
+
     const isBlackPassMember = useMemo(() => {
         if (!userSubscription) return false;
         const planName = userSubscription.planName || userSubscription.name || userSubscription.plan || '';
         const isActive = userSubscription.status === 'active' || userSubscription.status === 'Active';
-        return isActive && (planName.toLowerCase().includes('black'));
+        return isActive && planName.toLowerCase().includes('black');
     }, [userSubscription]);
 
     // Wallet management with backend integration
@@ -723,7 +734,8 @@ export const AuthProvider = ({ children }) => {
         try {
             setWalletLoading(true);
             const response = await apiClient.getWallet();
-            setWalletBalance(response?.data?.wallet?.balance || 0);
+            const newBalance = response?.data?.wallet?.availableBalance ?? response?.data?.wallet?.balance ?? 0;
+            updateWalletBalance(newBalance);
         } catch (error) {
             // Don't show error for unauthorized requests
             if (error.response?.status !== 401) {
@@ -732,7 +744,7 @@ export const AuthProvider = ({ children }) => {
         } finally {
             setWalletLoading(false);
         }
-    }, [sessions.consumer]);
+    }, [sessions.consumer?.id]);
 
     // Load wallet from backend when user logs in
     useEffect(() => {
@@ -744,7 +756,8 @@ export const AuthProvider = ({ children }) => {
     const addToWallet = useCallback(async (amount, paymentMethod) => {
         try {
             const response = await apiClient.addToWallet(amount, paymentMethod);
-            setWalletBalance(response.data.wallet?.balance || walletBalance + amount);
+            const newBalance = response.data.wallet?.availableBalance ?? response.data.wallet?.balance ?? (walletBalance + amount);
+            updateWalletBalance(newBalance);
             return { success: true, data: response.data.wallet };
         } catch (error) {
             console.error('Failed to add to wallet:', error);
@@ -817,6 +830,7 @@ export const AuthProvider = ({ children }) => {
     // Socket.io Integration
     useEffect(() => {
         const activeSession = sessions.consumer || sessions.captain || sessions.vendor || sessions.admin || sessions.staff;
+        const role = activeSession?.role;
         const userId = activeSession?.id || activeSession?._id;
         const token = activeSession?.token;
 
@@ -824,7 +838,7 @@ export const AuthProvider = ({ children }) => {
             socketService.connect(token);
 
             // Admins join broadcast room for real-time alerts
-            if (sessions.admin?.id) {
+            if (sessions.admin?.id && role === 'admin') {
                 socketService.joinAdminRoom();
             }
 
@@ -1191,8 +1205,26 @@ export const AuthProvider = ({ children }) => {
 
 
 
-    const updateBalance = useCallback((amountToAdd) => {
-        setWalletBalance(prev => prev + amountToAdd);
+    // 🛡️ Unified Wallet Sync: Update state, session, and storage together
+    const updateWalletBalance = useCallback((newBalance) => {
+        setWalletBalance(newBalance);
+
+        // Sync with consumer session to maintain single source of truth across all components
+        setSessions(prev => {
+            if (prev.consumer) {
+                const updatedConsumer = {
+                    ...prev.consumer,
+                    wallet: {
+                        ...(prev.consumer.wallet || {}),
+                        balance: newBalance,
+                        lastUpdated: new Date()
+                    }
+                };
+                localStorage.setItem(SESSION_KEYS.consumer, JSON.stringify(updatedConsumer));
+                return { ...prev, consumer: updatedConsumer };
+            }
+            return prev;
+        });
     }, []);
 
     const assignStaffToBooking = useCallback((bookingId, staffId, role = 'pickup', vendorId = null) => {
@@ -1335,7 +1367,7 @@ export const AuthProvider = ({ children }) => {
         } finally {
             setStatsLoading(false);
         }
-    }, [sessions.consumer]);
+    }, [sessions.consumer?.id]);
 
     useEffect(() => {
         if (sessions.consumer?.token) {
@@ -1438,7 +1470,7 @@ export const AuthProvider = ({ children }) => {
             walletBalance,
             lastRealTimeAlert,
             setLastRealTimeAlert,
-            updateBalance,
+            updateWalletBalance,
             loadWallet,
             addToWallet,
             notifications,
@@ -1480,6 +1512,7 @@ export const AuthProvider = ({ children }) => {
             apiSignup,
             apiLogout,
             setUserSubscription,
+            isGoldPassMember,
             isBlackPassMember,
             loadTrustedContacts,
             addContact,

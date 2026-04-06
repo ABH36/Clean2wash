@@ -98,15 +98,42 @@ module.exports = {
 
                 // Production Logic: Only allow 'captain' or 'staff' or 'vendor' or 'sparedriver' to update location
                 if (userRole === 'captain' || userRole === 'staff' || userRole === 'vendor' || userRole === 'sparedriver') {
+                    const normalizedPayload = {
+                        bookingId,
+                        lat: location.lat,
+                        lng: location.lng,
+                        location,
+                        timestamp: new Date()
+                    };
+
                     // 1. Notify Consumer (Booking Room)
-                    socket.to(bookingId).emit('location_updated', {
+                    socket.to(bookingId).emit('location_updated', normalizedPayload);
+                    // Backward-compatible alias for older consumer screens
+                    socket.to(bookingId).emit('locationUpdate', normalizedPayload);
+
+                    // 2. Notify Admin Control Tower (Elite Protocol)
+                    io.to('admin_room').emit('specialist_location_pulse', {
+                        bookingId,
+                        lat: location.lat,
+                        lng: location.lng,
+                        role: userRole,
+                        timestamp: new Date()
+                    });
+                }
+            });
+
+            socket.on('update_consumer_location', (data) => {
+                const { bookingId, location } = data;
+                if (!bookingId || !location) return;
+
+                if (userRole === 'consumer') {
+                    socket.to(bookingId).emit('consumer_location_updated', {
                         bookingId,
                         location,
                         timestamp: new Date()
                     });
 
-                    // 2. Notify Admin Control Tower (Elite Protocol)
-                    io.to('admin_room').emit('specialist_location_pulse', {
+                    io.to('admin_room').emit('consumer_location_pulse', {
                         bookingId,
                         lat: location.lat,
                         lng: location.lng,

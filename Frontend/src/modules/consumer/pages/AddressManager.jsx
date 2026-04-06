@@ -11,6 +11,7 @@ import { useGeoLocation } from '../../../hooks/useGeoLocation';
 import GoogleMapBox from '../../../components/common/GoogleMapBox';
 import { toast } from 'react-hot-toast';
 import { apiClient } from '../../../utils/api';
+import { geocodingService } from '../../../utils/geocoding';
 
 const ICONS = { home: Home, office: Briefcase, other: MapPin };
 
@@ -56,6 +57,8 @@ const AddressManager = () => {
     const [isGeocoding, setIsGeocoding] = useState(false);
     const [isSavingInstant, setIsSavingInstant] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const debounceTimerRef = useRef(null);
+    const lastGeocodedPos = useRef({ lat: 0, lng: 0 });
 
     const { detectCurrentLocation } = useGeoLocation();
 
@@ -134,63 +137,31 @@ const AddressManager = () => {
 
     const getAddressFromCoords = useCallback(async (lat, lng) => {
         setIsGeocoding(true);
-        
-        // Try Native Google Geocoding
-        if (window.google?.maps?.Geocoder) {
-            const geocoder = new window.google.maps.Geocoder();
-            try {
-                const response = await geocoder.geocode({ location: { lat, lng } });
-                if (response?.results?.[0]) {
-                    const result = response.results[0];
-                    const components = result.address_components;
-                    
-                    const pincode = components.find(c => c.types.includes('postal_code'))?.long_name || '';
-                    const city = components.find(c => c.types.includes('locality'))?.long_name || 
-                                 components.find(c => c.types.includes('sublocality_level_1'))?.long_name ||
-                                 components.find(c => c.types.includes('administrative_area_level_3'))?.long_name ||
-                                 components.find(c => c.types.includes('administrative_area_level_2'))?.long_name || '';
-                    const state = components.find(c => c.types.includes('administrative_area_level_1'))?.long_name || '';
-                    
-                    setGeocodedAddress(result.formatted_address);
-                    setGeocodedParts({ city, state, postcode: pincode });
-
-                    if (!editing) {
-                        setForm(f => ({
-                            ...f,
-                            full: result.formatted_address,
-                            city,
-                            state,
-                            pincode
-                        }));
-                    }
-                    setIsGeocoding(false);
-                    return;
-                }
-            } catch (err) {
-                console.error("Google Geocoding error:", err);
-            }
-        }
-
-        // Fallback to Backend Proxy
         try {
-            const data = await apiClient.request(`/maps/proxy/reverse?lat=${lat}&lon=${lng}`);
-            if (data?.status === 'success') {
-                const addr = data.data.display_name;
-                const parts = data.data.address;
-                setGeocodedAddress(addr);
-                setGeocodedParts(parts);
+            const data = await geocodingService.reverse(lat, lng);
+            if (data) {
+                setGeocodedAddress(data.display_name);
+                setGeocodedParts({ 
+                    city: data.city, 
+                    state: data.state, 
+                    postcode: data.pincode,
+                    street: data.street,
+                    area: data.area 
+                });
+
                 if (!editing) {
                     setForm(f => ({
                         ...f,
-                        full: addr,
-                        city: parts?.city || parts?.town || parts?.village || parts?.city_district || '',
-                        state: parts?.state || '',
-                        pincode: parts?.postcode || ''
+                        full: data.street,
+                        city: data.city,
+                        state: data.state,
+                        pincode: data.pincode,
+                        landmark: data.area !== 'Unknown Area' ? data.area : f.landmark
                     }));
                 }
             }
-        } catch (proxyErr) {
-            console.error("Geocoding fatal failure:", proxyErr);
+        } catch (err) {
+            console.error("Geocoding protocol failed:", err);
         } finally {
             setIsGeocoding(false);
         }
@@ -198,7 +169,37 @@ const AddressManager = () => {
 
     const handleIdle = (newCenter) => {
         setCenter(newCenter);
-        getAddressFromCoords(newCenter.lat, newCenter.lng);
+
+        // 💵 BILLING PROTECTION: 1-second Debounce
+        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+        
+        debounceTimerRef.current = setTimeout(() => {
+            const dist = getDistance(newCenter, lastGeocodedPos.current);
+            
+            // 💵 BILLING PROTECTION: 15-meter Threshold
+            // If moved less than 15 meters, don't re-geocode (saves hits on micro-adjustments)
+            if (dist > 15) {
+                getAddressFromCoords(newCenter.lat, newCenter.lng);
+                lastGeocodedPos.current = newCenter;
+            } else {
+                // Skips geocode for minimal movement (<15m)
+            }
+        }, 1000);
+    };
+
+    // Helper to calculate distance in meters
+    const getDistance = (p1, p2) => {
+        if (!p1 || !p2) return 999;
+        const R = 6371e3; // metres
+        const φ1 = p1.lat * Math.PI/180;
+        const φ2 = p2.lat * Math.PI/180;
+        const Δφ = (p2.lat-p1.lat) * Math.PI/180;
+        const Δλ = (p2.lng-p1.lng) * Math.PI/180;
+        const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                  Math.cos(φ1) * Math.cos(φ2) *
+                  Math.sin(Δλ/2) * Math.sin(Δλ/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
     };
 
     const handleLocate = () => {
@@ -215,16 +216,17 @@ const AddressManager = () => {
         });
     };
 
-    const openAdd = (initialText = '') => {
+    const openAdd = (addrText = '', parts = null) => {
         setEditing(null);
+        const finalParts = parts || geocodedParts;
         setForm({
             label: 'Home',
             icon: 'home',
-            full: initialText || geocodedAddress || '',
+            full: addrText || geocodedAddress || '',
             landmark: '',
-            city: geocodedParts?.city || '',
-            state: geocodedParts?.state || '',
-            pincode: geocodedParts?.postcode || ''
+            city: finalParts?.city || '',
+            state: finalParts?.state || '',
+            pincode: finalParts?.postcode || ''
         });
         setShowSheet(true);
     };
@@ -334,14 +336,18 @@ const AddressManager = () => {
         }
     };
 
-    const handleConfirmLocation = () => {
+    const handleConfirmLocation = (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        if (e && e.stopPropagation) e.stopPropagation();
+        
+        console.log("📍 Confirm Button Clicked!");
+        
         if (!geocodedAddress) {
             toast.error("Detecting location...");
             return;
         }
         
-        // Always open the bottom sheet to force complete address entry
-        openAdd();
+        openAdd(geocodedAddress, geocodedParts);
     };
 
     return (
@@ -406,26 +412,7 @@ const AddressManager = () => {
                             </button>
                         </div>
 
-                        {/* Confirm Button Overlay */}
-                        <div className="absolute bottom-4 left-4 z-[400]">
-                            {geocodedAddress && (
-                                <motion.button
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={handleConfirmLocation}
-                                    disabled={isGeocoding || isLocating}
-                                    className="bg-black text-white px-6 py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-[0_10px_30px_rgba(0,0,0,0.3)] flex items-center gap-2 border border-white/10 active:scale-95 transition-all disabled:opacity-80 disabled:cursor-not-allowed"
-                                >
-                                    {(isGeocoding || isLocating) ? (
-                                        <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                    ) : (
-                                        <Check size={16} strokeWidth={4} className="text-brand" />
-                                    )}
-                                    {isGeocoding ? 'Detecting...' : 'Confirm Location'}
-                                </motion.button>
-                            )}
-                        </div>
-
-                        {/* Static Center Pin Visual */}
+                        {/* Center Pin visual stays for context */}
                         <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
                             <div className="mb-8 flex flex-col items-center">
                                 <div className="w-10 h-10 rounded-full bg-brand/20 flex items-center justify-center animate-pulse">
@@ -434,26 +421,44 @@ const AddressManager = () => {
                                 <div className="w-0.5 h-4 bg-brand" />
                             </div>
                         </div>
-
-                        {/* Real-time Address Overlay (Refined) */}
-                        <AnimatePresence>
-                            {geocodedAddress && (
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.9 }}
-                                    className="absolute top-20 left-4 right-4 z-[300]"
-                                >
-                                    <div className="bg-black/80 backdrop-blur-md px-4 py-3 rounded-2xl flex items-center gap-3">
-                                        <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isGeocoding ? 'bg-brand animate-pulse' : 'bg-emerald-500'}`} />
-                                        <p className="text-[10px] font-black text-white/90 uppercase tracking-tight line-clamp-1 italic">
-                                            {isGeocoding ? '🛰️ Adjusting Coordinates...' : geocodedAddress}
-                                        </p>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
                     </div>
+
+                    {/* 🚀 ELITE UX: Prominent Confirm Button Below Map */}
+                    <AnimatePresence>
+                        {geocodedAddress && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 10 }}
+                                className="mt-4 px-1 relative z-[500]"
+                            >
+                                <motion.button
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={(e) => handleConfirmLocation(e)}
+                                    disabled={isGeocoding || isLocating}
+                                    className={`w-full py-4 rounded-[1.8rem] flex flex-col items-center justify-center gap-1 transition-all duration-300 shadow-2xl ${
+                                        isGeocoding ? 'bg-gray-100' : 'bg-black active:bg-brand shadow-brand/20'
+                                    } ${isGeocoding || isLocating ? 'pointer-events-none' : 'pointer-events-auto'}`}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        {isGeocoding ? (
+                                            <div className="w-3 h-3 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                                        ) : (
+                                            <Check size={16} strokeWidth={4} className="text-brand" />
+                                        )}
+                                        <span className={`text-[12px] font-black uppercase tracking-widest ${isGeocoding ? 'text-black/30' : 'text-white'}`}>
+                                            {isGeocoding ? '🛰️ Adjusting Coordinates...' : (geocodedParts?.area || 'Confirm & Save Location')}
+                                        </span>
+                                    </div>
+                                    {!isGeocoding && (
+                                        <p className="text-[9px] font-bold text-white/40 uppercase tracking-tighter line-clamp-1 px-4 italic">
+                                            {geocodedAddress || 'Point accurately to save'}
+                                        </p>
+                                    )}
+                                </motion.button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
 
                 {/* Subtitle */}

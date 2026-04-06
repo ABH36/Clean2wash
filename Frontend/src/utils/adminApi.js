@@ -144,8 +144,19 @@ class ApiClient {
         return this.request('/plans');
     }
 
+    async getChauffeurPlans() {
+        return this.request('/plans/chauffeur');
+    }
+
     async createPlan(data) {
         return this.request('/plans', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+    }
+
+    async createChauffeurPlan(data) {
+        return this.request('/plans/chauffeur', {
             method: 'POST',
             body: JSON.stringify(data)
         });
@@ -158,8 +169,21 @@ class ApiClient {
         });
     }
 
+    async updateChauffeurPlan(id, data) {
+        return this.request(`/plans/chauffeur/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data)
+        });
+    }
+
     async deletePlan(id) {
         return this.request(`/plans/${id}`, {
+            method: 'DELETE'
+        });
+    }
+
+    async deleteChauffeurPlan(id) {
+        return this.request(`/plans/chauffeur/${id}`, {
             method: 'DELETE'
         });
     }
@@ -169,6 +193,28 @@ class ApiClient {
         let endpoint = '/services';
         if (category && category !== 'All') endpoint += `?category=${encodeURIComponent(category)}`;
         return this.request(endpoint);
+    }
+
+    async getChauffeurServicesConfig() {
+        return this.request('/services/chauffeur-config');
+    }
+
+    async getApartmentWashConfig() {
+        return this.request('/services/apartment-config');
+    }
+
+    async updateChauffeurServiceConfig(id, data) {
+        return this.request(`/services/chauffeur-config/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data)
+        });
+    }
+
+    async updateApartmentWashConfig(id, data) {
+        return this.request(`/services/apartment-config/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data)
+        });
     }
 
     async createService(data) {
@@ -339,6 +385,17 @@ class ApiClient {
         return this.request('/bookings/chauffeur');
     }
 
+    async getApartmentWashConsole() {
+        return this.request('/apartment-wash/console');
+    }
+
+    async reviewApartmentSubscription(id, action) {
+        return this.request(`/apartment-wash/subscriptions/${id}/review`, {
+            method: 'PATCH',
+            body: JSON.stringify({ action })
+        });
+    }
+
     // ── Global Product Stats (Phase 35) ─────────────────────────
     async getProductStats() {
         return this.request('/products/stats');
@@ -401,9 +458,13 @@ export const adminAPI = {
     assignStaff: (bookingId, staffId, type) => apiClient.assignStaff(bookingId, staffId, type),
     // Plans
     getPlans: () => apiClient.getPlans(),
+    getChauffeurPlans: () => apiClient.getChauffeurPlans(),
     createPlan: (data) => apiClient.createPlan(data),
+    createChauffeurPlan: (data) => apiClient.createChauffeurPlan(data),
     updatePlan: (id, data) => apiClient.updatePlan(id, data),
+    updateChauffeurPlan: (id, data) => apiClient.updateChauffeurPlan(id, data),
     deletePlan: (id) => apiClient.deletePlan(id),
+    deleteChauffeurPlan: (id) => apiClient.deleteChauffeurPlan(id),
     // User Subscriptions (Active Instances)
     getSubscriptions: (params = {}) => {
         const query = new URLSearchParams(params).toString();
@@ -411,6 +472,10 @@ export const adminAPI = {
     },
     // Services
     getServices: (category) => apiClient.getServices(category),
+    getChauffeurServicesConfig: () => apiClient.getChauffeurServicesConfig(),
+    getApartmentWashConfig: () => apiClient.getApartmentWashConfig(),
+    updateChauffeurServiceConfig: (id, data) => apiClient.updateChauffeurServiceConfig(id, data),
+    updateApartmentWashConfig: (id, data) => apiClient.updateApartmentWashConfig(id, data),
     createService: (data) => apiClient.createService(data),
     updateService: (id, data) => apiClient.updateService(id, data),
     deleteService: (id) => apiClient.deleteService(id),
@@ -445,6 +510,8 @@ export const adminAPI = {
     deleteVehicleModel: (id) => apiClient.deleteVehicleModel(id),
     getSpareDrivers: () => apiClient.getSpareDrivers(),
     getSpareDriverBookings: () => apiClient.getSpareDriverBookings(),
+    getApartmentWashConsole: () => apiClient.getApartmentWashConsole(),
+    reviewApartmentSubscription: (id, action) => apiClient.reviewApartmentSubscription(id, action),
     // Expose raw request for legacy callers
     request: (endpoint, opts) => apiClient.request(endpoint, opts),
     setToken: (token) => apiClient.setToken(token),

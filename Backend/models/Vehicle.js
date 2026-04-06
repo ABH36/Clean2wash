@@ -9,11 +9,7 @@ const vehicleSchema = new mongoose.Schema({
     brand: {
         type: String,
         required: [true, 'Vehicle brand is required'],
-        trim: true,
-        enum: {
-            values: ['Honda', 'Maruti', 'Hyundai', 'Toyota', 'Tata', 'Mahindra', 'Kia', 'BMW', 'Mercedes', 'Audi', 'Skoda', 'Volkswagen', 'Nissan', 'Renault', 'MG', 'Jeep', 'Land Rover', 'Jaguar', 'Volvo', 'Porsche', 'Ferrari', 'Lamborghini', 'Bentley', 'Rolls Royce', 'Others'],
-            message: 'Please select a valid vehicle brand'
-        }
+        trim: true
     },
     model: {
         type: String,
@@ -24,16 +20,12 @@ const vehicleSchema = new mongoose.Schema({
     type: {
         type: String,
         required: [true, 'Vehicle type is required'],
-        enum: {
-            values: [
-                'Hatchback', 'Sedan', 'SUV', 'MUV', 'Compact SUV', 'MPV', 'Pickup',
-                'Luxury Sedan', 'Luxury SUV', 'Coupe', 'Convertible', 'Sports Car', 'Supercar',
-                'EV', 'Mini Truck', 'Truck', 'Van', 'Bus', 'Traveler', 'Tractor', 'Vintage',
-                'Bike', 'Scooter', 'Superbike'
-            ],
-            message: 'Please select a valid vehicle type'
-        },
+        trim: true,
         default: 'Sedan'
+    },
+    typeRef: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'VehicleType'
     },
     color: {
         type: String,
@@ -50,37 +42,7 @@ const vehicleSchema = new mongoose.Schema({
     },
     image: {
         type: String,
-        default: function () {
-            const typeImages = {
-                'Hatchback': 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=400&q=80',
-                'Sedan': 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80',
-                'SUV': 'https://images.unsplash.com/photo-1518987048-93e29699e79a?w=400&q=80',
-                'MUV': 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=400&q=80',
-                'Compact SUV': 'https://images.unsplash.com/photo-1518987048-93e29699e79a?w=400&q=80',
-                'MPV': 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=400&q=80',
-                'Pickup': 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=400&q=80',
-                'Luxury Sedan': 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400&q=80',
-                'Luxury SUV': 'https://images.unsplash.com/photo-1518987048-93e29699e79a?w=400&q=80',
-                'Coupe': 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400&q=80',
-                'Convertible': 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400&q=80',
-                'Sports Car': 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400&q=80',
-                'Supercar': 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400&q=80',
-                'EV': 'https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=400&q=80',
-                'Mini Truck': 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=400&q=80',
-                'Truck': 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=400&q=80',
-                'Van': 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=400&q=80',
-                'Bus': 'https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=400&q=80',
-                'Traveler': 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=400&q=80',
-                'Tractor': 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=400&q=80',
-                'Vintage': 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400&q=80',
-                'Bike': 'https://images.unsplash.com/photo-1558981285-6f0c94958bb6?w=400&q=80',
-                'Scooter': 'https://images.unsplash.com/photo-1599420186946-7b6fb4e297f0?w=400&q=80',
-                'Superbike': 'https://images.unsplash.com/photo-1571068316344-75bf43f5f9c2?w=400&q=80',
-                // Legacy support
-                'Luxury': 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400&q=80'
-            };
-            return typeImages[this.type] || typeImages['Sedan'];
-        }
+        default: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80'
     },
     isPrimary: {
         type: Boolean,
@@ -165,49 +127,29 @@ vehicleSchema.virtual('pucStatus').get(function () {
     }
 });
 
-// Pre-save middleware to ensure only one primary vehicle per owner
+// Pre-save middleware: Link typeRef and ensure only one primary vehicle per owner
 vehicleSchema.pre('save', async function () {
-    if (!this.isModified('isPrimary') || !this.isPrimary) return;
+    // 1. Link typeRef if missing
+    if (!this.typeRef && this.type) {
+        const VehicleType = mongoose.model('VehicleType');
+        const vType = await VehicleType.findOne({
+            $or: [
+                { type: this.type },
+                { name: this.type }
+            ]
+        });
+        if (vType) this.typeRef = vType._id;
+    }
 
-    // Unset primary status from other vehicles of the same owner
-    await this.constructor.updateMany(
-        { owner: this.owner, _id: { $ne: this._id }, isPrimary: true },
-        { isPrimary: false }
-    );
+    // 2. Handle primary status
+    if (this.isModified('isPrimary') && this.isPrimary) {
+        // Unset primary status from other vehicles of the same owner
+        await this.constructor.updateMany(
+            { owner: this.owner, _id: { $ne: this._id }, isPrimary: true },
+            { isPrimary: false }
+        );
+    }
 });
-
-// Static method to get vehicle type multiplier for pricing
-vehicleSchema.statics.getTypeMultiplier = function (type) {
-    const multipliers = {
-        'Hatchback': 1.0,
-        'Sedan': 1.2,
-        'SUV': 1.5,
-        'MUV': 1.4,
-        'Compact SUV': 1.4,
-        'MPV': 1.4,
-        'Pickup': 1.6,
-        'Luxury Sedan': 2.0,
-        'Luxury SUV': 2.2,
-        'Coupe': 1.8,
-        'Convertible': 2.0,
-        'Sports Car': 2.5,
-        'Supercar': 3.0,
-        'EV': 1.2,
-        'Mini Truck': 1.8,
-        'Truck': 2.5,
-        'Van': 1.8,
-        'Bus': 2.5,
-        'Traveler': 1.8,
-        'Tractor': 2.0,
-        'Vintage': 2.5,
-        'Bike': 0.6,
-        'Scooter': 0.5,
-        'Superbike': 0.9,
-        // Legacy support
-        'Luxury': 2.0
-    };
-    return multipliers[type] || 1.0;
-};
 
 const Vehicle = mongoose.model('Vehicle', vehicleSchema);
 

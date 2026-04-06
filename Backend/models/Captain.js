@@ -36,6 +36,7 @@ const captainSchema = new mongoose.Schema({
     profile: {
         avatar: { type: String, default: '' },
         city: { type: String, default: '' },
+        hub: { type: String, default: '' },
         vehicleType: { type: String, default: '' },
         plate: { type: String, default: '' },
         kit: { type: String, default: '' },

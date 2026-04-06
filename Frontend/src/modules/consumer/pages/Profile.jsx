@@ -7,17 +7,16 @@ import {
     ArrowLeft, ShieldCheck, Heart, Settings,
     LogOut, MoreHorizontal, Wallet, Shield,
     Bell, CreditCard, HelpCircle, Activity,
-    Clock, X, Package
+    Clock, X, Package, Crown, Sparkles, Zap
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import MobileLayout from '../components/layout/MobileLayout';
 import apiClient from '../../../utils/api';
 import PremiumBadge from '../components/membership/PremiumBadge';
-import { Crown, Sparkles, Zap } from 'lucide-react';
 
 const Profile = () => {
     const navigate = useNavigate();
-    const { logout, getUser, bookings, stats, updateUser, isBlackPassMember } = useAuth();
+    const { logout, getUser, bookings, stats, updateUser, isGoldPassMember } = useAuth();
     const user = getUser('consumer');
 
     const [isEditing, setIsEditing] = useState(false);
@@ -107,7 +106,6 @@ const Profile = () => {
     return (
         <MobileLayout>
             <div className="bg-[#FAFAFA] min-h-screen pb-24">
-                {/* Edit Modal */}
                 <AnimatePresence>
                     {isEditing && (
                         <>
@@ -126,7 +124,7 @@ const Profile = () => {
                                 className="fixed inset-x-0 bottom-0 bg-white rounded-t-[32px] z-[1001] p-6 pb-12 shadow-2xl"
                             >
                                 <div className="flex items-center justify-between mb-8">
-                                    <h2 className="text-xl font-[1000] text-content italic uppercase tracking-tight">Edit Profile</h2>
+                                    <h2 className="text-2xl font-[1000] text-content uppercase tracking-tight">Edit Profile</h2>
                                     <button onClick={() => setIsEditing(false)} className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-content">
                                         <X size={20} strokeWidth={3} />
                                     </button>
@@ -134,22 +132,22 @@ const Profile = () => {
 
                                 <div className="space-y-6">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Full Name</label>
+                                        <label className="text-[12px] font-black text-content-subtle uppercase tracking-widest ml-1">Full Name</label>
                                         <input
                                             type="text"
                                             value={editData.name}
                                             onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-                                            className="w-full h-14 bg-gray-50 border border-gray-100 rounded-2xl px-5 text-sm font-bold focus:bg-white focus:border-brand transition-all outline-none"
+                                            className="w-full h-15 bg-gray-50 border border-gray-100 rounded-2xl px-5 text-base font-bold focus:bg-white focus:border-brand transition-all outline-none"
                                             placeholder="John Doe"
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Email Address</label>
+                                        <label className="text-[12px] font-black text-content-subtle uppercase tracking-widest ml-1">Email Address</label>
                                         <input
                                             type="email"
                                             value={editData.email}
                                             onChange={(e) => setEditData({ ...editData, email: e.target.value })}
-                                            className="w-full h-14 bg-gray-50 border border-gray-100 rounded-2xl px-5 text-sm font-bold focus:bg-white focus:border-brand transition-all outline-none"
+                                            className="w-full h-15 bg-gray-50 border border-gray-100 rounded-2xl px-5 text-base font-bold focus:bg-white focus:border-brand transition-all outline-none"
                                             placeholder="john@example.com"
                                         />
                                     </div>
@@ -157,7 +155,7 @@ const Profile = () => {
                                     <button
                                         onClick={handleUpdateProfile}
                                         disabled={saving}
-                                        className="w-full h-14 bg-brand text-white rounded-2xl font-[1000] text-sm uppercase tracking-widest italic flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50"
+                                        className="w-full h-15 bg-brand text-white rounded-2xl font-[1000] text-base uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50"
                                     >
                                         {saving ? (
                                             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -171,55 +169,53 @@ const Profile = () => {
                     )}
                 </AnimatePresence>
 
-                {/* ── HEADER ── */}
                 <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md px-5 py-6 border-b border-gray-100 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <button onClick={() => navigate(-1)} className="p-1 -ml-1">
-                            <ArrowLeft size={20} className="text-content" />
+                            <ArrowLeft size={24} className="text-content" />
                         </button>
-                        <h1 className="text-base font-[1000] text-content uppercase tracking-tight italic">Account</h1>
+                        <h1 className="text-lg font-[1000] text-content uppercase tracking-tight">Account</h1>
                     </div>
-                    <button className="p-2 bg-gray-50 rounded-lg border border-gray-100">
-                        <Settings size={18} className="text-content-subtle" />
+                    <button className="p-2.5 bg-gray-50 rounded-xl border border-gray-100">
+                        <Settings size={20} className="text-content-subtle" />
                     </button>
                 </header>
 
                 <div className="px-5 pt-6 space-y-6">
-                    {/* ── PROFILE CARD ── */}
                     <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm flex items-center gap-4 relative overflow-hidden"
                     >
-                        {isBlackPassMember && (
+                        {isGoldPassMember && (
                             <div className="absolute top-0 right-0 w-32 h-full bg-brand/5 skew-x-[-20deg] pointer-events-none" />
                         )}
                         <div className="relative">
-                            <div className="w-16 h-16 bg-gray-50 rounded-lg border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
+                            <div className="w-18 h-18 bg-gray-50 rounded-lg border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
                                 {user?.profile?.avatar ? (
                                     <img src={user.profile.avatar} className="w-full h-full object-cover" alt={user.name} />
                                 ) : (
-                                    <User size={32} className="text-content-subtle" />
+                                    <User size={36} className="text-content-subtle" />
                                 )}
                             </div>
-                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-2 border-white rounded-full flex items-center justify-center">
-                                <ShieldCheck size={10} className="text-white" />
+                            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 border-2 border-white rounded-full flex items-center justify-center">
+                                <ShieldCheck size={12} className="text-white" />
                             </div>
                         </div>
 
                         <div className="flex-1 relative z-10">
                             <div className="flex items-center gap-2">
-                                <h2 className="text-base font-[1000] text-content italic uppercase leading-none">{user?.name || 'Aryan Pathak'}</h2>
-                                {isBlackPassMember && <PremiumBadge showText={false} size="sm" />}
+                                <h2 className="text-lg font-[1000] text-content uppercase leading-none">{user?.name || 'Aryan Pathak'}</h2>
+                                {isGoldPassMember && <PremiumBadge showText={false} size="sm" />}
                             </div>
-                            <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-1">{user?.phone || '+91 98765 43210'}</p>
-                            <div className="mt-2 flex items-center gap-2">
-                                <span className={`px-2 py-1 ${isBlackPassMember ? 'bg-gradient-to-r from-brand to-amber-400 text-black shadow-lg shadow-brand/20' : 'bg-brand text-white'} text-[9px] font-black rounded-lg uppercase tracking-tighter italic flex items-center gap-1.5 border border-white/20 transition-all hover:scale-105 active:scale-95`}>
-                                    {isBlackPassMember ? <><Crown size={10} fill="currentColor" /> Black Member Elite</> : 'Verified Plus'}
+                            <p className="text-[11px] font-[900] text-content-subtle uppercase tracking-widest mt-1.5">{user?.phone || '+91 98765 43210'}</p>
+                            <div className="mt-4 flex items-center gap-3">
+                                <span className={`px-2.5 py-1.5 ${isGoldPassMember ? 'bg-gradient-to-r from-brand to-amber-400 text-black shadow-lg shadow-brand/20' : 'bg-brand text-white'} text-[10px] font-[1000] rounded-xl uppercase tracking-tighter flex items-center gap-2 border border-white/20 transition-all hover:scale-105 active:scale-95`}>
+                                    {isGoldPassMember ? <><Crown size={11} fill="currentColor" /> Gold Pass</> : 'Verified Plus'}
                                 </span>
                                 <button
                                     onClick={() => setIsEditing(true)}
-                                    className="text-[8px] font-bold text-content-subtle uppercase underline"
+                                    className="text-[10px] font-black text-content-subtle uppercase underline underline-offset-4"
                                 >
                                     Edit Profile
                                 </button>
@@ -227,24 +223,22 @@ const Profile = () => {
                         </div>
                     </motion.div>
 
-                    {/* ── METRICS ── */}
                     <div className="grid grid-cols-3 gap-3">
-                        <div className="bg-white rounded-xl border border-gray-50 p-3 flex flex-col items-center justify-center gap-1">
-                            <span className="text-xs font-[1000] text-content italic">{user?.loyalty?.completedBookingsCount || '0'}</span>
-                            <span className="text-[8px] font-black text-content-subtle uppercase tracking-widest">Washes</span>
+                        <div className="bg-white rounded-2xl border border-gray-50 p-4 flex flex-col items-center justify-center gap-1.5 shadow-sm">
+                            <span className="text-sm font-[1000] text-content">{user?.loyalty?.completedBookingsCount || '0'}</span>
+                            <span className="text-[9px] font-black text-content-subtle uppercase tracking-[0.1em]">Washes</span>
                         </div>
-                        <div className="bg-white rounded-xl border border-gray-50 p-3 flex flex-col items-center justify-center gap-1 border-brand/20 relative overflow-hidden">
+                        <div className="bg-white rounded-2xl border border-gray-50 p-4 flex flex-col items-center justify-center gap-1.5 border-brand/20 relative overflow-hidden shadow-sm">
                             <div className="absolute top-0 left-0 h-1 bg-brand" style={{ width: `${((user?.loyalty?.completedBookingsCount || 0) % 10) * 10}%` }} />
-                            <span className="text-xs font-[1000] text-brand italic">{(user?.loyalty?.completedBookingsCount || 0) % 10}/10</span>
-                            <span className="text-[8px] font-black text-content-subtle uppercase tracking-widest text-center">Reward Goal</span>
+                            <span className="text-sm font-[1000] text-brand">{(user?.loyalty?.completedBookingsCount || 0) % 10}/10</span>
+                            <span className="text-[9px] font-black text-content-subtle uppercase tracking-[0.1em] text-center leading-none">Goal</span>
                         </div>
-                        <div className="bg-white rounded-xl border border-gray-50 p-3 flex flex-col items-center justify-center gap-1">
-                            <span className="text-xs font-[1000] text-emerald-600 italic">{user?.loyalty?.rewardsAvailable || '0'}</span>
-                            <span className="text-[8px] font-black text-content-subtle uppercase tracking-widest">Free Washes</span>
+                        <div className="bg-white rounded-2xl border border-gray-50 p-4 flex flex-col items-center justify-center gap-1.5 shadow-sm">
+                            <span className="text-sm font-[1000] text-emerald-600">{user?.loyalty?.rewardsAvailable || '0'}</span>
+                            <span className="text-[9px] font-black text-content-subtle uppercase tracking-[0.1em]">Free</span>
                         </div>
                     </div>
 
-                    {/* ── RECENT INSTANT HISTORY ── */}
                     <div className="space-y-3">
                         <div className="flex items-center justify-between px-1">
                             <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em]">Recent Instant History</h3>
@@ -287,7 +281,6 @@ const Profile = () => {
                         </div>
                     </div>
 
-                    {/* ── MENU GROUPS ── */}
                     <div className="space-y-6">
                         {MENU_GROUPS.map((group, gIdx) => (
                             <div key={gIdx} className="space-y-2.5">
@@ -297,15 +290,15 @@ const Profile = () => {
                                         <button
                                             key={i}
                                             onClick={() => navigate(item.path)}
-                                            className={`w-full p-4 flex items-center justify-between active:bg-gray-50 transition-colors ${i !== group.items.length - 1 ? 'border-b border-gray-50' : ''}`}
+                                            className={`w-full p-4.5 py-5 flex items-center justify-between active:bg-gray-50 transition-colors ${i !== group.items.length - 1 ? 'border-b border-gray-50' : ''}`}
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${getColorClass(item.color)}`}>
-                                                    <item.icon size={18} strokeWidth={2.5} />
+                                            <div className="flex items-center gap-4">
+                                                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center ${getColorClass(item.color)}`}>
+                                                    <item.icon size={22} strokeWidth={2.5} />
                                                 </div>
-                                                <span className="text-[11px] font-[1000] text-content uppercase tracking-tight">{item.label}</span>
+                                                <span className="text-[13px] font-[1000] text-content uppercase tracking-tight">{item.label}</span>
                                             </div>
-                                            <ChevronRight size={14} className="text-content-subtle opacity-30" />
+                                            <ChevronRight size={18} className="text-content-subtle opacity-30" />
                                         </button>
                                     ))}
                                 </div>
@@ -314,75 +307,80 @@ const Profile = () => {
                     </div>
 
                     {/* ── PREMIUM BANNER ── */}
-                    {isBlackPassMember ? (
-                        <div className="relative bg-[#0A0A0A] rounded-2xl p-6 overflow-hidden group border border-brand/20 shadow-2xl">
+                    {isGoldPassMember ? (
+                        <div className="relative bg-[#0A0A0A] rounded-2xl p-7 overflow-hidden group border border-brand/30 shadow-2xl">
+                            <motion.div
+                                initial={{ x: '-100%', opacity: 0 }}
+                                animate={{ x: '200%', opacity: [0, 0.3, 0] }}
+                                transition={{ repeat: Infinity, duration: 3, ease: "easeInOut", repeatDelay: 1 }}
+                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-25deg] z-20 pointer-events-none"
+                            />
+
                             <div className="absolute top-0 right-0 w-48 h-full bg-brand/[0.07] skew-x-[-25deg] -mr-16" />
-                            <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-brand/5 rounded-full blur-3xl" />
                             <div className="relative z-10">
-                                <div className="flex items-center bg-brand/10 w-fit px-2 py-0.5 rounded-full border border-brand/20 mb-3">
-                                    <span className="text-[7.5px] font-black text-brand uppercase tracking-[0.4em] italic leading-none">Subscription Active</span>
+                                <div className="flex items-center bg-brand/10 w-fit px-3 py-1 rounded-full border border-brand/20 mb-4">
+                                    <span className="text-[9px] font-[1000] text-brand uppercase tracking-[0.4em] leading-none">Subscription Active</span>
                                 </div>
-                                <h3 className="text-white text-2xl font-[1000] uppercase tracking-tight italic flex items-center gap-3">
-                                    <Crown className="text-brand drop-shadow-[0_0_8px_rgba(243,189,144,0.5)]" size={24} fill="currentColor" />
-                                    Black Pass Elite
+                                <h3 className="text-white text-[26px] font-[1000] uppercase tracking-tight flex items-center gap-3">
+                                    <Crown className="text-brand drop-shadow-[0_0_12px_rgba(243,189,144,0.6)]" size={30} fill="currentColor" />
+                                    Gold Pass
                                 </h3>
-                                <p className="text-brand/50 text-[10px] font-black uppercase tracking-widest mt-1 mb-6">Unlimited Benefits Activated</p>
+                                <p className="text-brand/50 text-[11px] font-black uppercase tracking-widest mt-1.5 mb-8">Unlimited Benefits Activated</p>
 
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-white/5 border border-white/5 p-3 rounded-xl flex items-center gap-3">
-                                        <div className="w-8 h-8 bg-brand/20 rounded-lg flex items-center justify-center">
-                                            <Sparkles size={14} className="text-brand" />
+                                    <div className="bg-white/5 border border-white/10 p-4 rounded-xl flex flex-col gap-3">
+                                        <div className="w-10 h-10 bg-brand/20 rounded-xl flex items-center justify-center">
+                                            <Sparkles size={18} className="text-brand" />
                                         </div>
                                         <div>
-                                            <p className="text-[12px] font-black text-white leading-none">30% OFF</p>
-                                            <p className="text-[7px] font-bold text-white/30 uppercase mt-0.5">Applied on All</p>
+                                            <p className="text-[14px] font-[1000] text-white leading-none">30% OFF</p>
+                                            <p className="text-[8px] font-black text-white/30 uppercase mt-1 tracking-widest">Applied Globally</p>
                                         </div>
                                     </div>
-                                    <div className="bg-white/5 border border-white/5 p-3 rounded-xl flex items-center gap-3">
-                                        <div className="w-8 h-8 bg-brand/20 rounded-lg flex items-center justify-center">
-                                            <Zap size={14} className="text-brand" />
+                                    <div className="bg-white/5 border border-white/10 p-4 rounded-xl flex flex-col gap-3">
+                                        <div className="w-10 h-10 bg-brand/20 rounded-xl flex items-center justify-center">
+                                            <Zap size={18} className="text-brand" />
                                         </div>
                                         <div>
-                                            <p className="text-[12px] font-black text-white leading-none">PRIORITY</p>
-                                            <p className="text-[7px] font-bold text-white/30 uppercase mt-0.5">Instant Access</p>
+                                            <p className="text-[14px] font-[1000] text-white leading-none">PRIORITY</p>
+                                            <p className="text-[8px] font-black text-white/30 uppercase mt-1 tracking-widest">Instant Booking</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     ) : (
-                        <div className="relative bg-content rounded-xl p-4 overflow-hidden group cursor-pointer" onClick={() => navigate('/')}>
+                        <div className="relative bg-content rounded-2xl p-6 overflow-hidden group cursor-pointer shadow-lg" onClick={() => navigate('/')}>
                             <div className="relative z-10 space-y-1">
-                                <span className="text-[8px] font-black text-brand uppercase tracking-widest italic">Exclusive Offer</span>
-                                <h3 className="text-white text-base font-[1000] uppercase tracking-tight italic">Upgrade to Black Pass</h3>
-                                <p className="text-white/40 text-[9px] font-bold uppercase tracking-widest leading-none mt-1">Unlock 30% discount on all services</p>
-                                <button className="mt-3 bg-white text-content px-4 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest transition-transform active:scale-95">Upgrade Now</button>
+                                <span className="text-[9px] font-black text-brand uppercase tracking-widest">Exclusive Opportunity</span>
+                                <h3 className="text-white text-xl font-[1000] uppercase tracking-tight">Upgrade to Gold Pass</h3>
+                                <p className="text-white/40 text-[11px] font-bold uppercase tracking-widest leading-none mt-2">Unlock 30% discount on all services</p>
+                                <button className="mt-5 bg-white text-content px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-transform active:scale-95 shadow-xl">Upgrade Now</button>
                             </div>
-                            <Crown size={80} className="absolute -right-4 -bottom-4 text-white/5 -rotate-12 group-hover:scale-110 transition-transform" />
+                            <Crown size={100} className="absolute -right-6 -bottom-6 text-white/5 -rotate-12 group-hover:scale-110 transition-transform" />
                         </div>
                     )}
 
-                    <div className="relative bg-content rounded-xl p-4 overflow-hidden group cursor-pointer">
+                    <div className="relative bg-content rounded-xl p-6 overflow-hidden group cursor-pointer shadow-lg">
                         <div className="relative z-10 space-y-1">
-                            <span className="text-[8px] font-black text-brand uppercase tracking-widest italic">Opportunity</span>
-                            <h3 className="text-white text-base font-[1000] uppercase tracking-tight italic">Become a Captain</h3>
-                            <p className="text-white/40 text-[9px] font-bold uppercase tracking-widest leading-none mt-1">Earn ₹30k+ per month</p>
-                            <button className="mt-3 bg-white text-content px-4 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest transition-transform active:scale-95">Apply Now</button>
+                            <span className="text-[9px] font-black text-brand uppercase tracking-widest">Opportunity</span>
+                            <h3 className="text-white text-xl font-[1000] uppercase tracking-tight">Become a Captain</h3>
+                            <p className="text-white/40 text-[11px] font-bold uppercase tracking-widest leading-none mt-2">Earn ₹30k+ per month</p>
+                            <button className="mt-5 bg-white text-content px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-transform active:scale-95">Apply Now</button>
                         </div>
-                        <ShieldCheck size={80} className="absolute -right-4 -bottom-4 text-white/5 -rotate-12 group-hover:scale-110 transition-transform" />
+                        <ShieldCheck size={100} className="absolute -right-6 -bottom-6 text-white/5 -rotate-12 group-hover:scale-110 transition-transform" />
                     </div>
 
-                    {/* ── LOGOUT ── */}
                     <button
                         onClick={() => { logout('consumer'); navigate('/login'); }}
-                        className="w-full py-4 rounded-xl bg-gray-50 border border-gray-200 text-red-500 font-[1000] text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 active:bg-red-50 active:border-red-100 transition-all border-dashed"
+                        className="w-full py-5 rounded-2xl bg-gray-50 border border-gray-200 text-red-500 font-[1000] text-[12px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 active:bg-red-50 active:shadow-inner transition-all border-dashed"
                     >
-                        <LogOut size={14} strokeWidth={3} />
+                        <LogOut size={16} strokeWidth={3} />
                         Logout Session
                     </button>
 
-                    <div className="text-center py-6">
-                        <p className="text-[9px] font-black text-content-subtle uppercase tracking-[0.2em] opacity-30 italic">clean2wash Platform v2.8.5 • Build 2026-02</p>
+                    <div className="text-center py-8">
+                        <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] opacity-30">clean2wash Platform v2.8.5 • Build 2026-02</p>
                     </div>
                 </div>
             </div>

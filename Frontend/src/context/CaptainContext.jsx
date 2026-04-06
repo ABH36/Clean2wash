@@ -45,7 +45,7 @@ export const CaptainProvider = ({ children }) => {
         try {
             setCaptainJobsLoading(true);
             const response = await captainAPI.getDashboard();
-            const { stats, captain, pendingJobs, activeJob, recentCompleted } = response.data;
+            const { stats, captain, pendingJobs, activeJob, activeJobs, recentCompleted, availabilityBlock } = response.data;
 
             // Updated earnings state with full breakdown
             setCaptainEarnings({
@@ -61,7 +61,11 @@ export const CaptainProvider = ({ children }) => {
 
             // Consolidate all jobs into a single list
             const allJobs = [];
-            if (activeJob) allJobs.push(activeJob);
+            if (Array.isArray(activeJobs) && activeJobs.length > 0) {
+                allJobs.push(...activeJobs);
+            } else if (activeJob) {
+                allJobs.push(activeJob);
+            }
 
             // Only include pending jobs if captain is online
             if (captain.isOnline && pendingJobs) {
@@ -78,15 +82,25 @@ export const CaptainProvider = ({ children }) => {
             const mappedJobs = allJobs.map(job => ({
                 ...job,
                 id: job._id || job.id,
-                price: job.pricing?.totalAmount ? `₹${job.pricing.totalAmount}` : (job.price || '₹0'),
+                price: ['completed', 'cancelled'].includes(job.status)
+                    ? (job.payoutPrice || job.price || `₹${job.payoutAmount || 0}`)
+                    : (job.pricing?.totalAmount ? `₹${job.pricing.totalAmount}` : (job.price || '₹0')),
                 serviceName: job.service?.name || job.serviceName || 'Wash Service',
                 userName: job.consumer?.name || job.userName || 'Customer',
-                vehicle: job.vehicle ? `${job.vehicle.brand || ''} ${job.vehicle.model || ''}`.trim() : (job.vehicle || 'Vehicle'),
+                vehicle: job.vehicleInfo ? `${job.vehicleInfo.brand || ''} ${job.vehicleInfo.model || ''}`.trim() : (job.vehicle || 'Vehicle'),
                 address: job.location?.address ? `${job.location.address.street || ''}, ${job.location.address.city || ''}` : (job.address || 'Location provided'),
-                landmark: job.location?.landmark || job.landmark || ''
+                landmark: job.location?.landmark || job.landmark || '',
+                isApartment: !!job.isApartment,
+                apartmentRoute: job.apartmentRoute || '',
+                parkingDetails: job.parkingDetails || job.location?.parkingDetails || {},
+                hubName: job.hubName || job.location?.hubId?.name || '',
+                availabilityBlock: availabilityBlock || null
             }));
 
             setCaptainJobs(mappedJobs);
+            if (availabilityBlock || (Array.isArray(activeJobs) && activeJobs.length > 0) || activeJob) {
+                setAvailableProductMissions([]);
+            }
 
             // Update session with fresh rating/online status if session exists
             if (sessions.captain) {
@@ -117,6 +131,7 @@ export const CaptainProvider = ({ children }) => {
             setAvailableProductMissions(response.data.missions || []);
         } catch (error) {
             console.error('Failed to load available product missions:', error);
+            setAvailableProductMissions([]);
         } finally {
             setProductMissionsLoading(false);
         }
@@ -157,12 +172,18 @@ export const CaptainProvider = ({ children }) => {
             const mappedJobs = (response.data.jobs || []).map(job => ({
                 ...job,
                 id: job._id,
-                price: `₹${job.pricing?.totalAmount || 0}`,
+                price: job.status === 'completed'
+                    ? (job.payoutPrice || `₹${job.payoutAmount || 0}`)
+                    : `₹${job.pricing?.totalAmount || 0}`,
                 serviceName: job.service?.name || 'Wash Service',
                 userName: job.consumer?.name || 'Customer',
-                vehicle: `${job.vehicle?.brand || ''} ${job.vehicle?.model || ''}`.trim() || 'Vehicle',
+                vehicle: `${job.vehicleInfo?.brand || job.vehicle?.brand || ''} ${job.vehicleInfo?.model || job.vehicle?.model || ''}`.trim() || job.vehicle || 'Vehicle',
                 address: job.location?.address ? `${job.location.address.street || ''}, ${job.location.address.city || ''}` : 'Location provided',
-                landmark: job.location?.landmark || ''
+                landmark: job.location?.landmark || '',
+                isApartment: !!job.isApartment,
+                apartmentRoute: job.apartmentRoute || '',
+                parkingDetails: job.parkingDetails || job.location?.parkingDetails || {},
+                hubName: job.hubName || job.location?.hubId?.name || ''
             }));
             setCaptainJobs(mappedJobs);
         } catch (error) {
@@ -182,9 +203,13 @@ export const CaptainProvider = ({ children }) => {
                 price: `₹${job.pricing?.totalAmount || 0}`,
                 serviceName: job.service?.name || 'Wash Service',
                 userName: job.consumer?.name || 'Customer',
-                vehicle: `${job.vehicle?.brand || ''} ${job.vehicle?.model || ''}`.trim() || 'Vehicle',
+                vehicle: `${job.vehicleInfo?.brand || job.vehicle?.brand || ''} ${job.vehicleInfo?.model || job.vehicle?.model || ''}`.trim() || job.vehicle || 'Vehicle',
                 address: job.location?.address ? `${job.location.address.street || ''}, ${job.location.address.city || ''}` : 'Location provided',
-                landmark: job.location?.landmark || ''
+                landmark: job.location?.landmark || '',
+                isApartment: !!job.isApartment,
+                apartmentRoute: job.apartmentRoute || '',
+                parkingDetails: job.parkingDetails || job.location?.parkingDetails || {},
+                hubName: job.hubName || job.location?.hubId?.name || ''
             }));
             setCaptainJobs(prev => {
                 const existingIds = new Set(prev.map(j => j.id || j._id));
@@ -260,6 +285,7 @@ export const CaptainProvider = ({ children }) => {
             } else {
                 // If going offline, clear the job list of non-active jobs
                 setCaptainJobs(prev => prev.filter(j => ['confirmed', 'en_route', 'arrived', 'washing', 'completed'].includes(j.status)));
+                setAvailableProductMissions([]);
             }
             return { success: true };
         } catch (error) {
@@ -289,19 +315,37 @@ export const CaptainProvider = ({ children }) => {
         }
     }, []);
 
+    const emitLiveLocationPulse = useCallback((lat, lng) => {
+        const activeBooking = captainJobs.find(job => ![
+            'pending',
+            'completed',
+            'cancelled',
+            'failed',
+            'vehicle_not_available',
+            'skipped'
+        ].includes(job.status));
+
+        const activeBookingId = activeBooking?.id || activeBooking?._id;
+        if (!activeBookingId) return;
+
+        socketService.emit('update_location', {
+            bookingId: activeBookingId,
+            location: { lat, lng }
+        });
+    }, [captainJobs]);
+
     const updateLocation = useCallback(async (lat, lng) => {
         try {
             const response = await captainAPI.updateLocation(lat, lng);
             if (response.status === 'success') {
-                // Refresh dashboard to show jobs in the newly selected region
-                loadCaptainDashboard();
+                emitLiveLocationPulse(lat, lng);
             }
             return { success: true, data: response.data };
         } catch (error) {
             console.error('Captain Update Location error:', error);
             return { success: false, error: error.message };
         }
-    }, [loadCaptainDashboard]);
+    }, [emitLiveLocationPulse]);
 
     // Auth methods
     const captainSendOTP = useCallback(async (phone, userData = null) => {
@@ -418,7 +462,7 @@ export const CaptainProvider = ({ children }) => {
                 watchId = navigator.geolocation.watchPosition(
                     (position) => {
                         const { latitude, longitude } = position.coords;
-                        captainAPI.updateLocation(latitude, longitude).catch(err => {
+                        updateLocation(latitude, longitude).catch(err => {
                             console.error("Failed to sync background location:", err);
                         });
                     },
@@ -448,7 +492,7 @@ export const CaptainProvider = ({ children }) => {
                 navigator.geolocation.clearWatch(watchId);
             }
         };
-    }, [sessions.captain?.isOnline]);
+    }, [sessions.captain?.isOnline, updateLocation]);
 
     // Socket: Connect + Join captain's personal room so targeted broadcasts work
     useEffect(() => {

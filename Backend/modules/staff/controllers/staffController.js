@@ -5,6 +5,13 @@ const walletHelper = require('../../../utils/walletHelper');
 const referralService = require('../../../utils/referralService');
 const { sendNotification } = require('../../../utils/notificationService');
 
+const STAFF_NON_APARTMENT_FILTER = {
+    $nor: [
+        { 'service.category': 'Apartment' },
+        { 'service.key': 'APARTMENT_WASH' }
+    ]
+};
+
 // Get Staff tasks (assigned to them via vendor)
 exports.getTasks = async (req, res) => {
     try {
@@ -28,7 +35,8 @@ exports.getTasks = async (req, res) => {
                         { status: { $nin: ['completed', 'cancelled'] } },
                         { status: { $in: ['completed', 'cancelled'] }, updatedAt: { $gte: dayAgo } }
                     ]
-                }
+                },
+                STAFF_NON_APARTMENT_FILTER
             ]
         })
             .populate('consumer', 'name phone profile')
@@ -94,11 +102,16 @@ exports.getDashboard = async (req, res) => {
         const staffId = req.user.id;
         // Service stats
         const bookings = await Booking.find({
-            $or: [
-                { pickupStaff: staffId },
-                { deliveryStaff: staffId },
-                { assignedStaff: staffId },
-                { 'provider.id': staffId }
+            $and: [
+                {
+                    $or: [
+                        { pickupStaff: staffId },
+                        { deliveryStaff: staffId },
+                        { assignedStaff: staffId },
+                        { 'provider.id': staffId }
+                    ]
+                },
+                STAFF_NON_APARTMENT_FILTER
             ]
         });
 
@@ -150,12 +163,17 @@ exports.getTaskById = async (req, res) => {
         const staffId = req.user.id;
         const taskId = req.params.id;
         const booking = await Booking.findOne({
-            _id: taskId,
-            $or: [
-                { pickupStaff: staffId },
-                { deliveryStaff: staffId },
-                { assignedStaff: staffId },
-                { 'provider.id': staffId }
+            $and: [
+                {
+                    _id: taskId,
+                    $or: [
+                        { pickupStaff: staffId },
+                        { deliveryStaff: staffId },
+                        { assignedStaff: staffId },
+                        { 'provider.id': staffId }
+                    ]
+                },
+                STAFF_NON_APARTMENT_FILTER
             ]
         })
             .populate('consumer', 'name phone profile')
@@ -237,12 +255,17 @@ exports.updateTaskStatus = async (req, res) => {
         }
 
         const booking = await Booking.findOne({
-            _id: taskId,
-            $or: [
-                { pickupStaff: staffId },
-                { deliveryStaff: staffId },
-                { assignedStaff: staffId },
-                { 'provider.id': staffId }
+            $and: [
+                {
+                    _id: taskId,
+                    $or: [
+                        { pickupStaff: staffId },
+                        { deliveryStaff: staffId },
+                        { assignedStaff: staffId },
+                        { 'provider.id': staffId }
+                    ]
+                },
+                STAFF_NON_APARTMENT_FILTER
             ]
         }).populate('consumer', 'name phone')
           .populate({
@@ -456,8 +479,13 @@ exports.updateLocation = async (req, res) => {
 
         const booking = await Booking.findOneAndUpdate(
             {
-                _id: taskId,
-                $or: [{ pickupStaff: staffId }, { deliveryStaff: staffId }, { assignedStaff: staffId }]
+                $and: [
+                    {
+                        _id: taskId,
+                        $or: [{ pickupStaff: staffId }, { deliveryStaff: staffId }, { assignedStaff: staffId }]
+                    },
+                    STAFF_NON_APARTMENT_FILTER
+                ]
             },
             {
                 'tracking.currentLocation': {
@@ -496,11 +524,16 @@ exports.getEarnings = async (req, res) => {
     try {
         const staffId = req.user.id;
         const bookings = await Booking.find({
-            status: 'completed',
-            $or: [
-                { pickupStaff: staffId },
-                { deliveryStaff: staffId },
-                { assignedStaff: staffId }
+            $and: [
+                {
+                    status: 'completed',
+                    $or: [
+                        { pickupStaff: staffId },
+                        { deliveryStaff: staffId },
+                        { assignedStaff: staffId }
+                    ]
+                },
+                STAFF_NON_APARTMENT_FILTER
             ]
         }).sort({ createdAt: -1 });
 
@@ -588,14 +621,19 @@ exports.commitToSlot = async (req, res) => {
         const taskId = req.params.id;
 
         const booking = await Booking.findOne({
-            _id: taskId,
-            $or: [
-                { pickupStaff: staffId },
-                { deliveryStaff: staffId },
-                { assignedStaff: staffId },
-                { 'provider.id': staffId }
-            ],
-            isActive: true
+            $and: [
+                {
+                    _id: taskId,
+                    $or: [
+                        { pickupStaff: staffId },
+                        { deliveryStaff: staffId },
+                        { assignedStaff: staffId },
+                        { 'provider.id': staffId }
+                    ],
+                    isActive: true
+                },
+                STAFF_NON_APARTMENT_FILTER
+            ]
         });
 
         if (!booking) {
@@ -662,14 +700,19 @@ exports.handleMissedWash = async (req, res) => {
         const { reason, photos } = req.body;
 
         const booking = await Booking.findOne({
-            _id: taskId,
-            $or: [
-                { pickupStaff: staffId },
-                { deliveryStaff: staffId },
-                { assignedStaff: staffId },
-                { 'provider.id': staffId }
-            ],
-            isActive: true
+            $and: [
+                {
+                    _id: taskId,
+                    $or: [
+                        { pickupStaff: staffId },
+                        { deliveryStaff: staffId },
+                        { assignedStaff: staffId },
+                        { 'provider.id': staffId }
+                    ],
+                    isActive: true
+                },
+                STAFF_NON_APARTMENT_FILTER
+            ]
         }).populate('consumer', 'name wallet');
 
         if (!booking) {

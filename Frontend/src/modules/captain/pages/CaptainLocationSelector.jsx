@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -24,6 +24,8 @@ const CaptainLocationSelector = () => {
     const [addressName, setAddressName] = useState('Fetching location...');
     const [isGeocoding, setIsGeocoding] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const debounceTimerRef = useRef(null);
+    const lastGeocodedPos = useRef({ lat: 0, lng: 0 });
 
     // Get current location on mount
     useEffect(() => {
@@ -51,21 +53,46 @@ const CaptainLocationSelector = () => {
         );
     };
 
-    // Reverse geocode when position changes
-    useEffect(() => {
-        const reverseGeocode = async () => {
-            setIsGeocoding(true);
-            const data = await geocodingService.reverse(selectedPos.lat, selectedPos.lng);
-            if (data) {
-                setAddressName(data.display_name);
+    const handleIdle = (newCenter) => {
+        setSelectedPos(newCenter);
+
+        // 💵 BILLING PROTECTION: 1-second Debounce
+        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+
+        debounceTimerRef.current = setTimeout(async () => {
+            const dist = getDistance(newCenter, lastGeocodedPos.current);
+
+            // 💵 BILLING PROTECTION: 15-meter Threshold
+            if (dist > 15) {
+                setIsGeocoding(true);
+                const data = await geocodingService.reverse(newCenter.lat, newCenter.lng);
+                if (data) {
+                    setAddressName(data.display_name);
+                    lastGeocodedPos.current = newCenter;
+                } else {
+                    setAddressName('Location selected');
+                }
+                setIsGeocoding(false);
             } else {
-                setAddressName('Location selected');
+                console.log("🛰️ Captain Map: Skipping geocode (Minimal movement)");
             }
-            setIsGeocoding(false);
-        };
-        const timer = setTimeout(reverseGeocode, 1000);
-        return () => clearTimeout(timer);
-    }, [selectedPos]);
+        }, 1000);
+    };
+
+    // Helper to calculate distance in meters
+    const getDistance = (p1, p2) => {
+        if (!p1 || !p2) return 999;
+        const R = 6371e3;
+        const φ1 = p1.lat * Math.PI / 180;
+        const φ2 = p2.lat * Math.PI / 180;
+        const Δφ = (p2.lat - p1.lat) * Math.PI / 180;
+        const Δλ = (p2.lng - p1.lng) * Math.PI / 180;
+        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    };
 
     const handleSearch = async (e) => {
         e.preventDefault();
@@ -145,7 +172,7 @@ const CaptainLocationSelector = () => {
                     <GoogleMapBox 
                         center={mapCenter} 
                         zoom={15} 
-                        onIdle={setSelectedPos}
+                        onIdle={handleIdle}
                         markers={[
                             {
                                 id: 'center-marker',

@@ -6,9 +6,9 @@ import {
     ShieldCheck, Lock,
     X, Timer, Navigation, Phone, MessageSquare,
     AlertTriangle, Search, CreditCard, Play,
-    Loader2, Check, Map, Settings, Zap
+    Loader2, Check, Map, Settings, Zap, ArrowRight
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { useGeoLocation } from '../../../hooks/useGeoLocation';
 import GoogleMapBox from '../../../components/common/GoogleMapBox';
@@ -16,6 +16,7 @@ import bookingAPI, { serviceAPI, spareDriverAPI, subscriptionAPI, vehicleAPI } f
 import { socketService } from '../../../utils/socket';
 import MobileLayout from '../components/layout/MobileLayout';
 import { toast } from 'react-hot-toast';
+import Header from '../../../components/common/Header';
 
 // 🏎️ Chauffeur Service Visuals
 import pointImg from '../../../assets/chauffeur/point.png';
@@ -84,9 +85,9 @@ const USER_AND_CAR_MARKER = svgToDataUrl(`
 
 // 🏛️ Fallback Protocol: Static Service Reference
 const SERVICE_TYPES = [
-    { id: 'point', title: 'Point to Point', subtitle: 'Round trip from your location', basePrice: 499 },
-    { id: 'hourly', title: 'Hourly Booking', subtitle: 'Flexible rental', basePrice: 799 },
-    { id: 'full', title: 'Full Day', subtitle: 'Dedicated city shift', basePrice: 999 },
+    { id: 'point', title: 'Point to point', subtitle: 'Round trip from your location', basePrice: 499 },
+    { id: 'hourly', title: 'Hourly booking', subtitle: 'Flexible rental', basePrice: 799 },
+    { id: 'full', title: 'Full day', subtitle: 'Dedicated city shift', basePrice: 999 },
     { id: 'outstation', title: 'Outstation', subtitle: 'Inter-city travel', basePrice: 2499 }
 ];
 
@@ -181,6 +182,48 @@ const calculateDurationMultiplier = (kind, durationLabel = '') => {
 const normalizeDurationLabel = (value = '') => (
     String(value || '').trim().toLowerCase().replace(/\s+/g, ' ')
 );
+
+const normalizeApplicableValue = (value = '') => String(value || '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+const getChauffeurServiceTokens = (service = {}) => {
+    const tokens = new Set();
+
+    [
+        service.id,
+        service.key,
+        service.title,
+        service.name,
+        service.metadata?.id,
+        service.metadata?.path,
+        service.metadata?.category,
+        normalizeServiceKind(service)
+    ].forEach((value) => {
+        const normalized = normalizeApplicableValue(value);
+        if (normalized) tokens.add(normalized);
+    });
+
+    return tokens;
+};
+
+const planAppliesToChauffeurService = (plan = {}, service = null) => {
+    if (!service) return true;
+
+    const applicableServices = Array.isArray(plan?.applicableServices) ? plan.applicableServices : [];
+    if (applicableServices.length === 0) return false;
+
+    const serviceTokens = getChauffeurServiceTokens(service);
+
+    return applicableServices.some((entry) => {
+        const normalized = normalizeApplicableValue(entry);
+        if (!normalized) return false;
+        if (normalized === 'SPARE_DRIVER' || normalized === 'CHAUFFEUR') return true;
+        if (serviceTokens.has(normalized)) return true;
+        return [...serviceTokens].some((token) => token.includes(normalized) || normalized.includes(token));
+    });
+};
 
 const getDurationSlotPrice = (service = {}, durationLabel = '') => {
     const rawPricing = service?.metadata?.durationPricing;
@@ -387,6 +430,10 @@ const SpareDriverBooking = () => {
     const userCoords = useMemo(() => 
         selectedAddress?.coordinates || currentLocation || { lat: 28.6139, lng: 77.2090 }
     , [selectedAddress, currentLocation]);
+    const [searchParams] = useSearchParams();
+    const typeFromUrl = searchParams.get('type');
+    const vehicleIdFromUrl = searchParams.get('vehicleId');
+
     const [services, setServices] = useState([]);
     const [vehicleTypes, setVehicleTypes] = useState([]);
     const [chauffeurPlans, setChauffeurPlans] = useState([]);
@@ -404,6 +451,10 @@ const SpareDriverBooking = () => {
     }, [phase]);
 
     const [selectedType, setSelectedType] = useState(() => {
+        if (typeFromUrl) {
+            const found = SERVICE_TYPES.find(t => t.id === typeFromUrl);
+            if (found) return found;
+        }
         const saved = sessionStorage.getItem('chauffeur_selected_type');
         return saved ? JSON.parse(saved) : null;
     });
@@ -485,7 +536,20 @@ const SpareDriverBooking = () => {
         sessionStorage.setItem('chauffeur_booking_details', JSON.stringify(bookingDetails));
     }, [bookingDetails]);
 
-    const [selectedVehicle, setSelectedVehicle] = useState(vehicles?.[0] || null);
+    const [selectedVehicle, setSelectedVehicle] = useState(() => {
+        if (vehicleIdFromUrl && vehicles && vehicles.length > 0) {
+            const found = vehicles.find(v => v.id === vehicleIdFromUrl);
+            if (found) return found;
+        }
+        return vehicles?.[0] || null;
+    });
+
+    useEffect(() => {
+        if (vehicleIdFromUrl && vehicles && vehicles.length > 0) {
+            const found = vehicles.find(v => v.id === vehicleIdFromUrl);
+            if (found) setSelectedVehicle(found);
+        }
+    }, [vehicleIdFromUrl, vehicles]);
     const [activeBookingId, setActiveBookingId] = useState(() => {
         return sessionStorage.getItem('chauffeur_active_booking_id') || null;
     });
@@ -534,7 +598,10 @@ const SpareDriverBooking = () => {
         0,
         (chauffeurSubscription?.monthlyCredits || 0) - (chauffeurSubscription?.usedCredits || 0)
     );
-    const canUseChauffeurSubscription = chauffeurSubscription?.status === 'active' && availableSubscriptionCredits > 0;
+    const availableChauffeurPlans = chauffeurPlans.filter((plan) => planAppliesToChauffeurService(plan, selectedType));
+    const canUseChauffeurSubscription = chauffeurSubscription?.status === 'active'
+        && availableSubscriptionCredits > 0
+        && planAppliesToChauffeurService(chauffeurSubscription, selectedType);
     const outstandingSettlementAmount = useMemo(() => {
         const explicitPending = Number(bookingDetails?.payment?.pendingAmount || 0);
         if (explicitPending > 0) return explicitPending;
@@ -816,7 +883,8 @@ const SpareDriverBooking = () => {
                 name: provider.name || booking.provider?.name || 'Assigned Driver',
                 phone: provider.phone || booking.provider?.phone || '',
                 rating: provider.rating || booking.provider?.rating || 5.0,
-                img: providerPhoto
+                img: providerPhoto,
+                isPremium: provider.verification?.policeStatus === 'approved'
             });
         }
 
@@ -844,12 +912,19 @@ const SpareDriverBooking = () => {
             const socket = socketService.getSocket();
             if (socket) {
                 // Listen for driver pulses
-                socket.on('location_updated', (data) => {
+                const handleLocationPulse = (data = {}) => {
                     console.log('[SpareDriver] Telemetry Pulse:', data);
-                    if (data.location) {
+                    if (data.location?.lat && data.location?.lng) {
                         setDriverLocation(data.location);
+                        return;
                     }
-                });
+                    if (Number.isFinite(Number(data.lat)) && Number.isFinite(Number(data.lng))) {
+                        setDriverLocation({ lat: Number(data.lat), lng: Number(data.lng) });
+                    }
+                };
+
+                socket.on('location_updated', handleLocationPulse);
+                socket.on('locationUpdate', handleLocationPulse);
 
                 // Listen for status changes
                 socket.on('booking_status_updated', (data) => {
@@ -921,6 +996,7 @@ const SpareDriverBooking = () => {
                 const socket = socketService.getSocket();
                 if (socket) {
                     socket.off('location_updated');
+                    socket.off('locationUpdate');
                     socket.off('booking_status_updated');
                     socket.off('otp_revealed');
                 }
@@ -1032,6 +1108,7 @@ const SpareDriverBooking = () => {
         handleSearchTimeout();
     }, [activeBookingId, bookingDetails?.status, lookingTime, phase]);
 
+
     // Fetch services and types
     useEffect(() => {
         const fetchData = async () => {
@@ -1040,11 +1117,33 @@ const SpareDriverBooking = () => {
                     serviceAPI.getChauffeurServices(),
                     vehicleAPI.getVehicleTypes(),
                     serviceAPI.getPlans({ category: 'Chauffeur', moduleScope: 'spare-driver' }),
-                    subscriptionAPI.getSubscription({ moduleScope: 'spare-driver' })
+                    subscriptionAPI.getSubscription({
+                        moduleScope: 'spare-driver',
+                        ...(selectedType ? { serviceKey: selectedType.metadata?.id || selectedType.key || selectedType.title } : {})
+                    })
                 ]);
                 
                 if (serviceRes.status === 'success') {
-                    setServices(serviceRes.data.services);
+                    const fetchedServices = serviceRes.data.services || [];
+                    setServices(fetchedServices);
+
+                    // 🎯 Direct Deep-Linking Logic
+                    if (typeFromUrl && fetchedServices.length > 0) {
+                        const targetService = fetchedServices.find(s => 
+                            normalizeServiceKind(s) === typeFromUrl || 
+                            s.id === typeFromUrl || 
+                            s.metadata?.id === typeFromUrl ||
+                            s.title?.toLowerCase().includes(typeFromUrl.toLowerCase())
+                        );
+                        
+                        if (targetService) {
+                            const built = buildSelectedType(targetService);
+                            setSelectedType(built);
+                            setPhase(PHASES.BOOKING_DETAILS);
+                            // Cleanup URL to avoid sticky param
+                            navigate('/spare-driver', { replace: true });
+                        }
+                    }
                 }
                 if (typeRes.status === 'success') {
                     setVehicleTypes(typeRes.data.vehicleTypes);
@@ -1062,7 +1161,7 @@ const SpareDriverBooking = () => {
             }
         };
         fetchData();
-    }, []);
+    }, [typeFromUrl]); // Run when typeFromUrl changes
 
     // Initial check for vehicles
     useEffect(() => {
@@ -1356,310 +1455,137 @@ const SpareDriverBooking = () => {
     };
 
     const renderHeader = (title, showBack = true) => (
-        <header className="px-5 pt-8 pb-4 bg-white/90 backdrop-blur-2xl sticky top-0 z-50 border-b border-black/[0.04] shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
-            <div className="absolute inset-x-0 top-0 h-20 bg-[radial-gradient(circle_at_top_right,rgba(242,159,5,0.14),transparent_58%)] pointer-events-none" />
-            <div className="relative flex items-center justify-between">
-            <div className="flex items-center gap-3">
-                {showBack && (
-                    <button
-                        onClick={() => phase === PHASES.SERVICE_TYPE ? navigate(-1) : setPhase(prev => {
-                            if (prev === PHASES.BOOKING_DETAILS) return PHASES.SERVICE_TYPE;
-                            if (prev === PHASES.CONFIRM_VEHICLE) return PHASES.BOOKING_DETAILS;
-                            return PHASES.SERVICE_TYPE;
-                        })}
-                        className="w-10 h-10 rounded-2xl bg-white border border-black/[0.04] shadow-[0_10px_24px_rgba(15,23,42,0.08)] flex items-center justify-center text-black active:scale-95 transition-transform"
-                    >
-                        <ChevronLeft size={16} strokeWidth={3} />
-                    </button>
-                )}
-                <div>
-                    <p className="text-[8px] font-black text-brand uppercase tracking-[0.32em] mb-1 leading-none">Elite Chauffeur Desk</p>
-                    <h1 className="text-lg font-black text-black tracking-tight uppercase leading-none">{title}</h1>
-                </div>
-            </div>
-            {phase === PHASES.BOOKING_DETAILS && (
-                <div className="bg-brand/10 border border-brand/15 px-3 py-1.5 rounded-full text-[8px] font-black uppercase tracking-[0.22em] text-brand shadow-[0_8px_20px_rgba(242,159,5,0.15)]">
-                    {bookingMode === 'instant' ? 'Book Now' : 'Scheduled Trip'}
-                </div>
-            )}
-            </div>
-        </header>
+        <Header 
+            title={title} 
+            showBack={showBack} 
+            onBackClick={() => {
+                if (phase === PHASES.BOOKING_DETAILS || phase === PHASES.SERVICE_TYPE) {
+                    navigate(-1);
+                } else {
+                    setPhase(prev => {
+                        if (prev === PHASES.CONFIRM_VEHICLE) return PHASES.BOOKING_DETAILS;
+                        if (prev === PHASES.CHECKOUT) {
+                            // If we came from Home with a vehicle, go back to details, then Home
+                            return PHASES.BOOKING_DETAILS;
+                        }
+                        return PHASES.BOOKING_DETAILS;
+                    });
+                }
+            }}
+        />
     );
 
-    const renderServiceType = () => (
-        <div className="px-5 pt-4 pb-7 space-y-5 bg-[linear-gradient(180deg,rgba(255,251,240,0.9),rgba(255,255,255,0.96)_24%,rgba(255,255,255,1)_100%)]">
-            <div className="relative overflow-hidden rounded-[2rem] border border-black/[0.04] bg-[#101316] px-5 py-5 shadow-[0_24px_60px_rgba(0,0,0,0.16)]">
-                <div className="absolute inset-y-0 right-0 w-28 bg-[radial-gradient(circle_at_center,rgba(242,159,5,0.28),transparent_68%)]" />
-                <div className="relative space-y-2">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
-                        <span className="text-[8px] font-black text-white/50 uppercase tracking-[0.28em]">Premium Mobility</span>
-                    </div>
-                    <h2 className="text-[26px] font-[1000] text-white tracking-[-0.08em] leading-[0.95] uppercase">Expert Drivers</h2>
-                    <p className="max-w-[17rem] text-[10px] font-bold text-white/45 uppercase tracking-[0.2em] leading-relaxed">Book a chauffeur with premium trip handling, live support and polished arrival experience.</p>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3">
-                {loading ? (
-                    <div className="flex flex-col items-center justify-center py-12 gap-4">
-                        <Loader2 className="w-8 h-8 text-brand animate-spin" />
-                        <p className="text-[10px] font-black text-black/20 uppercase tracking-widest">Loading Premium Drivers...</p>
-                    </div>
-                ) : (services.length > 0 ? services : SERVICE_TYPES).map((type) => {
-                    const kind = normalizeServiceKind(type);
-                    const cardImage = SERVICE_CARD_IMAGES[kind] || SERVICE_CARD_IMAGES.point;
-
-                    return (
-                        <motion.button
-                            key={type._id || type.id || type.name}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => {
-                                const nextType = buildSelectedType(type);
-                                const nextDurationOptions = getDurationOptionsForService(nextType);
-                                setSelectedType(nextType);
-                                setBookingDetails((prev) => ({
-                                    ...prev,
-                                    duration: nextDurationOptions[0] || getDefaultDurationForKind(nextType.kind)
-                                }));
-                                setPhase(PHASES.BOOKING_DETAILS);
-                            }}
-                            className="relative overflow-hidden rounded-[1.75rem] bg-white p-4 text-left border border-black/[0.04] shadow-[0_18px_45px_rgba(15,23,42,0.06)] flex items-center gap-4 group transition-all hover:border-brand/25 hover:-translate-y-0.5"
-                        >
-                            <div className="absolute inset-y-0 right-0 w-24 bg-[radial-gradient(circle_at_center,rgba(242,159,5,0.11),transparent_68%)] opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="w-16 h-16 rounded-[1.15rem] overflow-hidden flex items-center justify-center bg-white transition-all duration-300 shadow-[0_16px_30px_rgba(15,23,42,0.12)] group-hover:scale-105 flex-shrink-0 border border-black/[0.04]">
-                                <img
-                                    src={cardImage}
-                                    className="w-full h-full object-cover"
-                                    alt={type.title || type.name}
-                                />
-                            </div>
-                            <div className="flex-1">
-                                <div className="inline-flex items-center gap-1 rounded-full bg-gray-50 px-2 py-1 text-[7px] font-black uppercase tracking-[0.24em] text-black/35 mb-2">
-                                    <span className="w-1 h-1 rounded-full bg-brand" />
-                                    Chauffeur Mode
-                                </div>
-                                <h3 className="text-[15px] font-[1000] text-black uppercase tracking-tight leading-none mb-1">{type.title || type.name}</h3>
-                                <p className="text-[10px] font-bold text-black/30 uppercase tracking-widest">{type.subtitle || type.description}</p>
-                                <div className="mt-3 flex items-center gap-2 flex-wrap">
-                                    <div className="bg-black text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-[0_10px_20px_rgba(0,0,0,0.12)]">
-                                        <span className="text-[9px] font-black uppercase tracking-widest px-0.5">From {formatInr(sanitizePrice(type))}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1 text-[#F29F05] bg-[#FFF7E7] px-2.5 py-1.5 rounded-full border border-[#F29F05]/10">
-                                        <Star size={10} fill="currentColor" />
-                                        <span className="text-[10px] font-black uppercase leading-none">{type.rating || '4.9'}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <ChevronRight size={18} className="text-black/15 transition-transform group-hover:translate-x-1 group-hover:text-black/35" />
-                        </motion.button>
-                    );
-                })}
-            </div>
-
-            <div className="bg-[linear-gradient(180deg,#FFFFFF_0%,#FFFBF3_100%)] rounded-[2rem] p-6 border border-black/[0.03] shadow-[0_18px_45px_rgba(15,23,42,0.04)]">
-                <h4 className="text-[11px] font-black text-black/40 uppercase tracking-widest mb-4 text-center">Clean2Wash Guarantee</h4>
-                <div className="grid grid-cols-3 gap-2">
-                    {[
-                        { icon: Shield, title: 'SAFE', desc: 'Verified' },
-                        { icon: Star, title: 'EXPERT', desc: 'Top Rated' },
-                        { icon: Timer, title: 'FAST', desc: '15 Min Wait' }
-                    ].map((item, i) => (
-                        <div key={i} className="flex flex-col items-center text-center gap-2">
-                            <div className="w-10 h-10 bg-white rounded-[1rem] flex items-center justify-center border border-black/[0.02] shadow-[0_10px_20px_rgba(15,23,42,0.08)]">
-                                <item.icon size={16} className="text-brand" />
-                            </div>
-                            <div>
-                                <p className="text-[9px] font-black text-black uppercase tracking-tight leading-none">{item.title}</p>
-                                <p className="text-[7px] font-bold text-black/30 uppercase tracking-widest mt-1">{item.desc}</p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
 
     const renderBookingDetails = () => (
-        <div className="px-5 pt-4 pb-32 space-y-5 bg-[linear-gradient(180deg,#FFF9EF_0%,#FFFFFF_16%,#FFFFFF_100%)]">
-            <div className="rounded-[2rem] border border-black/[0.04] bg-white px-4 py-4 shadow-[0_18px_40px_rgba(15,23,42,0.05)]">
-                <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 flex flex-col bg-gradient-to-b from-[#FFFDF5] to-[#FEF3C7] min-h-screen overflow-hidden">
+            <div className="px-5 pt-4 pb-2 border-b border-[#0F172A]/05">
+                <div className="flex items-center justify-between">
                     <div>
-                        <p className="text-[8px] font-black text-brand uppercase tracking-[0.32em] mb-1.5">Trip Setup</p>
-                        <h3 className="text-[18px] font-[1000] text-black uppercase tracking-tight leading-none">
-                            {selectedType?.title || 'Chauffeur Booking'}
+                        <h3 className="text-[18px] font-black text-[#0F172A] tracking-tighter uppercase leading-none">
+                            {selectedType?.title || 'Point to Point'}
                         </h3>
-                        <p className="text-[9px] font-bold text-black/35 uppercase tracking-[0.18em] mt-2">
-                            lock your route, duration and dispatch preference
+                        <p className="text-[8px] font-extrabold text-[#F59E0B] uppercase tracking-[0.15em] mt-0.5">
+                            HOORA ELITE <span className="text-[#0F172A]/20 ml-1">• 1/2</span>
                         </p>
-                    </div>
-                    <div className="px-3 py-1.5 rounded-full bg-gray-50 border border-black/[0.04] text-[8px] font-black uppercase tracking-[0.22em] text-black/45">
-                        Step 1 of 3
                     </div>
                 </div>
             </div>
-            {/* 📍 Point-to-Point Destination Selector */}
-            {requiresDestination && (
-                <div className="space-y-4 rounded-[2rem] border border-black/[0.04] bg-white p-4 shadow-[0_16px_36px_rgba(15,23,42,0.05)]">
-                    <label className="text-[9px] font-black text-black/25 uppercase tracking-[0.25em] mb-1 block pl-1">
-                        {isOutstationService ? 'Travel Destination' : 'Where to? (Destination)'}
-                    </label>
-                    <div className="bg-gray-50/50 rounded-2xl border border-black/[0.03] p-4 flex items-center gap-4">
-                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-black/[0.04] shadow-sm">
-                            <MapPin size={16} className="text-red-500" />
-                        </div>
-                        <div className="flex-1">
-                            <p className="text-[12px] font-black text-black uppercase tracking-tight leading-none mb-1">
-                                {destination?.street || (isOutstationService ? 'Select your outstation destination' : "Select your travel destination")}
-                            </p>
-                            <p className="text-[9px] font-bold text-black/30 uppercase tracking-widest leading-none">
-                                {destination
-                                    ? `~${estimatedKm || '0'} km estimated route`
-                                    : (isOutstationService ? 'Required for outstation travel' : 'Required for Point-to-Point')}
-                            </p>
-                        </div>
-                        <button
-                            onClick={() => navigate(isOutstationService ? '/map' : '/addresses')}
-                            className="text-[9px] font-black text-brand uppercase underline decoration-brand/30 underline-offset-4"
-                        >
-                            {isOutstationService ? 'Pick On Map' : (destinationChoices.length > 0 ? 'Quick Select' : 'Add Address')}
-                        </button>
-                    </div>
 
-                    {destinationChoices.length > 0 && (
-                        <div className="grid grid-cols-1 gap-2">
-                            {destinationChoices.slice(0, 3).map((option) => (
-                                <button
-                                    key={option.id}
-                                    onClick={() => setDestination(option)}
-                                    className={`rounded-xl border px-4 py-3 text-left transition-colors ${destination?.id === option.id ? 'border-black bg-black text-white' : 'border-gray-100 bg-white text-black'}`}
-                                >
-                                    <p className="text-[10px] font-black uppercase tracking-tight">{option.street}</p>
-                                    <p className={`text-[8px] font-bold uppercase tracking-widest mt-1 ${destination?.id === option.id ? 'text-white/60' : 'text-black/30'}`}>
-                                        {option.label}{option.city ? ` • ${option.city}` : ''}
-                                    </p>
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            )}
-
-            <div className="space-y-4 rounded-[2rem] border border-black/[0.04] bg-white p-4 shadow-[0_16px_36px_rgba(15,23,42,0.05)]">
-                <div>
-                    <label className="text-[9px] font-black text-black/25 uppercase tracking-[0.25em] mb-2.5 block pl-1">Booking Mode</label>
-                    <div className="grid grid-cols-2 gap-3">
-                        <button
-                            onClick={() => setBookingDetails((prev) => ({ ...prev, bookingMode: 'instant' }))}
-                            className={`rounded-2xl border px-4 py-4 text-left transition-all ${bookingMode === 'instant' ? 'border-black bg-black text-white shadow-lg shadow-black/10' : 'border-gray-100 bg-white text-black hover:border-black/15'}`}
-                        >
-                            <div className="flex items-center gap-2 mb-2">
-                                <Zap size={13} />
-                                <span className="text-[10px] font-black uppercase tracking-widest">Book Now</span>
-                            </div>
-                            <p className={`text-[8px] font-bold uppercase tracking-widest leading-relaxed ${bookingMode === 'instant' ? 'text-white/55' : 'text-black/35'}`}>
-                                Start driver matching immediately
-                            </p>
-                        </button>
-                        <button
-                            onClick={() => setBookingDetails((prev) => ({ ...prev, bookingMode: 'scheduled' }))}
-                            className={`rounded-2xl border px-4 py-4 text-left transition-all ${bookingMode === 'scheduled' ? 'border-black bg-black text-white shadow-lg shadow-black/10' : 'border-gray-100 bg-white text-black hover:border-black/15'}`}
-                        >
-                            <div className="flex items-center gap-2 mb-2">
-                                <Calendar size={13} />
-                                <span className="text-[10px] font-black uppercase tracking-widest">Schedule</span>
-                            </div>
-                            <p className={`text-[8px] font-bold uppercase tracking-widest leading-relaxed ${bookingMode === 'scheduled' ? 'text-white/55' : 'text-black/35'}`}>
-                                Set a future date and departure time
-                            </p>
-                        </button>
-                    </div>
+            <div className="px-5 py-3 space-y-3">
+                {/* 2. Compact Toggle */}
+                <div className="p-1 bg-[#0F172A]/05 rounded-lg flex gap-1">
+                    <button
+                        onClick={() => setBookingDetails((prev) => ({ ...prev, bookingMode: 'instant' }))}
+                        className={`flex-1 h-9 rounded-md text-[9px] font-black uppercase tracking-wider transition-all ${bookingMode === 'instant' ? 'bg-[#0F172A] text-white shadow-sm' : 'bg-transparent text-[#0F172A]/30'}`}
+                    >
+                        Book Now
+                    </button>
+                    <button
+                        onClick={() => setBookingDetails((prev) => ({ ...prev, bookingMode: 'scheduled' }))}
+                        className={`flex-1 h-9 rounded-md text-[9px] font-black uppercase tracking-wider transition-all ${bookingMode === 'scheduled' ? 'bg-[#0F172A] text-white shadow-sm' : 'bg-transparent text-[#0F172A]/30'}`}
+                    >
+                        Schedule
+                    </button>
                 </div>
 
-                <div>
-                    <label className="text-[9px] font-black text-black/25 uppercase tracking-[0.25em] mb-2.5 block pl-1">
-                        {bookingMode === 'instant' ? 'Dispatch Window' : 'Booking Slot'}
-                    </label>
-                    {bookingMode === 'instant' ? (
-                        <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
-                                    <Zap size={16} />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-black">Instant Dispatch</p>
-                                    <p className="text-[8px] font-bold uppercase tracking-widest text-black/35 mt-1">
-                                        Nearby driver matching starts right after payment
-                                    </p>
-                                </div>
+                {/* 3. Slim Scheduling */}
+                {bookingMode === 'scheduled' && (
+                    <div className="grid grid-cols-2 gap-2 animate-in fade-in duration-300">
+                        <div className="bg-white rounded-lg p-2.5 border border-[#0F172A]/05 shadow-sm">
+                            <span className="text-[7px] font-bold text-[#0F172A]/30 uppercase tracking-widest block">Date</span>
+                            <input
+                                type="date"
+                                value={bookingDetails.date}
+                                onChange={(e) => setBookingDetails({ ...bookingDetails, date: e.target.value })}
+                                className="w-full text-[11px] font-bold bg-transparent border-none p-0 outline-none text-[#0F172A]"
+                            />
+                        </div>
+                        <div className="bg-white rounded-lg p-2.5 border border-[#0F172A]/05 shadow-sm">
+                            <span className="text-[7px] font-bold text-[#0F172A]/30 uppercase tracking-widest block">Time</span>
+                            <input
+                                type="time"
+                                value={bookingDetails.time}
+                                onChange={(e) => setBookingDetails({ ...bookingDetails, time: e.target.value })}
+                                className="w-full text-[11px] font-bold bg-transparent border-none p-0 outline-none text-[#0F172A]"
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {/* 4. Slim Location Row */}
+                <div className="space-y-1.5">
+                    <div 
+                        onClick={() => navigate('/map')}
+                        className="flex items-center justify-between p-3 bg-white border border-[#0F172A]/05 rounded-xl active:opacity-60 transition-all cursor-pointer"
+                    >
+                        <div className="flex items-center gap-2.5 overflow-hidden">
+                            <div className="w-7 h-7 rounded-lg bg-[#0F172A]/03 flex items-center justify-center text-[#0F172A]">
+                                <MapPin size={14} />
                             </div>
-                            <div className="text-right">
-                                <p className="text-[8px] font-black uppercase tracking-widest text-black/25 mb-1">Live Request</p>
-                                <p className="text-[12px] font-black uppercase tracking-tight text-black">
-                                    {bookingDetails.time || formatTimeInputValue()}
+                            <div className="overflow-hidden">
+                                <p className="text-[7px] font-bold text-[#0F172A]/30 uppercase tracking-widest leading-none mb-0.5">Pickup</p>
+                                <p className="text-[11px] font-bold text-[#0F172A] truncate">
+                                    {selectedAddress?.street || addresses?.find(a => a.isPrimary)?.street || addresses?.[0]?.street || 'Current Location'}
                                 </p>
                             </div>
                         </div>
-                    ) : (
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-white border border-gray-100 rounded-xl p-3.5 flex flex-col gap-1.5 shadow-sm">
-                                <div className="flex items-center gap-2 text-black/20">
-                                    <Calendar size={12} />
-                                    <span className="text-[8px] font-black uppercase tracking-widest">Select Date</span>
+                        <ChevronRight size={14} className="text-[#0F172A]/10" />
+                    </div>
+
+                    {requiresDestination && (
+                        <div 
+                            onClick={() => navigate('/map?from=chauffeur&type=destination')}
+                            className="flex items-center justify-between p-3 bg-white border border-[#0F172A]/05 rounded-xl active:opacity-60 transition-all cursor-pointer"
+                        >
+                            <div className="flex items-center gap-2.5 overflow-hidden">
+                                <div className="w-7 h-7 rounded-lg bg-[#F59E0B]/05 flex items-center justify-center text-[#F59E0B]">
+                                    <Navigation size={14} />
                                 </div>
-                                <input
-                                    type="date"
-                                    value={bookingDetails.date}
-                                    onChange={(e) => setBookingDetails({ ...bookingDetails, date: e.target.value })}
-                                    className="text-[13px] font-black bg-transparent border-none outline-none p-0 text-black appearance-none focus:ring-0"
-                                />
-                            </div>
-                            <div className="bg-white border border-gray-100 rounded-xl p-3.5 flex flex-col gap-1.5 shadow-sm">
-                                <div className="flex items-center gap-2 text-black/20">
-                                    <Clock size={12} />
-                                    <span className="text-[8px] font-black uppercase tracking-widest">Start Time</span>
+                                <div className="overflow-hidden">
+                                    <p className="text-[7px] font-bold text-[#0F172A]/30 uppercase tracking-widest leading-none mb-0.5">Destination</p>
+                                    <p className="text-[11px] font-bold text-[#0F172A] truncate">
+                                        {destination?.street || 'Select Drop Location'}
+                                    </p>
                                 </div>
-                                <input
-                                    type="time"
-                                    value={bookingDetails.time}
-                                    onChange={(e) => setBookingDetails({ ...bookingDetails, time: e.target.value })}
-                                    className="text-[13px] font-black bg-transparent border-none outline-none p-0 text-black appearance-none focus:ring-0"
-                                />
                             </div>
+                            <ChevronRight size={14} className="text-[#0F172A]/10" />
                         </div>
                     )}
                 </div>
 
-                <div>
-                    <label className="text-[9px] font-black text-black/25 uppercase tracking-[0.25em] mb-2.5 block pl-1">
-                        {selectedServiceKind === 'point' ? 'Pickup & Return Point' : 'Pickup Location'}
-                    </label>
-                    <div
-                        onClick={() => navigate('/map')}
-                        className="bg-white border border-gray-100 rounded-xl p-3.5 flex items-center gap-3 shadow-sm group active:bg-gray-50 transition-colors cursor-pointer"
-                    >
-                        <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-500 border border-emerald-100/50 flex-shrink-0">
-                            <MapPin size={14} />
-                        </div>
-                        <div className="flex-1 overflow-hidden">
-                            <h4 className="text-[11px] font-[1000] text-black uppercase tracking-tight leading-none mb-1">
-                                {selectedServiceKind === 'point' ? 'Trip Base Point' : 'Current Location'}
-                            </h4>
-                            <p className="text-[9px] font-bold text-black/30 uppercase tracking-widest truncate">{selectedAddress?.street || addresses?.find(a => a.isPrimary)?.street || addresses?.[0]?.street || 'Current Location'}</p>
-                        </div>
-                        <ChevronRight size={14} className="text-black/10 transition-transform group-hover:translate-x-1" />
-                    </div>
-                </div>
-
-                {(isHourlyService || selectedServiceKind === 'point' || selectedServiceKind === 'full' || durationOptions.length > 1) && (
-                    <div>
-                        <label className="text-[9px] font-black text-black/25 uppercase tracking-[0.25em] mb-2.5 block pl-1">Duration</label>
-                        <div className="flex flex-wrap gap-2">
+                {/* 5. Minimal Grid Hours */}
+                {durationOptions.length > 0 && (
+                    <div className="space-y-1.5">
+                        <label className="text-[8px] font-black text-[#0F172A]/20 uppercase tracking-[0.2em] flex items-center gap-1.5">
+                            <Clock size={9} />
+                            CHAUFFEUR DURATION
+                        </label>
+                        <div className="flex flex-wrap gap-1.5">
                             {durationOptions.map((d) => (
                                 <button
                                     key={d}
                                     onClick={() => setBookingDetails({ ...bookingDetails, duration: d })}
-                                    className={`px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${bookingDetails.duration === d ? 'bg-black text-white border-black shadow-lg shadow-black/10' : 'bg-gray-50 text-black/30 border-transparent hover:bg-gray-100'}`}
+                                    className={`flex-1 min-w-[30%] h-9 rounded-lg text-[9px] font-black uppercase transition-all border ${bookingDetails.duration === d ? 'bg-[#0F172A] text-white border-[#0F172A]' : 'bg-white text-[#0F172A]/30 border-[#0F172A]/05'}`}
                                 >
                                     {d}
                                 </button>
@@ -1667,84 +1593,37 @@ const SpareDriverBooking = () => {
                         </div>
                     </div>
                 )}
-            </div>
 
-            <div className="bg-[linear-gradient(180deg,#FFF7EA_0%,#FFFDF8_100%)] rounded-[2rem] p-4 border border-brand/10 space-y-3 shadow-[0_18px_40px_rgba(242,159,5,0.08)]">
-                <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-black text-black/30 uppercase tracking-widest">Estimated Fee</span>
-                    <span className="text-xl font-[1000] text-black tracking-tight">{formatInr(estimatedTotal)}</span>
-                </div>
-                <div className="h-px bg-brand/10 w-full" />
-                <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center flex-shrink-0 border border-brand/20 shadow-sm">
-                        <Info size={14} className="text-brand" />
-                    </div>
-                    <p className="text-[8px] font-bold text-black/50 leading-relaxed uppercase tracking-tight">
-                        Standard fare covers first <span className="text-black font-black">{bookingDetails.duration}</span>. 
-                        {isOutstationService ? ` Stay & Food Allowance (₹${commercialRules.outstationAllowancePerDay}/day) applies. Tolls & Parking by customer. ` : ""}
-                        Wait charges <span className="text-black font-black">₹{commercialRules.waitChargePerMinute}/min</span> apply after {commercialRules.waitingGraceMinutes}m.
-                        Night return <span className="text-black font-black">₹{commercialRules.nightAllowance}</span> applies if trip ends after 11 PM.
-                        {isOutstationService ? " Max 9h driving/day for safety." : ""}
-                    </p>
-                </div>
-                <div className="h-px bg-brand/10 w-full" />
-                <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center flex-shrink-0 border border-brand/20 shadow-sm">
-                        <CreditCard size={14} className="text-brand" />
-                    </div>
-                    <p className="text-[8px] font-bold text-black/50 leading-relaxed uppercase tracking-tight">
-                        An additional <span className="text-black font-black">2-hour reserve of {formatInr(estimatedReserveAmount)}</span> will be locked from your wallet for this trip.
-                        Extra usage for spare driver trips is settled from that reserve first.
-                        {selectedServiceKind === 'point' ? ' Point to Point will start and end at your pickup location.' : ''}
-                    </p>
+                {/* 6. Slim Pricing Row */}
+                <div className="flex items-center justify-between py-2.5 border-t border-[#0F172A]/05 mt-1">
+                    <span className="text-[9px] font-black text-[#0F172A]/20 uppercase tracking-widest">Total Estimated</span>
+                    <span className="text-[20px] font-black text-[#0F172A] tracking-tighter">
+                        <span className="text-[#F59E0B] mr-0.5">₹</span>{estimatedTotal}
+                    </span>
                 </div>
             </div>
 
-            {/* Safety Footer Details to fill space */}
-            <div className="bg-white rounded-[2rem] p-4 border border-black/[0.04] space-y-3 shadow-[0_16px_36px_rgba(15,23,42,0.05)]">
-                <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center border border-black/[0.02] shadow-sm">
-                        <Shield size={12} className="text-emerald-500" />
-                    </div>
-                    <div>
-                        <p className="text-[9px] font-black text-black uppercase tracking-tight leading-none mb-0.5">Insurance Covered</p>
-                        <p className="text-[7px] font-bold text-black/30 uppercase tracking-widest">Up to ₹5 Lakhs protection</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center border border-black/[0.02] shadow-sm">
-                        <User size={12} className="text-brand" />
-                    </div>
-                    <div>
-                        <p className="text-[9px] font-black text-black uppercase tracking-tight leading-none mb-0.5">Background Verified</p>
-                        <p className="text-[7px] font-bold text-black/30 uppercase tracking-widest">Identity & criminal records checked</p>
-                    </div>
-                </div>
-            </div>
-
-            <div className="fixed bottom-[4.85rem] left-1/2 z-40 w-full max-w-[430px] -translate-x-1/2 px-5 pointer-events-none">
-                <div className="rounded-[1.8rem] bg-white/92 backdrop-blur-2xl border border-black/[0.05] shadow-[0_24px_60px_rgba(15,23,42,0.14)] p-3 pointer-events-auto">
-                    <div className="flex items-center justify-between gap-3 mb-3 px-1">
-                        <div>
-                            <p className="text-[8px] font-black text-black/25 uppercase tracking-[0.24em]">Estimated Fee</p>
-                            <p className="text-[18px] font-[1000] text-black tracking-tight leading-none mt-1">{formatInr(estimatedTotal)}</p>
-                            {commercialRules.gstPercent > 0 && (
-                                <p className="text-[8px] font-bold text-black/30 uppercase tracking-widest mt-1">
-                                    GST {commercialRules.gstPercent}% {commercialRules.gstInclusive ? 'included' : `+ ${formatInr(estimatedGstAmount)}`}
-                                </p>
-                            )}
-                        </div>
-                        <div className="text-right">
-                            <p className="text-[8px] font-black text-brand uppercase tracking-[0.24em]">Next</p>
-                            <p className="text-[10px] font-black text-black/40 uppercase tracking-widest mt-1">Confirm Vehicle</p>
-                        </div>
-                    </div>
+            {/* 7. Ultra-Slim CTA */}
+            <div className="fixed bottom-[80px] left-0 right-0 z-50 px-5 px-safe">
+                <div className="max-w-[430px] mx-auto">
                     <button
-                        onClick={() => setPhase(PHASES.CONFIRM_VEHICLE)}
-                        className="w-full bg-black text-white h-13 rounded-[1.2rem] font-black text-[12px] uppercase tracking-[0.25em] shadow-[0_16px_34px_rgba(0,0,0,0.16)] active:scale-[0.98] transition-all flex items-center justify-center gap-3 group"
+                        onClick={() => {
+                            if (selectedVehicle) {
+                                setPhase(PHASES.CHECKOUT);
+                            } else {
+                                setPhase(PHASES.CONFIRM_VEHICLE);
+                            }
+                        }}
+                        className="w-full h-14 bg-[#0F172A] text-white rounded-xl flex items-center px-6 shadow-xl active:scale-[0.98] transition-all group"
                     >
-                        Confirm Details
-                        <ChevronRight size={16} strokeWidth={4} className="transition-transform group-hover:translate-x-1" />
+                        <div className="flex-1 text-left">
+                            <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest leading-none mb-1">Total Pay</p>
+                            <span className="text-[18px] font-bold text-[#F59E0B] tracking-tight">₹{estimatedTotal}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-bold uppercase tracking-widest text-white">Continue</span>
+                            <ArrowRight size={18} className="text-[#F59E0B]" />
+                        </div>
                     </button>
                 </div>
             </div>
@@ -1752,136 +1631,79 @@ const SpareDriverBooking = () => {
     );
 
     const renderConfirmVehicle = () => (
-        <div className="px-5 pt-4 pb-32 space-y-5 bg-[linear-gradient(180deg,#FFF9EF_0%,#FFFFFF_16%,#FFFFFF_100%)]">
-            <div className="rounded-[2rem] border border-black/[0.04] bg-white px-4 py-4 shadow-[0_18px_40px_rgba(15,23,42,0.05)]">
-                <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 flex flex-col bg-gradient-to-b from-[#FFFDF5] to-[#FEF3C7] min-h-screen">
+            <div className="px-5 pt-6 pb-3 border-b border-[#0F172A]/05">
+                <div className="flex items-center justify-between">
                     <div>
-                        <p className="text-[8px] font-black text-brand uppercase tracking-[0.32em] mb-1.5">Vehicle Match</p>
-                        <h3 className="text-[18px] font-[1000] text-black uppercase tracking-tight leading-none">Confirm Vehicle</h3>
-                        <p className="text-[9px] font-bold text-black/35 uppercase tracking-[0.18em] mt-2">
-                            choose the exact vehicle for this chauffeur trip
-                        </p>
-                    </div>
-                    <div className="px-3 py-1.5 rounded-full bg-gray-50 border border-black/[0.04] text-[8px] font-black uppercase tracking-[0.22em] text-black/45">
-                        Step 2 of 3
+                        <h3 className="text-[18px] font-black text-[#0F172A] tracking-tighter leading-none uppercase">Garage Select</h3>
+                        <p className="text-[8px] font-bold text-[#0F172A]/30 uppercase tracking-[0.2em] mt-1">STEP 2/3 • VEHICLE MATCH</p>
                     </div>
                 </div>
             </div>
 
-            <div className="space-y-3 rounded-[2rem] border border-black/[0.04] bg-white p-4 shadow-[0_16px_36px_rgba(15,23,42,0.05)]">
-                <label className="text-[9px] font-black text-black/25 uppercase tracking-[0.25em] mb-1 block pl-1">Confirm Vehicle</label>
-                <div className="grid grid-cols-1 gap-3">
-                    {vehicles?.map((v) => (
-                        <button
-                            key={v._id || v.id}
-                            onClick={() => setSelectedVehicle(v)}
-                            className={`p-3.5 rounded-2xl border transition-all flex items-center gap-4 text-left ${(selectedVehicle?._id || selectedVehicle?.id) === (v._id || v.id) ? 'bg-white border-brand shadow-lg shadow-brand/5' : 'bg-gray-50/50 border-black/[0.03]'}`}
-                        >
-                            <div className="w-12 h-12 bg-white rounded-xl overflow-hidden shadow-sm border border-black/[0.04]">
-                                <img src={v.img} className="w-full h-full object-cover" />
-                            </div>
-                            <div className="flex-1">
-                                <h4 className="text-[13px] font-[1000] text-black leading-none mb-1 uppercase tracking-tight">{v.brand} {v.model}</h4>
-                                <p className="text-[10px] font-bold text-black/30 uppercase tracking-widest">{v.plate}</p>
-                            </div>
-                            {(selectedVehicle?._id || selectedVehicle?.id) === (v._id || v.id) && (
-                                <div className="w-5 h-5 bg-brand rounded-full flex items-center justify-center">
-                                    <Check size={12} strokeWidth={4} className="text-white" />
+            <div className="px-5 py-3 space-y-3">
+                <div className="bg-white rounded-xl p-4 border border-[#0F172A]/05 shadow-sm space-y-2">
+                    <label className="text-[8px] font-bold text-[#0F172A]/30 uppercase tracking-widest flex items-center gap-2">
+                        <Car size={10} className="text-[#F59E0B]" />
+                        MY VEHICLES
+                    </label>
+                    <div className="grid grid-cols-1 gap-2 max-h-[160px] overflow-y-auto pr-1">
+                        {vehicles?.map((v) => (
+                            <button
+                                key={v._id || v.id}
+                                onClick={() => setSelectedVehicle(v)}
+                                className={`p-3 rounded-xl border transition-all flex items-center gap-3 text-left ${(selectedVehicle?._id || selectedVehicle?.id) === (v._id || v.id) ? 'bg-[#0F172A] border-[#0F172A]' : 'bg-white border-[#0F172A]/05'}`}
+                            >
+                                <div className="w-10 h-10 bg-[#0F172A]/03 rounded-lg overflow-hidden border border-[#0F172A]/05">
+                                    <img src={v.img} className="w-full h-full object-cover" />
                                 </div>
-                            )}
-                        </button>
-                    ))}
-                    <button
-                        onClick={() => navigate('/vehicles')}
-                        className="p-3.5 rounded-2xl border border-dashed border-gray-200 flex items-center gap-4 text-left hover:border-brand/30 transition-colors bg-gray-50/30"
-                    >
-                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-black/[0.03]">
-                            <Car size={18} className="text-black/15" />
-                        </div>
-                        <div className="flex-1">
-                            <h4 className="text-[13px] font-black text-black/40 leading-none mb-1 uppercase tracking-tight">Add New Vehicle</h4>
-                            <p className="text-[9px] font-bold text-black/20 uppercase tracking-widest">Register your car/bike</p>
-                        </div>
-                    </button>
-                </div>
-            </div>
-
-            <div className="bg-[#0D1117] text-white rounded-[2.1rem] p-5 space-y-4 relative overflow-hidden shadow-[0_28px_60px_rgba(15,23,42,0.22)] border border-white/5">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-brand/15 rounded-full blur-3xl -mr-8 -mt-8" />
-
-                <div className="flex items-center justify-between relative z-10 border-b border-white/5 pb-3">
-                    <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
-                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40">Secure Booking</span>
-                    </div>
-                    <button
-                        onClick={() => setPhase(PHASES.CHECKOUT)}
-                        className="text-[9px] font-black text-brand uppercase tracking-widest underline decoration-brand/30 underline-offset-4 cursor-pointer"
-                    >
-                        View Details
-                    </button>
-                </div>
-
-                <div className="relative z-10 flex items-center justify-between">
-                    <div>
-                        <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-1 leading-none">Standard Payout</p>
-                        <p className="text-2xl font-[1000] text-white tracking-tighter leading-none">{formatInr(estimatedTotal)}</p>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-[9px] font-black text-brand uppercase tracking-widest mb-1.5 leading-none">Booking Type</p>
-                        <div className="flex items-center gap-1.5 justify-end">
-                            <span className="text-[11px] font-black uppercase tracking-tight text-white">{bookingMode === 'instant' ? 'Instant' : 'Scheduled'}</span>
-                        </div>
+                                <div className="flex-1">
+                                    <h4 className={`text-[12px] font-bold leading-none uppercase ${(selectedVehicle?._id || selectedVehicle?.id) === (v._id || v.id) ? 'text-white' : 'text-[#0F172A]/40'}`}>{v.brand}</h4>
+                                    <p className={`text-[8px] font-bold uppercase tracking-widest mt-1 ${(selectedVehicle?._id || selectedVehicle?.id) === (v._id || v.id) ? 'text-[#F59E0B]' : 'text-[#0F172A]/20'}`}>{v.plate}</p>
+                                </div>
+                                {(selectedVehicle?._id || selectedVehicle?.id) === (v._id || v.id) && (
+                                    <Check size={14} strokeWidth={4} className="text-[#F59E0B]" />
+                                )}
+                            </button>
+                        ))}
                     </div>
                 </div>
 
-                <div className="flex items-center justify-center gap-2 pt-1 opacity-40">
-                    <ShieldCheck size={12} className="text-brand" />
-                    <span className="text-[8px] font-black uppercase tracking-widest text-white">SSL Secured Transaction</span>
-                </div>
-            </div>
-
-            <div className="fixed bottom-[4.85rem] left-1/2 z-40 w-full max-w-[430px] -translate-x-1/2 px-5 pointer-events-none">
-                <div className="rounded-[1.8rem] bg-white/92 backdrop-blur-2xl border border-black/[0.05] shadow-[0_24px_60px_rgba(15,23,42,0.14)] p-3 pointer-events-auto">
-                    <div className="flex items-center justify-between gap-3 mb-3 px-1">
+                <div className="bg-[#0F172A] text-white rounded-xl p-5 shadow-lg relative overflow-hidden">
+                    <div className="relative z-10 flex items-center justify-between">
                         <div>
-                            <p className="text-[8px] font-black text-black/25 uppercase tracking-[0.24em]">Vehicle Ready</p>
-                            <p className="text-[18px] font-[1000] text-black tracking-tight leading-none mt-1">
-                                {selectedVehicle ? `${selectedVehicle.brand || ''} ${selectedVehicle.model || ''}`.trim() || 'Selected Vehicle' : 'Choose Vehicle'}
+                            <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest mb-1 leading-none">Trip Fee</p>
+                            <p className="text-2xl font-black text-white tracking-tighter leading-none">
+                                <span className="text-[#F59E0B] mr-1">₹</span>{estimatedTotal}
                             </p>
                         </div>
                         <div className="text-right">
-                            <p className="text-[8px] font-black text-brand uppercase tracking-[0.24em]">Next</p>
-                            <p className="text-[10px] font-black text-black/40 uppercase tracking-widest mt-1">Checkout</p>
+                            <div className="flex items-center gap-1.5 justify-end">
+                                <ShieldCheck size={12} className="text-[#F59E0B]" />
+                                <span className="text-[9px] font-bold uppercase tracking-tight text-white/60">Verified Profile</span>
+                            </div>
                         </div>
                     </div>
-                    <button
-                        onClick={() => setPhase(PHASES.CHECKOUT)}
-                        disabled={isProcessing}
-                        className="w-full bg-brand text-black h-14 rounded-[1.2rem] font-[1000] text-[13px] uppercase tracking-[0.2em] shadow-[0_20px_40px_rgba(242,159,5,0.24)] active:scale-95 transition-all relative z-10 flex items-center justify-center gap-3 overflow-hidden group disabled:opacity-50"
-                    >
-                        {isProcessing ? (
-                            <>
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                                <span>Processing...</span>
-                            </>
-                        ) : (
-                            <>
-                                Confirm Mission Details
-                                <Lock size={16} fill="currentColor" className="opacity-40" />
-                            </>
-                        )}
-
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                    </button>
                 </div>
             </div>
 
-            <p className="text-center text-[8px] font-bold text-black/20 uppercase tracking-[0.2em] max-w-[200px] mx-auto leading-relaxed">
-                {bookingMode === 'instant'
-                    ? <>By requesting instantly, you agree to our <span className="text-black/40">Transit Terms</span> and <span className="text-black/40">Safety Guidelines</span>.</>
-                    : <>By scheduling, you agree to our <span className="text-black/40">Transit Terms</span> and <span className="text-black/40">Safety Guidelines</span>.</>}
-            </p>
+            {/* Compact Sticky Footer */}
+            <div className="fixed bottom-[80px] left-0 right-0 z-50 px-5 px-safe">
+                <div className="max-w-[430px] mx-auto flex items-center gap-3 bg-[#0F172A] p-4 rounded-xl shadow-xl">
+                    <div className="flex-shrink-0">
+                        <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest leading-none mb-1">Estimated Total</p>
+                        <p className="text-[18px] font-bold text-[#F59E0B] tracking-tight leading-none">₹{estimatedTotal}</p>
+                    </div>
+                    <button
+                        onClick={() => setPhase(PHASES.CHECKOUT)}
+                        disabled={!selectedVehicle}
+                        className="flex-1 h-12 bg-white text-[#0F172A] rounded-lg font-bold text-[11px] uppercase tracking-widest active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-20"
+                    >
+                        Review
+                        <ChevronRight size={14} strokeWidth={3} className="text-[#F59E0B]" />
+                    </button>
+                </div>
+            </div>
         </div>
     );
 
@@ -1902,6 +1724,7 @@ const SpareDriverBooking = () => {
                     <GoogleMapBox
                         center={userCoords}
                         zoom={15}
+                        options={{ gestureHandling: 'greedy' }}
                         markers={[
                             {
                                 position: userCoords,
@@ -1970,7 +1793,7 @@ const SpareDriverBooking = () => {
                         <div className="px-4 py-1.5 bg-black/40 backdrop-blur-md border border-white/5 rounded-full flex items-center gap-2">
                             <div className={`w-1.5 h-1.5 rounded-full animate-ping`} style={{ backgroundColor: SERVICE_ASSETS[selectedServiceKind]?.color || SERVICE_ASSETS.point.color }} />
                             <span className="text-[9px] font-black text-white uppercase tracking-widest">
-                                {driverAssigned ? `${driverInfo?.name || 'Driver'} Assigned` : `Searching ${selectedType?.title} Grid`}
+                                {driverAssigned ? `${driverInfo?.name || 'Driver'} assigned` : `Searching ${selectedType?.title} grid`}
                             </span>
                         </div>
                         <div className="w-8" />
@@ -1985,7 +1808,7 @@ const SpareDriverBooking = () => {
                                     <div className="flex flex-col items-center">
                                         <Navigation className="w-8 h-8 text-brand mb-2 animate-pulse" />
                                         <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">
-                                            {bookingDetails?.status === 'arrived' ? 'Driver Arrived' : 'On The Way'}
+                                            {bookingDetails?.status === 'arrived' ? 'Driver arrived' : 'On the way'}
                                         </span>
                                     </div>
                                 ) : (
@@ -2012,12 +1835,12 @@ const SpareDriverBooking = () => {
                                 <Radar className={`w-3 h-3 text-brand ${driverAssigned ? '' : 'animate-spin'}`} />
                                 <span className="text-[8px] font-black text-brand uppercase tracking-[0.2em]">
                                     {driverAssigned
-                                        ? (bookingDetails?.status === 'arrived' ? 'Driver Reached Pickup' : 'Driver Accepted Request')
-                                        : (lookingTime > 120 ? 'Phase 1: Local Grid (1.0 km)' : 'Phase 2: Expanded Network Scan')}
+                                        ? (bookingDetails?.status === 'arrived' ? 'Driver reached pickup' : 'Driver accepted request')
+                                        : (lookingTime > 120 ? 'Phase 1: Local grid (1.0 km)' : 'Phase 2: Expanded network scan')}
                                 </span>
                             </div>
                             <h3 className="text-2xl font-[1000] text-white uppercase tracking-tighter leading-none mb-2">
-                                {driverAssigned ? <>Driver<br />Assigned</> : <>Requesting<br />Chauffeurs</>}
+                                {driverAssigned ? <>Driver<br />assigned</> : <>Requesting<br />chauffeurs</>}
                             </h3>
                             <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] max-w-[200px] mx-auto leading-relaxed h-8">
                                 {driverAssigned
@@ -2048,7 +1871,7 @@ const SpareDriverBooking = () => {
                             >
                                 {driverAssigned ? <MessageSquare size={18} className="text-white/40" /> : <X size={18} className="text-white/40" />}
                                 <span className="text-[13px] font-black text-white uppercase tracking-widest">
-                                    {driverAssigned ? 'Need Help' : 'Cancel Request'}
+                                    {driverAssigned ? 'Need help' : 'Cancel request'}
                                 </span>
                             </button>
                         </div>
@@ -2077,7 +1900,7 @@ const SpareDriverBooking = () => {
                                     <div className="flex items-start justify-between gap-4">
                                         <div>
                                             <p className="text-[8px] font-black text-brand uppercase tracking-[0.25em] mb-2">
-                                                Start Trip PIN
+                                                Start trip PIN
                                             </p>
                                             <p className="text-3xl font-[1000] text-white tracking-[0.45em] leading-none">
                                                 {visibleSecurityPin}
@@ -2088,7 +1911,7 @@ const SpareDriverBooking = () => {
                                                 Share only at pickup
                                             </p>
                                             <p className="text-[8px] font-bold text-white/40 uppercase tracking-[0.15em] max-w-[110px] leading-relaxed">
-                                                Driver reach hone ke baad hi ye pin batani hai.
+                                                Share this OTP only after the driver reaches your pickup point.
                                             </p>
                                         </div>
                                     </div>
@@ -2097,7 +1920,7 @@ const SpareDriverBooking = () => {
                         </div>
 
                         <p className="text-center text-[8px] font-black text-white/10 uppercase tracking-[0.4em] animate-pulse">
-                            {driverAssigned ? 'Live chauffeur link established' : 'Secure Handshake in Progress'}
+                            {driverAssigned ? 'Live chauffeur link established' : 'Secure handshake in progress'}
                         </p>
                     </div>
                 </div>
@@ -2138,10 +1961,30 @@ const SpareDriverBooking = () => {
                 : lookingTime > 60
                     ? 'The network is checking the wider area for the best available driver.'
                     : 'Final availability sweep is running to secure your booking quickly.');
+        const liveSearchPolyline = driverAssigned && animatedDriverLocation
+            ? [{
+                path: [animatedDriverLocation, userCoords],
+                options: {
+                    strokeColor: serviceAccent,
+                    strokeOpacity: 0.95,
+                    strokeWeight: 4,
+                    geodesic: true,
+                    icons: [{
+                        icon: {
+                            path: 'M 0,-1 0,1',
+                            strokeOpacity: 0.7,
+                            scale: 3
+                        },
+                        offset: '0',
+                        repeat: '12px'
+                    }]
+                }
+            }]
+            : [];
 
         return (
             <div className="min-h-screen bg-[#f7f6f1] flex flex-col relative overflow-hidden">
-                <div className="relative h-[80svh] min-h-[33rem] overflow-hidden">
+                <div className="relative h-[82svh] min-h-[34rem] overflow-hidden">
                     <GoogleMapBox
                         center={userCoords}
                         zoom={15}
@@ -2196,11 +2039,12 @@ const SpareDriverBooking = () => {
                                 }
                             }] : [])
                         ]}
+                        polylines={liveSearchPolyline}
                         darkMode={false}
                     />
 
                     <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-white/90 via-white/40 to-transparent pointer-events-none" />
-                    <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#f7f6f1] via-[#f7f6f1]/45 to-transparent pointer-events-none" />
+                    <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#f7f6f1] via-[#f7f6f1]/45 to-transparent pointer-events-none" />
 
                     <div className="absolute inset-x-0 top-0 z-10 px-4 pt-4">
                         <div className="flex items-start justify-between gap-3">
@@ -2213,10 +2057,10 @@ const SpareDriverBooking = () => {
 
                             <div className="rounded-full bg-white/92 backdrop-blur-xl border border-black/[0.06] shadow-[0_18px_40px_rgba(15,23,42,0.12)] px-4 py-2.5 text-center">
                                 <p className="text-[8px] font-black text-black/30 uppercase tracking-[0.28em] leading-none">
-                                    {driverAssigned ? 'Chauffeur Locked' : 'Searching Nearby'}
+                                    {driverAssigned ? 'Chauffeur locked' : 'Searching nearby'}
                                 </p>
                                 <p className="text-[11px] font-[1000] text-black uppercase tracking-[0.12em] leading-none mt-2">
-                                    {driverAssigned ? `${driverInfo?.name || 'Driver'} live now` : selectedType?.title || 'Spare Driver'}
+                                    {driverAssigned ? `${driverInfo?.name || 'Driver'} assigned` : selectedType?.title || 'Spare driver'}
                                 </p>
                             </div>
 
@@ -2230,20 +2074,20 @@ const SpareDriverBooking = () => {
                     </div>
                 </div>
 
-                <div className="relative z-10 -mt-5 flex-1 rounded-t-[2.1rem] bg-white border-t border-black/[0.04] shadow-[0_-20px_50px_rgba(15,23,42,0.12)] px-5 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">
-                    <div className="mx-auto mb-4 h-1.5 w-16 rounded-full bg-black/[0.08]" />
+                <div className="relative z-10 -mt-3 flex-1 rounded-t-[2.1rem] bg-white border-t border-black/[0.04] shadow-[0_-20px_50px_rgba(15,23,42,0.12)] px-5 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.9rem)]">
+                    <div className="mx-auto mb-3 h-1.5 w-16 rounded-full bg-black/[0.08]" />
 
                     <div className="flex items-center justify-between gap-3">
                         <div>
-                            <p className="text-[8px] font-black text-black/25 uppercase tracking-[0.28em] leading-none">Live Match Status</p>
+                            <p className="text-[8px] font-black text-black/25 uppercase tracking-[0.28em] leading-none">Booking status</p>
                             <h3 className="text-[1.35rem] font-[1000] text-[#101828] tracking-tight leading-none mt-2">
-                                {driverAssigned ? 'Driver Assigned' : 'Requesting Chauffeurs'}
+                                {driverAssigned ? 'Driver assigned' : 'Requesting chauffeurs'}
                             </h3>
                         </div>
                         <div className="rounded-2xl bg-[#FFF7ED] border border-[#FED7AA] px-3 py-2 text-right min-w-[110px]">
-                            <p className="text-[8px] font-black text-[#F97316] uppercase tracking-[0.24em] leading-none">Request Mode</p>
+                            <p className="text-[8px] font-black text-[#F97316] uppercase tracking-[0.24em] leading-none">Trip state</p>
                             <p className="text-[11px] font-[1000] text-[#111827] uppercase tracking-[0.16em] leading-none mt-2">
-                                {driverAssigned ? (bookingDetails?.status === 'arrived' ? 'Arrived' : 'En Route') : 'Searching'}
+                                {driverAssigned ? (bookingDetails?.status === 'arrived' ? 'Arrived' : 'En route') : 'Searching'}
                             </p>
                         </div>
                     </div>
@@ -2274,39 +2118,39 @@ const SpareDriverBooking = () => {
                         </p>
                     </div>
 
-                    <div className="mt-4 grid grid-cols-2 gap-3">
+                    <div className="mt-3 grid grid-cols-2 gap-3">
                         <div className="rounded-[1.35rem] border border-black/[0.05] bg-[#FCFCFD] px-3.5 py-3">
-                            <p className="text-[8px] font-black text-black/25 uppercase tracking-[0.22em] leading-none">Pickup Base</p>
+                            <p className="text-[8px] font-black text-black/25 uppercase tracking-[0.22em] leading-none">Pickup base</p>
                             <p className="text-[11px] font-[1000] text-[#101828] uppercase tracking-[0.08em] leading-snug mt-2">
                                 {selectedAddress?.label || bookingDetails?.pickupLocation?.address || 'Current pickup location'}
                             </p>
                         </div>
                         <div className="rounded-[1.35rem] border border-black/[0.05] bg-[#FCFCFD] px-3.5 py-3">
                             <p className="text-[8px] font-black text-black/25 uppercase tracking-[0.22em] leading-none">
-                                {driverAssigned ? 'Security PIN' : 'Elite Protocol'}
+                                {driverAssigned ? 'Driver route' : 'Elite protocol'}
                             </p>
                             <p className="text-[11px] font-[1000] text-[#101828] uppercase tracking-[0.08em] leading-snug mt-2">
-                                {driverAssigned ? visibleSecurityPin : 'Only verified drivers are being pinged'}
+                                {driverAssigned ? 'Live route linked to your pickup' : 'Only verified drivers are being pinged'}
                             </p>
                         </div>
                     </div>
 
-                    <div className="mt-4 space-y-3">
+                    <div className="mt-3 space-y-3">
                         {driverAssigned ? (
                             <div className="rounded-[1.6rem] bg-[#111827] text-white px-4 py-4 shadow-[0_18px_40px_rgba(15,23,42,0.18)]">
                                 <div className="flex items-start justify-between gap-4">
                                     <div>
-                                        <p className="text-[8px] font-black text-white/45 uppercase tracking-[0.28em] leading-none">Share OTP At Pickup</p>
+                                        <p className="text-[8px] font-black text-white/45 uppercase tracking-[0.28em] leading-none">Share OTP at pickup</p>
                                         <p className="text-[1.7rem] font-[1000] tracking-[0.42em] leading-none mt-3 pl-1">
                                             {visibleSecurityPin}
                                         </p>
                                     </div>
                                     <div className="text-right">
                                         <p className="text-[8px] font-black text-[#F29F05] uppercase tracking-[0.2em] leading-none">
-                                            {driverInfo?.name || 'Assigned Driver'}
+                                            {driverInfo?.name || 'Assigned driver'}
                                         </p>
                                         <p className="text-[9px] font-bold text-white/55 leading-relaxed mt-3 max-w-[110px]">
-                                            Driver accept kar chuka hai. Pickup par OTP hi dikhana hai.
+                                            Your driver has accepted the request. Share the OTP only after pickup arrival.
                                         </p>
                                     </div>
                                 </div>
@@ -2317,7 +2161,7 @@ const SpareDriverBooking = () => {
                                 className="w-full h-14 rounded-[1.35rem] bg-[#111827] text-white flex items-center justify-center gap-3 font-[1000] text-[12px] uppercase tracking-[0.24em] active:scale-[0.99] transition-transform"
                             >
                                 <X size={18} />
-                                Cancel Request
+                                Cancel request
                             </button>
                         )}
 
@@ -2334,10 +2178,10 @@ const SpareDriverBooking = () => {
                             >
                                 <div className="text-left">
                                     <p className="text-[8px] font-black text-black/25 uppercase tracking-[0.22em] leading-none">
-                                        {driverAssigned ? 'Need Help' : 'Support Desk'}
+                                        {driverAssigned ? 'Need help' : 'Support'}
                                     </p>
                                     <p className="text-[12px] font-[1000] text-[#101828] uppercase tracking-[0.08em] leading-none mt-2">
-                                        {driverAssigned ? 'Chat with support' : 'Issue or emergency help'}
+                                        {driverAssigned ? 'Contact support' : 'Issue or emergency help'}
                                     </p>
                                 </div>
                                 <ChevronRight size={18} className="text-black/35" />
@@ -2371,7 +2215,7 @@ const SpareDriverBooking = () => {
                 >
                     <Calendar size={28} strokeWidth={2} />
                 </motion.div>
-                <h2 className="text-xl font-[1000] text-black uppercase tracking-tight leading-none mb-2">Booking Scheduled</h2>
+                <h2 className="text-xl font-[1000] text-black uppercase tracking-tight leading-none mb-2">Booking scheduled</h2>
                 <div className="inline-flex items-center px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-md border border-emerald-100">
                     <span className="text-[9px] font-black uppercase tracking-widest leading-none">{bookingDetails.date} @ {bookingDetails.time}</span>
                 </div>
@@ -2383,7 +2227,7 @@ const SpareDriverBooking = () => {
                         <User size={24} />
                     </div>
                     <div>
-                        <h4 className="text-[15px] font-[1000] text-black uppercase tracking-tight leading-none mb-1">Elite Chauffeur</h4>
+                        <h4 className="text-[15px] font-[1000] text-black uppercase tracking-tight leading-none mb-1">Elite chauffeur</h4>
                         <p className="text-[9px] font-black text-black/20 uppercase tracking-widest flex items-center gap-1.5 leading-none">
                             <span className="w-1 h-1 rounded-full bg-brand" /> Driver Details arriving soon
                         </p>
@@ -2395,14 +2239,14 @@ const SpareDriverBooking = () => {
 
                 <div className="mt-6 pt-5 border-t border-black/[0.03] grid grid-cols-2 gap-3">
                     <div className="bg-gray-50/50 p-3 rounded-xl border border-black/[0.02] flex flex-col gap-1">
-                        <span className="text-[7px] font-black text-black/20 uppercase tracking-[0.2em] leading-none mb-0.5">Assigned Car</span>
+                        <span className="text-[7px] font-black text-black/20 uppercase tracking-[0.2em] leading-none mb-0.5">Assigned car</span>
                         <div className="flex items-center gap-1.5">
                             <Car size={10} className="text-black/40" />
                             <span className="text-[10px] font-black text-black uppercase leading-none truncate">{selectedVehicle?.brand} {selectedVehicle?.model}</span>
                         </div>
                     </div>
                     <div className="bg-gray-50/50 p-3 rounded-xl border border-black/[0.02] flex flex-col gap-1">
-                        <span className="text-[7px] font-black text-black/20 uppercase tracking-[0.2em] leading-none mb-0.5">Estimated Fare</span>
+                        <span className="text-[7px] font-black text-black/20 uppercase tracking-[0.2em] leading-none mb-0.5">Estimated fare</span>
                         <div className="flex items-center gap-1.5">
                             <CreditCard size={10} className="text-black/40" />
                             <span className="text-[10px] font-black text-black uppercase leading-none">{formatInr(bookingDetails?.pricing?.totalAmount || estimatedTotal)}</span>
@@ -2412,7 +2256,7 @@ const SpareDriverBooking = () => {
             </div>
 
             <div className="bg-blue-50 border border-blue-100 rounded-[1.5rem] p-4 space-y-2">
-                <p className="text-[8px] font-black text-blue-700 uppercase tracking-[0.25em]">Dispatch Window</p>
+                <p className="text-[8px] font-black text-blue-700 uppercase tracking-[0.25em]">Dispatch window</p>
                 <div className="flex items-center justify-between gap-4">
                     <span className="text-[10px] font-bold text-blue-900/50 uppercase tracking-widest">Driver matching opens</span>
                     <span className="text-[10px] font-black text-blue-900 uppercase tracking-tight">
@@ -2433,7 +2277,7 @@ const SpareDriverBooking = () => {
                 onClick={() => navigate(activeBookingId ? `/spare-driver/history?bookingId=${activeBookingId}` : '/spare-driver/history')}
                 className="w-full bg-black text-white h-14 rounded-2xl font-black text-[13px] uppercase tracking-[0.2em] shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 mt-2"
             >
-                View in History
+                View in history
                 <ChevronRight size={18} strokeWidth={3} />
             </button>
         </div>
@@ -2508,7 +2352,7 @@ const SpareDriverBooking = () => {
                                 <Navigation size={18} className={`text-brand ${animatedDriverLocation ? 'animate-pulse' : ''}`} />
                             </div>
                             <div>
-                                <h4 className="text-[12px] font-black text-white uppercase tracking-tight leading-none mb-1">Live Telemetry</h4>
+                                <h4 className="text-[12px] font-black text-white uppercase tracking-tight leading-none mb-1">Live telemetry</h4>
                                 <p className="text-[8px] font-bold text-white/30 uppercase tracking-[0.2em] leading-none">
                                     {driverLocation ? 'Driver is moving' : 'Waiting for GPS pulse...'}
                                 </p>
@@ -2526,13 +2370,13 @@ const SpareDriverBooking = () => {
 
                 <div className="flex items-center justify-between">
                     <div>
-                        <p className="text-[8px] font-black text-black/20 uppercase tracking-[0.25em] mb-1.5 leading-none">Session Duration</p>
+                        <p className="text-[8px] font-black text-black/20 uppercase tracking-[0.25em] mb-1.5 leading-none">Session duration</p>
                         <h4 className="text-3xl font-[1000] text-black tracking-tighter leading-none tabular-nums">{formatTime(elapsedTime)}</h4>
                     </div>
                     <div className="text-right">
                         <div className="flex items-center justify-end gap-1.5 text-brand font-black text-[9px] uppercase tracking-widest">
                             <span className="w-1.5 h-1.5 rounded-full bg-brand animate-ping" />
-                            Live Session
+                            Live session
                         </div>
                     </div>
                 </div>
@@ -2543,8 +2387,18 @@ const SpareDriverBooking = () => {
                             <img src={driverInfo?.img} className="w-full h-full object-cover" />
                         </div>
                         <div>
-                            <p className="text-[11px] font-black text-black leading-none mb-0.5">{driverInfo?.name}</p>
-                            <p className="text-[8px] font-bold text-black/20 uppercase tracking-widest">Verified Chauffeur</p>
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                                <p className="text-[11px] font-black text-black leading-none">{driverInfo?.name}</p>
+                                {driverInfo?.isPremium && (
+                                    <div className="bg-brand/10 text-brand px-1.5 py-0.5 rounded-full flex items-center gap-0.5 border border-brand/20">
+                                        <ShieldCheck size={7} fill="currentColor" />
+                                        <span className="text-[6px] font-black uppercase tracking-tighter">Premium</span>
+                                    </div>
+                                )}
+                            </div>
+                            <p className="text-[8px] font-bold text-black/20 uppercase tracking-widest">
+                                {driverInfo?.isPremium ? 'Elite Chauffeur' : 'Verified Chauffeur'}
+                            </p>
                         </div>
                     </div>
                     {bookingDetails?.status === 'arrived' ? (
@@ -2564,16 +2418,16 @@ const SpareDriverBooking = () => {
                 {/* 🏷️ Phase 11: Real-time Surcharge Pulse 🏷️ */}
                 {(bookingDetails?.pricing?.totalAmount > (selectedType?.basePrice || 0)) && (
                     <div className="px-5 py-3 bg-brand/[0.03] border border-brand/10 rounded-2xl space-y-1.5 anim-pulse-subtle">
-                        <p className="text-[8px] font-black text-brand uppercase tracking-widest mb-1.5 opacity-60">Surcharges Applied</p>
+                        <p className="text-[8px] font-black text-brand uppercase tracking-widest mb-1.5 opacity-60">Surcharges applied</p>
                         {bookingDetails.notes?.internal?.includes('[WAITING]') && (
                             <div className="flex items-center justify-between">
-                                <span className="text-[9px] font-bold text-black/40 uppercase">Waiting Fee</span>
+                                <span className="text-[9px] font-bold text-black/40 uppercase">Waiting fee</span>
                                 <span className="text-[9px] font-black text-black">Applied</span>
                             </div>
                         )}
                         {bookingDetails.notes?.internal?.includes('[ARREARS]') && (
                             <div className="flex items-center justify-between">
-                                <span className="text-[9px] font-bold text-black/40 uppercase">Trip Extension</span>
+                                <span className="text-[9px] font-bold text-black/40 uppercase">Trip extension</span>
                                 <span className="text-[9px] font-black text-black">Active</span>
                             </div>
                         )}
@@ -2585,15 +2439,15 @@ const SpareDriverBooking = () => {
                     <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-2xl space-y-2">
                         <div className="flex items-center gap-2">
                             <Shield size={12} className="text-blue-600" />
-                            <span className="text-[9px] font-black text-blue-700 uppercase tracking-widest">Outstation Mission Protocol</span>
+                            <span className="text-[9px] font-black text-blue-700 uppercase tracking-widest">Outstation mission protocol</span>
                         </div>
                         <div className="space-y-1">
                             <div className="flex items-center justify-between">
-                                <span className="text-[8px] font-bold text-blue-900/40 uppercase">Stay & Food Allowance</span>
+                                <span className="text-[8px] font-bold text-blue-900/40 uppercase">Stay & food allowance</span>
                                 <span className="text-[8px] font-black text-blue-900">₹500 / 24h</span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-[8px] font-bold text-blue-900/40 uppercase">Daily Driving Limit</span>
+                                <span className="text-[8px] font-bold text-blue-900/40 uppercase">Daily driving limit</span>
                                 <span className="text-[8px] font-black text-blue-900">9 Hours Max</span>
                             </div>
                         </div>
@@ -2625,10 +2479,11 @@ const SpareDriverBooking = () => {
 
     const renderTripActiveLite = () => (
         <div className="min-h-screen bg-[#f7f6f1] flex flex-col relative overflow-hidden">
-            <div className="relative h-[80svh] min-h-[33rem] overflow-hidden">
+            <div className="relative h-[82svh] min-h-[34rem] overflow-hidden">
                 <GoogleMapBox
                     center={animatedDriverLocation || userCoords}
                     zoom={15}
+                    options={{ gestureHandling: 'greedy' }}
                     markers={[
                         {
                             position: userCoords,
@@ -2648,8 +2503,11 @@ const SpareDriverBooking = () => {
                             },
                             infoContent: (
                                 <div className="p-1 text-center">
-                                    <p className="text-[8px] font-black uppercase text-brand tracking-widest">Your Chauffeur</p>
-                                    <p className="text-[10px] font-black text-black leading-none mt-1">{driverInfo?.name || 'En Route'}</p>
+                                    <p className="text-[8px] font-black uppercase text-brand tracking-widest">Your {driverInfo?.isPremium ? 'Elite' : 'Verified'} Chauffeur</p>
+                                    <div className="flex items-center justify-center gap-1.5 mt-1">
+                                        <p className="text-[10px] font-black text-black leading-none">{driverInfo?.name || 'En Route'}</p>
+                                        {driverInfo?.isPremium && <ShieldCheck size={10} className="text-brand" />}
+                                    </div>
                                 </div>
                             )
                         }] : [])
@@ -2678,11 +2536,29 @@ const SpareDriverBooking = () => {
                             }
                         }] : [])
                     ]}
+                    polylines={animatedDriverLocation ? [{
+                        path: [animatedDriverLocation, userCoords],
+                        options: {
+                            strokeColor: SERVICE_ASSETS[selectedServiceKind]?.color || SERVICE_ASSETS.point.color,
+                            strokeOpacity: 0.95,
+                            strokeWeight: 4,
+                            geodesic: true,
+                            icons: [{
+                                icon: {
+                                    path: 'M 0,-1 0,1',
+                                    strokeOpacity: 0.7,
+                                    scale: 3
+                                },
+                                offset: '0',
+                                repeat: '12px'
+                            }]
+                        }
+                    }] : []}
                     darkMode={false}
                 />
 
                 <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-white/90 via-white/40 to-transparent pointer-events-none" />
-                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#f7f6f1] via-[#f7f6f1]/45 to-transparent pointer-events-none" />
+                <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#f7f6f1] via-[#f7f6f1]/45 to-transparent pointer-events-none" />
 
                 <div className="absolute top-4 left-4 right-4 z-20">
                     <div className="rounded-[1.4rem] bg-white/92 backdrop-blur-xl border border-black/[0.05] px-4 py-3 shadow-[0_18px_40px_rgba(15,23,42,0.12)] flex items-center justify-between gap-3">
@@ -2691,7 +2567,7 @@ const SpareDriverBooking = () => {
                                 <Navigation size={18} className={`text-brand ${animatedDriverLocation ? 'animate-pulse' : ''}`} />
                             </div>
                             <div>
-                                <p className="text-[8px] font-black text-black/25 uppercase tracking-[0.24em] leading-none">Live Telemetry</p>
+                                <p className="text-[8px] font-black text-black/25 uppercase tracking-[0.24em] leading-none">Live Trip</p>
                                 <p className="text-[11px] font-[1000] text-black uppercase tracking-[0.08em] leading-none mt-2">
                                     {driverLocation ? 'Driver is moving' : 'Waiting for GPS pulse'}
                                 </p>
@@ -2706,21 +2582,21 @@ const SpareDriverBooking = () => {
                 </div>
             </div>
 
-            <div className="relative z-30 -mt-5 flex-1 rounded-t-[2.1rem] bg-white border-t border-black/[0.04] shadow-[0_-20px_50px_rgba(15,23,42,0.12)] px-5 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">
-                <div className="mx-auto mb-4 h-1.5 w-16 rounded-full bg-black/[0.08]" />
+            <div className="relative z-30 -mt-3 flex-1 rounded-t-[2.1rem] bg-white border-t border-black/[0.04] shadow-[0_-20px_50px_rgba(15,23,42,0.12)] px-5 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.9rem)]">
+                <div className="mx-auto mb-3 h-1.5 w-16 rounded-full bg-black/[0.08]" />
 
                 <div className="flex items-center justify-between gap-3">
                     <div>
-                        <p className="text-[8px] font-black text-black/25 uppercase tracking-[0.28em] leading-none">Session Duration</p>
-                        <h4 className="text-[2rem] font-[1000] text-[#101828] tracking-tight leading-none tabular-nums mt-2">{formatTime(elapsedTime)}</h4>
+                        <p className="text-[8px] font-black text-black/25 uppercase tracking-[0.28em] leading-none">Session duration</p>
+                        <h4 className="text-[2rem] font-[1000] text-[#101828] tracking-tight leading-none tabular-nums">{formatTime(elapsedTime)}</h4>
                     </div>
                     <div className="rounded-2xl bg-[#FFF7ED] border border-[#FED7AA] px-3 py-2 text-right min-w-[110px]">
-                        <p className="text-[8px] font-black text-[#F97316] uppercase tracking-[0.24em] leading-none">Session State</p>
+                        <p className="text-[8px] font-black text-[#F97316] uppercase tracking-[0.24em] leading-none">Trip status</p>
                         <p className="text-[11px] font-[1000] text-[#111827] uppercase tracking-[0.16em] leading-none mt-2">Live Session</p>
                     </div>
                 </div>
 
-                <div className="mt-4 h-1.5 w-full rounded-full bg-black/[0.06] overflow-hidden">
+                <div className="mt-3 h-1.5 w-full rounded-full bg-black/[0.06] overflow-hidden">
                     <motion.div
                         className="h-full rounded-full bg-gradient-to-r from-[#F97316] via-[#F29F05] to-[#FACC15]"
                         animate={{ width: ['18%', '74%', '46%', '85%'] }}
@@ -2728,34 +2604,44 @@ const SpareDriverBooking = () => {
                     />
                 </div>
 
-                <div className="mt-4 rounded-[1.7rem] border border-black/[0.04] bg-[linear-gradient(180deg,#FFFFFF_0%,#F8FAFC_100%)] p-4 shadow-[0_14px_30px_rgba(15,23,42,0.05)]">
+                <div className="mt-3 rounded-[1.7rem] border border-black/[0.04] bg-[linear-gradient(180deg,#FFFFFF_0%,#F8FAFC_100%)] p-4 shadow-[0_14px_30px_rgba(15,23,42,0.05)]">
                     <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
                             <div className="w-11 h-11 bg-white rounded-xl overflow-hidden shadow-sm border border-black/[0.03]">
                                 <img src={driverInfo?.img} className="w-full h-full object-cover" />
                             </div>
                             <div>
-                                <p className="text-[11px] font-black text-black leading-none mb-0.5">{driverInfo?.name}</p>
-                                <p className="text-[8px] font-bold text-black/20 uppercase tracking-widest">Verified Chauffeur</p>
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                    <p className="text-[11px] font-black text-black leading-none">{driverInfo?.name}</p>
+                                    {driverInfo?.isPremium && (
+                                        <div className="bg-brand/10 text-brand px-1.5 py-0.5 rounded-full flex items-center gap-0.5 border border-brand/20 shadow-[0_4px_10px_rgba(242,159,5,0.1)]">
+                                            <Star size={7} fill="currentColor" />
+                                            <span className="text-[6px] font-black uppercase tracking-tighter">Premium</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <p className="text-[8px] font-bold text-black/20 uppercase tracking-widest">
+                                    {driverInfo?.isPremium ? 'Elite Assigned Chauffeur' : 'Assigned Chauffeur'}
+                                </p>
                             </div>
                         </div>
                         {bookingDetails?.status === 'arrived' ? (
                             <div className="rounded-[1.2rem] bg-[#111827] text-white px-4 py-3 text-center min-w-[122px]">
-                                <p className="text-[7px] font-black text-white/45 uppercase tracking-widest mb-1">Start OTP</p>
+                                <p className="text-[7px] font-black text-white/45 uppercase tracking-widest mb-1">Start Pin</p>
                                 <p className="text-lg font-[1000] tracking-[0.35em] pl-1">{visibleSecurityPin}</p>
                             </div>
                         ) : (
                             <div className="text-right">
                                 <p className="text-[10px] font-black text-black leading-none">{formatInr(bookingDetails?.pricing?.totalAmount)}</p>
-                                <p className="text-[7px] font-bold text-black/25 uppercase tracking-widest mt-1">Total Fare</p>
+                                <p className="text-[7px] font-bold text-black/25 uppercase tracking-widest mt-1">Total fare</p>
                             </div>
                         )}
                     </div>
                 </div>
 
                 {(bookingDetails?.pricing?.totalAmount > (selectedType?.basePrice || 0)) && (
-                    <div className="mt-4 px-4 py-3 bg-brand/[0.03] border border-brand/10 rounded-[1.4rem] space-y-1.5">
-                        <p className="text-[8px] font-black text-brand uppercase tracking-widest mb-1.5 opacity-60">Surcharges Applied</p>
+                    <div className="mt-3 px-4 py-3 bg-brand/[0.03] border border-brand/10 rounded-[1.4rem] space-y-1.5">
+                        <p className="text-[8px] font-black text-brand uppercase tracking-widest mb-1.5 opacity-60">Surcharges applied</p>
                         {bookingDetails.notes?.internal?.includes('[WAITING]') && (
                             <div className="flex items-center justify-between">
                                 <span className="text-[9px] font-bold text-black/40 uppercase">Waiting Fee</span>
@@ -2772,10 +2658,10 @@ const SpareDriverBooking = () => {
                 )}
 
                 {isOutstationService && (
-                    <div className="mt-4 p-4 bg-blue-50/50 border border-blue-100 rounded-[1.4rem] space-y-2">
+                    <div className="mt-3 p-4 bg-blue-50/50 border border-blue-100 rounded-[1.4rem] space-y-2">
                         <div className="flex items-center gap-2">
                             <Shield size={12} className="text-blue-600" />
-                            <span className="text-[9px] font-black text-blue-700 uppercase tracking-widest">Outstation Mission Protocol</span>
+                            <span className="text-[9px] font-black text-blue-700 uppercase tracking-widest">Outstation mission protocol</span>
                         </div>
                         <div className="space-y-1">
                             <div className="flex items-center justify-between">
@@ -2793,7 +2679,7 @@ const SpareDriverBooking = () => {
                     </div>
                 )}
 
-                <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="mt-3 grid grid-cols-2 gap-3">
                     <button
                         onClick={() => navigate(`/spare-driver/support?bookingId=${bookingDetails?._id || activeBookingId}`)}
                         className="w-full bg-gray-50 text-black h-12 rounded-[1rem] font-black text-[10px] uppercase tracking-[0.2em] border border-black/[0.03] shadow-[0_12px_24px_rgba(15,23,42,0.05)] flex items-center justify-center gap-2 active:scale-95 transition-transform"
@@ -2814,7 +2700,7 @@ const SpareDriverBooking = () => {
     );
 
     const renderTripCompleted = () => (
-        <div className="min-h-screen bg-[linear-gradient(180deg,#FFF9ED_0%,#FFFFFF_42%,#FFFFFF_100%)] flex flex-col items-center justify-center p-8 text-center space-y-6">
+        <div className="min-h-screen bg-[linear-gradient(180deg,#FFF9ED_0%,#FFFFFF_42%,#FFFFFF_100%)] flex flex-col items-center justify-center p-6 text-center space-y-5">
             <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
@@ -2823,12 +2709,12 @@ const SpareDriverBooking = () => {
                 <CheckCircle2 size={36} strokeWidth={2.5} />
             </motion.div>
 
-            <div className="space-y-3 max-w-[240px]">
+            <div className="space-y-2 max-w-[240px]">
                 <h2 className="text-2xl font-[1000] text-black uppercase tracking-tight leading-none">Session<br />Completed</h2>
                 <p className="text-[10px] font-bold text-black/30 uppercase tracking-[0.15em] leading-relaxed">Thank you for traveling with Clean2Wash elite chauffeurs.</p>
             </div>
 
-            <div className="w-full bg-white border border-black/[0.03] p-5 rounded-[2rem] space-y-3.5 shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
+            <div className="w-full bg-white border border-black/[0.03] p-5 rounded-[2rem] space-y-3 shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
                 <div className="flex items-center justify-between border-b border-black/5 pb-3">
                     <div>
                         <span className="text-[9px] font-black text-black/25 uppercase tracking-widest">Service</span>
@@ -2946,152 +2832,87 @@ const SpareDriverBooking = () => {
     );
 
     const renderCheckout = () => (
-        <div className="p-5 space-y-5">
-            <div className="space-y-3">
-                <label className="text-[9px] font-black text-black/25 uppercase tracking-[0.25em] mb-1 block pl-1">Trip Summary</label>
-                
-                {/* Visual Route Indicator */}
-                <div className="bg-white rounded-3xl p-5 border border-black/[0.04] shadow-sm space-y-4">
-                    <div className="flex gap-4 relative">
-                        {/* Connecting Line */}
-                        <div className="absolute left-[19px] top-6 bottom-6 w-0.5 border-l-2 border-dotted border-gray-200" />
-                        
-                        <div className="space-y-6 flex-1">
-                            {/* Point A */}
-                            <div className="flex items-start gap-4">
-                                <div className="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center border border-brand/20 z-10">
-                                    <MapPin size={16} className="text-brand" />
-                                </div>
-                                <div className="pt-1">
-                                    <p className="text-[8px] font-black text-black/30 uppercase tracking-widest leading-none mb-1.5">Pickup Location (A)</p>
-                                    <p className="text-[12px] font-[1000] text-black leading-tight uppercase tracking-tight">
-                                        {selectedAddress?.street || 'Current Location'}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Point B */}
-                            <div className="flex items-start gap-4">
-                                <div className="w-10 h-10 bg-black/5 rounded-xl flex items-center justify-center border border-black/10 z-10">
-                                    <MapPin size={16} className="text-red-500" />
-                                </div>
-                                <div className="pt-1">
-                                    <p className="text-[8px] font-black text-black/30 uppercase tracking-widest leading-none mb-1.5">
-                                        {requiresDestination ? 'Destination Point (B)' : (selectedServiceKind === 'point' ? 'Return Point (A)' : 'Service Plan')}
-                                    </p>
-                                    <p className="text-[12px] font-[1000] text-black leading-tight uppercase tracking-tight">
-                                        {requiresDestination
-                                            ? (destination?.street || 'Drop Location Not Set')
-                                            : (selectedServiceKind === 'point'
-                                                ? (selectedAddress?.street || addresses?.find(a => a.isPrimary)?.street || addresses?.[0]?.street || 'Same pickup point')
-                                                : `${selectedType?.title || 'Driver Booking'} - ${bookingDetails.duration}`)}
-                                    </p>
-                                    <p className="text-[8px] font-bold text-black/30 uppercase tracking-widest mt-1">
-                                        {serviceFlowMeta.summaryLabel}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="pt-4 border-t border-black/[0.03] flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Zap size={12} className="text-amber-500" />
-                            <span className="text-[9px] font-black uppercase tracking-widest text-black/40">
-                                {selectedServiceKind === 'point' ? 'Trip Pattern' : 'Est. Distance'}
-                            </span>
-                        </div>
-                        <span className="text-[11px] font-black text-black uppercase tracking-tight">
-                            {selectedServiceKind === 'point' ? `Return to pickup in ${bookingDetails.duration}` : `${estimatedKm} KM`}
-                        </span>
+        <div className="flex-1 flex flex-col bg-gradient-to-b from-[#FFFDF5] to-[#FEF3C7] min-h-screen">
+            <div className="px-5 pt-4 pb-2 border-b border-[#0F172A]/05">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h3 className="text-[18px] font-black text-[#0F172A] tracking-tighter leading-none uppercase">Summary</h3>
+                        <p className="text-[8px] font-extrabold text-[#F59E0B] uppercase tracking-[0.2em] mt-0.5">HOORA ELITE • 2/2</p>
                     </div>
                 </div>
             </div>
 
-            {/* Subscription Toggle */}
-            <div className={`p-4 rounded-[2rem] border transition-all shadow-[0_16px_36px_rgba(15,23,42,0.05)] ${useSubscription ? 'bg-emerald-50 border-emerald-200' : 'bg-gray-50/70 border-black/[0.03]'}`}>
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${useSubscription ? 'bg-white border-emerald-200 text-emerald-500' : 'bg-white border-black/[0.04] text-black/40'}`}>
-                            <CreditCard size={18} />
+            <div className="px-5 py-3 space-y-3">
+                <div className="bg-white rounded-xl p-4 border border-[#0F172A]/05 shadow-sm space-y-3">
+                    <div className="space-y-3">
+                        <div className="flex items-start gap-3">
+                            <div className="w-7 h-7 rounded-lg bg-[#0F172A]/03 flex items-center justify-center text-[#0F172A]">
+                                <MapPin size={14} />
+                            </div>
+                            <div className="overflow-hidden">
+                                <p className="text-[7px] font-bold text-[#0F172A]/30 uppercase tracking-widest leading-none mb-0.5">Base</p>
+                                <p className="text-[10px] font-black text-[#0F172A] uppercase truncate">{selectedAddress?.street || 'Pickup'}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                            <div className="w-7 h-7 rounded-lg bg-[#F59E0B]/05 flex items-center justify-center text-[#F59E0B]">
+                                <Navigation size={14} />
+                            </div>
+                            <div className="overflow-hidden">
+                                <p className="text-[7px] font-bold text-[#0F172A]/30 uppercase tracking-widest leading-none mb-0.5">Goal</p>
+                                <p className="text-[10px] font-black text-[#0F172A] uppercase truncate">
+                                    {requiresDestination ? (destination?.street || 'Destination') : (selectedType?.title || 'Trip')}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="pt-2.5 border-t border-[#0F172A]/05 grid grid-cols-2 gap-3">
+                        <div>
+                            <p className="text-[7px] font-bold text-[#0F172A]/30 uppercase tracking-widest mb-0.5">Category</p>
+                            <p className="text-[9px] font-black text-[#0F172A] uppercase">{bookingMode === 'instant' ? 'Rapid' : 'Plan'}</p>
                         </div>
                         <div>
-                            <p className="text-[11px] font-black text-black uppercase tracking-tight leading-none mb-1">Use Subscription</p>
-                            <p className="text-[8px] font-bold text-black/30 uppercase tracking-widest">
-                                {canUseChauffeurSubscription
-                                    ? `${availableSubscriptionCredits} credit left in ${chauffeurSubscription?.plan || chauffeurSubscription?.planName || 'active plan'}`
-                                    : (chauffeurPlans.length > 0 ? 'No active spare driver plan linked' : 'No spare driver plans published yet')}
-                            </p>
+                            <p className="text-[7px] font-bold text-[#0F172A]/30 uppercase tracking-widest mb-0.5">Vehicle</p>
+                            <p className="text-[9px] font-black text-[#F59E0B] uppercase truncate">{selectedVehicle ? `${selectedVehicle.brand}` : '-'}</p>
                         </div>
                     </div>
-                    <button 
-                        onClick={() => canUseChauffeurSubscription && setUseSubscription(!useSubscription)}
-                        disabled={!canUseChauffeurSubscription}
-                        className={`w-11 h-6 rounded-full relative transition-colors ${useSubscription ? 'bg-emerald-500' : 'bg-gray-200'} ${!canUseChauffeurSubscription ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${useSubscription ? 'left-6' : 'left-1'}`} />
-                    </button>
                 </div>
 
-                {!canUseChauffeurSubscription && chauffeurPlans.length > 0 && (
-                    <button
-                        onClick={() => navigate('/subscriptions?moduleScope=spare-driver&category=Chauffeur')}
-                        className="mt-3 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-600"
-                    >
-                        <CreditCard size={12} />
-                        View Spare Driver Plans
-                    </button>
-                )}
+                <div className="bg-[#0F172A] text-white rounded-xl p-4 flex items-center gap-4 shadow-lg border border-[#0F172A]/05">
+                    <Shield size={18} className="text-[#F59E0B]" />
+                    <div>
+                        <p className="text-[11px] font-bold text-white uppercase tracking-wide leading-none mb-1">Premium Insurance</p>
+                        <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">₹5L Cover Active</p>
+                    </div>
+                </div>
+
+                <div className="bg-[#0F172A] text-white rounded-xl p-5 shadow-xl relative overflow-hidden">
+                    <div className="flex items-center justify-between border-b border-white/05 pb-3">
+                        <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Base Fee</span>
+                        <span className="text-sm font-bold text-white">₹{estimatedTotal}</span>
+                    </div>
+                    <div className="flex items-center justify-between pt-3">
+                        <p className="text-[30px] font-black text-[#F59E0B] tracking-tighter leading-none">
+                            <span className="text-xs mr-1 opacity-40">₹</span>{estimatedTotal}
+                        </p>
+                        <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest text-right">TOTAL<br/>PAYABLE</p>
+                    </div>
+                </div>
             </div>
 
-            <div className="bg-[#0D1117] text-white rounded-[2.2rem] p-5 space-y-4 relative overflow-hidden shadow-[0_28px_60px_rgba(15,23,42,0.22)] border border-white/5">
-                <div className="absolute top-0 right-0 w-28 h-28 bg-brand/15 rounded-full blur-3xl -mr-8 -mt-8" />
-                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-3xl -ml-6 -mb-6" />
-
-                <div className="flex items-center justify-between relative z-10 border-b border-white/5 pb-3">
-                    <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
-                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40">Checkout Sync</span>
-                    </div>
-                    <ShieldCheck size={12} className="text-brand/50" />
+            {/* Compact Final Footer */}
+            <div className="fixed bottom-[80px] left-0 right-0 z-50 px-5 px-safe">
+                <div className="max-w-[430px] mx-auto bg-[#0F172A] p-4 rounded-xl shadow-2xl">
+                    <button
+                        onClick={handleConfirmBooking}
+                        disabled={isProcessing}
+                        className="w-full h-12 bg-white text-[#0F172A] rounded-lg font-bold text-[12px] uppercase tracking-widest active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                    >
+                        {isProcessing ? 'Processing...' : 'Confirm & Pay'}
+                        <ChevronRight size={16} strokeWidth={3} className="text-[#F59E0B]" />
+                    </button>
                 </div>
-
-                <div className="relative z-10 flex items-center justify-between">
-                    <div>
-                        <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-1 leading-none">Estimated Total</p>
-                        <p className="text-2xl font-[1000] text-white tracking-tighter leading-none">
-                            {useSubscription ? formatInr(0) : formatInr(estimatedTotal)}
-                        </p>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-[9px] font-black text-brand uppercase tracking-widest mb-1.5 leading-none">Payment Mode</p>
-                        <div className="flex items-center gap-1.5 justify-end">
-                            <span className="text-[10px] font-black uppercase tracking-tight text-white">{useSubscription ? 'Pass Credit' : 'Razorpay Secure'}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <button
-                    onClick={handleConfirmBooking}
-                    disabled={isProcessing || (requiresDestination && !destination) || (useSubscription && !canUseChauffeurSubscription)}
-                    className="w-full bg-brand text-black h-14 rounded-[1.1rem] font-[1000] text-[13px] uppercase tracking-[0.2em] shadow-[0_24px_48px_rgba(242,159,5,0.28)] active:scale-[0.985] transition-all relative z-10 flex items-center justify-center gap-3 overflow-hidden group disabled:opacity-50"
-                >
-                    {isProcessing ? (
-                        <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            <span>Processing...</span>
-                        </>
-                    ) : (
-                        <>
-                            {useSubscription
-                                ? (bookingMode === 'instant' ? 'Confirm & Dispatch Pass' : 'Confirm & Schedule Pass')
-                                : (bookingMode === 'instant' ? 'Pay & Request Driver' : 'Pay & Schedule Trip')}
-                            <ChevronRight size={16} strokeWidth={4} className="transition-transform group-hover:translate-x-1" />
-                        </>
-                    )}
-
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                </button>
             </div>
         </div>
     );
@@ -3143,7 +2964,6 @@ const SpareDriverBooking = () => {
                             transition={{ duration: 0.3, ease: 'easeOut' }}
                             className="h-full"
                         >
-                            {phase === PHASES.SERVICE_TYPE && renderServiceType()}
                             {phase === PHASES.BOOKING_DETAILS && renderBookingDetails()}
                             {phase === PHASES.CONFIRM_VEHICLE && renderConfirmVehicle()}
                             {phase === PHASES.CHECKOUT && renderCheckout()}

@@ -102,7 +102,7 @@ const BookingType = () => {
                                 </div>
                                 <div>
                                     <p className="text-white/40 text-[8px] font-black uppercase tracking-widest mb-1">Vehicle</p>
-                                    <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => navigate('/vehicles')}>
+                                    <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => navigate('/vehicles?from=booking-type')}>
                                         <Car size={12} className="text-blue-400" />
                                         <p className="text-white font-black text-xs leading-none">{primaryVehicle.brand} {primaryVehicle.model}</p>
                                     </div>

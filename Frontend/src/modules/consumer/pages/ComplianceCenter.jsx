@@ -73,14 +73,14 @@ const ComplianceCenter = () => {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <button onClick={() => navigate(-1)} className="p-1 -ml-1">
-                                <ChevronLeft size={20} className="text-content" strokeWidth={2.5} />
+                                <ChevronLeft size={20} className="text-slate-900" strokeWidth={2.5} />
                             </button>
                             <div>
-                                <h1 className="text-base font-black text-content uppercase tracking-tight italic">Compliance Hub</h1>
+                                <h1 className="text-base font-black text-slate-900 uppercase tracking-tight italic">Compliance Hub</h1>
                                 <p className="text-[9px] font-bold text-brand uppercase tracking-[0.2em] mt-0.5">certified intelligence node</p>
                             </div>
                         </div>
-                        <Settings size={18} className="text-content-subtle opacity-30" />
+                        <Settings size={18} className="text-slate-400 opacity-30" />
                     </div>
                 </header>
 
@@ -88,7 +88,7 @@ const ComplianceCenter = () => {
                     {/* ── Fleet Health Score ── */}
                     <motion.div
                         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                        className="bg-content rounded-2xl p-6 text-white relative overflow-hidden shadow-xl shadow-content/20"
+                        className="bg-slate-900 rounded-2xl p-6 text-white relative overflow-hidden shadow-xl shadow-slate-900/20"
                     >
                         <div className="relative z-10">
                             <div className="flex justify-between items-start mb-4">
@@ -143,8 +143,8 @@ const ComplianceCenter = () => {
                                 <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-300">
                                     <Zap size={32} />
                                 </div>
-                                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest">No vehicles found in garage</p>
-                                <button onClick={() => navigate('/vehicles')} className="text-[10px] font-black text-brand uppercase underline">Add Vehicle</button>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No vehicles found in garage</p>
+                                <button onClick={() => navigate('/vehicles?from=compliance-center')} className="text-[10px] font-black text-brand uppercase underline">Add vehicle</button>
                             </div>
                         ) : (
                             vehicles.map((v, i) => {
@@ -161,11 +161,11 @@ const ComplianceCenter = () => {
                                     >
                                         <div className="flex items-start justify-between mb-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center text-content-subtle border border-gray-100">
+                                                <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center text-slate-400 border border-gray-100">
                                                     <Zap size={20} />
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-sm font-black text-content uppercase italic leading-none">{v.brand} {v.model}</h3>
+                                                    <h3 className="text-sm font-black text-slate-900 uppercase italic leading-none">{v.brand} {v.model}</h3>
                                                     <p className="text-[10px] font-black text-brand uppercase tracking-widest mt-1.5">{v.plate}</p>
                                                 </div>
                                             </div>
@@ -178,9 +178,9 @@ const ComplianceCenter = () => {
                                                     <ins.icon size={14} className={ins.color} />
                                                     <span className={`text-[8px] font-black uppercase ${ins.color}`}>{ins.label}</span>
                                                 </div>
-                                                <p className="text-[9px] font-black text-content-subtle uppercase tracking-tight">Insurance</p>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-tight">Insurance</p>
                                                 {ins.urgency !== 'low' && (
-                                                    <button onClick={() => navigate('/insurance')} className="mt-2 text-[8px] font-black text-brand uppercase flex items-center gap-1">Renew Now <ArrowRight size={8} /></button>
+                                                    <button onClick={() => navigate('/insurance')} className="mt-2 text-[8px] font-black text-brand uppercase flex items-center gap-1">Renew now <ArrowRight size={8} /></button>
                                                 )}
                                             </div>
 
@@ -189,9 +189,9 @@ const ComplianceCenter = () => {
                                                     <puc.icon size={14} className={puc.color} />
                                                     <span className={`text-[8px] font-black uppercase ${puc.color}`}>{puc.label}</span>
                                                 </div>
-                                                <p className="text-[9px] font-black text-content-subtle uppercase tracking-tight">PUC / Emission</p>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-tight">PUC / Emission</p>
                                                 {puc.urgency !== 'low' && (
-                                                    <button onClick={() => navigate('/services')} className="mt-2 text-[8px] font-black text-brand uppercase flex items-center gap-1">Book Test <ArrowRight size={8} /></button>
+                                                    <button onClick={() => navigate('/services')} className="mt-2 text-[8px] font-black text-brand uppercase flex items-center gap-1">Book test <ArrowRight size={8} /></button>
                                                 )}
                                             </div>
                                         </div>
@@ -207,15 +207,15 @@ const ComplianceCenter = () => {
                             <div className="w-9 h-9 bg-blue-500 rounded-xl flex items-center justify-center text-white">
                                 <FileText size={18} />
                             </div>
-                            <h4 className="text-[10px] font-black text-content uppercase italic tracking-tight">Underwriting Node</h4>
-                            <p className="text-[8px] font-bold text-content-subtle uppercase leading-tight tracking-tight">Get certified reports for resale or insurance claims</p>
+                            <h4 className="text-[10px] font-black text-slate-900 uppercase italic tracking-tight">Underwriting Node</h4>
+                            <p className="text-[8px] font-bold text-slate-400 uppercase leading-tight tracking-tight">Get certified reports for resale or insurance claims</p>
                         </div>
                         <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100 space-y-3">
                             <div className="w-9 h-9 bg-emerald-500 rounded-xl flex items-center justify-center text-white">
                                 <AlertCircle size={18} />
                             </div>
-                            <h4 className="text-[10px] font-black text-content uppercase italic tracking-tight">Intelligence Log</h4>
-                            <p className="text-[8px] font-bold text-content-subtle uppercase leading-tight tracking-tight">View live incident logging and technician feedback</p>
+                            <h4 className="text-[10px] font-black text-slate-900 uppercase italic tracking-tight">Intelligence Log</h4>
+                            <p className="text-[8px] font-bold text-slate-400 uppercase leading-tight tracking-tight">View live incident logging and technician feedback</p>
                         </div>
                     </div>
                 </div>
@@ -224,7 +224,7 @@ const ComplianceCenter = () => {
                 <div className="fixed bottom-24 right-5">
                     <motion.button
                         whileTap={{ scale: 0.9 }}
-                        className="w-14 h-14 bg-content rounded-2xl flex items-center justify-center text-white shadow-2xl shadow-content/30 border border-white/10"
+                        className="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-2xl shadow-slate-900/30 border border-white/10"
                     >
                         <Activity size={24} className="animate-pulse" />
                     </motion.button>

@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import {
     ArrowLeft, Building, MapPin, Car, ShieldCheck,
-    Clock, Check, ChevronRight, ChevronDown, Info, Calendar, CreditCard, Search,
+    Clock, Check, ChevronRight, ChevronDown, Info, Calendar, CreditCard, Search, X,
     ArrowRight, Loader2, PauseCircle, PlayCircle, RefreshCw, PencilLine, SkipForward
 } from 'lucide-react';
 import MobileLayout from '../components/layout/MobileLayout';
@@ -87,12 +87,40 @@ const toApartmentSearchCard = (result, index = 0) => ({
     isSearchFallback: true
 });
 
-const getBuildingMarkerIcon = () => {
+const getApartmentMarkerIcon = (variant = 'default') => {
     if (!window.google?.maps?.Size || !window.google?.maps?.Point) return undefined;
+    const svg = variant === 'selected'
+        ? `
+            <svg xmlns="http://www.w3.org/2000/svg" width="56" height="66" viewBox="0 0 56 66">
+                <defs>
+                    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.22"/>
+                    </filter>
+                </defs>
+                <g filter="url(#shadow)">
+                    <path d="M28 3C18.2 3 10 11.2 10 21c0 13.7 18 34 18 34s18-20.3 18-34C46 11.2 37.8 3 28 3z" fill="#111827"/>
+                    <circle cx="28" cy="21" r="13" fill="#F29F05"/>
+                    <path d="M20 25V17.5c0-.8.7-1.5 1.5-1.5h13c.8 0 1.5.7 1.5 1.5V25M18 27h20M22 20h3M31 20h3M22 24h3M31 24h3" stroke="#111827" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </g>
+            </svg>`
+        : `
+            <svg xmlns="http://www.w3.org/2000/svg" width="50" height="58" viewBox="0 0 50 58">
+                <defs>
+                    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#0f172a" flood-opacity="0.18"/>
+                    </filter>
+                </defs>
+                <g filter="url(#shadow)">
+                    <path d="M25 3C16.4 3 9 10.4 9 19c0 12.2 16 30 16 30s16-17.8 16-30C41 10.4 33.6 3 25 3z" fill="#ffffff"/>
+                    <circle cx="25" cy="19" r="11.5" fill="#ECFDF5" stroke="#D1FAE5"/>
+                    <path d="M18 23V16.5c0-.8.7-1.5 1.5-1.5h11c.8 0 1.5.7 1.5 1.5V23M16.5 24.5h17M20 18.5h2.4M27.6 18.5H30M20 22h2.4M27.6 22H30" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </g>
+            </svg>`;
+
     return {
-        url: 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png',
-        scaledSize: new window.google.maps.Size(42, 42),
-        anchor: new window.google.maps.Point(21, 42)
+        url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+        scaledSize: new window.google.maps.Size(variant === 'selected' ? 56 : 50, variant === 'selected' ? 66 : 58),
+        anchor: new window.google.maps.Point(variant === 'selected' ? 28 : 25, variant === 'selected' ? 56 : 49)
     };
 };
 
@@ -131,7 +159,7 @@ const ApartmentWash = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [searchFallbackResults, setSearchFallbackResults] = useState([]);
     const [registeringApartment, setRegisteringApartment] = useState(false);
-    const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
+    const [viewMode, setViewMode] = useState('map'); // 'list' or 'map'
 
     // Form State
     const [selectedApartment, setSelectedApartment] = useState(null);
@@ -160,8 +188,8 @@ const ApartmentWash = () => {
 
     const apartmentSlots = useMemo(() => (
         slots.length > 0 ? slots : [
-            { id: 'morning', time: '6:00 AM - 9:00 AM', label: 'Morning Primary' },
-            { id: 'evening', time: '6:00 PM - 8:00 PM', label: 'Evening Optional' }
+            { id: 'morning', time: '6:00 AM - 9:00 AM', label: 'Morning primary' },
+            { id: 'evening', time: '6:00 PM - 8:00 PM', label: 'Evening optional' }
         ]
     ), [slots]);
 
@@ -209,11 +237,11 @@ const ApartmentWash = () => {
             try {
                 if (searchQuery) setFetching(true); // Only show subtle loading if searching
                 else setFetching(true);
-                
+
                 setFetchError('');
 
                 console.log('🏙️ ApartmentWash Discovery - City Hint:', currentCity, 'Search:', searchQuery);
-                
+
                 const response = await serviceAPI.getApartmentFlowData({
                     city: searchQuery ? '' : currentCity, // If searching, ignore user city preference
                     q: searchQuery,
@@ -306,10 +334,27 @@ const ApartmentWash = () => {
             const name = apt?.name?.toLowerCase() || '';
             const city = (typeof apt?.city === 'object' ? apt.city.name : apt?.city)?.toLowerCase() || '';
             const location = (typeof apt?.location === 'object' ? (apt.location.address || apt.location.full) : apt?.location)?.toLowerCase() || '';
-            
+
             return name.includes(q) || city.includes(q) || location.includes(q);
         });
     }, [apartments, searchFallbackResults, searchQuery]);
+
+    const normalizedApartmentSearch = searchQuery.trim().toLowerCase();
+
+    const exactRegisteredApartmentResults = useMemo(() => {
+        if (!normalizedApartmentSearch) return [];
+
+        return apartments.filter((apt) => {
+            const name = String(apt?.name || '').trim().toLowerCase();
+            return name === normalizedApartmentSearch;
+        });
+    }, [apartments, normalizedApartmentSearch]);
+
+    const step1SearchResults = useMemo(() => {
+        if (!normalizedApartmentSearch || normalizedApartmentSearch.length < 3) return [];
+        if (exactRegisteredApartmentResults.length > 0) return exactRegisteredApartmentResults;
+        return filteredApartments.filter((apt) => apt.isSearchFallback);
+    }, [normalizedApartmentSearch, exactRegisteredApartmentResults, filteredApartments]);
 
     useEffect(() => {
         if (!activeSubscription) return;
@@ -377,19 +422,19 @@ const ApartmentWash = () => {
         }
 
         setSelectedApartment(nextApartment);
-        
+
         // Auto-select or reset parking details based on metadata
         const metadata = nextApartment?.metadata || {};
         const levels = metadata.parkingLevels || [];
         const blocks = metadata.blocks || [];
-        
+
         setParkingDetails({
             ...parkingDetails,
             basement: levels.length === 1 ? levels[0] : '',
             block: blocks.length === 1 ? blocks[0] : '',
             pillar: ''
         });
-        
+
         setStep(2);
     };
 
@@ -511,21 +556,21 @@ const ApartmentWash = () => {
             <div className="space-y-2">
                 <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
-                    <p className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.24em]">Request Submitted</p>
+                    <p className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.24em]">Request submitted</p>
                 </div>
-                <h2 className="text-2xl font-[1000] text-content uppercase tracking-tighter">Admin Verification Pending</h2>
+                <h2 className="text-2xl font-[1000] text-content uppercase tracking-tighter">Admin verification pending</h2>
                 <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-relaxed">
-                    Payment receive ho gaya hai. Ab admin apartment verify karke captain mapping confirm karega, phir daily wash live hoga.
+                    Your payment is confirmed. The admin team will verify the apartment setup, confirm captain mapping, and then activate your daily wash service.
                 </p>
             </div>
 
             <div className="rounded-[2rem] bg-black p-6 text-white shadow-2xl">
                 <div className="flex items-start justify-between gap-3">
                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-brand">Apartment Request</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-brand">Apartment request</p>
                         <h3 className="mt-2 text-2xl font-[1000] uppercase tracking-tighter">{activeSubscription?.plan || 'Apartment Wash'}</h3>
                         <p className="mt-2 text-[10px] font-black uppercase tracking-[0.18em] text-white/40">
-                            {activeSubscription?.hub?.name || selectedApartment?.name || 'Apartment pending'} • {activeSubscription?.slot || selectedSlot?.label || 'Slot pending'}
+                            {(activeSubscription?.hub?.name || selectedApartment?.name || 'Apartment pending')}{' • '}{(activeSubscription?.slot || selectedSlot?.label || 'Slot pending')}
                         </p>
                     </div>
                     <div className="rounded-2xl bg-yellow-400 px-3 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-black">
@@ -539,18 +584,18 @@ const ApartmentWash = () => {
                         <p className="mt-2 text-sm font-[1000] tracking-tight">{getTodayDateString() ? (parkingDetails.carNumber || activeSubscription?.vehicle?.plate || activeSubscription?.vehicle?.plateNumber || 'Vehicle pending') : 'Vehicle pending'}</p>
                     </div>
                     <div className="rounded-2xl bg-white/5 p-4">
-                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Parking Route</p>
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Parking route</p>
                         <p className="mt-2 text-sm font-[1000] uppercase tracking-tight">{[parkingDetails.basement, parkingDetails.block, parkingDetails.pillar].filter(Boolean).join(' • ') || 'Parking pending'}</p>
                     </div>
                 </div>
 
                 <div className="mt-3 rounded-2xl bg-white/5 p-4">
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">What Happens Next</p>
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">What happens next</p>
                     <div className="mt-3 space-y-2">
                         {[
-                            'Admin apartment request verify karega',
-                            'Apartment ke liye captain pool map hoga',
-                            'Approved hote hi daily wash jobs captain ko jayengi'
+                            'Your apartment request will be reviewed',
+                            'A captain pool will be mapped to the apartment',
+                            'Approved plans will start generating daily wash jobs'
                         ].map((item) => (
                             <div key={item} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-white/75">
                                 <Check size={12} className="text-brand" />
@@ -563,12 +608,12 @@ const ApartmentWash = () => {
 
             {activationSummary && (
                 <div className="rounded-3xl border border-yellow-100 bg-yellow-50 px-5 py-4 shadow-sm">
-                    <p className="text-[10px] font-black uppercase tracking-[0.24em] text-yellow-700">Request Logged</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.24em] text-yellow-700">Request logged</p>
                     <p className="mt-2 text-[11px] font-[1000] uppercase tracking-tight text-yellow-900">
-                        {activationSummary.plan || activeSubscription?.plan || 'Apartment Wash'} request admin ke paas pahunch gayi hai.
+                        {activationSummary.plan || activeSubscription?.plan || 'Apartment Wash'} has been submitted for admin review.
                     </p>
                     <p className="mt-1 text-[9px] font-black uppercase tracking-[0.16em] text-yellow-800/70">
-                        {activationSummary.apartment || activeSubscription?.hub?.name || 'Apartment'} • {activationSummary.slot || activeSubscription?.slot || 'Slot pending'}
+                        {(activationSummary.apartment || activeSubscription?.hub?.name || 'Apartment')}{' • '}{(activationSummary.slot || activeSubscription?.slot || 'Slot pending')}
                     </p>
                 </div>
             )}
@@ -579,8 +624,8 @@ const ApartmentWash = () => {
                         <PencilLine size={20} />
                     </div>
                     <div>
-                        <p className="text-[12px] font-[1000] uppercase tracking-tight text-black">Update Request Details</p>
-                        <p className="text-[9px] font-black uppercase tracking-[0.18em] text-black/30 mt-1">Approval se pehle parking, vehicle aur slot correct kar sakte ho</p>
+                        <p className="text-[12px] font-[1000] uppercase tracking-tight text-black">Update request details</p>
+                        <p className="text-[9px] font-black uppercase tracking-[0.18em] text-black/30 mt-1">Update your vehicle, parking route, or slot before approval.</p>
                     </div>
                 </div>
 
@@ -637,24 +682,24 @@ const ApartmentWash = () => {
                         }, 'Apartment wash request updated')}
                         disabled={managementSaving}
                         className="w-full rounded-2xl bg-black py-4 text-[10px] font-black uppercase tracking-[0.2em] text-white disabled:opacity-40"
-                        >
-                            Save Request Details
-                        </button>
-                    </div>
+                    >
+                        Save request details
+                    </button>
                 </div>
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
                 <button
                     onClick={() => navigate('/apartment-wash/history')}
                     className="w-full rounded-3xl border border-black/[0.05] bg-white px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-black"
                 >
-                    View History
+                    View history
                 </button>
                 <button
                     onClick={() => navigate('/apartment-wash/support')}
                     className="w-full rounded-3xl border border-brand/20 bg-brand/5 px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-brand"
                 >
-                    Contact Support
+                    Contact support
                 </button>
             </div>
         </motion.div>
@@ -669,26 +714,34 @@ const ApartmentWash = () => {
             <div className="space-y-2">
                 <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-red-500" />
-                    <p className="text-[10px] font-black text-red-600 uppercase tracking-[0.24em]">Approval Required Again</p>
+                    <p className="text-[10px] font-black text-red-600 uppercase tracking-[0.24em]">Approval required again</p>
                 </div>
-                <h2 className="text-2xl font-[1000] text-content uppercase tracking-tighter">Request Needs Update</h2>
+                <h2 className="text-2xl font-[1000] text-content uppercase tracking-tighter">Request needs update</h2>
                 <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-relaxed">
-                    Admin ne is request ko approve nahi kiya. Apartment, slot ya parking details update karke dubara request bhejo.
+                    This request was not approved. Update the apartment, slot, or parking details and submit it again.
                 </p>
             </div>
 
             <div className="rounded-3xl border border-red-100 bg-red-50 px-5 py-5 shadow-sm">
                 <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-600">Request Not Approved</p>
                 <p className="mt-2 text-[11px] font-[1000] uppercase tracking-tight text-red-900">
-                    {activeSubscription?.hub?.name || selectedApartment?.name || 'Apartment'} • {activeSubscription?.slot || selectedSlot?.label || 'Slot pending'}
+                    {(activeSubscription?.hub?.name || selectedApartment?.name || 'Apartment')}{' • '}{(activeSubscription?.slot || selectedSlot?.label || 'Slot pending')}
                 </p>
+                {activeSubscription?.review?.rejectionReason && (
+                    <div className="mt-4 rounded-2xl border border-red-200 bg-white/70 px-4 py-3">
+                        <p className="text-[9px] font-black uppercase tracking-[0.18em] text-red-600">Admin Reason</p>
+                        <p className="mt-2 text-[11px] font-bold leading-relaxed text-red-900">
+                            {activeSubscription.review.rejectionReason}
+                        </p>
+                    </div>
+                )}
             </div>
 
             <button
                 onClick={handleStartRenewFlow}
                 className="w-full rounded-3xl bg-black px-5 py-4 text-[10px] font-black uppercase tracking-[0.22em] text-white"
             >
-                Reconfigure Request
+                Reconfigure request
             </button>
         </motion.div>
     );
@@ -717,21 +770,21 @@ const ApartmentWash = () => {
                 <div className="space-y-2">
                     <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.24em]">Subscription Active</p>
+                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.24em]">Subscription active</p>
                     </div>
-                    <h2 className="text-2xl font-[1000] text-content uppercase tracking-tighter">Manage Apartment Wash</h2>
+                    <h2 className="text-2xl font-[1000] text-content uppercase tracking-tighter">Manage apartment wash</h2>
                     <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-relaxed">
-                        Jab tak plan active hai, yahin se parking, slot, pause, skip aur renew manage karo.
+                        Everything for your apartment wash stays here: parking, slot, pause, skip, renewal, history, and support.
                     </p>
                 </div>
 
                 <div className="rounded-[2rem] bg-black p-6 text-white shadow-2xl">
                     <div className="flex items-start justify-between gap-3">
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-brand">Apartment Pass</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-brand">Apartment pass</p>
                             <h3 className="mt-2 text-2xl font-[1000] uppercase tracking-tighter">{activeSubscription?.plan || 'Apartment Wash'}</h3>
                             <p className="mt-2 text-[10px] font-black uppercase tracking-[0.18em] text-white/40">
-                                {activeSubscription?.hub?.name || selectedApartment?.name || 'Apartment pending'} • {activeSubscription?.slot || selectedSlot?.label || 'slot pending'}
+                                {(activeSubscription?.hub?.name || selectedApartment?.name || 'Apartment pending')}{' • '}{(activeSubscription?.slot || selectedSlot?.label || 'Slot pending')}
                             </p>
                         </div>
                         <div className={`rounded-2xl px-3 py-2 text-[9px] font-black uppercase tracking-[0.2em] ${activeSubscription?.status === 'paused' ? 'bg-yellow-400 text-black' : 'bg-emerald-500 text-white'}`}>
@@ -745,13 +798,13 @@ const ApartmentWash = () => {
                             <p className="mt-2 text-xl font-[1000] tracking-tighter">{Math.max(0, (activeSubscription?.monthlyCredits || 0) - (activeSubscription?.usedCredits || 0))}</p>
                         </div>
                         <div className="rounded-2xl bg-white/5 p-4">
-                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Valid Till</p>
+                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Valid till</p>
                             <p className="mt-2 text-sm font-[1000] uppercase tracking-tight">{formatDate(activeSubscription?.endDate)}</p>
                         </div>
                     </div>
 
                     <div className="mt-3 rounded-2xl bg-white/5 p-4">
-                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Next Wash Window</p>
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Next wash window</p>
                         <p className="mt-2 text-sm font-[1000] uppercase tracking-tight">
                             {nextWash?.date ? formatDate(nextWash.date) : nextWash?.label || 'Pending'}
                         </p>
@@ -763,12 +816,12 @@ const ApartmentWash = () => {
 
                 {activationSummary && (
                     <div className="rounded-3xl border border-emerald-100 bg-emerald-50 px-5 py-4 shadow-sm">
-                        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-600">Subscription Activated</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-600">Subscription activated</p>
                         <p className="mt-2 text-[11px] font-[1000] uppercase tracking-tight text-emerald-900">
-                            {activationSummary.plan || activeSubscription?.plan || 'Apartment Wash'} live ho gaya.
+                            {activationSummary.plan || activeSubscription?.plan || 'Apartment Wash'} is now active.
                         </p>
                         <p className="mt-1 text-[9px] font-black uppercase tracking-[0.16em] text-emerald-800/70">
-                            {activationSummary.apartment || activeSubscription?.hub?.name || 'Apartment'} • {activationSummary.slot || nextWash?.label || 'Slot pending'}
+                            {(activationSummary.apartment || activeSubscription?.hub?.name || 'Apartment')}{' • '}{(activationSummary.slot || nextWash?.label || 'Slot pending')}
                         </p>
                     </div>
                 )}
@@ -785,7 +838,7 @@ const ApartmentWash = () => {
                             </div>
                             <div className="flex-1">
                                 <p className="text-[12px] font-[1000] uppercase tracking-tight text-black">
-                                    {activeSubscription?.status === 'paused' ? 'Resume Daily Service' : 'Pause Service'}
+                                    {activeSubscription?.status === 'paused' ? 'Resume daily service' : 'Pause service'}
                                 </p>
                                 <p className="text-[9px] font-black uppercase tracking-[0.18em] text-black/30 mt-1">
                                     {activeSubscription?.status === 'paused' ? 'Reactivate regular apartment washes' : 'Temporarily stop future wash generation'}
@@ -800,8 +853,8 @@ const ApartmentWash = () => {
                                 <SkipForward size={20} />
                             </div>
                             <div>
-                                <p className="text-[12px] font-[1000] uppercase tracking-tight text-black">Skip Specific Date</p>
-                                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-black/30 mt-1">Use this when car unavailable ho ya travel par ho</p>
+                                <p className="text-[12px] font-[1000] uppercase tracking-tight text-black">Skip specific date</p>
+                                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-black/30 mt-1">Use this when the vehicle is unavailable or you are away.</p>
                             </div>
                         </div>
                         <div className="flex gap-3">
@@ -828,8 +881,8 @@ const ApartmentWash = () => {
                             <PencilLine size={20} />
                         </div>
                         <div>
-                            <p className="text-[12px] font-[1000] uppercase tracking-tight text-black">Update Parking & Slot</p>
-                            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-black/30 mt-1">Apartment ke andar gaadi ya parking point change ho to yahin save karo</p>
+                            <p className="text-[12px] font-[1000] uppercase tracking-tight text-black">Update parking & slot</p>
+                            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-black/30 mt-1">Save any vehicle, parking, or slot change for the apartment from here.</p>
                         </div>
                     </div>
 
@@ -887,7 +940,7 @@ const ApartmentWash = () => {
                             disabled={managementSaving}
                             className="w-full rounded-2xl bg-black py-4 text-[10px] font-black uppercase tracking-[0.2em] text-white disabled:opacity-40"
                         >
-                            Save Parking & Slot
+                            Save parking & slot
                         </button>
                     </div>
                 </div>
@@ -897,7 +950,7 @@ const ApartmentWash = () => {
                         onClick={() => navigate('/apartment-wash/history')}
                         className="w-full rounded-3xl border border-black/[0.05] bg-white px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-black"
                     >
-                        Wash History
+                        Wash history
                     </button>
                     <button
                         onClick={() => navigate('/apartment-wash/support')}
@@ -911,7 +964,7 @@ const ApartmentWash = () => {
                     onClick={handleStartRenewFlow}
                     className="w-full rounded-3xl border border-brand/20 bg-brand/5 px-5 py-4 text-[10px] font-black uppercase tracking-[0.22em] text-brand"
                 >
-                    Renew / Change Plan
+                    Renew / change plan
                 </button>
             </motion.div>
         );
@@ -921,17 +974,17 @@ const ApartmentWash = () => {
         <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="px-5 pt-4 space-y-6"
+            className="px-4 pt-3 pb-10 space-y-5"
         >
             <div className="space-y-1">
-                <h2 className="text-2xl font-[1000] text-content uppercase tracking-tighter">
-                    {apartments.length > 0 ? 'Select Your Apartment' : 'No Societies Nearby'}
+                <h2 className="text-[1.9rem] font-[1000] text-content uppercase tracking-tighter leading-none">
+                    {filteredApartments.length > 0 ? 'Choose your apartment' : 'Search your apartment'}
                 </h2>
                 <div className="flex flex-col gap-1">
-                    <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest">
-                        {apartments.length > 0 
-                            ? `Showing premium societies in ${user?.profile?.address?.city || 'your area'}`
-                            : 'We haven\'t reached your sector yet. Request society below.'
+                    <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-relaxed">
+                        {filteredApartments.length > 0
+                            ? `Registered apartments are visible on the map in ${user?.profile?.address?.city || 'your area'}`
+                            : 'Search any apartment and place it on the map to continue.'
                         }
                     </p>
                     {/* 🛠️ Temporary Debug Info */}
@@ -941,8 +994,8 @@ const ApartmentWash = () => {
             <div className="relative group">
                 <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-black/20 group-focus-within:text-brand transition-colors" />
                 <input
-                    placeholder="Search by society name or area..."
-                    className="w-full bg-gray-50/50 border border-black/[0.03] px-14 py-5 rounded-3xl text-[11px] font-[1000] text-black outline-none focus:border-brand/20 transition-all shadow-sm placeholder:text-black/10 uppercase tracking-widest font-outfit"
+                    placeholder="Search apartment name, area, or landmark"
+                    className="w-full bg-gray-50/70 border border-black/[0.03] px-14 py-5 rounded-3xl text-[11px] font-[1000] text-black outline-none focus:border-brand/20 transition-all shadow-sm placeholder:text-black/25 tracking-[0.08em] font-outfit"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -959,13 +1012,13 @@ const ApartmentWash = () => {
                     onClick={() => setViewMode('list')}
                     className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-white shadow-md text-brand' : 'text-content-muted hover:text-content'}`}
                 >
-                    <ListIcon size={16} /> List View
+                    <ListIcon size={16} /> List
                 </button>
                 <button
                     onClick={() => setViewMode('map')}
                     className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'map' ? 'bg-white shadow-md text-brand' : 'text-content-muted hover:text-content'}`}
                 >
-                    <MapIcon size={16} /> Map View
+                    <MapIcon size={16} /> Map
                 </button>
             </div>
 
@@ -976,35 +1029,74 @@ const ApartmentWash = () => {
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="h-[50vh] rounded-[2.5rem] overflow-hidden border-2 border-white shadow-2xl relative"
+                        className="rounded-[2.2rem] overflow-hidden border border-black/[0.04] bg-white shadow-[0_24px_50px_rgba(15,23,42,0.08)] relative"
                     >
-                        <GoogleMapBox 
-                            center={filteredApartments[0]?.location?.coordinates || { lat: 28.6139, lng: 77.2090 }}
-                            zoom={13}
-                            markers={filteredApartments.filter(apt => apt.location?.coordinates?.lat).map(apt => ({
-                                position: apt.location.coordinates,
-                                icon: getBuildingMarkerIcon(),
-                                infoContent: (
-                                    <div className="p-0 min-w-[180px] bg-white rounded-2xl overflow-hidden font-outfit shadow-2xl border border-gray-100">
-                                        <div className="p-3 bg-gray-50/50 border-b border-gray-100">
-                                            <h4 className="font-black text-[11px] uppercase text-black leading-none">{apt.name}</h4>
-                                        </div>
-                                        <div className="p-3">
-                                            <div className="flex items-center gap-1.5 mb-3 opacity-60">
-                                                <MapPin size={10} className="text-brand" />
-                                                <p className="text-[9px] font-bold uppercase truncate">{apt.location?.address || 'Premium Complex'}</p>
+                        <div className="relative h-[56svh]">
+                            <GoogleMapBox
+                                center={selectedApartment?.location?.coordinates || filteredApartments[0]?.location?.coordinates || { lat: 28.6139, lng: 77.2090 }}
+                                zoom={13}
+                                darkMode={false}
+                                markers={filteredApartments.filter(apt => apt.location?.coordinates?.lat).map(apt => ({
+                                    position: apt.location.coordinates,
+                                    icon: getApartmentMarkerIcon(String(selectedApartment?._id) === String(apt._id) ? 'selected' : 'default'),
+                                    infoContent: (
+                                        <div className="p-0 min-w-[180px] bg-white rounded-2xl overflow-hidden font-outfit shadow-2xl border border-gray-100">
+                                            <div className="p-3 bg-gray-50/50 border-b border-gray-100">
+                                                <h4 className="font-black text-[11px] uppercase text-black leading-none">{apt.name}</h4>
                                             </div>
-                                            <button
-                                                onClick={() => handleApartmentClick(apt)}
-                                                className="w-full bg-brand text-white text-[9px] h-9 rounded-lg font-black uppercase tracking-widest active:scale-95 transition-all shadow-md shadow-brand/20 flex items-center justify-center gap-2"
-                                            >
-                                                {apt.isSearchFallback ? 'Register & Continue' : 'Select Society'} <ArrowRight size={12} />
-                                            </button>
+                                            <div className="p-3">
+                                                <div className="flex items-center gap-1.5 mb-3 opacity-60">
+                                                    <MapPin size={10} className="text-brand" />
+                                                    <p className="text-[9px] font-bold uppercase truncate">{apt.location?.address || 'Premium Complex'}</p>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleApartmentClick(apt)}
+                                                    className="w-full bg-brand text-white text-[9px] h-9 rounded-lg font-black uppercase tracking-widest active:scale-95 transition-all shadow-md shadow-brand/20 flex items-center justify-center gap-2"
+                                                >
+                                                    {apt.isSearchFallback ? 'Register & Continue' : 'Select Apartment'} <ArrowRight size={12} />
+                                                </button>
+                                            </div>
                                         </div>
+                                    )
+                                }))}
+                                circles={selectedApartment?.location?.coordinates ? [{
+                                    center: selectedApartment.location.coordinates,
+                                    radius: 120,
+                                    options: {
+                                        fillColor: '#F29F05',
+                                        fillOpacity: 0.16,
+                                        strokeColor: '#F29F05',
+                                        strokeOpacity: 0.55,
+                                        strokeWeight: 1
+                                    }
+                                }] : []}
+                            />
+                            <div className="pointer-events-none absolute inset-x-0 top-0 p-4">
+                                <div className="mx-auto flex items-center justify-between gap-3 rounded-[1.25rem] bg-white/92 px-4 py-3 shadow-[0_16px_30px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+                                    <div>
+                                        <p className="text-[8px] font-black uppercase tracking-[0.22em] text-brand/70">Apartment Discovery Map</p>
+                                        <p className="mt-1 text-[11px] font-black uppercase text-content">
+                                            {searchQuery ? 'Showing search and registered results' : 'Registered apartment bases in your area'}
+                                        </p>
                                     </div>
-                                )
-                            }))}
-                        />
+                                    <div className="text-right">
+                                        <p className="text-[8px] font-black uppercase tracking-[0.2em] text-black/30">Visible Pins</p>
+                                        <p className="mt-1 text-lg font-[1000] tracking-tight text-content">{filteredApartments.length}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="border-t border-black/[0.04] bg-white p-4">
+                            <div className="flex items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-[9px] font-black uppercase tracking-[0.22em] text-brand/70">Visible Apartments</p>
+                                    <p className="mt-1 text-[11px] font-bold text-content-subtle">Registered apartments remain visible while you search.</p>
+                                </div>
+                                <div className="rounded-full bg-gray-100 px-3 py-2 text-[9px] font-black uppercase tracking-[0.18em] text-content-subtle">
+                                    {filteredApartments.length} shown
+                                </div>
+                            </div>
+                        </div>
                     </motion.div>
                 ) : (
                     <motion.div
@@ -1017,7 +1109,7 @@ const ApartmentWash = () => {
                         {fetching ? (
                             <div className="py-20 flex flex-col items-center justify-center gap-3">
                                 <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin" />
-                                <span className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Loading Societies...</span>
+                                <span className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Loading apartments...</span>
                             </div>
                         ) : filteredApartments.length > 0 ? (
                             filteredApartments.map((apt) => (
@@ -1051,7 +1143,7 @@ const ApartmentWash = () => {
                                         </div>
                                         {apt.isSearchFallback && (
                                             <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-[8px] font-black uppercase tracking-[0.18em] text-brand">
-                                                Search Result
+                                                {apt.isSearchFallback ? 'Search Result' : 'Registered Apartment'}
                                             </div>
                                         )}
                                     </div>
@@ -1066,8 +1158,8 @@ const ApartmentWash = () => {
                                     <Building className="text-gray-200" size={32} />
                                 </div>
                                 <div className="space-y-1">
-                                    <h3 className="text-sm font-black text-content uppercase tracking-tight">No Societies Found</h3>
-                                    <p className="text-[9px] font-bold text-content-subtle uppercase tracking-widest px-10 leading-relaxed">We are expanding rapidly. Request your society to be added next.</p>
+                                    <h3 className="text-sm font-black text-content uppercase tracking-tight">No apartments found</h3>
+                                    <p className="text-[9px] font-bold text-content-subtle uppercase tracking-widest px-10 leading-relaxed">Search your apartment on the map and register it to continue.</p>
                                 </div>
                                 <button
                                     onClick={async () => {
@@ -1097,12 +1189,166 @@ const ApartmentWash = () => {
                 )}
             </AnimatePresence>
 
-            <div className="bg-brand/5 border border-brand/10 p-5 rounded-xl flex gap-4 items-start">
+            <div className="bg-brand/5 border border-brand/10 p-5 rounded-[1.5rem] flex gap-4 items-start">
                 <Info size={18} className="text-brand shrink-0" />
                 <div className="space-y-1">
-                    <p className="text-[10px] font-black text-brand uppercase tracking-widest leading-none">Can't find your society?</p>
-                    <p className="text-[9px] font-bold text-content-subtle uppercase tracking-tight leading-relaxed">Search any apartment on map, register it, and continue the same apartment wash flow from here.</p>
+                    <p className="text-[10px] font-black text-brand uppercase tracking-widest leading-none">Need a new apartment added?</p>
+                    <p className="text-[9px] font-bold text-content-subtle uppercase tracking-tight leading-relaxed">Search any apartment on the map, register it, and continue the same apartment wash flow from here.</p>
                 </div>
+            </div>
+        </motion.div>
+    );
+
+    const renderStep1_ApartmentLookup = () => (
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="px-5 pt-6 pb-12"
+        >
+            <div className="space-y-5">
+                <div className="space-y-3">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-black/[0.05] bg-white px-3 py-2 shadow-sm">
+                        <Search size={12} className="text-brand" />
+                        <span className="text-[9px] font-black uppercase tracking-[0.22em] text-black/40">Apartment search</span>
+                    </div>
+                    <div className="space-y-2">
+                        <h2 className="text-[2rem] font-[1000] text-content uppercase tracking-tighter leading-none">
+                            Find your apartment
+                        </h2>
+                        <p className="max-w-[22rem] text-[11px] font-bold leading-relaxed text-content-subtle">
+                            Search your apartment by full name. If it is already registered, it will appear here instantly.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="rounded-[2rem] border border-black/[0.05] bg-white p-4 shadow-[0_24px_50px_rgba(15,23,42,0.08)]">
+                    <div className="relative">
+                        <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-black/20" />
+                        <input
+                            placeholder="Enter full apartment name"
+                            className="w-full rounded-[1.75rem] border border-black/[0.05] bg-gray-50 px-14 py-5 text-[12px] font-[1000] text-black outline-none transition-all placeholder:text-black/25 focus:border-brand/20 focus:bg-white"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-[#faf7f2] px-4 py-3">
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-black/45">
+                            {normalizedApartmentSearch.length < 3
+                                ? 'Type at least 3 letters to search'
+                                : exactRegisteredApartmentResults.length > 0
+                                    ? 'Exact registered apartment found'
+                                    : step1SearchResults.length > 0
+                                        ? 'Search results ready'
+                                        : 'No registered apartment matched yet'}
+                        </p>
+                        {normalizedApartmentSearch.length >= 3 && (
+                            <span className="rounded-full bg-white px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-black/60 shadow-sm">
+                                {step1SearchResults.length} result{step1SearchResults.length === 1 ? '' : 's'}
+                            </span>
+                        )}
+                    </div>
+                </div>
+
+                {fetchError && (
+                    <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3">
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-red-600">{fetchError}</p>
+                    </div>
+                )}
+
+                {fetching && normalizedApartmentSearch.length >= 3 ? (
+                    <div className="py-16 flex flex-col items-center justify-center gap-3">
+                        <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                        <span className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Searching apartments...</span>
+                    </div>
+                ) : normalizedApartmentSearch.length < 3 ? (
+                    <div className="rounded-[2rem] border border-dashed border-black/10 bg-gray-50/70 px-6 py-12 text-center">
+                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-white shadow-sm">
+                            <Building className="text-black/15" size={30} />
+                        </div>
+                        <h3 className="text-sm font-black uppercase tracking-tight text-content">Start with the apartment name</h3>
+                        <p className="mt-2 text-[10px] font-bold leading-relaxed text-content-subtle">
+                            This page is only for apartment search. Enter the apartment name to continue.
+                        </p>
+                    </div>
+                ) : step1SearchResults.length > 0 ? (
+                    <div className="space-y-3">
+                        {step1SearchResults.map((apt) => (
+                            <motion.button
+                                key={apt._id}
+                                whileTap={{ scale: 0.985 }}
+                                onClick={() => handleApartmentClick(apt)}
+                                disabled={registeringApartment}
+                                className="w-full rounded-[2rem] border border-black/[0.05] bg-white p-4 text-left shadow-[0_18px_35px_rgba(15,23,42,0.05)] transition-all active:scale-[0.99] disabled:opacity-60"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="flex h-16 w-16 items-center justify-center rounded-[1.4rem] bg-[#faf7f2] text-brand">
+                                        {apt.iconUrl ? (
+                                            <img
+                                                src={apt.iconUrl}
+                                                onError={(e) => { e.target.src = '/assets/appartment/default.png'; }}
+                                                alt={apt.name}
+                                                className="h-full w-full object-contain p-3"
+                                            />
+                                        ) : (
+                                            <Building size={28} />
+                                        )}
+                                    </div>
+
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="truncate text-[14px] font-[1000] uppercase tracking-tight text-black">{apt.name}</h3>
+                                            <span className={`shrink-0 rounded-full px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.16em] ${apt.isSearchFallback ? 'bg-brand/10 text-brand' : 'bg-emerald-50 text-emerald-700'}`}>
+                                                {apt.isSearchFallback ? 'New result' : 'Registered'}
+                                            </span>
+                                        </div>
+                                        <div className="mt-2 flex items-start gap-2">
+                                            <MapPin size={12} className="mt-0.5 shrink-0 text-brand" />
+                                            <p className="line-clamp-2 text-[10px] font-bold leading-relaxed text-black/45">
+                                                {typeof apt.location === 'object' ? (apt.location.address || apt.location.full) : (apt.location || 'Apartment address not available yet')}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black text-white">
+                                        <ChevronRight size={15} strokeWidth={3} />
+                                    </div>
+                                </div>
+                            </motion.button>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="rounded-[2rem] border border-dashed border-brand/20 bg-brand/5 px-6 py-10 text-center">
+                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-white text-brand shadow-sm">
+                            <Building size={30} />
+                        </div>
+                        <h3 className="text-sm font-black uppercase tracking-tight text-content">Apartment not found</h3>
+                        <p className="mt-2 text-[10px] font-bold leading-relaxed text-content-subtle">
+                            No registered apartment matched this name. You can still continue by adding it as a new apartment result.
+                        </p>
+                        <button
+                            onClick={async () => {
+                                if (!searchQuery.trim()) {
+                                    toast.error('Enter the apartment name first');
+                                    return;
+                                }
+
+                                const results = await geocodingService.search(searchQuery.trim());
+                                if (!results?.length) {
+                                    toast.error('Apartment location could not be found');
+                                    return;
+                                }
+
+                                const mappedApartment = toApartmentSearchCard(results[0], 0);
+                                setSearchFallbackResults([mappedApartment]);
+                                toast.success('New apartment result added. Tap it to continue.');
+                            }}
+                            className="mt-5 rounded-2xl bg-black px-6 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-white shadow-xl shadow-black/10"
+                        >
+                            Add New Apartment Result
+                        </button>
+                    </div>
+                )}
             </div>
         </motion.div>
     );
@@ -1118,13 +1364,13 @@ const ApartmentWash = () => {
                     <Building size={14} className="text-brand" />
                     <span className="text-[10px] font-black text-brand uppercase tracking-[0.2em]">{selectedApartment.name}</span>
                 </div>
-                <h2 className="text-2xl font-[1000] text-content uppercase tracking-tighter">Identify Your Parking</h2>
-                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-relaxed">Precise location helps us serve you better every morning</p>
+                <h2 className="text-2xl font-[1000] text-content uppercase tracking-tighter">Identify your parking</h2>
+                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-relaxed">Use the exact vehicle and parking route for reliable daily service.</p>
             </div>
 
             <form onSubmit={handleDetailsSubmit} className="space-y-4">
                 <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest ml-1">Select Your Registered Vehicle</label>
+                    <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest ml-1">Select your registered vehicle</label>
                     <div className="grid grid-cols-1 gap-2">
                         {vehicles && vehicles.length > 0 ? (
                             <>
@@ -1155,14 +1401,14 @@ const ApartmentWash = () => {
                                 {/* Add New Option */}
                                 <button
                                     type="button"
-                                    onClick={() => navigate('/profile/vehicles?from=apartment-wash')}
+                                    onClick={() => navigate('/vehicles?from=apartment-wash')}
                                     className="p-4 rounded-3xl border border-dashed border-gray-300 bg-gray-50 flex items-center gap-4 transition-all active:scale-[0.98] hover:border-brand hover:bg-brand/5"
                                 >
                                     <div className="w-12 h-12 rounded-2xl bg-white border border-gray-200 flex items-center justify-center text-gray-400">
                                         <Plus size={20} strokeWidth={2.5} />
                                     </div>
                                     <div className="text-left flex-1">
-                                        <p className="text-[11px] font-[1000] text-gray-400 uppercase tracking-tight">Register New Vehicle</p>
+                                        <p className="text-[11px] font-[1000] text-gray-400 uppercase tracking-tight">Register new vehicle</p>
                                         <p className="text-[8.5px] font-black text-gray-300 uppercase tracking-[0.2em] mt-1">Add a car to your garage</p>
                                     </div>
                                     <ChevronRight size={14} className="text-gray-300" />
@@ -1171,18 +1417,18 @@ const ApartmentWash = () => {
                         ) : (
                             <button
                                 type="button"
-                                onClick={() => navigate('/profile/vehicles?from=apartment-wash')}
+                                onClick={() => navigate('/vehicles?from=apartment-wash')}
                                 className="p-8 rounded-[2.5rem] border-2 border-dashed border-gray-200 bg-white flex flex-col items-center justify-center gap-4 text-center group hover:border-brand hover:bg-brand/5 transition-all"
                             >
                                 <div className="w-16 h-16 rounded-3xl bg-gray-50 flex items-center justify-center text-black/10 group-hover:bg-brand group-hover:text-white transition-all">
                                     <Car size={32} />
                                 </div>
                                 <div>
-                                    <p className="text-[12px] font-[1000] text-black uppercase tracking-tighter">No Active Vehicles</p>
+                                    <p className="text-[12px] font-[1000] text-black uppercase tracking-tighter">No active vehicles</p>
                                     <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mt-1">Please register your vehicle to continue</p>
                                 </div>
                                 <div className="bg-black text-white px-6 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest mt-2">
-                                    Register Car
+                                    Register car
                                 </div>
                             </button>
                         )}
@@ -1247,7 +1493,7 @@ const ApartmentWash = () => {
                     <div className="space-y-2">
                         <label className="text-[9px] font-black text-black/30 uppercase tracking-[0.2em] ml-2">Pillar / Slot No.</label>
                         <input
-                            required 
+                            required
                             placeholder={selectedApartment.metadata?.pillarRange ? `Pillar Range: ${selectedApartment.metadata.pillarRange.min} - ${selectedApartment.metadata.pillarRange.max}` : "e.g. P-102"}
                             type={selectedApartment.metadata?.pillarRange ? "number" : "text"}
                             min={selectedApartment.metadata?.pillarRange?.min}
@@ -1272,7 +1518,7 @@ const ApartmentWash = () => {
                         type="submit"
                         className="w-full bg-black text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all"
                     >
-                        Save & Continue
+                        Save & continue
                         <ChevronRight size={16} />
                     </button>
                 </div>
@@ -1287,8 +1533,8 @@ const ApartmentWash = () => {
             className="px-5 pt-4 space-y-6"
         >
             <div className="space-y-1">
-                <h2 className="text-2xl font-[1000] text-content uppercase tracking-tighter">Monthly Wash Plan</h2>
-                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-relaxed">{apartmentService?.description || 'Subscription based recurring care for your vehicle'}</p>
+                <h2 className="text-2xl font-[1000] text-content uppercase tracking-tighter">Choose a monthly plan</h2>
+                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-relaxed">{apartmentService?.description || 'Recurring apartment wash plans for scheduled vehicle care.'}</p>
             </div>
 
             <div className="grid grid-cols-1 gap-4">
@@ -1297,7 +1543,7 @@ const ApartmentWash = () => {
                         <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center text-black/10">
                             <Calendar size={32} />
                         </div>
-                        <p className="text-[11px] font-black text-black/30 uppercase tracking-[0.2em]">No local society plans detected</p>
+                        <p className="text-[11px] font-black text-black/30 uppercase tracking-[0.2em]">No apartment plans are available yet</p>
                     </div>
                 ) : plans.map((plan) => (
                     <motion.div
@@ -1307,25 +1553,24 @@ const ApartmentWash = () => {
                             setSelectedPlan(plan);
                             setStep(4);
                         }}
-                        className={`relative p-6 rounded-[32px] border-2 cursor-pointer transition-all ${
-                            plan.popular 
-                            ? 'bg-gradient-to-br from-neutral-900 via-black to-neutral-800 text-white border-white/5 shadow-2xl shadow-black/20' 
-                            : 'bg-white text-black border-black/[0.04] shadow-xl shadow-black/[0.02]'
-                        }`}
+                        className={`relative p-6 rounded-[32px] border-2 cursor-pointer transition-all ${plan.popular
+                                ? 'bg-gradient-to-br from-neutral-900 via-black to-neutral-800 text-white border-white/5 shadow-2xl shadow-black/20'
+                                : 'bg-white text-black border-black/[0.04] shadow-xl shadow-black/[0.02]'
+                            }`}
                     >
                         {plan.popular && (
                             <div className="absolute -top-3 left-6 px-4 py-1.5 bg-brand text-black text-[9px] font-[1000] uppercase tracking-[0.2em] rounded-full shadow-lg z-20">
-                                Elite Choice
+                                Elite choice
                             </div>
                         )}
-                        
+
                         <div className="flex justify-between items-start mb-6">
                             <div className="space-y-2">
                                 <h3 className="text-2xl font-[1000] uppercase tracking-tighter leading-none">{plan.name}</h3>
                                 <div className="flex items-center gap-2">
                                     <div className={`w-1.5 h-1.5 rounded-full ${plan.popular ? 'bg-brand' : 'bg-brand/50'}`} />
                                     <span className={`text-[10px] font-black uppercase tracking-widest ${plan.popular ? 'text-white/40' : 'text-black/30'}`}>
-                                        {plan.type && String(plan.type).length < 20 ? plan.type : 'Society Pass'}
+                                        {plan.type && String(plan.type).length < 20 ? plan.type : 'Apartment Plan'}
                                     </span>
                                 </div>
                             </div>
@@ -1342,11 +1587,11 @@ const ApartmentWash = () => {
                         <div className={`flex items-center gap-4 pt-5 border-t ${plan.popular ? 'border-white/10' : 'border-black/[0.05]'}`}>
                             <div className={`flex items-center gap-2 px-3 py-2 rounded-xl ${plan.popular ? 'bg-white/5' : 'bg-gray-50'}`}>
                                 <Calendar size={13} className="text-brand" strokeWidth={3} />
-                                <span className="text-[10px] font-black uppercase tracking-tight">{plan.washes || 10} WOSH</span>
+                                <span className="text-[10px] font-black uppercase tracking-tight">{plan.washes || 10} washes</span>
                             </div>
                             <div className="flex-1 overflow-hidden">
                                 <span className={`text-[11px] font-[1000] uppercase tracking-wide block truncate ${plan.popular ? 'text-white/80' : 'text-black/60'}`}>
-                                    {plan.desc || 'Premium door-to-hub care'}
+                                    {plan.desc || 'Professional recurring apartment wash coverage'}
                                 </span>
                             </div>
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${plan.popular ? 'bg-white/10 text-brand group-active:scale-90' : 'bg-black text-white'}`}>
@@ -1359,7 +1604,7 @@ const ApartmentWash = () => {
 
             <div className="bg-gray-50 border border-gray-100 p-5 rounded-xl flex gap-4 items-center">
                 <ShieldCheck size={20} className="text-blue-600 shrink-0" />
-                <p className="text-[10px] font-black text-blue-900 uppercase tracking-widest leading-tight">Professional dry wash eco-care protocol 100% Guaranteed</p>
+                <p className="text-[10px] font-black text-blue-900 uppercase tracking-widest leading-tight">Dry-wash-first service protocol designed for clean, repeatable apartment operations.</p>
             </div>
         </motion.div>
     );
@@ -1371,7 +1616,7 @@ const ApartmentWash = () => {
             className="px-5 pt-4 space-y-6"
         >
             <div className="space-y-1">
-                <h2 className="text-2xl font-[1000] text-content uppercase tracking-tighter">Choose Service Slot</h2>
+                <h2 className="text-2xl font-[1000] text-content uppercase tracking-tighter">Choose service slot</h2>
                 <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-relaxed">
                     {slotLoading ? 'Checking live slot capacity...' : 'Cluster efficiency target: 10 cars per slot per apartment'}
                 </p>
@@ -1379,8 +1624,8 @@ const ApartmentWash = () => {
 
             <div className="space-y-3">
                 {(slots.length > 0 ? slots : [
-                    { id: 'morning', time: '6:00 AM - 9:00 AM', label: 'Morning Primary' },
-                    { id: 'evening', time: '6:00 PM - 8:00 PM', label: 'Evening Optional' }
+                    { id: 'morning', time: '6:00 AM - 9:00 AM', label: 'Morning primary' },
+                    { id: 'evening', time: '6:00 PM - 8:00 PM', label: 'Evening optional' }
                 ]).map((slot) => {
                     const SlotIcon = Clock
                     return (
@@ -1405,7 +1650,7 @@ const ApartmentWash = () => {
                                 <div className={`px-3 py-1 rounded-lg text-[9px] font-[1000] uppercase tracking-widest shadow-sm ${slot.available === false ? 'bg-red-50 text-red-600 shadow-red-500/5' : 'bg-emerald-50 text-emerald-600 shadow-emerald-500/5'}`}>
                                     {slot.available === false ? 'Full' : `${slot.remaining ?? 10} Left`}
                                 </div>
-                                <span className="text-[9px] font-black text-black/40 uppercase tracking-widest">{slot.time || 'Premium Slot'}</span>
+                                <span className="text-[9px] font-black text-black/40 uppercase tracking-widest">{slot.time || 'Premium slot'}</span>
                             </div>
                         </motion.button>
                     )
@@ -1413,12 +1658,12 @@ const ApartmentWash = () => {
             </div>
 
             <div className="p-5 bg-black/95 rounded-2xl text-white space-y-3">
-                <h4 className="text-[11px] font-black uppercase tracking-widest text-brand">Business Rules</h4>
+                <h4 className="text-[11px] font-black uppercase tracking-widest text-brand">Business rules</h4>
                 <ul className="space-y-2">
                     {(businessRules.length > 0 ? businessRules : [
                         'Primary focus on morning 6-9 AM operations',
                         'Sorted workload by Basement -> Block -> Pillar',
-                        'Max 10 cars per slot per compartment'
+                        'Max 10 cars per slot per apartment'
                     ]).map((rule, idx) => (
                         <li key={idx} className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-tight text-white/60">
                             <Check size={12} className="text-green-500" /> {rule}
@@ -1439,8 +1684,8 @@ const ApartmentWash = () => {
                 <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center text-green-600 mb-4 border border-green-100 shadow-sm">
                     <ShieldCheck size={40} strokeWidth={2.5} />
                 </div>
-                <h2 className="text-2xl font-[1000] text-content uppercase tracking-tighter">Pre-Booking Summary</h2>
-                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest mt-1">Review your apartment subscription</p>
+                <h2 className="text-2xl font-[1000] text-content uppercase tracking-tighter">Review subscription request</h2>
+                <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest mt-1">Confirm your apartment, vehicle, plan, and slot before payment.</p>
             </div>
 
             <div className="bg-white border border-black/[0.03] rounded-[32px] overflow-hidden shadow-xl">
@@ -1448,7 +1693,7 @@ const ApartmentWash = () => {
                     <div className="absolute top-0 right-0 w-32 h-32 bg-brand/20 rounded-full -mr-16 -mt-16 blur-3xl opacity-50" />
                     <div className="flex justify-between items-start relative z-10">
                         <div>
-                            <p className="text-[10px] font-black text-brand uppercase tracking-[0.25em] mb-2 leading-none">Subscription Active</p>
+                            <p className="text-[10px] font-black text-brand uppercase tracking-[0.25em] mb-2 leading-none">Subscription request</p>
                             <h3 className="text-3xl font-[1000] text-white uppercase tracking-tighter leading-none">{selectedPlan.name}</h3>
                         </div>
                         <div className="text-right">
@@ -1465,7 +1710,7 @@ const ApartmentWash = () => {
                         <div className="space-y-2">
                             <div className="flex items-center gap-2">
                                 <Building size={12} className="text-brand" strokeWidth={3} />
-                                <p className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] leading-none font-outfit">Society</p>
+                                <p className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] leading-none font-outfit">Apartment</p>
                             </div>
                             <p className="text-[12px] font-[1000] text-black uppercase tracking-tight leading-tight">{selectedApartment.name}</p>
                         </div>
@@ -1482,7 +1727,7 @@ const ApartmentWash = () => {
                                 <MapPin size={12} className="text-brand" strokeWidth={3} />
                                 <p className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] leading-none font-outfit">Parking</p>
                             </div>
-                            <p className="text-[12px] font-[1000] text-black uppercase tracking-tight leading-none">{parkingDetails.basement} • {parkingDetails.block}</p>
+                            <p className="text-[12px] font-[1000] text-black uppercase tracking-tight leading-none">{parkingDetails.basement}{' • '}{parkingDetails.block}</p>
                             <span className="text-[9px] font-black text-black/40 uppercase tracking-widest leading-none font-outfit">Pillar {parkingDetails.pillar}</span>
                         </div>
                         <div className="space-y-2">
@@ -1503,7 +1748,7 @@ const ApartmentWash = () => {
                                 </div>
                                 <div>
                                     <span className="text-[10px] font-black text-black/30 uppercase tracking-widest block leading-none mb-1 font-outfit">Payment Gateway</span>
-                                    <span className="text-[11px] font-[1000] text-black uppercase tracking-tight">Razorpay Secure</span>
+                                    <span className="text-[11px] font-[1000] text-black uppercase tracking-tight">Razorpay secure</span>
                                 </div>
                             </div>
                             <div className="flex items-center gap-1.5 text-emerald-500">
@@ -1650,7 +1895,7 @@ const ApartmentWash = () => {
                         <div className="w-5 h-5 border-2 border-brand border-t-white rounded-full animate-spin" />
                     ) : (
                         <>
-                            <span className="relative z-10">Pay & Subscribe Now</span>
+                            <span className="relative z-10">Pay & send request</span>
                             <ArrowRight size={14} className="relative z-10 group-hover:translate-x-1 transition-transform" />
                         </>
                     )}
@@ -1664,7 +1909,7 @@ const ApartmentWash = () => {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-white">
                 <Loader2 className="w-10 h-10 text-brand animate-spin mb-4" strokeWidth={3} />
-                <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.3em] animate-pulse">Initializing Direct Registry...</p>
+                <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.3em] animate-pulse">Initializing direct registry...</p>
             </div>
         );
     }
@@ -1684,7 +1929,7 @@ const ApartmentWash = () => {
                         <div className="flex-1 flex flex-col items-center">
                             <div className="flex items-center gap-1.5 mb-0.5">
                                 <div className="w-1 h-1 rounded-full bg-brand animate-pulse" />
-                                <span className="text-[9px] font-[1000] text-black/20 uppercase tracking-[0.3em] leading-none font-outfit">SOCIETY PASS</span>
+                                <span className="text-[9px] font-[1000] text-black/20 uppercase tracking-[0.3em] leading-none font-outfit">APARTMENT SERVICE</span>
                             </div>
                             <h1 className="text-[13px] font-[1000] text-black uppercase tracking-tight">{apartmentService?.title || 'Apartment Wash'}</h1>
                         </div>
@@ -1701,7 +1946,7 @@ const ApartmentWash = () => {
                                     key={s}
                                     className="h-full flex-1 rounded-full bg-black"
                                     initial={{ opacity: 0.1, scaleX: 0 }}
-                                    animate={{ 
+                                    animate={{
                                         opacity: s <= step ? 1 : 0.1,
                                         scaleX: s <= step ? 1 : 0
                                     }}
@@ -1725,13 +1970,13 @@ const ApartmentWash = () => {
                             className="min-h-[50vh] flex flex-col items-center justify-center gap-4"
                         >
                             <Loader2 className="w-10 h-10 text-brand animate-spin" strokeWidth={3} />
-                            <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.3em]">Syncing Apartment Pass...</p>
+                            <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.3em]">Syncing apartment pass...</p>
                         </motion.div>
                     ) : manageMode ? (
                         renderActiveSubscriptionManager()
                     ) : (
                         <>
-                            {step === 1 && renderStep1_ApartmentSelection()}
+                            {step === 1 && renderStep1_ApartmentLookup()}
                             {step === 2 && renderStep2_ParkingDetails()}
                             {step === 3 && renderStep3_PlanSelection()}
                             {step === 4 && renderStep4_SlotSelection()}

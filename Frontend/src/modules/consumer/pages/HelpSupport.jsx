@@ -117,13 +117,13 @@ const ChatSheet = ({ onClose }) => {
                     <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
                 </div>
                 <div className="flex-1">
-                    <p className="font-black text-sm text-content tracking-tight">CarWash AI Support</p>
+                    <p className="font-black text-sm text-slate-900 tracking-tight">Carwash AI support</p>
                     <div className="flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
                         <p className="text-[9px] font-black text-green-600 uppercase tracking-widest">Online · Replies in &lt;2 min</p>
                     </div>
                 </div>
-                <button onClick={onClose} className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-content-muted hover:bg-gray-200 transition-colors">
+                <button onClick={onClose} className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-slate-400 hover:bg-gray-200 transition-colors">
                     <X size={15} strokeWidth={2.5} />
                 </button>
             </div>
@@ -134,14 +134,14 @@ const ChatSheet = ({ onClose }) => {
                     <motion.div key={msg.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                         className={`flex gap-2 ${msg.from === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                         {/* Avatar */}
-                        <div className={`w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 self-end mb-1 ${msg.from === 'bot' ? 'bg-brand/10' : 'bg-content'}`}>
+                        <div className={`w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 self-end mb-1 ${msg.from === 'bot' ? 'bg-brand/10' : 'bg-slate-900'}`}>
                             {msg.from === 'bot'
                                 ? <Bot size={13} className="text-brand" strokeWidth={2} />
                                 : <User size={13} className="text-white" strokeWidth={2} />}
                         </div>
                         {/* Bubble */}
                         <div className={`max-w-[72%] px-4 py-2.5 rounded-2xl text-sm font-medium leading-relaxed ${msg.from === 'bot'
-                            ? 'bg-gray-50 border border-gray-100 text-content rounded-tl-md'
+                            ? 'bg-gray-50 border border-gray-100 text-slate-900 rounded-tl-md'
                             : 'bg-brand text-white rounded-tr-md'
                             }`}>
                             {renderText(msg.text)}
@@ -219,8 +219,8 @@ const HelpSupport = () => {
     })).filter(cat => cat.items.length > 0);
 
     const handleQuickAction = (label) => {
-        if (label === 'Call Us') { window.location.href = 'tel:+918069100000'; return; }
-        if (label === 'Live Chat') { setShowChat(true); return; }
+        if (label === 'Call us') { window.location.href = 'tel:+918069100000'; return; }
+        if (label === 'Live chat') { setShowChat(true); return; }
         if (label === 'Email') { window.location.href = 'mailto:support@carwash.in'; return; }
     };
 
@@ -245,16 +245,16 @@ const HelpSupport = () => {
                         <ChevronLeft size={18} strokeWidth={2.5} className="text-content" />
                     </button>
                     <div>
-                        <h1 className="text-lg font-black tracking-tight text-content leading-none">Help &amp; Support</h1>
-                        <p className="text-[9px] text-brand font-black uppercase tracking-widest mt-0.5">24/7 Ecosystem Support</p>
+                        <h1 className="text-lg font-black tracking-tight text-slate-900 leading-none">Help &amp; support</h1>
+                        <p className="text-[9px] text-brand font-black uppercase tracking-widest mt-0.5">24/7 ecosystem support</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
-                    <Search size={16} className="text-content-subtle flex-shrink-0" strokeWidth={2.5} />
+                    <Search size={16} className="text-slate-400 flex-shrink-0" strokeWidth={2.5} />
                     <input placeholder="Search your question…" value={search} onChange={e => setSearch(e.target.value)}
-                        className="flex-1 bg-transparent text-sm font-bold text-content outline-none placeholder:text-content-subtle placeholder:font-medium" />
+                        className="flex-1 bg-transparent text-sm font-bold text-slate-900 outline-none placeholder:text-slate-400 placeholder:font-medium" />
                     {search && (
-                        <button onClick={() => setSearch('')} className="text-content-subtle">
+                        <button onClick={() => setSearch('')} className="text-slate-400">
                             <X size={14} strokeWidth={2.5} />
                         </button>
                     )}
@@ -266,8 +266,8 @@ const HelpSupport = () => {
                 {/* ── Quick Actions ── */}
                 <div className="grid grid-cols-3 gap-3">
                     {[
-                        { icon: <Phone size={20} className="text-green-600" />, label: 'Call Us', sub: '24/7', bg: 'bg-green-50 border-green-100' },
-                        { icon: <MessageSquare size={20} className="text-blue-600" />, label: 'Live Chat', sub: '< 2 min', bg: 'bg-blue-50 border-blue-100', active: true },
+                        { icon: <Phone size={20} className="text-green-600" />, label: 'Call us', sub: '24/7', bg: 'bg-green-50 border-green-100' },
+                        { icon: <MessageSquare size={20} className="text-blue-600" />, label: 'Live chat', sub: '< 2 min', bg: 'bg-blue-50 border-blue-100', active: true },
                         { icon: <Mail size={20} className="text-violet-600" />, label: 'Email', sub: '< 4 hrs', bg: 'bg-violet-50 border-violet-100' },
                     ].map(a => (
                         <motion.button key={a.label} whileTap={{ scale: 0.93 }}
@@ -278,8 +278,8 @@ const HelpSupport = () => {
                             )}
                             <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-soft border border-white">{a.icon}</div>
                             <div className="text-center">
-                                <p className="font-black text-xs text-content">{a.label}</p>
-                                <p className="text-[8px] font-bold text-content-subtle">{a.sub}</p>
+                                <p className="font-black text-xs text-slate-900">{a.label}</p>
+                                <p className="text-[8px] font-bold text-slate-400">{a.sub}</p>
                             </div>
                         </motion.button>
                     ))}
@@ -287,13 +287,13 @@ const HelpSupport = () => {
 
                 {/* ── AI Bot Banner ── */}
                 <motion.div whileTap={{ scale: 0.98 }} onClick={() => setShowChat(true)}
-                    className="bg-content rounded-2xl p-4 flex items-center gap-4 cursor-pointer">
+                    className="bg-slate-900 rounded-2xl p-4 flex items-center gap-4 cursor-pointer">
                     <div className="w-11 h-11 bg-brand rounded-xl flex items-center justify-center flex-shrink-0 relative">
                         <Zap size={20} className="text-white" fill="white" />
-                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-content" />
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-slate-900" />
                     </div>
                     <div className="flex-1">
-                        <p className="text-white font-black text-sm tracking-tight">CarWash AI Support Bot</p>
+                        <p className="text-white font-black text-sm tracking-tight">Carwash AI support bot</p>
                         <p className="text-white/50 text-[9px] font-bold">Instant answers, anytime · Click to chat</p>
                     </div>
                     <div className="bg-brand text-white font-black text-xs px-3 py-2 rounded-xl flex items-center gap-1.5">
@@ -305,15 +305,15 @@ const HelpSupport = () => {
                 {/* ── FAQ Sections ── */}
                 {filtered.map(cat => (
                     <section key={cat.category} className="space-y-2">
-                        <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest px-1">{cat.category}</p>
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-1">{cat.category}</p>
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden">
                             {cat.items.map((item, i) => (
                                 <div key={item.q} className={i < cat.items.length - 1 ? 'border-b border-gray-50' : ''}>
                                     <button onClick={() => setOpenItem(openItem === item.q ? null : item.q)}
                                         className="w-full flex items-start justify-between gap-3 px-4 py-4 text-left hover:bg-gray-50 transition-colors">
-                                        <p className={`text-sm font-black tracking-tight leading-snug flex-1 transition-colors ${openItem === item.q ? 'text-brand' : 'text-content'}`}>{item.q}</p>
+                                        <p className={`text-sm font-black tracking-tight leading-snug flex-1 transition-colors ${openItem === item.q ? 'text-brand' : 'text-slate-900'}`}>{item.q}</p>
                                         <motion.div animate={{ rotate: openItem === item.q ? 180 : 0 }} transition={{ duration: 0.2 }} className="flex-shrink-0 mt-0.5">
-                                            <ChevronDown size={16} strokeWidth={2.5} className={openItem === item.q ? 'text-brand' : 'text-content-subtle'} />
+                                            <ChevronDown size={16} strokeWidth={2.5} className={openItem === item.q ? 'text-brand' : 'text-slate-400'} />
                                         </motion.div>
                                     </button>
                                     <AnimatePresence>
@@ -322,7 +322,7 @@ const HelpSupport = () => {
                                                 transition={{ duration: 0.22 }} className="overflow-hidden">
                                                 <div className="px-4 pb-4">
                                                     <div className="bg-brand/5 rounded-xl p-3.5 border border-brand/10">
-                                                        <p className="text-[11px] font-bold text-content-muted leading-relaxed">{item.a}</p>
+                                                        <p className="text-[11px] font-bold text-slate-600 leading-relaxed">{item.a}</p>
                                                     </div>
                                                 </div>
                                             </motion.div>
@@ -336,10 +336,10 @@ const HelpSupport = () => {
 
                 {filtered.length === 0 && (
                     <div className="text-center py-12">
-                        <p className="font-black text-content-subtle text-sm">No results for "{search}"</p>
-                        <p className="text-[10px] text-content-subtle font-bold mt-1">Try different keywords or chat with us</p>
+                        <p className="font-black text-slate-400 text-sm">No results for "{search}"</p>
+                        <p className="text-[10px] text-slate-400 font-bold mt-1">Try different keywords or chat with us</p>
                         <button onClick={() => setShowChat(true)} className="mt-4 bg-brand text-white font-black text-xs px-5 py-2.5 rounded-xl uppercase tracking-widest">
-                            Open Chat
+                            Open chat
                         </button>
                     </div>
                 )}

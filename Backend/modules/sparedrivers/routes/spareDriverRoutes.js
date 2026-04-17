@@ -3,23 +3,57 @@ const router = express.Router();
 const ctrl = require('../controllers/spareDriverController');
 const authMiddleware = require('../../../middleware/authMiddleware');
 
-// ── Public Driver Routes ──
+// Public driver auth
+router.post('/auth/send-otp', ctrl.sendSignupOTP);
+router.post('/auth/verify-otp', ctrl.verifySignupOTP);
 router.post('/register', ctrl.register);
 router.post('/login', ctrl.login);
 
-// ── Protected Driver Routes ──
+// Protected driver routes
 router.post(
     '/upload-docs',
     authMiddleware.protect,
     authMiddleware.restrictTo('sparedriver'),
     ctrl.upload.fields([
-        { name: 'aadhaarCard', maxCount: 1 },
+        { name: 'aadhaarFront', maxCount: 1 },
+        { name: 'aadhaarBack', maxCount: 1 },
+        { name: 'panCard', maxCount: 1 },
         { name: 'drivingLicense', maxCount: 1 },
         { name: 'selfie', maxCount: 1 }
     ]),
     ctrl.uploadDocuments
 );
+router.get('/kit-payment/key', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.getKitPaymentKey);
+router.post('/kit-payment/order', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.createKitPaymentOrder);
+router.post('/kit-payment/verify', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.verifyKitPayment);
+router.get('/kit-config', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.getKitConfig);
+router.get('/premium-config', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.getPremiumConfig);
+router.post(
+    '/kit-payment',
+    authMiddleware.protect,
+    authMiddleware.restrictTo('sparedriver'),
+    ctrl.upload.fields([
+        { name: 'paymentProof', maxCount: 1 }
+    ]),
+    ctrl.submitKitPaymentProof
+);
 router.get('/profile', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.getProfile);
+router.post('/inquiry', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.submitInquiry);
+router.patch(
+    '/profile-picture',
+    authMiddleware.protect,
+    authMiddleware.restrictTo('sparedriver'),
+    ctrl.upload.fields([{ name: 'selfie', maxCount: 1 }]),
+    ctrl.updateProfilePicture
+);
+router.patch(
+    '/police-verification',
+    authMiddleware.protect,
+    authMiddleware.restrictTo('sparedriver'),
+    ctrl.upload.fields([{ name: 'pvrFile', maxCount: 1 }]),
+    ctrl.uploadPoliceVerification
+);
+router.patch('/profile', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.updateProfile);
 router.patch('/toggle-online', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.toggleOnline);
 router.get('/bookings', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.getBookings);
 router.patch('/location', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.updateLocation);
@@ -35,9 +69,10 @@ router.delete('/notifications/clear', authMiddleware.protect, authMiddleware.res
 router.post('/fcm-token', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.updateFCMToken);
 router.post('/emergency', authMiddleware.protect, ctrl.reportEmergency);
 
-// ── Admin-Only Routes ──
+// Admin-only routes
 router.get('/admin/drivers', authMiddleware.protect, authMiddleware.restrictTo('admin'), ctrl.adminListDrivers);
 router.patch('/admin/drivers/:id', authMiddleware.protect, authMiddleware.restrictTo('admin'), ctrl.adminVerifyDriver);
+router.patch('/admin/drivers/:id/premium', authMiddleware.protect, authMiddleware.restrictTo('admin'), ctrl.adminUpdatePremiumVerification);
 router.patch('/admin/bookings/:id/assign', authMiddleware.protect, authMiddleware.restrictTo('admin'), ctrl.adminAssignBooking);
 router.patch('/admin/bookings/:id/release', authMiddleware.protect, authMiddleware.restrictTo('admin'), ctrl.adminReleaseBooking);
 router.patch('/admin/bookings/:id/cancel', authMiddleware.protect, authMiddleware.restrictTo('admin'), ctrl.adminCancelBooking);

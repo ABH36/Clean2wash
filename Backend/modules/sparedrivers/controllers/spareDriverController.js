@@ -4,9 +4,12 @@ const User = require('../../../models/User');
 const Setting = require('../../../models/Setting');
 const WalletTransaction = require('../../../models/WalletTransaction');
 const Notification = require('../../../models/Notification');
+const AuditLog = require('../../../models/AuditLog');
 const commissionHelper = require('../../../utils/commissionHelper');
 const { getIO } = require('../../../socketService');
 const cloudinary = require('../../../utils/cloudinary');
+const razorpay = require('../../../config/razorpay');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { sendSpareDriverNotification, sendAdminNotification, sendNotification } = require('../../../utils/notificationService');
@@ -18,6 +21,8 @@ const {
 const { executeWalletTransaction, adjustWalletHold } = require('../../../utils/walletHelper');
 
 const CHAUFFEUR_DISPATCH_LEAD_MINUTES = 15;
+const spareDriverSignupOTPStore = new Map();
+const validateSignupPhone = (phone = '') => /^[6-9]\d{9}$/.test(String(phone).trim());
 
 const getScheduledDispatchTime = (schedule = {}) => {
     if (!schedule?.date) return new Date();
@@ -47,6 +52,155 @@ const getSocketIO = () => {
 
 const getActorRole = (req) => req.auth?.role || req.user?.role || 'sparedriver';
 const isDriverOperational = (driver) => driver?.status === 'active';
+const hasValidLatLng = (coordinates = {}) => (
+    Number.isFinite(Number(coordinates?.lat))
+    && Number.isFinite(Number(coordinates?.lng))
+    && Number(coordinates.lat) !== 0
+    && Number(coordinates.lng) !== 0
+);
+const DRIVER_KIT_PRICE = 1499;
+const DEFAULT_SPARE_DRIVER_KIT_CONFIG = {
+    title: 'Starter Driver Kit',
+    subtitle: 'Complete payment to unlock your chauffeur dashboard.',
+    kitPrice: DRIVER_KIT_PRICE,
+    monthlyDeductionAmount: 199,
+    monthlyDeductionMonths: 2,
+    imageUrls: [
+        'https://images.unsplash.com/photo-1517602302552-471fe67acf66?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1485291571150-772bcfc10da5?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=1200&q=80'
+    ]
+};
+const DEFAULT_SPARE_DRIVER_PREMIUM_CONFIG = {
+    title: 'Premium Driver Program',
+    subtitle: 'Police-verified chauffeurs get premium trust and booking visibility.',
+    benefits: [
+        'Premium badge on profile and operational identity',
+        'Priority visibility for high-trust customer trips',
+        'Higher confidence score during manual assignment'
+    ]
+};
+
+const normalizeSpareDriverKitConfig = (value = {}) => {
+    const imageUrls = Array.isArray(value?.imageUrls)
+        ? value.imageUrls.map((url) => String(url || '').trim()).filter(Boolean).slice(0, 8)
+        : [];
+
+    const kitPrice = Number(value?.kitPrice);
+    const monthlyDeductionAmount = Number(value?.monthlyDeductionAmount);
+    const monthlyDeductionMonths = Number(value?.monthlyDeductionMonths);
+
+    return {
+        title: String(value?.title || DEFAULT_SPARE_DRIVER_KIT_CONFIG.title).trim() || DEFAULT_SPARE_DRIVER_KIT_CONFIG.title,
+        subtitle: String(value?.subtitle || DEFAULT_SPARE_DRIVER_KIT_CONFIG.subtitle).trim() || DEFAULT_SPARE_DRIVER_KIT_CONFIG.subtitle,
+        kitPrice: Number.isFinite(kitPrice) && kitPrice > 0 ? Math.round(kitPrice) : DEFAULT_SPARE_DRIVER_KIT_CONFIG.kitPrice,
+        monthlyDeductionAmount: Number.isFinite(monthlyDeductionAmount) && monthlyDeductionAmount >= 0
+            ? Math.round(monthlyDeductionAmount)
+            : DEFAULT_SPARE_DRIVER_KIT_CONFIG.monthlyDeductionAmount,
+        monthlyDeductionMonths: Number.isFinite(monthlyDeductionMonths) && monthlyDeductionMonths >= 0
+            ? Math.min(12, Math.round(monthlyDeductionMonths))
+            : DEFAULT_SPARE_DRIVER_KIT_CONFIG.monthlyDeductionMonths,
+        imageUrls: imageUrls.length ? imageUrls : DEFAULT_SPARE_DRIVER_KIT_CONFIG.imageUrls
+    };
+};
+
+const getSpareDriverKitConfig = async () => {
+    const setting = await Setting.findOne({ key: 'sparedriver_kit_config' }).select('value').lean();
+    return normalizeSpareDriverKitConfig(setting?.value || {});
+};
+
+const normalizeSpareDriverPremiumConfig = (value = {}) => {
+    const benefits = Array.isArray(value?.benefits)
+        ? value.benefits.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 10)
+        : [];
+
+    return {
+        title: String(value?.title || DEFAULT_SPARE_DRIVER_PREMIUM_CONFIG.title).trim() || DEFAULT_SPARE_DRIVER_PREMIUM_CONFIG.title,
+        subtitle: String(value?.subtitle || DEFAULT_SPARE_DRIVER_PREMIUM_CONFIG.subtitle).trim() || DEFAULT_SPARE_DRIVER_PREMIUM_CONFIG.subtitle,
+        benefits: benefits.length ? benefits : DEFAULT_SPARE_DRIVER_PREMIUM_CONFIG.benefits
+    };
+};
+
+const getSpareDriverPremiumConfig = async () => {
+    const setting = await Setting.findOne({ key: 'sparedriver_premium_config' }).select('value').lean();
+    return normalizeSpareDriverPremiumConfig(setting?.value || {});
+};
+
+const addMonthsToDate = (date = new Date(), months = 1) => {
+    const next = new Date(date);
+    next.setMonth(next.getMonth() + months);
+    return next;
+};
+
+const applyMonthlyKitRecovery = async (driver, bookingId = '') => {
+    if (!driver) return null;
+    if (driver.status !== 'active') return null;
+
+    const recovery = driver.onboardingRecovery || {};
+    if (!recovery.startedAt) return null;
+    const enabled = Boolean(recovery.enabled);
+    const monthlyAmount = Math.max(0, Number(recovery.monthlyDeductionAmount || 0));
+    const totalMonths = Math.max(0, Number(recovery.totalMonths || 0));
+    const monthsDeducted = Math.max(0, Number(recovery.monthsDeducted || 0));
+
+    if (!enabled || !monthlyAmount || !totalMonths || monthsDeducted >= totalMonths) {
+        return null;
+    }
+
+    const now = new Date();
+    const dueAt = recovery.nextDeductionAt ? new Date(recovery.nextDeductionAt) : now;
+    if (Number.isFinite(dueAt.getTime()) && dueAt.getTime() > now.getTime()) {
+        return null;
+    }
+
+    const installmentNumber = monthsDeducted + 1;
+
+    try {
+        await executeWalletTransaction(
+            driver._id,
+            monthlyAmount,
+            'debit',
+            {
+                category: 'SERVICE_CHARGE',
+                description: `Starter kit monthly recovery installment ${installmentNumber}/${totalMonths}`,
+                referenceId: `${driver._id.toString()}-kit-recovery-${installmentNumber}-${now.toISOString().slice(0, 10)}`,
+                referenceType: 'sparedriver_kit_recovery',
+                creditLimit: 0,
+                metaData: {
+                    bookingId: bookingId ? bookingId.toString() : '',
+                    installmentNumber,
+                    totalMonths
+                }
+            },
+            null,
+            SpareDriver
+        );
+
+        const completedInstallments = installmentNumber;
+        driver.onboardingRecovery.monthsDeducted = completedInstallments;
+        driver.onboardingRecovery.lastDeductedAt = now;
+        driver.onboardingRecovery.pendingAmount = Math.max(0, Number(driver.onboardingRecovery.pendingAmount || 0) - monthlyAmount);
+        driver.onboardingRecovery.nextDeductionAt = completedInstallments >= totalMonths ? null : addMonthsToDate(now, 1);
+        driver.onboardingRecovery.enabled = completedInstallments < totalMonths;
+        await driver.save({ validateBeforeSave: false });
+
+        return {
+            charged: true,
+            amount: monthlyAmount,
+            installmentNumber: completedInstallments,
+            totalMonths
+        };
+    } catch (walletError) {
+        driver.onboardingRecovery.pendingAmount = Number(driver.onboardingRecovery.pendingAmount || 0) + monthlyAmount;
+        driver.onboardingRecovery.nextDeductionAt = addMonthsToDate(now, 1);
+        await driver.save({ validateBeforeSave: false });
+        console.warn('Monthly kit recovery skipped:', walletError.message);
+        return {
+            charged: false,
+            error: walletError.message
+        };
+    }
+};
 
 const getChauffeurCommercialRules = (booking = {}) => {
     const rules = booking?.service?.metadata?.commercialRules || {};
@@ -215,7 +369,7 @@ const populateAdminBooking = (bookingQuery) => (
     bookingQuery
         .populate('consumer', 'name phone email profile')
         .populate('vehicle', 'brand model type plate')
-        .populate('provider.id', 'name phone status isOnline currentLocation')
+        .populate('provider.id', 'name phone status isOnline currentLocation verification')
 );
 
 const emitAdminBookingRefresh = (booking, payload = {}) => {
@@ -440,6 +594,135 @@ exports.register = async (req, res) => {
     }
 };
 
+exports.sendSignupOTP = async (req, res) => {
+    try {
+        const { phone, userData = {} } = req.body || {};
+        const normalizedPhone = String(phone || '').trim();
+
+        if (!validateSignupPhone(normalizedPhone)) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'Please provide a valid 10-digit mobile number'
+            });
+        }
+
+        if (!userData?.name || !userData?.password) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'Name and password are required before requesting OTP'
+            });
+        }
+
+        const existingDriver = await SpareDriver.findOne({ phone: normalizedPhone });
+        if (existingDriver) {
+            return res.status(409).json({
+                status: 'fail',
+                message: 'This phone number is already registered. Please sign in instead.'
+            });
+        }
+
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();
+        spareDriverSignupOTPStore.set(normalizedPhone, {
+            otp,
+            expiresAt: Date.now() + (10 * 60 * 1000),
+            userData: {
+                name: String(userData.name || '').trim(),
+                email: String(userData.email || '').trim(),
+                phone: normalizedPhone,
+                password: String(userData.password || '')
+            }
+        });
+
+        console.log(`🔢 Spare Driver Signup OTP for ${normalizedPhone}: ${otp}`);
+
+        return res.status(200).json({
+            status: 'success',
+            message: 'OTP sent successfully',
+            data: {
+                phone: normalizedPhone,
+                otp,
+                expiresInSeconds: 600
+            }
+        });
+    } catch (err) {
+        console.error('Spare driver sendSignupOTP error:', err);
+        return res.status(500).json({ status: 'fail', message: 'Failed to send OTP. Please try again.' });
+    }
+};
+
+exports.verifySignupOTP = async (req, res) => {
+    try {
+        const { phone, otp } = req.body || {};
+        const normalizedPhone = String(phone || '').trim();
+
+        if (!validateSignupPhone(normalizedPhone) || !String(otp || '').trim()) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'Phone number and OTP are required'
+            });
+        }
+
+        const otpRecord = spareDriverSignupOTPStore.get(normalizedPhone);
+        if (!otpRecord) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'OTP expired or not requested. Please request a new OTP.'
+            });
+        }
+
+        if (otpRecord.expiresAt < Date.now()) {
+            spareDriverSignupOTPStore.delete(normalizedPhone);
+            return res.status(400).json({
+                status: 'fail',
+                message: 'OTP has expired. Please request a new OTP.'
+            });
+        }
+
+        if (String(otpRecord.otp) !== String(otp).trim()) {
+            return res.status(401).json({
+                status: 'fail',
+                message: 'Invalid OTP. Please try again.'
+            });
+        }
+
+        const existingDriver = await SpareDriver.findOne({ phone: normalizedPhone });
+        if (existingDriver) {
+            spareDriverSignupOTPStore.delete(normalizedPhone);
+            return res.status(409).json({
+                status: 'fail',
+                message: 'This phone number is already registered. Please sign in instead.'
+            });
+        }
+
+        const pendingUserData = otpRecord.userData || {};
+        const newDriver = await SpareDriver.create({
+            name: pendingUserData.name,
+            email: pendingUserData.email || undefined,
+            phone: pendingUserData.phone,
+            password: pendingUserData.password
+        });
+
+        spareDriverSignupOTPStore.delete(normalizedPhone);
+
+        const token = signToken(newDriver._id);
+        return res.status(201).json({
+            status: 'success',
+            message: 'Signup verified successfully',
+            token,
+            data: {
+                token,
+                driver: {
+                    ...newDriver.toObject(),
+                    password: undefined
+                }
+            }
+        });
+    } catch (err) {
+        console.error('Spare driver verifySignupOTP error:', err);
+        return res.status(500).json({ status: 'fail', message: 'Failed to verify OTP. Please try again.' });
+    }
+};
+
 exports.login = async (req, res) => {
     try {
         const { phone, password } = req.body;
@@ -495,12 +778,12 @@ exports.uploadDocuments = async (req, res) => {
             return res.status(401).json({ status: 'fail', message: 'Unauthorized request' });
         }
 
-        const files = req.files; // { aadhaarCard, drivingLicense, selfie }
+        const files = req.files; // { aadhaarFront, aadhaarBack, panCard, drivingLicense, selfie }
 
-        if (!files?.aadhaarCard || !files?.drivingLicense || !files?.selfie) {
+        if (!files?.aadhaarFront || !files?.aadhaarBack || !files?.panCard || !files?.drivingLicense || !files?.selfie) {
             return res.status(400).json({
                 status: 'fail',
-                message: 'All three documents are required: aadhaarCard, drivingLicense, selfie'
+                message: 'All required documents must be uploaded: aadhaarFront, aadhaarBack, panCard, drivingLicense, selfie'
             });
         }
 
@@ -517,16 +800,27 @@ exports.uploadDocuments = async (req, res) => {
             }
         };
 
-        const aadhaarUrl = await uploadFile(files.aadhaarCard);
+        const aadhaarFrontUrl = await uploadFile(files.aadhaarFront);
+        const aadhaarBackUrl = await uploadFile(files.aadhaarBack);
+        const panCardUrl = await uploadFile(files.panCard);
         const dlUrl = await uploadFile(files.drivingLicense);
         const selfieUrl = await uploadFile(files.selfie);
+
+        const kitConfig = await getSpareDriverKitConfig();
 
         const driver = await SpareDriver.findByIdAndUpdate(
             driverId,
             {
-                'documents.aadhaarCard.url': aadhaarUrl,
+                'documents.aadhaarCard.url': aadhaarFrontUrl,
+                'documents.aadhaarCard.frontUrl': aadhaarFrontUrl,
+                'documents.aadhaarCard.backUrl': aadhaarBackUrl,
+                'documents.panCard.url': panCardUrl,
                 'documents.drivingLicense.url': dlUrl,
                 'documents.selfie.url': selfieUrl,
+                'verification.policeStatus': 'pending',
+                'kit.required': true,
+                'kit.price': Number(kitConfig.kitPrice || DRIVER_KIT_PRICE),
+                'kit.paymentStatus': 'pending',
                 status: 'pending_verification'
             },
             { new: true, runValidators: true }
@@ -568,13 +862,326 @@ exports.uploadDocuments = async (req, res) => {
 exports.getProfile = async (req, res) => {
     try {
         const driverId = getDriverIdFromRequest(req);
+        let driver = await SpareDriver.findById(driverId);
+        if (!driver) {
+            return res.status(404).json({ status: 'fail', message: 'Driver not found' });
+        }
+
+        await applyMonthlyKitRecovery(driver);
+        driver = await SpareDriver.findById(driverId);
+
+        res.status(200).json({ status: 'success', data: { driver } });
+    } catch (err) {
+        res.status(404).json({ status: 'fail', message: 'Driver not found' });
+    }
+};
+
+exports.getKitConfig = async (req, res) => {
+    try {
+        const kitConfig = await getSpareDriverKitConfig();
+        return res.status(200).json({
+            status: 'success',
+            data: { kitConfig }
+        });
+    } catch (err) {
+        return res.status(500).json({ status: 'fail', message: err.message });
+    }
+};
+
+exports.getPremiumConfig = async (req, res) => {
+    try {
+        const premiumConfig = await getSpareDriverPremiumConfig();
+        return res.status(200).json({
+            status: 'success',
+            data: { premiumConfig }
+        });
+    } catch (err) {
+        return res.status(500).json({ status: 'fail', message: err.message });
+    }
+};
+
+exports.getKitPaymentKey = async (req, res) => {
+    try {
+        if (!razorpay || !razorpay.key_id) {
+            return res.status(500).json({ status: 'fail', message: 'Payment gateway not configured' });
+        }
+
+        return res.status(200).json({
+            status: 'success',
+            data: {
+                key_id: razorpay.key_id
+            }
+        });
+    } catch (err) {
+        return res.status(500).json({ status: 'fail', message: err.message });
+    }
+};
+
+exports.createKitPaymentOrder = async (req, res) => {
+    try {
+        const driverId = getDriverIdFromRequest(req);
+        const driver = await SpareDriver.findById(driverId);
+
+        if (!driver) {
+            return res.status(404).json({ status: 'fail', message: 'Driver not found' });
+        }
+
+        if (!['verified_pending_kit', 'kit_payment_pending'].includes(driver.status)) {
+            return res.status(400).json({ status: 'fail', message: 'Kit payment is available only after verification approval' });
+        }
+
+        if (!razorpay) {
+            return res.status(500).json({ status: 'fail', message: 'Payment gateway not configured' });
+        }
+
+        const kitConfig = await getSpareDriverKitConfig();
+        const amount = Number(kitConfig.kitPrice || DRIVER_KIT_PRICE);
+        const safeReceipt = `sdk_${driver._id.toString().slice(-8)}_${Date.now().toString().slice(-8)}`;
+        const order = await razorpay.orders.create({
+            amount: Math.round(amount * 100),
+            currency: 'INR',
+            receipt: safeReceipt,
+            payment_capture: 1,
+            notes: {
+                driverId: driver._id.toString(),
+                purpose: 'driver_kit'
+            }
+        });
+
+        driver.kit = {
+            ...(driver.kit || {}),
+            required: true,
+            price: amount,
+            razorpayOrderId: order.id
+        };
+        await driver.save();
+
+        return res.status(200).json({
+            status: 'success',
+            data: {
+                order_id: order.id,
+                amount: order.amount,
+                currency: order.currency,
+                receipt: order.receipt,
+                kitPrice: amount
+            }
+        });
+    } catch (err) {
+        console.error('Create Kit Payment Order Error:', err);
+        return res.status(400).json({
+            status: 'fail',
+            message: err?.error?.description || err?.description || err?.message || 'Could not create kit payment order'
+        });
+    }
+};
+
+exports.verifyKitPayment = async (req, res) => {
+    try {
+        const driverId = getDriverIdFromRequest(req);
+        const {
+            razorpay_order_id,
+            razorpay_payment_id,
+            razorpay_signature
+        } = req.body || {};
+
+        if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+            return res.status(400).json({ status: 'fail', message: 'All payment details are required' });
+        }
+
         const driver = await SpareDriver.findById(driverId);
         if (!driver) {
             return res.status(404).json({ status: 'fail', message: 'Driver not found' });
         }
-        res.status(200).json({ status: 'success', data: { driver } });
+
+        const secret = process.env.RAZORPAY_KEY_SECRET || 'GkxKRQ2B0U63BKBoayuugS3D';
+        const generatedSignature = crypto
+            .createHmac('sha256', secret)
+            .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+            .digest('hex');
+
+        if (generatedSignature !== razorpay_signature) {
+            return res.status(400).json({ status: 'fail', message: 'Invalid payment signature' });
+        }
+
+        const kitConfig = await getSpareDriverKitConfig();
+
+        driver.kit = {
+            ...(driver.kit || {}),
+            required: true,
+            price: Number(driver.kit?.price || kitConfig.kitPrice || DRIVER_KIT_PRICE),
+            paymentStatus: 'under_review',
+            paymentReference: razorpay_payment_id,
+            razorpayOrderId: razorpay_order_id,
+            razorpayPaymentId: razorpay_payment_id,
+            paidAt: new Date()
+        };
+        driver.status = 'kit_payment_pending';
+        await driver.save();
+
+        await Promise.all([
+            sendSpareDriverNotification(driver._id, {
+                title: 'Kit Payment Successful',
+                message: 'Your driver kit payment was received and is now under admin review for final activation.',
+                type: 'payment',
+                priority: 'high',
+                actionUrl: '/spare-driver/register',
+                actionText: 'Track Activation',
+                metaData: { status: 'kit_payment_pending', paymentId: razorpay_payment_id }
+            }),
+            sendAdminNotification({
+                title: 'Kit Payment Received',
+                message: `${driver.name || 'A spare driver'} completed kit payment and is waiting for final activation.`,
+                type: 'payment',
+                priority: 'high',
+                actionUrl: '/admin/spare-drivers/verification',
+                actionText: 'Approve Driver',
+                metaData: { driverId, status: 'kit_payment_pending', paymentId: razorpay_payment_id }
+            })
+        ]);
+
+        return res.status(200).json({
+            status: 'success',
+            message: 'Kit payment verified successfully',
+            data: { driver }
+        });
     } catch (err) {
-        res.status(404).json({ status: 'fail', message: 'Driver not found' });
+        console.error('Verify Kit Payment Error:', err);
+        return res.status(400).json({ status: 'fail', message: err.message });
+    }
+};
+
+exports.submitKitPaymentProof = async (req, res) => {
+    try {
+        const driverId = getDriverIdFromRequest(req);
+        const { paymentReference } = req.body || {};
+        const files = req.files || {};
+
+        const driver = await SpareDriver.findById(driverId);
+        if (!driver) {
+            return res.status(404).json({ status: 'fail', message: 'Driver not found' });
+        }
+
+        if (driver.status !== 'verified_pending_kit' && driver.status !== 'kit_payment_pending') {
+            return res.status(400).json({ status: 'fail', message: 'Kit payment can only be submitted after verification approval' });
+        }
+
+        if (!files?.paymentProof?.[0]) {
+            return res.status(400).json({ status: 'fail', message: 'Upload kit payment proof to continue' });
+        }
+
+        const filePath = files.paymentProof[0].path;
+        let paymentProofUrl = '';
+        try {
+            const result = await cloudinary.uploadImage(filePath, `clean2wash/sparedrivers/${driverId}/kit-payment`);
+            try { fs.unlinkSync(filePath); } catch (e) {}
+            paymentProofUrl = result.secure_url;
+        } catch (uploadError) {
+            console.warn('Falling back to local kit payment proof storage:', uploadError.message);
+            paymentProofUrl = `${req.protocol}://${req.get('host')}/uploads/sparedrivers/${path.basename(filePath)}`;
+        }
+
+        const kitConfig = await getSpareDriverKitConfig();
+
+        driver.kit = {
+            ...(driver.kit || {}),
+            required: true,
+            price: Number(driver.kit?.price || kitConfig.kitPrice || DRIVER_KIT_PRICE),
+            paymentStatus: 'under_review',
+            paymentProofUrl,
+            paymentReference: paymentReference || '',
+            paidAt: new Date()
+        };
+        driver.status = 'kit_payment_pending';
+        await driver.save();
+
+        await Promise.all([
+            sendSpareDriverNotification(driver._id, {
+                title: 'Kit Payment Submitted',
+                message: 'Your kit payment proof is under review. We will activate your dashboard after admin confirmation.',
+                type: 'verification',
+                priority: 'high',
+                actionUrl: '/spare-driver/register',
+                actionText: 'Track Status',
+                metaData: { status: 'kit_payment_pending' }
+            }),
+            sendAdminNotification({
+                title: 'Kit Payment Review Pending',
+                message: `${driver.name || 'A spare driver'} submitted kit payment proof for activation.`,
+                type: 'verification',
+                priority: 'high',
+                actionUrl: '/admin/spare-drivers',
+                actionText: 'Review Driver',
+                metaData: { driverId, status: 'kit_payment_pending' }
+            })
+        ]);
+
+        return res.status(200).json({
+            status: 'success',
+            message: 'Kit payment proof submitted successfully',
+            data: { driver }
+        });
+    } catch (err) {
+        console.error('Kit Payment Proof Error:', err);
+        res.status(400).json({ status: 'fail', message: err.message });
+    }
+};
+
+exports.submitInquiry = async (req, res) => {
+    try {
+        const driverId = getDriverIdFromRequest(req);
+        const { category = 'general', subject = '', message = '' } = req.body || {};
+
+        if (!String(subject).trim() || !String(message).trim()) {
+            return res.status(400).json({ status: 'fail', message: 'Subject and message are required' });
+        }
+
+        const driver = await SpareDriver.findById(driverId);
+        if (!driver) {
+            return res.status(404).json({ status: 'fail', message: 'Driver not found' });
+        }
+
+        const inquiry = {
+            category,
+            subject: String(subject).trim(),
+            message: String(message).trim(),
+            status: 'open',
+            createdAt: new Date()
+        };
+
+        driver.inquiries = [inquiry, ...(driver.inquiries || [])].slice(0, 20);
+        await driver.save();
+
+        const latestInquiry = driver.inquiries[0];
+
+        await Promise.all([
+            sendSpareDriverNotification(driver._id, {
+                title: 'Inquiry Sent',
+                message: 'Your inquiry has been shared with admin. We will notify you once there is an update.',
+                type: 'system',
+                priority: 'medium',
+                actionUrl: '/spare-driver/inquiry',
+                actionText: 'Open Inquiry Desk',
+                metaData: { inquiryId: latestInquiry?._id?.toString?.() || '' }
+            }),
+            sendAdminNotification({
+                title: 'Driver Inquiry Received',
+                message: `${driver.name || 'A spare driver'} raised a ${category} inquiry: ${String(subject).trim()}`,
+                type: 'system',
+                priority: 'high',
+                actionUrl: '/admin/spare-drivers/drivers',
+                actionText: 'Open Driver Desk',
+                metaData: { driverId: driver._id.toString(), inquiryId: latestInquiry?._id?.toString?.() || '' }
+            })
+        ]);
+
+        return res.status(200).json({
+            status: 'success',
+            message: 'Inquiry submitted successfully',
+            data: { inquiries: driver.inquiries || [] }
+        });
+    } catch (err) {
+        console.error('Driver Inquiry Error:', err);
+        return res.status(400).json({ status: 'fail', message: err.message });
     }
 };
 
@@ -595,15 +1202,71 @@ exports.adminListDrivers = async (req, res) => {
 // ── Admin: Verify / Reject a driver ──
 exports.adminVerifyDriver = async (req, res) => {
     try {
-        const { status, adminNote } = req.body; // status: 'active' | 'rejected'
-        const allowed = ['active', 'rejected', 'suspended'];
+        const { status, adminNote } = req.body;
+        const kitConfig = await getSpareDriverKitConfig();
+        const allowed = ['verified_pending_kit', 'active', 'rejected', 'suspended'];
         if (!allowed.includes(status)) {
             return res.status(400).json({ status: 'fail', message: 'Invalid status' });
+        }
+
+        const existingDriver = await SpareDriver.findById(req.params.id);
+        if (!existingDriver) {
+            return res.status(404).json({ status: 'fail', message: 'Driver not found' });
+        }
+
+        if (
+            status === 'verified_pending_kit'
+            && (
+                !existingDriver.documents?.aadhaarCard?.frontUrl
+                || !existingDriver.documents?.aadhaarCard?.backUrl
+                || !existingDriver.documents?.panCard?.url
+                || !existingDriver.documents?.drivingLicense?.url
+                || !existingDriver.documents?.selfie?.url
+            )
+        ) {
+            return res.status(400).json({ status: 'fail', message: 'Driver documents are incomplete. Aadhaar, PAN, driving license and selfie are required before approval.' });
+        }
+
+        if (
+            status === 'active'
+            && existingDriver.kit?.required !== false
+            && existingDriver.status !== 'active'
+            && !['under_review', 'verified'].includes(existingDriver.kit?.paymentStatus)
+        ) {
+            return res.status(400).json({ status: 'fail', message: 'Kit payment must be submitted before final activation' });
         }
 
         const update = { status, adminNote };
         if (status !== 'active') {
             update.isOnline = false;
+        }
+
+        if (status === 'verified_pending_kit') {
+            update['kit.required'] = true;
+            update['kit.price'] = Number(kitConfig.kitPrice || DRIVER_KIT_PRICE);
+            update['kit.paymentStatus'] = 'pending';
+        }
+
+        if (status === 'active') {
+            const now = new Date();
+            const existingRecovery = existingDriver.onboardingRecovery || {};
+            update['kit.required'] = true;
+            update['kit.paymentStatus'] = 'verified';
+            update['kit.verifiedAt'] = now;
+            update.onboardingRecovery = {
+                enabled: Number(kitConfig.monthlyDeductionAmount || 0) > 0 && Number(kitConfig.monthlyDeductionMonths || 0) > 0,
+                monthlyDeductionAmount: Number(kitConfig.monthlyDeductionAmount || 0),
+                totalMonths: Number(kitConfig.monthlyDeductionMonths || 0),
+                monthsDeducted: Number(existingRecovery.monthsDeducted || 0),
+                pendingAmount: Number(existingRecovery.pendingAmount || 0),
+                lastDeductedAt: existingRecovery.lastDeductedAt || null,
+                startedAt: existingRecovery.startedAt || now,
+                nextDeductionAt: existingRecovery.nextDeductionAt || now
+            };
+        }
+
+        if (status === 'rejected') {
+            // Document rejection doesn't necessarily mean PVR is rejected
         }
 
         const driver = await SpareDriver.findByIdAndUpdate(
@@ -612,8 +1275,23 @@ exports.adminVerifyDriver = async (req, res) => {
             { new: true }
         );
 
-        if (!driver) {
-            return res.status(404).json({ status: 'fail', message: 'Driver not found' });
+        // 🛡️ Audit Log: Driver Verification
+        try {
+            await AuditLog.create({
+                userId: req.user?._id || req.auth?.id,
+                action: 'VERIFY_DRIVER',
+                resource: 'SPAREDDRIVER',
+                resourceId: driver._id,
+                oldValue: { status: existingDriver.status },
+                newValue: { status: driver.status },
+                metadata: {
+                    ip: req.ip,
+                    userAgent: req.get('user-agent'),
+                    adminNote: update.adminNote
+                }
+            });
+        } catch (auditErr) {
+            console.error('Audit Log failed:', auditErr.message);
         }
 
         const io = getSocketIO();
@@ -626,14 +1304,16 @@ exports.adminVerifyDriver = async (req, res) => {
         }
 
         await sendSpareDriverNotification(driver._id, {
-            title: status === 'active' ? 'Account Approved' : 'Verification Updated',
+            title: status === 'active' ? 'Account Activated' : status === 'verified_pending_kit' ? 'Verification Approved' : 'Verification Updated',
             message: status === 'active'
                 ? 'Your spare driver account is live now. Go online to receive bookings.'
+                : status === 'verified_pending_kit'
+                    ? `Your verification is complete. Pay ₹${driver.kit?.price || DRIVER_KIT_PRICE} for the starter kit to unlock your dashboard.`
                 : (adminNote || `Your account status has been updated to ${status}.`),
             type: 'verification',
             priority: status === 'active' ? 'high' : 'medium',
-            actionUrl: status === 'active' ? '/spare-driver/dashboard' : '/spare-driver/profile',
-            actionText: status === 'active' ? 'Open Dashboard' : 'View Profile',
+            actionUrl: status === 'active' ? '/spare-driver/dashboard' : '/spare-driver/register',
+            actionText: status === 'active' ? 'Open Dashboard' : 'Continue Activation',
             metaData: { status, adminNote: adminNote || '' }
         });
 
@@ -914,6 +1594,77 @@ exports.rejectBooking = async (req, res) => {
         });
     } catch (err) {
         res.status(400).json({ status: 'fail', message: err.message });
+    }
+};
+
+exports.adminUpdatePremiumVerification = async (req, res) => {
+    try {
+        const { action, reason = '' } = req.body || {};
+        if (!['approve', 'reject'].includes(action)) {
+            return res.status(400).json({ status: 'fail', message: 'Invalid premium action' });
+        }
+
+        const driver = await SpareDriver.findById(req.params.id);
+        if (!driver) {
+            return res.status(404).json({ status: 'fail', message: 'Driver not found' });
+        }
+
+        if (!driver.documents?.policeVerification?.url) {
+            return res.status(400).json({ status: 'fail', message: 'Police verification document is not uploaded yet' });
+        }
+
+        const oldPoliceStatus = driver.verification?.policeStatus || 'pending';
+        driver.verification = driver.verification || {};
+        driver.verification.policeStatus = action === 'approve' ? 'approved' : 'rejected';
+        driver.verification.isPremium = action === 'approve';
+        
+        if (action === 'approve') {
+            driver.verification.policeVerifiedAt = new Date();
+        }
+        driver.adminNote = reason || driver.adminNote || '';
+        await driver.save({ validateBeforeSave: false });
+
+        // 🛡️ Audit Log: Premium Status
+        try {
+            await AuditLog.create({
+                userId: req.user?._id || req.auth?.id,
+                action: 'UPDATE_PREMIUM_STATUS',
+                resource: 'SPAREDDRIVER',
+                resourceId: driver._id,
+                oldValue: { policeStatus: oldPoliceStatus, isPremium: !driver.verification.isPremium },
+                newValue: { policeStatus: driver.verification.policeStatus, isPremium: driver.verification.isPremium },
+                metadata: {
+                    ip: req.ip,
+                    userAgent: req.get('user-agent'),
+                    reason: reason
+                }
+            });
+        } catch (auditErr) {
+            console.error('Audit Log failed:', auditErr.message);
+        }
+
+        await sendSpareDriverNotification(driver._id, {
+            title: action === 'approve' ? 'Premium Badge Approved' : 'Premium Verification Rejected',
+            message: action === 'approve'
+                ? 'Your police verification is approved. Premium badge is now active.'
+                : (reason || 'Your premium verification was rejected. Please re-upload valid police documents.'),
+            type: 'verification',
+            priority: 'high',
+            actionUrl: '/spare-driver/premium',
+            actionText: 'Open Premium',
+            metaData: {
+                action,
+                policeStatus: driver.verification.policeStatus
+            }
+        });
+
+        return res.status(200).json({
+            status: 'success',
+            message: action === 'approve' ? 'Premium verification approved' : 'Premium verification rejected',
+            data: { driver }
+        });
+    } catch (err) {
+        return res.status(400).json({ status: 'fail', message: err.message });
     }
 };
 
@@ -1314,6 +2065,20 @@ exports.toggleOnline = async (req, res) => {
                 message: 'Your account must be verified before going online'
             });
         }
+        const currentCoordinates = Array.isArray(driver.currentLocation?.coordinates)
+            ? driver.currentLocation.coordinates
+            : [];
+        const hasLiveLocation = currentCoordinates.length === 2
+            && Number(currentCoordinates[0]) !== 0
+            && Number(currentCoordinates[1]) !== 0;
+        const hasAddressCoordinates = hasValidLatLng(driver.address?.coordinates);
+
+        if (isOnline && !hasLiveLocation && hasAddressCoordinates) {
+            driver.currentLocation = {
+                type: 'Point',
+                coordinates: [Number(driver.address.coordinates.lng), Number(driver.address.coordinates.lat)]
+            };
+        }
 
         driver.isOnline = Boolean(isOnline);
         await driver.save({ validateBeforeSave: false });
@@ -1618,6 +2383,13 @@ exports.updateBookingStatus = async (req, res) => {
 
                 booking.payment.providerPayoutAmount = providerPayout;
                 booking.payment.platformCommissionAmount = adminCut;
+
+                const recoveryResult = await applyMonthlyKitRecovery(driver, booking._id);
+                if (recoveryResult?.charged) {
+                    booking.payment.recoveryDeductionAmount = Number(booking.payment.recoveryDeductionAmount || 0) + Number(recoveryResult.amount || 0);
+                    booking.notes = booking.notes || {};
+                    booking.notes.internal = `${booking.notes.internal || ''}\n[KIT_RECOVERY] Deducted ₹${recoveryResult.amount} (installment ${recoveryResult.installmentNumber}/${recoveryResult.totalMonths}) from driver wallet.`.trim();
+                }
             }
         }
 
@@ -1823,5 +2595,132 @@ exports.updateFCMToken = async (req, res) => {
             status: 'error',
             message: 'Failed to update FCM token'
         });
+    }
+};
+
+exports.updateProfilePicture = async (req, res) => {
+    try {
+        const driverId = getDriverIdFromRequest(req);
+        if (!req.files?.selfie?.[0]) {
+            return res.status(400).json({ status: 'fail', message: 'No image provided' });
+        }
+
+        const filePath = req.files.selfie[0].path;
+        let selfieUrl = '';
+
+        try {
+            const result = await cloudinary.uploadImage(filePath, `clean2wash/sparedrivers/${driverId}/profile`);
+            try { fs.unlinkSync(filePath); } catch (e) {}
+            selfieUrl = result.secure_url;
+        } catch (uploadError) {
+            console.warn('Falling back to local storage for profile picture:', uploadError.message);
+            selfieUrl = `${req.protocol}://${req.get('host')}/uploads/sparedrivers/${path.basename(filePath)}`;
+        }
+
+        const driver = await SpareDriver.findByIdAndUpdate(
+            driverId,
+            { 'documents.selfie.url': selfieUrl },
+            { new: true }
+        );
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Profile picture updated successfully',
+            data: { selfie: selfieUrl }
+        });
+    } catch (err) {
+        res.status(500).json({ status: 'fail', message: err.message });
+    }
+};
+
+exports.uploadPoliceVerification = async (req, res) => {
+    try {
+        const driverId = getDriverIdFromRequest(req);
+        const { pvrNumber } = req.body;
+        
+        if (!req.files?.pvrFile?.[0]) {
+            return res.status(400).json({ status: 'fail', message: 'Verification document is required' });
+        }
+
+        const filePath = req.files.pvrFile[0].path;
+        let pvrUrl = '';
+
+        try {
+            const result = await cloudinary.uploadImage(filePath, `clean2wash/sparedrivers/${driverId}/pvr`);
+            try { fs.unlinkSync(filePath); } catch (e) {}
+            pvrUrl = result.secure_url;
+        } catch (uploadError) {
+            console.warn('Falling back to local storage for PVR:', uploadError.message);
+            pvrUrl = `${req.protocol}://${req.get('host')}/uploads/sparedrivers/${path.basename(filePath)}`;
+        }
+
+        const driver = await SpareDriver.findByIdAndUpdate(
+            driverId,
+            {
+                'documents.policeVerification.url': pvrUrl,
+                'documents.policeVerification.number': pvrNumber || '',
+                'verification.policeStatus': 'pending'
+            },
+            { new: true }
+        );
+
+        await sendAdminNotification({
+            title: 'Police Verification Pending',
+            message: `${driver.name} has submitted PVR for Premium Upgrade.`,
+            type: 'verification',
+            priority: 'high',
+            actionUrl: '/admin/spare-drivers',
+            metaData: { driverId, status: 'pvr_review' }
+        });
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Verification dossier transmitted. Awaiting command review.',
+            data: { driver }
+        });
+    } catch (err) {
+        res.status(500).json({ status: 'fail', message: err.message });
+    }
+};
+
+exports.updateProfile = async (req, res) => {
+    try {
+        const driverId = getDriverIdFromRequest(req);
+        const { name, email, address } = req.body;
+
+        const updateData = {};
+        if (name) updateData.name = name;
+        if (email) updateData.email = email;
+        if (address) {
+            const normalizedCoordinates = hasValidLatLng(address?.coordinates)
+                ? {
+                    lat: Number(address.coordinates.lat),
+                    lng: Number(address.coordinates.lng)
+                }
+                : null;
+
+            updateData.address = {
+                street: address.street,
+                city: address.city,
+                state: address.state,
+                pincode: address.pincode,
+                country: address.country || 'India',
+                coordinates: normalizedCoordinates
+            };
+        }
+
+        const driver = await SpareDriver.findByIdAndUpdate(
+            driverId,
+            { $set: updateData },
+            { new: true, runValidators: true }
+        );
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Dossier updated successfully',
+            data: { driver }
+        });
+    } catch (err) {
+        res.status(500).json({ status: 'fail', message: err.message });
     }
 };

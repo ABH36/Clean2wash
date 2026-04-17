@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 import MobileLayout from '../components/layout/MobileLayout';
 import api, { bookingAPI } from '../../../utils/api';
 import { useAuth } from '../../../context/AuthContext';
+import Header from '../../../components/common/Header';
 
 const formatMoney = (amount) => `Rs ${Number(amount || 0).toLocaleString('en-IN')}`;
 
@@ -121,12 +122,7 @@ const SpareDriverHistory = () => {
     return (
         <MobileLayout>
             <div className="min-h-screen bg-white flex flex-col">
-                <header className="px-5 pt-12 pb-4 flex items-center gap-4 border-b border-gray-100">
-                    <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-black">
-                        <ChevronLeft size={20} strokeWidth={2.5} />
-                    </button>
-                    <h1 className="text-xl font-black text-black tracking-tight uppercase leading-none">Chauffeur History</h1>
-                </header>
+                <Header title="Chauffeur history" showBack={true} />
 
                 <div className="p-5 space-y-4">
                     {loading ? (
@@ -165,26 +161,26 @@ const SpareDriverHistory = () => {
                                                 </p>
                                             </div>
                                             <div className="flex items-center gap-2 flex-wrap mt-2">
-                                                <span className="px-2 py-1 rounded-md bg-gray-100 text-black/60 text-[8px] font-black uppercase tracking-widest">
+                                                <span className="px-2 py-1 rounded-md bg-gray-100 text-black/60 text-[8px] font-bold tracking-wide">
                                                     #{trip.bookingId || trip._id?.slice(-6)}
                                                 </span>
                                                 {trip.payment?.status && (
-                                                    <span className="px-2 py-1 rounded-md bg-blue-50 text-blue-600 text-[8px] font-black uppercase tracking-widest">
-                                                        Payment {trip.payment.status}
+                                                    <span className="px-2 py-1 rounded-md bg-blue-50 text-blue-600 text-[8px] font-bold tracking-wide">
+                                                        Payment {trip.payment.status.replace('_', ' ')}
                                                     </span>
                                                 )}
                                                 {trip.payment?.status === 'settlement_pending' && Number(trip.payment?.pendingAmount || 0) > 0 && (
-                                                    <span className="px-2 py-1 rounded-md bg-amber-50 text-amber-700 text-[8px] font-black uppercase tracking-widest">
+                                                    <span className="px-2 py-1 rounded-md bg-amber-50 text-amber-700 text-[8px] font-bold tracking-wide">
                                                         Due {formatMoney(trip.payment.pendingAmount)}
                                                     </span>
                                                 )}
                                                 {trip.feedback?.rating && (
-                                                    <span className="px-2 py-1 rounded-md bg-emerald-50 text-emerald-600 text-[8px] font-black uppercase tracking-widest">
+                                                    <span className="px-2 py-1 rounded-md bg-emerald-50 text-emerald-600 text-[8px] font-bold tracking-wide">
                                                         Rated {trip.feedback.rating}/5
                                                     </span>
                                                 )}
                                                 {issueCount > 0 && (
-                                                    <span className="px-2 py-1 rounded-md bg-red-50 text-red-600 text-[8px] font-black uppercase tracking-widest">
+                                                    <span className="px-2 py-1 rounded-md bg-red-50 text-red-600 text-[8px] font-bold tracking-wide">
                                                         {issueCount} issue{issueCount > 1 ? 's' : ''} open
                                                     </span>
                                                 )}
@@ -234,14 +230,14 @@ const SpareDriverHistory = () => {
                                                     disabled={settlingTripId === trip._id}
                                                     className="h-11 rounded-xl bg-amber-400 text-black text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
                                                 >
-                                                    {settlingTripId === trip._id ? 'Processing' : 'Pay Wallet'}
+                                                    {settlingTripId === trip._id ? 'Processing' : 'Pay wallet'}
                                                 </button>
                                                 <button
                                                     onClick={() => handleSettlement(trip, 'online')}
                                                     disabled={settlingTripId === trip._id}
                                                     className="h-11 rounded-xl bg-black text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
                                                 >
-                                                    {settlingTripId === trip._id ? 'Opening' : 'Pay Balance'}
+                                                    {settlingTripId === trip._id ? 'Opening' : 'Pay balance'}
                                                 </button>
                                             </>
                                         ) : (
@@ -251,7 +247,7 @@ const SpareDriverHistory = () => {
                                                     disabled={trip.status !== 'completed'}
                                                     className="h-11 rounded-xl bg-black text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-40"
                                                 >
-                                                    {trip.feedback?.rating ? 'Update Rating' : 'Rate Trip'}
+                                                    {trip.feedback?.rating ? 'Update rating' : 'Rate trip'}
                                                 </button>
                                                 <button
                                                     onClick={() => navigate(`/spare-driver/support?bookingId=${trip._id}`)}
@@ -268,12 +264,12 @@ const SpareDriverHistory = () => {
                     ) : (
                         <div className="flex flex-col items-center py-20 gap-3 opacity-20">
                             <History size={48} />
-                            <p className="text-sm font-black uppercase tracking-widest">No Trips Found</p>
+                            <p className="text-sm font-black uppercase tracking-widest">No trips found</p>
                         </div>
                     )}
 
                     <div className="pt-8 flex flex-col items-center">
-                        <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em]">End of History</p>
+                        <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em]">End of history</p>
                     </div>
                 </div>
             </div>

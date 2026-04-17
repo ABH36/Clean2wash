@@ -63,9 +63,33 @@ const bookingSchema = new mongoose.Schema({
             type: Number,
             default: 0
         },
+        subtotal: {
+            type: Number,
+            default: 0
+        },
+        gstAmount: {
+            type: Number,
+            default: 0
+        },
+        gstPercent: {
+            type: Number,
+            default: 0
+        },
         totalAmount: {
             type: Number,
             required: [true, 'Total amount is required']
+        },
+        finalAmount: {
+            type: Number,
+            default: 0
+        },
+        platformCommission: {
+            type: Number,
+            default: 0
+        },
+        driverEarning: {
+            type: Number,
+            default: 0
         },
         breakdown: [{
             type: { type: String },

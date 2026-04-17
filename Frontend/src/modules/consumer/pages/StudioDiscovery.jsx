@@ -83,34 +83,34 @@ const StudioDiscovery = () => {
                         <ChevronLeft size={22} strokeWidth={3} />
                     </button>
                     <div>
-                        <h1 className="text-xl font-[1000] text-black leading-none uppercase tracking-tighter">Nearby Studios</h1>
+                        <h1 className="text-xl font-[1000] text-black leading-none uppercase tracking-tighter">Nearby studios</h1>
                         <p className="text-[9px] text-brand font-black uppercase tracking-widest mt-1.5">Top-rated centers near you</p>
                     </div>
                 </div>
 
                 <div className="flex gap-2">
                     <div className="flex-1 flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5">
-                        <Search size={16} className="text-content-subtle" strokeWidth={2.5} />
+                        <Search size={16} className="text-slate-400" strokeWidth={2.5} />
                         <input
                             type="text"
                             placeholder="Search studios..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="bg-transparent text-xs font-bold text-content outline-none placeholder:font-medium placeholder:text-content-subtle"
+                            className="bg-transparent text-xs font-bold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400"
                         />
                     </div>
-                    <button className="w-11 h-11 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center text-content">
+                    <button className="w-11 h-11 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center text-slate-900">
                         <SlidersHorizontal size={18} strokeWidth={2.5} />
                     </button>
                 </div>
 
                 {/* Filters */}
                 <div className="flex gap-2 overflow-x-auto pt-4 pb-1 scrollbar-hide">
-                    {['All', 'Elite', 'Fastest', 'Budget-Friendly'].map((f) => (
+                    {['All', 'Elite', 'Fastest', 'Budget-friendly'].map((f) => (
                         <button
                             key={f}
                             onClick={() => setActiveFilter(f)}
-                            className={`flex-shrink-0 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${activeFilter === f ? 'bg-brand text-white border-brand shadow-md' : 'bg-white border-gray-100 text-content-muted hover:bg-gray-50'}`}
+                            className={`flex-shrink-0 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${activeFilter === f ? 'bg-brand text-white border-brand shadow-md' : 'bg-white border-gray-100 text-slate-500 hover:bg-gray-50'}`}
                         >
                             {f}
                         </button>
@@ -123,15 +123,15 @@ const StudioDiscovery = () => {
                 <div className="flex bg-gray-100 p-1 rounded-2xl">
                     <button
                         onClick={() => setViewMode('list')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-white shadow-md text-brand' : 'text-content-muted'}`}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-white shadow-md text-brand' : 'text-slate-500'}`}
                     >
-                        <List size={16} /> List View
+                        <List size={16} /> List view
                     </button>
                     <button
                         onClick={() => setViewMode('map')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'map' ? 'bg-white shadow-md text-brand' : 'text-content-muted'}`}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'map' ? 'bg-white shadow-md text-brand' : 'text-slate-500'}`}
                     >
-                        <MapIcon size={16} /> Map View
+                        <MapIcon size={16} /> Map view
                     </button>
                 </div>
 
@@ -139,7 +139,7 @@ const StudioDiscovery = () => {
                 <div className="-mx-4 pt-4 pb-2 overflow-hidden">
                     <div className="flex items-center justify-between mb-4 px-4">
                         <div className="flex flex-col">
-                            <h3 className="text-base font-[1000] text-black uppercase tracking-tight leading-none mb-1">Studio Wash Stories</h3>
+                            <h3 className="text-base font-[1000] text-black uppercase tracking-tight leading-none mb-1">Studio wash stories</h3>
                             <p className="text-[8px] font-black text-black/20 uppercase tracking-widest leading-none">Elite detailing in motion</p>
                         </div>
                         <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-white shadow-lg active:scale-90 transition-transform">
@@ -165,7 +165,7 @@ const StudioDiscovery = () => {
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-2.5">
                                     <div className="mb-1.5 flex items-center gap-1">
                                         <div className="w-1 h-1 rounded-full bg-orange-500 animate-pulse" />
-                                        <span className="text-[6px] font-black text-white/50 uppercase tracking-[0.2em]">HD PREVIEW</span>
+                                        <span className="text-[6px] font-black text-white/50 uppercase tracking-[0.2em]">HD preview</span>
                                     </div>
                                     <h4 className="text-white text-[9px] font-[1000] uppercase tracking-tight leading-tight mb-1.5">{sv.name}</h4>
                                     <div className="flex items-center gap-1 opacity-60">
@@ -248,13 +248,13 @@ const StudioDiscovery = () => {
                             {!currentLocation && (
                                 <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-20 flex flex-col items-center justify-center text-center p-10">
                                     <Navigation size={40} className="text-brand animate-bounce mb-4" />
-                                    <h4 className="font-black text-content uppercase tracking-tight">Detecting Location...</h4>
-                                    <p className="text-[10px] font-bold text-content-subtle mt-2">Allow location access to see studios near you</p>
+                                    <h4 className="font-black text-slate-900 uppercase tracking-tight">Detecting location...</h4>
+                                    <p className="text-[10px] font-bold text-slate-400 mt-2">Allow location access to see studios near you</p>
                                     <button
                                         onClick={() => detectCurrentLocation()}
                                         className="mt-6 bg-black text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest"
                                     >
-                                        Enable Access
+                                        Enable access
                                     </button>
                                 </div>
                             )}
@@ -270,7 +270,7 @@ const StudioDiscovery = () => {
                             {/* ── Map Teaser (Only in List View) ── */}
                             <div className="bg-content rounded-2xl p-4 shadow-lg flex items-center justify-between relative overflow-hidden group">
                                 <div className="relative z-10">
-                                    <h3 className="text-white font-black text-sm tracking-tight mb-1">View on Map</h3>
+                                    <h3 className="text-white font-black text-sm tracking-tight mb-1">View on map</h3>
                                     <p className="text-white/40 text-[9px] font-bold uppercase tracking-widest">See studios around you</p>
                                 </div>
                                 <button onClick={() => setViewMode('map')} className="relative z-10 w-10 h-10 bg-brand rounded-xl flex items-center justify-center text-white shadow-lg">
@@ -288,7 +288,7 @@ const StudioDiscovery = () => {
                                 ) : filteredStudios.length === 0 ? (
                                     <div className="py-20 text-center">
                                         <MapPin size={40} className="mx-auto text-gray-200 mb-4" />
-                                        <p className="text-xs font-bold text-content-subtle uppercase tracking-widest">No studios found nearby</p>
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No studios found nearby</p>
                                     </div>
                                 ) : (
                                     filteredStudios.map((studio, i) => (
@@ -308,7 +308,7 @@ const StudioDiscovery = () => {
                                                 {studio.isElite && (
                                                     <div className="absolute top-3 left-3 bg-brand px-2.5 py-1.5 rounded-lg flex items-center gap-1.5">
                                                         <Zap size={10} className="text-white" fill="white" />
-                                                        <span className="text-white text-[8px] font-black uppercase tracking-widest">Elite Service</span>
+                                                        <span className="text-white text-[8px] font-black uppercase tracking-widest">Elite service</span>
                                                     </div>
                                                 )}
                                                 <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
@@ -323,7 +323,7 @@ const StudioDiscovery = () => {
                                                         </div>
                                                     </div>
                                                     <div className="bg-white p-2.5 rounded-xl shadow-lg">
-                                                        <p className="text-[7px] font-black text-content-subtle uppercase tracking-widest leading-none mb-0.5">Starts at</p>
+                                                        <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none mb-0.5">Starts at</p>
                                                         <p className="text-brand font-black text-base leading-none italic">{studio.price}</p>
                                                     </div>
                                                 </div>
@@ -333,7 +333,7 @@ const StudioDiscovery = () => {
                                             <div className="p-4 flex items-center justify-between">
                                                 <div className="flex gap-2">
                                                     {studio.features.slice(0, 2).map(f => (
-                                                        <div key={f} className="flex items-center gap-1 text-[9px] font-black text-content-subtle uppercase tracking-wider">
+                                                        <div key={f} className="flex items-center gap-1 text-[9px] font-black text-slate-400 uppercase tracking-wider">
                                                             <ShieldCheck size={12} className="text-brand" /> {f}
                                                         </div>
                                                     ))}
@@ -353,10 +353,10 @@ const StudioDiscovery = () => {
                                     <Droplets size={24} className="text-blue-500" />
                                 </div>
                                 <div className="flex-1">
-                                    <h4 className="font-black text-xs text-content uppercase tracking-widest">Become a Partner</h4>
+                                    <h4 className="font-black text-xs text-content uppercase tracking-widest">Become a partner</h4>
                                     <p className="text-[10px] font-bold text-content-subtle mt-1">List your studio on CarWash and reach 10x customers.</p>
                                 </div>
-                                <button onClick={() => navigate('/vendor/signup')} className="text-brand text-[8px] font-black uppercase tracking-widest border-b border-brand/30">Join Us</button>
+                                <button onClick={() => navigate('/vendor/signup')} className="text-brand text-[8px] font-black uppercase tracking-widest border-b border-brand/30">Join us</button>
                             </div>
                         </motion.div>
                     )}
@@ -399,20 +399,20 @@ const StudioDiscovery = () => {
                                             <Radar size={48} className="text-brand animate-spin-slow" />
                                         </div>
                                     </div>
-                                    <h3 className="text-white text-xl font-[1000] uppercase tracking-tighter mb-3">Protocol Stream Unavailable</h3>
+                                    <h3 className="text-white text-xl font-[1000] uppercase tracking-tighter mb-3">Protocol stream unavailable</h3>
                                     <p className="text-white/40 text-[11px] font-bold uppercase tracking-widest leading-relaxed max-w-xs">
                                         The live service protocol visualization is currently being calibrated for your location.
                                     </p>
                                     <div className="mt-8 flex items-center gap-3 px-4 py-2 bg-white/5 rounded-full border border-white/5">
                                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                        <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">Studio Nodes Online</span>
+                                        <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">Studio nodes online</span>
                                     </div>
                                 </div>
                             )}
 
                             <div className="absolute bottom-8 left-8 right-8">
                                 <div className="bg-white/10 backdrop-blur-3xl rounded-2xl p-5 border border-white/10">
-                                    <p className="text-white text-[13px] font-[1000] uppercase tracking-[0.2em]">{activeVideoUrl ? 'Studio Detailing Protocol' : 'Protocol Status: Active'}</p>
+                                    <p className="text-white text-[13px] font-[1000] uppercase tracking-[0.2em]">{activeVideoUrl ? 'Studio detailing protocol' : 'Protocol status: active'}</p>
                                     <p className="text-white/50 text-[10px] font-bold mt-1 uppercase tracking-widest leading-relaxed">
                                         {activeVideoUrl ? 'Experience precision-engineered car care delivered to your sanctuary.' : 'Professional teams are standing by for immediate execution.'}
                                     </p>

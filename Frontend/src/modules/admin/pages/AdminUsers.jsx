@@ -1,96 +1,134 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Search,
     UserPlus,
     Edit2,
-    Trash2,
     X,
     Filter,
-    Shield,
     Mail,
     Phone,
     MapPin,
-    Crown,
     CheckCircle2,
-    MoreVertical,
     ChevronLeft,
     ChevronRight,
     Eye,
-    Check,
-    AlertCircle,
     Clock,
-    XCircle,
-    Car,
-    Briefcase
+    Briefcase,
+    Activity,
+    Key,
+    Users as UsersIcon,
+    RefreshCw,
+    Calendar,
+    Ban,
+    TrendingUp,
+    DollarSign,
+    History,
+    Flag,
+    CheckCircle,
+    XOctagon,
+    CreditCard,
+    MapPin as LocationIcon,
+    Calendar as CalendarIcon
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
-import { useAuth } from '../../../context/AuthContext';
 import { toast } from 'react-hot-toast';
 import { adminAPI } from '../../../utils/adminApi';
 
 const AdminUsers = () => {
     const location = useLocation();
-    const [activeTab, setActiveTab] = useState('Consumers');
     const [hubs, setHubs] = useState([]);
-
-    const fetchHubs = async () => {
-        try {
-            const res = await adminAPI.getHubs();
-            if (res.status === 'success') {
-                setHubs(res.data.hubs || []);
-            }
-        } catch (err) {
-            console.error("Failed to fetch hubs:", err);
-        }
-    };
-
-    useEffect(() => {
-        const params = new URLSearchParams(location.search);
-        const type = params.get('type');
-        if (type === 'vendors') {
-            setActiveTab('Vendors');
-        } else if (type === 'captains') {
-            setActiveTab('Captains');
-        } else if (type === 'staff') {
-            setActiveTab('Staff');
-        } else {
-            setActiveTab('Consumers');
-        }
-    }, [location.search]);
-
+    const [loading, setLoading] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [formData, setFormData] = useState({ name: '', phone: '', email: '', password: '', role: '', hub: '', city: '' });
-    const [loading, setLoading] = useState(false);
-    const [viewingIdProof, setViewingIdProof] = useState(null);
+    const [formData, setFormData] = useState({ name: '', phone: '', email: '', password: '', role: '', hub: '', city: '', status: 'Active' });
+    const [users, setUsers] = useState([]);
+    
+    // Enhanced State for Customer Features Only
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [isUserDetailsOpen, setIsUserDetailsOpen] = useState(false);
+    const [statusFilter, setStatusFilter] = useState('All');
+    const [kycFilter, setKycFilter] = useState('All');
+    const [riskFilter, setRiskFilter] = useState('All');
+    
+    // Filtering State
+    const [dateRange, setDateRange] = useState({ start: '', end: '' });
+    const [showDateFilter, setShowDateFilter] = useState(false);
+    const [showFilters, setShowFilters] = useState(false);
 
-    const TABS = ['Consumers', 'Captains', 'Spare Drivers', 'Staff', 'Vendors'];
+    // Pagination State
+    const [page, setPage] = useState(1);
+    const [limit] = useState(50);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalUsers, setTotalUsers] = useState(0);
 
-    const getRoleKey = (tab) => {
-        switch (tab) {
-            case 'Consumers': return 'consumer';
-            case 'Captains': return 'captain';
-            case 'Spare Drivers': return 'sparedriver';
-            case 'Staff': return 'staff';
-            case 'Vendors': return 'vendor';
-            default: return 'consumer';
+    // Helper Functions for New Features
+    const calculateRiskScore = (user) => {
+        let score = 0;
+        
+        // Cancellation rate (0-40 points)
+        const cancellationRate = (user.stats?.cancellations || 0) / Math.max(user.stats?.totalBookings || 1, 1);
+        score += Math.min(cancellationRate * 100, 40);
+        
+        // Complaint rate (0-30 points)
+        const complaintRate = (user.stats?.complaints || 0) / Math.max(user.stats?.totalBookings || 1, 1);
+        score += Math.min(complaintRate * 150, 30);
+        
+        // Account age factor (0-20 points - newer accounts are riskier)
+        const accountAge = Date.now() - new Date(user.createdAt).getTime();
+        const daysSinceCreation = accountAge / (1000 * 60 * 60 * 24);
+        if (daysSinceCreation < 7) score += 20;
+        else if (daysSinceCreation < 30) score += 10;
+        
+        // Activity pattern (0-10 points)
+        const lastActivity = user.lastActivity ? Date.now() - new Date(user.lastActivity).getTime() : 0;
+        const daysSinceActivity = lastActivity / (1000 * 60 * 60 * 24);
+        if (daysSinceActivity > 30) score += 10;
+        
+        return Math.min(Math.round(score), 100);
+    };
+
+    const getRiskBadge = (score) => {
+        if (score <= 30) return { label: 'Low', color: 'text-[var(--success-text)]', bg: 'bg-[var(--success-light)]', border: 'border-[var(--success)]' };
+        if (score <= 60) return { label: 'Medium', color: 'text-[var(--warning-text)]', bg: 'bg-[var(--warning-light)]', border: 'border-[var(--warning)]' };
+        return { label: 'High', color: 'text-[var(--error-text)]', bg: 'bg-[var(--error-light)]', border: 'border-[var(--error)]' };
+    };
+
+    const getKycStatus = (user) => {
+        if (user.kyc?.status === 'verified' || user.isVerified) return 'Verified';
+        if (user.kyc?.status === 'rejected') return 'Rejected';
+        return 'Pending';
+    };
+
+    const getKycBadge = (status) => {
+        switch (status) {
+            case 'Verified': return { label: 'Verified', color: 'text-[var(--success-text)]', bg: 'bg-[var(--success-light)]', border: 'border-[var(--success)]', icon: <CheckCircle size={12} /> };
+            case 'Rejected': return { label: 'Rejected', color: 'text-[var(--error-text)]', bg: 'bg-[var(--error-light)]', border: 'border-[var(--error)]', icon: <XOctagon size={12} /> };
+            default: return { label: 'Pending', color: 'text-[var(--warning-text)]', bg: 'bg-[var(--warning-light)]', border: 'border-[var(--warning)]', icon: <Clock size={12} /> };
         }
     };
 
-    const currentRole = getRoleKey(activeTab);
-    const [users, setUsers] = useState([]);
+    const getRoleContext = () => {
+        // Users module only handles consumers/customers
+        return { key: 'consumer', label: 'Consumer Base' };
+    };
+
+    const currentRole = getRoleContext();
 
     const fetchUsers = async () => {
         setLoading(true);
         try {
-            const res = await adminAPI.getUsers(currentRole);
+            // Only fetch consumer users
+            const res = await adminAPI.getUsers('consumer', page, limit);
             if (res.status === 'success') {
                 setUsers(res.data.users || []);
+                setTotalPages(res.totalPages || 1);
+                setTotalUsers(res.total || 0);
             }
         } catch (err) {
-            console.error("Failed to load users", err);
+            console.error("Failed to load consumers", err);
+            toast.error("Failed to load consumers");
         } finally {
             setLoading(false);
         }
@@ -98,18 +136,51 @@ const AdminUsers = () => {
 
     useEffect(() => {
         fetchUsers();
-        fetchHubs();
-    }, [currentRole]);
+    }, [page]);
 
-    const filteredUsers = users.filter(u =>
-        (u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (u.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (u._id || u.id || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Remove the effect that depends on currentRole.key since we only handle consumers
+
+    const filteredUsers = useMemo(() => {
+        let result = users.filter(u =>
+            (u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (u.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (u.phone || '').includes(searchTerm) ||
+            (u._id || u.id || '').toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        // Status Filter
+        if (statusFilter !== 'All') {
+            result = result.filter(u => (u.status || 'Active') === statusFilter);
+        }
+
+        // KYC Filter
+        if (kycFilter !== 'All') {
+            result = result.filter(u => getKycStatus(u) === kycFilter);
+        }
+
+        // Risk Filter
+        if (riskFilter !== 'All') {
+            result = result.filter(u => {
+                const score = calculateRiskScore(u);
+                const risk = getRiskBadge(score);
+                return risk.label === riskFilter;
+            });
+        }
+
+        if (dateRange.start && dateRange.end) {
+            const start = new Date(dateRange.start).getTime();
+            const end = new Date(dateRange.end).getTime();
+            result = result.filter(u => {
+                const created = new Date(u.createdAt).getTime();
+                return created >= start && created <= end;
+            });
+        }
+        return result;
+    }, [users, searchTerm, dateRange, statusFilter, kycFilter, riskFilter]);
 
     const handleOpenAdd = () => {
         setEditingUser(null);
-        setFormData({ name: '', phone: '', email: '', password: '', role: activeTab === 'Staff' ? 'Field Agent' : '', hub: '', city: '' });
+        setFormData({ name: '', phone: '', email: '', password: '', role: 'Elite', hub: '', city: '', status: 'Active' });
         setIsModalOpen(true);
     };
 
@@ -119,10 +190,10 @@ const AdminUsers = () => {
             name: user.name || '',
             phone: user.phone || '',
             email: user.email || '',
-            role: user.role || '',
+            role: user.role || 'Elite',
             hub: user.profile?.hub || '',
             city: user.profile?.address?.city || user.profile?.city || '',
-            studioName: user.profile?.studioName || ''
+            status: user.status || 'Active'
         });
         setIsModalOpen(true);
     };
@@ -130,597 +201,822 @@ const AdminUsers = () => {
     const handleSave = async (e) => {
         e.preventDefault();
         setLoading(true);
-
         try {
             if (editingUser) {
                 await adminAPI.updateUser(editingUser._id || editingUser.id, formData);
+                toast.success('Consumer updated successfully');
             } else {
-                await adminAPI.createUser({
-                    ...formData,
-                    role: currentRole,
-                    status: 'Active'
-                });
+                await adminAPI.createUser({ ...formData, role: 'consumer' });
+                toast.success('Consumer added successfully');
             }
-            await fetchUsers();
+            fetchUsers();
             setIsModalOpen(false);
         } catch (err) {
-            console.error("Failed to save user", err);
-            toast.error(err.message || "Failed to save user");
-        } finally {
-            setLoading(false);
-        }
+            toast.error(err.message || "Failed to save consumer");
+        } finally { setLoading(false); }
     };
 
     const handleDelete = async (userId) => {
         toast((t) => (
-            <div className="flex flex-col gap-3">
-                <p className="text-xs font-bold text-content uppercase tracking-tight">Are you sure you want to purge this user from the system?</p>
+            <div className="flex flex-col gap-2 p-1 text-[var(--text-primary)]">
+                <p className="text-xs font-bold">Delete this consumer?</p>
                 <div className="flex gap-2">
-                    <button
-                        onClick={async () => {
-                            toast.dismiss(t.id);
-                            try {
-                                // For soft delete, we just set isActive to false
-                                await adminAPI.updateUser(userId, { isActive: false });
-                                await fetchUsers();
-                                toast.success("User purged successfully");
-                            } catch (err) {
-                                console.error("Failed to delete user", err);
-                                toast.error("Failed to delete user");
-                            }
-                        }}
-                        className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase"
-                    >
-                        Purge Entity
-                    </button>
-                    <button
-                        onClick={() => toast.dismiss(t.id)}
-                        className="bg-gray-100 text-content px-3 py-1.5 rounded-lg text-[10px] font-black uppercase"
-                    >
-                        Keep Node
-                    </button>
+                    <button onClick={async () => {
+                        toast.dismiss(t.id);
+                        try {
+                            await adminAPI.updateUser(userId, { isActive: false });
+                            fetchUsers();
+                            toast.success("Consumer deleted");
+                        } catch (err) { toast.error("Failed to delete consumer"); }
+                    }} className="btn-danger text-[10px] font-bold">Confirm</button>
+                    <button onClick={() => toast.dismiss(t.id)} className="btn-secondary text-[10px] font-bold">Cancel</button>
                 </div>
             </div>
-        ), { duration: 5000 });
+        ));
     };
 
-    const handleVerifyVendor = async (vendorId, status) => {
+    const handleStatusUpdate = async (userId, updates) => {
         try {
-            await adminAPI.updateUser(vendorId, { verificationStatus: status });
-            await fetchUsers();
-            toast.success(`Vendor status updated to ${status}`);
-        } catch (err) {
-            console.error("Failed to update status", err);
-            toast.error("Failed to update status");
+            await adminAPI.updateUser(userId, updates);
+            fetchUsers();
+            toast.success('Consumer status updated');
+        } catch (err) { 
+            toast.error('Failed to update consumer status'); 
         }
     };
 
-    const handleVerifyCaptain = async (captainId, isVerified) => {
+    const handleKycAction = async (userId, action, note = '') => {
         try {
-            await adminAPI.updateUser(captainId, { isVerified, status: isVerified ? 'Active' : 'Inactive' });
-            await fetchUsers();
-            toast.success(`Captain verification updated`);
+            await adminAPI.updateUserKyc(userId, { status: action, note });
+            fetchUsers();
+            toast.success(`KYC ${action} successfully`);
         } catch (err) {
-            console.error("Failed to update captain verify status", err);
-            toast.error("Failed to update captain verify status");
+            toast.error('KYC action failed');
         }
+    };
+
+    const handleBlockUser = async (userId, block = true) => {
+        try {
+            await adminAPI.updateUser(userId, { 
+                status: block ? 'Blocked' : 'Active',
+                blockedAt: block ? new Date() : null 
+            });
+            fetchUsers();
+            toast.success(`Consumer ${block ? 'blocked' : 'unblocked'} successfully`);
+        } catch (err) {
+            toast.error(`Failed to ${block ? 'block' : 'unblock'} consumer`);
+        }
+    };
+
+    const handleFlagUser = async (userId, flagged = true) => {
+        try {
+            await adminAPI.updateUser(userId, { 
+                flagged,
+                flaggedAt: flagged ? new Date() : null 
+            });
+            fetchUsers();
+            toast.success(`Consumer ${flagged ? 'flagged as risky' : 'unflagged'}`);
+        } catch (err) {
+            toast.error('Failed to update consumer flag status');
+        }
+    };
+
+    const openUserDetails = (user) => {
+        setSelectedUser(user);
+        setIsUserDetailsOpen(true);
     };
 
     return (
-        <>
-            <div className="space-y-6">
-                <div className="rounded-[2rem] border border-brand/15 bg-brand/5 px-6 py-5">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                        <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-brand/70">Apartment Wash Ops</p>
-                            <p className="mt-2 text-sm font-bold leading-6 text-content-subtle">
-                                Apartment wash captain mapping aur apartment-specific user operations ab dedicated apartment desk me shift ho chuke hain.
-                            </p>
+        <div className="space-y-4 pb-10 max-w-full mx-auto px-1 transition-colors duration-500">
+            {/* ── HIGH-DENSITY PREMIUM CONTROL ── */}
+            <div className="admin-card">
+                <div className="flex flex-col lg:flex-row items-center gap-4 justify-between">
+                    <div className="flex flex-col gap-0.5">
+                        <h1 className="text-xl font-semibold text-[var(--text-primary)] tracking-tight capitalize leading-none">Consumer Base</h1>
+                        <div className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] animate-pulse" />
+                            <p className="text-xs font-medium text-[var(--primary)] uppercase tracking-wide opacity-80">Customer Management System</p>
                         </div>
-                        <button
-                            onClick={() => window.location.assign('/admin/apartment-wash')}
-                            className="rounded-2xl bg-black px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-brand"
-                        >
-                            Open Apartment Desk
-                        </button>
-                    </div>
-                </div>
-                {/* Tactical Selection Bar */}
-                <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
-                    <div className="flex bg-gray-100 p-1 rounded-2xl w-full lg:w-auto overflow-x-auto scrollbar-hide">
-                        {TABS.map(tab => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                className={`flex-1 lg:px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab ? 'bg-white text-brand shadow-sm' : 'text-content-subtle hover:text-content'}`}
-                            >
-                                {tab}
-                            </button>
-                        ))}
                     </div>
 
-                    <div className="flex items-center gap-3 w-full lg:w-auto">
-                        <div className="flex-1 lg:w-72 bg-white border border-gray-100 rounded-2xl px-4 py-2.5 flex items-center gap-3 shadow-soft group focus-within:border-brand transition-all">
-                            <Search size={16} className="text-content-subtle group-focus-within:text-brand" />
+                    <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
+                        <div className="flex-1 lg:w-64 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-lg px-4 py-2 flex items-center gap-3 group focus-within:border-[var(--primary)] transition-all">
+                            <Search size={14} className="text-[var(--text-muted)] group-focus-within:text-[var(--primary)]" />
                             <input
                                 type="text"
-                                placeholder="Filter entities..."
-                                className="bg-transparent outline-none text-xs font-bold text-content w-full"
+                                placeholder="Search consumers..."
+                                className="bg-transparent outline-none text-sm font-medium text-[var(--text-primary)] w-full placeholder:text-[var(--text-muted)]"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <button
-                            onClick={handleOpenAdd}
-                            className="h-11 px-6 bg-brand text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand/20 flex items-center gap-2 shrink-0 hover:scale-105 active:scale-95 transition-all"
-                        >
-                            <UserPlus size={16} /> New {activeTab.slice(0, -1)}
-                        </button>
-                    </div>
-                </div>
 
-                {/* Registry Terminal */}
-                <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-soft overflow-hidden">
-                    <div className="admin-table-container">
-                        <table className="w-full text-left">
-                            <thead className="bg-gray-50/50">
-                                <tr>
-                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest">Identity Node</th>
-                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest">Attributes</th>
-                                    {activeTab === 'Captains' && (
-                                        <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest text-center">Clearance Status</th>
-                                    )}
-                                    {activeTab === 'Vendors' && (
-                                        <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest text-center">Clearance Status</th>
-                                    )}
-                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest text-center">Protocol Status</th>
-                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest">Sync Date</th>
-                                    <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {loading && (
-                                    <tr>
-                                        <td colSpan="6" className="px-8 py-20 text-center">
-                                            <div className="w-8 h-8 mx-auto border-4 border-brand/30 border-t-brand rounded-full animate-spin" />
-                                            <p className="text-xs mt-4 font-black text-content-subtle uppercase">Loading Registry...</p>
-                                        </td>
-                                    </tr>
-                                )}
-                                {!loading && filteredUsers.map((user, i) => (
-                                    <tr key={user._id || user.id} className="group hover:bg-gray-50/30 transition-all">
-                                        <td className="px-8 py-6">
-                                            <div className="flex items-center gap-4">
-                                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xs border transition-all ${user.isVerified ? 'border-green-500 bg-green-50 text-green-600' : 'bg-brand/5 text-brand border-brand/10'} group-hover:bg-brand group-hover:text-white group-hover:border-brand`}>
-                                                    {(user.name || 'U')[0]}
+                        <div className="relative">
+                            <button 
+                                onClick={() => setShowFilters(!showFilters)}
+                                className={`btn-secondary flex items-center gap-2 ${showFilters ? 'btn-primary' : ''}`}
+                            >
+                                <Filter size={15} />
+                                Filters
+                            </button>
+                            <AnimatePresence>
+                                {showFilters && (
+                                    <motion.div 
+                                        initial={{ opacity: 0, scale: 0.95, y: 10 }} 
+                                        animate={{ opacity: 1, scale: 1, y: 0 }} 
+                                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                                        className="absolute top-full right-0 mt-3 p-6 admin-card z-50 w-80 border-t-4 border-t-[var(--primary)]"
+                                    >
+                                        <div className="space-y-4">
+                                            <h4 className="text-sm font-semibold text-[var(--text-primary)] uppercase tracking-wide">Advanced Filters</h4>
+                                            
+                                            <div className="grid grid-cols-1 gap-4">
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-medium text-[var(--text-secondary)] uppercase">Status</label>
+                                                    <select 
+                                                        value={statusFilter} 
+                                                        onChange={(e) => setStatusFilter(e.target.value)}
+                                                        className="admin-select"
+                                                    >
+                                                        <option value="All">All Status</option>
+                                                        <option value="Active">Active</option>
+                                                        <option value="Blocked">Blocked</option>
+                                                        <option value="Suspended">Suspended</option>
+                                                    </select>
                                                 </div>
-                                                <div>
-                                                    <p className="text-xs font-black text-content leading-none mb-1.5 uppercase truncate max-w-[150px]">{user.name}</p>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-[9px] font-bold text-content-subtle truncate block max-w-[100px]">{user._id || user.id}</span>
-                                                        {user.isEnterprise && <Shield size={10} className="text-brand" />}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-6">
-                                            <div className="space-y-1">
-                                                <p className="text-[10px] font-black text-content-muted uppercase tracking-wider flex items-center gap-1.5">
-                                                    {activeTab === 'Captains' ? (
-                                                        <><MapPin size={10} className="text-brand" /> {user.profile?.city || 'External Hub'}</>
-                                                    ) : activeTab === 'Staff' ? (
-                                                        <><Shield size={10} className="text-brand" /> {user.profile?.role || 'Agent'}</>
-                                                    ) : activeTab === 'Vendors' ? (
-                                                        <><Crown size={10} className="text-brand" /> {user.profile?.studioName || 'Standard'}</>
-                                                    ) : (
-                                                        <><Crown size={10} className="text-brand" /> {user.role || 'Elite'}</>
-                                                    )}
-                                                </p>
-                                                <p className="text-[9px] font-bold text-content-subtle flex items-center gap-1.5 truncate">
-                                                    <Mail size={10} /> {user.email || user.phone}
-                                                </p>
-                                                {activeTab === 'Captains' && (
-                                                    <p className="text-[9px] font-bold text-content-subtle flex items-center gap-1.5 truncate">
-                                                        <Car size={10} /> {user.profile?.vehicleType || 'No Vehicle'} - {user.profile?.plate || 'N/A'}
-                                                    </p>
-                                                )}
-                                                {activeTab === 'Captains' && (
-                                                    <p className="text-[9px] font-bold text-content-subtle flex items-center gap-1.5 truncate">
-                                                        <Briefcase size={10} /> Exp: {user.profile?.experience || 'Fresher'}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </td>
-                                        {activeTab === 'Captains' && (
-                                            <td className="px-8 py-6 text-center">
-                                                <div className="flex flex-col items-center gap-2">
-                                                    <span className={`text-[8px] font-black uppercase px-2.5 py-1 rounded-lg border flex items-center gap-1.5 ${user.isVerified ? 'bg-green-50 text-green-600 border-green-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>
-                                                        {user.isVerified ? <CheckCircle2 size={10} /> : <Clock size={10} />}
-                                                        {user.isVerified ? 'Verified' : 'Pending'}
-                                                    </span>
-                                                    {(user.profile?.drivingLicense || user.profile?.aadharCard) && (
-                                                        <button
-                                                            onClick={() => setViewingIdProof(user)}
-                                                            className="text-[8px] font-black text-brand uppercase tracking-widest hover:underline flex items-center gap-1"
-                                                        >
-                                                            <Eye size={10} /> Inspect Docs
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        )}
-                                        {activeTab === 'Vendors' && (
-                                            <td className="px-8 py-6 text-center">
-                                                <div className="flex flex-col items-center gap-2">
-                                                    <span className={`text-[8px] font-black uppercase px-2.5 py-1 rounded-lg border flex items-center gap-1.5 ${user.profile?.verificationStatus === 'verified' ? 'bg-green-50 text-green-600 border-green-100' :
-                                                        user.profile?.verificationStatus === 'rejected' ? 'bg-red-50 text-red-600 border-red-100' :
-                                                            'bg-orange-50 text-orange-600 border-orange-100'
-                                                        }`}>
-                                                        {user.profile?.verificationStatus === 'verified' ? <CheckCircle2 size={10} /> :
-                                                            user.profile?.verificationStatus === 'rejected' ? <AlertCircle size={10} /> : <Clock size={10} />}
-                                                        {user.profile?.verificationStatus || 'Pending'}
-                                                    </span>
-                                                    {user.profile?.idProof && (
-                                                        <button
-                                                            onClick={() => setViewingIdProof(user)}
-                                                            className="text-[8px] font-black text-brand uppercase tracking-widest hover:underline flex items-center gap-1"
-                                                        >
-                                                            <Eye size={10} /> Inspect ID
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        )}
-                                        <td className="px-8 py-6 text-center">
-                                            <span className={`text-[8px] font-black uppercase px-2.5 py-1 rounded-lg border ${user.status === 'Active' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
-                                                {user.status || 'Active'}
-                                            </span>
-                                        </td>
-                                        <td className="px-8 py-6">
-                                            <p className="text-[10px] font-bold text-content-subtle">{new Date(user.createdAt).toLocaleDateString() || 'Legacy'}</p>
-                                        </td>
-                                        <td className="px-8 py-6">
-                                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                                {activeTab === 'Captains' && !user.isVerified && (
-                                                    <button onClick={() => handleVerifyCaptain(user._id || user.id, true)} className="p-2.5 bg-green-50 hover:bg-green-500 hover:text-white rounded-xl text-green-600 transition-all shadow-sm" title="Verify Captain">
-                                                        <Check size={13} />
-                                                    </button>
-                                                )}
-                                                {activeTab === 'Vendors' && user.profile?.verificationStatus !== 'verified' && (
-                                                    <>
-                                                        <button onClick={() => handleVerifyVendor(user._id || user.id, 'verified')} className="p-2.5 bg-green-50 hover:bg-green-500 hover:text-white rounded-xl text-green-600 transition-all shadow-sm" title="Approve Identity">
-                                                            <Check size={13} />
-                                                        </button>
-                                                        {user.profile?.verificationStatus !== 'rejected' && (
-                                                            <button onClick={() => handleVerifyVendor(user._id || user.id, 'rejected')} className="p-2.5 bg-red-50 hover:bg-red-500 hover:text-white rounded-xl text-red-600 transition-all shadow-sm" title="Reject Identity">
-                                                                <X size={13} />
-                                                            </button>
-                                                        )}
-                                                    </>
-                                                )}
-                                                <button onClick={() => handleOpenEdit(user)} className="p-2.5 bg-gray-50 hover:bg-brand hover:text-white rounded-xl text-content-subtle transition-all shadow-sm">
-                                                    <Edit2 size={13} />
-                                                </button>
-                                                <button onClick={() => handleDelete(user._id || user.id)} className="p-2.5 bg-gray-50 hover:bg-red-500 hover:text-white rounded-xl text-content-subtle transition-all shadow-sm">
-                                                    <Trash2 size={13} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {filteredUsers.length === 0 && (
-                                    <tr>
-                                        <td colSpan="5" className="px-8 py-20 text-center">
-                                            <div className="w-16 h-16 bg-gray-50 rounded-[2rem] flex items-center justify-center mx-auto mb-4 border border-dashed border-gray-200">
-                                                <Search size={24} className="text-gray-300" />
-                                            </div>
-                                            <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest">No matching entities in {activeTab} registry</p>
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
 
-                {/* Footer Nav */}
-                <div className="px-10 py-5 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between">
-                    <p className="text-[9px] font-black text-content-subtle uppercase tracking-[0.2em]">Displaying {filteredUsers.length} Nodes in Secure Hub</p>
-                    <div className="flex items-center gap-2">
-                        <button className="w-9 h-9 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-content-subtle hover:text-brand transition-all shadow-sm"><ChevronLeft size={16} /></button>
-                        <button className="h-9 px-4 rounded-xl bg-brand text-white flex items-center justify-center text-[10px] font-black uppercase tracking-widest shadow-lg shadow-brand/20">1</button>
-                        <button className="w-9 h-9 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-content-subtle hover:text-brand transition-all shadow-sm font-black text-[10px]">2</button>
-                        <button className="w-9 h-9 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-content-subtle hover:text-brand transition-all shadow-sm"><ChevronRight size={16} /></button>
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-medium text-[var(--text-secondary)] uppercase">KYC Status</label>
+                                                    <select 
+                                                        value={kycFilter} 
+                                                        onChange={(e) => setKycFilter(e.target.value)}
+                                                        className="admin-select"
+                                                    >
+                                                        <option value="All">All KYC</option>
+                                                        <option value="Verified">Verified</option>
+                                                        <option value="Pending">Pending</option>
+                                                        <option value="Rejected">Rejected</option>
+                                                    </select>
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-medium text-[var(--text-secondary)] uppercase">Risk Level</label>
+                                                    <select 
+                                                        value={riskFilter} 
+                                                        onChange={(e) => setRiskFilter(e.target.value)}
+                                                        className="admin-select"
+                                                    >
+                                                        <option value="All">All Risk Levels</option>
+                                                        <option value="Low">Low Risk</option>
+                                                        <option value="Medium">Medium Risk</option>
+                                                        <option value="High">High Risk</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <button 
+                                                onClick={() => {
+                                                    setStatusFilter('All');
+                                                    setKycFilter('All');
+                                                    setRiskFilter('All');
+                                                }}
+                                                className="text-xs font-medium text-[var(--error)] uppercase hover:underline"
+                                            >
+                                                Clear All Filters
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <button onClick={fetchUsers} className="btn-secondary w-10 h-10 p-0 flex items-center justify-center">
+                                <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+                            </button>
+                            <button
+                                onClick={handleOpenAdd}
+                                className="btn-primary flex items-center gap-2"
+                            >
+                                <UserPlus size={15} /> Add Consumer
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
+            {/* ── PROFESSIONAL HIGH-DENSITY REGISTRY ── */}
+            <div className="admin-card overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Consumer Profile</th>
+                                <th>Contact & Location</th>
+                                <th className="text-center">KYC Status</th>
+                                <th className="text-center">Risk Score</th>
+                                <th className="text-center">Activity</th>
+                                <th className="text-center">Status</th>
+                                <th className="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {loading && users.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7" className="text-center py-24">
+                                        <div className="w-10 h-10 mx-auto border-4 border-[var(--border)] border-t-[var(--primary)] rounded-full animate-spin" />
+                                    </td>
+                                </tr>
+                            ) : filteredUsers.map((user) => {
+                                const riskScore = calculateRiskScore(user);
+                                const riskBadge = getRiskBadge(riskScore);
+                                const kycStatus = getKycStatus(user);
+                                const kycBadge = getKycBadge(kycStatus);
+                                const totalSpent = user.stats?.totalSpent || 0;
+                                const bookingCount = user.stats?.totalBookings || 0;
+                                const lastActivity = user.lastActivity ? new Date(user.lastActivity).toLocaleDateString() : 'Never';
+
+                                return (
+                                    <tr key={user._id || user.id}>
+                                        {/* Customer Profile */}
+                                        <td>
+                                            <div className="flex items-center gap-4">
+                                                <div className="relative">
+                                                    <div className="w-12 h-12 flex-shrink-0 rounded-lg bg-[var(--bg-secondary)] text-[var(--text-primary)] font-semibold text-sm border border-[var(--border)] flex items-center justify-center uppercase">
+                                                        {(user.name || 'C')[0]}
+                                                    </div>
+                                                    {user.flagged && (
+                                                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--error)] rounded-full flex items-center justify-center">
+                                                            <Flag size={8} className="text-white" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <p className="text-sm font-semibold text-[var(--text-primary)] capitalize leading-none truncate">{user.name}</p>
+                                                        {user.flagged && (
+                                                            <span className="badge badge-error text-xs">
+                                                                RISKY
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <p className="text-xs font-medium text-[var(--text-muted)] font-mono truncate">
+                                                            ID-{(user._id || user.id).slice(-8).toUpperCase()}
+                                                        </p>
+                                                        <div className="flex items-center gap-1">
+                                                            <CreditCard size={10} className="text-[var(--primary)]" />
+                                                            <span className="text-xs font-medium text-[var(--primary)]">₹{totalSpent.toLocaleString()}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                            <Briefcase size={10} className="text-[var(--text-secondary)]" />
+                                                            <span className="text-xs font-medium text-[var(--text-secondary)]">{bookingCount}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        {/* Contact & Location */}
+                                        <td>
+                                            <div className="flex flex-col gap-2 min-w-0">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <Phone size={12} className="text-[var(--primary)] shrink-0" />
+                                                    <span className="text-sm font-medium text-[var(--text-primary)] tabular-nums">{user.phone}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <Mail size={12} className="text-[var(--text-secondary)] shrink-0" />
+                                                    <span className="text-xs font-medium text-[var(--text-secondary)] truncate">{user.email || 'No email'}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <LocationIcon size={12} className="text-[var(--text-secondary)] shrink-0" />
+                                                    <span className="text-xs font-medium text-[var(--text-secondary)] capitalize truncate">
+                                                        {user.profile?.city || user.profile?.address?.city || 'Unknown'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                {/* KYC Status */}
+                                <td className="text-center">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className={`badge ${kycStatus === 'Verified' ? 'badge-success' : kycStatus === 'Rejected' ? 'badge-error' : 'badge-warning'} flex items-center gap-1`}>
+                                            {kycBadge.icon}
+                                            {kycBadge.label}
+                                        </div>
+                                        {kycStatus === 'Pending' && user.kyc?.document && (
+                                            <div className="flex gap-1">
+                                                <button 
+                                                    onClick={() => handleKycAction(user._id || user.id, 'verified')}
+                                                    className="px-2 py-1 bg-[var(--success-light)] text-[var(--success-text)] text-xs font-medium rounded hover:bg-[var(--success)] hover:text-white transition-all"
+                                                >
+                                                    Approve
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleKycAction(user._id || user.id, 'rejected')}
+                                                    className="px-2 py-1 bg-[var(--error-light)] text-[var(--error-text)] text-xs font-medium rounded hover:bg-[var(--error)] hover:text-white transition-all"
+                                                >
+                                                    Reject
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </td>
+
+                                        {/* Risk Score */}
+                                        <td className="text-center">
+                                            <div className="flex flex-col items-center gap-2">
+                                                <div className={`w-16 h-16 rounded-full border-4 flex items-center justify-center relative ${
+                                                    riskScore <= 30 ? 'border-[var(--success)] bg-[var(--success-light)]' :
+                                                    riskScore <= 60 ? 'border-[var(--warning)] bg-[var(--warning-light)]' :
+                                                    'border-[var(--error)] bg-[var(--error-light)]'
+                                                }`}>
+                                                    <span className={`text-xs font-semibold ${
+                                                        riskScore <= 30 ? 'text-[var(--success-text)]' :
+                                                        riskScore <= 60 ? 'text-[var(--warning-text)]' :
+                                                        'text-[var(--error-text)]'
+                                                    }`}>{riskScore}</span>
+                                                </div>
+                                                <span className={`text-xs font-medium uppercase ${
+                                                    riskScore <= 30 ? 'text-[var(--success-text)]' :
+                                                    riskScore <= 60 ? 'text-[var(--warning-text)]' :
+                                                    'text-[var(--error-text)]'
+                                                }`}>
+                                                    {riskBadge.label} Risk
+                                                </span>
+                                            </div>
+                                        </td>
+
+                                        {/* Activity */}
+                                        <td className="text-center">
+                                            <div className="flex flex-col items-center gap-2">
+                                                <div className="flex items-center gap-1">
+                                                    <CalendarIcon size={12} className="text-[var(--text-secondary)]" />
+                                                    <span className="text-xs font-medium text-[var(--text-primary)]">{lastActivity}</span>
+                                                </div>
+                                                <button 
+                                                    onClick={() => openUserDetails(user)}
+                                                    className="text-xs font-medium text-[var(--primary)] uppercase hover:underline"
+                                                >
+                                                    View Details
+                                                </button>
+                                            </div>
+                                        </td>
+
+                                        {/* Status */}
+                                        <td className="text-center">
+                                            <div className={`badge ${
+                                                user.status === 'Blocked' ? 'badge-error' : 'badge-success'
+                                            } flex items-center gap-2`}>
+                                                <div className={`w-2 h-2 rounded-full ${user.status === 'Blocked' ? 'bg-[var(--error)]' : 'bg-[var(--success)]'} animate-pulse`} />
+                                                {user.status || 'Active'}
+                                            </div>
+                                        </td>
+
+                                        {/* Actions */}
+                                        <td className="px-6 py-4 pr-10">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button 
+                                                    onClick={() => openUserDetails(user)} 
+                                                    title="View Profile"
+                                                    className="btn-secondary w-9 h-9 p-0 flex items-center justify-center"
+                                                >
+                                                    <Eye size={14} />
+                                                </button>
+                                                
+                                                {user.status !== 'Blocked' ? (
+                                                    <button 
+                                                        onClick={() => handleBlockUser(user._id || user.id, true)} 
+                                                        title="Block User"
+                                                        className="btn-danger w-9 h-9 p-0 flex items-center justify-center"
+                                                    >
+                                                        <Ban size={14} />
+                                                    </button>
+                                                ) : (
+                                                    <button 
+                                                        onClick={() => handleBlockUser(user._id || user.id, false)} 
+                                                        title="Unblock User"
+                                                        className="w-9 h-9 bg-[var(--success-light)] text-[var(--success-text)] hover:bg-[var(--success)] hover:text-white rounded-lg transition-all flex items-center justify-center border border-[var(--success)]"
+                                                    >
+                                                        <CheckCircle size={14} />
+                                                    </button>
+                                                )}
+
+                                                <button 
+                                                    onClick={() => handleFlagUser(user._id || user.id, !user.flagged)} 
+                                                    title={user.flagged ? "Remove Flag" : "Flag as Risky"}
+                                                    className={`w-9 h-9 rounded-lg transition-all flex items-center justify-center border ${
+                                                        user.flagged 
+                                                            ? 'bg-[var(--warning-light)] text-[var(--warning-text)] border-[var(--warning)] hover:bg-[var(--warning)] hover:text-white' 
+                                                            : 'btn-secondary'
+                                                    }`}
+                                                >
+                                                    <Flag size={14} />
+                                                </button>
+
+                                                <button 
+                                                    onClick={() => handleOpenEdit(user)} 
+                                                    title="Edit User"
+                                                    className="btn-secondary w-9 h-9 p-0 flex items-center justify-center"
+                                                >
+                                                    <Edit2 size={14} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+
+                <footer className="px-8 py-5 bg-[var(--bg-secondary)] border-t border-[var(--border)] flex items-center justify-between">
+                    <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest flex items-center gap-4">
+                        <Activity size={18} className="text-[var(--primary)]" />
+                        Total Consumers: {totalUsers}
+                    </p>
+                    
+                    <div className="flex items-center gap-3">
+                        <button 
+                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                            disabled={page === 1}
+                            className="btn-secondary w-10 h-10 p-0 flex items-center justify-center disabled:opacity-30"
+                        >
+                            <ChevronLeft size={22} />
+                        </button>
+                        <div className="h-10 px-6 rounded-xl border border-[var(--border)] bg-[var(--card)] flex items-center gap-5">
+                            <span className="text-[11px] font-black text-[var(--text-primary)] uppercase">Page {page}</span>
+                            <span className="w-px h-4 bg-[var(--border)]" />
+                            <span className="text-[11px] font-black text-[var(--text-secondary)] lowercase tracking-tight">{totalPages} clusters</span>
+                        </div>
+                        <button 
+                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                            disabled={page === totalPages}
+                            className="btn-secondary w-10 h-10 p-0 flex items-center justify-center disabled:opacity-30"
+                        >
+                            <ChevronRight size={22} />
+                        </button>
+                    </div>
+                </footer>
+            </div>
+
             {/* Entity Configuration Modal */}
-            < AnimatePresence >
+            <AnimatePresence>
                 {isModalOpen && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setIsModalOpen(false)}
-                            className="absolute inset-0 bg-content/60 backdrop-blur-sm"
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="bg-white w-[95%] md:w-full max-w-2xl rounded-[2rem] md:rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-gray-100 max-h-[90vh] overflow-y-auto"
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-black/50" />
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.95, y: 30 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 30 }} 
+                            className="admin-card w-full max-w-lg relative z-10 overflow-hidden flex flex-col"
                         >
-                            <div className="px-6 md:px-10 py-6 md:py-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                            <div className="px-8 py-6 border-b border-[var(--border)] flex items-center justify-between bg-[var(--bg-secondary)]">
                                 <div>
-                                    <h2 className="text-xl font-black text-content leading-none uppercase">{editingUser ? 'Update Protocol' : `New ${activeTab.slice(0, -1)}`}</h2>
-                                    <p className="text-[10px] font-black text-brand uppercase tracking-widest mt-2">Entity Synchronization Terminal</p>
+                                    <h2 className="text-2xl font-black text-[var(--text-primary)] tracking-tighter capitalize leading-none mb-1.5">{editingUser ? 'Update Consumer' : 'Add New Consumer'}</h2>
+                                    <p className="text-[9px] font-black text-[var(--primary)] uppercase tracking-widest pl-1">Consumer Management System</p>
                                 </div>
-                                <button onClick={() => setIsModalOpen(false)} className="p-3 bg-white hover:bg-gray-50 rounded-2xl border border-gray-100 text-content-subtle transition-all">
-                                    <X size={20} />
+                                <button onClick={() => setIsModalOpen(false)} className="btn-secondary w-12 h-12 p-0 flex items-center justify-center">
+                                    <X size={26} />
                                 </button>
                             </div>
-                            <div className="p-6 md:p-10">
+                            <div className="p-8">
                                 <form onSubmit={handleSave} className="space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
-                                        <div className="space-y-1.5 font-sans">
-                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Full Identity</label>
-                                            <input
-                                                required
-                                                placeholder="e.g. Aryan Pathak"
-                                                className="w-full bg-gray-50 border border-gray-100 px-5 md:px-6 py-3.5 md:py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
-                                                value={formData.name}
-                                                onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                            />
-                                        </div>
-                                        <div className="space-y-1.5 font-sans">
-                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Email Address</label>
-                                            <input
-                                                required
-                                                type="email"
-                                                placeholder="entity@network.in"
-                                                className="w-full bg-gray-50 border border-gray-100 px-5 md:px-6 py-3.5 md:py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
-                                                value={formData.email}
-                                                onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                            />
-                                        </div>
-                                        <div className="space-y-1.5 font-sans">
-                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Phone Number</label>
-                                            <input
-                                                required
-                                                type="tel"
-                                                placeholder="98XXXXXXXX"
-                                                className="w-full bg-gray-50 border border-gray-100 px-5 md:px-6 py-3.5 md:py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
-                                                value={formData.phone}
-                                                onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                            />
-                                        </div>
-                                        {!editingUser && (
-                                            <div className="space-y-1.5 font-sans">
-                                                <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Secure PIN / Password</label>
-                                                <input
-                                                    required
-                                                    type="password"
-                                                    placeholder="••••••••"
-                                                    className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
-                                                    value={formData.password}
-                                                    onChange={e => setFormData({ ...formData, password: e.target.value })}
-                                                />
+                                    <div className="grid grid-cols-2 gap-6">
+                                        {[
+                                            { label: 'Consumer Name', key: 'name', type: 'text', icon: <UsersIcon size={16} />, placeholder: 'Full Name' },
+                                            { label: 'Phone Number', key: 'phone', type: 'tel', icon: <Phone size={16} />, placeholder: 'Contact Number' },
+                                            { label: 'Email Address', key: 'email', type: 'email', icon: <Mail size={16} />, placeholder: 'Email Address' },
+                                            ...(!editingUser ? [{ label: 'Password', key: 'password', type: 'password', icon: <Key size={16} />, placeholder: 'Account Password' }] : [])
+                                        ].map((field) => (
+                                            <div key={field.key} className="space-y-2.5">
+                                                <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest ml-1">{field.label}</label>
+                                                <div className="relative group">
+                                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] group-focus-within:text-[var(--primary)] transition-all">{field.icon}</div>
+                                                    <input
+                                                        required
+                                                        type={field.type}
+                                                        placeholder={field.placeholder}
+                                                        className="admin-input pl-12"
+                                                        value={formData[field.key]}
+                                                        onChange={e => setFormData({ ...formData, [field.key]: e.target.value })}
+                                                    />
+                                                </div>
                                             </div>
-                                        )}
-                                        {activeTab === 'Captains' || activeTab === 'Staff' ? (
-                                            <div className="space-y-1.5 font-sans">
-                                                <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">
-                                                    {activeTab === 'Captains' ? 'Operational Hub' : 'Assigned Hub'}
-                                                </label>
-                                                <select
-                                                    className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm appearance-none"
-                                                    value={formData.hub}
-                                                    onChange={e => setFormData({ ...formData, hub: e.target.value })}
-                                                >
-                                                    <option value="">Select a Hub</option>
-                                                    {hubs.map(hub => (
-                                                        <option key={hub._id} value={hub.name}>{hub.name} ({hub.city})</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                        ) : null}
-
-                                        {activeTab === 'Staff' ? (
-                                            <div className="space-y-1.5 font-sans">
-                                                <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Access Designation</label>
-                                                <select
-                                                    className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm appearance-none"
-                                                    value={formData.role}
-                                                    onChange={e => setFormData({ ...formData, role: e.target.value })}
-                                                >
-                                                    <option value="Field Agent">Field Agent</option>
-                                                    <option value="Hub Executive">Hub Executive</option>
-                                                    <option value="Dispatch Command">Dispatch Command</option>
-                                                </select>
-                                            </div>
-                                        ) : activeTab === 'Vendors' ? (
-                                            <div className="space-y-1.5 font-sans">
-                                                <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Enterprise Tier</label>
-                                                <select
-                                                    className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm appearance-none"
-                                                    value={formData.tier}
-                                                    onChange={e => setFormData({ ...formData, tier: e.target.value })}
-                                                >
-                                                    <option value="Standard">Standard Node</option>
-                                                    <option value="Premium">Premium Partner</option>
-                                                    <option value="Elite">Elite Enterprise</option>
-                                                </select>
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-1.5 font-sans">
-                                                <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Account Tier</label>
-                                                <select
-                                                    className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm appearance-none"
-                                                    value={formData.role}
-                                                    onChange={e => setFormData({ ...formData, role: e.target.value })}
-                                                >
-                                                    <option value="Basic">Basic User</option>
-                                                    <option value="Elite">Elite Member</option>
-                                                    <option value="Platinum">Platinum Plus</option>
-                                                </select>
-                                            </div>
-                                        )}
-                                        <div className="space-y-1.5 font-sans">
-                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">City Node</label>
-                                            <input
-                                                placeholder="e.g. Faridabad"
-                                                className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
-                                                value={formData.city}
-                                                onChange={e => setFormData({ ...formData, city: e.target.value })}
-                                            />
-                                        </div>
+                                        ))}
                                     </div>
-                                    <div className="pt-2 md:pt-4">
-                                        <button
-                                            disabled={loading}
-                                            className="w-full bg-content text-white py-4 md:py-5 rounded-[1.5rem] md:rounded-[2rem] font-black text-[10px] uppercase tracking-[0.25em] shadow-2xl shadow-content/20 flex items-center justify-center gap-3 hover:bg-brand transition-all disabled:opacity-50"
-                                        >
-                                            {loading ? 'Processing...' : (
-                                                <>{editingUser ? 'Synchronize Entity' : 'Commit to Registry'} <CheckCircle2 size={18} /></>
-                                            )}
-                                        </button>
-                                    </div>
+                                    <button disabled={loading} className="btn-primary w-full h-16 text-[12px] uppercase tracking-[0.4em] disabled:opacity-50 mt-4 relative group">
+                                         <span className="relative z-10">{loading ? <RefreshCw size={24} className="animate-spin mx-auto" /> : (editingUser ? 'UPDATE CONSUMER' : 'ADD CONSUMER')}</span>
+                                    </button>
                                 </form>
                             </div>
                         </motion.div>
                     </div>
-                )
-                }
-            </AnimatePresence >
-            {/* ID Proof Inspection Modal */}
-            < AnimatePresence >
-                {viewingIdProof && (
-                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setViewingIdProof(null)}
-                            className="absolute inset-0 bg-content/80 backdrop-blur-md"
+                )}
+            </AnimatePresence>
+
+            {/* User Details Modal */}
+            <AnimatePresence>
+                {isUserDetailsOpen && selectedUser && (
+                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+                        <motion.div 
+                            initial={{ opacity: 0 }} 
+                            animate={{ opacity: 1 }} 
+                            exit={{ opacity: 0 }} 
+                            onClick={() => setIsUserDetailsOpen(false)} 
+                            className="absolute inset-0 bg-black/50" 
                         />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="bg-white w-full max-w-3xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-gray-100 flex flex-col md:flex-row h-[80vh] md:h-auto"
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.95, y: 30 }} 
+                            animate={{ opacity: 1, scale: 1, y: 0 }} 
+                            exit={{ opacity: 0, scale: 0.95, y: 30 }} 
+                            className="admin-card w-full max-w-6xl h-[90vh] relative z-10 overflow-hidden flex flex-col"
                         >
-                            <div className="flex-1 bg-gray-50 flex items-center justify-center p-6 relative overflow-y-auto max-h-[80vh]">
-                                {activeTab === 'Captains' ? (
-                                    <div className="flex flex-col gap-8 w-full">
-                                        {viewingIdProof.profile?.drivingLicense && (
-                                            <div className="w-full">
-                                                <p className="text-xs font-black text-content-subtle uppercase mb-2">Driving License</p>
-                                                <img src={viewingIdProof.profile.drivingLicense} alt="Driving License" className="max-w-full h-auto object-contain rounded-2xl shadow-md border-4 border-white" />
-                                            </div>
-                                        )}
-                                        {viewingIdProof.profile?.aadharCard && (
-                                            <div className="w-full">
-                                                <p className="text-xs font-black text-content-subtle uppercase mb-2">Aadhar Card</p>
-                                                <img src={viewingIdProof.profile.aadharCard} alt="Aadhar Card" className="max-w-full h-auto object-contain rounded-2xl shadow-md border-4 border-white" />
-                                            </div>
-                                        )}
-                                        {viewingIdProof.profile?.photo && (
-                                            <div className="w-full">
-                                                <p className="text-xs font-black text-content-subtle uppercase mb-2">Captain Photo</p>
-                                                <img src={viewingIdProof.profile.photo} alt="Captain Photo" className="max-w-[200px] h-auto object-contain rounded-2xl shadow-md border-4 border-white" />
-                                            </div>
-                                        )}
+                            {/* Header */}
+                            <div className="px-8 py-6 border-b border-[var(--border)] flex items-center justify-between bg-[var(--bg-secondary)]">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-16 h-16 bg-[var(--primary)] text-white rounded-2xl flex items-center justify-center text-2xl font-black">
+                                        {(selectedUser.name || 'U')[0]}
                                     </div>
-                                ) : (
-                                    <img
-                                        src={viewingIdProof.profile?.idProof}
-                                        alt="ID Proof"
-                                        className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl border-4 border-white"
-                                    />
-                                )}
-
-                                <div className="fixed top-10 left-10 flex items-center gap-2 bg-white/90 backdrop-blur px-4 py-2 rounded-xl border border-gray-100 shadow-sm z-10">
-                                    <Shield size={14} className="text-brand" />
-                                    <span className="text-[10px] font-black text-content uppercase tracking-widest">Identity Document</span>
-                                </div>
-                            </div>
-                            <div className="w-full md:w-80 p-10 flex flex-col justify-between">
-                                <div className="space-y-8">
                                     <div>
-                                        <p className="text-[10px] font-black text-brand uppercase tracking-[0.3em] mb-2">Inspection Protocol</p>
-                                        <h3 className="text-2xl font-black text-content leading-none uppercase tracking-tighter">
-                                            {activeTab === 'Captains' ? viewingIdProof.name : viewingIdProof.profile?.studioName}
-                                        </h3>
-                                        <p className="text-[9px] font-bold text-content-subtle uppercase tracking-[0.2em] mt-2 px-0.5">Entity: {viewingIdProof._id || viewingIdProof.id}</p>
-                                    </div>
-
-                                    <div className="space-y-4 pt-4 border-t border-gray-100">
-                                        <div className="flex justify-between items-center">
-                                            <p className="text-[9px] font-black text-content-subtle uppercase tracking-widest">Legal Name</p>
-                                            <p className="text-xs font-bold text-content">{viewingIdProof.name}</p>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <p className="text-[9px] font-black text-content-subtle uppercase tracking-widest">Contact</p>
-                                            <p className="text-xs font-bold text-content">{viewingIdProof.phone || viewingIdProof.email}</p>
-                                        </div>
-                                        {activeTab === 'Captains' && (
-                                            <>
-                                                <div className="flex justify-between items-center">
-                                                    <p className="text-[9px] font-black text-content-subtle uppercase tracking-widest">Operating City</p>
-                                                    <p className="text-xs font-bold text-content">{viewingIdProof.profile?.city || 'N/A'}</p>
-                                                </div>
-                                                <div className="flex justify-between items-center">
-                                                    <p className="text-[9px] font-black text-content-subtle uppercase tracking-widest">Vehicle Details</p>
-                                                    <p className="text-xs font-bold text-content">{viewingIdProof.profile?.vehicleType} ({viewingIdProof.profile?.plate || 'No Plate'})</p>
-                                                </div>
-                                                <div className="flex justify-between items-center">
-                                                    <p className="text-[9px] font-black text-content-subtle uppercase tracking-widest">Experience & Kit</p>
-                                                    <p className="text-xs font-bold text-content">{viewingIdProof.profile?.experience} | {viewingIdProof.profile?.kit}</p>
-                                                </div>
-                                            </>
-                                        )}
-                                        <div className="flex justify-between items-center">
-                                            <p className="text-[9px] font-black text-content-subtle uppercase tracking-widest">Status</p>
-                                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-lg border ${activeTab === 'Captains' ? (viewingIdProof.isVerified ? 'bg-green-50 text-green-600 border-green-100' : 'bg-orange-50 text-orange-600 border-orange-100') : (viewingIdProof.profile?.verificationStatus === 'verified' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-orange-50 text-orange-600 border-orange-100')
-                                                }`}>
-                                                {activeTab === 'Captains' ? (viewingIdProof.isVerified ? 'Verified' : 'Pending') : viewingIdProof.profile?.verificationStatus}
-                                            </span>
-                                        </div>
+                                        <h2 className="text-2xl font-black text-[var(--text-primary)] capitalize leading-none mb-1">{selectedUser.name}</h2>
+                                        <p className="text-[10px] font-black text-[var(--primary)] uppercase tracking-widest">Consumer Profile & Intelligence</p>
                                     </div>
                                 </div>
+                                <button 
+                                    onClick={() => setIsUserDetailsOpen(false)} 
+                                    className="btn-secondary w-12 h-12 p-0 flex items-center justify-center"
+                                >
+                                    <X size={24} />
+                                </button>
+                            </div>
 
-                                <div className="space-y-3 pt-10">
-                                    {activeTab === 'Captains' && !viewingIdProof.isVerified && (
-                                        <button
-                                            onClick={() => { handleVerifyCaptain(viewingIdProof._id || viewingIdProof.id, true); setViewingIdProof(null); }}
-                                            className="w-full bg-green-500 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-green-500/20 flex items-center justify-center gap-2 hover:bg-green-600 transition-all hover:scale-[1.02]"
-                                        >
-                                            Approve Identity <Check size={16} />
-                                        </button>
-                                    )}
-                                    {activeTab === 'Vendors' && viewingIdProof.profile?.verificationStatus !== 'verified' && (
-                                        <button
-                                            onClick={() => { handleVerifyVendor(viewingIdProof._id || viewingIdProof.id, 'verified'); setViewingIdProof(null); }}
-                                            className="w-full bg-green-500 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-green-500/20 flex items-center justify-center gap-2 hover:bg-green-600 transition-all hover:scale-[1.02]"
-                                        >
-                                            Approve Identity <Check size={16} />
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={() => setViewingIdProof(null)}
-                                        className="w-full bg-gray-50 text-content-subtle py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] border border-gray-100 hover:bg-white transition-all"
-                                    >
-                                        Close Terminal
-                                    </button>
+                            {/* Content */}
+                            <div className="flex-1 overflow-y-auto p-8">
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                    {/* Left Column - Profile & Stats */}
+                                    <div className="space-y-6">
+                                        {/* Basic Info Card */}
+                                        <div className="admin-card-compact">
+                                            <h3 className="text-lg font-black text-[var(--text-primary)] mb-4 uppercase tracking-wide">Consumer Overview</h3>
+                                            <div className="space-y-4">
+                                                <div className="flex items-center gap-3">
+                                                    <Phone size={16} className="text-[var(--primary)]" />
+                                                    <span className="text-sm font-bold text-[var(--text-primary)]">{selectedUser.phone}</span>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <Mail size={16} className="text-[var(--primary)]" />
+                                                    <span className="text-sm font-bold text-[var(--text-primary)]">{selectedUser.email || 'No email'}</span>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <LocationIcon size={16} className="text-[var(--primary)]" />
+                                                    <span className="text-sm font-bold text-[var(--text-primary)] capitalize">
+                                                        {selectedUser.profile?.city || selectedUser.profile?.address?.city || 'Unknown Location'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <CalendarIcon size={16} className="text-[var(--primary)]" />
+                                                    <span className="text-sm font-bold text-[var(--text-primary)]">
+                                                        Joined {new Date(selectedUser.createdAt).toLocaleDateString()}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Stats Card */}
+                                        <div className="admin-card-compact">
+                                            <h3 className="text-lg font-black text-[var(--text-primary)] mb-4 uppercase tracking-wide">Consumer Statistics</h3>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="text-center p-4 bg-[var(--bg-secondary)] rounded-xl">
+                                                    <div className="text-2xl font-black text-[var(--primary)] mb-1">
+                                                        {selectedUser.stats?.totalBookings || 0}
+                                                    </div>
+                                                    <div className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest">
+                                                        Total Bookings
+                                                    </div>
+                                                </div>
+                                                <div className="text-center p-4 bg-[var(--bg-secondary)] rounded-xl">
+                                                    <div className="text-2xl font-black text-[var(--primary)] mb-1">
+                                                        ₹{(selectedUser.stats?.totalSpent || 0).toLocaleString()}
+                                                    </div>
+                                                    <div className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest">
+                                                        Total Spent
+                                                    </div>
+                                                </div>
+                                                <div className="text-center p-4 bg-[var(--bg-secondary)] rounded-xl">
+                                                    <div className="text-2xl font-black text-[var(--error)] mb-1">
+                                                        {selectedUser.stats?.cancellations || 0}
+                                                    </div>
+                                                    <div className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest">
+                                                        Cancellations
+                                                    </div>
+                                                </div>
+                                                <div className="text-center p-4 bg-[var(--bg-secondary)] rounded-xl">
+                                                    <div className="text-2xl font-black text-[var(--warning)] mb-1">
+                                                        {selectedUser.stats?.complaints || 0}
+                                                    </div>
+                                                    <div className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest">
+                                                        Complaints
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Risk Assessment */}
+                                        <div className="admin-card-compact">
+                                            <h3 className="text-lg font-black text-[var(--text-primary)] mb-4 uppercase tracking-wide">Risk Assessment</h3>
+                                            <div className="flex items-center justify-center mb-4">
+                                                <div className={`w-24 h-24 rounded-full border-8 ${getRiskBadge(calculateRiskScore(selectedUser)).border} ${getRiskBadge(calculateRiskScore(selectedUser)).bg} flex items-center justify-center relative`}>
+                                                    <span className={`text-xl font-black ${getRiskBadge(calculateRiskScore(selectedUser)).color}`}>
+                                                        {calculateRiskScore(selectedUser)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="text-center">
+                                                <span className={`text-sm font-black uppercase tracking-widest ${getRiskBadge(calculateRiskScore(selectedUser)).color}`}>
+                                                    {getRiskBadge(calculateRiskScore(selectedUser)).label} Risk Consumer
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Middle Column - Activity & History */}
+                                    <div className="space-y-6">
+                                        {/* Recent Activity */}
+                                        <div className="admin-card-compact">
+                                            <h3 className="text-lg font-black text-[var(--text-primary)] mb-4 uppercase tracking-wide">Recent Activity</h3>
+                                            <div className="space-y-3">
+                                                {selectedUser.recentBookings?.length > 0 ? (
+                                                    selectedUser.recentBookings.slice(0, 5).map((booking, index) => (
+                                                        <div key={index} className="flex items-center justify-between p-3 bg-[var(--bg-secondary)] rounded-lg">
+                                                            <div>
+                                                                <p className="text-sm font-bold text-[var(--text-primary)]">{booking.service || 'Service'}</p>
+                                                                <p className="text-[10px] text-[var(--text-secondary)]">
+                                                                    {new Date(booking.createdAt).toLocaleDateString()}
+                                                                </p>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <p className="text-sm font-bold text-[var(--primary)]">₹{booking.amount || 0}</p>
+                                                                <span className={`badge text-[8px] ${
+                                                                    booking.status === 'completed' ? 'badge-success' :
+                                                                    booking.status === 'cancelled' ? 'badge-error' :
+                                                                    'badge-warning'
+                                                                }`}>
+                                                                    {booking.status}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <div className="text-center py-8 text-[var(--text-secondary)]">
+                                                        <History size={32} className="mx-auto mb-2 opacity-30" />
+                                                        <p className="text-sm font-bold">No recent activity</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* KYC Status */}
+                                        <div className="admin-card-compact">
+                                            <h3 className="text-lg font-black text-[var(--text-primary)] mb-4 uppercase tracking-wide">KYC Verification</h3>
+                                            <div className="space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-sm font-bold text-[var(--text-primary)]">Status</span>
+                                                    <div className={`badge ${getKycBadge(getKycStatus(selectedUser)).bg} ${getKycBadge(getKycStatus(selectedUser)).color}`}>
+                                                        {getKycStatus(selectedUser)}
+                                                    </div>
+                                                </div>
+                                                
+                                                {selectedUser.kyc?.document && (
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-sm font-bold text-[var(--text-primary)]">Document</span>
+                                                        <span className="text-xs font-medium text-[var(--success-text)]">
+                                                            Submitted
+                                                        </span>
+                                                    </div>
+                                                )}
+
+                                                {getKycStatus(selectedUser) === 'Pending' && (
+                                                    <div className="flex gap-2 pt-2">
+                                                        <button 
+                                                            onClick={() => handleKycAction(selectedUser._id || selectedUser.id, 'verified')}
+                                                            className="flex-1 py-2 bg-[var(--success-light)] text-[var(--success-text)] text-[10px] font-black uppercase rounded hover:bg-[var(--success)] hover:text-white transition-all"
+                                                        >
+                                                            Approve KYC
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleKycAction(selectedUser._id || selectedUser.id, 'rejected')}
+                                                            className="flex-1 py-2 bg-[var(--error-light)] text-[var(--error-text)] text-[10px] font-black uppercase rounded hover:bg-[var(--error)] hover:text-white transition-all"
+                                                        >
+                                                            Reject KYC
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Right Column - Admin Actions */}
+                                    <div className="space-y-6">
+                                        {/* Admin Actions */}
+                                        <div className="admin-card-compact">
+                                            <h3 className="text-lg font-black text-[var(--text-primary)] mb-4 uppercase tracking-wide">Admin Actions</h3>
+                                            <div className="space-y-3">
+                                                {selectedUser.status !== 'Blocked' ? (
+                                                    <button 
+                                                        onClick={() => {
+                                                            handleBlockUser(selectedUser._id || selectedUser.id, true);
+                                                            setIsUserDetailsOpen(false);
+                                                        }}
+                                                        className="btn-danger w-full py-3 text-sm font-black uppercase flex items-center justify-center gap-2"
+                                                    >
+                                                        <Ban size={16} />
+                                                        Block Consumer
+                                                    </button>
+                                                ) : (
+                                                    <button 
+                                                        onClick={() => {
+                                                            handleBlockUser(selectedUser._id || selectedUser.id, false);
+                                                            setIsUserDetailsOpen(false);
+                                                        }}
+                                                        className="w-full py-3 bg-[var(--success-light)] text-[var(--success-text)] text-sm font-black uppercase rounded-lg hover:bg-[var(--success)] hover:text-white transition-all flex items-center justify-center gap-2"
+                                                    >
+                                                        <CheckCircle size={16} />
+                                                        Unblock Consumer
+                                                    </button>
+                                                )}
+
+                                                <button 
+                                                    onClick={() => {
+                                                        handleFlagUser(selectedUser._id || selectedUser.id, !selectedUser.flagged);
+                                                        setIsUserDetailsOpen(false);
+                                                    }}
+                                                    className={`w-full py-3 text-sm font-black uppercase rounded-lg transition-all flex items-center justify-center gap-2 ${
+                                                        selectedUser.flagged 
+                                                            ? 'bg-[var(--warning-light)] text-[var(--warning-text)] hover:bg-[var(--warning)] hover:text-white' 
+                                                            : 'bg-[var(--warning-light)] text-[var(--warning-text)] hover:bg-[var(--warning)] hover:text-white'
+                                                    }`}
+                                                >
+                                                    <Flag size={16} />
+                                                    {selectedUser.flagged ? 'Remove Flag' : 'Flag as Risky'}
+                                                </button>
+
+                                                <button 
+                                                    onClick={() => {
+                                                        setIsUserDetailsOpen(false);
+                                                        handleOpenEdit(selectedUser);
+                                                    }}
+                                                    className="btn-primary w-full py-3 text-sm font-black uppercase flex items-center justify-center gap-2"
+                                                >
+                                                    <Edit2 size={16} />
+                                                    Edit Consumer
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* User Flags & Notes */}
+                                        <div className="admin-card-compact">
+                                            <h3 className="text-lg font-black text-[var(--text-primary)] mb-4 uppercase tracking-wide">Flags & Notes</h3>
+                                            <div className="space-y-3">
+                                                {selectedUser.flagged && (
+                                                    <div className="p-3 bg-[var(--error-light)] border border-[var(--error)] rounded-lg">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <Flag size={14} className="text-[var(--error)]" />
+                                                            <span className="text-sm font-black text-[var(--error-text)] uppercase">Risky Consumer</span>
+                                                        </div>
+                                                        <p className="text-[11px] text-[var(--error-text)]">
+                                                            Flagged on {selectedUser.flaggedAt ? new Date(selectedUser.flaggedAt).toLocaleDateString() : 'Unknown date'}
+                                                        </p>
+                                                    </div>
+                                                )}
+
+                                                {selectedUser.status === 'Blocked' && (
+                                                    <div className="p-3 bg-[var(--error-light)] border border-[var(--error)] rounded-lg">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <Ban size={14} className="text-[var(--error)]" />
+                                                            <span className="text-sm font-black text-[var(--error-text)] uppercase">Blocked Consumer</span>
+                                                        </div>
+                                                        <p className="text-[11px] text-[var(--error-text)]">
+                                                            Blocked on {selectedUser.blockedAt ? new Date(selectedUser.blockedAt).toLocaleDateString() : 'Unknown date'}
+                                                        </p>
+                                                    </div>
+                                                )}
+
+                                                {!selectedUser.flagged && selectedUser.status !== 'Blocked' && (
+                                                    <div className="p-3 bg-[var(--success-light)] border border-[var(--success)] rounded-lg text-center">
+                                                        <CheckCircle size={24} className="text-[var(--success)] mx-auto mb-2" />
+                                                        <p className="text-sm font-bold text-[var(--success-text)]">Clean Record</p>
+                                                        <p className="text-[10px] text-[var(--success-text)]">No flags or restrictions</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>
                     </div>
                 )}
-            </AnimatePresence >
-        </>
+            </AnimatePresence>
+        </div>
     );
 };
 

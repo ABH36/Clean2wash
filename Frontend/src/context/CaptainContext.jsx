@@ -520,12 +520,54 @@ export const CaptainProvider = ({ children }) => {
         socketService.on('booking_status_updated', handleBookingUpdate);
 
         // Instant Wash: Broadcast for new available jobs
+        const normalizeCapability = (value = '') => {
+            const normalized = String(value || '').trim().toLowerCase();
+            if (!normalized) return '';
+            if (/(bus)/i.test(normalized)) return 'bus';
+            if (/(traveler|traveller|van|mpv|muv)/i.test(normalized)) return 'traveler';
+            if (/(truck|pickup|tractor|mini truck)/i.test(normalized)) return 'heavy';
+            if (/(suv|compact suv|luxury suv)/i.test(normalized)) return 'suv';
+            if (/(bike|scooter|superbike|two wheeler)/i.test(normalized)) return 'bike';
+            return 'car';
+        };
+
+        const isCapabilityCompatible = (captainVehicleType = '', requestedCapability = '') => {
+            const captainCapability = normalizeCapability(captainVehicleType);
+            const requiredCapability = normalizeCapability(requestedCapability);
+            if (!requiredCapability) return true;
+            if (!captainCapability) return false;
+
+            const compatibilityMap = {
+                car: new Set(['car', 'suv']),
+                suv: new Set(['suv']),
+                traveler: new Set(['traveler']),
+                bus: new Set(['bus']),
+                heavy: new Set(['heavy']),
+                bike: new Set(['bike'])
+            };
+
+            return (compatibilityMap[requiredCapability] || new Set([requiredCapability])).has(captainCapability);
+        };
+
+        const isBlockingMissionStatus = (status = '') => (
+            ['confirmed', 'assigned', 'accepted', 'en_route', 'arrived', 'before_photo', 'washing', 'after_photo', 'in_progress', 'active']
+                .includes(status)
+        );
+
         const handleNewBroadcast = (data) => {
             if (!sessions.captain?.isOnline) return;
+            if (!isCapabilityCompatible(sessions.captain?.profile?.vehicleType, data?.capabilityRequired)) return;
 
             setCaptainJobs(prev => {
                 const alreadyExists = prev.find(j => j.id === data.bookingId || j._id === data.bookingId);
                 if (alreadyExists) return prev;
+
+                const hasBlockingMission = prev.some((job) => {
+                    if (job?.availabilityBlock) return true;
+                    return isBlockingMissionStatus(job?.status);
+                });
+
+                if (hasBlockingMission) return prev;
 
                 const newJob = {
                     ...data,
@@ -586,7 +628,7 @@ export const CaptainProvider = ({ children }) => {
             socketService.off('product_mission_claimed', handleProductMissionClaimed);
             // Note: Don't disconnect here — socket stays alive for the session
         };
-    }, [sessions.captain?.id, sessions.captain?.isOnline]);
+    }, [sessions.captain?.id, sessions.captain?.isOnline, sessions.captain?.profile?.vehicleType]);
 
 
     return (

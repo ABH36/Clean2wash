@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
     AlertTriangle,
     CarFront,
@@ -21,20 +22,27 @@ import { toast } from 'react-hot-toast';
 import { spareDriverAPI } from '../../../utils/spareDriverApi';
 import { adminAPI } from '../../../utils/adminApi';
 import { socketService } from '../../../utils/socket';
+import VerificationSection from '../components/spareDrivers/VerificationSection';
+import DriversSection from '../components/spareDrivers/DriversSection';
+import OperationsSection from '../components/spareDrivers/OperationsSection';
+import PricingSection from '../components/spareDrivers/PricingSection';
+import SubscriptionsSection from '../components/spareDrivers/SubscriptionsSection';
 
 const STATUS_CONFIG = {
-    pending_docs: { label: 'Pending Docs', color: 'bg-blue-50 text-blue-600', dot: 'bg-blue-400' },
+    pending_docs: { label: 'Pending docs', color: 'bg-blue-50 text-blue-600', dot: 'bg-blue-400' },
     pending_verification: { label: 'Pending', color: 'bg-yellow-50 text-yellow-700', dot: 'bg-yellow-400' },
+    verified_pending_kit: { label: 'Kit required', color: 'bg-orange-50 text-orange-700', dot: 'bg-orange-400' },
+    kit_payment_pending: { label: 'Kit review', color: 'bg-amber-50 text-amber-700', dot: 'bg-amber-400' },
     active: { label: 'Active', color: 'bg-green-50 text-green-700', dot: 'bg-green-400' },
     rejected: { label: 'Rejected', color: 'bg-red-50 text-red-600', dot: 'bg-red-400' },
     suspended: { label: 'Suspended', color: 'bg-gray-50 text-gray-600', dot: 'bg-gray-400' },
 };
 
 const BOOKING_STATUS_CONFIG = {
-    pending: { label: 'Awaiting Driver', color: 'bg-yellow-50 text-yellow-700' },
-    en_route: { label: 'Driver En Route', color: 'bg-blue-50 text-blue-700' },
-    arrived: { label: 'Driver Arrived', color: 'bg-purple-50 text-purple-700' },
-    active: { label: 'Trip Active', color: 'bg-emerald-50 text-emerald-700' },
+    pending: { label: 'Awaiting driver', color: 'bg-yellow-50 text-yellow-700' },
+    en_route: { label: 'Driver en route', color: 'bg-blue-50 text-blue-700' },
+    arrived: { label: 'Driver arrived', color: 'bg-purple-50 text-purple-700' },
+    active: { label: 'Trip active', color: 'bg-emerald-50 text-emerald-700' },
     completed: { label: 'Completed', color: 'bg-green-50 text-green-700' },
     cancelled: { label: 'Cancelled', color: 'bg-red-50 text-red-600' },
 };
@@ -47,6 +55,83 @@ const ISSUE_STATUS_CONFIG = {
 };
 
 const TERMINAL_STATUSES = ['completed', 'cancelled', 'refunded'];
+
+const DRIVER_LANES = [
+    { id: 'all', label: 'All drivers' },
+    { id: 'pending_docs', label: 'Docs missing' },
+    { id: 'pending_verification', label: 'Verification' },
+    { id: 'verified_pending_kit', label: 'Kit required' },
+    { id: 'kit_payment_pending', label: 'Kit review' },
+    { id: 'active', label: 'Active fleet' },
+    { id: 'suspended', label: 'Suspended' },
+    { id: 'rejected', label: 'Rejected' }
+];
+
+const CHAUFFEUR_ADMIN_SECTIONS = ['verification', 'operations', 'drivers', 'pricing', 'kit', 'premium', 'subscriptions'];
+const DEFAULT_KIT_MANAGEMENT = {
+    title: 'Starter Driver Kit',
+    subtitle: 'Complete payment to unlock your chauffeur dashboard.',
+    kitPrice: 1499,
+    monthlyDeductionAmount: 199,
+    monthlyDeductionMonths: 2,
+    imageUrls: [
+        'https://images.unsplash.com/photo-1517602302552-471fe67acf66?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1485291571150-772bcfc10da5?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=1200&q=80'
+    ]
+};
+const DEFAULT_PREMIUM_MANAGEMENT = {
+    title: 'Premium Driver Program',
+    subtitle: 'Police-verified chauffeurs get premium trust and booking visibility.',
+    benefits: [
+        'Premium badge on profile and operational identity',
+        'Priority visibility for high-trust customer trips',
+        'Higher confidence score during manual assignment'
+    ]
+};
+
+const ADMIN_SECTION_META = {
+    verification: {
+        title: 'Verification queue',
+        description: 'Approve registrations, review KYC documents, and move drivers into kit activation.',
+        icon: ShieldAlert
+    },
+    operations: {
+        title: 'Live operations',
+        description: 'Track active trips, support issues, manual assignment, and exception handling.',
+        icon: ClipboardList
+    },
+    drivers: {
+        title: 'Driver directory',
+        description: 'Review all chauffeur accounts, lane filters, and account-level actions.',
+        icon: User
+    },
+    pricing: {
+        title: 'Pricing control',
+        description: 'Manage service pricing, duration slots, commission, and GST settings.',
+        icon: IndianRupee
+    },
+    kit: {
+        title: 'Kit management',
+        description: 'Control onboarding kit price, gallery visuals, and monthly wallet deductions.',
+        icon: CarFront
+    },
+    premium: {
+        title: 'Premium program',
+        description: 'Manage police-verification premium rules, benefits, and driver badge eligibility.',
+        icon: CheckCircle2
+    },
+    subscriptions: {
+        title: 'Subscription desk',
+        description: 'Control chauffeur plans, credits, and spare-driver-only subscriptions.',
+        icon: Crown
+    }
+};
+
+const getAdminSpareDriverSection = (pathname = '') => {
+    const matchedSection = CHAUFFEUR_ADMIN_SECTIONS.find((section) => pathname.endsWith(`/${section}`));
+    return matchedSection || 'verification';
+};
 
 const getBookingAddress = (booking) => (
     booking.location?.address?.street
@@ -146,13 +231,19 @@ const parseDurationPricingText = (value = '') => (
         }, {})
 );
 
+const normalizeApplicableValue = (value = '') => String(value || '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
 const AdminSpareDrivers = () => {
+    const location = useLocation();
     const [allDrivers, setAllDrivers] = useState([]);
     const [liveBookings, setLiveBookings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [bookingsLoading, setBookingsLoading] = useState(true);
-    const [activeSection, setActiveSection] = useState('verification');
-    const [filter, setFilter] = useState('');
+    const [activeSection, setActiveSection] = useState(() => getAdminSpareDriverSection(location.pathname));
+    const [driverLane, setDriverLane] = useState('all');
     const [opsFilter, setOpsFilter] = useState('all');
     const [opsSearch, setOpsSearch] = useState('');
     const [selectedDriver, setSelectedDriver] = useState(null);
@@ -201,9 +292,31 @@ const AdminSpareDrivers = () => {
         credits: 4,
         maxVehicles: 1,
         rollover: 0,
-        accent: 'brand'
+        accent: 'brand',
+        applicableService: 'SPARE_DRIVER'
+    });
+    const [kitConfigLoading, setKitConfigLoading] = useState(true);
+    const [kitConfigSaving, setKitConfigSaving] = useState(false);
+    const [kitConfigForm, setKitConfigForm] = useState({
+        title: DEFAULT_KIT_MANAGEMENT.title,
+        subtitle: DEFAULT_KIT_MANAGEMENT.subtitle,
+        kitPrice: DEFAULT_KIT_MANAGEMENT.kitPrice,
+        monthlyDeductionAmount: DEFAULT_KIT_MANAGEMENT.monthlyDeductionAmount,
+        monthlyDeductionMonths: DEFAULT_KIT_MANAGEMENT.monthlyDeductionMonths,
+        imageUrlsText: ''
+    });
+    const [premiumConfigLoading, setPremiumConfigLoading] = useState(true);
+    const [premiumConfigSaving, setPremiumConfigSaving] = useState(false);
+    const [premiumConfigForm, setPremiumConfigForm] = useState({
+        title: DEFAULT_PREMIUM_MANAGEMENT.title,
+        subtitle: DEFAULT_PREMIUM_MANAGEMENT.subtitle,
+        benefitsText: DEFAULT_PREMIUM_MANAGEMENT.benefits.join('\n')
     });
     const [livePulseMap, setLivePulseMap] = useState({});
+
+    useEffect(() => {
+        setActiveSection(getAdminSpareDriverSection(location.pathname));
+    }, [location.pathname]);
 
     const fetchDrivers = async () => {
         setLoading(true);
@@ -254,11 +367,66 @@ const AdminSpareDrivers = () => {
         }
     };
 
+    const fetchKitManagement = async () => {
+        setKitConfigLoading(true);
+        try {
+            const res = await adminAPI.getSettings();
+            const settingList = res?.data?.settings || [];
+            const configuredValue = settingList.find((setting) => setting.key === 'sparedriver_kit_config')?.value || {};
+            const merged = {
+                ...DEFAULT_KIT_MANAGEMENT,
+                ...configuredValue,
+                imageUrls: Array.isArray(configuredValue?.imageUrls) ? configuredValue.imageUrls : []
+            };
+
+            setKitConfigForm({
+                title: String(merged.title || DEFAULT_KIT_MANAGEMENT.title),
+                subtitle: String(merged.subtitle || DEFAULT_KIT_MANAGEMENT.subtitle),
+                kitPrice: Number(merged.kitPrice || DEFAULT_KIT_MANAGEMENT.kitPrice),
+                monthlyDeductionAmount: Number(merged.monthlyDeductionAmount || DEFAULT_KIT_MANAGEMENT.monthlyDeductionAmount),
+                monthlyDeductionMonths: Number(merged.monthlyDeductionMonths || DEFAULT_KIT_MANAGEMENT.monthlyDeductionMonths),
+                imageUrlsText: merged.imageUrls.join('\n')
+            });
+        } catch (err) {
+            console.error('Failed to fetch kit management config:', err.message);
+            toast.error('Could not load kit management settings');
+        } finally {
+            setKitConfigLoading(false);
+        }
+    };
+
+    const fetchPremiumManagement = async () => {
+        setPremiumConfigLoading(true);
+        try {
+            const res = await adminAPI.getSettings();
+            const settingList = res?.data?.settings || [];
+            const configuredValue = settingList.find((setting) => setting.key === 'sparedriver_premium_config')?.value || {};
+            const merged = {
+                ...DEFAULT_PREMIUM_MANAGEMENT,
+                ...configuredValue,
+                benefits: Array.isArray(configuredValue?.benefits) ? configuredValue.benefits : DEFAULT_PREMIUM_MANAGEMENT.benefits
+            };
+
+            setPremiumConfigForm({
+                title: String(merged.title || DEFAULT_PREMIUM_MANAGEMENT.title),
+                subtitle: String(merged.subtitle || DEFAULT_PREMIUM_MANAGEMENT.subtitle),
+                benefitsText: (merged.benefits || []).join('\n')
+            });
+        } catch (err) {
+            console.error('Failed to fetch premium management config:', err.message);
+            toast.error('Could not load premium program settings');
+        } finally {
+            setPremiumConfigLoading(false);
+        }
+    };
+
     const refreshAll = () => {
         fetchDrivers();
         fetchLiveBookings();
         fetchChauffeurServices();
         fetchChauffeurPlans();
+        fetchKitManagement();
+        fetchPremiumManagement();
     };
 
     useEffect(() => {
@@ -331,17 +499,35 @@ const AdminSpareDrivers = () => {
         };
     }, []);
 
-    const filteredDrivers = useMemo(() => (
-        filter ? allDrivers.filter((driver) => driver.status === filter) : allDrivers
-    ), [allDrivers, filter]);
-
     const verificationQueue = useMemo(() => (
-        allDrivers.filter((driver) => ['pending_docs', 'pending_verification', 'rejected', 'suspended'].includes(driver.status))
+        allDrivers.filter((driver) => (
+            ['pending_docs', 'pending_verification', 'verified_pending_kit', 'kit_payment_pending', 'rejected', 'suspended'].includes(driver.status)
+            || (driver.status === 'active' && driver.verification?.policeStatus !== 'approved')
+        ))
     ), [allDrivers]);
 
     const assignableDrivers = useMemo(() => (
         allDrivers.filter((driver) => driver.status === 'active' && driver.isOnline)
     ), [allDrivers]);
+
+    const laneCounts = useMemo(() => ({
+        all: allDrivers.length,
+        pending_docs: allDrivers.filter((driver) => driver.status === 'pending_docs').length,
+        pending_verification: allDrivers.filter((driver) => driver.status === 'pending_verification').length,
+        verified_pending_kit: allDrivers.filter((driver) => driver.status === 'verified_pending_kit').length,
+        kit_payment_pending: allDrivers.filter((driver) => driver.status === 'kit_payment_pending').length,
+        active: allDrivers.filter((driver) => driver.status === 'active').length,
+        suspended: allDrivers.filter((driver) => driver.status === 'suspended').length,
+        rejected: allDrivers.filter((driver) => driver.status === 'rejected').length
+    }), [allDrivers]);
+
+    const verificationDrivers = useMemo(() => (
+        verificationQueue.filter((driver) => driverLane === 'all' ? true : driver.status === driverLane)
+    ), [driverLane, verificationQueue]);
+
+    const directoryDrivers = useMemo(() => (
+        allDrivers.filter((driver) => driverLane === 'all' ? true : driver.status === driverLane)
+    ), [driverLane, allDrivers]);
 
     const filteredLiveBookings = useMemo(() => {
         const query = opsSearch.trim().toLowerCase();
@@ -374,9 +560,7 @@ const AdminSpareDrivers = () => {
     }, [liveBookings, opsFilter, opsSearch]);
 
     const pendingDocsCount = allDrivers.filter((driver) => driver.status === 'pending_docs').length;
-    const pendingCount = allDrivers.filter((driver) => driver.status === 'pending_verification').length;
-    const rejectedCount = allDrivers.filter((driver) => driver.status === 'rejected').length;
-    const suspendedCount = allDrivers.filter((driver) => driver.status === 'suspended').length;
+    const pendingCount = allDrivers.filter((driver) => ['pending_verification', 'verified_pending_kit', 'kit_payment_pending'].includes(driver.status)).length;
     const onlineDrivers = assignableDrivers.length;
     const unassignedTrips = liveBookings.filter((booking) => !booking.provider?.id).length;
     const refundAttention = liveBookings.filter((booking) => ['refund_pending', 'refund_failed'].includes(booking.payment?.status)).length;
@@ -440,6 +624,28 @@ const AdminSpareDrivers = () => {
             setDriverActioning(false);
         }
     };
+
+    const primaryDriverAction = useMemo(() => {
+        if (!selectedDriver) return null;
+
+        if (selectedDriver.status === 'pending_docs') {
+            return null;
+        }
+
+        if (selectedDriver.status === 'pending_verification') {
+            return { status: 'verified_pending_kit', label: 'Verify Docs' };
+        }
+
+        if (selectedDriver.status === 'kit_payment_pending') {
+            return { status: 'active', label: 'Approve Kit' };
+        }
+
+        if (selectedDriver.status === 'verified_pending_kit') {
+            return null;
+        }
+
+        return { status: 'active', label: 'Approve' };
+    }, [selectedDriver]);
 
     const handleAssignBooking = async () => {
         if (!selectedBooking?._id) return;
@@ -546,6 +752,12 @@ const AdminSpareDrivers = () => {
     };
 
     const openPlanEditor = (plan = {}) => {
+        const applicableServices = Array.isArray(plan?.applicableServices) ? plan.applicableServices : [];
+        const specificService = applicableServices.find((entry) => {
+            const normalized = normalizeApplicableValue(entry);
+            return normalized && normalized !== 'SPARE_DRIVER' && normalized !== 'CHAUFFEUR';
+        });
+
         setSelectedPlan(plan);
         setPlanForm({
             name: plan?.name || '',
@@ -556,7 +768,8 @@ const AdminSpareDrivers = () => {
             credits: plan?.credits ?? 4,
             maxVehicles: plan?.maxVehicles ?? 1,
             rollover: plan?.rollover ?? 0,
-            accent: plan?.accent || 'brand'
+            accent: plan?.accent || 'brand',
+            applicableService: specificService || 'SPARE_DRIVER'
         });
     };
 
@@ -630,7 +843,9 @@ const AdminSpareDrivers = () => {
                 maxVehicles: Number(planForm.maxVehicles),
                 rollover: Number(planForm.rollover),
                 accent: planForm.accent,
-                applicableServices: ['SPARE_DRIVER', 'CHAUFFEUR']
+                applicableServices: planForm.applicableService === 'SPARE_DRIVER'
+                    ? ['SPARE_DRIVER']
+                    : [planForm.applicableService]
             };
 
             const res = selectedPlan?._id
@@ -669,238 +884,382 @@ const AdminSpareDrivers = () => {
         }
     };
 
+    const handleKitConfigSave = async () => {
+        setKitConfigSaving(true);
+        try {
+            const payload = {
+                title: String(kitConfigForm.title || '').trim() || DEFAULT_KIT_MANAGEMENT.title,
+                subtitle: String(kitConfigForm.subtitle || '').trim() || DEFAULT_KIT_MANAGEMENT.subtitle,
+                kitPrice: Math.max(1, Math.round(Number(kitConfigForm.kitPrice || DEFAULT_KIT_MANAGEMENT.kitPrice))),
+                monthlyDeductionAmount: Math.max(0, Math.round(Number(kitConfigForm.monthlyDeductionAmount || 0))),
+                monthlyDeductionMonths: Math.max(0, Math.min(12, Math.round(Number(kitConfigForm.monthlyDeductionMonths || 0)))),
+                imageUrls: String(kitConfigForm.imageUrlsText || '')
+                    .split('\n')
+                    .map((line) => line.trim())
+                    .filter(Boolean)
+                    .slice(0, 8)
+            };
+
+            await adminAPI.updateSetting('sparedriver_kit_config', payload);
+            toast.success('Kit management settings updated');
+            await fetchKitManagement();
+        } catch (err) {
+            toast.error(err.message || 'Could not save kit settings');
+        } finally {
+            setKitConfigSaving(false);
+        }
+    };
+
+    const handlePremiumConfigSave = async () => {
+        setPremiumConfigSaving(true);
+        try {
+            const payload = {
+                title: String(premiumConfigForm.title || '').trim() || DEFAULT_PREMIUM_MANAGEMENT.title,
+                subtitle: String(premiumConfigForm.subtitle || '').trim() || DEFAULT_PREMIUM_MANAGEMENT.subtitle,
+                benefits: String(premiumConfigForm.benefitsText || '')
+                    .split('\n')
+                    .map((line) => line.trim())
+                    .filter(Boolean)
+                    .slice(0, 10)
+            };
+
+            if (!payload.benefits.length) {
+                payload.benefits = DEFAULT_PREMIUM_MANAGEMENT.benefits;
+            }
+
+            await adminAPI.updateSetting('sparedriver_premium_config', payload);
+            toast.success('Premium program settings updated');
+            await fetchPremiumManagement();
+        } catch (err) {
+            toast.error(err.message || 'Could not save premium settings');
+        } finally {
+            setPremiumConfigSaving(false);
+        }
+    };
+
+    const handlePremiumVerificationAction = async (action) => {
+        if (!selectedDriver?._id) return;
+
+        if (action === 'reject' && !String(driverActionNote || '').trim()) {
+            toast.error('Please provide a rejection reason in admin note');
+            return;
+        }
+
+        setDriverActioning(true);
+        try {
+            const res = await spareDriverAPI.adminUpdatePremiumVerification(
+                selectedDriver._id,
+                action,
+                String(driverActionNote || '').trim()
+            );
+            const updatedDriver = res?.data?.driver;
+            if (updatedDriver?._id) {
+                setAllDrivers((current) => current.map((driver) => (
+                    driver._id === updatedDriver._id ? updatedDriver : driver
+                )));
+                setSelectedDriver(updatedDriver);
+            }
+            toast.success(action === 'approve' ? 'Premium badge approved' : 'Premium verification rejected');
+        } catch (err) {
+            toast.error(err.message || 'Could not update premium verification');
+        } finally {
+            setDriverActioning(false);
+        }
+    };
+
+    const activeSectionMeta = ADMIN_SECTION_META[activeSection] || ADMIN_SECTION_META.verification;
+    const sectionStatMap = {
+        verification: pendingDocsCount + pendingCount,
+        operations: liveBookings.length,
+        drivers: allDrivers.length,
+        pricing: chauffeurServices.length,
+        kit: Number(kitConfigForm.kitPrice || 0),
+        premium: String(premiumConfigForm.benefitsText || '').split('\n').map((line) => line.trim()).filter(Boolean).length,
+        subscriptions: chauffeurPlans.length
+    };
+
     return (
-        <div className="space-y-6">
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
-                    <button
-                        key={key}
-                        onClick={() => {
-                            if (key === 'pending_docs' || key === 'pending_verification') {
-                                setActiveSection('verification');
-                                return;
-                            }
-
-                            setActiveSection('drivers');
-                            setFilter((current) => (current === key ? '' : key));
-                        }}
-                        className={`p-4 bg-white border rounded-lg text-left transition-all hover:shadow-sm ${filter === key ? 'border-brand' : 'border-gray-100'}`}
-                    >
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className={`w-2 h-2 rounded-full ${cfg.dot}`} />
-                            <span className="text-[9px] font-black text-black/30 uppercase tracking-widest">{cfg.label}</span>
-                        </div>
-                        <p className="text-xl font-black text-black">
-                            {allDrivers.filter((driver) => driver.status === key).length}
-                        </p>
-                    </button>
-                ))}
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-4">
-                <div className="bg-white border border-gray-100 rounded-lg p-4">
+        <div className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-3">
+                <div className="bg-white border border-gray-100 rounded-[1rem] p-3.5 shadow-[0_10px_20px_rgba(15,23,42,0.04)]">
                     <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-2">Live Trips</p>
                     <p className="text-2xl font-black text-black">{liveBookings.length}</p>
                 </div>
-                <div className="bg-white border border-gray-100 rounded-lg p-4">
+                <div className="bg-white border border-gray-100 rounded-[1rem] p-3.5 shadow-[0_10px_20px_rgba(15,23,42,0.04)]">
                     <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-2">Online Drivers</p>
                     <p className="text-2xl font-black text-green-700">{onlineDrivers}</p>
                 </div>
-                <div className="bg-white border border-gray-100 rounded-lg p-4">
+                <div className="bg-white border border-gray-100 rounded-[1rem] p-3.5 shadow-[0_10px_20px_rgba(15,23,42,0.04)]">
                     <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-2">Waiting Trips</p>
                     <p className="text-2xl font-black text-yellow-700">{unassignedTrips}</p>
                 </div>
-                <div className="bg-white border border-gray-100 rounded-lg p-4">
+                <div className="bg-white border border-gray-100 rounded-[1rem] p-3.5 shadow-[0_10px_20px_rgba(15,23,42,0.04)]">
                     <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-2">Open Issues</p>
                     <p className="text-2xl font-black text-red-600">{openIssues}</p>
                 </div>
-                <div className="bg-white border border-gray-100 rounded-lg p-4">
+                <div className="bg-white border border-gray-100 rounded-[1rem] p-3.5 shadow-[0_10px_20px_rgba(15,23,42,0.04)]">
                     <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-2">Refund Watch</p>
                     <p className="text-2xl font-black text-purple-700">{refundAttention}</p>
                 </div>
             </div>
 
-            <div className="bg-white border border-gray-100 rounded-lg p-3">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                    <button
-                        onClick={() => setActiveSection('verification')}
-                        className={`rounded-lg border px-4 py-4 text-left transition-colors ${activeSection === 'verification' ? 'border-black bg-black text-white' : 'border-gray-200 bg-white text-black'}`}
-                    >
-                        <p className={`text-[9px] font-black uppercase tracking-widest ${activeSection === 'verification' ? 'text-white/60' : 'text-black/30'}`}>Verification Queue</p>
-                        <p className="mt-2 text-lg font-black">{pendingDocsCount + pendingCount}</p>
-                        <p className={`text-[10px] font-bold ${activeSection === 'verification' ? 'text-white/70' : 'text-black/45'}`}>
-                            New registrations, pending KYC, and approval actions
-                        </p>
-                    </button>
-                    <button
-                        onClick={() => setActiveSection('operations')}
-                        className={`rounded-lg border px-4 py-4 text-left transition-colors ${activeSection === 'operations' ? 'border-black bg-black text-white' : 'border-gray-200 bg-white text-black'}`}
-                    >
-                        <p className={`text-[9px] font-black uppercase tracking-widest ${activeSection === 'operations' ? 'text-white/60' : 'text-black/30'}`}>Live Ops</p>
-                        <p className="mt-2 text-lg font-black">{liveBookings.length}</p>
-                        <p className={`text-[10px] font-bold ${activeSection === 'operations' ? 'text-white/70' : 'text-black/45'}`}>
-                            Running trips, support cases, reassignments, and refunds
-                        </p>
-                    </button>
-                    <button
-                        onClick={() => setActiveSection('drivers')}
-                        className={`rounded-lg border px-4 py-4 text-left transition-colors ${activeSection === 'drivers' ? 'border-black bg-black text-white' : 'border-gray-200 bg-white text-black'}`}
-                    >
-                        <p className={`text-[9px] font-black uppercase tracking-widest ${activeSection === 'drivers' ? 'text-white/60' : 'text-black/30'}`}>Driver Directory</p>
-                        <p className="mt-2 text-lg font-black">{allDrivers.length}</p>
-                        <p className={`text-[10px] font-bold ${activeSection === 'drivers' ? 'text-white/70' : 'text-black/45'}`}>
-                            Full driver list with status filters and review access
-                        </p>
-                    </button>
-                    <button
-                        onClick={() => setActiveSection('pricing')}
-                        className={`rounded-lg border px-4 py-4 text-left transition-colors ${activeSection === 'pricing' ? 'border-black bg-black text-white' : 'border-gray-200 bg-white text-black'}`}
-                    >
-                        <p className={`text-[9px] font-black uppercase tracking-widest ${activeSection === 'pricing' ? 'text-white/60' : 'text-black/30'}`}>Pricing Control</p>
-                        <p className="mt-2 text-lg font-black">{chauffeurServices.length}</p>
-                        <p className={`text-[10px] font-bold ${activeSection === 'pricing' ? 'text-white/70' : 'text-black/45'}`}>
-                            Manage the four chauffeur services used by the consumer app
-                        </p>
-                    </button>
-                    <button
-                        onClick={() => setActiveSection('subscriptions')}
-                        className={`rounded-lg border px-4 py-4 text-left transition-colors ${activeSection === 'subscriptions' ? 'border-black bg-black text-white' : 'border-gray-200 bg-white text-black'}`}
-                    >
-                        <p className={`text-[9px] font-black uppercase tracking-widest ${activeSection === 'subscriptions' ? 'text-white/60' : 'text-black/30'}`}>Subscription Desk</p>
-                        <p className="mt-2 text-lg font-black">{chauffeurPlans.length}</p>
-                        <p className={`text-[10px] font-bold ${activeSection === 'subscriptions' ? 'text-white/70' : 'text-black/45'}`}>
-                            Manage spare-driver-only plans without affecting other services
-                        </p>
-                    </button>
-                </div>
-            </div>
-
-            {activeSection === 'verification' && (
-                <div className="space-y-4">
-                    <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-                        <div className="bg-white border border-gray-100 rounded-lg p-4">
-                            <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-2">Pending Docs</p>
-                            <p className="text-2xl font-black text-blue-600">{pendingDocsCount}</p>
+            <div className="space-y-4">
+                <div className="bg-white border border-gray-100 rounded-[1rem] p-4 shadow-[0_14px_28px_rgba(15,23,42,0.05)]">
+                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                        <div>
+                            <p className="text-[9px] font-black text-black/25 uppercase tracking-[0.24em] mb-2">Active Workspace</p>
+                            <h3 className="text-[18px] font-black text-black uppercase">{activeSectionMeta.title}</h3>
+                            <p className="text-[10px] font-bold text-black/40 mt-2 max-w-[38rem]">
+                                {activeSectionMeta.description}
+                            </p>
                         </div>
-                        <div className="bg-white border border-gray-100 rounded-lg p-4">
-                            <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-2">Pending Review</p>
-                            <p className="text-2xl font-black text-yellow-700">{pendingCount}</p>
-                        </div>
-                        <div className="bg-white border border-gray-100 rounded-lg p-4">
-                            <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-2">Rejected</p>
-                            <p className="text-2xl font-black text-red-600">{rejectedCount}</p>
-                        </div>
-                        <div className="bg-white border border-gray-100 rounded-lg p-4">
-                            <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-2">Suspended</p>
-                            <p className="text-2xl font-black text-gray-700">{suspendedCount}</p>
+                        <div className="rounded-[1.2rem] border border-black/[0.04] bg-gray-50 px-4 py-3 text-right">
+                            <p className="text-[8px] font-black text-black/25 uppercase tracking-[0.22em]">Live Records</p>
+                            <p className="text-[18px] font-black text-black mt-2">{sectionStatMap[activeSection]}</p>
                         </div>
                     </div>
+                </div>
 
-                    <div className="bg-white border border-gray-100 rounded-lg overflow-hidden">
-                        <div className="px-5 py-4 border-b border-gray-50">
-                            <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-1">Driver Verification Desk</p>
-                            <h3 className="text-[14px] font-black text-black uppercase">Approve new spare drivers and review flagged accounts</h3>
+                {activeSection === 'verification' && (
+                    <VerificationSection
+                        lanes={DRIVER_LANES}
+                        driverLane={driverLane}
+                        laneCounts={laneCounts}
+                        onSelectLane={setDriverLane}
+                        loading={loading}
+                        verificationDrivers={verificationDrivers}
+                        statusConfig={STATUS_CONFIG}
+                        openDriverReview={openDriverReview}
+                    />
+                )}
+
+                {activeSection === 'drivers' && (
+                    <DriversSection
+                        lanes={DRIVER_LANES}
+                        driverLane={driverLane}
+                        laneCounts={laneCounts}
+                        onSelectLane={setDriverLane}
+                        refreshAll={refreshAll}
+                        loading={loading}
+                        directoryDrivers={directoryDrivers}
+                        statusConfig={STATUS_CONFIG}
+                        openDriverReview={openDriverReview}
+                    />
+                )}
+
+                {activeSection === 'operations' && (
+                    <OperationsSection
+                        opsFilter={opsFilter}
+                        setOpsFilter={setOpsFilter}
+                        opsSearch={opsSearch}
+                        setOpsSearch={setOpsSearch}
+                        bookingsLoading={bookingsLoading}
+                        filteredLiveBookings={filteredLiveBookings}
+                        bookingStatusConfig={BOOKING_STATUS_CONFIG}
+                        getAssignedDriver={getAssignedDriver}
+                        getBookingDestination={getBookingDestination}
+                        getOpenIssueCount={getOpenIssueCount}
+                        livePulseMap={livePulseMap}
+                        isRoundTripPointBooking={isRoundTripPointBooking}
+                        getBookedDurationLabel={getBookedDurationLabel}
+                        isFullDayBooking={isFullDayBooking}
+                        isOutstationBooking={isOutstationBooking}
+                        getBookingAddress={getBookingAddress}
+                        getBookingAmount={getBookingAmount}
+                        getBookingSchedule={getBookingSchedule}
+                        openDriverReview={openDriverReview}
+                        openBookingDesk={openBookingDesk}
+                    />
+                )}
+
+                {activeSection === 'pricing' && (
+                    <PricingSection
+                        fetchChauffeurServices={fetchChauffeurServices}
+                        pricingLoading={pricingLoading}
+                        chauffeurServices={chauffeurServices}
+                        openPricingEditor={openPricingEditor}
+                    />
+                )}
+
+                {activeSection === 'kit' && (
+                    <div className="bg-white border border-gray-100 rounded-[1rem] p-4 md:p-5 shadow-[0_14px_28px_rgba(15,23,42,0.05)] space-y-5">
+                        <div className="flex items-start justify-between gap-3 flex-wrap">
+                            <div>
+                                <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-1">Kit Management Desk</p>
+                                <h3 className="text-[16px] font-black text-black uppercase">Onboarding Kit Config</h3>
+                                <p className="text-[10px] font-bold text-black/45 mt-1.5">Driver app kit price, onboarding visuals, and wallet deductions are controlled here.</p>
+                            </div>
+                            <button
+                                onClick={fetchKitManagement}
+                                className="h-9 px-4 border border-gray-200 rounded-lg text-[10px] font-black text-black/50 uppercase hover:border-black hover:text-black transition-colors"
+                            >
+                                Refresh Config
+                            </button>
                         </div>
 
-                        {loading ? (
-                            <div className="py-16 flex items-center justify-center">
+                        {kitConfigLoading ? (
+                            <div className="py-14 flex items-center justify-center">
                                 <div className="w-5 h-5 border-2 border-brand/30 border-t-brand rounded-full animate-spin" />
                             </div>
-                        ) : verificationQueue.length === 0 ? (
-                            <div className="py-16 text-center">
-                                <User size={32} className="mx-auto text-black/10 mb-3" />
-                                <p className="text-[10px] font-black text-black/20 uppercase tracking-widest">No drivers waiting for verification right now</p>
-                            </div>
                         ) : (
-                            <div className="divide-y divide-gray-50">
-                                {verificationQueue.map((driver) => {
-                                    const cfg = STATUS_CONFIG[driver.status] || STATUS_CONFIG.pending_docs;
-                                    const docsCount = [
-                                        driver.documents?.aadhaarCard?.url,
-                                        driver.documents?.drivingLicense?.url,
-                                        driver.documents?.selfie?.url,
-                                    ].filter(Boolean).length;
+                            <>
+                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[9px] font-black text-black/30 uppercase tracking-widest mb-1.5">Kit Title</label>
+                                        <input
+                                            value={kitConfigForm.title}
+                                            onChange={(event) => setKitConfigForm((prev) => ({ ...prev, title: event.target.value }))}
+                                            className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[9px] font-black text-black/30 uppercase tracking-widest mb-1.5">Kit Subtitle</label>
+                                        <input
+                                            value={kitConfigForm.subtitle}
+                                            onChange={(event) => setKitConfigForm((prev) => ({ ...prev, subtitle: event.target.value }))}
+                                            className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        />
+                                    </div>
+                                </div>
 
-                                    return (
-                                        <div key={driver._id} className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr_0.7fr_auto] gap-4 px-5 py-4 items-center hover:bg-gray-50/50 transition-colors">
-                                            <div className="space-y-1">
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <p className="text-[11px] font-black text-black uppercase">{driver.name}</p>
-                                                    <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[8px] font-black uppercase ${cfg.color}`}>
-                                                        <div className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                                                        {cfg.label}
-                                                    </span>
-                                                </div>
-                                                <p className="text-[10px] font-bold text-black/45">{driver.phone}</p>
-                                                <p className="text-[10px] font-bold text-black/30 truncate">{driver.email || 'Email not available'}</p>
-                                            </div>
+                                <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="block text-[9px] font-black text-black/30 uppercase tracking-widest mb-1.5">Signup Kit Price</label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            value={kitConfigForm.kitPrice}
+                                            onChange={(event) => setKitConfigForm((prev) => ({ ...prev, kitPrice: event.target.value }))}
+                                            className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[9px] font-black text-black/30 uppercase tracking-widest mb-1.5">Monthly Wallet Deduction</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={kitConfigForm.monthlyDeductionAmount}
+                                            onChange={(event) => setKitConfigForm((prev) => ({ ...prev, monthlyDeductionAmount: event.target.value }))}
+                                            className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[9px] font-black text-black/30 uppercase tracking-widest mb-1.5">Deduction Months</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="12"
+                                            value={kitConfigForm.monthlyDeductionMonths}
+                                            onChange={(event) => setKitConfigForm((prev) => ({ ...prev, monthlyDeductionMonths: event.target.value }))}
+                                            className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        />
+                                    </div>
+                                </div>
 
-                                            <div className="space-y-1">
-                                                <p className="text-[9px] font-black text-black/25 uppercase tracking-widest">Documents</p>
-                                                <p className={`text-[11px] font-black ${docsCount === 3 ? 'text-green-600' : 'text-black/35'}`}>
-                                                    {docsCount}/3 uploaded
-                                                </p>
-                                                <p className="text-[9px] font-bold text-black/25">
-                                                    Joined {new Date(driver.createdAt).toLocaleDateString('en-IN')}
-                                                </p>
-                                            </div>
+                                <div>
+                                    <label className="block text-[9px] font-black text-black/30 uppercase tracking-widest mb-1.5">Kit Gallery Images</label>
+                                    <textarea
+                                        rows={5}
+                                        value={kitConfigForm.imageUrlsText}
+                                        onChange={(event) => setKitConfigForm((prev) => ({ ...prev, imageUrlsText: event.target.value }))}
+                                        placeholder={'One image URL per line\nhttps://...'}
+                                        className="w-full border border-gray-200 rounded-md px-3 py-2 text-[11px] font-bold text-black resize-y outline-none focus:border-black"
+                                    />
+                                    <p className="text-[9px] font-black text-black/25 uppercase tracking-widest mt-1.5">Driver app shows this as horizontal scrollable gallery.</p>
+                                </div>
 
-                                            <div className="space-y-1">
-                                                <p className="text-[9px] font-black text-black/25 uppercase tracking-widest">Status Note</p>
-                                                <p className="text-[10px] font-bold text-black/45">
-                                                    {driver.adminNote || (driver.status === 'pending_docs' ? 'Waiting for full documents upload' : 'Ready for admin action')}
-                                                </p>
-                                            </div>
-
-                                            <div className="flex items-center xl:justify-end gap-2">
-                                                <button
-                                                    onClick={() => openDriverReview(driver)}
-                                                    className="h-10 px-4 bg-black text-white text-[10px] font-black uppercase rounded-md hover:bg-brand hover:text-black transition-colors"
-                                                >
-                                                    Review Driver
-                                                </button>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                                <div className="flex items-center justify-end gap-3">
+                                    <button
+                                        onClick={handleKitConfigSave}
+                                        disabled={kitConfigSaving}
+                                        className="h-10 px-5 bg-black text-white text-[10px] font-black uppercase rounded-md hover:bg-brand hover:text-black transition-colors"
+                                    >
+                                        {kitConfigSaving ? 'Saving...' : 'Save Kit Config'}
+                                    </button>
+                                </div>
+                            </>
                         )}
                     </div>
-                </div>
-            )}
+                )}
 
-            {activeSection === 'drivers' && (
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div className="flex items-center gap-3 flex-wrap">
-                    <select
-                        value={filter}
-                        onChange={(event) => setFilter(event.target.value)}
-                        className="h-9 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black uppercase outline-none"
-                    >
-                        <option value="">All Drivers</option>
-                        <option value="pending_verification">Pending Review</option>
-                        <option value="active">Active</option>
-                        <option value="rejected">Rejected</option>
-                        <option value="suspended">Suspended</option>
-                        <option value="pending_docs">Pending Docs</option>
-                    </select>
-                    {pendingCount > 0 && (
-                        <span className="px-2.5 py-1 bg-yellow-400 text-black text-[9px] font-black uppercase rounded-md">
-                            {pendingCount} need review
-                        </span>
-                    )}
-                </div>
-                <button
-                    onClick={refreshAll}
-                    className="flex items-center gap-2 h-9 px-4 border border-gray-200 rounded-md text-[10px] font-black text-black/50 uppercase hover:border-black hover:text-black transition-colors"
-                >
-                    <RefreshCw size={13} />
-                    Refresh
-                </button>
-                </div>
-            )}
+                {activeSection === 'premium' && (
+                    <div className="bg-white border border-gray-100 rounded-[1rem] p-4 md:p-5 shadow-[0_14px_28px_rgba(15,23,42,0.05)] space-y-5">
+                        <div className="flex items-start justify-between gap-3 flex-wrap">
+                            <div>
+                                <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-1">Premium Program Desk</p>
+                                <h3 className="text-[16px] font-black text-black uppercase">Police Verification + Badge Benefits</h3>
+                                <p className="text-[10px] font-bold text-black/45 mt-1.5">Manage premium badge messaging, benefits, and verification guidance visible in driver popup and profile page.</p>
+                            </div>
+                            <button
+                                onClick={fetchPremiumManagement}
+                                className="h-9 px-4 border border-gray-200 rounded-lg text-[10px] font-black text-black/50 uppercase hover:border-black hover:text-black transition-colors"
+                            >
+                                Refresh Config
+                            </button>
+                        </div>
 
-            {activeSection === 'operations' && (
+                        {premiumConfigLoading ? (
+                            <div className="py-14 flex items-center justify-center">
+                                <div className="w-5 h-5 border-2 border-brand/30 border-t-brand rounded-full animate-spin" />
+                            </div>
+                        ) : (
+                            <>
+                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[9px] font-black text-black/30 uppercase tracking-widest mb-1.5">Popup / Page Title</label>
+                                        <input
+                                            value={premiumConfigForm.title}
+                                            onChange={(event) => setPremiumConfigForm((prev) => ({ ...prev, title: event.target.value }))}
+                                            className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[9px] font-black text-black/30 uppercase tracking-widest mb-1.5">Subtitle</label>
+                                        <input
+                                            value={premiumConfigForm.subtitle}
+                                            onChange={(event) => setPremiumConfigForm((prev) => ({ ...prev, subtitle: event.target.value }))}
+                                            className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-[9px] font-black text-black/30 uppercase tracking-widest mb-1.5">Premium Benefits (one per line)</label>
+                                    <textarea
+                                        rows={6}
+                                        value={premiumConfigForm.benefitsText}
+                                        onChange={(event) => setPremiumConfigForm((prev) => ({ ...prev, benefitsText: event.target.value }))}
+                                        placeholder={'Premium badge on profile\nPriority visibility for high-trust trips\nHigher confidence score during manual assignment'}
+                                        className="w-full border border-gray-200 rounded-md px-3 py-2 text-[11px] font-bold text-black resize-y outline-none focus:border-black"
+                                    />
+                                    <p className="text-[9px] font-black text-black/25 uppercase tracking-widest mt-1.5">These benefits appear in driver dashboard popup and premium profile page.</p>
+                                </div>
+
+                                <div className="flex items-center justify-end gap-3">
+                                    <button
+                                        onClick={handlePremiumConfigSave}
+                                        disabled={premiumConfigSaving}
+                                        className="h-10 px-5 bg-black text-white text-[10px] font-black uppercase rounded-md hover:bg-brand hover:text-black transition-colors"
+                                    >
+                                        {premiumConfigSaving ? 'Saving...' : 'Save Premium Config'}
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
+
+                {activeSection === 'subscriptions' && (
+                    <SubscriptionsSection
+                        fetchChauffeurPlans={fetchChauffeurPlans}
+                        openPlanEditor={openPlanEditor}
+                        plansLoading={plansLoading}
+                        chauffeurPlans={chauffeurPlans}
+                        handlePlanDelete={handlePlanDelete}
+                    />
+                )}
+
+                {/* Legacy duplicated blocks removed for cleaner admin flow
             <div className="bg-white border border-black/[0.04] rounded-[1.6rem] overflow-hidden shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
                 <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between gap-3 flex-wrap">
                     <div>
@@ -998,9 +1357,9 @@ const AdminSpareDrivers = () => {
                                                         {pulseState.driver?.at ? `Driver pulse ${new Date(pulseState.driver.at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : 'Driver pulse pending'}
                                                         {pulseState.consumer?.at ? ` · Consumer pulse ${new Date(pulseState.consumer.at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : ''}
                                                     </p>
-                                                )}
-                                            </div>
-                                        </div>
+                    )}
+            </div>
+                                    </div>
                                     </div>
 
                                     <div className="space-y-2">
@@ -1051,9 +1410,9 @@ const AdminSpareDrivers = () => {
                     </div>
                 )}
             </div>
-            )}
+            */}
 
-            {activeSection === 'pricing' && (
+                {/*
             <div className="space-y-4">
                 <div className="bg-white border border-gray-100 rounded-lg px-5 py-4 flex items-center justify-between gap-3 flex-wrap">
                     <div>
@@ -1134,9 +1493,9 @@ const AdminSpareDrivers = () => {
                     ))}
                 </div>
             </div>
-            )}
+            */}
 
-            {activeSection === 'subscriptions' && (
+                {/*
             <div className="space-y-4">
                 <div className="bg-white border border-gray-100 rounded-lg px-5 py-4 flex items-center justify-between gap-3 flex-wrap">
                     <div>
@@ -1228,7 +1587,20 @@ const AdminSpareDrivers = () => {
                                 <div className="border border-gray-100 rounded-md p-3">
                                     <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Applicable Services</p>
                                     <p className="text-[10px] font-black text-black/55 uppercase">
-                                        {(plan.applicableServices || []).join(', ') || 'SPARE_DRIVER'}
+                                        {(plan.applicableServices || []).length === 0
+                                            ? 'ALL SPARE DRIVER SERVICES'
+                                            : (plan.applicableServices || []).map((entry) => {
+                                                const normalized = normalizeApplicableValue(entry);
+                                                if (normalized === 'SPARE_DRIVER' || normalized === 'CHAUFFEUR') {
+                                                    return 'ALL SPARE DRIVER SERVICES';
+                                                }
+
+                                                const matchedService = chauffeurServices.find((service) => (
+                                                    normalizeApplicableValue(service.metadata?.id || service.key || service.title) === normalized
+                                                ));
+
+                                                return matchedService?.title || normalized.replace(/_/g, ' ');
+                                            }).join(', ')}
                                     </p>
                                 </div>
                             </div>
@@ -1249,96 +1621,13 @@ const AdminSpareDrivers = () => {
                     ))}
                 </div>
             </div>
-            )}
+            */}
 
-            {activeSection === 'drivers' && (
-            <div className="bg-white border border-gray-100 rounded-lg overflow-hidden">
-                <div className="px-5 py-4 border-b border-gray-50">
-                    <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-1">Driver Directory</p>
-                    <h3 className="text-[14px] font-black text-black uppercase">All spare drivers with filterable status and review access</h3>
-                </div>
-                <div className="grid grid-cols-12 px-5 py-3 border-b border-gray-50 bg-gray-50/50">
-                    <span className="col-span-4 text-[9px] font-black text-black/30 uppercase tracking-widest">Driver</span>
-                    <span className="col-span-3 text-[9px] font-black text-black/30 uppercase tracking-widest">Contact</span>
-                    <span className="col-span-2 text-[9px] font-black text-black/30 uppercase tracking-widest">Status</span>
-                    <span className="col-span-2 text-[9px] font-black text-black/30 uppercase tracking-widest">Docs</span>
-                    <span className="col-span-1 text-[9px] font-black text-black/30 uppercase tracking-widest">Action</span>
-                </div>
-
-                {loading ? (
-                    <div className="py-16 flex items-center justify-center">
-                        <div className="w-5 h-5 border-2 border-brand/30 border-t-brand rounded-full animate-spin" />
-                    </div>
-                ) : filteredDrivers.length === 0 ? (
-                    <div className="py-16 text-center">
-                        <User size={32} className="mx-auto text-black/10 mb-3" />
-                        <p className="text-[10px] font-black text-black/20 uppercase tracking-widest">No drivers found for this filter</p>
-                    </div>
-                ) : (
-                    <div className="divide-y divide-gray-50">
-                        {filteredDrivers.map((driver) => {
-                            const cfg = STATUS_CONFIG[driver.status] || STATUS_CONFIG.pending_docs;
-                            const docsCount = [
-                                driver.documents?.aadhaarCard?.url,
-                                driver.documents?.drivingLicense?.url,
-                                driver.documents?.selfie?.url,
-                            ].filter(Boolean).length;
-
-                            return (
-                                <div key={driver._id} className="grid grid-cols-12 px-5 py-4 items-center hover:bg-gray-50/50 transition-colors">
-                                    <div className="col-span-4 flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-black/30">
-                                            <User size={14} />
-                                        </div>
-                                        <div>
-                                            <p className="text-[11px] font-black text-black uppercase">{driver.name}</p>
-                                            <p className="text-[8px] font-bold text-black/25 uppercase mt-0.5">
-                                                {new Date(driver.createdAt).toLocaleDateString('en-IN')}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="col-span-3">
-                                        <p className="text-[10px] font-black text-black/60">{driver.phone}</p>
-                                        <p className="text-[9px] font-bold text-black/25 truncate">{driver.email}</p>
-                                    </div>
-
-                                    <div className="col-span-2 space-y-1">
-                                        <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[8px] font-black uppercase ${cfg.color}`}>
-                                            <div className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                                            {cfg.label}
-                                        </span>
-                                        <p className={`text-[8px] font-black uppercase ${driver.isOnline ? 'text-green-600' : 'text-black/25'}`}>
-                                            {driver.isOnline ? 'Online' : 'Offline'}
-                                        </p>
-                                    </div>
-
-                                    <div className="col-span-2">
-                                        <span className={`text-[10px] font-black ${docsCount === 3 ? 'text-green-600' : 'text-black/30'}`}>
-                                            {docsCount}/3 uploaded
-                                        </span>
-                                    </div>
-
-                                    <div className="col-span-1">
-                                        <button
-                                            onClick={() => openDriverReview(driver)}
-                                            className="flex items-center gap-1 text-[9px] font-black text-black/40 uppercase hover:text-black transition-colors"
-                                        >
-                                            <Eye size={13} />
-                                            Review
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
             </div>
-            )}
 
             {selectedDriver && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 px-4">
-                    <div className="bg-white rounded-lg w-full max-w-lg overflow-hidden shadow-2xl">
+                    <div className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
                         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                             <div>
                                 <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-1">Driver Review</p>
@@ -1365,9 +1654,12 @@ const AdminSpareDrivers = () => {
                                 <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-2">Documents</p>
                                 <div className="space-y-2">
                                     {[
-                                        { label: 'Aadhaar Card', url: selectedDriver.documents?.aadhaarCard?.url },
+                                        { label: 'Aadhaar Front', url: selectedDriver.documents?.aadhaarCard?.frontUrl },
+                                        { label: 'Aadhaar Back', url: selectedDriver.documents?.aadhaarCard?.backUrl },
+                                        { label: 'PAN Card', url: selectedDriver.documents?.panCard?.url },
                                         { label: 'Driving License', url: selectedDriver.documents?.drivingLicense?.url },
                                         { label: 'Live Selfie', url: selectedDriver.documents?.selfie?.url },
+                                        { label: 'Police Verification', url: selectedDriver.documents?.policeVerification?.url }
                                     ].map(({ label, url }) => (
                                         <div key={label} className="flex items-center justify-between px-3 py-2.5 border border-gray-100 rounded-md">
                                             <span className="text-[10px] font-black text-black uppercase">{label}</span>
@@ -1382,6 +1674,51 @@ const AdminSpareDrivers = () => {
                                     ))}
                                 </div>
                             </div>
+
+                            <div className="grid grid-cols-1 gap-3">
+                                <div className="border border-gray-100 rounded-md p-3">
+                                    <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Kit Status</p>
+                                    <p className="text-[11px] font-black text-black uppercase">{selectedDriver.kit?.paymentStatus || 'pending'}</p>
+                                </div>
+                                <div className="border border-gray-100 rounded-md p-3">
+                                    <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Premium Police Status</p>
+                                    <p className="text-[11px] font-black text-black uppercase">{selectedDriver.verification?.policeStatus || 'pending'}</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div className="border border-gray-100 rounded-md p-3">
+                                    <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Kit Price</p>
+                                    <p className="text-[11px] font-black text-black">₹{selectedDriver.kit?.price || 1499}</p>
+                                </div>
+                                <div className="border border-gray-100 rounded-md p-3">
+                                    <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Payment Ref</p>
+                                    <p className="text-[11px] font-black text-black">{selectedDriver.kit?.paymentReference || 'Not submitted'}</p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div className="border border-gray-100 rounded-md p-3">
+                                    <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Police Ref Number</p>
+                                    <p className="text-[11px] font-black text-black">{selectedDriver.documents?.policeVerification?.number || 'Not submitted'}</p>
+                                </div>
+                                <div className="border border-gray-100 rounded-md p-3">
+                                    <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Police Verified At</p>
+                                    <p className="text-[11px] font-black text-black">
+                                        {selectedDriver.verification?.policeVerifiedAt
+                                            ? new Date(selectedDriver.verification.policeVerifiedAt).toLocaleString('en-IN')
+                                            : 'Pending'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {selectedDriver.kit?.paymentProofUrl && (
+                                <div className="flex items-center justify-between px-3 py-2.5 border border-gray-100 rounded-md">
+                                    <span className="text-[10px] font-black text-black uppercase">Kit Payment Proof</span>
+                                    <a href={selectedDriver.kit.paymentProofUrl} target="_blank" rel="noreferrer" className="text-[9px] font-black text-brand uppercase underline">
+                                        View
+                                    </a>
+                                </div>
+                            )}
 
                             <div>
                                 <label className="block text-[9px] font-black text-black/30 uppercase tracking-widest mb-1.5">Admin Note</label>
@@ -1418,13 +1755,39 @@ const AdminSpareDrivers = () => {
                                 <AlertTriangle size={13} />
                                 Suspend
                             </button>
+                            {primaryDriverAction ? (
+                                <button
+                                    onClick={() => handleVerify(primaryDriverAction.status)}
+                                    disabled={driverActioning}
+                                    className="h-10 bg-black text-white text-[10px] font-black uppercase rounded-md flex items-center justify-center gap-1.5 hover:bg-brand hover:text-black transition-colors"
+                                >
+                                    <CheckCircle2 size={13} />
+                                    {primaryDriverAction.label}
+                                </button>
+                            ) : (
+                                <button
+                                    disabled
+                                    className="h-10 bg-gray-100 text-gray-400 text-[10px] font-black uppercase rounded-md flex items-center justify-center gap-1.5"
+                                >
+                                    <CheckCircle2 size={13} />
+                                    Waiting Kit
+                                </button>
+                            )}
+                        </div>
+                        <div className="px-6 pb-5 grid grid-cols-2 gap-3">
                             <button
-                                onClick={() => handleVerify('active')}
-                                disabled={driverActioning}
-                                className="h-10 bg-black text-white text-[10px] font-black uppercase rounded-md flex items-center justify-center gap-1.5 hover:bg-brand hover:text-black transition-colors"
+                                onClick={() => handlePremiumVerificationAction('reject')}
+                                disabled={driverActioning || !selectedDriver.documents?.policeVerification?.url}
+                                className="h-10 bg-red-50 text-red-600 border border-red-100 text-[10px] font-black uppercase rounded-md hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <CheckCircle2 size={13} />
-                                Approve
+                                Reject Premium
+                            </button>
+                            <button
+                                onClick={() => handlePremiumVerificationAction('approve')}
+                                disabled={driverActioning || !selectedDriver.documents?.policeVerification?.url}
+                                className="h-10 bg-emerald-600 text-white text-[10px] font-black uppercase rounded-md hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Approve Premium
                             </button>
                         </div>
                     </div>
@@ -1433,7 +1796,7 @@ const AdminSpareDrivers = () => {
 
             {selectedPlan !== null && (
                 <div className="fixed inset-0 z-[204] flex items-center justify-center bg-black/50 px-4 py-6">
-                    <div className="bg-white rounded-lg w-full max-w-2xl overflow-hidden shadow-2xl">
+                    <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
                         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                             <div>
                                 <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-1">Subscription Control</p>
@@ -1527,6 +1890,27 @@ const AdminSpareDrivers = () => {
                                         className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
                                     />
                                 </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-[9px] font-black text-black/30 uppercase tracking-widest mb-1.5">Plan Applies To</label>
+                                    <select
+                                        value={planForm.applicableService}
+                                        onChange={(event) => setPlanForm((prev) => ({ ...prev, applicableService: event.target.value }))}
+                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                    >
+                                        <option value="SPARE_DRIVER">All Spare Driver Services</option>
+                                        {chauffeurServices.map((service) => {
+                                            const serviceToken = normalizeApplicableValue(service.metadata?.id || service.key || service.title);
+                                            return (
+                                                <option key={service._id} value={serviceToken}>
+                                                    {service.title}
+                                                </option>
+                                            );
+                                        })}
+                                    </select>
+                                    <p className="mt-2 text-[10px] font-bold text-black/35">
+                                        Global wash passes will not be used here. This plan will stay inside the spare driver module only.
+                                    </p>
+                                </div>
                             </div>
 
                             <div>
@@ -1563,7 +1947,7 @@ const AdminSpareDrivers = () => {
 
             {selectedPricingService && (
                 <div className="fixed inset-0 z-[205] flex items-center justify-center bg-black/50 px-4 py-6">
-                    <div className="bg-white rounded-lg w-full max-w-2xl overflow-hidden shadow-2xl">
+                    <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
                         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                             <div>
                                 <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-1">Pricing Control</p>
@@ -1817,12 +2201,18 @@ const AdminSpareDrivers = () => {
             )}
 
             {selectedBooking && (
-                <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/55 px-4 py-6">
-                    <div className="bg-[linear-gradient(180deg,#FFF9EF_0%,#FFFFFF_18%,#FFFFFF_100%)] rounded-[1.8rem] w-full max-w-4xl max-h-[92vh] overflow-y-auto shadow-[0_28px_70px_rgba(15,23,42,0.18)] border border-black/[0.04]">
-                        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
+                <div
+                    className="fixed inset-0 z-[210] flex items-stretch justify-end bg-black/55 backdrop-blur-[2px]"
+                    onClick={() => setSelectedBooking(null)}
+                >
+                    <div
+                        className="h-full w-full max-w-[42rem] bg-[linear-gradient(180deg,#FFF9EF_0%,#FFFFFF_18%,#FFFFFF_100%)] dark:bg-slate-950 overflow-y-auto shadow-[-12px_0_40px_rgba(15,23,42,0.24)] border-l border-black/[0.04] dark:border-white/10"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <div className="sticky top-0 z-10 px-6 py-4 border-b border-gray-100 dark:border-white/10 bg-white/85 dark:bg-slate-950/90 backdrop-blur flex items-center justify-between gap-3 flex-wrap">
                             <div>
-                                <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-1">Operations Desk</p>
-                                <h3 className="text-lg font-black text-black uppercase">
+                                <p className="text-[9px] font-black text-black/30 dark:text-white/45 uppercase tracking-widest mb-1">Operations Desk</p>
+                                <h3 className="text-lg font-black text-black dark:text-white uppercase">
                                     {selectedBooking.serviceName || 'Chauffeur Service'} - {selectedBooking.bookingId || selectedBooking._id?.slice(-6)}
                                 </h3>
                             </div>
@@ -1831,31 +2221,37 @@ const AdminSpareDrivers = () => {
                                     {(BOOKING_STATUS_CONFIG[selectedBooking.status] || BOOKING_STATUS_CONFIG.pending).label}
                                 </span>
                                 {selectedBooking.payment?.status && (
-                                    <span className="px-2.5 py-1 rounded text-[8px] font-black uppercase bg-gray-100 text-black/60">
+                                    <span className="px-2.5 py-1 rounded text-[8px] font-black uppercase bg-gray-100 dark:bg-white/10 text-black/60 dark:text-white/65">
                                         Payment {selectedBooking.payment.status}
                                     </span>
                                 )}
+                                <button
+                                    onClick={() => setSelectedBooking(null)}
+                                    className="h-8 px-3 border border-gray-200 dark:border-white/15 rounded-md text-[10px] font-black uppercase text-black/55 dark:text-white/70 hover:border-black dark:hover:border-white/45 transition-colors"
+                                >
+                                    Close
+                                </button>
                             </div>
                         </div>
 
                         <div className="px-6 py-5 space-y-5">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="border border-black/[0.04] rounded-[1.25rem] p-4 space-y-2 bg-white shadow-[0_14px_30px_rgba(15,23,42,0.04)]">
-                                    <p className="text-[8px] font-black text-black/25 uppercase tracking-widest">Customer</p>
-                                    <p className="text-[12px] font-black text-black uppercase">{selectedBooking.consumer?.name || 'Pending'}</p>
-                                    <p className="text-[10px] font-bold text-black/45">{selectedBooking.consumer?.phone || 'No phone'}</p>
-                                    <p className="text-[10px] font-bold text-black/35">{getBookingAddress(selectedBooking)}</p>
+                                <div className="border border-black/[0.04] dark:border-white/10 rounded-[1.1rem] p-4 space-y-2 bg-white dark:bg-slate-900 shadow-[0_14px_30px_rgba(15,23,42,0.04)] dark:shadow-none">
+                                    <p className="text-[8px] font-black text-black/25 dark:text-white/45 uppercase tracking-widest">Customer</p>
+                                    <p className="text-[12px] font-black text-black dark:text-white uppercase">{selectedBooking.consumer?.name || 'Pending'}</p>
+                                    <p className="text-[10px] font-bold text-black/45 dark:text-white/60">{selectedBooking.consumer?.phone || 'No phone'}</p>
+                                    <p className="text-[10px] font-bold text-black/35 dark:text-white/55">{getBookingAddress(selectedBooking)}</p>
                                 </div>
-                                <div className="border border-gray-100 rounded-lg p-4 space-y-2">
-                                    <p className="text-[8px] font-black text-black/25 uppercase tracking-widest">Trip Snapshot</p>
-                                    <p className="text-[12px] font-black text-black uppercase">{getBookingAmount(selectedBooking)}</p>
-                                    <p className="text-[10px] font-bold text-black/45">Schedule: {getBookingSchedule(selectedBooking)}</p>
+                                <div className="border border-gray-100 dark:border-white/10 rounded-[1.1rem] p-4 space-y-2 bg-white dark:bg-slate-900">
+                                    <p className="text-[8px] font-black text-black/25 dark:text-white/45 uppercase tracking-widest">Trip Snapshot</p>
+                                    <p className="text-[12px] font-black text-black dark:text-white uppercase">{getBookingAmount(selectedBooking)}</p>
+                                    <p className="text-[10px] font-bold text-black/45 dark:text-white/60">Schedule: {getBookingSchedule(selectedBooking)}</p>
                                     {getBookedDurationLabel(selectedBooking) && (
-                                        <p className="text-[10px] font-bold text-black/45">
+                                        <p className="text-[10px] font-bold text-black/45 dark:text-white/60">
                                             Booked Window: {getBookedDurationLabel(selectedBooking)}
                                         </p>
                                     )}
-                                    <p className="text-[10px] font-bold text-black/35">
+                                    <p className="text-[10px] font-bold text-black/35 dark:text-white/55">
                                         Vehicle: {[selectedBooking.vehicle?.brand, selectedBooking.vehicle?.model, selectedBooking.vehicle?.plate].filter(Boolean).join(' ') || 'Vehicle pending'}
                                     </p>
                                     {isRoundTripPointBooking(selectedBooking) && (
@@ -1879,15 +2275,15 @@ const AdminSpareDrivers = () => {
                                         </p>
                                     )}
                                 </div>
-                                <div className="border border-gray-100 rounded-lg p-4 space-y-2">
-                                    <p className="text-[8px] font-black text-black/25 uppercase tracking-widest">Current Driver</p>
-                                    <p className="text-[12px] font-black text-black uppercase">
+                                <div className="border border-gray-100 dark:border-white/10 rounded-[1.1rem] p-4 space-y-2 bg-white dark:bg-slate-900">
+                                    <p className="text-[8px] font-black text-black/25 dark:text-white/45 uppercase tracking-widest">Current Driver</p>
+                                    <p className="text-[12px] font-black text-black dark:text-white uppercase">
                                         {getAssignedDriver(selectedBooking)?.name || 'Not assigned'}
                                     </p>
-                                    <p className="text-[10px] font-bold text-black/45">
+                                    <p className="text-[10px] font-bold text-black/45 dark:text-white/60">
                                         {getAssignedDriver(selectedBooking)?.phone || 'No driver linked yet'}
                                     </p>
-                                    <p className="text-[10px] font-bold text-black/35">
+                                    <p className="text-[10px] font-bold text-black/35 dark:text-white/55">
                                         Open issues: {getOpenIssueCount(selectedBooking)}
                                     </p>
                                     {livePulseMap[selectedBooking._id]?.driver?.at && (
@@ -1898,19 +2294,19 @@ const AdminSpareDrivers = () => {
                                 </div>
                             </div>
 
-                            <div className="border border-gray-100 rounded-lg p-4 space-y-4">
+                            <div className="border border-gray-100 dark:border-white/10 rounded-[1.1rem] p-4 space-y-4 bg-white dark:bg-slate-900">
                                 <div className="flex items-center gap-2">
                                     <ShieldAlert size={16} className="text-[#F29F05]" />
-                                    <p className="text-[11px] font-black text-black uppercase">Manual Dispatch & Support Controls</p>
+                                    <p className="text-[11px] font-black text-black dark:text-white uppercase">Manual Dispatch & Support Controls</p>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-end">
                                     <div>
-                                        <label className="block text-[9px] font-black text-black/30 uppercase tracking-widest mb-1.5">Select Verified Online Driver</label>
+                                        <label className="block text-[9px] font-black text-black/30 dark:text-white/45 uppercase tracking-widest mb-1.5">Select Verified Online Driver</label>
                                         <select
                                             value={selectedAssignDriverId}
                                             onChange={(event) => setSelectedAssignDriverId(event.target.value)}
-                                            className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black uppercase outline-none"
+                                            className="w-full h-11 border border-gray-200 dark:border-white/15 rounded-md px-3 text-[11px] font-black text-black dark:text-white uppercase outline-none bg-white dark:bg-slate-800"
                                         >
                                             <option value="">Choose driver</option>
                                             {assignableDrivers.map((driver) => (
@@ -1930,13 +2326,13 @@ const AdminSpareDrivers = () => {
                                 </div>
 
                                 <div>
-                                    <label className="block text-[9px] font-black text-black/30 uppercase tracking-widest mb-1.5">Operations Note</label>
+                                    <label className="block text-[9px] font-black text-black/30 dark:text-white/45 uppercase tracking-widest mb-1.5">Operations Note</label>
                                     <textarea
                                         rows={3}
                                         value={bookingActionNote}
                                         onChange={(event) => setBookingActionNote(event.target.value)}
                                         placeholder="Explain why you are reassigning, releasing, cancelling, or updating support status..."
-                                        className="w-full border border-gray-200 rounded-md px-3 py-2 text-[11px] font-bold text-black resize-none outline-none focus:border-black"
+                                        className="w-full border border-gray-200 dark:border-white/15 rounded-md px-3 py-2 text-[11px] font-bold text-black dark:text-white resize-none outline-none focus:border-black dark:bg-slate-800"
                                     />
                                 </div>
 
@@ -1960,7 +2356,7 @@ const AdminSpareDrivers = () => {
                                     {getAssignedDriver(selectedBooking) && (
                                         <button
                                             onClick={() => openDriverReview(getAssignedDriver(selectedBooking))}
-                                            className="h-10 px-4 border border-gray-200 text-[10px] font-black uppercase rounded-md hover:border-black transition-colors"
+                                            className="h-10 px-4 border border-gray-200 dark:border-white/15 text-[10px] font-black uppercase rounded-md hover:border-black dark:hover:border-white/45 transition-colors text-black dark:text-white"
                                         >
                                             Review Current Driver
                                         </button>
@@ -1968,26 +2364,26 @@ const AdminSpareDrivers = () => {
                                 </div>
                             </div>
 
-                            <div className="border border-gray-100 rounded-lg p-4 space-y-4">
+                            <div className="border border-gray-100 dark:border-white/10 rounded-[1.1rem] p-4 space-y-4 bg-white dark:bg-slate-900">
                                 <div className="flex items-center gap-2">
-                                    <ClipboardList size={16} className="text-black/55" />
-                                    <p className="text-[11px] font-black text-black uppercase">Issue Resolution Desk</p>
+                                    <ClipboardList size={16} className="text-black/55 dark:text-white/70" />
+                                    <p className="text-[11px] font-black text-black dark:text-white uppercase">Issue Resolution Desk</p>
                                 </div>
 
                                 {selectedBooking.issues?.length ? (
                                     <div className="space-y-3">
                                         {selectedBooking.issues.map((issue) => (
-                                            <div key={issue._id} className="border border-gray-100 rounded-md p-3">
+                                            <div key={issue._id} className="border border-gray-100 dark:border-white/10 rounded-md p-3">
                                                 <div className="flex items-start justify-between gap-3 flex-wrap">
                                                     <div className="space-y-1">
                                                         <div className="flex items-center gap-2 flex-wrap">
-                                                            <span className="text-[10px] font-black text-black uppercase">{issue.type || 'Support'}</span>
+                                                            <span className="text-[10px] font-black text-black dark:text-white uppercase">{issue.type || 'Support'}</span>
                                                             <span className={`px-2 py-1 rounded text-[8px] font-black uppercase ${ISSUE_STATUS_CONFIG[issue.status] || ISSUE_STATUS_CONFIG.open}`}>
                                                                 {issue.status}
                                                             </span>
                                                         </div>
-                                                        <p className="text-[10px] font-bold text-black/55">{issue.description || 'No issue description provided.'}</p>
-                                                        <p className="text-[9px] font-black text-black/25 uppercase">
+                                                        <p className="text-[10px] font-bold text-black/55 dark:text-white/65">{issue.description || 'No issue description provided.'}</p>
+                                                        <p className="text-[9px] font-black text-black/25 dark:text-white/45 uppercase">
                                                             {issue.reportedAt ? new Date(issue.reportedAt).toLocaleString('en-IN') : 'Just now'}
                                                         </p>
                                                     </div>
@@ -2019,8 +2415,8 @@ const AdminSpareDrivers = () => {
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="border border-dashed border-gray-200 rounded-md p-6 text-center">
-                                        <p className="text-[10px] font-black text-black/25 uppercase tracking-widest">No support issues linked to this trip yet</p>
+                                    <div className="border border-dashed border-gray-200 dark:border-white/15 rounded-md p-6 text-center">
+                                        <p className="text-[10px] font-black text-black/25 dark:text-white/45 uppercase tracking-widest">No support issues linked to this trip yet</p>
                                     </div>
                                 )}
                             </div>
@@ -2029,7 +2425,7 @@ const AdminSpareDrivers = () => {
                         <div className="px-6 pb-6 flex items-center justify-end">
                             <button
                                 onClick={() => setSelectedBooking(null)}
-                                className="h-10 px-5 border border-gray-200 text-black/50 text-[10px] font-black uppercase rounded-md hover:border-black hover:text-black transition-colors"
+                                className="h-10 px-5 border border-gray-200 dark:border-white/15 text-black/50 dark:text-white/70 text-[10px] font-black uppercase rounded-md hover:border-black dark:hover:border-white/45 hover:text-black dark:hover:text-white transition-colors"
                             >
                                 Close Desk
                             </button>

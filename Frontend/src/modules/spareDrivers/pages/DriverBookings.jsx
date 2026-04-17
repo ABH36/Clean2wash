@@ -1,441 +1,126 @@
-import React, { useEffect, useState } from 'react';
-import {
-    MapPin,
-    Clock,
-    User,
-    XCircle,
-    ChevronRight,
-    Calendar,
-    Loader2,
-    Phone,
-    Car,
-    Wallet,
-    X
+import React, { useState, useEffect } from 'react';
+import { 
+    Calendar, MapPin, Clock, Search, Filter, 
+    ChevronRight, ArrowUpRight, Zap, Bell, 
+    MoreHorizontal, FilterX, Loader2, Navigation,
+    ArrowLeft, X, ShieldCheck, User, Phone
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import DriverLayout from '../components/DriverLayout';
 import { spareDriverAPI } from '../../../utils/spareDriverApi';
 import { toast } from 'react-hot-toast';
+import GoogleMapBox from '../../../components/common/GoogleMapBox';
 
-const LIVE_STATUSES = ['en_route', 'arrived', 'active'];
-const CLOSED_STATUSES = ['completed', 'cancelled'];
-
-const formatDisplayDate = (dateValue) => {
-    if (!dateValue) return 'ASAP';
-    const parsed = new Date(dateValue);
-    if (Number.isNaN(parsed.getTime())) return 'ASAP';
-    return parsed.toLocaleString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-};
-
-const getStatusBadge = (status) => {
-    const tones = {
-        pending: 'bg-gray-50 text-black/50 border-gray-200',
-        en_route: 'bg-blue-50 text-blue-600 border-blue-100',
-        arrived: 'bg-amber-50 text-amber-700 border-amber-100',
-        active: 'bg-green-50 text-green-700 border-green-100',
-        completed: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-        cancelled: 'bg-red-50 text-red-600 border-red-100'
-    };
-
-    return tones[status] || 'bg-gray-50 text-black/50 border-gray-200';
-};
-
-const isRoundTripPointBooking = (booking) => {
-    const identity = [
-        booking?.service?.metadata?.id,
-        booking?.service?.name,
-        booking?.service?.title
-    ].filter(Boolean).join(' ').toLowerCase();
-
-    return identity.includes('point');
-};
-
-const isFullDayBooking = (booking) => {
-    const identity = [
-        booking?.service?.metadata?.id,
-        booking?.service?.name,
-        booking?.service?.title
-    ].filter(Boolean).join(' ').toLowerCase();
-
-    return identity.includes('full day') || identity.includes('full-day') || identity.includes('fullday');
-};
-
-const getBookedDurationLabel = (booking) => (
-    booking?.service?.duration || booking?.schedule?.estimatedDuration || null
-);
-
-const isOutstationBooking = (booking) => {
-    const identity = [
-        booking?.service?.metadata?.id,
-        booking?.service?.name,
-        booking?.service?.title
-    ].filter(Boolean).join(' ').toLowerCase();
-
-    return identity.includes('outstation');
+const STATUS_TONE = {
+    pending: 'bg-brand text-black',
+    en_route: 'bg-brand text-black shadow-lg shadow-brand/10',
+    arrived: 'bg-brand text-black shadow-lg shadow-brand/10',
+    active: 'bg-green-600 text-white',
+    completed: 'bg-content/[0.05] text-content/30',
 };
 
 const DriverBookings = () => {
-    const [tab, setTab] = useState('AVAILABLE');
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [selectedBooking, setSelectedBooking] = useState(null);
+    const [filter, setFilter] = useState('all');
+    const [selectedJob, setSelectedJob] = useState(null);
 
-    useEffect(() => {
-        spareDriverAPI.getBookings()
-            .then((res) => {
-                if (res?.data?.bookings) {
-                    setBookings(res.data.bookings);
-                }
-            })
-            .catch(() => { })
-            .finally(() => setLoading(false));
-    }, []);
-
-    const available = bookings.filter((booking) => ![...CLOSED_STATUSES, ...LIVE_STATUSES].includes(booking.status));
-    const scheduled = bookings.filter((booking) => LIVE_STATUSES.includes(booking.status));
-
-    const handleAccept = async (id) => {
+    const fetch = async () => {
         try {
-            await spareDriverAPI.acceptBooking(id);
-            setBookings((prev) => prev.map((booking) => (
-                booking._id === id ? { ...booking, status: 'en_route' } : booking
-            )));
-            setSelectedBooking((current) => (
-                current?._id === id ? { ...current, status: 'en_route' } : current
-            ));
-            toast.success('Booking accepted');
-        } catch (err) {
-            console.error('Failed to accept booking', err);
-            toast.error(err.message || 'Could not accept booking');
-        }
+            const res = await spareDriverAPI.getBookings();
+            setBookings(res.data.bookings || []);
+        } catch (e) { toast.error("Sync error"); }
+        finally { setLoading(false); }
     };
 
-    const handleReject = async (id) => {
-        const reason = window.prompt('Optional reason for rejecting this request:') || '';
+    useEffect(() => { fetch(); }, []);
 
-        try {
-            const response = await spareDriverAPI.rejectBooking(id, reason);
-            setBookings((prev) => prev.filter((booking) => booking._id !== id));
-            setSelectedBooking((current) => current?._id === id ? null : current);
-            toast.success(response?.message || 'Booking rejected');
-        } catch (err) {
-            console.error('Failed to reject booking', err);
-            toast.error(err.message || 'Could not reject booking');
-        }
-    };
-
-    const BookingCard = ({ booking, isAvailable }) => {
-        const pickup = booking.location?.address?.street || booking.location?.address?.city || 'Unknown';
-        const fare = `₹${booking.pricing?.totalAmount || 0}`;
-        const when = booking.schedule?.date
-            ? formatDisplayDate(booking.schedule.date)
-            : 'ASAP';
-        const isRoundTrip = isRoundTripPointBooking(booking);
-        const isFullDay = isFullDayBooking(booking);
-        const bookedDuration = getBookedDurationLabel(booking);
-        const isOutstation = isOutstationBooking(booking);
-
-        return (
-            <div className="border border-gray-100 rounded-lg p-4 space-y-3">
-                <div className="flex items-start justify-between">
-                    <div>
-                        <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-1">{booking.bookingId || booking._id}</p>
-                        <p className="text-sm font-black text-black uppercase">{booking.service?.name || 'Service'}</p>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-sm font-black text-black">{fare}</p>
-                        <span className={`inline-flex items-center px-2 py-1 rounded border text-[8px] font-black uppercase mt-1 ${getStatusBadge(booking.status)}`}>
-                            {booking.status?.replace('_', ' ')}
-                        </span>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2 pt-2 border-t border-gray-50">
-                    <User size={11} className="text-black/25 shrink-0" />
-                    <span className="text-[10px] font-black text-black/50 uppercase truncate">{booking.consumer?.name || 'Customer'}</span>
-                    <span className="text-black/10 mx-1">|</span>
-                    <MapPin size={11} className="text-black/25 shrink-0" />
-                    <span className="text-[10px] font-black text-black/50 uppercase truncate">{pickup}</span>
-                </div>
-
-                {isRoundTrip && (
-                    <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest">
-                        Return drop at same pickup point
-                    </p>
-                )}
-
-                <div className="flex items-center gap-2 flex-wrap">
-                    {bookedDuration && (
-                        <span className="inline-flex items-center px-2 py-1 rounded border border-black/5 bg-black/[0.02] text-[8px] font-black uppercase text-black/55">
-                            {bookedDuration}
-                        </span>
-                    )}
-                    {isFullDay && (
-                        <span className="inline-flex items-center px-2 py-1 rounded border border-amber-100 bg-amber-50 text-[8px] font-black uppercase text-amber-700">
-                            Full Day Shift
-                        </span>
-                    )}
-                    {isOutstation && (
-                        <span className="inline-flex items-center px-2 py-1 rounded border border-blue-100 bg-blue-50 text-[8px] font-black uppercase text-blue-700">
-                            Outstation
-                        </span>
-                    )}
-                </div>
-
-                {!isAvailable && (
-                    <div className="flex items-center gap-2 text-black/35">
-                        <Clock size={11} className="shrink-0" />
-                        <span className="text-[10px] font-black uppercase">{when}</span>
-                    </div>
-                )}
-
-                {isAvailable ? (
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => handleReject(booking._id)}
-                            className="flex-1 h-9 border border-red-100 text-red-500 text-[10px] font-black uppercase tracking-widest rounded-md"
-                        >
-                            Reject
-                        </button>
-                        <button
-                            onClick={() => handleAccept(booking._id)}
-                            className="flex-1 h-9 bg-[#F29F05] text-black text-[10px] font-black uppercase tracking-widest rounded-md"
-                        >
-                            Accept
-                        </button>
-                        <button
-                            onClick={() => setSelectedBooking(booking)}
-                            className="h-9 px-3 border border-gray-200 text-black/50 rounded-md flex items-center justify-center"
-                        >
-                            <ChevronRight size={15} />
-                        </button>
-                    </div>
-                ) : (
-                    <button
-                        onClick={() => setSelectedBooking(booking)}
-                        className="w-full h-9 border border-gray-100 text-black text-[10px] font-black uppercase tracking-widest rounded-md flex items-center justify-center gap-2"
-                    >
-                        View Details <ChevronRight size={13} />
-                    </button>
-                )}
-            </div>
-        );
-    };
+    const filtered = bookings.filter(b => filter === 'all' || b.status === filter);
 
     return (
-        <DriverLayout title="Bookings">
-            <div className="px-5 py-6 space-y-5">
-                <div className="flex border border-black/[0.04] bg-white rounded-[1.4rem] overflow-hidden shadow-[0_14px_30px_rgba(15,23,42,0.05)]">
-                    {['AVAILABLE', 'SCHEDULED'].map((currentTab) => (
-                        <button
-                            key={currentTab}
-                            onClick={() => setTab(currentTab)}
-                            className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all ${tab === currentTab ? 'bg-black text-white' : 'text-black/30'}`}
+        <DriverLayout title="Sector Control">
+            <div className="px-6 py-6 space-y-6 pb-24">
+                {/* ── Filter Node ── */}
+                <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar">
+                    {['all', 'pending', 'active', 'completed'].map((tab) => (
+                        <button 
+                            key={tab} 
+                            onClick={() => setFilter(tab)}
+                            className={`px-6 h-10 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${filter === tab ? 'bg-black dark:bg-brand text-brand dark:text-black shadow-lg' : 'bg-surface border border-content/[0.04] text-content/30'}`}
                         >
-                            {currentTab}
+                            {tab}
                         </button>
                     ))}
                 </div>
 
-                <div className="space-y-3">
-                    {loading ? (
-                        <div className="flex justify-center py-10">
-                            <Loader2 size={20} className="animate-spin text-black/20" />
-                        </div>
-                    ) : tab === 'AVAILABLE' ? (
-                        available.length > 0 ? (
-                            available.map((booking) => <BookingCard key={booking._id} booking={booking} isAvailable />)
-                        ) : (
-                            <div className="py-16 flex flex-col items-center gap-2 opacity-20">
-                                <Calendar size={32} />
-                                <p className="text-[10px] font-black uppercase tracking-widest">No jobs nearby</p>
+                {/* ── Registry ── */}
+                <div className="space-y-4">
+                    {filtered.length > 0 ? filtered.map((b) => (
+                        <motion.div 
+                            key={b._id} 
+                            initial={{ y: 20, opacity: 0 }} 
+                            animate={{ y: 0, opacity: 1 }}
+                            onClick={() => setSelectedJob(b)}
+                            className="bg-surface border border-content/[0.04] rounded-[2rem] p-5 shadow-sm relative overflow-hidden active:scale-[0.98] transition-all duration-500"
+                        >
+                            <div className="flex justify-between items-start mb-4">
+                                <span className={`px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${STATUS_TONE[b.status] || STATUS_TONE.completed}`}>{b.status}</span>
+                                <p className="text-lg font-black text-content tracking-tighter">₹{b.pricing?.totalAmount}</p>
                             </div>
-                        )
-                    ) : (
-                        scheduled.length > 0 ? (
-                            scheduled.map((booking) => <BookingCard key={booking._id} booking={booking} isAvailable={false} />)
-                        ) : (
-                            <div className="py-16 flex flex-col items-center gap-2 opacity-20">
-                                <Clock size={32} />
-                                <p className="text-[10px] font-black uppercase tracking-widest">No active trips</p>
+                            <h3 className="text-[11px] font-black text-content uppercase mb-1">{b.service?.name}</h3>
+                            <div className="flex items-center gap-4 text-content/25">
+                                <div className="flex items-center gap-1.5"><Calendar size={12} /><span className="text-[9px] font-black uppercase">{new Date(b.createdAt).toLocaleDateString()}</span></div>
+                                <div className="flex items-center gap-1.5"><Navigation size={12} /><span className="text-[9px] font-black uppercase">{b.service?.duration || 'Express'}</span></div>
                             </div>
-                        )
+                            <div className="mt-4 flex items-center gap-3 pt-4 border-t border-content/[0.03]">
+                                <MapPin size={14} className="text-brand shrink-0" />
+                                <p className="text-[10px] font-black text-content/60 uppercase truncate">{b.location?.address?.street}</p>
+                            </div>
+                        </motion.div>
+                    )) : (
+                        <div className="py-20 text-center opacity-20 text-content"><Search size={32} className="mx-auto mb-4" /><p className="text-[10px] font-black uppercase tracking-widest">Sector Clear</p></div>
                     )}
                 </div>
             </div>
 
-            {selectedBooking && (
-                <div className="fixed inset-0 z-[120] bg-black/55 backdrop-blur-[2px] flex items-end justify-center">
-                    <div className="w-full max-w-[430px] bg-[linear-gradient(180deg,#FFF9EF_0%,#FFFFFF_18%,#FFFFFF_100%)] rounded-t-[32px] px-5 pt-5 pb-7 max-h-[85vh] overflow-y-auto shadow-[0_-24px_60px_rgba(15,23,42,0.16)]">
-                        <div className="flex items-center justify-between mb-5">
-                            <div>
-                                <p className="text-[9px] font-black text-black/30 uppercase tracking-widest">Booking Details</p>
-                                <h2 className="text-lg font-black text-black uppercase mt-1">{selectedBooking.service?.name || 'Chauffeur Service'}</h2>
-                            </div>
-                            <button
-                                onClick={() => setSelectedBooking(null)}
-                                className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-black/40"
-                            >
-                                <X size={18} />
-                            </button>
-                        </div>
-
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between border border-gray-100 rounded-xl px-4 py-3">
-                                <div>
-                                    <p className="text-[8px] font-black text-black/25 uppercase tracking-widest">Booking ID</p>
-                                    <p className="text-[11px] font-black text-black mt-1">{selectedBooking.bookingId || selectedBooking._id}</p>
+            {/* ── Intel Drawer ── */}
+            <AnimatePresence>
+                {selectedJob && (
+                    <>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedJob(null)} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]" />
+                        <motion.div 
+                            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 25 }}
+                            className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-surface rounded-t-[2.8rem] z-[70] overflow-hidden shadow-2xl transition-colors duration-500"
+                        >
+                            <div className="w-12 h-1.5 bg-content/10 rounded-full mx-auto mt-4 mb-2" />
+                            <div className="p-8 space-y-8">
+                                <div className="flex justify-between items-start">
+                                    <div><p className="text-[10px] font-black text-brand uppercase tracking-widest mb-1">Mission Intel</p><h2 className="text-2xl font-black text-content uppercase tracking-tight">{selectedJob.service?.name}</h2></div>
+                                    <button onClick={() => setSelectedJob(null)} className="p-2 bg-content/[0.04] rounded-xl text-content/20"><X size={20} /></button>
                                 </div>
-                                <span className={`inline-flex items-center px-2.5 py-1 rounded border text-[8px] font-black uppercase ${getStatusBadge(selectedBooking.status)}`}>
-                                    {selectedBooking.status?.replace('_', ' ')}
-                                </span>
-                            </div>
 
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="border border-gray-100 rounded-xl px-4 py-3">
-                                    <p className="text-[8px] font-black text-black/25 uppercase tracking-widest">Fare</p>
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <Wallet size={14} className="text-[#F29F05]" />
-                                        <p className="text-[12px] font-black text-black">₹{selectedBooking.pricing?.totalAmount || 0}</p>
-                                    </div>
+                                <div className="h-44 w-full rounded-2xl overflow-hidden border border-content/5 bg-content/[0.02] relative shadow-inner">
+                                    <GoogleMapBox 
+                                        center={{ lat: selectedJob.location?.address?.coordinates?.lat || 28.6139, lng: selectedJob.location?.address?.coordinates?.lng || 77.2090 }}
+                                        zoom={14}
+                                        markers={[{ position: { lat: selectedJob.location?.address?.coordinates?.lat, lng: selectedJob.location?.address?.coordinates?.lng }, icon: { url: 'https://cdn-icons-png.flaticon.com/512/684/684908.png', scaledSize: { width: 32, height: 32 } } }]}
+                                    />
                                 </div>
-                                <div className="border border-gray-100 rounded-xl px-4 py-3">
-                                    <p className="text-[8px] font-black text-black/25 uppercase tracking-widest">Vehicle</p>
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <Car size={14} className="text-[#F29F05]" />
-                                        <p className="text-[12px] font-black text-black truncate">
-                                            {selectedBooking.vehicle?.brand || 'Vehicle'} {selectedBooking.vehicle?.model || ''}
-                                        </p>
-                                    </div>
+
+                                <div className="space-y-4">
+                                    <div className="flex gap-4"><User size={18} className="text-content/20" /><div><p className="text-[9px] font-black text-content/20 uppercase tracking-widest">Customer</p><p className="text-sm font-black text-content uppercase">{selectedJob.consumer?.name}</p></div></div>
+                                    <div className="flex gap-4"><MapPin size={18} className="text-brand" /><div><p className="text-[9px] font-black text-content/20 uppercase tracking-widest">Target Terminal</p><p className="text-sm font-black text-content uppercase leading-snug">{selectedJob.location?.address?.street}, {selectedJob.location?.address?.city}</p></div></div>
+                                </div>
+
+                                <div className="flex gap-3">
+                                    <a href={`tel:${selectedJob.consumer?.phone}`} className="flex-1 h-15 bg-black dark:bg-brand text-white dark:text-black rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg"><Phone size={18} /><span className="text-[11px] font-black uppercase tracking-widest">Contact</span></a>
+                                    <div className="px-6 h-15 bg-content/[0.04] border border-content/[0.03] rounded-2xl flex flex-col justify-center text-right"><p className="text-[8px] font-black text-content/20 uppercase">Yield</p><p className="text-lg font-black text-content tracking-tight">₹{selectedJob.pricing?.totalAmount}</p></div>
                                 </div>
                             </div>
-
-                            <div className="border border-gray-100 rounded-xl px-4 py-4 space-y-3">
-                                <div className="flex items-center gap-3">
-                                    <User size={16} className="text-black/30 shrink-0" />
-                                    <div className="min-w-0">
-                                        <p className="text-[8px] font-black text-black/25 uppercase tracking-widest">Customer</p>
-                                        <p className="text-[12px] font-black text-black uppercase truncate mt-1">{selectedBooking.consumer?.name || 'Customer'}</p>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-3">
-                                    <Phone size={16} className="text-black/30 shrink-0" />
-                                    <div className="min-w-0">
-                                        <p className="text-[8px] font-black text-black/25 uppercase tracking-widest">Phone</p>
-                                        <p className="text-[12px] font-black text-black mt-1">{selectedBooking.consumer?.phone || 'Not available'}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="border border-gray-100 rounded-xl px-4 py-4 space-y-3">
-                                <div className="flex items-start gap-3">
-                                    <MapPin size={16} className="text-[#F29F05] shrink-0 mt-0.5" />
-                                    <div className="min-w-0">
-                                        <p className="text-[8px] font-black text-black/25 uppercase tracking-widest">Pickup</p>
-                                        <p className="text-[12px] font-black text-black mt-1">
-                                            {selectedBooking.location?.address?.street || selectedBooking.location?.address?.city || 'Unknown pickup'}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {isRoundTripPointBooking(selectedBooking) ? (
-                                    <div className="flex items-start gap-3">
-                                        <MapPin size={16} className="text-blue-500 shrink-0 mt-0.5" />
-                                        <div className="min-w-0">
-                                            <p className="text-[8px] font-black text-black/25 uppercase tracking-widest">Drop</p>
-                                            <p className="text-[12px] font-black text-black mt-1">
-                                                Same pickup point return
-                                            </p>
-                                        </div>
-                                    </div>
-                                ) : (selectedBooking.location?.destination?.street || selectedBooking.location?.destination?.address?.street ? (
-                                    <div className="flex items-start gap-3">
-                                        <MapPin size={16} className="text-red-500 shrink-0 mt-0.5" />
-                                        <div className="min-w-0">
-                                            <p className="text-[8px] font-black text-black/25 uppercase tracking-widest">Drop</p>
-                                            <p className="text-[12px] font-black text-black mt-1">
-                                                {selectedBooking.location?.destination?.street || selectedBooking.location?.destination?.address?.street}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ) : null)}
-
-                                <div className="flex items-start gap-3">
-                                    <Clock size={16} className="text-black/30 shrink-0 mt-0.5" />
-                                    <div className="min-w-0">
-                                        <p className="text-[8px] font-black text-black/25 uppercase tracking-widest">Schedule</p>
-                                        <p className="text-[12px] font-black text-black mt-1">
-                                            {selectedBooking.schedule?.type === 'scheduled'
-                                                ? formatDisplayDate(selectedBooking.schedule?.date)
-                                                : 'Instant booking'}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {getBookedDurationLabel(selectedBooking) && (
-                                    <div className="flex items-start gap-3">
-                                        <Calendar size={16} className="text-black/30 shrink-0 mt-0.5" />
-                                        <div className="min-w-0">
-                                            <p className="text-[8px] font-black text-black/25 uppercase tracking-widest">Booked Window</p>
-                                            <p className="text-[12px] font-black text-black mt-1">
-                                                {getBookedDurationLabel(selectedBooking)}
-                                            </p>
-                                            {isFullDayBooking(selectedBooking) && (
-                                                <p className="text-[9px] font-bold text-amber-700 uppercase mt-1">
-                                                    Full day trip. Overtime starts after booked window.
-                                                </p>
-                                            )}
-                                            {isOutstationBooking(selectedBooking) && (
-                                                <p className="text-[9px] font-bold text-blue-700 uppercase mt-1">
-                                                    Outstation rules apply. Keep destination, toll and return notes handy.
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {(selectedBooking.notes?.consumer || selectedBooking.notes?.provider || selectedBooking.notes?.internal) && (
-                                <div className="border border-gray-100 rounded-xl px-4 py-4">
-                                    <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-2">Notes</p>
-                                    <p className="text-[11px] font-bold text-black/70 leading-relaxed whitespace-pre-line">
-                                        {selectedBooking.notes?.consumer || selectedBooking.notes?.provider || selectedBooking.notes?.internal}
-                                    </p>
-                                </div>
-                            )}
-
-                            <button
-                                onClick={() => setSelectedBooking(null)}
-                                className="w-full h-11 border border-gray-200 text-black text-[10px] font-black uppercase tracking-widest rounded-xl flex items-center justify-center gap-2"
-                            >
-                                Close Details <XCircle size={14} />
-                            </button>
-
-                            {selectedBooking.status === 'pending' && (
-                                <div className="grid grid-cols-2 gap-3">
-                                    <button
-                                        onClick={() => handleReject(selectedBooking._id)}
-                                        className="w-full h-11 border border-red-100 text-red-500 text-[10px] font-black uppercase tracking-widest rounded-xl"
-                                    >
-                                        Reject Request
-                                    </button>
-                                    <button
-                                        onClick={() => handleAccept(selectedBooking._id)}
-                                        className="w-full h-11 bg-[#F29F05] text-black text-[10px] font-black uppercase tracking-widest rounded-xl"
-                                    >
-                                        Accept Request
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
         </DriverLayout>
     );
 };

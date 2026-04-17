@@ -1,5 +1,5 @@
 import React, { useCallback, memo, useState } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Circle } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Circle, Polyline } from '@react-google-maps/api';
 
 const DARK_STYLES = [
     { "featureType": "all", "elementType": "labels.text.fill", "stylers": [{ "color": "#7c7c7c" }] },
@@ -28,6 +28,7 @@ const GoogleMapBox = ({
     onIdle,
     markers = [], 
     circles = [],
+    polylines = [],
     children,
     containerStyle = { width: '100%', height: '100%' },
     options = {},
@@ -51,6 +52,48 @@ const GoogleMapBox = ({
         setMap(null);
         if (onUnmount) onUnmount(mapInstance);
     }, [onUnmount]);
+
+    const normalizeIcon = useCallback((iconConfig) => {
+        if (!iconConfig || typeof iconConfig !== 'object') return iconConfig;
+        if (!window.google?.maps) return iconConfig;
+
+        const normalized = { ...iconConfig };
+
+        if (
+            iconConfig.scaledSize
+            && typeof iconConfig.scaledSize.width === 'number'
+            && typeof iconConfig.scaledSize.height === 'number'
+        ) {
+            normalized.scaledSize = new window.google.maps.Size(
+                iconConfig.scaledSize.width,
+                iconConfig.scaledSize.height
+            );
+        }
+
+        if (
+            iconConfig.anchor
+            && typeof iconConfig.anchor.x === 'number'
+            && typeof iconConfig.anchor.y === 'number'
+        ) {
+            normalized.anchor = new window.google.maps.Point(
+                iconConfig.anchor.x,
+                iconConfig.anchor.y
+            );
+        }
+
+        if (
+            iconConfig.labelOrigin
+            && typeof iconConfig.labelOrigin.x === 'number'
+            && typeof iconConfig.labelOrigin.y === 'number'
+        ) {
+            normalized.labelOrigin = new window.google.maps.Point(
+                iconConfig.labelOrigin.x,
+                iconConfig.labelOrigin.y
+            );
+        }
+
+        return normalized;
+    }, []);
 
     const handleCenterChanged = () => {
         if (map && onCenterChanged) {
@@ -117,7 +160,7 @@ const GoogleMapBox = ({
                 <Marker
                     key={`marker-${index}`}
                     position={marker.position}
-                    icon={marker.icon}
+                    icon={normalizeIcon(marker.icon)}
                     onClick={() => {
                         if (marker.infoContent) setActiveInfoWindow(index);
                         if (marker.onClick) marker.onClick();
@@ -137,6 +180,14 @@ const GoogleMapBox = ({
                     center={circle.center}
                     radius={circle.radius}
                     options={circle.options}
+                />
+            ))}
+
+            {polylines.map((polyline, index) => (
+                <Polyline
+                    key={`polyline-${index}`}
+                    path={polyline.path}
+                    options={polyline.options}
                 />
             ))}
             

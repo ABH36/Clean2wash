@@ -1,40 +1,28 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Plus, Car, Trash2, Check, Edit3, AlertCircle, CheckCircle2, ShieldAlert, FileSearch, Zap, Calendar, Radar, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Car, Trash2, Check, Edit3, AlertCircle, CheckCircle2, ShieldAlert, FileSearch, Zap, Calendar, Radar, Clock, X, Search } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { vehicleAPI } from '../../../utils/api';
 import { toast as hotToast } from 'react-hot-toast';
+import MobileLayout from '../components/layout/MobileLayout';
 
-const BLANK_FORM = { brand: '', model: '', type: 'Sedan', color: '#3498db', plate: '', insuranceExpiry: '', pucExpiry: '' };
-
-const Toast = ({ msg, type = 'success', onDone }) => (
-    <motion.div initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 80, opacity: 0 }} onAnimationComplete={() => setTimeout(onDone, 2000)}
-        className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-[200] max-w-xs w-[92%] flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>
-        {type === 'success'
-            ? <CheckCircle2 size={18} className="text-white flex-shrink-0" strokeWidth={2.5} />
-            : <AlertCircle size={18} className="text-white flex-shrink-0" strokeWidth={2.5} />}
-        <p className="text-white font-black text-sm">{msg}</p>
-    </motion.div>
-);
+const BLANK_FORM = { brand: '', model: '', type: 'Sedan', color: '#3498db', plate: '', insuranceExpiry: '', PUCExpiry: '' };
 
 const VehicleManager = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const fromPage = searchParams.get('from');
 
-    const { vehicles, addVehicle, updateVehicle, removeVehicle, setPrimaryVehicle, user } = useAuth();
+    const { vehicles, addVehicle, updateVehicle, removeVehicle, setPrimaryVehicle } = useAuth();
     const [showSheet, setShowSheet] = useState(false);
     const [editId, setEditId] = useState(null);
     const [form, setForm] = useState(BLANK_FORM);
     const [errors, setErrors] = useState({});
-    const [toast, setToast] = useState(null);
     const [isFetching, setIsFetching] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [dynamicBrands, setDynamicBrands] = useState(['Honda', 'Maruti', 'Hyundai', 'Toyota', 'Tata', 'Others']);
     const [dynamicTypes, setDynamicTypes] = useState([]);
-    const [loadingResources, setLoadingResources] = useState(true);
     const [globalCatalog, setGlobalCatalog] = useState([]);
     const [loadingCatalog, setLoadingCatalog] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -42,39 +30,31 @@ const VehicleManager = () => {
     useEffect(() => {
         const fetchResources = async () => {
             try {
-                // Fetch All Resources in parallel
                 const [modelsRes, brandsRes, typesRes] = await Promise.all([
                     vehicleAPI.getVehicleModels(),
                     vehicleAPI.getVehicleBrands(),
                     vehicleAPI.getVehicleTypes()
                 ]);
-
                 if (modelsRes.status === 'success') setGlobalCatalog(modelsRes.data.vehicleModels || []);
                 if (brandsRes.status === 'success') setDynamicBrands(brandsRes.data.brands || []);
                 if (typesRes.status === 'success') setDynamicTypes(typesRes.data.vehicleTypes || []);
-
             } catch (err) {
                 console.error('Failed to fetch resources:', err);
             } finally {
                 setLoadingCatalog(false);
-                setLoadingResources(false);
             }
         };
         fetchResources();
     }, []);
-
-
 
     const getTypeImage = (typeName) => {
         const typeObj = dynamicTypes.find(t => t.type === typeName || t.name === typeName);
         return typeObj?.image || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80';
     };
 
-    // Matching Logic: Find Catalog Models that match User Vehicles
     const matchedCatalogIds = useMemo(() => {
         const matched = new Set();
         if (!Array.isArray(globalCatalog)) return matched;
-
         vehicles.forEach(v => {
             const match = globalCatalog.find(m =>
                 m.brand?.toLowerCase() === v.brand?.toLowerCase() &&
@@ -105,14 +85,10 @@ const VehicleManager = () => {
         if (type === 'success') hotToast.success(msg);
         else hotToast.error(msg);
     };
+
     const closeSheet = () => { setShowSheet(false); setEditId(null); setErrors({}); };
 
-    const openAdd = () => {
-        setForm(BLANK_FORM);
-        setEditId(null);
-        setErrors({});
-        setShowSheet(true);
-    };
+    const openAdd = () => { setForm(BLANK_FORM); setEditId(null); setErrors({}); setShowSheet(true); };
 
     const openEdit = (v) => {
         setForm({
@@ -121,38 +97,32 @@ const VehicleManager = () => {
             type: v.type,
             color: v.color || '#3498db',
             plate: v.plate,
-            insuranceExpiry: v.insuranceExpiry || '',
-            pucExpiry: v.pucExpiry || ''
+            insuranceExpiry: v.compliance?.insuranceExpiry || v.insuranceExpiry || '',
+            PUCExpiry: v.compliance?.pucExpiry || v.pucExpiry || ''
         });
-        setEditId(v._id || v.id); // Support both MongoDB _id and legacy id
+        setEditId(v._id || v.id);
         setErrors({});
         setShowSheet(true);
     };
 
     const handleVahanFetch = async () => {
-        if (!form.plate) {
-            setErrors({ plate: 'Enter plate number first' });
-            return;
-        }
+        if (!form.plate) { setErrors({ plate: 'Enter plate number first' }); return; }
         setIsFetching(true);
-        // Simulate VAHAN API delay
         await new Promise(r => setTimeout(r, 1500));
-
-        // Smart mock: pick a random model from catalog if available, else fallback
         const mockModel = globalCatalog.length > 0
             ? globalCatalog[Math.floor(Math.random() * globalCatalog.length)]
-            : { brand: 'Maruti', model: 'Swift ZXI', type: 'Hatchback' };
+            : { brand: 'Maruti', model: 'Swift', type: 'Hatchback' };
 
         setForm(prev => ({
             ...prev,
             brand: mockModel.brand,
             model: mockModel.model,
             type: mockModel.type,
-            insuranceExpiry: new Date(Date.now() + 31536000000).toISOString().split('T')[0], // 1 year later
-            pucExpiry: new Date(Date.now() + 15552000000).toISOString().split('T')[0] // 6 months later
+            insuranceExpiry: new Date(Date.now() + 31536000000).toISOString().split('T')[0],
+            PUCExpiry: new Date(Date.now() + 15552000000).toISOString().split('T')[0]
         }));
         setIsFetching(false);
-        showToast('Details fetched from VAHAN!');
+        showToast('Details updated via Vahan');
     };
 
     const validate = () => {
@@ -161,7 +131,7 @@ const VehicleManager = () => {
         if (!form.model.trim()) e.model = 'Required';
         if (!form.plate.trim()) e.plate = 'Required';
         else if (!/^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{1,4}$/.test(form.plate.replace(/\s/g, '').toUpperCase())) {
-            e.plate = 'Invalid Plate (Ex: KA05M1234)';
+            e.plate = 'Invalid plate (e.g. KA05M1234)';
         }
         setErrors(e);
         return Object.keys(e).length === 0;
@@ -171,9 +141,7 @@ const VehicleManager = () => {
         const result = await setPrimaryVehicle(id);
         if (result.success) {
             showToast('Set as primary vehicle');
-            if (fromPage === 'instant-wash') {
-                setTimeout(() => navigate(-1), 1000);
-            }
+            if (fromPage) setTimeout(() => navigate(-1), 1000);
         } else {
             showToast(result.error || 'Failed to set primary vehicle', 'error');
         }
@@ -182,28 +150,10 @@ const VehicleManager = () => {
     const handleDelete = async (id) => {
         hotToast((t) => (
             <div className="flex flex-col gap-3">
-                <p className="text-xs font-bold text-content uppercase tracking-tight">Delete this vehicle from your garage?</p>
+                <p className="text-[13px] font-bold text-slate-800">Remove this vehicle from your garage?</p>
                 <div className="flex gap-2">
-                    <button
-                        onClick={async () => {
-                            hotToast.dismiss(t.id);
-                            const result = await removeVehicle(id);
-                            if (result.success) {
-                                showToast('Vehicle removed', 'success');
-                            } else {
-                                showToast(result.error || 'Failed to remove vehicle', 'error');
-                            }
-                        }}
-                        className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase"
-                    >
-                        Delete
-                    </button>
-                    <button
-                        onClick={() => hotToast.dismiss(t.id)}
-                        className="bg-gray-100 text-content px-3 py-1.5 rounded-lg text-[10px] font-black uppercase"
-                    >
-                        Cancel
-                    </button>
+                    <button onClick={async () => { hotToast.dismiss(t.id); await removeVehicle(id); showToast('Vehicle removed'); }} className="bg-red-500 text-white px-4 py-2 rounded-xl text-[11px] font-bold">Delete</button>
+                    <button onClick={() => hotToast.dismiss(t.id)} className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-[11px] font-bold">Cancel</button>
                 </div>
             </div>
         ), { duration: 5000 });
@@ -211,13 +161,7 @@ const VehicleManager = () => {
 
     const handleSave = async () => {
         if (!validate()) return;
-
-        // Align with Backend Schema requirements
         const cleanedPlate = form.plate.replace(/\s/g, '').toUpperCase();
-        
-        // 🧪 Protocol: Use dynamic type image or generic fallback
-        const img = getTypeImage(form.type);
-
         const vehiclePayload = {
             brand: form.brand,
             model: form.model,
@@ -226,36 +170,19 @@ const VehicleManager = () => {
             plate: cleanedPlate,
             compliance: {
                 insuranceExpiry: form.insuranceExpiry || null,
-                pucExpiry: form.pucExpiry || null
-            },
-            specifications: {
-                fuelType: 'Petrol', // Default
-                transmission: 'Manual' // Default
+                pucExpiry: form.PUCExpiry || null
             }
         };
 
         setIsSaving(true);
         try {
-            if (editId) {
-                const result = await updateVehicle(editId, vehiclePayload);
-                if (result.success) {
-                    showToast('Vehicle updated successfully!');
-                    closeSheet();
-                } else {
-                    showToast(result.error || 'Failed to update vehicle', 'error');
-                }
+            const result = editId ? await updateVehicle(editId, vehiclePayload) : await addVehicle(vehiclePayload);
+            if (result.success) {
+                showToast(editId ? 'Vehicle updated' : 'Vehicle added');
+                closeSheet();
+                if (fromPage) setTimeout(() => navigate(-1), 1000);
             } else {
-                const result = await addVehicle(vehiclePayload);
-                if (result.success) {
-                    showToast('Vehicle added to garage!');
-                    closeSheet();
-                    if (fromPage === 'instant-wash') {
-                        // The backend might auto-set it as primary if it's the first vehicle
-                        setTimeout(() => navigate(-1), 1000);
-                    }
-                } else {
-                    showToast(result.error || 'Failed to add vehicle', 'error');
-                }
+                showToast(result.error || 'Failed to save', 'error');
             }
         } catch (error) {
             showToast('Failed to save vehicle', 'error');
@@ -269,8 +196,8 @@ const VehicleManager = () => {
         const diff = new Date(date) - new Date();
         const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
         if (days < 0) return { label: 'Expired', color: 'text-red-500', bg: 'bg-red-50' };
-        if (days < 30) return { label: `${days}d left`, color: 'text-orange-500', bg: 'bg-orange-50' };
-        return { label: 'Active', color: 'text-green-500', bg: 'bg-green-50' };
+        if (days < 30) return { label: `${days} days left`, color: 'text-amber-500', bg: 'bg-amber-50' };
+        return { label: 'Active', color: 'text-emerald-500', bg: 'bg-emerald-50' };
     };
 
     const setField = (key, val) => {
@@ -279,388 +206,212 @@ const VehicleManager = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#F8F9FA] font-sans pb-32">
-
-            <AnimatePresence>
-                {toast && <Toast key={toast.msg} msg={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
-            </AnimatePresence>
-
-            <header className="px-4 pt-8 pb-4 bg-white/80 backdrop-blur-xl sticky top-0 z-50 border-b border-black/[0.03]">
-                <div className="flex items-center gap-4">
-                    <button 
-                        onClick={() => {
-                            if (fromPage && vehicles.length === 0) {
-                                navigate('/');
-                            } else {
-                                navigate(-1);
-                            }
-                        }} 
-                        className="w-10 h-10 bg-gray-50 border border-black/[0.02] rounded-xl flex items-center justify-center active:scale-90 transition-all shadow-sm"
-                    >
-                        <ChevronLeft size={18} className="text-black" />
-                    </button>
-                    <div className="flex-1">
-                        <p className="text-[9px] font-black text-brand uppercase tracking-[0.2em] leading-none mb-1 text-opacity-40">Fleet Management</p>
-                        <h1 className="text-[18px] font-[1000] tracking-tighter text-black leading-none uppercase">Your Garaj</h1>
+        <MobileLayout>
+            <div className="min-h-screen bg-slate-50 font-sans pb-32">
+                {/* ── Compact Header ── */}
+                <header className="px-5 pt-8 pb-4 bg-white sticky top-0 z-[60] border-b border-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => navigate(-1)} className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-all">
+                            <ChevronLeft size={22} className="text-slate-900" />
+                        </button>
+                        <div>
+                            <h1 className="text-[20px] font-bold text-slate-900 tracking-tight leading-none">My garage</h1>
+                            <p className="text-[11px] text-slate-400 font-medium mt-1.5">Manage your fleet</p>
+                        </div>
                     </div>
-                    <button onClick={openAdd}
-                        className="flex items-center gap-2 bg-black text-white px-4 py-2.5 rounded-xl font-black text-[9px] shadow-2xl shadow-black/20 active:scale-95 transition-all uppercase tracking-widest">
-                        <Plus size={12} strokeWidth={3} /> Register
+                    <button onClick={openAdd} className="h-10 px-4 bg-slate-900 text-white rounded-xl text-[12px] font-bold flex items-center gap-2 active:scale-95 transition-all">
+                        <Plus size={16} /> New vehicle
                     </button>
-                </div>
-            </header>
+                </header>
 
-            <div className="px-4 py-4 space-y-4 pb-24">
-                <AnimatePresence>
-                    {vehicles.map((v, i) => {
-                        const insStatus = getExpiryStatus(v.insuranceExpiry);
-                        const pucStatus = getExpiryStatus(v.pucExpiry);
-                        const vId = v._id || v.id;
-
-                        return (
-                            <motion.div key={vId} layout
-                                initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.95, y: 20 }} transition={{ type: 'spring', damping: 20, stiffness: 100 }}
-                                className={`group bg-white rounded-xl border overflow-hidden transition-all duration-300 ${v.isPrimary ? 'border-brand/30 shadow-2xl shadow-brand/10' : 'border-black/[0.03] shadow-xl hover:shadow-2xl'}`}>
-
-                                <div className="relative h-56 overflow-hidden">
-                                    <img src={v.image || v.img || getTypeImage(v.type)} alt={v.model} className="w-full h-full object-cover transform scale-100 group-hover:scale-110 transition-transform duration-700" />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-
-                                    <div className="absolute top-4 left-4 flex items-center gap-2">
-                                        {v.isPrimary ? (
-                                            <div className="bg-[#00FF66] text-black text-[8px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-lg shadow-[#00FF66]/20">
-                                                <div className="w-1 h-1 rounded-full bg-black animate-pulse" />
-                                                Active Protocol
-                                            </div>
-                                        ) : (
-                                            <div className="bg-white/10 backdrop-blur-md border border-white/20 text-white text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg shadow-inner">
-                                                {v.type}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="absolute bottom-4 left-4 right-4">
-                                        <div className="flex items-end justify-between gap-4">
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <p className="text-brand text-[9px] font-black uppercase tracking-[0.3em] leading-none">{v.brand}</p>
-                                                    {v.status === 'Pending' && (
-                                                        <div className="flex items-center gap-1 bg-orange-500/20 text-orange-200 border border-orange-500/30 px-1.5 py-0.5 rounded text-[6px] font-black uppercase tracking-tighter animate-pulse backdrop-blur-md">
-                                                            <Clock size={6} /> Pending
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <h3 className="text-white font-[1000] text-[20px] tracking-tighter leading-none uppercase">
-                                                    {v.model}
-                                                </h3>
-                                            </div>
-                                            <div className="bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white flex flex-col items-center shadow-2xl">
-                                                <p className="text-[6px] font-black text-black/20 uppercase leading-none mb-1 tracking-[0.2em]">Plate</p>
-                                                <p className="text-[11px] font-[1000] text-black tracking-[0.1em] leading-none block">{v.plate.replace(/\s/g, '').toUpperCase()}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="px-4 py-4 bg-white">
-                                    {/* Compliance Grid */}
-                                    <div className="grid grid-cols-2 gap-3 mb-4">
-                                        {insStatus && (
-                                            <div className={`px-3 py-2.5 rounded-xl border ${insStatus.bg.replace('bg-', 'border-').replace('50', '200')} ${insStatus.bg} flex items-center gap-3`}>
-                                                <div className={`p-1.5 rounded-lg ${insStatus.bg.replace('bg-', 'bg-').replace('50', '100')} ${insStatus.color}`}>
-                                                    <ShieldAlert size={12} />
-                                                </div>
-                                                <div>
-                                                    <p className="text-[7px] font-black text-black/20 uppercase tracking-widest leading-none mb-1">Insurance</p>
-                                                    <p className={`text-[9px] font-black uppercase ${insStatus.color} leading-none`}>{insStatus.label}</p>
-                                                </div>
-                                            </div>
-                                        )}
-                                        {pucStatus && (
-                                            <div className={`px-3 py-2.5 rounded-xl border ${pucStatus.bg.replace('bg-', 'border-').replace('50', '200')} ${pucStatus.bg} flex items-center gap-3`}>
-                                                <div className={`p-1.5 rounded-lg ${pucStatus.bg.replace('bg-', 'bg-').replace('50', '100')} ${pucStatus.color}`}>
-                                                    <Zap size={12} />
-                                                </div>
-                                                <div>
-                                                    <p className="text-[7px] font-black text-black/20 uppercase tracking-widest leading-none mb-1">Compliance</p>
-                                                    <p className={`text-[9px] font-black uppercase ${pucStatus.color} leading-none`}>{pucStatus.label}</p>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex gap-2">
-                                            {!v.isPrimary ? (
-                                                <button onClick={() => handleSetPrimary(vId)}
-                                                    className="px-4 h-9 bg-black text-white text-[9px] font-black uppercase tracking-[0.2em] rounded-xl hover:bg-brand transition-all flex items-center gap-2 shadow-lg shadow-black/10">
-                                                    <Check size={12} strokeWidth={3} /> Select Protocol
-                                                </button>
-                                            ) : (
-                                                <div className="flex items-center gap-2 px-3 h-9 bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase tracking-[0.2em] rounded-xl border border-emerald-100">
-                                                    <CheckCircle2 size={12} strokeWidth={3} /> Station Paired
+                <div className="px-5 pt-6 space-y-5">
+                    {/* ── Vehicle List ── */}
+                    <AnimatePresence mode="popLayout">
+                        {vehicles.map((v, i) => {
+                            const insStatus = getExpiryStatus(v.compliance?.insuranceExpiry || v.insuranceExpiry);
+                            const pucStatus = getExpiryStatus(v.compliance?.pucExpiry || v.PUCExpiry);
+                            const vId = v._id || v.id;
+                            return (
+                                <motion.div key={vId} layout initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
+                                    className={`bg-white rounded-[2rem] border overflow-hidden transition-all ${v.isPrimary ? 'border-brand/30 shadow-lg' : 'border-gray-100 shadow-sm'}`}>
+                                    <div className="relative h-44 overflow-hidden">
+                                        <img src={v.image || v.img || getTypeImage(v.type)} alt="" className="w-full h-full object-cover" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent" />
+                                        <div className="absolute top-4 right-4 flex gap-2">
+                                            {v.isPrimary && (
+                                                <div className="bg-brand text-slate-900 text-[9px] font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1.5">
+                                                    <CheckCircle2 size={12} /> Primary vehicle
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <button onClick={() => openEdit(v)} className="w-9 h-9 bg-gray-50 text-black rounded-xl flex items-center justify-center border border-black/[0.03] hover:border-brand hover:text-brand transition-all shadow-sm">
-                                                <Edit3 size={14} />
-                                            </button>
-                                            <button onClick={() => handleDelete(vId)} className="w-9 h-9 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center border border-rose-100 hover:bg-rose-500 hover:text-white transition-all shadow-sm">
-                                                <Trash2 size={14} />
-                                            </button>
+                                        <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
+                                            <div>
+                                                <p className="text-brand text-[10px] font-bold uppercase tracking-widest mb-1">{v.brand}</p>
+                                                <h3 className="text-white text-[20px] font-bold leading-none">{v.model}</h3>
+                                            </div>
+                                            <div className="bg-white/95 px-3 py-1.5 rounded-xl border border-white flex flex-col items-center">
+                                                <span className="text-[11px] font-bold text-slate-900 tracking-widest">{v.plate.replace(/\s/g, '').toUpperCase()}</span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </motion.div>
-                        );
-                    })}
-                </AnimatePresence>
 
-                {/* Master Fleet Registry (Premium Edition) */}
-                <div className="pt-12 space-y-6">
-                    <div className="px-2">
-                        <div className="flex items-center justify-between mb-4">
+                                    <div className="p-4 space-y-4">
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {insStatus && (
+                                                <div className={`p-2.5 rounded-2xl border ${insStatus.bg} ${insStatus.color.replace('text-', 'border-')}/10 flex items-center gap-3`}>
+                                                    <ShieldAlert size={16} className={insStatus.color} />
+                                                    <div className="min-w-0">
+                                                        <p className="text-[13px] font-bold leading-none mb-1">Insurance</p>
+                                                        <p className={`text-[10px] font-bold opacity-60`}>{insStatus.label}</p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {pucStatus && (
+                                                <div className={`p-2.5 rounded-2xl border ${pucStatus.bg} ${pucStatus.color.replace('text-', 'border-')}/10 flex items-center gap-3`}>
+                                                    <Zap size={16} className={pucStatus.color} />
+                                                    <div className="min-w-0">
+                                                        <p className="text-[13px] font-bold leading-none mb-1">Pollution</p>
+                                                        <p className={`text-[10px] font-bold opacity-60`}>{pucStatus.label}</p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center justify-between border-t border-slate-50 pt-3">
+                                            <div className="flex gap-2">
+                                                {!v.isPrimary ? (
+                                                    <button onClick={() => handleSetPrimary(vId)} className="h-9 px-4 bg-slate-100 text-slate-600 text-[11px] font-bold rounded-xl active:scale-95 transition-all">Set as primary</button>
+                                                ) : (
+                                                    <span className="h-9 px-4 bg-emerald-50 text-emerald-600 text-[11px] font-bold rounded-xl flex items-center gap-1.5 border border-emerald-100">Ready for service</span>
+                                                )}
+                                            </div>
+                                            <div className="flex gap-1.5">
+                                                <button onClick={() => openEdit(v)} className="w-9 h-9 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center border border-slate-100 active:scale-90 transition-all"><Edit3 size={14} /></button>
+                                                <button onClick={() => handleDelete(vId)} className="w-9 h-9 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center border border-rose-100 active:scale-90 transition-all"><Trash2 size={14} /></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
+                    </AnimatePresence>
+
+                    {/* ── Fleet Registry ── */}
+                    <div className="pt-8 space-y-5">
+                        <div className="flex items-center justify-between">
                             <div>
-                                <h2 className="text-[18px] font-[1000] text-black uppercase tracking-tighter leading-none">Master Fleet Registry</h2>
-                                <p className="text-[10px] font-bold text-black/30 uppercase tracking-[0.1em] mt-2">Pair your model with the Studio Grade protocol</p>
+                                <h2 className="text-[17px] font-bold text-slate-900 leading-none">Vehicle registry</h2>
+                                <p className="text-[11px] text-slate-400 font-medium mt-1.5">Register from our direct model catalog</p>
                             </div>
-                            <div className="bg-black text-white px-3 py-2 rounded-2xl flex items-center gap-2 shadow-xl shadow-black/10">
-                                <Radar size={12} className="animate-pulse" />
-                                <span className="text-[9px] font-black uppercase tracking-widest leading-none">{filteredCatalog.length}</span>
+                            <div className="bg-slate-100 text-slate-400 h-7 px-3 rounded-full flex items-center gap-1.5 text-[10px] font-bold">
+                                <Radar size={12} /> {filteredCatalog.length}
                             </div>
                         </div>
 
-                        {/* Search Bar - Luxury Glass */}
-                        <div className="relative group">
-                            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                                <FileSearch size={14} className="text-black/20 group-focus-within:text-brand transition-colors" />
-                            </div>
-                            <input
-                                type="text"
-                                placeholder="SEARCH YOUR MODEL (E.G. BMW, THAR...)"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-white border border-black/[0.03] rounded-xl px-10 py-3.5 font-black text-[11px] text-black tracking-[0.05em] uppercase focus:border-brand focus:ring-8 focus:ring-brand/5 transition-all outline-none shadow-xl shadow-black/[0.02]"
-                            />
-                            {searchQuery && (
-                                <button
-                                    onClick={() => setSearchQuery('')}
-                                    className="absolute inset-y-0 right-4 flex items-center text-black/20 hover:text-rose-500 transition-colors"
-                                >
-                                    <X size={16} />
-                                </button>
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-4 flex items-center text-slate-400"><Search size={16} /></div>
+                            <input type="text" placeholder="Search your model (e.g. Creta, Thar)" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full h-12 pl-11 pr-4 bg-white border border-gray-100 rounded-2xl text-[13px] font-bold outline-none focus:border-brand/40 shadow-sm" />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 pb-12">
+                            {loadingCatalog ? (
+                                [1, 2, 3, 4].map(n => <div key={n} className="h-40 bg-white rounded-[1.8rem] animate-pulse" />)
+                            ) : (
+                                filteredCatalog.map((m, idx) => {
+                                    const isMatched = matchedCatalogIds.has(m._id);
+                                    return (
+                                        <motion.div key={m._id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: idx * 0.02 }}
+                                            onClick={() => {
+                                                if (isMatched) { navigate(-1); } 
+                                                else { setForm({ ...BLANK_FORM, brand: m.brand, model: m.model, type: m.type }); setShowSheet(true); }
+                                            }}
+                                            className={`relative h-44 rounded-[1.8rem] overflow-hidden shadow-sm group border-2 ${isMatched ? 'border-brand' : 'border-transparent'}`}
+                                        >
+                                            <img src={m.image || 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=400&q=80'} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-transparent to-transparent" />
+                                            {isMatched && ( <div className="absolute top-3 right-3 bg-brand text-[8px] font-bold px-2 py-0.5 rounded-full">MATCHED</div> )}
+                                            <div className="absolute bottom-3 left-3 right-3">
+                                                <p className="text-white/50 text-[9px] font-bold uppercase tracking-widest leading-none mb-1">{m.brand}</p>
+                                                <h3 className="text-white text-[13px] font-bold leading-tight truncate">{m.model}</h3>
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })
                             )}
                         </div>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-4 pb-12">
-                        {loadingCatalog ? (
-                            [1, 2, 3, 4].map(n => (
-                                <div key={n} className="h-48 bg-gray-100 rounded-[2rem] animate-pulse" />
-                            ))
-                        ) : (
-                            filteredCatalog.map((m, idx) => {
-                                const isMatched = matchedCatalogIds.has(m._id);
-                                return (
-                                    <motion.div
-                                        key={m._id}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: idx * 0.03 }}
-                                        whileTap={{ scale: 0.95 }}
-                                        onClick={() => {
-                                            if (isMatched) {
-                                                const userV = vehicles.find(v =>
-                                                    v.brand?.toLowerCase() === m.brand?.toLowerCase() &&
-                                                    v.model?.toLowerCase() === m.model?.toLowerCase()
-                                                );
-                                                if (userV) handleSetPrimary(userV.id || userV._id);
-                                                navigate(-1);
-                                            } else {
-                                                setForm({
-                                                    ...BLANK_FORM,
-                                                    brand: m.brand,
-                                                    model: m.model,
-                                                    type: m.type
-                                                });
-                                                setShowSheet(true);
-                                            }
-                                        }}
-                                        className={`relative group h-48 rounded-xl overflow-hidden transition-all duration-500 ${isMatched ? 'ring-2 ring-[#00FF66] shadow-2xl shadow-[#00FF66]/20' : 'bg-white shadow-xl hover:shadow-2xl'}`}
-                                    >
-                                        <img src={m.image || 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=400&q=80'}
-                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={m.model} />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-
-                                        {isMatched && (
-                                            <div className="absolute top-3 left-3 bg-[#00FF66] text-black text-[7px] font-[1000] uppercase tracking-widest px-2.5 py-1 rounded-full flex items-center gap-1 shadow-lg z-10">
-                                                <div className="w-1 h-1 rounded-full bg-black animate-ping" /> MATCHED
-                                            </div>
-                                        )}
-
-                                        <div className="absolute bottom-4 left-4 right-4">
-                                            <p className="text-white/60 text-[8px] font-black uppercase tracking-[0.2em] leading-none mb-1">{m.brand}</p>
-                                            <h3 className="text-white font-[1000] text-[13px] leading-tight uppercase tracking-tighter line-clamp-1">{m.model}</h3>
-
-                                            <div className="flex items-center gap-2 mt-2">
-                                                <div className="flex items-center gap-1 text-white/40 text-[8px] font-black uppercase tracking-widest">
-                                                    <Clock size={8} />
-                                                    {m.sessionTime || 45}m
-                                                </div>
-                                                <div className="w-1 h-1 rounded-full bg-white/20" />
-                                                <span className="text-brand text-[8px] font-black uppercase tracking-widest">{m.difficulty || 'Normal'}</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Luxury Selection Overlay */}
-                                        <div className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center`}>
-                                            <div className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center transform translate-y-4 group-hover:translate-y-0 transition-all">
-                                                <Plus size={20} strokeWidth={3} />
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                );
-                            })
-                        )}
-                    </div>
                 </div>
-            </div>
 
-            <AnimatePresence>
-                {showSheet && (
-                    <>
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={closeSheet} />
-
-                        <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white rounded-t-[2.5rem] z-50 overflow-hidden shadow-2xl"
-                            style={{ maxHeight: '90vh' }}>
-
-                            <div className="px-6 pt-5 pb-3 border-b border-gray-50 sticky top-0 bg-white/80 backdrop-blur-md z-10">
-                                <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-5" />
-                                <div className="flex items-center justify-between">
-                                    <h3 className="font-black text-xl tracking-tight text-gray-900 uppercase">
-                                        {editId ? 'Modify Fleet' : 'Recruit Vehicle'}
-                                    </h3>
-                                    <button onClick={closeSheet} className="w-9 h-9 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 font-black">✕</button>
+                {/* ── Vehicle Sheet ── */}
+                <AnimatePresence>
+                    {showSheet && (
+                        <>
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={closeSheet} className="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-[1000]" />
+                            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} className="fixed inset-x-0 bottom-0 bg-white rounded-t-[2.5rem] z-[1001] p-8 pb-12 shadow-2xl overflow-y-auto max-h-[90vh]">
+                                <div className="flex items-center justify-between mb-8">
+                                    <h2 className="text-xl font-bold text-slate-900">{editId ? 'Vehicle settings' : 'Register vehicle'}</h2>
+                                    <button onClick={closeSheet} className="w-9 h-9 bg-slate-50 rounded-full flex items-center justify-center text-slate-400"><X size={18} /></button>
                                 </div>
-                            </div>
-
-                            <div className="overflow-y-auto px-6 py-6 pb-12 space-y-6">
-                                {/* VAHAN FETCH Integration */}
-                                <div className="space-y-3">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-brand">Vehicle Identification</p>
-                                    <div className="flex gap-2">
-                                        <div className="flex-1 relative">
-                                            <input placeholder="ENTER PLATE (e.g. KA05MR7821)" value={form.plate}
-                                                onChange={e => setField('plate', e.target.value.toUpperCase())}
-                                                className={`w-full bg-gray-50 border ${errors.plate ? 'border-red-300 ring-1 ring-red-100' : 'border-gray-200'} rounded-2xl px-4 py-4 font-black text-sm text-gray-900 tracking-widest uppercase focus:border-brand transition-all outline-none`} />
-                                            {errors.plate && <p className="text-[10px] font-bold text-red-500 mt-1 ml-1 uppercase tracking-tighter">{errors.plate}</p>}
+                                <div className="space-y-6">
+                                    <div className="space-y-3">
+                                        <p className="text-[11px] font-bold text-slate-400 ml-1">Vehicle plate number</p>
+                                        <div className="flex gap-2">
+                                            <input placeholder="Ex: KA05M1234" value={form.plate} onChange={e => setField('plate', e.target.value.toUpperCase())}
+                                                className={`flex-1 h-14 bg-slate-50 border ${errors.plate ? 'border-red-200' : 'border-slate-100'} rounded-2xl px-5 font-bold text-slate-900 outline-none`} />
+                                            <button onClick={handleVahanFetch} disabled={isFetching} className="w-14 h-14 bg-brand text-slate-900 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-all">
+                                                {isFetching ? <RefreshCw size={22} className="animate-spin" /> : <ShieldAlert size={22} />}
+                                            </button>
                                         </div>
-                                        <button onClick={handleVahanFetch} disabled={isFetching}
-                                            className={`w-14 bg-brand text-white rounded-2xl flex items-center justify-center shadow-lg shadow-brand/20 ${isFetching ? 'animate-pulse' : 'active:scale-95'}`}>
-                                            {isFetching ? <Zap size={20} className="animate-spin" /> : <ShieldAlert size={20} />}
-                                        </button>
+                                        <p className="text-[10px] text-slate-400 font-medium">Identify vehicle details automatically via Vahan API</p>
                                     </div>
-                                    <div className="flex items-center gap-2 px-1">
-                                        <FileSearch size={12} className="text-gray-400" />
-                                        <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Auto-fill details via VAHAN API</span>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Brand</p>
-                                        <div className="relative group">
-                                            <select value={dynamicBrands.includes(form.brand) ? form.brand : (form.brand ? 'Others' : '')} 
-                                                onChange={e => {
-                                                    const val = e.target.value;
-                                                    if (val === 'Others') setField('brand', '');
-                                                    else setField('brand', val);
-                                                }}
-                                                className={`w-full bg-gray-50 border ${errors.brand ? 'border-red-300' : 'border-gray-100'} rounded-2xl px-4 py-3.5 font-bold text-sm text-gray-900 outline-none appearance-none cursor-pointer focus:border-brand/30 transition-all shadow-sm`}>
-                                                <option value="">Select Brand</option>
-                                                {dynamicBrands.filter(b => b !== 'Others').map(b => (
-                                                    <option key={b} value={b}>{b}</option>
-                                                ))}
-                                                <option value="Others">+ Add Different Brand</option>
-                                            </select>
-                                            <div className="absolute right-4 inset-y-0 flex items-center pointer-events-none text-gray-400">
-                                                <ChevronRight size={14} className="rotate-90" />
-                                            </div>
-                                        </div>
-
-                                        {(!dynamicBrands.includes(form.brand) || form.brand === 'Others') && (
-                                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mt-2">
-                                                <input 
-                                                    placeholder="Manual Brand Entry"
-                                                    value={form.brand}
-                                                    onChange={e => setField('brand', e.target.value)}
-                                                    className="w-full bg-white border border-brand/20 rounded-xl px-4 py-3 font-bold text-xs uppercase tracking-widest outline-none focus:border-brand"
-                                                />
-                                            </motion.div>
-                                        )}
-                                        {errors.brand && <p className="text-[8px] font-bold text-red-500 ml-1 uppercase">{errors.brand}</p>}
-                                    </div>
-                                    <div className="space-y-2">
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Type</p>
-                                        <select value={form.type} onChange={e => setField('type', e.target.value)}
-                                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3.5 font-bold text-sm text-gray-900 outline-none appearance-none">
-                                            {dynamicTypes.map(t => <option key={t.type || t.name} value={t.type || t.name}>{t.name || t.type}</option>)}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Full Model Name</p>
-                                    <input placeholder="e.g. Range Rover Evoque" value={form.model}
-                                        onChange={e => setField('model', e.target.value)}
-                                        className={`w-full bg-gray-50 border ${errors.model ? 'border-red-300' : 'border-gray-100'} rounded-2xl px-5 py-4 font-bold text-sm text-gray-900 outline-none focus:border-brand/30`} />
-                                    {errors.model && <p className="text-[8px] font-bold text-red-500 ml-1 uppercase">{errors.model}</p>}
-                                </div>
-
-                                {/* COMPLIANCE DATES */}
-                                <div className="space-y-3 pt-2">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-brand">Compliance & Reminders</p>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <div className="flex items-center justify-between px-1">
-                                                <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest">Insurance Exp.</span>
-                                                <Calendar size={10} className="text-blue-500" />
-                                            </div>
-                                            <input type="date" value={form.insuranceExpiry} onChange={e => setField('insuranceExpiry', e.target.value)}
-                                                className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3.5 font-bold text-xs text-gray-900" />
+                                            <p className="text-[11px] font-bold text-slate-400 ml-1">Brand</p>
+                                            <select value={form.brand} onChange={e => setField('brand', e.target.value)} className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold text-slate-900 outline-none">
+                                                <option value="">Select</option>
+                                                {dynamicBrands.map(b => <option key={b} value={b}>{b}</option>)}
+                                            </select>
                                         </div>
                                         <div className="space-y-2">
-                                            <div className="flex items-center justify-between px-1">
-                                                <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest">PUC / Emission</span>
-                                                <Calendar size={10} className="text-emerald-500" />
-                                            </div>
-                                            <input type="date" value={form.pucExpiry} onChange={e => setField('pucExpiry', e.target.value)}
-                                                className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3.5 font-bold text-xs text-gray-900" />
+                                            <p className="text-[11px] font-bold text-slate-400 ml-1">Category</p>
+                                            <select value={form.type} onChange={e => setField('type', e.target.value)} className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold text-slate-900 outline-none">
+                                                {dynamicTypes.map(t => <option key={t.type || t.name} value={t.type || t.name}>{t.name || t.type}</option>)}
+                                            </select>
                                         </div>
                                     </div>
+                                    <div className="space-y-2">
+                                        <p className="text-[11px] font-bold text-slate-400 ml-1">Full model name</p>
+                                        <input placeholder="Ex: Creta 1.5 Diesel" value={form.model} onChange={e => setField('model', e.target.value)}
+                                            className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-5 font-bold text-slate-900 outline-none" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <p className="text-[11px] font-bold text-slate-400 ml-1">Insurance expiry</p>
+                                            <input type="date" value={form.insuranceExpiry} onChange={e => setField('insuranceExpiry', e.target.value)}
+                                                className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold text-slate-900 outline-none" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <p className="text-[11px] font-bold text-slate-400 ml-1">Pollution (PUC)</p>
+                                            <input type="date" value={form.PUCExpiry} onChange={e => setField('PUCExpiry', e.target.value)}
+                                                className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold text-slate-900 outline-none" />
+                                        </div>
+                                    </div>
+                                    <button onClick={handleSave} disabled={isSaving} className="w-full h-15 bg-slate-900 text-white rounded-2xl font-bold flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-30 shadow-xl">
+                                        {isSaving ? <RefreshCw size={22} className="animate-spin" /> : <CheckCircle2 size={22} />}
+                                        {editId ? 'Apply updates' : 'Register vehicle'}
+                                    </button>
                                 </div>
-
-                                <motion.button whileTap={{ scale: 0.97 }} onClick={handleSave} disabled={isSaving}
-                                    className={`w-full h-14 ${isSaving ? 'bg-gray-400' : 'bg-gray-900'} text-white rounded-2xl font-black text-sm shadow-xl shadow-gray-900/20 flex items-center justify-center gap-3 uppercase tracking-widest transition-all`}>
-                                    {isSaving ? (
-                                        <Zap size={18} className="animate-spin" />
-                                    ) : (
-                                        <CheckCircle2 size={18} />
-                                    )}
-                                    {isSaving ? 'Establishing Connection...' : (editId ? 'Update Modifications' : 'Confirm Registration')}
-                                </motion.button>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
-        </div>
+                            </motion.div>
+                        </>
+                    )}
+                </AnimatePresence>
+            </div>
+        </MobileLayout>
     );
 };
+
+const RefreshCw = ({ size, className }) => <RefreshCwIcon size={size} className={className} />;
+import { RefreshCw as RefreshCwIcon } from 'lucide-react';
 
 export default VehicleManager;

@@ -49,7 +49,6 @@ import SafetyContacts from './modules/consumer/pages/SafetyContacts';
 import ComplianceCenter from './modules/consumer/pages/ComplianceCenter';
 import IncidentLog from './modules/consumer/pages/IncidentLog';
 import ProductDetail from './modules/consumer/pages/ProductDetail';
-import Portfolio from './modules/consumer/pages/Portfolio';
 import ApartmentWash from './modules/consumer/pages/ApartmentWash';
 import ApartmentWashHistory from './modules/consumer/pages/ApartmentWashHistory';
 import ApartmentWashSupport from './modules/consumer/pages/ApartmentWashSupport';
@@ -69,6 +68,10 @@ import DriverEarnings from './modules/spareDrivers/pages/DriverEarnings';
 import DriverHistory from './modules/spareDrivers/pages/DriverHistory';
 import DriverProfile from './modules/spareDrivers/pages/DriverProfile';
 import DriverNotifications from './modules/spareDrivers/pages/DriverNotifications';
+import DriverInquiry from './modules/spareDrivers/pages/DriverInquiry';
+import DriverKitPurchase from './modules/spareDrivers/pages/DriverKitPurchase';
+import DriverPremium from './modules/spareDrivers/pages/DriverPremium';
+import DriverAddress from './modules/spareDrivers/pages/DriverAddress';
 
 // ── Captain Module ──
 import CaptainHome from './modules/captain/pages/CaptainHome';
@@ -123,25 +126,10 @@ import StaffProductTaskDetail from './modules/staff/pages/StaffProductTaskDetail
 import CaptainProductMission from './modules/captain/pages/CaptainProductMission';
 
 import AdminPanelLayout from './modules/admin/components/AdminLayout';
-import AdminDashboard from './modules/admin/pages/AdminDashboard';
-import AdminAnalytics from './modules/admin/pages/AdminAnalytics';
-import AdminUsers from './modules/admin/pages/AdminUsers';
-import AdminServices from './modules/admin/pages/AdminServices';
-import AdminBookings from './modules/admin/pages/AdminBookings';
-import AdminSettings from './modules/admin/pages/AdminSettings';
-import AdminHubs from './modules/admin/pages/AdminHubs';
-import AdminPromotions from './modules/admin/pages/AdminPromotions';
-import AdminSubscriptions from './modules/admin/pages/AdminSubscriptions';
 import AdminLogin from './modules/admin/pages/AdminLogin';
-import AdminProductVerification from './modules/admin/pages/AdminProductVerification';
-import AdminSpareDrivers from './modules/admin/pages/AdminSpareDrivers';
-import AdminApartmentWash from './modules/admin/pages/AdminApartmentWash';
-import AdminTransactions from './modules/admin/pages/AdminTransactions';
-import AdminVehicleCatalog from './modules/admin/pages/AdminVehicleCatalog';
-import AdminAuditLogs from './modules/admin/pages/AdminAuditLogs';
-import AdminProductDashboard from './modules/admin/pages/AdminProductDashboard';
-import AdminNotifications from './modules/admin/pages/AdminNotifications';
+import { getFlattenedRoutes } from './modules/admin/AdminRoutesConfig.jsx';
 import LocationPromptModal from './modules/consumer/components/LocationPromptModal';
+import FeatureGuard from './components/FeatureGuard';
 
 // ── Scroll to top on route change ──
 const ScrollToTop = () => {
@@ -182,24 +170,28 @@ function App() {
                   <Router>
                     <ScrollToTop />
                     <Routes>
+                      {/* ── Stealth Mode: Driver-Only Pivot ── */}
+                      <Route path="/captain/*" element={<Navigate to="/" replace />} />
+                      <Route path="/vendor/*" element={<Navigate to="/" replace />} />
+                      <Route path="/staff/*" element={<Navigate to="/" replace />} />
+                      <Route path="/instant-wash/*" element={<Navigate to="/" replace />} />
+                      <Route path="/e-shop/*" element={<Navigate to="/" replace />} />
+                      <Route path="/shop/*" element={<Navigate to="/" replace />} />
+                      <Route path="/cart/*" element={<Navigate to="/" replace />} />
+                      <Route path="/apartment-wash/*" element={<Navigate to="/" replace />} />
+                      <Route path="/full-wash-booking/*" element={<Navigate to="/" replace />} />
+                      <Route path="/studios/*" element={<Navigate to="/" replace />} />
+                      <Route path="/subscriptions/*" element={<Navigate to="/" replace />} />
+
                       {/* ── Public Auth Routes ── */}
                       <Route path="/onboarding" element={<Onboarding />} />
                       <Route path="/login" element={<Login />} />
                       <Route path="/signup" element={<Signup />} />
                       <Route path="/otp-verify" element={<OTPVerification />} />
-                      <Route path="/captain/login" element={<CaptainLogin />} />
-                      <Route path="/captain/signup" element={<CaptainSignup />} />
-                      <Route path="/captain/otp-verify" element={<CaptainOTPVerification />} />
-                      <Route path="/vendor/login" element={<VendorLogin />} />
-                      <Route path="/vendor/signup" element={<VendorSignup />} />
-                      <Route path="/staff/login" element={<StaffLogin />} />
-                      <Route path="/staff/signup" element={<StaffSignup />} />
                       <Route path="/admin/login" element={<AdminLogin />} />
 
                       {/* ── Consumer: Public ── */}
                       <Route path="/" element={<Home />} />
-                      <Route path="/shop" element={<ShopPage />} />
-                      <Route path="/cart" element={<CartPage />} />
 
                       {/* ── Spare Driver Module (Made public for UI testing) ── */}
                       <Route path="/spare-driver" element={<SpareDriverBooking />} />
@@ -213,13 +205,12 @@ function App() {
                       <Route path="/spare-driver/history-log" element={<DriverHistory />} />
                       <Route path="/spare-driver/profile" element={<DriverProfile />} />
                       <Route path="/spare-driver/notifications" element={<DriverNotifications />} />
+                      <Route path="/spare-driver/inquiry" element={<DriverInquiry />} />
+                      <Route path="/spare-driver/kit-purchase" element={<DriverKitPurchase />} />
+                      <Route path="/spare-driver/premium" element={<DriverPremium />} />
+                      <Route path="/spare-driver/address" element={<DriverAddress />} />
 
                       {/* ── Consumer: Protected ── */}
-                      <Route path="/instant-wash" element={P('consumer', <InstantWash />)} />
-                      <Route path="/e-shop" element={P('consumer', <EShop />)} />
-                      <Route path="/e-shop/product/:id" element={P('consumer', <ProductDetail />)} />
-                      <Route path="/wishlist" element={P('consumer', <Wishlist />)} />
-                      <Route path="/studios" element={P('consumer', <StudioDiscovery />)} />
                       <Route path="/map" element={P('consumer', <MapScreen />)} />
                       <Route path="/service/:id" element={P('consumer', <ServiceDetails />)} />
                       <Route path="/booking-type" element={P('consumer', <BookingType />)} />
@@ -228,10 +219,6 @@ function App() {
                       <Route path="/vehicles" element={P('consumer', <VehicleManager />)} />
                       <Route path="/addresses" element={P('consumer', <AddressManager />)} />
                       <Route path="/wash-and-care" element={P('consumer', <WashAndCare />)} />
-                      <Route path="/subscriptions" element={P('consumer', <Subscriptions />)} />
-                      <Route path="/apartment-wash" element={P('consumer', <ApartmentWash />)} />
-                      <Route path="/apartment-wash/history" element={P('consumer', <ApartmentWashHistory />)} />
-                      <Route path="/apartment-wash/support" element={P('consumer', <ApartmentWashSupport />)} />
                       <Route path="/wallet" element={P('consumer', <Wallet />)} />
                       <Route path="/refer" element={P('consumer', <ReferEarn />)} />
                       <Route path="/help" element={P('consumer', <HelpSupport />)} />
@@ -245,81 +232,29 @@ function App() {
                       <Route path="/rate" element={P('consumer', <RateExperience />)} />
                       <Route path="/notifications" element={P('consumer', <Notifications />)} />
                       <Route path="/specialized-model/:type" element={P('consumer', <ModelDetail />)} />
-                      <Route path="/instant-wash" element={P('consumer', <InstantWash />)} />
-                      <Route path="/full-wash-booking" element={P('consumer', <FullWashBooking />)} />
-                      <Route path="/booking-confirmation" element={P('consumer', <BookingConfirmation />)} />
                       <Route path="/safety/contacts" element={P('consumer', <SafetyContacts />)} />
                       <Route path="/compliance" element={P('consumer', <ComplianceCenter />)} />
                       <Route path="/safety/incidents" element={P('consumer', <IncidentLog />)} />
-                      <Route path="/portfolio" element={P('consumer', <Portfolio />)} />
                       <Route path="/sos-active" element={P('consumer', <SOSActive />)} />
                       <Route path="/safety/sos" element={P('consumer', <EmergencySOS />)} />
 
-                      {/* ── Captain: Protected ── */}
-                      <Route path="/captain" element={P('captain', <CaptainHome />)} />
-                      <Route path="/captain/dashboard" element={<Navigate to="/captain" replace />} />
-                      <Route path="/captain/job" element={P('captain', <CaptainJobDetail />)} />
-                      <Route path="/captain/apartment-route" element={P('captain', <CaptainApartmentRoute />)} />
-                      <Route path="/captain/earnings" element={P('captain', <CaptainEarnings />)} />
-                      <Route path="/captain/profile" element={P('captain', <CaptainProfile />)} />
-                      <Route path="/captain/history" element={P('captain', <CaptainHistory />)} />
-                      <Route path="/captain/safety" element={P('captain', <CaptainSafety />)} />
-                      <Route path="/captain/settings" element={P('captain', <CaptainSettings />)} />
-                      <Route path="/captain/support" element={P('captain', <CaptainSupport />)} />
-                      <Route path="/captain/rewards" element={P('captain', <CaptainRewards />)} />
-                      <Route path="/captain/profile/edit" element={P('captain', <CaptainProfileEdit />)} />
-                      <Route path="/captain/notifications" element={P('captain', <CaptainNotifications />)} />
-                      <Route path="/captain/profile/personal" element={P('captain', <CaptainPersonalInfo />)} />
-                      <Route path="/captain/portfolio" element={P('captain', <CaptainPortfolio />)} />
-                      <Route path="/captain/area-select" element={P('captain', <CaptainLocationSelector />)} />
-
-                      {/* ── Vendor: Protected ── */}
-                      <Route path="/vendor" element={P('vendor', <VendorHome />)} />
-                      <Route path="/vendor/orders" element={P('vendor', <VendorOrders />)} />
-                      <Route path="/vendor/fleet" element={P('vendor', <VendorFleet />)} />
-                      <Route path="/vendor/earnings" element={P('vendor', <VendorEarnings />)} />
-                      <Route path="/vendor/settings" element={P('vendor', <VendorSettings />)} />
-                      <Route path="/vendor/customers" element={P('vendor', <VendorCustomers />)} />
-                      <Route path="/vendor/order/:id" element={P('vendor', <VendorOrderDetail />)} />
-                      <Route path="/vendor/product-order/:id" element={P('vendor', <VendorProductOrderDetail />)} />
-                      <Route path="/vendor/inventory" element={P('vendor', <VendorInventory />)} />
-                      <Route path="/vendor/products" element={P('vendor', <VendorProducts />)} />
-                      <Route path="/vendor/services" element={P('vendor', <VendorServices />)} />
-                      <Route path="/vendor/reports" element={P('vendor', <VendorReports />)} />
-                      <Route path="/vendor/staff" element={P('vendor', <VendorStaff />)} />
-
-                      {/* ── Staff: Protected ── */}
-                      <Route path="/staff" element={P('staff', <StaffDashboard />)} />
-                      <Route path="/staff/task/:id" element={P('staff', <TaskDetails />)} />
-                      <Route path="/staff/product-task/:orderId/:itemId" element={P('staff', <StaffProductTaskDetail />)} />
-                      <Route path="/captain/product-mission/:orderId/:itemId" element={P('captain', <CaptainProductMission />)} />
-                      <Route path="/staff/history" element={P('staff', <StaffHistory />)} />
-                      <Route path="/staff/profile" element={P('staff', <StaffProfile />)} />
-                      <Route path="/staff/profile/personal" element={P('staff', <StaffPersonalInfo />)} />
-                      <Route path="/staff/profile/security" element={P('staff', <StaffSecurity />)} />
-                      <Route path="/staff/profile/support" element={P('staff', <StaffSupport />)} />
-                      <Route path="/staff/profile/notifications" element={P('staff', <StaffNotifications />)} />
-                      <Route path="/staff/map" element={P('staff', <StaffMapView />)} />
-
                       {/* ── Admin: Protected ── */}
                       <Route element={P('admin', <AdminPanelLayout />)}>
-                        <Route path="/admin" element={<AdminDashboard />} />
-                        <Route path="/admin/analytics" element={<AdminAnalytics />} />
-                        <Route path="/admin/users" element={<AdminUsers />} />
-                        <Route path="/admin/services" element={<AdminServices />} />
-                        <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
-                        <Route path="/admin/bookings" element={<AdminBookings />} />
-                        <Route path="/admin/settings" element={<AdminSettings />} />
-                        <Route path="/admin/hubs" element={<AdminHubs />} />
-                        <Route path="/admin/products" element={<AdminProductVerification />} />
-                        <Route path="/admin/promotions" element={<AdminPromotions />} />
-                        <Route path="/admin/spare-drivers" element={<AdminSpareDrivers />} />
-                        <Route path="/admin/apartment-wash" element={<AdminApartmentWash />} />
-                        <Route path="/admin/transactions" element={<AdminTransactions />} />
-                        <Route path="/admin/vehicle-catalog" element={<AdminVehicleCatalog />} />
-                        <Route path="/admin/product-war-room" element={<AdminProductDashboard />} />
-                        <Route path="/admin/notifications" element={<AdminNotifications />} />
-                        <Route path="/admin/audit" element={<AdminAuditLogs />} />
+                        {/* ── Dynamic Admin Routes (Engineering Next Level) ── */}
+                        {getFlattenedRoutes().map((route) => (
+                          <Route 
+                            key={route.path}
+                            path={route.path} 
+                            element={
+                              <FeatureGuard feature={route.flag}>
+                                {route.component}
+                              </FeatureGuard>
+                            } 
+                          />
+                        ))}
+                        
+                        {/* Subscriptions legacy route */}
+                        <Route path="/admin/subscriptions" element={<Navigate to="/admin/spare-drivers/subscriptions" replace />} />
                       </Route>
 
                       {/* ── Fallback ── */}
@@ -341,17 +276,5 @@ function App() {
     </ErrorBoundary>
   );
 }
-
-const PlaceholderPanel = ({ name, emoji = '✨' }) => (
-  <div className="flex flex-col items-center justify-center min-h-screen bg-background p-10 text-center">
-    <div className="text-5xl mb-5">{emoji}</div>
-    <h2 className="text-2xl font-black text-content tracking-tight">{name}</h2>
-    <p className="text-content-subtle text-sm font-bold mt-2">This module is currently in development.</p>
-    <button onClick={() => window.history.back()}
-      className="mt-8 text-brand font-black uppercase text-xs tracking-widest border-b border-brand/30 pb-0.5">
-      ← Go Back
-    </button>
-  </div>
-);
 
 export default App;

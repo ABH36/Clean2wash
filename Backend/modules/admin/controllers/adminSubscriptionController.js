@@ -3,7 +3,10 @@ const Subscription = require('../../../models/Subscription');
 const catchAsync = require('../../../utils/catchAsync');
 const AppError = require('../../../utils/AppError');
 
-const CHAUFFEUR_APPLICABLE_SERVICES = ['SPARE_DRIVER', 'CHAUFFEUR'];
+const normalizeApplicableValue = (value = '') => String(value)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
 
 const derivePlanScope = (plan = {}) => {
     if (plan.moduleScope) return plan.moduleScope;
@@ -16,11 +19,21 @@ const derivePlanScope = (plan = {}) => {
     return 'general';
 };
 
-const normalizeChauffeurPlanPayload = (payload = {}) => ({
-    ...payload,
-    moduleScope: 'spare-driver',
-    applicableServices: CHAUFFEUR_APPLICABLE_SERVICES
-});
+const normalizeChauffeurPlanPayload = (payload = {}) => {
+    const normalizedApplicableServices = Array.isArray(payload.applicableServices)
+        ? payload.applicableServices
+            .map((entry) => normalizeApplicableValue(entry))
+            .filter(Boolean)
+        : [];
+
+    return {
+        ...payload,
+        moduleScope: 'spare-driver',
+        applicableServices: normalizedApplicableServices.length > 0
+            ? [...new Set(normalizedApplicableServices)]
+            : ['SPARE_DRIVER']
+    };
+};
 
 /**
  * 🛠️ Admin Subscription Controller

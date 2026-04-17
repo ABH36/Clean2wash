@@ -80,7 +80,10 @@ const fetchNearbyDrivers = async (booking, excludeDriverIds = [], maxDistance = 
     const normalizedExclusions = [...new Set(excludeDriverIds.map(normalizeId).filter(Boolean))];
     const query = {
         isOnline: true,
-        status: 'active'
+        status: 'ACTIVE',
+        verificationStatus: 'APPROVED',
+        'kit.paymentStatus': 'verified',  // ✅ Kit validation
+        'dutyHours.status.canAcceptBookings': true  // ✅ Duty hours check
     };
 
     if (normalizedExclusions.length > 0) {
@@ -101,13 +104,13 @@ const fetchNearbyDrivers = async (booking, excludeDriverIds = [], maxDistance = 
             }
         };
 
-        return SpareDriver.find(query).select('_id name');
+        return SpareDriver.find(query).select('_id name allowedServices');
     }
 
     return SpareDriver.find(query)
         .sort({ updatedAt: -1 })
         .limit(20)
-        .select('_id name');
+        .select('_id name allowedServices');
 };
 
 const broadcastBookingToDrivers = async (booking, options = {}) => {

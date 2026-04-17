@@ -3,50 +3,44 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
     Clock, CheckCircle2, XCircle, Star, ChevronRight,
-    Navigation, RotateCcw, Filter, Zap, ArrowRight, ChevronLeft
+    Navigation, RotateCcw, Filter, Zap, ArrowRight, ChevronLeft,
+    Calendar, Inbox, MapPin
 } from 'lucide-react';
 import MobileLayout from '../components/layout/MobileLayout';
 import { useAuth } from '../../../context/AuthContext';
 
 const TABS = ['Active', 'Past', 'Cancelled'];
 
-const BOOKINGS = {
-    Active: [
-        { id: 'CarWash-8821', service: 'Instant Eco Wash', captain: 'Rahul Sharma', captainImg: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80', carImg: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80', status: 'Captain En Route', statusColor: 'text-blue-600 bg-blue-50', eta: '12 min', amount: '₹473', date: 'Today, 2:30 PM' },
-    ],
-    Past: [
-        { id: 'CarWash-7761', service: 'Full Deep Clean', captain: 'Amit Singh', captainImg: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&q=80', carImg: 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=400&q=80', status: 'Completed', statusColor: 'text-green-600 bg-green-50', rating: 4.9, rated: true, amount: '₹1,199', date: 'Yesterday, 10:15 AM' },
-        { id: 'CarWash-7102', service: 'Instant Eco Wash', captain: 'Vikram Das', captainImg: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80', carImg: 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=400&q=80', status: 'Completed', statusColor: 'text-green-600 bg-green-50', rating: 4.7, rated: false, amount: '₹299', date: 'Feb 18, 3:00 PM' },
-    ],
-    Cancelled: [
-        { id: 'CarWash-6490', service: 'Tire & Rim Shine', captain: null, captainImg: null, carImg: 'https://images.unsplash.com/photo-1611455600759-99abfc83e9c4?w=400&q=80', status: 'Cancelled', statusColor: 'text-red-600 bg-red-50', amount: '₹199', date: 'Feb 15, 12:00 PM' },
-    ],
-};
-
 const MyBookings = () => {
     const navigate = useNavigate();
     const { bookings, user } = useAuth();
     const [activeTab, setActiveTab] = useState('Active');
 
-    // Filter and Map Bookings
     const userBookings = bookings.filter(b => b.consumer === user?.id || b.consumer?.id === user?.id || b.userId === user?.id);
-
-    const activeStatuses = ['pending', 'confirmed', 'assigned', 'en_route', 'arrived', 'before_photo', 'in_progress', 'after_photo', 'pickup-assigned', 'at-studio', 'quality-check', 'ready-for-delivery'];
+    const activeStatuses = [
+        'pending', 'confirmed', 'accepted', 'assigned',
+        'en_route', 'arrived', 'active',
+        'before_photo', 'in_progress', 'after_photo',
+        'pickup-assigned', 'at-studio', 'quality-check',
+        'ready-for-delivery', 'delivery-assigned', 'out_for_delivery'
+    ];
 
     const getDisplayStatus = (status) => {
         const mapping = {
             'pending': 'Searching',
-            'confirmed': 'Found Captain',
+            'confirmed': 'Found captain',
+            'accepted': 'Driver accepted',
             'assigned': 'Confirmed',
-            'en_route': 'En Route',
+            'en_route': 'En route',
             'arrived': 'Arrived',
+            'active': 'Trip active',
             'before_photo': 'Inspecting',
             'in_progress': 'Washing',
             'after_photo': 'Finishing',
             'completed': 'Completed',
             'cancelled': 'Cancelled',
             'pickup-assigned': 'Pickup',
-            'at-studio': 'At Studio',
+            'at-studio': 'At studio',
             'quality-check': 'Audit',
             'ready-for-delivery': 'Delivering'
         };
@@ -54,10 +48,10 @@ const MyBookings = () => {
     };
 
     const getStatusColor = (status) => {
-        if (status === 'completed') return 'text-green-600 bg-green-50';
-        if (status === 'cancelled') return 'text-red-600 bg-red-50';
-        if (['pending', 'confirmed'].includes(status)) return 'text-violet-600 bg-violet-50';
-        return 'text-blue-600 bg-blue-50';
+        if (status === 'completed') return 'text-emerald-500 bg-emerald-50';
+        if (status === 'cancelled') return 'text-red-500 bg-red-50';
+        if (['pending', 'confirmed'].includes(status)) return 'text-amber-500 bg-amber-50';
+        return 'text-blue-500 bg-blue-50';
     };
 
     const mappedBookings = {
@@ -66,8 +60,8 @@ const MyBookings = () => {
             return {
                 id: b._id || b.id,
                 bookingId: b.bookingId || b.id,
-                service: b.service?.name || b.serviceName || 'Car Wash',
-                captain: b.provider?.id?.name || b.provider?.name || (isVendor ? 'Service Studio' : 'Searching…'),
+                service: b.service?.name || b.serviceName || 'Car wash',
+                captain: b.provider?.id?.name || b.provider?.name || (isVendor ? 'Service studio' : 'Searching…'),
                 captainImg: b.provider?.id?.photo || b.provider?.photo || null,
                 carImg: b.vehicle?.image || b.vehicleImg || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80',
                 status: getDisplayStatus(b.status),
@@ -75,7 +69,8 @@ const MyBookings = () => {
                 eta: b.status === 'en_route' ? '12 min' : (b.status === 'in_progress' ? 'Washing' : '—'),
                 amount: `₹${b.pricing?.totalAmount || b.amount || b.price}`,
                 date: b.createdAt ? new Date(b.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today',
-                type: b.service?.type || b.type || 'captain'
+                type: b.service?.type || b.type || 'captain',
+                rawStatus: b.status
             };
         }),
         Past: userBookings.filter(b => b.status === 'completed').map(b => ({
@@ -86,20 +81,20 @@ const MyBookings = () => {
             captainImg: b.provider?.id?.photo || null,
             carImg: b.vehicle?.image || b.vehicleImg || 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=400&q=80',
             status: 'Completed',
-            statusColor: 'text-green-600 bg-green-50',
+            statusColor: 'text-emerald-500 bg-emerald-50',
             rating: b.feedback?.rating || 0,
             rated: !!b.feedback?.rating,
             amount: `₹${b.pricing?.totalAmount || b.amount || b.price}`,
-            date: b.createdAt ? new Date(b.createdAt).toLocaleDateString() : 'Recently'
+            date: b.createdAt ? new Date(b.createdAt).toLocaleDateString([], { day: 'numeric', month: 'short' }) : 'Recently'
         })),
         Cancelled: userBookings.filter(b => b.status === 'cancelled').map(b => ({
             id: b._id || b.id,
             bookingId: b.bookingId || b.id,
             service: b.service?.name || b.serviceName,
             status: 'Cancelled',
-            statusColor: 'text-red-600 bg-red-50',
+            statusColor: 'text-red-500 bg-red-50',
             amount: `₹${b.pricing?.totalAmount || b.amount || b.price}`,
-            date: b.createdAt ? new Date(b.createdAt).toLocaleDateString() : 'Recently',
+            date: b.createdAt ? new Date(b.createdAt).toLocaleDateString([], { day: 'numeric', month: 'short' }) : 'Recently',
             carImg: b.vehicle?.image || b.vehicleImg || 'https://images.unsplash.com/photo-1611455600759-99abfc83e9c4?w=400&q=80'
         }))
     };
@@ -108,61 +103,62 @@ const MyBookings = () => {
 
     return (
         <MobileLayout>
-            {/* ── Header ── */}
-            <header className="px-4 pt-10 pb-4 flex items-center justify-between bg-white sticky top-0 z-50 border-b border-gray-100">
-                <div className="flex items-center gap-3">
-                    <button onClick={() => navigate(-1)} className="w-9 h-9 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center">
-                        <ChevronLeft size={18} strokeWidth={2.5} className="text-content" />
-                    </button>
-                    <div>
-                        <h1 className="text-lg font-black tracking-tight text-content leading-none">My Bookings</h1>
-                        <p className="text-[9px] text-brand font-black uppercase tracking-widest mt-0.5">Wash History</p>
-                    </div>
-                </div>
-                <button className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100">
-                    <Filter size={16} strokeWidth={2.5} className="text-content-muted" />
-                </button>
-            </header>
-
-            <div className="px-4 pt-4 pb-24 space-y-4">
-
-                {/* ── Tabs ── */}
-                <div className="flex gap-2">
-                    {TABS.map((tab) => (
-                        <button key={tab} onClick={() => setActiveTab(tab)}
-                            className={`flex-1 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-brand text-white shadow-md' : 'bg-white border border-gray-100 text-content-subtle'
-                                }`}>
-                            {tab} <span className={`ml-1 px-1 py-0.5 rounded text-[8px] ${activeTab === tab ? 'bg-white/20' : 'bg-gray-100'}`}>{mappedBookings[tab].length}</span>
+            <div className="bg-slate-50 min-h-screen pb-32">
+                {/* ── Compact Header ── */}
+                <header className="px-5 pt-8 pb-4 bg-white sticky top-0 z-[60] border-b border-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => navigate(-1)} className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-all">
+                            <ChevronLeft size={22} className="text-slate-900" />
                         </button>
-                    ))}
-                </div>
+                        <div>
+                            <h1 className="text-[20px] font-bold text-slate-900 tracking-tight leading-none">My bookings</h1>
+                            <p className="text-[11px] text-slate-400 font-medium mt-1.5">Manage your requests</p>
+                        </div>
+                    </div>
+                </header>
 
-                {/* ── Cards ── */}
-                <AnimatePresence mode="wait">
-                    <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className="space-y-3">
-                        {list.length === 0 ? (
-                            <div className="text-center py-16">
-                                <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                                    <Clock size={24} className="text-content-subtle" />
+                <div className="px-5 pt-6 space-y-5">
+                    {/* ── Tabs ── */}
+                    <div className="flex bg-white p-1 rounded-2xl border border-gray-100 shadow-sm">
+                        {TABS.map((tab) => (
+                            <button key={tab} onClick={() => setActiveTab(tab)}
+                                className={`flex-1 py-2.5 rounded-xl font-bold text-[12px] transition-all flex items-center justify-center gap-2 ${activeTab === tab ? 'bg-slate-900 text-white shadow-md' : 'text-slate-400'}`}>
+                                {tab}
+                                <span className={`h-4.5 px-1.5 rounded-lg flex items-center justify-center text-[9px] font-bold ${activeTab === tab ? 'bg-white/10 text-white' : 'bg-slate-50 text-slate-400'}`}>
+                                    {mappedBookings[tab].length}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* ── Booking Feed ── */}
+                    <AnimatePresence mode="wait">
+                        <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                            {list.length === 0 ? (
+                                <div className="text-center py-20 bg-white rounded-[2.5rem] border border-dashed border-gray-200">
+                                    <Inbox size={32} className="text-slate-100 mx-auto mb-3" />
+                                    <p className="text-[12px] font-bold text-slate-300">No bookings in this sector</p>
                                 </div>
-                                <p className="font-black text-content-subtle text-sm">No bookings here</p>
-                            </div>
-                        ) : list.map((b) => <BookingCard key={b.id} booking={b} onNavigate={navigate} />)}
-                    </motion.div>
-                </AnimatePresence>
+                            ) : list.map((b) => <BookingCard key={b.id} booking={b} onNavigate={navigate} />)}
+                        </motion.div>
+                    </AnimatePresence>
 
-                {/* ── Book Again CTA ── */}
-                <div onClick={() => navigate('/instant-wash')} className="flex items-center gap-4 bg-content p-4 rounded-2xl cursor-pointer group">
-                    <div className="w-11 h-11 bg-brand rounded-xl flex items-center justify-center flex-shrink-0">
-                        <Zap size={20} className="text-white" fill="white" />
-                    </div>
-                    <div className="flex-1">
-                        <p className="text-white font-black text-sm tracking-tight">Book a new wash</p>
-                        <p className="text-white/50 text-[9px] font-bold uppercase tracking-widest">Instant or Scheduled</p>
-                    </div>
-                    <div className="bg-white/10 p-2 rounded-lg group-hover:translate-x-1 transition-transform">
-                        <ArrowRight size={15} className="text-white" strokeWidth={2.5} />
-                    </div>
+                    {/* ── Quick Action ── */}
+                    <button 
+                        onClick={() => navigate('/instant-wash')} 
+                        className="w-full bg-slate-900 p-5 rounded-[2rem] flex items-center gap-4 border border-white/5 active:scale-[0.98] transition-all group shadow-xl"
+                    >
+                        <div className="w-11 h-11 bg-brand rounded-2xl flex items-center justify-center shrink-0">
+                            <Zap size={22} className="text-slate-900" fill="currentColor" />
+                        </div>
+                        <div className="flex-1 text-left">
+                            <p className="text-white font-bold text-[15px] leading-tight mb-1">Book a new wash</p>
+                            <p className="text-white/40 text-[10px] font-medium leading-none">Instant or scheduled service</p>
+                        </div>
+                        <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white/20 group-hover:text-brand transition-colors">
+                            <ArrowRight size={18} />
+                        </div>
+                    </button>
                 </div>
             </div>
         </MobileLayout>
@@ -170,65 +166,77 @@ const MyBookings = () => {
 };
 
 const BookingCard = ({ booking: b, onNavigate }) => (
-    <motion.div whileTap={{ scale: 0.99 }}
+    <motion.div 
+        whileTap={{ scale: 0.99 }}
         onClick={() => {
-            if (['Matching', 'En Route', 'In Progress'].includes(b.status)) onNavigate(`/booking-status?type=${b.type}&id=${b.id}`);
+            if (b.type === 'sparedriver') {
+                if (['pending', 'confirmed', 'accepted', 'assigned', 'en_route', 'arrived', 'active'].includes(b.rawStatus)) {
+                    onNavigate('/spare-driver');
+                    return;
+                }
+                onNavigate(`/spare-driver/history?bookingId=${b.id}`);
+                return;
+            }
+            if (['Searching', 'En route', 'Washing', 'At studio', 'Trip active'].includes(b.status)) onNavigate(`/booking-status?type=${b.type}&id=${b.id}`);
             else onNavigate(`/order/${b.id}`);
         }}
-        className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden cursor-pointer">
+        className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden"
+    >
         <div className="relative h-28 overflow-hidden">
-            <img src={b.carImg} alt={b.service} className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-            <div className={`absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-xl ${b.statusColor}`}>
-                {b.status === 'Completed' && <CheckCircle2 size={10} strokeWidth={3} />}
-                {b.status === 'Cancelled' && <XCircle size={10} strokeWidth={3} />}
-                {['Matching', 'En Route', 'In Progress', 'Scheduled'].includes(b.status) && <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />}
-                <span className="text-[8px] font-black uppercase tracking-widest">{b.status}</span>
+            <img src={b.carImg} alt="" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent" />
+            <div className={`absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-bold ${b.statusColor} shadow-md`}>
+                {b.status === 'Completed' && <CheckCircle2 size={12} />}
+                {b.status === 'Cancelled' && <XCircle size={12} />}
+                {['Searching', 'En route', 'Washing', 'Delivering', 'Trip active'].includes(b.status) && <div className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />}
+                {b.status}
             </div>
-            <div className="absolute bottom-3 left-3">
-                <p className="text-white font-black text-base tracking-tight leading-none">{b.service}</p>
-                <p className="text-white/60 text-[9px] font-bold mt-0.5">{b.id}</p>
+            <div className="absolute bottom-3 left-3 space-y-1">
+                <p className="text-white font-bold text-[15px] leading-none">{b.service}</p>
+                <p className="text-white/40 text-[9px] font-medium leading-none">{b.bookingId || b.id}</p>
             </div>
-            <div className="absolute bottom-3 right-3 bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-lg">
-                <span className="text-white font-black text-sm">{b.amount}</span>
+            <div className="absolute bottom-3 right-3 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
+                <p className="text-white font-bold text-[14px] leading-none">{b.amount}</p>
             </div>
         </div>
 
-        <div className="px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
+        <div className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
                 {b.captainImg ? (
-                    <img src={b.captainImg} alt={b.captain} className="w-8 h-8 rounded-xl object-cover border border-gray-100" />
+                    <img src={b.captainImg} className="w-9 h-9 rounded-xl object-cover border border-slate-50 shadow-sm" alt="" />
                 ) : (
-                    <div className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center">
-                        <Navigation size={13} className="text-content-subtle" />
+                    <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
+                        <Navigation size={16} className="text-slate-300" />
                     </div>
                 )}
                 <div>
-                    <p className="font-black text-sm text-content leading-none">{b.captain || 'No Captain'}</p>
-                    <p className="text-[9px] text-content-subtle font-bold mt-0.5">{b.date}</p>
+                    <h4 className="text-[13px] font-bold text-slate-800 leading-none mb-1.5">{b.captain || 'Service staff'}</h4>
+                    <p className="text-[10px] text-slate-400 font-medium leading-none">{b.date}</p>
                 </div>
             </div>
-            <div>
-                {['En Route', 'In Progress', 'Scheduled'].includes(b.status) && (
-                    <div className="flex items-center gap-1.5 bg-blue-50 text-blue-600 px-3 py-2 rounded-xl">
-                        <Clock size={12} strokeWidth={3} /><span className="font-black text-xs">{b.eta}</span>
+            
+            <div className="flex items-center gap-2">
+                {['En route', 'Washing', 'Pickup', 'Trip active'].includes(b.status) && (
+                    <div className="flex items-center gap-1.5 bg-blue-50 text-blue-500 px-3 py-1.5 rounded-xl border border-blue-100/30">
+                        <Clock size={12} strokeWidth={3} /><span className="font-bold text-[11px]">{b.eta}</span>
                     </div>
                 )}
                 {b.status === 'Completed' && !b.rated && (
-                    <div className="flex items-center gap-1 bg-amber-50 text-amber-700 px-3 py-2 rounded-xl">
-                        <Star size={12} fill="currentColor" /><span className="font-black text-xs">Rate</span>
+                    <div className="flex items-center gap-1 bg-amber-50 text-amber-500 px-3 py-1.5 rounded-xl border border-amber-100/30">
+                        <Star size={12} fill="currentColor" /><span className="font-bold text-[11px]">Rate</span>
                     </div>
                 )}
                 {b.status === 'Completed' && b.rated && (
-                    <div className="flex items-center gap-1 bg-green-50 text-green-700 px-3 py-2 rounded-xl">
-                        <Star size={12} fill="currentColor" /><span className="font-black text-xs">{b.rating}</span>
+                    <div className="flex items-center gap-1 bg-emerald-50 text-emerald-500 px-3 py-1.5 rounded-xl border border-emerald-100/30">
+                        <Star size={12} fill="currentColor" /><span className="font-bold text-[11px]">{b.rating}</span>
                     </div>
                 )}
                 {b.status === 'Cancelled' && (
-                    <div className="flex items-center gap-1 bg-gray-50 text-content-subtle px-3 py-2 rounded-xl">
-                        <RotateCcw size={12} strokeWidth={2.5} /><span className="font-black text-xs">Rebook</span>
+                    <div className="flex items-center gap-1.5 bg-slate-50 text-slate-400 px-3 py-1.5 rounded-xl border border-slate-100">
+                        <RotateCcw size={12} strokeWidth={3} /><span className="font-bold text-[11px]">Rebook</span>
                     </div>
                 )}
+                <ChevronRight size={16} className="text-slate-200" />
             </div>
         </div>
     </motion.div>

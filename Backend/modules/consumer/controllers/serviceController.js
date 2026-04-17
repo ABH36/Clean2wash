@@ -305,6 +305,7 @@ exports.getBanners = catchAsync(async (req, res, next) => {
         cta: doc.cta || 'Book Now',
         path: doc.path || '/',
         theme: doc.theme || 'dark',
+        category: doc.category || 'promo',
         applicableServices: doc.applicableServices || []
     }));
 
@@ -1313,6 +1314,7 @@ exports.getHomeData = catchAsync(async (req, res, next) => {
         cta: doc.cta || 'Book Now',
         path: doc.path || '/',
         theme: doc.theme || 'dark',
+        category: doc.category || 'promo',
         applicableServices: doc.applicableServices || []
     }));
 

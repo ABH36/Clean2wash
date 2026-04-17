@@ -31,12 +31,9 @@ const LOCATION_PICKER_PIN = svgToDataUrl(`
 <svg width="82" height="98" viewBox="0 0 82 98" fill="none" xmlns="http://www.w3.org/2000/svg">
   <ellipse cx="41" cy="88" rx="20" ry="7" fill="rgba(15,23,42,0.16)"/>
   <path d="M41 7C27.193 7 16 18.193 16 32C16 50 41 73 41 73C41 73 66 50 66 32C66 18.193 54.807 7 41 7Z" fill="#101828"/>
-  <path d="M41 11C29.402 11 20 20.402 20 32C20 47.346 41 67.173 41 67.173C41 67.173 62 47.346 62 32C62 20.402 52.598 11 41 11Z" fill="#111827" stroke="#F29F05" stroke-width="2.4"/>
+  <path d="M41 11C29.402 11 20 20.402 20 32C20 47.346 41 67.173 41 67.173C41 67.173 62 47.346 62 32C62 20.402 52.598 11 41 11Z" fill="#111827" stroke="#F59E0B" stroke-width="2.8"/>
   <circle cx="41" cy="32" r="15" fill="white"/>
-  <path d="M41 22.5L44.4 29.6L52 30.6L46.5 35.8L47.9 43.2L41 39.4L34.1 43.2L35.5 35.8L30 30.6L37.6 29.6L41 22.5Z" fill="#F29F05"/>
-  <rect x="29.5" y="46.5" width="23" height="6.8" rx="3.4" fill="#111827"/>
-  <circle cx="34" cy="54.8" r="3" fill="#111827"/>
-  <circle cx="48" cy="54.8" r="3" fill="#111827"/>
+  <path d="M41 22.5L44.4 29.6L52 30.6L46.5 35.8L47.9 43.2L41 39.4L34.1 43.2L35.5 35.8L30 30.6L37.6 29.6L41 22.5Z" fill="#F59E0B"/>
 </svg>
 `);
 
@@ -180,7 +177,14 @@ const MapScreen = () => {
                 await syncSelectedLocation(pos, 'Current Location');
             }
         } catch (err) {
-            toast.error('Location Access Denied');
+            if (err.message === 'LOCATION_PERMISSION_DENIED') {
+                toast.error('Location Blocked: Please enable GPS in your browser settings', {
+                    duration: 5000,
+                    icon: '🔒'
+                });
+            } else {
+                toast.error('Location Access Failed');
+            }
         }
     };
 
@@ -281,11 +285,20 @@ const MapScreen = () => {
             <div className="absolute inset-0 z-0">
                 <GoogleMapBox 
                     center={selectedLocation.coordinates || currentLocation || { lat: 28.7041, lng: 77.1025 }}
-                    zoom={13}
+                    zoom={15}
                     onLoad={setMap}
                     onIdle={handleMapIdle}
                     markers={mapMarkers}
                     darkMode={false}
+                    options={{
+                        disableDefaultUI: true,
+                        zoomControl: false,
+                        mapTypeControl: false,
+                        scaleControl: false,
+                        streetViewControl: false,
+                        rotateControl: false,
+                        fullscreenControl: false
+                    }}
                 />
 
                 <div className="absolute inset-0 bg-gradient-to-b from-white/86 via-transparent to-white/88 pointer-events-none" />
@@ -295,76 +308,77 @@ const MapScreen = () => {
                 />
 
                 {!type && (
-                    <div className="absolute top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10">
-                        <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="relative">
+                    <div className="absolute top-[50%] left-1/2 -translate-x-1/2 -translate-y-[100%] flex flex-col items-center pointer-events-none z-10">
+                        <motion.div 
+                            initial={{ scale: 0.5, opacity: 0 }} 
+                            animate={{ scale: 1, opacity: 1 }} 
+                            className="relative mb-2"
+                        >
                             <img
                                 src={LOCATION_PICKER_PIN}
                                 alt="Selected location"
-                                className="w-[4.6rem] h-[5.3rem] drop-shadow-[0_22px_40px_rgba(15,23,42,0.24)]"
+                                className="w-14 h-16 drop-shadow-[0_15px_30px_rgba(0,0,0,0.3)]"
                             />
                         </motion.div>
+                        <div className="w-2 h-1 bg-black/20 rounded-full blur-[2px]" />
                     </div>
                 )}
             </div>
 
-            {/* ── Top Bar Container ── */}
-            <header className="relative z-50 px-5 pt-12 space-y-5">
+            <header className="absolute top-0 left-0 right-0 z-50 p-5 space-y-4">
                 <div className="flex items-center justify-between">
                     <button
                         onClick={() => navigate(-1)}
-                        className="w-12 h-12 bg-white/90 backdrop-blur-2xl border border-black/[0.03] rounded-2xl flex items-center justify-center shadow-2xl active:scale-90 transition-all"
+                        className="w-10 h-10 bg-white shadow-xl rounded-full flex items-center justify-center text-black active:scale-95 transition-all border border-black/[0.03]"
                     >
-                        <ChevronLeft size={24} strokeWidth={3} className="text-black" />
+                        <ChevronLeft size={20} strokeWidth={3} />
                     </button>
-                    <div className="text-center">
-                        <span className="text-[10px] font-black tracking-[0.3em] text-black/20 uppercase block mb-0.5">Positioning</span>
-                        <h1 className="text-[15px] font-black text-black uppercase tracking-tight">Set Location</h1>
-                    </div>
-                    <button className="w-12 h-12 bg-white/90 backdrop-blur-2xl border border-black/[0.03] rounded-2xl flex items-center justify-center shadow-2xl">
-                        <MapIcon size={22} className="text-black/30" />
+                    <div />
+                    <button className="w-10 h-10 bg-white shadow-xl rounded-full flex items-center justify-center text-black border border-black/[0.03]">
+                        <MapIcon size={18} className="text-black/30" />
                     </button>
                 </div>
 
-                <div className="relative group shadow-[0_20px_60px_rgba(0,0,0,0.08)] rounded-[1.5rem] overflow-hidden">
-                    <div className="absolute inset-y-0 left-6 flex items-center text-black/20 group-focus-within:text-brand transition-colors duration-300">
-                        <Search size={22} strokeWidth={3} />
+                <div className="relative group">
+                    <div className="absolute inset-y-0 left-5 flex items-center text-black/20">
+                        <Search size={18} strokeWidth={3} />
                     </div>
                     <input
                         ref={searchInputRef}
                         type="text"
-                        placeholder="Search area, landmark..."
+                        placeholder="Search area, street or building..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full h-16 bg-white border-0 pl-16 pr-16 text-sm font-black text-black placeholder:text-black/20 focus:ring-4 focus:ring-brand/10 transition-all outline-none"
+                        className="w-full h-12 bg-white/90 backdrop-blur-xl border border-black/05 pl-12 pr-12 text-[13px] font-bold text-black placeholder:text-black/20 rounded-2xl shadow-xl focus:ring-0 outline-none"
                     />
                     <button
                         onClick={handleLocateMe}
-                        className="absolute inset-y-0 right-6 flex items-center text-brand"
+                        className="absolute inset-y-0 right-5 flex items-center text-[#F59E0B]"
                     >
-                        <Locate size={22} strokeWidth={3} />
+                        <Locate size={18} strokeWidth={3} />
                     </button>
                 </div>
 
                 <AnimatePresence>
                     {searchResults.length > 0 && (
                         <motion.div
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            className="bg-white/95 backdrop-blur-3xl rounded-[2.5rem] mt-2 border border-black/[0.02] shadow-[0_40px_80px_rgba(0,0,0,0.15)] max-h-[40vh] overflow-y-auto p-4 space-y-1"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-white/95 backdrop-blur-3xl rounded-2xl mt-2 border border-black/05 shadow-2xl max-h-[30vh] overflow-y-auto p-2"
                         >
                             {searchResults.map((loc) => (
                                 <button
                                     key={loc.id}
                                     onClick={() => handleSearchResultSelect(loc)}
-                                    className="w-full flex items-center gap-5 p-4 hover:bg-black/[0.02] rounded-[2rem] transition-all group"
+                                    className="w-full flex items-center gap-3 p-3 hover:bg-black/[0.02] rounded-xl transition-all"
                                 >
-                                    <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-black/15 group-hover:text-brand transition-all">
-                                        <MapPin size={22} />
+                                    <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-black/10">
+                                        <MapPin size={16} />
                                     </div>
                                     <div className="text-left flex-1 min-w-0">
-                                        <h4 className="text-[15px] font-[1000] text-black uppercase tracking-tight leading-none mb-1.5">{loc.label}</h4>
-                                        <p className="text-[11px] font-bold text-black/30 uppercase tracking-widest truncate">{loc.address}</p>
+                                        <h4 className="text-[12px] font-black text-black uppercase truncate">{loc.label}</h4>
+                                        <p className="text-[9px] font-bold text-black/20 uppercase tracking-tighter truncate">{loc.address}</p>
                                     </div>
                                 </button>
                             ))}
@@ -373,61 +387,54 @@ const MapScreen = () => {
                 </AnimatePresence>
             </header>
 
-            {/* ── Bottom Section ── */}
-            <div className="mt-auto relative z-50">
-                <div className="bg-white rounded-t-[2.5rem] p-6 pt-5 shadow-[0_-30px_60px_rgba(0,0,0,0.1)] border-t border-black/[0.03]">
-                    <div className="w-12 h-1 bg-gray-100 rounded-full mx-auto mb-6" />
-
-                    <div className="space-y-5">
-                        <div className="flex items-start gap-4">
-                            <div className="w-11 h-11 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-500 flex-shrink-0">
-                                <MapPin size={22} strokeWidth={3} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between mb-1">
-                                    <h3 className="text-[9px] font-black text-black/25 uppercase tracking-[0.25em]">Drop Point</h3>
-                                    <button onClick={handleEdit} className="text-brand text-[9px] font-black uppercase tracking-widest underline underline-offset-4">Edit</button>
-                                </div>
-                                <h4 className="text-[15px] font-[1000] text-black uppercase tracking-tight leading-tight mb-0.5 truncate">
-                                    {selectedLocation.label}
-                                </h4>
-                                <p className="text-[10px] font-bold text-black/30 uppercase tracking-widest leading-relaxed">
-                                    {selectedLocation.address}
-                                </p>
-                            </div>
+            {/* ── Bottom Interface Card ── */}
+            <div className="absolute bottom-4 left-4 right-4 z-50">
+                <div className="bg-white rounded-[28px] p-5 shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-black/[0.03]">
+                    <div className="flex items-start gap-4 mb-5">
+                        <div className="w-10 h-10 bg-[#0F172A]/03 rounded-xl flex items-center justify-center text-[#F59E0B] flex-shrink-0">
+                            <MapPin size={20} strokeWidth={3} />
                         </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-gray-50/70 p-3 rounded-[1.25rem] border border-black/[0.01]">
-                                <p className="text-[8px] font-black text-black/20 uppercase tracking-[0.2em] mb-1.5 leading-none">Security</p>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
-                                    <span className="text-[10px] font-black text-black uppercase tracking-tight">Active Zone</span>
-                                </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-0.5">
+                                <h3 className="text-[8px] font-black text-black/20 uppercase tracking-widest">Selected Location</h3>
+                                <button onClick={handleEdit} className="text-[#F59E0B] text-[9px] font-black uppercase tracking-widest leading-none">Change</button>
                             </div>
-                            <div className="bg-gray-50/70 p-3 rounded-[1.25rem] border border-black/[0.01]">
-                                <p className="text-[8px] font-black text-black/20 uppercase tracking-[0.2em] mb-1.5 leading-none">Category</p>
-                                <div className="flex items-center gap-2">
-                                    <Zap size={10} className="text-brand" fill="currentColor" />
-                                    <span className="text-[10px] font-black text-black uppercase tracking-tight">{context === 'chauffeur' ? 'Expert Driver' : 'Elite Care'}</span>
-                                </div>
-                            </div>
+                            <h4 className="text-[14px] font-[1000] text-black uppercase tracking-tight leading-tight truncate">
+                                {selectedLocation.label}
+                            </h4>
+                            <p className="text-[9px] font-bold text-black/30 uppercase tracking-tighter truncate mt-0.5">
+                                {selectedLocation.address}
+                            </p>
                         </div>
                     </div>
 
-                    <div className="pt-6">
+                    <div className="grid grid-cols-2 gap-2.5 mb-5">
+                        <div className="bg-gray-50/70 py-2.5 px-3 rounded-xl border border-black/[0.01] flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] animate-pulse" />
+                            <span className="text-[9px] font-black text-black uppercase tracking-tight">Active Zone</span>
+                        </div>
+                        <div className="bg-gray-50/70 py-2.5 px-3 rounded-xl border border-black/[0.01] flex items-center gap-2">
+                            <Zap size={10} className="text-[#F59E0B]" fill="currentColor" />
+                            <span className="text-[9px] font-black text-black uppercase tracking-tight">Elite Care</span>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <button
+                            onClick={handleLocateMe}
+                            className="w-full h-12 bg-white border border-black/10 text-black rounded-2xl font-[1000] text-[11px] uppercase tracking-[0.15em] flex items-center justify-center gap-2 shadow-sm active:bg-gray-50 transition-all"
+                        >
+                            <Locate size={14} className="text-[#F59E0B]" strokeWidth={3} />
+                            Use Current Location
+                        </button>
+
                         <motion.button
-                            whileTap={{ scale: 0.96 }}
+                            whileTap={{ scale: 0.98 }}
                             onClick={handleConfirm}
                             disabled={isGeocoding}
-                            className="w-full bg-black text-white h-14 rounded-2xl font-black text-[14px] uppercase tracking-[0.3em] shadow-[0_20px_40px_rgba(0,0,0,0.15)] flex items-center justify-center relative group overflow-hidden disabled:opacity-50"
+                            className="w-full bg-black text-white h-13 rounded-2xl font-black text-[12px] uppercase tracking-[0.2em] shadow-xl flex items-center justify-center transition-all disabled:opacity-50"
                         >
-                            <span className="relative z-10 pl-4">
-                                {isGeocoding ? 'Locating...' : 'Confirm Location'}
-                            </span>
-                            <div className="absolute right-6 opacity-30 group-hover:translate-x-1 transition-transform relative z-10">
-                                <ChevronRight size={22} strokeWidth={3} />
-                            </div>
+                            {isGeocoding ? 'Locating...' : 'Confirm Location'}
                         </motion.button>
                     </div>
                 </div>

@@ -22,7 +22,13 @@ import {
     TrendingUp,
     LayoutGrid,
     List,
-    MoreVertical
+    MoreVertical,
+    Activity,
+    CloudRain,
+    ArrowRight,
+    Image as ImageIcon,
+    Layout,
+    Globe
 } from 'lucide-react';
 
 const AdminPromotions = () => {
@@ -62,6 +68,7 @@ const AdminPromotions = () => {
         code: '', name: '', type: 'Percentage', val: '', expiry: '', status: 'Active',
         userGets: '', friendGets: '',
         title: '', subtitle: '', image: '', cta: '', path: '', theme: 'dark',
+        category: 'promo',
         applicableServices: []
     });
 
@@ -142,110 +149,135 @@ const AdminPromotions = () => {
     });
 
     return (
-        <>
-            <div className="space-y-6">
-                {/* Control Header */}
-                <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
-                    <div className="flex bg-gray-100 p-1 rounded-2xl w-full lg:w-auto overflow-x-auto scrollbar-hide">
+        <div className="space-y-6 pb-20 bg-[var(--bg)] min-h-screen">
+            {/* Control Header */}
+            <div className="admin-card border-none shadow-soft-xl">
+                <div className="flex flex-col gap-6">
+                    <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
+                        <div className="space-y-1">
+                            <h1 className="text-2xl font-bold text-[var(--text-primary)]">Promotions & Marketing</h1>
+                            <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-[var(--primary)] animate-pulse" />
+                                <p className="text-xs font-semibold text-[var(--primary)] uppercase tracking-[0.15em]">Global Campaign Manager</p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                            <div className="flex-1 lg:w-72 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl px-4 py-2.5 flex items-center gap-3 group focus-within:border-[var(--primary)] transition-all">
+                                <Search size={16} className="text-[var(--text-muted)] group-focus-within:text-[var(--primary)]" />
+                                <input
+                                    type="text"
+                                    placeholder={`Locate ${activeTab.toLowerCase()}...`}
+                                    className="bg-transparent outline-none text-sm font-semibold text-[var(--text-primary)] w-full placeholder:text-[var(--text-muted)]"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                />
+                            </div>
+                            <button
+                                onClick={handleOpenAdd}
+                                className="h-11 px-6 bg-[var(--primary)] text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-[var(--primary)]/20 flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                            >
+                                <Plus size={18} /> New Campaign
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex border-b border-[var(--border)] overflow-x-auto scrollbar-hide">
                         {['Coupons', 'Referrals', 'Offers', 'Banners'].map(tab => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
-                                className={`flex-1 lg:px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab ? 'bg-white text-brand shadow-sm' : 'text-content-subtle hover:text-content'}`}
+                                className={`px-8 py-4 text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap border-b-2 ${
+                                    activeTab === tab 
+                                        ? 'border-[var(--primary)] text-[var(--primary)]' 
+                                        : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                                }`}
                             >
                                 {tab}
                             </button>
                         ))}
                     </div>
-
-                    <div className="flex items-center gap-3 w-full lg:w-auto">
-                        <div className="flex-1 lg:w-72 bg-white border border-gray-100 rounded-2xl px-4 py-2.5 flex items-center gap-3 shadow-soft group focus-within:border-brand transition-all">
-                            <Search size={16} className="text-content-subtle group-focus-within:text-brand" />
-                            <input
-                                type="text"
-                                placeholder={`Locate ${activeTab.toLowerCase()}...`}
-                                className="bg-transparent outline-none text-xs font-bold text-content w-full"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
-                        </div>
-                        <button
-                            onClick={handleOpenAdd}
-                            className="h-11 px-6 bg-brand text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand/20 flex items-center gap-2 shrink-0 hover:scale-105 active:scale-95 transition-all"
-                        >
-                            <Plus size={18} /> Create Entry
-                        </button>
-                    </div>
                 </div>
-
-                {/* Promotion Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {filteredList.map((p, i) => (
-                        <motion.div
-                            key={p._id}
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: i * 0.05 }}
-                            className="bg-white rounded-[2.5rem] border border-gray-100 shadow-soft overflow-hidden group hover:border-brand transition-all flex flex-col relative"
-                        >
-                            <div className="p-8 pb-4">
-                                <div className="flex justify-between items-start mb-6">
-                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border border-gray-100 group-hover:bg-brand group-hover:text-white transition-all shadow-sm ${p.status === 'Active' ? 'bg-brand/10 text-brand' : 'bg-gray-50 text-content-subtle'}`}>
-                                        {activeTab === 'Referrals' ? <Gift size={28} /> : (activeTab === 'Banners' ? <LayoutGrid size={28} /> : (activeTab === 'Offers' ? <TrendingUp size={28} /> : <Tag size={28} />))}
-                                    </div>
-                                    <div className="flex flex-col items-end gap-1.5">
-                                        <button onClick={() => handleToggle(p)} className="transition-all">
-                                            {p.status === 'Active' ? <ToggleRight size={32} className="text-green-500" /> : <ToggleLeft size={32} className="text-gray-300" />}
-                                        </button>
-                                        {activeTab !== 'Banners' && <span className="text-[10px] font-bold text-content-subtle uppercase tracking-widest">{p.usage} Uses</span>}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <h4 className="text-xl font-black text-content uppercase tracking-tighter truncate group-hover:text-brand transition-colors">
-                                        {p.code || p.name || p.title}
-                                    </h4>
-                                    <p className="text-[10px] font-black text-brand uppercase tracking-widest mt-1">
-                                        {activeTab === 'Referrals' ? `Reward: ${p.userGets}` : (activeTab === 'Banners' ? `Theme: ${p.theme}` : `${p.val} ${p.type}`)}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {activeTab === 'Banners' && p.image && (
-                                <div className="px-8 pb-4">
-                                    <div className="h-20 w-full rounded-xl overflow-hidden border border-gray-100 bg-gray-50">
-                                        <img src={p.image} className="w-full h-full object-cover" alt="" />
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="px-8 py-5 bg-gray-50/50 mt-auto flex items-center justify-between border-t border-gray-100">
-                                <div className="flex items-center gap-2">
-                                    <Calendar size={12} className="text-content-subtle" />
-                                    <span className="text-[10px] font-bold text-content-subtle uppercase">Exp: {p.expiry || 'LIFETIME'}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button onClick={() => handleOpenEdit(p)} className="p-2 hover:bg-brand hover:text-white rounded-lg text-content-subtle transition-all"><Edit2 size={12} /></button>
-                                    <button onClick={() => setDeleteConfirm({ isOpen: true, id: p._id })} className="p-2 hover:bg-red-500 hover:text-white rounded-lg text-content-subtle transition-all"><Trash2 size={12} /></button>
-                                </div>
-                            </div>
-                        </motion.div>
-                    ))}
-                </div>
-
-                {/* Empty State */}
-                {filteredList.length === 0 && (
-                    <div className="py-20 flex flex-col items-center justify-center text-center">
-                        <div className="w-20 h-20 bg-gray-50 rounded-[2.5rem] flex items-center justify-center text-gray-300 mb-6 border border-gray-100">
-                            <Zap size={32} />
-                        </div>
-                        <h4 className="text-lg font-black text-content uppercase">No Promotions Located</h4>
-                        <p className="text-xs font-bold text-content-subtle uppercase tracking-widest mt-2">Initialize a new campaign to boost network growth</p>
-                    </div>
-                )}
             </div>
 
-            {/* Promotion Configuration Terminal */}
+            {/* Content Area */}
+            {isFetching ? (
+                <div className="py-20 flex flex-col items-center justify-center">
+                    <div className="w-10 h-10 border-4 border-[var(--border)] border-t-[var(--primary)] rounded-full animate-spin mb-4" />
+                    <p className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest">Fetching Campaigns...</p>
+                </div>
+            ) : filteredList.length === 0 ? (
+                <div className="py-20 flex flex-col items-center justify-center text-center bg-[var(--card)] rounded-3xl border border-[var(--border)] border-dashed">
+                    <div className="w-20 h-20 bg-[var(--bg-secondary)] rounded-[2rem] flex items-center justify-center text-[var(--text-muted)] mb-6 border border-[var(--border)]">
+                        <Zap size={32} />
+                    </div>
+                    <h4 className="text-lg font-bold text-[var(--text-primary)] uppercase tracking-tight">No Promotions Located</h4>
+                    <p className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-widest mt-2 max-w-xs px-4">
+                        Initialize a new campaign to boost network growth and engagement.
+                    </p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+                    <AnimatePresence>
+                        {filteredList.map((p, i) => (
+                            <motion.div
+                                key={p._id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                transition={{ delay: i * 0.05 }}
+                                className="bg-[var(--card)] rounded-3xl border border-[var(--border)] shadow-soft overflow-hidden group hover:border-[var(--primary)] transition-all flex flex-col relative"
+                            >
+                                <div className="p-6 pb-4">
+                                    <div className="flex justify-between items-start mb-6">
+                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border border-[var(--border)] group-hover:bg-[var(--primary)] group-hover:text-white transition-all shadow-sm ${p.status === 'Active' ? 'bg-[var(--primary-light)] text-[var(--primary)]' : 'bg-[var(--bg-secondary)] text-[var(--text-muted)]'}`}>
+                                            {activeTab === 'Referrals' ? <Gift size={24} /> : (activeTab === 'Banners' ? <LayoutGrid size={24} /> : (activeTab === 'Offers' ? <TrendingUp size={24} /> : <Tag size={24} />))}
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1.5">
+                                            <button onClick={() => handleToggle(p)} className="transition-all transform hover:scale-110 active:scale-95">
+                                                {p.status === 'Active' ? <ToggleRight size={28} className="text-emerald-500" /> : <ToggleLeft size={28} className="text-[var(--text-muted)]" />}
+                                            </button>
+                                            {activeTab !== 'Banners' && (
+                                                <span className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">{p.usage} Uses</span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <h4 className="text-lg font-bold text-[var(--text-primary)] uppercase tracking-tight truncate group-hover:text-[var(--primary)] transition-colors">
+                                            {p.code || p.name || p.title}
+                                        </h4>
+                                        <p className="text-[10px] font-bold text-[var(--primary)] uppercase tracking-widest mt-1">
+                                            {activeTab === 'Referrals' ? `Reward: ${p.userGets}` : (activeTab === 'Banners' ? `Theme: ${p.theme}` : `${p.val} ${p.type}`)}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {activeTab === 'Banners' && p.image && (
+                                    <div className="px-6 pb-4">
+                                        <div className="h-24 w-full rounded-2xl overflow-hidden border border-[var(--border)] bg-[var(--bg-secondary)]">
+                                            <img src={p.image} className="w-full h-full object-cover" alt="" onError={(e) => { e.target.src = 'https://via.placeholder.com/400x150?text=No+Preview'; }} />
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="px-6 py-4 bg-[var(--bg-secondary)] mt-auto flex items-center justify-between border-t border-[var(--border)]">
+                                    <div className="flex items-center gap-2">
+                                        <Calendar size={12} className="text-[var(--text-muted)]" />
+                                        <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase">Exp: {p.expiry ? new Date(p.expiry).toLocaleDateString() : 'LIFETIME'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <button onClick={() => handleOpenEdit(p)} className="p-2 bg-[var(--card)] hover:bg-[var(--primary)] hover:text-white rounded-lg text-[var(--text-muted)] border border-[var(--border)] transition-all shadow-sm"><Edit2 size={12} /></button>
+                                        <button onClick={() => setDeleteConfirm({ isOpen: true, id: p._id })} className="p-2 bg-[var(--card)] hover:bg-red-500 hover:text-white rounded-lg text-[var(--text-muted)] border border-[var(--border)] transition-all shadow-sm"><Trash2 size={12} /></button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
+                </div>
+            )}
+
+            {/* Modal Logic Terminal */}
             <AnimatePresence>
                 {isModalOpen && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -254,34 +286,35 @@ const AdminPromotions = () => {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setIsModalOpen(false)}
-                            className="absolute inset-0 bg-content/60 backdrop-blur-sm"
+                            className="absolute inset-0 bg-black/60 backdrop-blur-md"
                         />
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="bg-white w-[95%] sm:max-w-4xl rounded-[2.5rem] sm:rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-gray-100"
+                            className="bg-[var(--card)] w-[95%] max-w-2xl rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden border border-[var(--border)]"
                         >
-                            <div className="px-6 sm:px-10 py-6 sm:py-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                            <div className="px-8 py-6 border-b border-[var(--border)] flex items-center justify-between bg-[var(--bg-secondary)]">
                                 <div>
-                                    <h2 className="text-xl font-black text-content leading-none uppercase">{editingPromo ? 'Synchronize Protocol' : 'New Growth Entry'}</h2>
-                                    <p className="text-[10px] font-black text-brand uppercase tracking-widest mt-2 px-1">Promotional Logic Terminal</p>
+                                    <h2 className="text-xl font-bold text-[var(--text-primary)] leading-none uppercase tracking-tight">{editingPromo ? 'Synchronize Protocol' : 'New Growth Entry'}</h2>
+                                    <p className="text-[10px] font-bold text-[var(--primary)] uppercase tracking-widest mt-2">{activeTab} Logic Terminal</p>
                                 </div>
-                                <button onClick={() => setIsModalOpen(false)} className="p-3 bg-white hover:bg-gray-50 rounded-2xl border border-gray-100 text-content-subtle transition-all">
+                                <button onClick={() => setIsModalOpen(false)} className="w-10 h-10 bg-[var(--card)] hover:bg-[var(--bg-secondary)] rounded-xl border border-[var(--border)] text-[var(--text-secondary)] transition-all flex items-center justify-center">
                                     <X size={20} />
                                 </button>
                             </div>
-                            <div className="p-6 sm:p-10 overflow-y-auto max-h-[75vh] scrollbar-hide">
+                            
+                            <div className="p-8 overflow-y-auto max-h-[70vh] scrollbar-hide">
                                 <form onSubmit={handleSave} className="space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                        <div className="md:col-span-2 space-y-1.5 font-sans">
-                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">
+                                    <div className="space-y-4">
+                                        <div className="space-y-1.5 font-sans">
+                                            <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest ml-1">
                                                 {activeTab === 'Referrals' ? 'Campaign Name' : (activeTab === 'Banners' ? 'Banner Title' : 'Protocol Code')}
                                             </label>
                                             <input
                                                 required
                                                 placeholder={activeTab === 'Referrals' ? 'Standard Growth Referral' : (activeTab === 'Banners' ? 'ENTER TITLE' : 'WASHPRO100')}
-                                                className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm uppercase"
+                                                className="w-full bg-[var(--bg-secondary)] border border-[var(--border)] px-5 py-3.5 rounded-2xl text-sm font-semibold text-[var(--text-primary)] outline-none focus:border-[var(--primary)] focus:bg-[var(--card)] transition-all shadow-sm uppercase placeholder:opacity-50"
                                                 value={activeTab === 'Referrals' ? formData.name : (activeTab === 'Banners' ? formData.title : formData.code)}
                                                 onChange={e => {
                                                     const val = e.target.value;
@@ -292,150 +325,162 @@ const AdminPromotions = () => {
                                             />
                                         </div>
 
-                                        {activeTab === 'Banners' ? null : activeTab !== 'Referrals' ? (
-                                            <>
-                                                <div className="space-y-1.5 font-sans">
-                                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Reduction Type</label>
-                                                    <select
-                                                        className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm appearance-none"
-                                                        value={formData.type}
-                                                        onChange={e => setFormData({ ...formData, type: e.target.value })}
-                                                    >
-                                                        <option value="Percentage">Percentage (%)</option>
-                                                        <option value="Flat">Flat Value (₹)</option>
-                                                        <option value="Freebie">Free Service</option>
-                                                    </select>
-                                                </div>
-                                                <div className="space-y-1.5 font-sans">
-                                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Valuation / Badge</label>
-                                                    <input
-                                                        required
-                                                        placeholder="e.g. 50% or Badge Name"
-                                                        className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
-                                                        value={formData.val}
-                                                        onChange={e => setFormData({ ...formData, val: e.target.value })}
-                                                    />
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div className="space-y-1.5 font-sans">
-                                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Referrer Reward</label>
-                                                    <input
-                                                        required
-                                                        placeholder="e.g. ₹100"
-                                                        className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
-                                                        value={formData.userGets}
-                                                        onChange={e => setFormData({ ...formData, userGets: e.target.value })}
-                                                    />
-                                                </div>
-                                                <div className="space-y-1.5 font-sans">
-                                                    <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Invitee Bonus / Badge</label>
-                                                    <input
-                                                        required
-                                                        placeholder="e.g. ₹50 or Badge Name"
-                                                        className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
-                                                        value={formData.val || formData.friendGets} // Re-using val for badge here in UI, fallback
-                                                        onChange={e => {
-                                                            setFormData({ ...formData, friendGets: e.target.value, val: e.target.value })
-                                                        }}
-                                                    />
-                                                </div>
-                                            </>
-                                        )}
-
-                                        <div className="md:col-span-2 space-y-1.5 font-sans pt-4 border-t border-gray-100">
-                                            <label className="text-[10px] font-black text-brand uppercase tracking-widest ml-1">Visual Representation (Home Display)</label>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {activeTab === 'Banners' ? null : activeTab !== 'Referrals' ? (
+                                                <>
+                                                    <div className="space-y-1.5 font-sans">
+                                                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest ml-1">Reduction Type</label>
+                                                        <select
+                                                            className="w-full bg-[var(--bg-secondary)] border border-[var(--border)] px-5 py-3.5 rounded-2xl text-sm font-semibold text-[var(--text-primary)] outline-none focus:border-[var(--primary)] focus:bg-[var(--card)] transition-all shadow-sm appearance-none"
+                                                            value={formData.type}
+                                                            onChange={e => setFormData({ ...formData, type: e.target.value })}
+                                                        >
+                                                            <option value="Percentage">Percentage (%)</option>
+                                                            <option value="Flat">Flat Value (₹)</option>
+                                                            <option value="Freebie">Free Service</option>
+                                                        </select>
+                                                    </div>
+                                                    <div className="space-y-1.5 font-sans">
+                                                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest ml-1">Value / Badge</label>
+                                                        <input
+                                                            required
+                                                            placeholder="e.g. 50"
+                                                            className="w-full bg-[var(--bg-secondary)] border border-[var(--border)] px-5 py-3.5 rounded-2xl text-sm font-semibold text-[var(--text-primary)] outline-none focus:border-[var(--primary)] focus:bg-[var(--card)] transition-all shadow-sm"
+                                                            value={formData.val}
+                                                            onChange={e => setFormData({ ...formData, val: e.target.value })}
+                                                        />
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <div className="space-y-1.5 font-sans">
+                                                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest ml-1">Referrer Reward</label>
+                                                        <input
+                                                            required
+                                                            placeholder="e.g. ₹100"
+                                                            className="w-full bg-[var(--bg-secondary)] border border-[var(--border)] px-5 py-3.5 rounded-2xl text-sm font-semibold text-[var(--text-primary)] outline-none focus:border-[var(--primary)] focus:bg-[var(--card)] transition-all shadow-sm"
+                                                            value={formData.userGets}
+                                                            onChange={e => setFormData({ ...formData, userGets: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1.5 font-sans">
+                                                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest ml-1">Invitee Bonus</label>
+                                                        <input
+                                                            required
+                                                            placeholder="e.g. ₹50"
+                                                            className="w-full bg-[var(--bg-secondary)] border border-[var(--border)] px-5 py-3.5 rounded-2xl text-sm font-semibold text-[var(--text-primary)] outline-none focus:border-[var(--primary)] focus:bg-[var(--card)] transition-all shadow-sm"
+                                                            value={formData.friendGets}
+                                                            onChange={e => setFormData({ ...formData, friendGets: e.target.value })}
+                                                        />
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
 
-                                        <div className="md:col-span-2 space-y-1.5 font-sans">
-                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Subtitle / Promo Line</label>
+                                        <div className="space-y-1.5 font-sans">
+                                            <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest ml-1">Description / Subtitle</label>
                                             <input
                                                 required
-                                                placeholder="SUB-TEXT OR PROMO LINE"
-                                                className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm uppercase"
+                                                placeholder="Short display line for customers"
+                                                className="w-full bg-[var(--bg-secondary)] border border-[var(--border)] px-5 py-3.5 rounded-2xl text-sm font-semibold text-[var(--text-primary)] outline-none focus:border-[var(--primary)] focus:bg-[var(--card)] transition-all shadow-sm"
                                                 value={formData.subtitle}
                                                 onChange={e => setFormData({ ...formData, subtitle: e.target.value })}
                                             />
                                         </div>
-                                        <div className="space-y-1.5 font-sans">
-                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Image URL</label>
-                                            <input
-                                                placeholder="/assets/example.png"
-                                                className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
-                                                value={formData.image}
-                                                onChange={e => setFormData({ ...formData, image: e.target.value })}
-                                            />
-                                        </div>
-                                        <div className="space-y-1.5 font-sans">
-                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Call to Action (CTA)</label>
-                                            <input
-                                                placeholder="Explore Now"
-                                                className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm uppercase"
-                                                value={formData.cta}
-                                                onChange={e => setFormData({ ...formData, cta: e.target.value })}
-                                            />
-                                        </div>
 
-                                        <div className="grid grid-cols-2 gap-5">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className="space-y-1.5 font-sans">
-                                                <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Theme Selection</label>
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    {['dark', 'light'].map(t => (
-                                                        <button
-                                                            key={t}
-                                                            type="button"
-                                                            onClick={() => setFormData({ ...formData, theme: t })}
-                                                            className={`h-12 rounded-2xl border font-black text-[10px] uppercase tracking-widest transition-all ${formData.theme === t
-                                                                    ? 'bg-content text-white border-content shadow-lg'
-                                                                    : 'bg-white text-content-subtle border-gray-100 hover:border-brand/30'
-                                                                }`}
-                                                        >
-                                                            {t} Theme
-                                                        </button>
-                                                    ))}
+                                                <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest ml-1">Image Asset URL</label>
+                                                <div className="relative">
+                                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"><ImageIcon size={14} /></div>
+                                                    <input
+                                                        placeholder="https://..."
+                                                        className="w-full bg-[var(--bg-secondary)] border border-[var(--border)] pl-10 pr-5 py-3.5 rounded-2xl text-sm font-semibold text-[var(--text-primary)] outline-none focus:border-[var(--primary)] focus:bg-[var(--card)] transition-all shadow-sm"
+                                                        value={formData.image}
+                                                        onChange={e => setFormData({ ...formData, image: e.target.value })}
+                                                    />
                                                 </div>
                                             </div>
-
                                             <div className="space-y-1.5 font-sans">
-                                                <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Route / Destination Path</label>
-                                                <input
-                                                    placeholder="/shop, /refer, etc"
-                                                    className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
-                                                    value={formData.path}
-                                                    onChange={e => setFormData({ ...formData, path: e.target.value })}
-                                                />
+                                                <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest ml-1">Expiry Schedule</label>
+                                                <div className="relative">
+                                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"><Clock size={14} /></div>
+                                                    <input
+                                                        type="date"
+                                                        className="w-full bg-[var(--bg-secondary)] border border-[var(--border)] pl-10 pr-5 py-3.5 rounded-2xl text-sm font-semibold text-[var(--text-primary)] outline-none focus:border-[var(--primary)] focus:bg-[var(--card)] transition-all shadow-sm"
+                                                        value={formData.expiry ? formData.expiry.split('T')[0] : ''}
+                                                        onChange={e => setFormData({ ...formData, expiry: e.target.value })}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
-                                        {activeTab !== 'Referrals' && activeTab !== 'Banners' && (
-                                            <div className="md:col-span-2 space-y-1.5 font-sans border-t border-gray-100 pt-4">
-                                                <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Protocol Expiry</label>
-                                                <input
-                                                    type="date"
-                                                    className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
-                                                    value={formData.expiry}
-                                                    onChange={e => setFormData({ ...formData, expiry: e.target.value })}
-                                                />
+
+                                        {activeTab === 'Banners' && (
+                                            <div className="space-y-4 pt-4 border-t border-[var(--border)] border-dashed">
+                                                <div className="space-y-1.5 font-sans">
+                                                    <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest ml-1">Banner Concept / Category</label>
+                                                    <div className="flex gap-2">
+                                                        {['driver', 'carwash', 'promo'].map(c => (
+                                                            <button
+                                                                key={c}
+                                                                type="button"
+                                                                onClick={() => setFormData({ ...formData, category: c })}
+                                                                className={`flex-1 h-12 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all ${
+                                                                    formData.category === c 
+                                                                        ? 'bg-[var(--primary)] text-white border-[var(--primary)]' 
+                                                                        : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--primary)]'
+                                                                }`}
+                                                            >
+                                                                {c}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="space-y-1.5 font-sans">
+                                                    <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest ml-1">Action Destination (Path)</label>
+                                                    <input
+                                                        placeholder="/services"
+                                                        className="w-full bg-[var(--bg-secondary)] border border-[var(--border)] px-5 py-3.5 rounded-2xl text-sm font-semibold text-[var(--text-primary)] outline-none focus:border-[var(--primary)] focus:bg-[var(--card)] transition-all shadow-sm"
+                                                        value={formData.path}
+                                                        onChange={e => setFormData({ ...formData, path: e.target.value })}
+                                                    />
+                                                </div>
+                                                <div className="space-y-1.5 font-sans">
+                                                    <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest ml-1">UI Theme</label>
+                                                    <div className="flex gap-2">
+                                                        {['dark', 'light'].map(t => (
+                                                            <button
+                                                                key={t}
+                                                                type="button"
+                                                                onClick={() => setFormData({ ...formData, theme: t })}
+                                                                className={`flex-1 h-12 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all ${
+                                                                    formData.theme === t 
+                                                                        ? 'bg-[var(--primary)] text-white border-[var(--primary)]' 
+                                                                        : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--primary)]'
+                                                                }`}
+                                                            >
+                                                                {t}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
                                             </div>
                                         )}
                                     </div>
 
-                                    <div className="pt-8 mt-4 border-t border-gray-100">
-                                        <div className="flex flex-col mb-8">
-                                            <label className="text-[10px] font-black text-brand uppercase tracking-[0.2em] ml-1 mb-1">Global Campaign Execution</label>
-                                            <p className="text-[9px] font-bold text-content-subtle uppercase tracking-widest ml-1">This protocol will be synchronized globally across all network nodes. Specific service logic is now managed via the Service Catalog.</p>
-                                        </div>
-
-                                        <button
-                                            disabled={loading}
-                                            type="submit"
-                                            className="w-full bg-content text-white py-5 rounded-[2rem] font-black text-[10px] uppercase tracking-[0.25em] shadow-2xl shadow-content/20 flex items-center justify-center gap-3 hover:bg-brand transition-all disabled:opacity-50"
-                                        >
-                                            {loading ? 'Initializing Protocol...' : (
-                                                <>{editingPromo ? 'Update Synchronization' : 'Commit Global Protocol'} <CheckCircle2 size={18} /></>
-                                            )}
-                                        </button>
-                                    </div>
+                                    <button
+                                        disabled={loading}
+                                        type="submit"
+                                        className="w-full bg-[var(--primary)] text-white py-4.5 rounded-2xl font-bold text-sm uppercase tracking-widest shadow-xl shadow-[var(--primary)]/20 flex items-center justify-center gap-3 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 mt-8"
+                                    >
+                                        {loading ? (
+                                            <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                        ) : (
+                                            <>{editingPromo ? 'Update Synchronization' : 'Commit Protocol'} <CheckCircle2 size={18} /></>
+                                        )}
+                                    </button>
                                 </form>
                             </div>
                         </motion.div>
@@ -443,7 +488,7 @@ const AdminPromotions = () => {
                 )}
             </AnimatePresence>
 
-            {/* Delete Confirmation Modal */}
+            {/* Terminate Confirmation */}
             <AnimatePresence>
                 {deleteConfirm.isOpen && (
                     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
@@ -458,24 +503,26 @@ const AdminPromotions = () => {
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 relative z-10 border border-gray-100 shadow-2xl text-center"
+                            className="bg-[var(--card)] w-full max-w-sm rounded-[2.5rem] p-8 relative z-10 border border-[var(--border)] shadow-2xl text-center"
                         >
                             <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
                                 <Trash2 size={32} />
                             </div>
-                            <h3 className="text-xl font-black text-content leading-none uppercase tracking-tighter mb-2">Terminate Promo?</h3>
-                            <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mb-8 px-4">This action will permanently terminate this promotion protocol.</p>
+                            <h3 className="text-xl font-bold text-[var(--text-primary)] leading-none uppercase tracking-tight mb-2">Terminate Promo?</h3>
+                            <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-8 px-4 leading-relaxed">
+                                This action will permanently terminate this promotion protocol from the network.
+                            </p>
 
                             <div className="flex gap-3">
                                 <button
                                     onClick={() => setDeleteConfirm({ isOpen: false, id: null })}
-                                    className="flex-1 bg-gray-100 text-content-subtle py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all"
+                                    className="flex-1 bg-[var(--bg-secondary)] text-[var(--text-secondary)] py-4 rounded-2xl font-bold text-[10px] uppercase tracking-widest hover:bg-[var(--border)] transition-all border border-[var(--border)]"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handleDelete}
-                                    className="flex-1 bg-red-500 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all"
+                                    className="flex-1 bg-red-500 text-white py-4 rounded-2xl font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all"
                                 >
                                     Terminate
                                 </button>
@@ -484,7 +531,7 @@ const AdminPromotions = () => {
                     </div>
                 )}
             </AnimatePresence>
-        </>
+        </div>
     );
 };
 

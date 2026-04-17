@@ -1,0 +1,444 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
+import { useNavigate, useLocation, Outlet } from 'react-router-dom';
+import { useAuth } from '../../../context/AuthContext';
+import { useTheme } from '../../../context/ThemeContext';
+import { adminAPI } from '../../../utils/adminApi';
+import { socketService } from '../../../utils/socket';
+import { isFeatureEnabled, syncPlatformConfig } from '../../../utils/platformConfig';
+import { ADMIN_ROUTES_CONFIG } from '../AdminRoutesConfig.jsx';
+import '../../../styles/admin-theme.css';
+import {
+    LogOut,
+    Menu,
+    X,
+    Bell,
+    Search,
+    Car,
+    Moon,
+    Sun,
+    ChevronDown,
+    Package
+} from 'lucide-react';
+
+const AdminLayout = ({ title: propTitle }) => {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const { logout } = useAuth();
+    const { isDarkMode, toggleTheme } = useTheme();
+    const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 1024);
+    const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [expandedGroups, setExpandedGroups] = useState(['Overview']);
+    const [isLoadingConfig, setIsLoadingConfig] = useState(true);
+
+    // Apply theme to document
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
+    }, [isDarkMode]);
+
+    useEffect(() => {
+        const initPlatform = async () => {
+            await syncPlatformConfig();
+            setIsLoadingConfig(false);
+        };
+        initPlatform();
+    }, []);
+
+    const getPageTitle = () => {
+        if (propTitle) return propTitle;
+        const path = location.pathname;
+        if (path === '/admin') return 'Dashboard';
+        if (path === '/admin/notifications') return 'Notifications';
+        if (path === '/admin/bookings') return 'Bookings';
+        if (path === '/admin/users') {
+            const params = new URLSearchParams(location.search);
+            const type = params.get('type');
+            if (type === 'vendors') return 'Vendors';
+            if (type === 'captains') return 'Captains';
+            if (type === 'staff') return 'Staff';
+            if (type === 'sparedriver') return 'Spare Drivers';
+            return 'Consumers';
+        }
+        if (path === '/admin/apartment-wash') return 'Apartment Wash';
+        if (path === '/admin/studio-wash') return 'Studio Wash';
+        if (path.startsWith('/admin/spare-drivers')) return 'Spare Drivers';
+        return 'Admin Panel';
+    };
+
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth <= 1024) setIsSidebarOpen(false);
+            else setIsSidebarOpen(true);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const fetchUnreadCount = async () => {
+        try {
+            const res = await adminAPI.getNotifications({ limit: 1, isRead: false });
+            if (res.status === 'success') {
+                setUnreadCount(res.data.unreadCount || 0);
+            }
+        } catch (error) {
+            console.error('Failed to fetch unread count:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchUnreadCount();
+        socketService.joinAdminRoom();
+        const handleNewNotification = () => fetchUnreadCount();
+        socketService.on('new_admin_notification', handleNewNotification);
+        socketService.on('sos_alert', handleNewNotification);
+        socketService.on('new_booking', handleNewNotification);
+
+        return () => {
+            socketService.off('new_admin_notification', handleNewNotification);
+            socketService.off('sos_alert', handleNewNotification);
+            socketService.off('new_booking', handleNewNotification);
+        };
+    }, []);
+
+    useEffect(() => { setIsMobileNavOpen(false); }, [location.pathname]);
+
+    const NAV_ITEMS = ADMIN_ROUTES_CONFIG.map(category => ({
+        label: category.category,
+        icon: category.icon,
+        flag: category.flag,
+        children: category.routes.map(route => ({
+            label: route.label,
+            path: route.path,
+            icon: route.icon,
+            flag: route.flag,
+            hidden: route.hidden
+        }))
+    })).filter(item => !item.flag || isFeatureEnabled(item.flag))
+    .map(item => ({
+        ...item,
+        children: item.children?.filter(child => (!child.flag || isFeatureEnabled(child.flag)) && !child.hidden)
+    }));
+
+    const toggleGroup = (label) => {
+        setExpandedGroups(prev => 
+            prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label]
+        );
+    };
+
+    return (
+        <div className="admin-panel flex flex-col lg:flex-row font-sans selection:bg-[var(--primary)] selection:text-white">
+            
+            {/* Desktop Sidebar - Clean Professional */}
+            <motion.aside
+                animate={{ width: isSidebarOpen ? 280 : 85 }}
+                className="hidden lg:flex admin-sidebar flex-col sticky top-0 h-screen overflow-hidden z-[60] transition-all duration-300 shrink-0"
+            >
+                <SidebarContent
+                    isSidebarOpen={isSidebarOpen}
+                    NAV_ITEMS={NAV_ITEMS}
+                    location={location}
+                    navigate={navigate}
+                    expandedGroups={expandedGroups}
+                    toggleGroup={toggleGroup}
+                    onLogout={() => { logout('admin'); navigate('/admin/login'); }}
+                />
+            </motion.aside>
+
+            {/* Mobile Sidebar */}
+            <AnimatePresence>
+                {isMobileNavOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsMobileNavOpen(false)}
+                            className="fixed inset-0 bg-black/50 z-[70] lg:hidden"
+                        />
+                        <motion.aside
+                            initial={{ x: -280 }}
+                            animate={{ x: 0 }}
+                            exit={{ x: -280 }}
+                            className="fixed top-0 left-0 bottom-0 w-[280px] admin-sidebar flex flex-col z-[80] lg:hidden shadow-xl"
+                        >
+                            <div className="absolute top-6 right-6 text-[var(--text-muted)] hover:text-[var(--text-primary)] z-10 p-2 hover:bg-[var(--card-hover)] rounded-lg transition-colors cursor-pointer" onClick={() => setIsMobileNavOpen(false)}>
+                                <X size={20} />
+                            </div>
+                            <SidebarContent
+                                isSidebarOpen={true}
+                                NAV_ITEMS={NAV_ITEMS}
+                                location={location}
+                                navigate={navigate}
+                                expandedGroups={expandedGroups}
+                                toggleGroup={toggleGroup}
+                                onLogout={() => { logout('admin'); navigate('/admin/login'); }}
+                            />
+                        </motion.aside>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Main Content Area */}
+            <main className="flex-1 flex flex-col min-h-screen min-w-0 relative overflow-x-hidden pb-16 lg:pb-0">
+                {/* Clean Professional Topbar */}
+                <header className="bg-[var(--card)] px-6 py-4 border-b border-[var(--border)] flex items-center justify-between sticky top-0 z-50 transition-colors duration-200">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                            className="hidden lg:flex p-2 bg-[var(--bg-secondary)] rounded-lg text-[var(--text-secondary)] hover:bg-[var(--card-hover)] hover:text-[var(--text-primary)] transition-colors"
+                        >
+                            {isSidebarOpen ? <X size={18} /> : <Menu size={18} />}
+                        </button>
+                        <button
+                            onClick={() => setIsMobileNavOpen(true)}
+                            className="lg:hidden p-2 bg-[var(--bg-secondary)] rounded-lg text-[var(--text-secondary)]"
+                        >
+                            <Menu size={18} />
+                        </button>
+                        <div className="h-6 w-px bg-[var(--border)] mx-2 hidden lg:block" />
+                        <h2 className="text-xl font-semibold text-[var(--text-primary)] capitalize truncate max-w-[120px] lg:max-w-none">
+                            {getPageTitle()}
+                        </h2>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        {/* Search Bar - Clean */}
+                        <div className="hidden lg:flex items-center gap-3 bg-[var(--bg-secondary)] px-4 py-2 rounded-lg border border-[var(--border)] focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary-light)] transition-all">
+                            <Search size={16} className="text-[var(--text-muted)]" />
+                            <input
+                                type="text"
+                                placeholder="Search..."
+                                className="bg-transparent outline-none text-sm text-[var(--text-primary)] w-56 placeholder:text-[var(--text-muted)]"
+                            />
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                            {/* Theme Toggle - Clean */}
+                            <button
+                                onClick={toggleTheme}
+                                title="Toggle Theme"
+                                className="w-10 h-10 bg-[var(--bg-secondary)] rounded-lg flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--card-hover)] hover:text-[var(--text-primary)] transition-colors"
+                            >
+                                {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+                            </button>
+
+                            {/* Notifications - Clean */}
+                            <button
+                                onClick={() => navigate('/admin/notifications')}
+                                className="w-10 h-10 bg-[var(--bg-secondary)] rounded-lg flex items-center justify-center text-[var(--text-secondary)] relative hover:bg-[var(--card-hover)] hover:text-[var(--text-primary)] transition-colors"
+                            >
+                                <Bell size={18} />
+                                {unreadCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-[var(--error)] text-white text-[10px] font-semibold flex items-center justify-center rounded-full">
+                                        {unreadCount > 99 ? '99+' : unreadCount}
+                                    </span>
+                                )}
+                            </button>
+                            
+                            <div className="h-6 w-px bg-[var(--border)] mx-2" />
+                            
+                            {/* Profile - Clean */}
+                            <div className="flex items-center gap-3 bg-[var(--bg-secondary)] pr-3 pl-2 py-2 rounded-lg hover:bg-[var(--card-hover)] transition-colors cursor-pointer">
+                                <div className="w-8 h-8 rounded-lg bg-[var(--primary)] flex items-center justify-center text-white font-semibold text-sm shrink-0">
+                                    AD
+                                </div>
+                                <div className="hidden sm:block text-left overflow-hidden">
+                                    <p className="text-sm font-semibold text-[var(--text-primary)] leading-none truncate w-20">Admin</p>
+                                    <p className="text-xs text-[var(--text-secondary)] mt-0.5">Superuser</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                {/* Main Content - Clean */}
+                <div className="admin-container p-6 flex-1 relative">
+                    <AnimatePresence mode="wait">
+                        {isLoadingConfig ? (
+                            <motion.div 
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="absolute inset-0 flex items-center justify-center bg-[var(--bg)] z-50"
+                            >
+                                <div className="flex flex-col items-center gap-4">
+                                    <div className="w-12 h-12 border-4 border-[var(--border)] border-t-[var(--primary)] rounded-full animate-spin" />
+                                    <p className="text-sm font-semibold text-[var(--text-secondary)]">Loading Dashboard...</p>
+                                </div>
+                            </motion.div>
+                        ) : (
+                            <motion.div
+                                key={location.pathname + location.search}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2, ease: "easeOut" }}
+                                className="fade-in"
+                            >
+                                <Outlet />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+
+                <BottomNav
+                    NAV_ITEMS={NAV_ITEMS}
+                    location={location}
+                    navigate={navigate}
+                    setIsMobileNavOpen={setIsMobileNavOpen}
+                />
+            </main>
+        </div>
+    );
+};
+
+const SidebarContent = ({ isSidebarOpen, NAV_ITEMS, location, navigate, onLogout, expandedGroups, toggleGroup }) => (
+    <div className="flex flex-col h-full">
+        {/* Logo Section */}
+        <div className={`p-6 flex items-center gap-3 border-b border-[var(--border)] ${!isSidebarOpen && 'justify-center'}`}>
+            <div className="w-10 h-10 bg-[var(--primary)] rounded-lg flex items-center justify-center shrink-0">
+                <Car size={22} className="text-white" />
+            </div>
+            {isSidebarOpen && (
+                <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="flex flex-col"
+                >
+                    <span className="text-lg font-semibold text-[var(--text-primary)]">Carwash Admin</span>
+                    <span className="text-xs text-[var(--text-secondary)]">Management Panel</span>
+                </motion.div>
+            )}
+        </div>
+
+        {/* Navigation */}
+        <nav
+            className="flex-1 px-3 space-y-1 overflow-y-auto scrollbar-hide py-4"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+            <LayoutGroup id="sidebar-nav">
+                {NAV_ITEMS.map((item, i) => {
+                    const fullPath = location.pathname + location.search;
+                    const isGroup = !!item.children;
+                    const isExpanded = expandedGroups.includes(item.label);
+                    
+                    const isPathActive = (path) => {
+                        if (!path) return false;
+                        if (path.includes('?')) return fullPath === path;
+                        return fullPath === path || (path !== '/admin' && !fullPath.includes('?') && fullPath.startsWith(path));
+                    };
+
+                    const isAnyChildActive = item.children?.some(child => isPathActive(child.path));
+                    const isActive = isGroup ? isAnyChildActive : isPathActive(item.path);
+
+                    return (
+                        <div key={item.label} className="space-y-1">
+                            <motion.button
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: i * 0.02 }}
+                                onClick={() => isGroup ? toggleGroup(item.label) : navigate(item.path)}
+                                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group relative ${
+                                    isActive && !isGroup
+                                        ? 'bg-[var(--primary)] text-white'
+                                        : (isActive && isGroup 
+                                            ? 'text-[var(--primary)] bg-[var(--primary-light)]' 
+                                            : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover)]')
+                                }`}
+                            >
+                                <div className="shrink-0">
+                                    {item.icon}
+                                </div>
+                                {isSidebarOpen && (
+                                    <div className="flex-1 flex items-center justify-between">
+                                        <span className="text-sm font-medium">
+                                            {item.label}
+                                        </span>
+                                        {isGroup && (
+                                            <ChevronDown size={14} className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                                        )}
+                                    </div>
+                                )}
+                            </motion.button>
+
+                            <AnimatePresence>
+                                {isGroup && isExpanded && isSidebarOpen && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        className="overflow-hidden pl-10 space-y-1"
+                                    >
+                                        {item.children.map((child) => {
+                                            const isChildActive = isPathActive(child.path);
+                                            return (
+                                                <button
+                                                    key={child.label}
+                                                    onClick={() => navigate(child.path)}
+                                                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                                        isChildActive 
+                                                            ? 'text-[var(--primary)] bg-[var(--primary-light)]' 
+                                                            : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover)]'
+                                                    }`}
+                                                >
+                                                    {child.label}
+                                                </button>
+                                            );
+                                        })}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    );
+                })}
+            </LayoutGroup>
+        </nav>
+
+        <div className="p-3 mt-auto border-t border-[var(--border)]">
+            <button
+                onClick={onLogout}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[var(--error-light)] hover:text-[var(--error)] text-[var(--text-secondary)] transition-colors group"
+            >
+                <LogOut size={18} />
+                {isSidebarOpen && <span className="text-sm font-medium">Logout</span>}
+            </button>
+        </div>
+    </div>
+);
+
+const BottomNav = ({ NAV_ITEMS, location, navigate, setIsMobileNavOpen }) => {
+    const BOTTOM_ITEMS = NAV_ITEMS.slice(0, 4).map(group => group.children?.[0]).filter(Boolean);
+
+    return (
+        <nav className="fixed bottom-0 left-0 right-0 h-16 bg-[var(--card)] border-t border-[var(--border)] px-6 flex items-center justify-between lg:hidden z-[60] safe-area-bottom transition-colors duration-200">
+            {BOTTOM_ITEMS.map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                    <button
+                        key={item.label}
+                        onClick={() => navigate(item.path)}
+                        className={`flex flex-col items-center gap-1 transition-colors ${
+                            isActive ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'
+                        }`}
+                    >
+                        <div className={`p-1.5 rounded-lg ${isActive ? 'bg-[var(--primary-light)]' : ''}`}>
+                            {item.icon ? React.cloneElement(item.icon, { size: 20 }) : <Package size={20} />}
+                        </div>
+                    </button>
+                );
+            })}
+            <button
+                onClick={() => setIsMobileNavOpen(true)}
+                className="flex flex-col items-center gap-1 text-[var(--text-muted)]"
+            >
+                <div className="p-1.5 rounded-lg">
+                    <Menu size={20} />
+                </div>
+            </button>
+        </nav>
+    );
+};
+
+export default AdminLayout;

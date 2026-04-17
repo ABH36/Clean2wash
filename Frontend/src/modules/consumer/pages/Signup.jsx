@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { ChevronLeft, Phone, Mail, ArrowRight, ShieldCheck, Zap, Star } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
+import { toast } from 'react-hot-toast';
 
 const Signup = () => {
     const navigate = useNavigate();
@@ -20,7 +21,7 @@ const Signup = () => {
 
     const handleContinue = async () => {
         if (formData.phone.length < 10 || !formData.email) return;
-        
+
         // Simple email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(formData.email)) {
@@ -33,6 +34,7 @@ const Signup = () => {
         const res = await sendOTP(formData.phone, 'phone', userData);
         setLoading(false);
         if (res.success) {
+            toast.success(`Testing OTP: ${res.data?.otp || 'sent'}`, { duration: 5000 });
             navigate('/otp-verify', {
                 state: {
                     type: 'phone',
@@ -71,7 +73,7 @@ const Signup = () => {
                     <div className="relative aspect-[16/9]">
                         <img
                             src="/assets/carwash/2.png"
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover object-center"
                             alt="Join clean2wash"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent opacity-80" />
@@ -82,7 +84,7 @@ const Signup = () => {
                                     <Star size={10} fill="currentColor" />
                                     <span className="text-[8px] font-[1000] uppercase tracking-[0.2em]">Premium Membership</span>
                                 </div>
-                                <h1 className="text-2xl font-[1000] text-content tracking-tighter uppercase italic leading-none">
+                                <h1 className="text-2xl font-[1000] text-content tracking-tighter uppercase leading-none">
                                     Get <span className="text-brand">Started.</span>
                                 </h1>
                             </div>
@@ -114,7 +116,7 @@ const Signup = () => {
                                         const val = e.target.value.replace(/\D/g, '');
                                         if (val.length <= 10) setFormData({ ...formData, phone: val });
                                     }}
-                                    className="w-full bg-white border border-gray-100 rounded-xl pl-11 pr-4 py-4 font-bold text-content text-base outline-none focus:border-brand/40 shadow-sm transition-all placeholder:text-gray-100 tracking-widest font-mono"
+                                    className="w-full bg-white border border-gray-100 rounded-xl pl-11 pr-4 py-4 font-bold text-slate-950 text-base outline-none focus:border-brand/40 shadow-sm transition-all placeholder:text-gray-300 tracking-widest font-mono"
                                 />
                             </div>
                         </div>
@@ -131,7 +133,7 @@ const Signup = () => {
                                 placeholder="name@example.com"
                                 value={formData.email}
                                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                className="w-full bg-white border border-gray-100 rounded-xl pl-11 pr-4 py-4 font-bold text-content text-sm outline-none focus:border-brand/40 shadow-sm transition-all placeholder:text-gray-100"
+                                className="w-full bg-white border border-gray-100 rounded-xl pl-11 pr-4 py-4 font-bold text-slate-950 text-sm outline-none focus:border-brand/40 shadow-sm transition-all placeholder:text-gray-300"
                             />
                         </div>
                     </div>

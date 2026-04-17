@@ -30,7 +30,7 @@ const AdminLogin = () => {
         if (result.success) {
             navigate('/admin');
         } else {
-            setError(result.error || 'Invalid System ID or Passcode. Try: admin@CarWash.in / admin123');
+            setError(result.error || 'Invalid System ID or Passcode. Try: admin@SpareDriver.in / admin123');
             setLoading(false);
         }
     };
@@ -54,7 +54,7 @@ const AdminLogin = () => {
                     <div className="w-20 h-20 bg-brand text-white rounded-3xl flex items-center justify-center shadow-[0_0_50px_rgba(var(--brand-rgb),0.3)] mb-8 animate-pulse">
                         <Cpu size={40} />
                     </div>
-                    <h1 className="text-4xl font-black text-white tracking-tighter uppercase leading-none">CarWash <br /><span className="text-brand">Infrastructure</span></h1>
+                    <h1 className="text-4xl font-black text-white tracking-tighter uppercase leading-none">Spare Driver <br /><span className="text-brand">Infrastructure</span></h1>
                     <div className="flex items-center gap-2 mt-4 bg-white/5 px-4 py-1.5 rounded-full border border-white/10">
                         <Terminal size={12} className="text-brand" />
                         <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Authorized Access Only</p>
@@ -73,7 +73,7 @@ const AdminLogin = () => {
                                     <Fingerprint className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20" size={18} />
                                     <input
                                         type="email"
-                                        placeholder="admin@CarWash.in"
+                                        placeholder="admin@SpareDriver.in"
                                         required
                                         value={email}
                                         onChange={e => setEmail(e.target.value)}

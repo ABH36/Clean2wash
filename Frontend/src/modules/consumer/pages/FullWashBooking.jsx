@@ -328,13 +328,13 @@ const FullWashBooking = () => {
 
         // Use the same robust logic as backend Subscription.js
         return plan.applicableServices?.some(serviceName => {
-            if (serviceName === 'Instant Wash' || serviceName === 'Studio Wash') {
+            if (serviceName === 'Instant wash' || serviceName === 'Studio wash') {
                 return service.category === 'Doorstep' || service.category === 'Studio' || service.category === 'Studio Detailing';
             }
-            if (serviceName === 'Studio Wash') {
+            if (serviceName === 'Studio wash') {
                 return service.category === 'Studio' || service.category === 'Studio Detailing';
             }
-            if (serviceName === 'Spare Driver') {
+            if (serviceName === 'Spare driver') {
                 return service.category === 'Chauffeur';
             }
             return false;
@@ -875,12 +875,6 @@ const FullWashBooking = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => navigate('/addresses?from=studio-wash')}
-                        className="w-9 h-9 bg-gray-50/80 rounded-xl flex items-center justify-center border border-black/[0.02] active:scale-95 transition-transform"
-                    >
-                        <MapPin size={16} className="text-black/60" />
-                    </button>
                     <button
                         onClick={() => navigate('/wallet')}
                         className="w-9 h-9 bg-gray-50/80 rounded-xl flex items-center justify-center border border-black/[0.02] active:scale-95 transition-transform"
@@ -1440,27 +1434,27 @@ const FullWashBooking = () => {
 
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="bg-gray-50/80 backdrop-blur-sm rounded-xl p-4 border border-black/[0.02] flex flex-col justify-between h-24">
-                                                <p className="text-[8px] font-black text-black/30 uppercase tracking-[0.15em] leading-none mb-1">Execution Protocol</p>
+                                                <p className="text-[8px] font-black text-black/30 uppercase tracking-[0.15em] leading-none mb-1">Execution protocol</p>
                                                 <div className="flex items-baseline gap-1">
                                                     <span className="text-[24px] font-[1000] text-black leading-none">{activeServiceDuration}</span>
-                                                    <span className="text-[11px] font-black text-black/40 uppercase tracking-tighter">Mins</span>
+                                                    <span className="text-[11px] font-black text-black/40 uppercase tracking-tighter">mins</span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
                                                     <span className="text-[7px] font-black text-black/30 uppercase tracking-widest">
-                                                        {matchedModel?.difficulty ? `${matchedModel.difficulty} Protocol` : 'Studio Calibrated'}
+                                                        {matchedModel?.difficulty ? `${matchedModel.difficulty} protocol` : 'Studio calibrated'}
                                                     </span>
                                                 </div>
                                             </div>
                                             <div className="bg-brand/5 backdrop-blur-sm rounded-xl p-4 border border-brand/10 flex flex-col justify-between h-24">
-                                                <p className="text-[8px] font-black text-black/30 uppercase tracking-[0.15em] leading-none mb-1">Session Valuation</p>
+                                                <p className="text-[8px] font-black text-black/30 uppercase tracking-[0.15em] leading-none mb-1">Session valuation</p>
                                                 <div className="flex items-baseline gap-1">
                                                     <span className="text-[24px] font-[1000] text-black leading-none">₹{activeServicePrice}</span>
                                                     <span className="text-[10px] font-black text-brand uppercase tracking-tighter">Total</span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <ShieldCheck size={10} className="text-brand" />
-                                                    <span className="text-[7px] font-black text-black/30 uppercase tracking-widest">Secured Node</span>
+                                                    <span className="text-[7px] font-black text-black/30 uppercase tracking-widest">Secured node</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1475,7 +1469,7 @@ const FullWashBooking = () => {
                                             <div className="flex items-center justify-between px-1">
                                                 <div className="flex items-center gap-2">
                                                     <Car size={14} className="text-brand" />
-                                                    <h3 className="text-[11px] font-black text-black uppercase tracking-[0.15em]">Vehicle Intelligence</h3>
+                                                    <h3 className="text-[11px] font-black text-black uppercase tracking-[0.15em]">Vehicle intelligence</h3>
                                                 </div>
                                                 <div className="flex items-center gap-2 bg-black/5 px-2 py-1 rounded-lg">
                                                     <LayoutGrid size={10} className="text-black/40" />
@@ -1496,7 +1490,7 @@ const FullWashBooking = () => {
                                                         />
                                                     </div>
                                                     <div>
-                                                        <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-1">Asset Identification</p>
+                                                        <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-1">Asset identification</p>
                                                         <h4 className="text-[18px] font-[1000] uppercase leading-none tracking-tight">
                                                             {matchedModel.brand} <span className="text-brand">{matchedModel.model}</span>
                                                         </h4>
@@ -1515,17 +1509,17 @@ const FullWashBooking = () => {
                                             {/* Complexity & Offer Matrix */}
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div className="bg-gray-50 p-4 rounded-xl border border-black/[0.02]">
-                                                    <p className="text-[8px] font-black text-black/30 uppercase tracking-widest mb-3">Complexity Index</p>
+                                                    <p className="text-[8px] font-black text-black/30 uppercase tracking-widest mb-3">Complexity index</p>
                                                     <div className="flex items-center gap-2">
                                                         <div className={`w-2 h-2 rounded-full ${matchedModel.difficulty === 'Hard' ? 'bg-red-500' : matchedModel.difficulty === 'Medium' ? 'bg-orange-500' : 'bg-emerald-500'}`} />
-                                                        <span className="text-[14px] font-[1000] text-black uppercase">{matchedModel.difficulty || 'Standard'}</span>
+                                                        <span className="text-[14px] font-[1000] text-black uppercase">{matchedModel.difficulty || 'standard'}</span>
                                                     </div>
                                                 </div>
                                                 <div className="bg-gray-50 p-4 rounded-xl border border-black/[0.02]">
-                                                    <p className="text-[8px] font-black text-black/30 uppercase tracking-widest mb-3">Prep Protocol</p>
+                                                    <p className="text-[8px] font-black text-black/30 uppercase tracking-widest mb-3">Prep protocol</p>
                                                     <div className="flex items-center gap-2">
                                                         <Timer size={14} className="text-black/40" />
-                                                        <span className="text-[14px] font-[1000] text-black uppercase">{matchedModel.protocolSteps?.length || 0} Steps</span>
+                                                        <span className="text-[14px] font-[1000] text-black uppercase">{matchedModel.protocolSteps?.length || 0} steps</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1533,7 +1527,7 @@ const FullWashBooking = () => {
                                             {/* Identify Highlights */}
                                             {matchedModel.features?.length > 0 && (
                                                 <div className="space-y-3">
-                                                    <h4 className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] px-1">Identity Highlights</h4>
+                                                    <h4 className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] px-1">Identity highlights</h4>
                                                     <div className="flex flex-wrap gap-2">
                                                         {matchedModel.features.map((feat, idx) => (
                                                             <div key={idx} className="bg-[#FAF1E8] border border-[#E9DCCF] px-4 py-2 rounded-2xl flex items-center gap-2">
@@ -1550,7 +1544,7 @@ const FullWashBooking = () => {
                                                 <div className="bg-brand/5 border border-brand/10 rounded-xl p-4 space-y-4">
                                                     <div className="flex items-center gap-2">
                                                         <Gift size={16} className="text-brand" />
-                                                        <h4 className="text-[12px] font-[1000] text-black uppercase tracking-widest leading-none">Offer Protocols</h4>
+                                                        <h4 className="text-[12px] font-[1000] text-black uppercase tracking-widest leading-none">Offer protocols</h4>
                                                     </div>
                                                     <div className="space-y-3">
                                                         {matchedModel.offers?.map((offer, idx) => (
@@ -1572,7 +1566,7 @@ const FullWashBooking = () => {
                                                                     </div>
                                                                     <div>
                                                                         <p className="text-[13px] font-[1000] uppercase tracking-widest">{coupon}</p>
-                                                                        <p className="text-[7px] font-bold text-white/30 uppercase tracking-[0.2em] mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">Asset Specific Coupon</p>
+                                                                        <p className="text-[7px] font-bold text-white/30 uppercase tracking-[0.2em] mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">Asset specific coupon</p>
                                                                     </div>
                                                                 </div>
                                                                 <button
@@ -1595,7 +1589,7 @@ const FullWashBooking = () => {
                                                 <div className="space-y-4">
                                                     <div className="flex items-center gap-2 px-1">
                                                         <Shield size={14} className="text-emerald-500" />
-                                                        <h3 className="text-[11px] font-black text-black uppercase tracking-[0.15em]">Model Prep Protocol</h3>
+                                                        <h3 className="text-[11px] font-black text-black uppercase tracking-[0.15em]">Model prep protocol</h3>
                                                     </div>
                                                     <div className="grid grid-cols-1 gap-2">
                                                         {matchedModel.protocolSteps.map((step, idx) => (
@@ -1616,7 +1610,7 @@ const FullWashBooking = () => {
                                         <div className="flex items-center justify-between px-1">
                                             <div className="flex items-center gap-2">
                                                 <Radar size={14} className="text-brand" />
-                                                <h3 className="text-[11px] font-black text-black uppercase tracking-[0.15em]">Scope of Maintenance</h3>
+                                                <h3 className="text-[11px] font-black text-black uppercase tracking-[0.15em]">Scope of maintenance</h3>
                                             </div>
                                             <span className="text-[8px] font-black text-black/20 uppercase tracking-widest">V.2.4 Analytics</span>
                                         </div>
@@ -1625,11 +1619,11 @@ const FullWashBooking = () => {
                                             <div className="flex bg-white/40 border-b border-black/[0.04]">
                                                 <div className="flex-1 py-4 px-6 flex items-center justify-center gap-2 border-r border-black/[0.04] bg-emerald-50/30">
                                                     <CheckCircle2 size={12} className="text-emerald-500" />
-                                                    <span className="text-[9px] font-black text-emerald-700 uppercase tracking-[0.1em]">Verified Additions</span>
+                                                    <span className="text-[9px] font-black text-emerald-700 uppercase tracking-[0.1em]">Verified additions</span>
                                                 </div>
                                                 <div className="flex-1 py-4 px-6 flex items-center justify-center gap-2 bg-gray-50/50">
                                                     <MinusCircle size={12} className="text-black/30" />
-                                                    <span className="text-[9px] font-black text-black/40 uppercase tracking-[0.1em]">Protocol Limits</span>
+                                                    <span className="text-[9px] font-black text-black/40 uppercase tracking-[0.1em]">Protocol limits</span>
                                                 </div>
                                             </div>
 
@@ -1672,7 +1666,7 @@ const FullWashBooking = () => {
                                         <div className="space-y-4">
                                             <div className="flex items-center gap-2 px-1">
                                                 <Zap size={14} className="text-brand" fill="currentColor" />
-                                                <h3 className="text-[11px] font-black text-black uppercase tracking-[0.15em]">Execution Pipeline</h3>
+                                                <h3 className="text-[11px] font-black text-black uppercase tracking-[0.15em]">Execution pipeline</h3>
                                             </div>
                                             <div className="space-y-3">
                                                 {activeService.protocolSteps.map((step, idx) => (
@@ -1704,7 +1698,7 @@ const FullWashBooking = () => {
                                             <ShieldCheck size={20} className="text-emerald-500" />
                                         </div>
                                         <div>
-                                            <p className="text-[12px] font-[1000] text-emerald-900 uppercase tracking-tight leading-none mb-1.5">Studio Grade Warranty</p>
+                                            <p className="text-[12px] font-[1000] text-emerald-900 uppercase tracking-tight leading-none mb-1.5">Studio grade warranty</p>
                                             <p className="text-[9px] font-bold text-emerald-700/60 leading-relaxed uppercase tracking-widest">
                                                 This protocol includes 100% paint safety assurance and premium chemical usage.
                                             </p>
@@ -1742,7 +1736,7 @@ const FullWashBooking = () => {
                                     >
                                         <div className="absolute inset-0 bg-brand opacity-0 group-hover:opacity-10 transition-opacity" />
                                         <Zap size={18} className={selectedVehicle ? "text-brand" : "text-black/5"} fill="currentColor" />
-                                        <span>Execute Booking</span>
+                                        <span>Execute booking</span>
                                         <ChevronRight size={18} strokeWidth={4} className="group-hover:translate-x-1 transition-transform" />
                                     </motion.button>
                                 </div>
@@ -1788,7 +1782,7 @@ const FullWashBooking = () => {
                                         <div className="w-20 h-20 rounded-full bg-brand/20 flex items-center justify-center animate-pulse">
                                             <Play size={40} className="text-brand ml-2" />
                                         </div>
-                                        <p className="text-white/40 text-xs font-black uppercase tracking-widest">Protocol Stream Unavailable</p>
+                                        <p className="text-white/40 text-xs font-black uppercase tracking-widest">Protocol stream unavailable</p>
                                     </div>
                                 )}
                             </motion.div>
@@ -1876,7 +1870,7 @@ const FullWashBooking = () => {
                                 className="bg-brand text-black px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-2xl border border-white/20"
                             >
                                 <Crown size={12} fill="currentColor" strokeWidth={3} />
-                                <span className="text-[9px] font-[1000] uppercase tracking-widest">Gold Priority active</span>
+                                <span className="text-[9px] font-[1000] uppercase tracking-widest">Gold priority active</span>
                             </motion.div>
                         </div>
                     )}
@@ -1905,7 +1899,7 @@ const FullWashBooking = () => {
                             </div>
                             <div className="flex flex-col">
                                 <h2 className="text-[11px] font-black text-white uppercase tracking-tighter">
-                                    {findingTime > 0 ? currentMessage : 'No Specialist Found'}
+                                    {findingTime > 0 ? currentMessage : 'No specialist found'}
                                 </h2>
                                 <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest leading-none">
                                     Searching within 10km grid
@@ -1948,7 +1942,7 @@ const FullWashBooking = () => {
                                 </div>
                             </div>
                             {isGoldPassMember && (
-                                <div className="px-2 py-1 bg-brand text-black text-[7px] font-black rounded-lg animate-pulse uppercase">Member Benefit</div>
+                                <div className="px-2 py-1 bg-brand text-black text-[7px] font-black rounded-lg animate-pulse uppercase">Member benefit</div>
                             )}
                         </div>
 
@@ -2069,7 +2063,7 @@ const FullWashBooking = () => {
                                                 activeBooking?.status === 'in_progress' ? 'Detailing Active' :
                                                     'Specialist Coordinating'}
                                     </span>
-                                    {!isCompleted && <span className="text-[8px] font-bold text-black/30 uppercase mt-0.5 tracking-tighter">Studio Tracking Protocol Active</span>}
+                                    {!isCompleted && <span className="text-[8px] font-bold text-black/30 uppercase mt-0.5 tracking-tighter">Studio tracking protocol active</span>}
                                 </div>
                             </div>
                             <div className="w-px h-4 bg-black/5" />
@@ -2110,7 +2104,7 @@ const FullWashBooking = () => {
                                 <div>
                                     <div className="flex items-center gap-2 mb-0.5">
                                         <h3 className="text-[15px] font-[1000] text-black uppercase tracking-tighter leading-none">{activeBooking?.service?.name}</h3>
-                                        <span className="px-1.5 py-0.5 bg-indigo-600 text-white text-[6px] font-black rounded-full uppercase tracking-widest">Sanctuary Sync</span>
+                                        <span className="px-1.5 py-0.5 bg-indigo-600 text-white text-[6px] font-black rounded-full uppercase tracking-widest">Sanctuary sync</span>
                                     </div>
                                     <p className="text-[9px] font-bold text-black/30 uppercase tracking-widest leading-none">{activeBooking?.bookingId || activeBookingId?.toString().slice(-8).toUpperCase()}</p>
                                 </div>
@@ -2134,7 +2128,7 @@ const FullWashBooking = () => {
                                 </div>
                             </div>
                             <div className="flex-1 min-w-0">
-                                <h4 className="text-[13px] font-[1000] text-black uppercase tracking-tight leading-none mb-1">{activeBooking?.provider?.name || 'Finding Specialist...'}</h4>
+                                <h4 className="text-[13px] font-[1000] text-black uppercase tracking-tight leading-none mb-1">{activeBooking?.provider?.name || 'Finding specialist...'}</h4>
                                 <div className="flex items-center gap-2">
                                     <div className="flex items-center bg-white px-1.5 py-0.5 rounded-full shadow-sm border border-black/[0.06]">
                                         <Star size={8} fill="#F29F05" className="text-brand mr-1" />
@@ -2205,7 +2199,7 @@ const FullWashBooking = () => {
                                 className="bg-black text-white py-3 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-xl shadow-black/20 flex flex-col items-center justify-center gap-1 group overflow-hidden relative"
                             >
                                 <div className="absolute inset-0 bg-brand/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-                                <span className="relative z-10">Security PIN</span>
+                                <span className="relative z-10">Security pin</span>
                                 <span className="relative z-10 text-[12px] text-brand">{activeBooking?.securityPin || '----'}</span>
                             </motion.button>
                         </div>
@@ -3188,7 +3182,7 @@ const FullWashBooking = () => {
         ];
 
         const discountPct = (passConfig?.discount || 0.3) * 100;
-        const passPrice = blackPassPlan?.price || passConfig?.price || 499;
+        const passPrice = goldPassPlan?.price || passConfig?.price || 499;
 
         return (
             <div className="min-h-screen bg-[#F8F9FB] pb-32 font-sans">
@@ -3229,7 +3223,7 @@ const FullWashBooking = () => {
                                 <div className="flex-1">
                                     <h3 className="text-brand font-[1000] text-[14px] uppercase tracking-tight leading-none mb-1.5">Save ₹{Math.round(finalPrice * (discountPct / 100))} Right Now!</h3>
                                     <p className="text-white/40 text-[8px] font-black uppercase tracking-widest leading-relaxed">
-                                        Join {blackPassPlan?.name || 'Black Pass'} for ₹{passPrice} and unlock {discountPct}% OFF on this booking instantly.
+                                        Join {goldPassPlan?.name || 'Black Pass'} for ₹{passPrice} and unlock {discountPct}% OFF on this booking instantly.
                                     </p>
                                 </div>
                                 <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-brand">

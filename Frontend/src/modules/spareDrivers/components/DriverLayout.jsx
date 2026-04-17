@@ -1,120 +1,105 @@
-import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Calendar, Wallet, User, LogOut, Bell } from 'lucide-react';
-import LocationIndicator from '../../../components/Location/LocationIndicator';
-import { spareDriverAPI } from '../../../utils/spareDriverApi';
-import { socketService } from '../../../utils/socket';
+import React, { useEffect, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { 
+    LayoutDashboard, 
+    Calendar, 
+    Wallet, 
+    Bell, 
+    User, 
+    History,
+    Sun,
+    Moon
+} from 'lucide-react';
+import { useTheme } from '../../../context/ThemeContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const DriverLayout = ({ children, title = 'Dashboard' }) => {
-    const navigate = useNavigate();
+const DriverLayout = ({ children, title, hideNav = false, hideHeader = false }) => {
+    const location = useLocation();
+    const { isDarkMode, toggleTheme } = useTheme();
+    const [unreadCount, setUnreadCount] = useState(0);
 
-    const [unreadCount, setUnreadCount] = React.useState(0);
-
-    React.useEffect(() => {
-        const token = localStorage.getItem('chauffeur_token');
-        if (!token) {
-            setUnreadCount(0);
-            return;
-        }
-
-        socketService.connect(token);
-
-        // 1. Initial Fetch
-        spareDriverAPI.getNotifications({ isRead: false, limit: 1 })
-            .then(res => setUnreadCount(res.data.unreadCount || 0))
-            .catch(() => { });
-
-        // 2. Real-time Listen
-        const socket = socketService.getSocket();
-        const syncUnreadCount = (event) => {
-            const nextCount = Number(event.detail?.count);
-            if (!Number.isNaN(nextCount)) {
-                setUnreadCount(nextCount);
-            }
-        };
-
-        if (socket) {
-            socket.on('new_spare_driver_notification', () => {
-                setUnreadCount(prev => prev + 1);
-            });
-        }
-
-        window.addEventListener('spare-driver-unread-sync', syncUnreadCount);
-        return () => {
-            if (socket) socket.off('new_spare_driver_notification');
-            window.removeEventListener('spare-driver-unread-sync', syncUnreadCount);
-        };
+    useEffect(() => {
+        const handleSync = (e) => setUnreadCount(e.detail?.count || 0);
+        window.addEventListener('spare-driver-unread-sync', handleSync);
+        return () => window.removeEventListener('spare-driver-unread-sync', handleSync);
     }, []);
 
-    const navItems = [
-        { icon: LayoutDashboard, label: 'Home', path: '/spare-driver/dashboard' },
-        { icon: Calendar, label: 'Bookings', path: '/spare-driver/bookings' },
-        { icon: Wallet, label: 'Earnings', path: '/spare-driver/earnings' },
-        { icon: User, label: 'Profile', path: '/spare-driver/profile' },
+    const navLinks = [
+        { to: '/spare-driver/dashboard', icon: LayoutDashboard, label: 'HUB' },
+        { to: '/spare-driver/bookings', icon: Calendar, label: 'OPS' },
+        { to: '/spare-driver/earnings', icon: Wallet, label: 'BAL' },
+        { to: '/spare-driver/profile', icon: User, label: 'DOC' }
     ];
 
     return (
-        <div className="min-h-screen bg-[linear-gradient(180deg,#FFF9EF_0%,#FFFFFF_18%,#FFFFFF_100%)] flex flex-col font-sans pb-24" style={{ maxWidth: 430, margin: '0 auto' }}>
-
-            {/* ── Header ── */}
-            <header className="px-5 pt-8 pb-4 bg-white/90 backdrop-blur-2xl border-b border-black/[0.04] shadow-[0_12px_30px_rgba(15,23,42,0.05)] flex items-center justify-between sticky top-0 z-[60] relative overflow-hidden">
-                <div className="absolute inset-x-0 top-0 h-20 bg-[radial-gradient(circle_at_top_right,rgba(242,159,5,0.14),transparent_58%)] pointer-events-none" />
-                <div className="flex items-center gap-3">
-                    <div className="relative">
-                        <span className="text-[9px] font-black text-[#F29F05] uppercase tracking-[0.25em] block mb-0.5">Chauffeur</span>
-                        <h1 className="text-sm font-black text-black uppercase tracking-tight leading-none">{title}</h1>
+        <div className="min-h-screen bg-background text-content font-sans selection:bg-brand selection:text-black transition-colors duration-500 driver-theme">
+            {/* ── Fixed Header ── */}
+            {!hideHeader && (
+                <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-[50] px-6 py-5 bg-surface/80 backdrop-blur-xl border-b border-content/[0.03] flex items-center justify-between transition-colors duration-500">
+                    <div>
+                        <p className="text-[9px] font-black text-brand uppercase tracking-[0.3em] mb-0.5">Fleet Protocol</p>
+                        <h1 className="text-xl font-black text-content tracking-tighter uppercase">{title || 'Command'}</h1>
                     </div>
-                    <div className="w-[1px] h-4 bg-gray-100" />
-                    <LocationIndicator variant="minimal" />
-                </div>
-                <div className="flex items-center gap-4">
-                    <NavLink to="/spare-driver/notifications" className="relative p-2.5 rounded-2xl bg-white border border-black/[0.04] shadow-[0_10px_24px_rgba(15,23,42,0.06)] text-black/40 hover:text-black transition-colors">
-                        <Bell size={20} />
-                        {unreadCount > 0 && (
-                            <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[8px] font-black flex items-center justify-center rounded-full border-2 border-white">
-                                {unreadCount > 9 ? '9+' : unreadCount}
-                            </span>
-                        )}
-                    </NavLink>
-                    <button
-                        onClick={() => {
-                            spareDriverAPI.clearToken();
-                            socketService.disconnect();
-                            navigate('/spare-driver/register');
-                        }}
-                        className="p-2.5 rounded-2xl bg-white border border-black/[0.04] shadow-[0_10px_24px_rgba(15,23,42,0.06)] text-black/30 hover:text-red-500 transition-colors"
-                        title="Logout"
-                    >
-                        <LogOut size={18} />
-                    </button>
-                </div>
-            </header>
+                    <div className="flex items-center gap-2">
+                        {/* ── Theme Toggle ── */}
+                        <button 
+                            onClick={toggleTheme}
+                            className="p-2.5 rounded-xl border border-content/[0.04] bg-content/[0.02] text-content/40 hover:text-brand transition-all active:scale-95"
+                        >
+                            {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+                        </button>
 
-            {/* ── Content ── */}
-            <main className="flex-1">{children}</main>
+                        <NavLink to="/spare-driver/notifications" className="relative p-2.5 rounded-xl border border-content/[0.04] bg-content/[0.02] text-content/40 hover:text-brand transition-all active:scale-95">
+                            <Bell size={18} />
+                            {unreadCount > 0 && (
+                                <motion.span 
+                                    initial={{ scale: 0 }} animate={{ scale: 1 }}
+                                    className="absolute top-2.5 right-2.5 w-2 h-2 bg-brand rounded-full border-2 border-surface shadow-sm" 
+                                />
+                            )}
+                        </NavLink>
+                        <NavLink to="/spare-driver/history-log" className="p-2.5 rounded-xl border border-content/[0.04] bg-content/[0.02] text-content/40 hover:text-brand transition-all active:scale-95">
+                            <History size={18} />
+                        </NavLink>
+                    </div>
+                </header>
+            )}
 
-            {/* ── Bottom Nav ── */}
-            <nav className="fixed bottom-0 left-0 right-0 bg-white/92 backdrop-blur-2xl border border-black/[0.04] h-[74px] flex items-center justify-around z-50 rounded-t-[1.75rem] shadow-[0_-18px_40px_rgba(15,23,42,0.08)]"
-                style={{ maxWidth: 430, margin: '0 auto', left: '50%', transform: 'translateX(-50%)', width: '100%' }}>
-                {navItems.map(({ icon: Icon, label, path }) => (
-                    <NavLink
-                        key={path}
-                        to={path}
-                        className={({ isActive }) =>
-                            `flex flex-col items-center gap-1 w-16 transition-all ${isActive ? 'text-black' : 'text-black/25'}`
-                        }
-                    >
-                        {({ isActive }) => (
-                            <>
-                                <div className={`w-10 h-10 flex items-center justify-center rounded-2xl transition-all ${isActive ? 'bg-[#F29F05] shadow-[0_14px_30px_rgba(242,159,5,0.28)]' : 'bg-transparent'}`}>
-                                    <Icon size={17} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'text-black' : ''} />
-                                </div>
-                                <span className="text-[8px] font-black uppercase tracking-widest">{label}</span>
-                            </>
-                        )}
-                    </NavLink>
-                ))}
-            </nav>
+            {/* ── Content Terminal ── */}
+            <main className={`${!hideHeader ? 'pt-24' : 'pt-0'} ${!hideNav ? 'pb-32' : 'pb-0'} max-w-[430px] mx-auto min-h-screen px-0`}>
+                {children}
+            </main>
+
+            {/* ── Navigation Dock ── */}
+            {!hideNav && (
+                <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-48px)] max-w-[380px] z-[50] h-18 bg-black/[0.90] dark:bg-black/[0.80] backdrop-blur-2xl rounded-[2.2rem] border border-white/10 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] px-4 flex items-center justify-between transition-all duration-500">
+                    {navLinks.map((link) => (
+                        <NavLink
+                            key={link.to}
+                            to={link.to}
+                            className={({ isActive }) => `
+                                relative flex flex-col items-center justify-center w-14 h-14 rounded-2xl transition-all duration-300
+                                ${isActive ? 'text-brand scale-110' : 'text-white/30 hover:text-white/60'}
+                            `}
+                        >
+                            {({ isActive }) => (
+                                <>
+                                    <link.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+                                    <span className={`text-[8px] font-black uppercase tracking-widest mt-1 ${isActive ? 'opacity-100' : 'opacity-0'}`}>
+                                        {link.label}
+                                    </span>
+                                    {isActive && (
+                                        <motion.div 
+                                            layoutId="nav_dot"
+                                            className="absolute -bottom-1 w-1 h-1 bg-brand rounded-full shadow-[0_0_8px_#FACD15]" 
+                                        />
+                                    )}
+                                </>
+                            )}
+                        </NavLink>
+                    ))}
+                </nav>
+            )}
         </div>
     );
 };

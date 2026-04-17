@@ -346,13 +346,13 @@ const InstantWash = () => {
 
         // Precise matching mirroring Backend protocol
         return applicable.some(serviceName => {
-            if (serviceName === 'Instant Wash') {
+            if (serviceName === 'Instant wash' || serviceName === 'Studio wash') {
                 return (category === 'Doorstep' || category === 'Express') && isInstant && !isApartment;
             }
-            if (serviceName === 'Studio Wash') {
+            if (serviceName === 'Studio wash') {
                 return category === 'Studio' || category === 'Studio Detailing';
             }
-            if (serviceName === 'Spare Driver') {
+            if (serviceName === 'Spare driver') {
                 return category === 'Chauffeur';
             }
             
@@ -492,7 +492,7 @@ const InstantWash = () => {
                 p.description?.toLowerCase().includes(searchQuery.toLowerCase());
 
             // Only show plans relevant to Instant Wash (Daily/Express)
-            const isInstantPlan = (p.category === 'Express' || p.category === 'Instant Wash' || p.category === 'Doorstep');
+            const isInstantPlan = (p.category === 'Express' || p.category === 'Instant wash' || p.category === 'Doorstep');
 
             return matchesSearch && isInstantPlan;
         });
@@ -1374,7 +1374,7 @@ const InstantWash = () => {
                     {dynamicServices.some(s => s.faqs?.length > 0) && (
                         <div className="px-1 py-8 space-y-6">
                             <div className="flex items-center justify-between px-4">
-                                <h3 className="text-[11px] font-black text-black uppercase tracking-[0.2em]">Protocol Intelligence</h3>
+                                <h3 className="text-[11px] font-black text-black uppercase tracking-[0.2em]">Protocol intelligence</h3>
                                 <div className="flex gap-1">
                                     <div className="w-1 h-1 rounded-full bg-brand" />
                                     <div className="w-3 h-1 rounded-full bg-brand/20" />
@@ -1383,14 +1383,14 @@ const InstantWash = () => {
 
                             <div className="space-y-3">
                                 {dynamicServices.flatMap(s => s.faqs || []).slice(0, 4).map((faq, i) => (
-                                    <details key={i} className="group bg-white rounded-xl border border-black/[0.02] overflow-hidden shadow-sm transition-all duration-300 open:shadow-md">
+                                    <details key={i} className="group bg-white rounded-[1.5rem] border border-black/[0.02] overflow-hidden shadow-sm transition-all duration-300 open:shadow-md">
                                         <summary className="list-none px-6 py-4 flex items-center justify-between cursor-pointer active:bg-gray-50 transition-colors">
-                                            <span className="text-[11px] font-black text-black uppercase tracking-tight">{faq.question}</span>
+                                            <span className="text-[11px] font-black text-black tracking-tight">{faq.question}</span>
                                             <ChevronDown size={14} className="text-black/20 group-open:rotate-180 transition-transform" />
                                         </summary>
                                         <div className="px-6 pb-6 pt-2">
                                             <div className="h-px w-full bg-black/[0.02] mb-4" />
-                                            <p className="text-[11px] font-bold text-black/40 leading-relaxed uppercase tracking-tighter">
+                                            <p className="text-[11px] font-bold text-black/40 leading-relaxed tracking-tighter">
                                                 {faq.answer}
                                             </p>
                                         </div>
@@ -1401,10 +1401,9 @@ const InstantWash = () => {
                     )}
 
                     {/* Dynamic 'Why Us' Section */}
-                    {/* ... (as existing) ... */}
                     <div className="px-1 py-6 space-y-6">
                         <div className="text-center space-y-1">
-                            <h3 className="text-[10px] font-black text-black uppercase tracking-[0.3em] leading-none mb-1.5">The Studio Standard</h3>
+                            <h3 className="text-[10px] font-black text-black uppercase tracking-[0.3em] leading-none mb-1.5">The studio standard</h3>
                             <div className="flex items-center justify-center gap-4">
                                 <div className="h-px w-8 bg-black/10" />
                                 <Stars size={12} className="text-brand" />
@@ -1414,17 +1413,17 @@ const InstantWash = () => {
 
                         <div className="grid grid-cols-2 gap-3">
                             {[
-                                { icon: Shield, label: "Studio Grade", sub: "Premium Protocol" },
-                                { icon: Timer, label: "30 Min Avg", sub: "Execution Speed" },
-                                { icon: Zap, label: "Live Track", sub: "Real-time Ops" },
-                                { icon: CreditCard, label: "Secure Pay", sub: "Protocol Ensured" }
+                                { icon: Shield, label: "Studio grade", sub: "Premium protocol" },
+                                { icon: Timer, label: "30 Min avg", sub: "Execution speed" },
+                                { icon: Zap, label: "Live track", sub: "Real-time ops" },
+                                { icon: CreditCard, label: "Secure pay", sub: "Protocol ensured" }
                             ].map((item, i) => (
-                                <div key={i} className="bg-white rounded-xl p-4 border border-black/[0.02] shadow-sm flex flex-col items-center text-center gap-3">
+                                <div key={i} className="bg-white rounded-[1.5rem] p-4 border border-black/[0.02] shadow-sm flex flex-col items-center text-center gap-3">
                                     <div className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center">
                                         <item.icon size={16} className="text-black/80" />
                                     </div>
                                     <div>
-                                        <p className="text-[11px] font-black text-black uppercase leading-none tracking-tight mb-1">{item.label}</p>
+                                        <p className="text-[11px] font-black text-black leading-none tracking-tight mb-1">{item.label}</p>
                                         <p className="text-[8px] font-bold text-black/30 uppercase tracking-widest">{item.sub}</p>
                                     </div>
                                 </div>
@@ -1490,10 +1489,10 @@ const InstantWash = () => {
                                         <div className="flex items-center gap-2 mb-3">
                                             <div className="bg-black text-white px-2 py-1 rounded-md flex items-center gap-1.5">
                                                 <Zap size={10} className="text-brand" fill="currentColor" />
-                                                <span className="text-[9px] font-black uppercase tracking-widest">{activeService.tag || 'PREMIUM'}</span>
+                                                <span className="text-[9px] font-black uppercase tracking-widest">{activeService.tag || 'Premium'}</span>
                                             </div>
                                             <div className="h-4 w-px bg-black/10" />
-                                            <span className="text-[9px] font-[1000] text-black/40 uppercase tracking-widest">Protocol Sync Locked</span>
+                                            <span className="text-[9px] font-[1000] text-black/40 uppercase tracking-widest">Protocol sync locked</span>
                                         </div>
 
                                         <h2 className="text-3xl font-[1000] text-black leading-[0.9] uppercase tracking-tighter mb-5 relative">
@@ -1506,28 +1505,28 @@ const InstantWash = () => {
                                         </h2>
 
                                         <div className="grid grid-cols-2 gap-3">
-                                            <div className="bg-gray-50/80 backdrop-blur-sm rounded-2xl p-4 border border-black/[0.02] flex flex-col justify-between h-24">
-                                                <p className="text-[8px] font-black text-black/30 uppercase tracking-[0.15em] leading-none mb-1">Execution Protocol</p>
+                                            <div className="bg-gray-50/80 backdrop-blur-sm rounded-[1.5rem] p-4 border border-black/[0.02] flex flex-col justify-between h-24">
+                                                <p className="text-[8px] font-black text-black/30 uppercase tracking-[0.15em] leading-none mb-1">Execution protocol</p>
                                                 <div className="flex items-baseline gap-1">
                                                     <span className="text-[24px] font-[1000] text-black leading-none">{activeServiceDuration}</span>
-                                                    <span className="text-[11px] font-black text-black/40 uppercase tracking-tighter">Mins</span>
+                                                    <span className="text-[11px] font-black text-black/40 uppercase tracking-tighter">mins</span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
                                                     <span className="text-[7px] font-black text-black/30 uppercase tracking-widest">
-                                                        {matchedModel?.difficulty ? `${matchedModel.difficulty} Protocol` : 'Studio Calibrated'}
+                                                        {matchedModel?.difficulty ? `${matchedModel.difficulty} protocol` : 'Studio calibrated'}
                                                     </span>
                                                 </div>
                                             </div>
-                                            <div className="bg-brand/5 backdrop-blur-sm rounded-2xl p-4 border border-brand/10 flex flex-col justify-between h-24">
-                                                <p className="text-[8px] font-black text-black/30 uppercase tracking-[0.15em] leading-none mb-1">Session Valuation</p>
+                                            <div className="bg-brand/5 backdrop-blur-sm rounded-[1.5rem] p-4 border border-brand/10 flex flex-col justify-between h-24">
+                                                <p className="text-[8px] font-black text-black/30 uppercase tracking-[0.15em] leading-none mb-1">Session valuation</p>
                                                 <div className="flex items-baseline gap-1">
                                                     <span className="text-[24px] font-[1000] text-black leading-none">₹{activeServicePrice}</span>
                                                     <span className="text-[9px] font-black text-brand uppercase tracking-tighter">Total</span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <ShieldCheck size={10} className="text-brand" />
-                                                    <span className="text-[7px] font-black text-black/30 uppercase tracking-widest">Secured Node</span>
+                                                    <span className="text-[7px] font-black text-black/30 uppercase tracking-widest">Secured node</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1614,17 +1613,17 @@ const InstantWash = () => {
 
                                             {/* Offer Protocols & Coupons */}
                                             {(matchedModel.offers?.length > 0 || matchedModel.coupons?.length > 0) && (
-                                                <div className="bg-brand/5 border border-brand/10 rounded-3xl p-5 space-y-4">
+                                                <div className="bg-brand/5 border border-brand/10 rounded-[2rem] p-5 space-y-4">
                                                     <div className="flex items-center gap-2">
                                                         <Gift size={15} className="text-brand" />
-                                                        <h4 className="text-[11px] font-[1000] text-black uppercase tracking-widest leading-none">Offer Protocols</h4>
+                                                        <h4 className="text-[11px] font-[1000] text-black uppercase tracking-widest leading-none">Offer protocols</h4>
                                                     </div>
                                                     <div className="space-y-3">
                                                         {matchedModel.offers?.map((offer, idx) => (
                                                             <div key={idx} className="flex items-center justify-between bg-white p-3 rounded-xl border border-brand/5">
                                                                 <div>
-                                                                    <p className="text-[10px] font-[1000] text-black uppercase tracking-tight">{offer.title || 'Launch Offer'}</p>
-                                                                    <p className="text-[8px] font-bold text-black/30 uppercase tracking-widest">{offer.description || 'Dynamic Discount Applied'}</p>
+                                                                    <p className="text-[10px] font-[1000] text-black uppercase tracking-tight">{offer.title || 'Launch offer'}</p>
+                                                                    <p className="text-[8px] font-bold text-black/30 uppercase tracking-widest">{offer.description || 'Dynamic discount applied'}</p>
                                                                 </div>
                                                                 <div className="bg-emerald-500 text-white px-2.5 py-0.5 rounded-lg text-[9px] font-black">
                                                                     -{offer.discountPercentage || 10}%
@@ -1632,24 +1631,24 @@ const InstantWash = () => {
                                                             </div>
                                                         ))}
                                                         {matchedModel.coupons?.map((coupon, idx) => (
-                                                            <div key={idx} className="flex items-center justify-between bg-black text-white p-3.5 rounded-2xl group active:scale-95 transition-all">
+                                                            <div key={idx} className="flex items-center justify-between bg-black text-white p-3.5 rounded-[1.5rem] group active:scale-95 transition-all">
                                                                 <div className="flex items-center gap-3">
                                                                     <div className="w-8 h-8 rounded-xl bg-brand/20 flex items-center justify-center border border-brand/20">
                                                                         <Zap size={14} className="text-brand" />
                                                                     </div>
                                                                     <div>
                                                                         <p className="text-[13px] font-[1000] uppercase tracking-widest">{coupon}</p>
-                                                                        <p className="text-[7px] font-bold text-white/30 uppercase tracking-[0.2em] mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">Asset Specific Coupon</p>
+                                                                        <p className="text-[7px] font-bold text-white/30 uppercase tracking-[0.2em] mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">Asset specific coupon</p>
                                                                     </div>
                                                                 </div>
                                                                 <button
                                                                     onClick={() => {
                                                                         setCouponCode(coupon);
-                                                                        toast.success("Coupon Protocol Loaded");
+                                                                        toast.success("Coupon protocol loaded");
                                                                     }}
                                                                     className="bg-brand text-white text-[9px] font-black px-4 py-2 rounded-xl uppercase tracking-widest hover:bg-white hover:text-black transition-all"
                                                                 >
-                                                                    ADD
+                                                                    Add
                                                                 </button>
                                                             </div>
                                                         ))}
@@ -1797,7 +1796,7 @@ const InstantWash = () => {
                                                 category: activeService.category,
                                                 price: activeServicePrice,
                                                 vehicleId: selectedVehicle?.id || selectedVehicle?._id,
-                                                vehicleName: selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model}` : "Premium Asset",
+                                                vehicleName: selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model}` : "Premium asset",
                                                 vehicleImg: selectedVehicle?.img || FALLBACK_IMAGES[0],
                                                 duration: activeServiceDuration,
                                                 type: 'service'
@@ -1814,7 +1813,7 @@ const InstantWash = () => {
                                     >
                                         <div className="absolute inset-0 bg-brand opacity-0 group-hover:opacity-10 transition-opacity" />
                                         <Zap size={18} className={selectedVehicle ? "text-brand" : "text-black/5"} fill="currentColor" />
-                                        <span>Execute Booking</span>
+                                        <span>Execute booking</span>
                                         <ChevronRight size={18} strokeWidth={4} className="group-hover:translate-x-1 transition-transform" />
                                     </motion.button>
                                 </div>
@@ -2868,7 +2867,7 @@ const InstantWash = () => {
                             onClick={() => {
                                 const activeAddr = selectedAddress || addresses.find(a => a.isPrimary) || addresses[0];
                                 if (!activeAddr) {
-                                    navigate('/addresses?from=instant-wash');
+                                    navigate('/map?from=instant-wash');
                                     toast.error('Please select a service address');
                                     return;
                                 }
@@ -3164,7 +3163,7 @@ const InstantWash = () => {
         ];
 
         const discountPct = (passConfig?.discount || 0.3) * 100;
-        const passPrice = blackPassPlan?.price || passConfig?.price || 499;
+        const passPrice = goldPassPlan?.price || passConfig?.price || 499;
 
         return (
             <div className="min-h-screen bg-[#F8F9FB] pb-32 font-sans">
@@ -3205,7 +3204,7 @@ const InstantWash = () => {
                                 <div className="flex-1">
                                     <h3 className="text-brand font-[1000] text-[13px] uppercase tracking-tight leading-none mb-1.5">Save ₹{Math.round(finalPrice * (discountPct / 100))} Right Now!</h3>
                                     <p className="text-white/40 text-[8px] font-black uppercase tracking-widest leading-relaxed">
-                                        Join {blackPassPlan?.name || 'Black Pass'} for ₹{passPrice} and unlock {discountPct}% OFF on this booking instantly.
+                                        Join {goldPassPlan?.name || 'Black Pass'} for ₹{passPrice} and unlock {discountPct}% OFF on this booking instantly.
                                     </p>
                                 </div>
                                 <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-brand">

@@ -3,6 +3,7 @@ const Captain = require('../../../models/Captain');
 const User = require('../../../models/User');
 const Product = require('../../../models/Product');
 const ProductOrder = require('../../../models/ProductOrder');
+const Service = require('../../../models/Service');
 const Hub = require('../../../models/Hub');
 const Setting = require('../../../models/Setting');
 const AuditLog = require('../../../models/AuditLog');
@@ -59,6 +60,64 @@ exports.getDashboard = async (req, res) => {
         const totalRevenue = serviceRevenue + productRevenue;
         const totalActiveOps = activeServicesCount + activeProductOrders;
         const totalUsers = await User.countDocuments({ isActive: true });
+
+        // Segregated Populations (P12 Expanded - Multi-Collection Census)
+        const roleCounts = {
+            consumer: await User.countDocuments({ role: 'consumer', isActive: true }),
+            captain: await Captain.countDocuments({ isActive: true }),
+            vendor: await User.countDocuments({ role: 'vendor', isActive: true }),
+            staff: await User.countDocuments({ role: 'staff', isActive: true }),
+            sparedriver: await SpareDriver.countDocuments({ isActive: true })
+        };
+        const totalBookingsAllTime = await Booking.countDocuments({ isActive: true });
+
+        // Today's Velocity
+        const startOfToday = new Date(new Date().setHours(0, 0, 0, 0));
+        const todayRevenueResult = await Booking.aggregate([
+            { $match: { status: 'completed', isActive: true, updatedAt: { $gte: startOfToday } } },
+            { $group: { _id: null, total: { $sum: '$pricing.totalAmount' } } }
+        ]);
+        const todayRevenue = todayRevenueResult[0]?.total || 0;
+
+        // 7-Day Performance Matrix (Global & Category Segregated)
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        
+        // Parallel aggregation for global trend & category mix
+        const [yieldTrend, categoryMix] = await Promise.all([
+            Booking.aggregate([
+                { $match: { isActive: true, createdAt: { $gte: sevenDaysAgo } } },
+                { 
+                    $group: { 
+                        _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                        bookings: { $sum: 1 },
+                        revenue: { $sum: { $ifNull: ["$pricing.totalAmount", 0] } }
+                    } 
+                },
+                { $sort: { "_id": 1 } }
+            ]),
+            Booking.aggregate([
+                { $match: { isActive: true, createdAt: { $gte: sevenDaysAgo } } },
+                {
+                    $group: {
+                        _id: { 
+                            date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                            category: { $ifNull: ["$service.category", "General"] }
+                        },
+                        bookings: { $sum: 1 },
+                        revenue: { $sum: { $ifNull: ["$pricing.totalAmount", 0] } }
+                    }
+                },
+                { $sort: { "_id.date": 1 } }
+            ])
+        ]);
+
+        // Process Category Mix into a usable matrix
+        const categoryMatrix = {};
+        categoryMix.forEach(item => {
+            const { date, category } = item._id;
+            if (!categoryMatrix[category]) categoryMatrix[category] = [];
+            categoryMatrix[category].push({ date, bookings: item.bookings, revenue: item.revenue });
+        });
 
         // --- 4. STUCK BOOKINGS DETECTION (Operational IQ) ---
         // Definition: Active for > 120 mins without status update
@@ -124,12 +183,17 @@ exports.getDashboard = async (req, res) => {
             status: 'success',
             data: {
                 totalRevenue,
+                todayRevenue,
+                yieldTrend,
+                categoryMatrix, // New: Segregated Analytics
                 serviceRevenue,
                 productRevenue,
                 activeJobs: activeServicesCount,
                 activeProductOrders,
                 totalActiveOps,
                 totalUsers,
+                roleCounts,
+                totalBookingsAllTime,
                 lowStockCount,
                 stuckBookings,
                 recentBookings: mappedRecentBookings,
@@ -539,26 +603,51 @@ exports.verifyProduct = async (req, res) => {
 
 exports.getUsers = async (req, res) => {
     try {
-        const { role } = req.query;
+        const { role, page = 1, limit = 50 } = req.query;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        
         let users = [];
+        let total = 0;
 
         if (role === 'captain') {
-            users = await Captain.find({}).select('-password');
+            const query = { isActive: { $ne: false } };
+            total = await Captain.countDocuments(query);
+            users = await Captain.find(query)
+                .select('-password')
+                .skip(skip)
+                .limit(parseInt(limit))
+                .sort({ createdAt: -1 });
         } else if (role === 'sparedriver') {
             const SpareDriver = require('../../../models/SpareDriver');
-            users = await SpareDriver.find({}).select('-password');
+            const query = { isActive: { $ne: false } };
+            total = await SpareDriver.countDocuments(query);
+            users = await SpareDriver.find(query)
+                .select('-password')
+                .skip(skip)
+                .limit(parseInt(limit))
+                .sort({ createdAt: -1 });
         } else {
-            const query = role ? { role } : {};
-            users = await User.find(query).select('-password');
+            const query = { isActive: { $ne: false } };
+            if (role) query.role = role;
+            total = await User.countDocuments(query);
+            users = await User.find(query)
+                .select('-password')
+                .skip(skip)
+                .limit(parseInt(limit))
+                .sort({ createdAt: -1 });
         }
 
         res.status(200).json({
             status: 'success',
             results: users.length,
+            total,
+            totalPages: Math.ceil(total / parseInt(limit)),
+            currentPage: parseInt(page),
             data: { users }
         });
     } catch (error) {
-        res.status(500).json({ status: 'error', message: 'Failed to get users' });
+        console.error("Fetch Users Error:", error);
+        res.status(500).json({ status: 'error', message: 'Failed to synchronize registry' });
     }
 };
 
@@ -607,6 +696,75 @@ exports.getSpareDriverBookings = async (req, res) => {
     } catch (error) {
         console.error('Error fetching chauffeur bookings:', error);
         res.status(500).json({ status: 'error', message: 'Failed to fetch chauffeur bookings' });
+    }
+};
+
+exports.getStudioWashConsole = async (req, res) => {
+    try {
+        const studioCategories = ['Studio', 'Studio Detailing'];
+
+        const [bookings, staff, vendors, studioServices] = await Promise.all([
+            Booking.find({
+                'service.category': { $in: studioCategories },
+                isActive: true
+            })
+                .populate('consumer', 'name phone email profile')
+                .populate('vehicle', 'brand model type plate')
+                .populate('provider.id', 'name phone profile.studioName profile.city')
+                .populate('pickupStaff', 'name phone profile.photo profile.vendorId')
+                .populate('deliveryStaff', 'name phone profile.photo profile.vendorId')
+                .sort({ createdAt: -1 }),
+            User.find({ role: 'staff', isActive: true })
+                .select('name phone profile.vendorId profile.studioName profile.city'),
+            User.find({ role: 'vendor', isActive: true })
+                .select('name phone email profile.studioName profile.city profile.verificationStatus'),
+            Service.find({ category: { $in: studioCategories } })
+                .sort({ updatedAt: -1 })
+        ]);
+
+        const mappedBookings = bookings.map((booking) => ({
+            ...booking.toObject(),
+            price: `₹${booking.pricing?.totalAmount || 0}`,
+            serviceName: booking.service?.name || 'Studio Wash',
+            assignment: {
+                pickupStaffId: booking.pickupStaff?._id || null,
+                deliveryStaffId: booking.deliveryStaff?._id || null
+            }
+        }));
+
+        const liveCount = mappedBookings.filter((booking) => (
+            !['completed', 'cancelled', 'refunded'].includes(booking.status)
+        )).length;
+
+        const unassignedPickup = mappedBookings.filter((booking) => (
+            !booking.pickupStaff && !['completed', 'cancelled', 'refunded'].includes(booking.status)
+        )).length;
+
+        const unassignedDelivery = mappedBookings.filter((booking) => (
+            ['ready-for-delivery', 'delivery-assigned', 'out_for_delivery'].includes(booking.status) && !booking.deliveryStaff
+        )).length;
+
+        return res.status(200).json({
+            status: 'success',
+            data: {
+                metrics: {
+                    totalStudioBookings: mappedBookings.length,
+                    liveStudioBookings: liveCount,
+                    totalStudioServices: studioServices.length,
+                    activeVendors: vendors.length,
+                    activeStaff: staff.length,
+                    unassignedPickup,
+                    unassignedDelivery
+                },
+                bookings: mappedBookings,
+                staff,
+                vendors,
+                studioServices
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching studio wash console:', error);
+        return res.status(500).json({ status: 'error', message: 'Failed to fetch studio wash console' });
     }
 };
 

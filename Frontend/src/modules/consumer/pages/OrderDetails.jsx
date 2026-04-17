@@ -24,8 +24,8 @@ const OrderDetails = () => {
         return (
             <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-10 text-center">
                 <ShoppingBag size={48} className="text-gray-200 mb-4" />
-                <h2 className="text-lg font-black text-content uppercase tracking-tight italic">Order Not Found</h2>
-                <p className="text-content-subtle text-[10px] font-bold mt-2 uppercase tracking-widest leading-relaxed">We couldn't find the order with ID: <span className="text-brand">#{id}</span></p>
+                <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight italic">Order Not Found</h2>
+                <p className="text-slate-500 text-[10px] font-bold mt-2 uppercase tracking-widest leading-relaxed">We couldn't find the order with ID: <span className="text-brand">#{id}</span></p>
                 <button onClick={() => navigate('/')} className="mt-8 px-8 py-3 bg-brand text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand/20">Go Home</button>
             </div>
         );
@@ -89,14 +89,14 @@ const OrderDetails = () => {
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <button onClick={() => navigate(-1)} className="w-9 h-9 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform">
-                            <ChevronLeft size={18} strokeWidth={2.5} className="text-content" />
+                            <ChevronLeft size={18} strokeWidth={2.5} className="text-slate-900" />
                         </button>
                         <div>
-                            <h1 className="text-lg font-black tracking-tight text-content leading-none">Order Status</h1>
+                            <h1 className="text-lg font-black tracking-tight text-slate-900 leading-none">Order Status</h1>
                             <p className="text-[9px] text-brand font-black uppercase tracking-widest mt-0.5">#{order.bookingId || order.id || order._id}</p>
                         </div>
                     </div>
-                    <button className="flex items-center gap-1.5 bg-gray-50 border border-gray-100 px-3 py-2 rounded-xl text-content-muted text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all">
+                    <button className="flex items-center gap-1.5 bg-gray-50 border border-gray-100 px-3 py-2 rounded-xl text-slate-500 text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all">
                         <Download size={13} strokeWidth={2.5} /> Tracking
                     </button>
                 </div>
@@ -112,12 +112,12 @@ const OrderDetails = () => {
                             }`}>
                             {order.status === 'completed' ? <CheckCircle2 size={30} /> : <Package size={30} />}
                         </div>
-                        <h2 className="text-lg font-black text-content tracking-tighter uppercase italic leading-none mb-1">
+                        <h2 className="text-lg font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-1">
                             {order.status === 'pending' ? 'Waiting for Vendor' :
                                 order.status === 'confirmed' ? 'Vendor Confirmed' :
                                     order.status === 'in-progress' || order.status === 'en_route' ? 'Out for Delivery' : 'Delivered Success'}
                         </h2>
-                        <p className="text-content-subtle text-[8px] font-black uppercase tracking-[0.2em] opacity-70">
+                        <p className="text-slate-400 text-[8px] font-black uppercase tracking-[0.2em] opacity-70">
                             {order.status === 'pending' ? 'Your order request has been sent to nearby vendors' :
                                 order.status === 'confirmed' ? 'A vendor has accepted your order and preparing' :
                                     order.status === 'in-progress' || order.status === 'en_route' ? 'Our delivery partner is on the way' : 'Your products have been safely delivered'}
@@ -148,7 +148,7 @@ const OrderDetails = () => {
                 {/* ── Timeline ── */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden">
                     <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
-                        <p className="text-[9px] font-black uppercase tracking-widest text-content-subtle">Live Track History</p>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Live Track History</p>
                         <span className="text-[8px] font-black text-brand bg-brand/10 px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">Live</span>
                     </div>
                     <div className="px-5 py-5 space-y-0">
@@ -172,8 +172,8 @@ const OrderDetails = () => {
                                     </div>
                                     <div className="flex-1 flex items-center justify-between pt-1">
                                         <div>
-                                            <p className={`font-[1000] text-xs underline-offset-4 tracking-tight transition-colors ${isActive ? 'text-brand underline italic' : step.done ? 'text-content' : 'text-gray-300'}`}>{step.label}</p>
-                                            <p className={`text-[8px] font-black uppercase tracking-widest mt-0.5 ${isActive ? 'text-brand animate-pulse' : 'text-content-subtle'}`}>{step.done ? step.subtitle : 'Coming up...'}</p>
+                                            <p className={`font-[1000] text-xs underline-offset-4 tracking-tight transition-colors ${isActive ? 'text-brand underline italic' : step.done ? 'text-slate-900' : 'text-gray-300'}`}>{step.label}</p>
+                                            <p className={`text-[8px] font-black uppercase tracking-widest mt-0.5 ${isActive ? 'text-brand animate-pulse' : 'text-slate-400'}`}>{step.done ? step.subtitle : 'Coming up...'}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -196,7 +196,7 @@ const OrderDetails = () => {
                 {/* ── Order Content ── */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden">
                     <div className="px-5 py-4 border-b border-gray-50">
-                        <p className="text-[9px] font-black uppercase tracking-widest text-content-subtle">Order Summary</p>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Order Summary</p>
                     </div>
                     <div className="p-4 space-y-3">
                         {order.items?.length > 0 ? order.items.map((item, idx) => (
@@ -205,10 +205,10 @@ const OrderDetails = () => {
                                     <img src={item.image || "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=100&q=80"} className="w-8 h-8 object-contain" alt="" />
                                 </div>
                                 <div className="flex-1">
-                                    <p className="text-[10px] font-black text-content uppercase tracking-tight leading-none">{item.name || item.serviceName || order.service?.name}</p>
-                                    <p className="text-[8px] font-bold text-content-subtle uppercase tracking-widest mt-1">Qty: {item.qty || 1} · ₹{(item.salePrice || item.price || 0).toLocaleString()}</p>
+                                    <p className="text-[10px] font-black text-slate-900 uppercase tracking-tight leading-none">{item.name || item.serviceName || order.service?.name}</p>
+                                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">Qty: {item.qty || 1} · ₹{(item.salePrice || item.price || 0).toLocaleString()}</p>
                                 </div>
-                                <p className="text-[11px] font-black text-content">₹{((item.salePrice || item.price || 0) * (item.qty || 1)).toLocaleString()}</p>
+                                <p className="text-[11px] font-black text-slate-900">₹{((item.salePrice || item.price || 0) * (item.qty || 1)).toLocaleString()}</p>
                             </div>
                         )) : (
                             <div className="flex items-center gap-3">
@@ -216,10 +216,10 @@ const OrderDetails = () => {
                                     <ShoppingBag size={18} className="text-content-subtle" />
                                 </div>
                                 <div className="flex-1">
-                                    <p className="text-[10px] font-black text-content uppercase tracking-tight leading-none">{order.service?.name || order.serviceName || 'Car Service'}</p>
-                                    <p className="text-[8px] font-bold text-content-subtle uppercase tracking-widest mt-1">Qty: 1</p>
+                                    <p className="text-[10px] font-black text-slate-900 uppercase tracking-tight leading-none">{order.service?.name || order.serviceName || 'Car Service'}</p>
+                                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">Qty: 1</p>
                                 </div>
-                                <p className="text-[11px] font-black text-content">₹{(order.pricing?.totalAmount || order.amount || order.price || 0).toLocaleString()}</p>
+                                <p className="text-[11px] font-black text-slate-900">₹{(order.pricing?.totalAmount || order.amount || order.price || 0).toLocaleString()}</p>
                             </div>
                         )}
                     </div>
@@ -227,9 +227,9 @@ const OrderDetails = () => {
 
                 {/* ── Bill Breakdown ── */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-soft p-5 space-y-3">
-                    <div className="flex justify-between items-center text-[10px] font-bold text-content-subtle uppercase tracking-widest">
+                    <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                         <span>Total Payable</span>
-                        <span className="text-content font-black text-base">₹{(order.pricing?.totalAmount || order.amount || order.price || 0).toLocaleString()}</span>
+                        <span className="text-slate-900 font-black text-base">₹{(order.pricing?.totalAmount || order.amount || order.price || 0).toLocaleString()}</span>
                     </div>
                     <div className="pt-2 border-t border-gray-50 flex items-center gap-2">
                         <ShieldCheck size={14} className="text-green-600" />
@@ -241,10 +241,10 @@ const OrderDetails = () => {
 
             {/* ── Footer ── */}
             <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-100 px-6 py-4 flex gap-4 z-50">
-                <button className="flex-1 h-12 bg-gray-50 border border-gray-100 rounded-xl text-content font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all">
+                <button className="flex-1 h-12 bg-gray-50 border border-gray-100 rounded-xl text-slate-900 font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all">
                     <MessageSquare size={16} /> Support
                 </button>
-                <button onClick={() => navigate('/')} className="flex-1 h-12 bg-content text-white rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">
+                <button onClick={() => navigate('/')} className="flex-1 h-12 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">
                     Back to Feed
                 </button>
             </div>

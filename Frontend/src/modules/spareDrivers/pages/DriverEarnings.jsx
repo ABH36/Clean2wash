@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, ArrowDownLeft, ArrowUpRight, Download, Loader2, Wallet } from 'lucide-react';
+import { TrendingUp, ArrowDownLeft, ArrowUpRight, Download, Loader2, Wallet, ShieldCheck, Zap } from 'lucide-react';
 import DriverLayout from '../components/DriverLayout';
 import { spareDriverAPI } from '../../../utils/spareDriverApi';
+import { motion } from 'framer-motion';
 
 const DriverEarnings = () => {
     const [loading, setLoading] = useState(true);
@@ -13,127 +14,86 @@ const DriverEarnings = () => {
     });
 
     useEffect(() => {
-        const loadData = async () => {
+        const load = async () => {
             try {
-                // Get profile for balance
-                const profileRes = await spareDriverAPI.getProfile();
-                const balance = profileRes?.data?.driver?.wallet?.balance || 0;
-
-                // Get transactions
-                const txRes = await spareDriverAPI.getTransactions();
-                const txns = txRes?.data?.transactions || [];
-
-                // Calculate stats (Current Month)
+                const [p, t] = await Promise.all([spareDriverAPI.getProfile(), spareDriverAPI.getTransactions()]);
+                const txs = t.data.transactions || [];
                 const now = new Date();
-                const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-                const monthly = txns
-                    .filter(t => t.type === 'credit' && new Date(t.createdAt) >= firstDayOfMonth)
-                    .reduce((acc, t) => acc + t.amount, 0);
-
-                const jobs = txns.filter(t => t.category === 'SERVICE_BOOKING' && t.type === 'credit').length;
-
+                const start = new Date(now.getFullYear(), now.getMonth(), 1);
+                
                 setData({
-                    balance,
-                    transactions: txns,
-                    monthlyEarnings: monthly,
-                    jobsDone: jobs
+                    balance: p.data.driver?.wallet?.balance || 0,
+                    transactions: txs,
+                    monthlyEarnings: txs.filter(x => x.type === 'credit' && new Date(x.createdAt) >= start).reduce((a, b) => a + b.amount, 0),
+                    jobsDone: txs.filter(x => x.category === 'SERVICE_BOOKING' && x.type === 'credit').length
                 });
-            } catch (err) {
-                console.error("Failed to load earnings:", err);
-            } finally {
-                setLoading(false);
-            }
+            } catch (e) { console.error(e); }
+            setLoading(false);
         };
-        loadData();
+        load();
     }, []);
 
-    if (loading) {
-        return (
-            <DriverLayout title="Earnings">
-                <div className="flex items-center justify-center min-h-[60vh]">
-                    <Loader2 size={24} className="animate-spin text-[#F29F05]" />
-                </div>
-            </DriverLayout>
-        );
-    }
+    if (loading) return <DriverLayout title="Finance"><div className="flex h-[60vh] items-center justify-center font-black text-brand uppercase tracking-[0.4em] animate-pulse">Syncing Vault...</div></DriverLayout>;
 
     return (
-        <DriverLayout title="Earnings">
-            <div className="px-5 py-6 space-y-5">
-
-                {/* ── Balance Card ── */}
-                <div className="bg-[#0D1117] text-white rounded-[2rem] p-5 shadow-[0_24px_55px_rgba(15,23,42,0.2)] border border-white/5 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-28 h-28 bg-brand/15 rounded-full blur-3xl -mr-6 -mt-6" />
-                    <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-1">Available Balance</p>
-                    <p className="text-4xl font-black text-white leading-none mb-5">₹{data.balance.toLocaleString()}</p>
-
-                    <div className="flex gap-3">
-                        <button className="flex-1 h-10 bg-[#F29F05] text-black text-[10px] font-black uppercase tracking-widest rounded-md active:scale-95 transition-transform">
-                            Withdraw
-                        </button>
-                        <button className="w-10 h-10 border border-white/10 text-white rounded-md flex items-center justify-center hover:bg-white/5 active:scale-95 transition-all">
-                            <Download size={15} />
-                        </button>
-                    </div>
-                </div>
-
-                {/* ── Stats Row ── */}
+        <DriverLayout title="Finance Console">
+            <div className="px-6 py-6 space-y-6 pb-24">
+                {/* ── Yield Matrix ── */}
+                <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-black rounded-[2.8rem] p-8 shadow-2xl relative overflow-hidden text-center border border-white/5 transition-colors duration-500">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand/10 blur-[60px]" />
+                    <p className="text-[10px] font-black text-brand uppercase tracking-[0.4em] mb-4">Secured Balance</p>
+                    <h2 className="text-5xl font-black text-white tracking-tighter leading-none mb-8">₹{data.balance}</h2>
+                    
                     <div className="grid grid-cols-2 gap-3">
-                    <div className="border border-black/[0.04] rounded-[1.5rem] p-4 bg-white shadow-[0_16px_36px_rgba(15,23,42,0.05)]">
-                        <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-2">This Month</p>
-                        <p className="text-xl font-black text-black">₹{data.monthlyEarnings.toLocaleString()}</p>
-                        <div className="flex items-center gap-1 text-[#F29F05] text-[9px] font-black mt-1">
-                            <TrendingUp size={10} /> Live Stats
+                        <button className="h-14 bg-brand text-black rounded-2xl font-black text-[12px] uppercase tracking-widest active:scale-95 transition-all">Withdraw</button>
+                        <button className="h-14 bg-white/5 border border-white/5 text-white/40 rounded-2xl flex items-center justify-center active:scale-95"><Download size={20} /></button>
+                    </div>
+                </motion.div>
+
+                {/* ── Telemetry ── */}
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-surface border border-content/[0.04] p-6 rounded-[2rem] shadow-sm transition-colors duration-500">
+                        <p className="text-[9px] font-black text-content/20 uppercase tracking-widest mb-2">Monthly Cycle</p>
+                        <p className="text-2xl font-black text-content tracking-tight">₹{data.monthlyEarnings}</p>
+                        <div className="flex items-center gap-1.5 mt-2 bg-brand/10 w-fit px-3 py-1 rounded-full">
+                            <Zap size={10} className="text-brand fill-brand" />
+                            <span className="text-[8px] font-black uppercase text-brand">Peak Yield</span>
                         </div>
                     </div>
-                    <div className="border border-black/[0.04] rounded-[1.5rem] p-4 bg-white shadow-[0_16px_36px_rgba(15,23,42,0.05)]">
-                        <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-2">Jobs Done</p>
-                        <p className="text-xl font-black text-black">{data.jobsDone}</p>
-                        <p className="text-[9px] font-black text-[#F29F05] mt-1">Verified Node</p>
+                    <div className="bg-surface border border-content/[0.04] p-6 rounded-[2rem] shadow-sm transition-colors duration-500">
+                        <p className="text-[9px] font-black text-content/20 uppercase tracking-widest mb-2">Missions Log</p>
+                        <p className="text-2xl font-black text-content tracking-tight">{data.jobsDone}</p>
+                        <div className="flex items-center gap-1.5 mt-2 bg-content/[0.05] w-fit px-3 py-1 rounded-full">
+                            <ShieldCheck size={10} className="text-content/30" />
+                            <span className="text-[8px] font-black uppercase text-content/30">Verified</span>
+                        </div>
                     </div>
                 </div>
 
-                {/* ── Transactions ── */}
-                <div>
-                    <p className="text-[9px] font-black text-black/25 uppercase tracking-widest mb-3">Recent Transactions</p>
-                    <div className="border border-black/[0.04] rounded-[1.6rem] divide-y divide-gray-50 overflow-hidden bg-white shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
+                {/* ── Archive ── */}
+                <div className="space-y-4">
+                    <p className="text-[10px] font-black text-content/30 uppercase tracking-[0.3em] px-2">Operational Ledger</p>
+                    <div className="bg-surface border border-content/[0.04] rounded-[2.2rem] overflow-hidden shadow-sm divide-y divide-content/[0.04] transition-colors duration-500">
                         {data.transactions.length > 0 ? data.transactions.map((tx, i) => (
-                            <div key={tx._id || i} className="flex items-center justify-between px-4 py-3.5">
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-7 h-7 rounded-md flex items-center justify-center ${tx.type === 'credit' ? 'bg-[#F29F05]/10' : 'bg-gray-50'}`}>
-                                        {tx.type === 'credit'
-                                            ? <ArrowDownLeft size={13} className="text-[#F29F05]" />
-                                            : <ArrowUpRight size={13} className="text-black/30" />}
+                            <div key={i} className="p-5 flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${tx.type === 'credit' ? 'bg-brand/10 text-brand' : 'bg-content/[0.05] text-content/20'}`}>
+                                        {tx.type === 'credit' ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-black text-black uppercase leading-none truncate max-w-[150px]">
-                                            {tx.description || tx.category}
-                                        </p>
-                                        <p className="text-[8px] font-bold text-black/25 uppercase mt-0.5">
-                                            {new Date(tx.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })} • {tx._id.slice(-6).toUpperCase()}
-                                        </p>
+                                        <p className="text-[11px] font-black text-content uppercase leading-none mb-1">{tx.description || tx.category}</p>
+                                        <p className="text-[8px] font-black text-content/20 uppercase tracking-widest">{new Date(tx.createdAt).toLocaleDateString()} • {tx._id.slice(-6).toUpperCase()}</p>
                                     </div>
                                 </div>
-                                <p className={`text-[12px] font-black ${tx.type === 'credit' ? 'text-black' : 'text-black/40'}`}>
+                                <p className={`text-sm font-black ${tx.type === 'credit' ? 'text-content' : 'text-content/40'}`}>
                                     {tx.type === 'credit' ? '+' : '-'}₹{tx.amount}
                                 </p>
                             </div>
                         )) : (
-                            <div className="py-12 flex flex-col items-center gap-2 opacity-20">
-                                <Wallet size={24} />
-                                <p className="text-[10px] font-black uppercase tracking-widest text-center">No transactions yet</p>
-                            </div>
+                           <div className="py-20 text-center opacity-20 text-content"><Wallet size={32} className="mx-auto mb-4" /><p className="text-[10px] font-black uppercase tracking-widest">No Logs Found</p></div>
                         )}
                     </div>
                 </div>
-
-                {data.transactions.length > 5 && (
-                    <button className="w-full text-center text-[9px] font-black text-black/20 uppercase tracking-widest py-3 hover:text-black/40 transition-colors">
-                        View Full Statement
-                    </button>
-                )}
-
             </div>
         </DriverLayout>
     );

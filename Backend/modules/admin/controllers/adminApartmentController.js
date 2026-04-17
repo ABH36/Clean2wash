@@ -49,7 +49,7 @@ exports.getApartmentWashConsole = async (req, res) => {
             })
                 .populate('vendor', 'name profile.studioName')
                 .lean(),
-            Captain.find({ isActive: true })
+            Captain.find({})
                 .select('name phone isOnline isVerified rating profile location createdAt')
                 .lean(),
             SubscriptionPlan.find({ isActive: true, moduleScope: 'apartment-wash' }).sort({ price: 1 }).lean(),
@@ -80,11 +80,12 @@ exports.getApartmentWashConsole = async (req, res) => {
         const mappedCaptains = captains.map((captain) => ({
             ...captain,
             mappedHub: captain.profile?.hub || '',
-            apartmentReady: !!captain.profile?.hub && captain.isVerified
+            apartmentReady: !!captain.profile?.hub && captain.isVerified && captain.isActive
         }));
+        const eligibleApartmentCaptains = mappedCaptains.filter((captain) => captain.isVerified && captain.isActive);
 
         const apartmentHubs = hubs.map((hub) => {
-            const mapped = mappedCaptains.filter((captain) => captain.profile?.hub === hub.name);
+            const mapped = eligibleApartmentCaptains.filter((captain) => captain.profile?.hub === hub.name);
             const liveSubscriptions = apartmentSubscriptions.filter((subscription) => String(subscription.hub?._id || subscription.hub) === String(hub._id));
             const liveBookings = bookings.filter((booking) => String(booking.location?.hubId?._id || booking.location?.hubId) === String(hub._id));
             const recommendedCaptains = Math.max(1, Math.ceil(liveSubscriptions.length / 10));
@@ -112,8 +113,8 @@ exports.getApartmentWashConsole = async (req, res) => {
 
         const stats = {
             societies: apartmentHubs.length,
-            mappedCaptains: mappedCaptains.filter((captain) => captain.profile?.hub).length,
-            verifiedCaptains: mappedCaptains.filter((captain) => captain.isVerified).length,
+            mappedCaptains: eligibleApartmentCaptains.filter((captain) => captain.profile?.hub).length,
+            verifiedCaptains: eligibleApartmentCaptains.length,
             pendingApprovals: apartmentSubscriptions.filter((subscription) => subscription.status === 'pending').length,
             activeSubscriptions: apartmentSubscriptions.filter((subscription) => subscription.status === 'active').length,
             pausedSubscriptions: apartmentSubscriptions.filter((subscription) => subscription.status === 'paused').length,
@@ -143,7 +144,7 @@ exports.getApartmentWashConsole = async (req, res) => {
 exports.reviewApartmentSubscription = async (req, res) => {
     try {
         const { id } = req.params;
-        const { action } = req.body;
+        const { action, reason = '', captainId = '' } = req.body;
 
         if (!['approve', 'reject'].includes(action)) {
             return res.status(400).json({ status: 'error', message: 'Invalid review action' });
@@ -155,18 +156,28 @@ exports.reviewApartmentSubscription = async (req, res) => {
         }
 
         if (action === 'reject') {
+            // ... (keep rejection logic as is)
             subscription.status = 'rejected';
+            subscription.review = {
+                ...(subscription.review || {}),
+                rejectionReason: String(reason || '').trim(),
+                reviewedAt: new Date(),
+                reviewedBy: req.user?._id || undefined
+            };
             await subscription.save();
+
+            const rejectionReason = subscription.review?.rejectionReason || 'Please review the apartment, parking route, or slot details and submit the request again.';
 
             await sendNotification(subscription.user, {
                 title: 'Apartment Request Needs Update',
-                message: `Your apartment wash request for ${subscription.hub?.name || 'the selected apartment'} was not approved. Update the request details and submit again.`,
+                message: `Your apartment wash request for ${subscription.hub?.name || 'the selected apartment'} was not approved. Reason: ${rejectionReason}`,
                 type: 'subscription',
                 priority: 'high',
                 actionUrl: '/apartment-wash',
                 metaData: {
                     subscriptionId: subscription._id.toString(),
                     status: 'rejected',
+                    rejectionReason,
                     serviceKey: 'APARTMENT_WASH'
                 }
             });
@@ -178,6 +189,28 @@ exports.reviewApartmentSubscription = async (req, res) => {
             });
         }
 
+        // Approval Logic
+        if (captainId) {
+            const selectedCaptain = await Captain.findOne({
+                _id: captainId,
+                isActive: true,
+                isVerified: true
+            }).select('_id');
+
+            if (!selectedCaptain) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'Selected captain must be active and verified before approval'
+                });
+            }
+
+            // Map the selected captain to this apartment hub
+            await Captain.findByIdAndUpdate(captainId, {
+                $set: { 'profile.hub': subscription.hub?.name || '' }
+            });
+            console.log(`Captain ${captainId} mapped to hub ${subscription.hub?.name} during apartment approval`);
+        }
+
         const mappedCaptains = await Captain.find({
             isActive: true,
             isVerified: true,
@@ -187,7 +220,7 @@ exports.reviewApartmentSubscription = async (req, res) => {
         if (!mappedCaptains.length) {
             return res.status(400).json({
                 status: 'error',
-                message: 'Map at least one verified captain to this apartment before approval'
+                message: 'Map at least one active verified captain to this apartment before approval'
             });
         }
 
@@ -202,6 +235,12 @@ exports.reviewApartmentSubscription = async (req, res) => {
         );
 
         subscription.status = 'active';
+        subscription.review = {
+            ...(subscription.review || {}),
+            rejectionReason: '',
+            reviewedAt: new Date(),
+            reviewedBy: req.user?._id || undefined
+        };
         await subscription.save();
 
         if (subscription.hub) {

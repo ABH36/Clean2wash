@@ -1,1 +1,0 @@
-{"_id":"69c6076d003ce6d953713f64","name":"Captain Rohit","phone":"8888888888","password":"$2b$10$YGwVrNRLhBDE.TCn9gXboOS6YePLoHnx3RgiNwt3gFbn5P.Dc3hbe","role":"staff","profile":{"hub":"Prestige Lakeside (Test)","skills":["Interior","Exterior","Ceramic"],"status":"Available"},"isActive":true,"createdAt":"2026-03-27T04:28:29.782Z","updatedAt":"2026-03-27T04:28:29.782Z","__v":0}

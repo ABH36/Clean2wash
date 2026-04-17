@@ -160,3 +160,78 @@ exports.updateTransactionStatus = catchAsync(async (req, res, next) => {
         data: { transaction }
     });
 });
+
+// @desc    Get detailed financial analytics
+// @route   GET /api/admin/transactions/analytics
+// @access  Private (Admin)
+exports.getFinancialAnalytics = catchAsync(async (req, res, next) => {
+    // 1. Calculate Total Revenue (all completed credits from customers)
+    const revenueStats = await WalletTransaction.aggregate([
+        {
+            $match: {
+                category: { $in: ['BOOKING_PAYMENT', 'ADD_FUNDS'] },
+                type: 'credit',
+                status: 'completed'
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                total: { $sum: '$amount' }
+            }
+        }
+    ]);
+
+    // 2. Calculate Total Payouts (all completed withdrawals to drivers)
+    const payoutStats = await WalletTransaction.aggregate([
+        {
+            $match: {
+                category: 'WITHDRAWAL',
+                status: 'completed'
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                total: { $sum: '$amount' }
+            }
+        }
+    ]);
+
+    // 3. Daily Earnings (last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const dailyEarnings = await WalletTransaction.aggregate([
+        {
+            $match: {
+                type: 'credit',
+                status: 'completed',
+                createdAt: { $gte: sevenDaysAgo }
+            }
+        },
+        {
+            $group: {
+                _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                revenue: { $sum: '$amount' }
+            }
+        },
+        { $sort: { _id: 1 } }
+    ]);
+
+    const totalRevenue = revenueStats[0]?.total || 0;
+    const totalPayouts = payoutStats[0]?.total || 0;
+    const profitMargin = totalRevenue > 0 ? (((totalRevenue - totalPayouts) / totalRevenue) * 100).toFixed(1) : 0;
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            totalRevenue,
+            totalPayouts,
+            profitMargin,
+            dailyEarnings: dailyEarnings.map(d => ({ date: d._id, revenue: d.revenue })),
+            activeTransactions: await WalletTransaction.countDocuments({ status: 'pending' }),
+            commissionRate: 15 // Standard platform commission
+        }
+    });
+});

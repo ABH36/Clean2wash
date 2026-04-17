@@ -179,7 +179,7 @@ const AdminSubscriptions = () => {
                                 <h3 className="text-2xl font-[1000] uppercase italic tracking-tighter">Pass Strategy Command</h3>
                             </div>
                             <p className="text-[11px] font-bold text-white/40 uppercase tracking-[0.2em] leading-relaxed max-w-sm">
-                                Manage universal discount protocols and marketing headlines for the clean2wash BLACK ecosystem globally.
+                                Manage universal discount protocols and marketing headlines for the Spare Driver BLACK ecosystem globally.
                             </p>
 
                             <div className="flex items-center gap-10 mt-8">
@@ -435,7 +435,7 @@ const AdminSubscriptions = () => {
                                     <div className="grid grid-cols-2 gap-5">
                                         <div className="col-span-2 space-y-1.5">
                                             <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Plan Identity</label>
-                                            <input required placeholder="e.g. clean2wash Pass Pro" className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold outline-none focus:border-brand transition-all" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                                            <input required placeholder="e.g. Spare Driver Pass Pro" className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold outline-none focus:border-brand transition-all" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
                                         </div>
                                         <div className="space-y-1.5">
                                             <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Price Matrix (₹)</label>

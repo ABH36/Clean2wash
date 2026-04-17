@@ -84,7 +84,10 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/carwash',
     });
 
 // Security middleware
-app.use(helmet());
+// Security middleware with Cross-Origin Resource Policy relaxed for static assets
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 
 
 

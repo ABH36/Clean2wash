@@ -89,15 +89,19 @@ export const LocationProvider = ({ children }) => {
             const error = (err) => {
                 console.warn(`Geolocation error (code ${err.code}): ${err.message}`);
                 
-                // If high accuracy failed/timeout, try one more time with standard accuracy
-                if (!isFallback) {
+                // Code 1: Permission Denied - No point in retrying
+                if (err.code === 1) {
+                    reject(new Error('LOCATION_PERMISSION_DENIED'));
+                    return;
+                }
+
+                // If high accuracy failed/timeout (Code 3), try standard accuracy
+                if (!isFallback && (err.code === 3 || err.code === 2)) {
                     isFallback = true;
-                    console.warn('High accuracy location failed, retrying with standard accuracy...');
+                    console.log('Retrying with standard accuracy...');
                     
-                    // Standard accuracy with a generous maximumAge to allow cached Wi-Fi/IP location
                     const lowAccOptions = { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 };
                     navigator.geolocation.getCurrentPosition(success, (err2) => {
-                        console.error('Standard accuracy fallback also failed:', err2);
                         reject(err2);
                     }, lowAccOptions);
                 } else {

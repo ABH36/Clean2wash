@@ -15,6 +15,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import MobileLayout from '../components/layout/MobileLayout';
 import { bookingAPI } from '../../../utils/api';
 import { toast } from 'react-hot-toast';
+import Header from '../../../components/common/Header';
 
 const FAQS = [
     {
@@ -34,23 +35,23 @@ const FAQS = [
 const SUPPORT_ACTIONS = [
     {
         id: 'billing',
-        title: 'Billing Issue',
+        title: 'Billing issue',
         icon: Wallet,
         color: '#3B82F6',
         desc: 'Review payment, extension, or fare related issues',
-        cta: 'Open Trip History'
+        cta: 'Open trip history'
     },
     {
         id: 'safety',
-        title: 'Safety Concerns',
+        title: 'Safety concerns',
         icon: Shield,
         color: '#EF4444',
         desc: 'Escalate unsafe behavior or urgent travel concerns',
-        cta: 'Open Active Trip'
+        cta: 'Open active trip'
     },
     {
         id: 'emergency',
-        title: 'Emergency Contact',
+        title: 'Emergency contact',
         icon: Phone,
         color: '#10B981',
         desc: 'Call emergency services immediately during an active trip',
@@ -59,11 +60,11 @@ const SUPPORT_ACTIONS = [
 ];
 
 const ISSUE_OPTIONS = [
-    { id: 'driver_late', label: 'Driver Late', hint: 'Driver delayed or not moving toward pickup', priority: 'High' },
-    { id: 'driver_behavior', label: 'Driver Behavior', hint: 'Unprofessional or unsafe interaction', priority: 'High' },
-    { id: 'route_concern', label: 'Route Concern', hint: 'Wrong route, unnecessary detour, or confusion', priority: 'Medium' },
-    { id: 'billing_issue', label: 'Billing Issue', hint: 'Fare, surcharge, or payment mismatch', priority: 'Urgent' },
-    { id: 'refund_request', label: 'Refund Request', hint: 'Need a refund review after cancellation or trip failure', priority: 'Urgent' },
+    { id: 'driver_late', label: 'Driver late', hint: 'Driver delayed or not moving toward pickup', priority: 'High' },
+    { id: 'driver_behavior', label: 'Driver behavior', hint: 'Unprofessional or unsafe interaction', priority: 'High' },
+    { id: 'route_concern', label: 'Route concern', hint: 'Wrong route, unnecessary detour, or confusion', priority: 'Medium' },
+    { id: 'billing_issue', label: 'Billing issue', hint: 'Fare, surcharge, or payment mismatch', priority: 'Urgent' },
+    { id: 'refund_request', label: 'Refund request', hint: 'Need a refund review after cancellation or trip failure', priority: 'Urgent' },
     { id: 'sos', label: 'SOS', hint: 'Emergency help required right now', priority: 'Critical' }
 ];
 
@@ -194,12 +195,7 @@ const SpareDriverSupport = () => {
     return (
         <MobileLayout>
             <div className="min-h-screen bg-white flex flex-col">
-                <header className="px-5 pt-12 pb-4 flex items-center gap-4 border-b border-gray-100">
-                    <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-black">
-                        <ChevronLeft size={20} strokeWidth={2.5} />
-                    </button>
-                    <h1 className="text-xl font-black text-black tracking-tight uppercase leading-none">Chauffeur Support</h1>
-                </header>
+                <Header title="Chauffeur support" showBack={true} />
 
                 <div className="p-5 space-y-6">
                     <div className="bg-brand/5 rounded-[2.5rem] p-6 border border-brand/20 relative overflow-hidden text-center flex flex-col items-center">
@@ -207,7 +203,7 @@ const SpareDriverSupport = () => {
                         <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-brand mb-4 shadow-xl border border-brand/10">
                             <MessageSquare size={24} strokeWidth={2.5} />
                         </div>
-                        <h2 className="text-[20px] font-black text-black uppercase tracking-tight leading-none mb-1">Live Help Desk</h2>
+                        <h2 className="text-[20px] font-black text-black uppercase tracking-tight leading-none mb-1">Live help desk</h2>
                         <p className="text-[10px] font-bold text-black/40 uppercase tracking-widest">Use the fastest route based on your issue</p>
                     </div>
 
@@ -216,7 +212,7 @@ const SpareDriverSupport = () => {
                             <AlertTriangle size={18} className="text-[#F29F05] shrink-0 mt-0.5" />
                             <div>
                                 <p className="text-[9px] font-black text-black/30 uppercase tracking-widest">
-                                    {activeBookingId ? 'Active Booking' : 'History Booking'}
+                                    {activeBookingId ? 'Active booking' : 'History booking'}
                                 </p>
                                 <p className="text-[11px] font-black text-black uppercase mt-1">
                                     Support linked to booking {supportBookingId.slice(-8)}
@@ -240,7 +236,7 @@ const SpareDriverSupport = () => {
                                     onClick={() => navigate(activeBookingId ? '/spare-driver' : '/spare-driver/history')}
                                     className="mt-3 text-[9px] font-black text-[#F29F05] uppercase tracking-widest inline-flex items-center gap-1"
                                 >
-                                    {activeBookingId ? 'Return to Active Trip' : 'Back to History'}
+                                    {activeBookingId ? 'Return to active trip' : 'Back to history'}
                                     <ArrowRight size={12} />
                                 </button>
                             </div>
@@ -272,7 +268,7 @@ const SpareDriverSupport = () => {
 
                     <div className="bg-white border border-gray-100 rounded-[2rem] p-5 shadow-[0_8px_30px_rgba(0,0,0,0.03)] space-y-4">
                         <div>
-                            <p className="text-[9px] font-black text-black/30 uppercase tracking-widest">Issue Reporter</p>
+                            <p className="text-[9px] font-black text-black/30 uppercase tracking-widest">Issue reporter</p>
                             <h3 className="text-[15px] font-black text-black uppercase tracking-tight mt-1">
                                 {supportBookingId ? 'Report spare driver issue to admin' : 'Issue reporting needs a trip context'}
                             </h3>
@@ -293,7 +289,7 @@ const SpareDriverSupport = () => {
                         <div className="rounded-2xl border border-black/[0.05] bg-gray-50/70 px-4 py-3">
                             <div className="flex items-center justify-between gap-3">
                                 <div>
-                                    <p className="text-[9px] font-black text-black/30 uppercase tracking-widest">Support Hint</p>
+                                    <p className="text-[9px] font-black text-black/30 uppercase tracking-widest">Support hint</p>
                                     <p className="text-[11px] font-black text-black uppercase mt-1">{selectedIssueMeta.hint}</p>
                                 </div>
                                 <span className={`px-2 py-1 rounded-md text-[8px] font-black uppercase ${
@@ -324,14 +320,14 @@ const SpareDriverSupport = () => {
                             disabled={!supportBookingId || submittingIssue}
                             className="w-full bg-black text-white h-12 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] disabled:opacity-40"
                         >
-                            {submittingIssue ? 'Sending...' : (selectedIssueType === 'sos' ? 'Send SOS Alert' : 'Submit Support Issue')}
+                            {submittingIssue ? 'Sending...' : (selectedIssueType === 'sos' ? 'Send SOS alert' : 'Submit support issue')}
                         </button>
                     </div>
 
                     {supportBooking?.issues?.length > 0 && (
                         <div className="bg-white border border-gray-100 rounded-[2rem] p-5 shadow-[0_8px_30px_rgba(0,0,0,0.03)] space-y-4">
                             <div>
-                                <p className="text-[9px] font-black text-black/30 uppercase tracking-widest">Support Timeline</p>
+                                <p className="text-[9px] font-black text-black/30 uppercase tracking-widest">Support timeline</p>
                                 <h3 className="text-[15px] font-black text-black uppercase tracking-tight mt-1">
                                     Latest trip issues and admin status
                                 </h3>
@@ -378,13 +374,13 @@ const SpareDriverSupport = () => {
                             className="rounded-2xl border border-gray-100 bg-white px-4 py-4 text-left"
                         >
                             <Clock size={18} className="text-[#F29F05] mb-3" />
-                            <p className="text-[10px] font-black text-black uppercase tracking-widest">Past Trips</p>
-                            <p className="text-[13px] font-black text-black mt-1">Open History</p>
+                            <p className="text-[10px] font-black text-black uppercase tracking-widest">Past trips</p>
+                            <p className="text-[13px] font-black text-black mt-1">Open history</p>
                         </button>
                     </div>
 
                     <div className="pt-8 border-t border-black/[0.03] space-y-4">
-                        <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em] text-center">Frequently Asked Questions</p>
+                        <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em] text-center">Frequently asked questions</p>
                         {FAQS.map((faq, index) => {
                             const open = expandedFaq === index;
                             return (

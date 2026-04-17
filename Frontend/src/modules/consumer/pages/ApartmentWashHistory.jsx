@@ -68,7 +68,7 @@ const ApartmentWashHistory = () => {
                     <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-black">
                         <ChevronLeft size={20} strokeWidth={2.5} />
                     </button>
-                    <h1 className="text-xl font-black text-black tracking-tight uppercase leading-none">Apartment History</h1>
+                    <h1 className="text-xl font-black text-black tracking-tight uppercase leading-none">Apartment history</h1>
                 </header>
 
                 <div className="p-5 space-y-4 pb-24">
@@ -149,7 +149,7 @@ const ApartmentWashHistory = () => {
                                             )}
                                             {booking.serviceImages?.after?.length > 0 && (
                                                 <span className="rounded-md bg-blue-50 px-2 py-1 text-[8px] font-black uppercase tracking-widest text-blue-600">
-                                                    Proof Uploaded
+                                                    Proof uploaded
                                                 </span>
                                             )}
                                         </div>
@@ -166,7 +166,7 @@ const ApartmentWashHistory = () => {
                                             }}
                                             className="h-11 rounded-xl bg-black text-white text-[10px] font-black uppercase tracking-widest"
                                         >
-                                            {isLive ? 'Track Wash' : booking.feedback?.rating ? 'Update Rating' : 'Rate Wash'}
+                                            {isLive ? 'Track wash' : booking.feedback?.rating ? 'Update rating' : 'Rate wash'}
                                         </button>
                                         <button
                                             onClick={() => navigate(`/apartment-wash/support?bookingId=${booking._id}`)}
@@ -181,7 +181,7 @@ const ApartmentWashHistory = () => {
                     ) : (
                         <div className="flex flex-col items-center py-20 gap-3 opacity-30">
                             <ShieldCheck size={48} />
-                            <p className="text-sm font-black uppercase tracking-widest">No Apartment Wash History</p>
+                            <p className="text-sm font-black uppercase tracking-widest">No apartment wash history</p>
                         </div>
                     )}
                 </div>

@@ -58,6 +58,11 @@ const promotionSchema = new mongoose.Schema({
         type: [String],
         default: []
     },
+    category: {
+        type: String,
+        enum: ['driver', 'carwash', 'promo'],
+        default: 'promo'
+    },
     isActive: {
         type: Boolean,
         default: true

@@ -82,10 +82,10 @@ class ApiClient {
         return this.request('/dashboard');
     }
 
-    async getUsers(role) {
-        let endpoint = '/users';
+    async getUsers(role, page = 1, limit = 50) {
+        let endpoint = `/users?page=${page}&limit=${limit}`;
         if (role) {
-            endpoint += `?role=${role}`;
+            endpoint += `&role=${role}`;
         }
         return this.request(endpoint);
     }
@@ -265,6 +265,10 @@ class ApiClient {
         return this.request('/bookings');
     }
 
+    async getStudioWashConsole() {
+        return this.request('/studio-wash/console');
+    }
+
     // ── Hubs ──────────────────────────────────────────────────────
     async getHubs() {
         return this.request('/hubs');
@@ -389,10 +393,10 @@ class ApiClient {
         return this.request('/apartment-wash/console');
     }
 
-    async reviewApartmentSubscription(id, action) {
+    async reviewApartmentSubscription(id, action, reason = '', captainId = '') {
         return this.request(`/apartment-wash/subscriptions/${id}/review`, {
             method: 'PATCH',
-            body: JSON.stringify({ action })
+            body: JSON.stringify({ action, reason, captainId })
         });
     }
 
@@ -446,7 +450,7 @@ export const adminAPI = {
     login: (email, password) => apiClient.login(email, password),
     getProfile: () => apiClient.getProfile(),
     getDashboard: () => apiClient.getDashboard(),
-    getUsers: (role) => apiClient.getUsers(role),
+    getUsers: (role, page, limit) => apiClient.getUsers(role, page, limit),
     createUser: (userData) => apiClient.createUser(userData),
     updateUser: (userId, userData) => apiClient.updateUser(userId, userData),
     deleteUser: (userId) => apiClient.deleteUser(userId),
@@ -499,6 +503,7 @@ export const adminAPI = {
     // Transactions
     getTransactions: (params) => apiClient.getTransactions(params),
     getSettlementStats: () => apiClient.getSettlementStats(),
+    getFinancialAnalytics: () => apiClient.request('/transactions/analytics'),
     updateTransactionStatus: (id, status, adminNote, utr) => apiClient.updateTransactionStatus(id, status, adminNote, utr),
     // Audit Logs
     getAuditLogs: (params) => apiClient.getAuditLogs(params),
@@ -510,8 +515,9 @@ export const adminAPI = {
     deleteVehicleModel: (id) => apiClient.deleteVehicleModel(id),
     getSpareDrivers: () => apiClient.getSpareDrivers(),
     getSpareDriverBookings: () => apiClient.getSpareDriverBookings(),
+    getStudioWashConsole: () => apiClient.getStudioWashConsole(),
     getApartmentWashConsole: () => apiClient.getApartmentWashConsole(),
-    reviewApartmentSubscription: (id, action) => apiClient.reviewApartmentSubscription(id, action),
+    reviewApartmentSubscription: (id, action, reason, captainId) => apiClient.reviewApartmentSubscription(id, action, reason, captainId),
     // Expose raw request for legacy callers
     request: (endpoint, opts) => apiClient.request(endpoint, opts),
     setToken: (token) => apiClient.setToken(token),
@@ -532,5 +538,62 @@ export const adminAPI = {
         return apiClient.request(`/notifications${query ? `?${query}` : ''}`);
     },
     markNotificationRead: (id) => apiClient.request(`/notifications/${id}/read`, { method: 'PATCH' }),
-    markAllRead: () => apiClient.request('/notifications/read-all', { method: 'POST' })
+    markAllRead: () => apiClient.request('/notifications/read-all', { method: 'POST' }),
+
+    // ── SPARE DRIVER PRICING ENGINE ──────────────────────────────
+    // Services
+    getSpareDriverServices: () => apiClient.request('/spare-driver/services'),
+    getSpareDriverService: (type) => apiClient.request(`/spare-driver/services/${type}`),
+    updateSpareDriverService: (type, data) => apiClient.request(`/spare-driver/services/${type}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+    }),
+    toggleSpareDriverService: (type) => apiClient.request(`/spare-driver/services/${type}/toggle`, {
+        method: 'PATCH'
+    }),
+    initializeSpareDriverServices: () => apiClient.request('/spare-driver/services/initialize', {
+        method: 'POST'
+    }),
+
+    // Pricing
+    getPricingConfig: () => apiClient.request('/spare-driver/pricing/config'),
+    updatePricingConfig: (data) => apiClient.request('/spare-driver/pricing/config', {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+    }),
+    calculatePrice: (data) => apiClient.request('/spare-driver/pricing/calculate', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }),
+    getPricingSummary: () => apiClient.request('/spare-driver/pricing/summary'),
+    toggleSurge: () => apiClient.request('/spare-driver/pricing/surge/toggle', {
+        method: 'PATCH'
+    }),
+    toggleNightCharges: () => apiClient.request('/spare-driver/pricing/night/toggle', {
+        method: 'PATCH'
+    }),
+
+    // Payouts
+    getPayouts: (params) => {
+        const query = new URLSearchParams(params).toString();
+        return apiClient.request(`/spare-driver/payouts${query ? `?${query}` : ''}`);
+    },
+    getPayout: (id) => apiClient.request(`/spare-driver/payouts/${id}`),
+    generatePayout: (data) => apiClient.request('/spare-driver/payouts/generate', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }),
+    generateAllPayouts: (data) => apiClient.request('/spare-driver/payouts/generate-all', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }),
+    addPayoutAdjustment: (id, data) => apiClient.request(`/spare-driver/payouts/${id}/adjustment`, {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }),
+    processPayout: (id, transactionId) => apiClient.request(`/spare-driver/payouts/${id}/process`, {
+        method: 'POST',
+        body: JSON.stringify({ transactionId })
+    }),
+    getPayoutStats: () => apiClient.request('/spare-driver/payouts/stats')
 };

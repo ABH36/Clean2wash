@@ -14,6 +14,15 @@ import LocationIndicator from '../../../components/Location/LocationIndicator';
 import MobileLayout from '../components/layout/MobileLayout';
 import PremiumBadge from '../components/membership/PremiumBadge';
 import GoldPassModal from '../components/membership/GoldPassModal';
+import Header from '../../../components/common/Header';
+
+// 🏎️ Chauffeur Service Visuals
+import pImg from '../../../assets/chauffeur/point.png';
+import hImg from '../../../assets/chauffeur/hourly.png';
+import oImg from '../../../assets/chauffeur/outstation.png';
+import fImg from '../../../assets/chauffeur/full.png';
+import gImg from '../../../assets/chauffeur/garage.png';
+import sImg from '../../../assets/chauffeur/sos.png';
 
 const CountdownTimer = ({ targetTime }) => {
     const [timeLeft, setTimeLeft] = useState('');
@@ -48,8 +57,19 @@ const Home = () => {
     const [sosCountdown, setSosCountdown] = useState(5);
     const [sosActive, setSosActive] = useState(false);
     const [showGoldPassModal, setShowGoldPassModal] = useState(false);
-    const { getUser, userSubscription, isGoldPassMember, bookings, dispatchSOS } = useAuth();
+    const { getUser, userSubscription, isGoldPassMember, bookings, dispatchSOS, vehicles, vehiclesLoading } = useAuth();
     const user = getUser('consumer');
+
+    // ═══════════════════════════════════════════════════════════════
+    // 🚨 SPARE DRIVER ONLY MODE - FEATURE FLAGS
+    // ═══════════════════════════════════════════════════════════════
+    const SHOW_CAR_WASH = false;        // Hide car wash services
+    const SHOW_ESHOP = false;           // Hide e-shop/products
+    const SHOW_STUDIO = false;          // Hide studio services
+    const SHOW_APARTMENT_WASH = false;  // Hide apartment wash
+    const SHOW_INSTANT_WASH = false;    // Hide instant wash
+    const SHOW_FULL_WASH = false;       // Hide full wash/studio booking
+    // ═══════════════════════════════════════════════════════════════
 
     const triggerSOS = () => {
         setShowSOS(true);
@@ -73,6 +93,8 @@ const Home = () => {
     const [isSearching, setIsSearching] = useState(false);
     const [showAllServices, setShowAllServices] = useState(false);
     const [activePromo, setActivePromo] = useState(0);
+    const [showVehicleModal, setShowVehicleModal] = useState(false);
+    const [selectedServiceForBooking, setSelectedServiceForBooking] = useState(null);
 
     /* --- Dynamic Content Fetching --- */
 
@@ -129,42 +151,9 @@ const Home = () => {
     }, [searchQuery]);
 
 
+    // Redesigned Premium Header
     const renderHeader = () => (
-        <header className="px-5 pt-3 pb-2 bg-[#FFF6E9] flex flex-col gap-1 shadow-sm shadow-black/[0.02] border-b border-black/[0.03]">
-            {/* Top Row: Logo & Icons */}
-            <div className="flex items-center justify-between">
-                <div className="flex flex-col">
-                    <div className="w-10 h-10 bg-brand rounded-2xl flex items-center justify-center text-white font-black text-xs shadow-lg shadow-brand/20 active:scale-95 transition-transform">CW</div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                    <button onClick={() => navigate('/wallet')} className="w-9 h-9 bg-black/5 rounded-xl flex items-center justify-center relative active:scale-95 transition-all hover:bg-black/10 flex-shrink-0">
-                        <Wallet size={19} className="text-black" />
-                    </button>
-                    <button onClick={() => navigate('/portfolio')} className="w-9 h-9 bg-black/5 rounded-xl flex items-center justify-center relative active:scale-95 transition-all hover:bg-black/10 flex-shrink-0">
-                        <Image size={19} className="text-black" />
-                    </button>
-                    <button onClick={() => navigate('/notifications')} className="w-9 h-9 bg-black/5 rounded-xl flex items-center justify-center relative active:scale-95 transition-all hover:bg-black/10 flex-shrink-0">
-                        <Bell size={19} className="text-black" />
-                        <span className="absolute top-2 right-2 w-2 h-2 bg-brand border-2 border-[#FFF6E9] rounded-full" />
-                    </button>
-                    <button onClick={() => navigate('/profile')} className="w-9 h-9 bg-black/5 rounded-xl flex items-center justify-center overflow-visible relative active:scale-95 transition-all hover:bg-black/10 flex-shrink-0">
-                        <User size={19} className="text-black" />
-                        {isGoldPassMember && (
-                            <div className="absolute -top-1.5 -right-1.5 z-30 scale-[0.55]">
-                                <PremiumBadge />
-                            </div>
-                        )}
-                    </button>
-                </div>
-            </div>
-
-            {/* Bottom Row: Location (Native High Contrast) */}
-            <div className="flex items-center gap-0.5 ml-0.5">
-                <LocationIndicator variant="minimal" className="font-[1000] text-[10px] text-black uppercase tracking-tight max-w-[220px] truncate" />
-                <ChevronDown size={14} className="text-black/40" strokeWidth={3} />
-            </div>
-        </header>
+        <Header />
     );
 
     const userBookings = bookings?.filter(b => b.consumer === user?.id || b.consumer?.id === user?.id || b.userId === user?.id) || [];
@@ -179,11 +168,13 @@ const Home = () => {
     const DEFAULT_BANNERS = [
         {
             id: 'def-1',
-            title: '100% Doorstep Prep',
-            subtitle: 'Professional car care at your location',
-            image: '/assets/carwash/6.png',
+            category: 'driver',
+            title: "Professional Drivers On Demand",
+            subtitle: "Book trained drivers for your own car anytime",
+            image: '/assets/sparedriver/sparedriver.png',
             theme: 'dark',
-            path: '/services'
+            cta: 'Book Driver Now',
+            path: '/spare-driver'
         },
         {
             id: 'def-2',
@@ -274,24 +265,28 @@ const Home = () => {
                                         animate={{ y: 0, opacity: 1 }}
                                         transition={{ delay: 0.3, duration: 0.6 }}
                                     >
-                                        <h2 className={`text-[44px] font-[1000] leading-[0.8] tracking-[ -0.05em] uppercase mb-3 ${banner.theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                                        <h2 className={`text-[28px] font-[1000] leading-[1.1] tracking-[-0.02em] uppercase mb-4 ${banner.category === 'driver' ? 'text-[#F59E0B]' : (banner.theme === 'dark' ? 'text-white' : 'text-black')}`}>
                                             {banner.title.split(' ').map((word, i) => (
                                                 <React.Fragment key={i}>
-                                                    {word === '100%' ? <span className="text-brand">{word}</span> : word}
-                                                    {i % 2 === 1 ? <br /> : ' '}
+                                                    {banner.category !== 'driver' && word === '100%' ? <span className="text-brand">{word}</span> : word}
+                                                    {i === 1 ? <br /> : ' '}
                                                 </React.Fragment>
                                             ))}
                                         </h2>
-                                        <p className={`text-[10px] font-black uppercase tracking-[0.4em] mb-6 ${banner.theme === 'dark' ? 'text-white/40' : 'text-black/40'}`}>
+                                        <p className={`text-[9px] font-bold uppercase tracking-[0.3em] mb-8 leading-relaxed max-w-[240px] ${banner.category === 'driver' ? 'text-white/50' : (banner.theme === 'dark' ? 'text-white/40' : 'text-black/40')}`}>
                                             {banner.subtitle}
                                         </p>
 
                                         <motion.div
-                                            whileHover={{ x: 5 }}
-                                            className={`flex items-center gap-3 text-[11px] font-black uppercase tracking-[0.2em] ${banner.theme === 'dark' ? 'text-brand' : 'text-black'}`}
+                                            whileTap={{ scale: 0.95 }}
+                                            className={`inline-flex items-center gap-4 px-6 py-3 rounded-full border-2 text-[10px] font-black uppercase tracking-[0.15em] transition-all ${
+                                                banner.category === 'driver' 
+                                                    ? 'bg-[#F59E0B] text-black border-[#F59E0B] shadow-xl shadow-[#F59E0B]/20' 
+                                                    : (banner.theme === 'dark' ? 'bg-brand text-white border-brand shadow-xl shadow-brand/20' : 'bg-black text-white border-black')
+                                            }`}
                                         >
-                                            <span className="border-b-2 border-current pb-0.5">{banner.cta || 'Explore Now'}</span>
-                                            <ArrowRight size={16} strokeWidth={3} />
+                                            <span>{banner.cta || (banner.category === 'driver' ? 'Book Driver Now' : 'Explore Now')}</span>
+                                            <ArrowRight size={14} strokeWidth={3} />
                                         </motion.div>
                                     </motion.div>
                                 </div>
@@ -299,23 +294,18 @@ const Home = () => {
                         ))}
                     </AnimatePresence>
 
-                    {/* Banner Progress Indicators */}
-                    <div className="absolute bottom-6 left-8 right-8 flex gap-2 z-20">
+                    {/* Premium Dot Indicators */}
+                    <div className="absolute bottom-10 left-0 right-0 flex justify-center gap-2 z-20">
                         {displayBanners.map((_, i) => (
-                            <div
+                            <button
                                 key={i}
                                 onClick={() => { setActiveBanner(i); setProgress(0); }}
-                                className="h-1 flex-1 bg-white/20 rounded-full overflow-hidden cursor-pointer"
-                            >
-                                {i === activeBanner && (
-                                    <motion.div
-                                        className="h-full bg-brand"
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${progress}%` }}
-                                        transition={{ ease: "linear" }}
-                                    />
-                                )}
-                            </div>
+                                className={`h-1.5 rounded-full transition-all duration-500 ${
+                                    i === activeBanner 
+                                        ? 'w-6 bg-[#F59E0B]' 
+                                        : 'w-1.5 bg-white/20 hover:bg-white/40'
+                                }`}
+                            />
                         ))}
                     </div>
                 </>
@@ -520,44 +510,53 @@ const Home = () => {
     const sliderCards = useMemo(() => {
         const dbCards = [...promotionalCards];
 
-        // 1. Premium Gold Pass Card (Evergreen)
-        const goldCard = {
-            id: 'static-gold-pass',
-            title: 'Gold Pass Membership',
-            subtitle: '30% OFF ON ALL SERVICES FOREVER',
-            badge: 'PREMIUM',
-            theme: 'dark',
-            cta: 'Purchase Now',
-            image: '/assets/carwashsubscription/7.png',
-            action: () => setShowGoldPassModal(true)
-        };
+        const cards = [];
 
-        // 2. Refer & Earn Card (Growth Protocol)
+        // 1. Premium Gold Pass Card (Evergreen) - HIDE if car wash is hidden
+        if (SHOW_CAR_WASH) {
+            const goldCard = {
+                id: 'static-gold-pass',
+                title: 'Gold Pass Membership',
+                subtitle: '30% OFF ON ALL SERVICES FOREVER',
+                badge: 'PREMIUM',
+                theme: 'dark',
+                cta: 'Purchase Now',
+                image: '/assets/carwashsubscription/7.png',
+                action: () => setShowGoldPassModal(true)
+            };
+            cards.push(goldCard);
+        }
+
+        // 2. Refer & Earn Card (Growth Protocol) - ALWAYS SHOW
         const referCard = {
             id: 'static-refer-earn',
             title: 'Refer & Earn Rewards',
-            subtitle: 'Share the shine and get ₹50 credits',
+            subtitle: 'Share and get ₹50 credits',
             badge: 'REFERRAL',
             theme: 'light',
             cta: 'Invite Friends',
             image: '/assets/carwash/2.png',
-            path: '/profile/referral'
+            path: '/refer'
         };
+        cards.push(referCard);
 
-        // 3. Special Shop Offer (Retention)
-        const shopCard = {
-            id: 'static-shop-offer',
-            title: 'Clean2Wash Flash Sale',
-            subtitle: 'Up to 20% OFF on car care kits',
-            badge: 'MEGA OFFER',
-            theme: 'dark',
-            cta: 'Visit E-Shop',
-            image: '/assets/product-accessories/product.png',
-            path: '/e-shop'
-        };
+        // 3. Special Shop Offer (Retention) - HIDE if e-shop is hidden
+        if (SHOW_ESHOP) {
+            const shopCard = {
+                id: 'static-shop-offer',
+                title: 'Spare Driver Flash Sale',
+                subtitle: 'Up to 20% OFF on car care kits',
+                badge: 'MEGA OFFER',
+                theme: 'dark',
+                cta: 'Visit E-Shop',
+                image: '/assets/product-accessories/product.png',
+                path: '/e-shop'
+            };
+            cards.push(shopCard);
+        }
 
-        return [goldCard, referCard, shopCard, ...dbCards];
-    }, [promotionalCards, isGoldPassMember]);
+        return [...cards, ...dbCards];
+    }, [promotionalCards, isGoldPassMember, SHOW_CAR_WASH, SHOW_ESHOP]);
 
     // Loop logic for the promotional cards carousel
     useEffect(() => {
@@ -569,17 +568,101 @@ const Home = () => {
     }, [sliderCards?.length]);
 
     const exploreItems = useMemo(() => {
-        // High-Fidelity Utility Row (Mission Critical Hub)
-        return [
-            { title: 'Products', image: '/assets/product-accessories/product.png', path: '/e-shop' },
-            { title: 'My Garage', icon: 'car', color: '#3B82F6', path: '/vehicles' },
-            { title: 'Emergency SOS', icon: 'alert-triangle', color: '#EF4444', action: triggerSOS },
-        ];
-    }, []);
+        // High-Fidelity Utility Row (Mission Critical Hub) - SPARE DRIVER FOCUSED
+        const items = [];
+        
+        // Only show non-car wash items
+        if (!SHOW_ESHOP) {
+            // Hide Products/E-shop
+        } else {
+            items.push({ title: 'Products', image: '/assets/product-accessories/product.png', path: '/e-shop' });
+        }
+        
+        // Always show these
+        items.push({ title: 'My Garage', image: gImg, path: '/vehicles' });
+        items.push({ title: 'SOS Alert', image: sImg, action: 'triggerSOS' });
+        
+        return items;
+    }, [SHOW_ESHOP]);
+
+    const renderVehicleModal = () => (
+        <AnimatePresence>
+            {showVehicleModal && (
+                <>
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setShowVehicleModal(false)}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[2100]"
+                    />
+                    <motion.div
+                        initial={{ y: "100%" }}
+                        animate={{ y: 0 }}
+                        exit={{ y: "100%" }}
+                        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                        className="fixed bottom-0 left-0 right-0 bg-white rounded-t-[24px] z-[2101] px-6 pt-2 pb-8 shadow-2xl safe-area-bottom"
+                    >
+                        <div className="w-12 h-1 bg-black/10 rounded-full mx-auto mt-2 mb-6" onClick={() => setShowVehicleModal(false)} />
+
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="space-y-0.5">
+                                <h2 className="text-[18px] font-black text-black">Select Vehicle</h2>
+                                <p className="text-[10px] font-medium text-black/40 leading-none">Which car are we driving today?</p>
+                            </div>
+                            <button
+                                onClick={() => setShowVehicleModal(false)}
+                                className="w-8 h-8 flex items-center justify-center text-black/40 hover:text-black active:scale-90 transition-transform"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="bg-gray-50/80 border border-black/[0.03] rounded-2xl overflow-hidden mb-6">
+                            {vehicles?.map((vehicle, idx) => (
+                                <button
+                                    key={vehicle.id}
+                                    onClick={() => {
+                                        setShowVehicleModal(false);
+                                        navigate(`/spare-driver?type=${selectedServiceForBooking?.id}&vehicleId=${vehicle.id}`);
+                                    }}
+                                    className={`w-full px-4 py-3.5 flex items-center justify-between group active:bg-black/[0.03] transition-colors ${idx !== 0 ? 'border-t border-black/[0.03]' : ''}`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-black/05 shadow-sm">
+                                            <Car size={20} className="text-black/60" />
+                                        </div>
+                                        <div className="text-left">
+                                            <h4 className="text-[13px] font-black text-black leading-none uppercase">{vehicle.brand} {vehicle.model}</h4>
+                                            <p className="text-[9px] font-bold text-black/30 uppercase tracking-tighter mt-1">{vehicle.regNo}</p>
+                                        </div>
+                                    </div>
+                                    <div className="w-5 h-5 rounded-full border-2 border-black/10 flex items-center justify-center group-hover:border-[#F59E0B]">
+                                        <div className="w-2.5 h-2.5 rounded-full bg-transparent group-hover:bg-[#F59E0B] transition-colors" />
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+
+                        <button
+                            onClick={() => navigate('/vehicles?mode=add')}
+                            className="w-full h-12 bg-black text-white rounded-xl flex items-center justify-center gap-2 font-[1000] text-[11px] uppercase tracking-widest shadow-lg shadow-black/10 active:scale-[0.98] transition-all"
+                        >
+                            <span className="w-5 h-5 bg-white/10 rounded-full flex items-center justify-center">
+                                <X size={12} className="rotate-45" />
+                            </span>
+                            Add New Vehicle
+                        </button>
+                    </motion.div>
+                </>
+            )}
+        </AnimatePresence>
+    );
 
     const viewMoreServices = [
-        { title: 'Instant Wash', icon: Car, color: '#F29F05', path: '/instant-wash' },
-        { title: 'Apartments', icon: Building, color: '#6366F1', path: '/apartment-wash' },
+        // Only show Spare Driver related services
+        ...(SHOW_INSTANT_WASH ? [{ title: 'Instant Wash', icon: Car, color: '#F29F05', path: '/instant-wash' }] : []),
+        ...(SHOW_APARTMENT_WASH ? [{ title: 'Apartments', icon: Building, color: '#6366F1', path: '/apartment-wash' }] : []),
         { title: 'Appointment', icon: Calendar, color: '#3B82F6', path: '/full-wash-booking' },
         { title: 'Spare Drivers', icon: User, color: '#FF8533', path: '/spare-driver' },
         { title: 'Alerts', icon: Bell, color: '#A855F7', path: '/notifications' },
@@ -715,92 +798,59 @@ const Home = () => {
     const renderDashboard = () => {
         return (
             <div className="pb-6 space-y-8">
-                {/* Everything In Minutes - Rapido Style Bento Grid */}
-                <section className="px-5">
-                    <h3 className="text-[14px] font-black text-black opacity-40 uppercase tracking-widest mb-3">Everything In Minutes</h3>
-                    <div className="grid grid-cols-2 gap-3">
-                        {/* Instant Wash - Large Vertical Card */}
-                        <motion.button
-                            whileTap={{ scale: 0.96 }}
-                            onClick={() => navigate('/instant-wash')}
-                            className="bg-amber-50/50 rounded-xl p-4 text-left flex flex-col justify-between h-[155px] shadow-[0_8px_20px_-8px_rgba(0,0,0,0.06)] border border-amber-100/50 relative overflow-hidden group"
-                        >
-                            {/* Visual Asset - Shifted to avoid bottom pill overlap */}
-                            <div className="absolute right-[-15%] top-[10%] w-[110%] h-[80%] transition-transform duration-700 group-hover:scale-105 pointer-events-none z-0">
-                                <img src="/assets/instantwash/carwash.png" className="w-full h-full object-contain opacity-90" alt="" />
-                            </div>
-
-                            <div className="relative z-20">
-                                <p className="text-[9px] font-black text-brand uppercase tracking-widest mb-1">Professional</p>
-                                <h4 className="text-[15px] font-[1000] text-black uppercase tracking-tighter leading-[0.9]">Instant<br />Car/Bike Wash</h4>
-                            </div>
-
-                            <div className="relative z-20 -ml-0.5">
-                                <div className="bg-black/90 backdrop-blur-md text-white px-2 py-1 rounded-lg inline-flex items-center shadow-xl shadow-black/10 border border-white/5">
-                                    <span className="text-[6.5px] font-[1000] uppercase tracking-[0.05em] leading-none">Starts @ ₹299</span>
+                {/* Professional Service Cards - Clean Premium Design */}
+                <section className="px-5 -mt-8 relative z-30">
+                    <div className="grid grid-cols-2 gap-4">
+                        {[
+                            { id: 'point', title: 'Point to Point', desc: 'Inner-city one way move', image: pImg },
+                            { id: 'hourly', title: 'Hourly Booking', desc: 'Flexible rental by hour', image: hImg },
+                            { id: 'full', title: 'Full Day', desc: 'Dedicated 8hr city shift', image: fImg },
+                            { id: 'outstation', title: 'Outstation', desc: 'Safe inter-city travel', image: oImg }
+                        ].map((item, idx) => (
+                            <motion.button
+                                key={item.id}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => {
+                                    if (vehicles?.length === 0) {
+                                        navigate('/vehicles?mode=add');
+                                    } else {
+                                        setSelectedServiceForBooking(item);
+                                        setShowVehicleModal(true);
+                                    }
+                                }}
+                                className="bg-white rounded-[12px] p-4 text-left flex flex-col justify-between h-[230px] shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-black/[0.03] group relative"
+                            >
+                                <div className="space-y-1">
+                                    <h4 className="text-[14px] font-[900] text-black uppercase tracking-tight leading-tight">{item.title}</h4>
+                                    <p className="text-[9px] font-medium text-black/40 leading-snug">{item.desc}</p>
+                                    <div className="pt-1.5 flex items-center gap-1">
+                                        <span className="text-[10px] font-black text-[#F59E0B]">
+                                            {services.find(s => s.id === item.id || s.title?.toLowerCase().includes(item.id))?.price || (item.id === 'point' ? '₹499' : item.id === 'hourly' ? '₹799' : item.id === 'full' ? '₹999' : '₹2499')}
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
-                        </motion.button>
-
-                        {/* Studio Wash - Large Vertical Card */}
-                        <motion.button
-                            whileTap={{ scale: 0.96 }}
-                            onClick={() => navigate('/full-wash-booking')}
-                            className="bg-blue-50/50 rounded-xl p-4 text-left flex flex-col justify-between h-[155px] shadow-[0_8px_20px_-8px_rgba(0,0,0,0.06)] border border-blue-100/50 relative overflow-hidden group"
-                        >
-                            {/* Visual Asset */}
-                            <div className="absolute right-[-15%] top-[10%] w-[110%] h-[80%] transition-transform duration-700 group-hover:scale-105 pointer-events-none z-0">
-                                <img src="/assets/studiowash/studio.png" className="w-full h-full object-contain opacity-90" alt="" />
-                            </div>
-
-                            <div className="relative z-20">
-                                <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-1">Premium</p>
-                                <h4 className="text-[15px] font-[1000] text-black uppercase tracking-tighter leading-[0.9]">Studio<br />Wash</h4>
-                            </div>
-
-                            <div className="relative z-20 -ml-0.5">
-                                <div className="bg-black/90 backdrop-blur-md text-white px-2 py-1 rounded-lg inline-flex items-center shadow-xl shadow-black/10 border border-white/5">
-                                    <span className="text-[6.5px] font-[1000] uppercase tracking-[0.05em] leading-none">Book Schedule</span>
+                                
+                                <div className="relative mt-2 flex flex-col items-center">
+                                    <div className="w-full h-28 flex items-center justify-center">
+                                        <img 
+                                            src={item.image} 
+                                            className="h-full w-auto object-contain transform group-hover:scale-110 group-hover:-translate-y-2 transition-all duration-700 drop-shadow-[0_20px_30px_rgba(0,0,0,0.1)] mix-blend-multiply" 
+                                            alt={item.title} 
+                                        />
+                                    </div>
+                                    
+                                    <div className="w-full mt-3 h-10 bg-black text-white rounded-[8px] flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest group-hover:bg-[#F59E0B] transition-colors duration-300">
+                                        <span>Book Now</span>
+                                        <ArrowRight size={12} strokeWidth={3} />
+                                    </div>
                                 </div>
-                            </div>
-                        </motion.button>
+                            </motion.button>
+                        ))}
                     </div>
                 </section>
 
-                <section className="flex gap-3 px-5 -mt-5">
-                    {/* Apartment Wash */}
-                    <motion.button
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => navigate('/apartment-wash')}
-                        className="flex-1 bg-indigo-50/50 p-3 text-left flex flex-col justify-between h-[85px] rounded-2xl relative overflow-hidden group shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-indigo-100/50"
-                    >
-                        <div className="absolute right-[-15%] top-[15%] w-[100%] h-[95%] transition-transform duration-700 group-hover:scale-105 pointer-events-none z-0">
-                            <img src="/assets/appartment/appartment.png" className="w-full h-full object-contain opacity-90" alt="" />
-                        </div>
-                        <div className="relative z-20">
-                            <p className="text-[9px] font-black text-indigo-600 uppercase tracking-widest mb-0.5">Subscription</p>
-                            <h4 className="text-[14px] font-[1000] text-black uppercase tracking-tighter leading-[0.9]">Apartment<br />Car Wash</h4>
-                        </div>
-                    </motion.button>
-
-                    {/* Spare Driver */}
-                    <motion.button
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => navigate('/spare-driver')}
-                        className="flex-1 bg-orange-50/40 p-3 text-left flex flex-col justify-between h-[85px] rounded-2xl relative overflow-hidden group shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-orange-100/50"
-                    >
-                        <div className="absolute right-[-15%] top-[15%] w-[100%] h-[95%] transition-transform duration-700 group-hover:scale-105 pointer-events-none z-0">
-                            <img src="/assets/sparedriver/sparedriver.png" className="w-full h-full object-contain opacity-90" alt="" />
-                        </div>
-                        <div className="relative z-20">
-                            <p className="text-[9px] font-black text-orange-600 uppercase tracking-widest mb-0.5">On-Demand</p>
-                            <h4 className="text-[14px] font-[1000] text-black uppercase tracking-tighter leading-[0.9]">Spare<br />Driver</h4>
-                        </div>
-                    </motion.button>
-                </section>
-
                 {/* Studio Detailing - Premium Section */}
-                {studioServices.length > 0 && (
+                {SHOW_STUDIO && studioServices.length > 0 && (
                     <section className="px-5">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-[15px] font-black text-black opacity-40 uppercase tracking-widest">Studio Detailing</h3>
@@ -838,45 +888,6 @@ const Home = () => {
                     </section>
                 )}
 
-                {/* Explore Categories - Grid Icons */}
-                <section className="px-5 pt-0 -mt-3">
-                    <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-[15px] font-black text-black opacity-40 uppercase tracking-widest">Explore</h3>
-                    </div>
-                    <div className="grid grid-cols-4 gap-4">
-                        {loadingServices ? (
-                            [1, 2, 3, 4].map(i => <div key={i} className="w-14 h-14 bg-gray-50 animate-pulse rounded-xl mx-auto" />)
-                        ) : [
-                            ...exploreItems,
-                            { title: 'View More', icon: LayoutGrid, color: '#6366F1', action: () => setShowAllServices(true) },
-                        ].map((item, idx) => (
-                            <motion.button
-                                key={idx}
-                                whileTap={{ scale: 0.9 }}
-                                onClick={() => item.action ? (typeof item.action === 'function' ? item.action() : (item.action === 'triggerSOS' ? triggerSOS() : null)) : navigate(item.path)}
-                                className="flex flex-col items-center gap-2"
-                            >
-                                <div className={`w-14 h-14 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100/50 shadow-sm overflow-hidden ${item.image ? '' : 'p-2'}`}>
-                                    {item.image ? (
-                                        <img src={item.image} alt={item.title} className="w-full h-full object-contain scale-[1.5]" />
-                                    ) : (
-                                        <div style={{ color: item.color }}>
-                                            {item.icon === 'shield-check' ? <ShieldCheck size={22} strokeWidth={2.5} /> :
-                                                item.icon === 'activity' ? <Activity size={22} strokeWidth={2.5} /> :
-                                                item.icon === 'alert-triangle' ? <AlertTriangle size={22} strokeWidth={2.5} /> :
-                                                item.icon === 'car' ? <Car size={22} strokeWidth={2.5} /> :
-                                                item.icon === 'wallet' ? <Wallet size={22} strokeWidth={2.5} /> :
-                                                item.icon === 'building' ? <Building size={22} strokeWidth={2.5} /> :
-                                                item.icon === 'calendar' ? <Calendar size={22} strokeWidth={2.5} /> :
-                                                <LayoutGrid size={22} strokeWidth={2.5} />}
-                                        </div>
-                                    )}
-                                </div>
-                                <span className="text-[10px] font-black text-black/60 uppercase tracking-tight leading-tight">{item.title}</span>
-                            </motion.button>
-                        ))}
-                    </div>
-                </section>
 
                 {/* Dynamic Promotional Cards (Full-Width Continuous Loop) */}
                 <section className="relative overflow-hidden h-[130px] mb-4">
@@ -933,146 +944,28 @@ const Home = () => {
     };
 
     const renderFooter = () => (
-        <section className="pb-12 space-y-8">
+        <section className="pb-12 pt-8">
             <div className="px-5">
-                <div className="flex items-center justify-center gap-6">
-                    <div className="h-[2px] bg-gradient-to-r from-transparent via-black/10 to-black/20 flex-1" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-black/40">Hyper Drive Explore</span>
-                    <div className="h-[2px] bg-gradient-to-l from-transparent via-black/10 to-black/20 flex-1" />
-                </div>
-            </div>
+                <div className="bg-white/80 p-6 rounded-2xl border border-black/10 text-center shadow-sm">
+                    <h2 className="text-[18px] font-[1000] text-[#0F172A] tracking-tighter uppercase leading-[0.9] mb-8">
+                        India's #1<br />Elite Chauffeur Network
+                    </h2>
 
-            {/* Premium Guarantee Section */}
-            <div className="mt-6">
-                <div className="flex items-center gap-3 mb-5">
-                    <div className="w-8 h-1 bg-[#F29F05] rounded-full" />
-                    <h3 className="text-[13px] font-black text-black uppercase tracking-widest">Clean2Wash Promise</h3>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-green-50/50 p-4 rounded-2xl border border-green-100 shadow-sm flex flex-col gap-2.5">
-                        <div className="w-8 h-8 bg-green-100/50 rounded-lg flex items-center justify-center">
-                            <Zap size={16} className="text-green-600" />
+                    <div className="grid grid-cols-3 gap-2 mb-2">
+                        <div className="flex flex-col items-center gap-2">
+                            <ShieldCheck size={18} className="text-[#F59E0B]" />
+                            <p className="text-[8px] font-black text-black/70 uppercase tracking-[0.2em] leading-none">Verified</p>
                         </div>
-                        <div>
-                            <h4 className="text-[10px] font-black text-black uppercase leading-none">Eco-Friendly</h4>
-                            <p className="text-[8px] font-[900] text-black/30 mt-1.5 uppercase leading-[1.2] tracking-tighter">95% LESS WATER THAN TRADITIONAL WASH</p>
+                        <div className="flex flex-col items-center gap-2 border-x border-black/05">
+                            <User size={18} className="text-[#F59E0B]" />
+                            <p className="text-[8px] font-black text-black/70 uppercase tracking-[0.2em] leading-none">Professional</p>
                         </div>
-                    </div>
-
-                    <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 shadow-sm flex flex-col gap-2.5">
-                        <div className="w-8 h-8 bg-blue-100/50 rounded-lg flex items-center justify-center">
-                            <Shield size={16} className="text-blue-600" />
-                        </div>
-                        <div>
-                            <h4 className="text-[10px] font-black text-black uppercase leading-none">Studio Care</h4>
-                            <p className="text-[8px] font-[900] text-black/30 mt-1.5 uppercase leading-[1.2] tracking-tighter">CERTIFIED EQUIPMENT & PREMIUM CHEMICALS</p>
+                        <div className="flex flex-col items-center gap-2">
+                            <Zap size={18} className="text-[#F59E0B]" />
+                            <p className="text-[8px] font-black text-black/70 uppercase tracking-[0.2em] leading-none">Rapid</p>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            {/* Expansion Hype Banner - Showroom, Apartment, Corporate Coming Soon */}
-            <div className="bg-black py-8 relative overflow-hidden group">
-                <div className="absolute top-[-20%] left-[-10%] w-72 h-72 bg-brand/30 rounded-full blur-[120px] z-0 animate-pulse" />
-                <div className="absolute bottom-[-20%] right-[-10%] w-72 h-72 bg-indigo-600/30 rounded-full blur-[120px] z-0" />
-
-                <div className="relative z-10 px-4">
-                    <div className="flex flex-col items-center text-center mb-6">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="h-[1px] w-8 bg-brand" />
-                            <span className="text-brand text-[10px] font-black uppercase tracking-[0.5em]">Building Success</span>
-                            <div className="h-[1px] w-8 bg-brand" />
-                        </div>
-                        <h2 className="text-white text-[28px] font-[1000] leading-[0.8] uppercase tracking-tighter mb-3">
-                            WE ARE<br />EXPANDING
-                        </h2>
-                        <p className="text-white/40 text-[9px] font-bold uppercase tracking-[0.2em] max-w-[200px]">Next-gen care arriving at new horizons</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-2">
-                        {expansionItems.map((item, idx) => (
-                            <motion.div
-                                key={idx}
-                                whileHover={{ scale: 1.01, y: -1 }}
-                                whileTap={{ scale: 0.99 }}
-                                onClick={() => item.path && navigate(item.path)}
-                                className={`bg-gradient-to-r ${item.val} backdrop-blur-xl border border-white/20 px-4 py-2.5 rounded-xl flex items-center justify-between group/item transition-all duration-300 shadow-xl cursor-pointer`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20 shadow-2xl transition-all duration-500 group-hover/item:scale-110 group-hover/item:bg-white/20">
-                                        <div className="text-white">
-                                            {item.title === 'Spare Drivers' ? <User size={20} /> :
-                                                item.title === 'Apartments' ? <HomeIcon size={20} /> :
-                                                    <Briefcase size={20} />}
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <h4 className="text-white text-[14px] font-[1000] uppercase tracking-tighter leading-none">{item.title}</h4>
-                                        <span className="text-white/40 text-[8px] font-black uppercase mt-0.5 tracking-widest">{item.subtitle}</span>
-                                    </div>
-                                </div>
-                                <div className={`bg-white/20 backdrop-blur-md text-white text-[8px] font-black px-3 py-1 rounded-xl uppercase tracking-[0.2em] border border-white/20 group-hover/item:bg-white group-hover/item:text-black transition-colors duration-300 ${item.cta === 'Join Now' ? 'bg-white text-black' : ''}`}>
-                                    {item.cta}
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* How it Works - Minimalist Steps */}
-            <div className="mt-4 bg-white/40 p-5 rounded-2xl border border-black/5">
-                <h3 className="text-[11px] font-black text-black uppercase tracking-widest mb-4 text-center opacity-60">Professional Process</h3>
-                <div className="flex justify-between items-start gap-1">
-                    <div className="flex flex-col items-center text-center flex-1">
-                        <div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center text-[10px] font-black mb-2">1</div>
-                        <p className="text-[9px] font-black text-black uppercase leading-tight">Book a<br />Service</p>
-                    </div>
-                    <div className="h-px bg-black/10 flex-1 mt-3.5" />
-                    <div className="flex flex-col items-center text-center flex-1">
-                        <div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center text-[10px] font-black mb-2">2</div>
-                        <p className="text-[9px] font-black text-black uppercase leading-tight">Expert<br />Pickup</p>
-                    </div>
-                    <div className="h-px bg-black/10 flex-1 mt-3.5" />
-                    <div className="flex flex-col items-center text-center flex-1">
-                        <div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center text-[10px] font-black mb-2">3</div>
-                        <p className="text-[9px] font-black text-black uppercase leading-tight">Studio<br />Shine</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Consolidated Brand Identity Card */}
-            <div className="mt-4 bg-white/80 p-6 rounded-2xl border border-black/10 text-center shadow-sm">
-                <h2 className="text-[18px] font-black text-black/40 tracking-tighter uppercase leading-[0.9] mb-6">
-                    India's #1<br />Car & Bike Care App
-                </h2>
-
-                <div className="grid grid-cols-3 gap-4 border-b border-black/5 pb-6 mb-6">
-                    {stats.map((stat, i) => (
-                        <div key={i} className={i === 1 ? "border-x border-black/10" : ""}>
-                            <p className="text-[14px] font-black text-black leading-none uppercase">{stat.value}</p>
-                            <p className="text-[8px] font-black text-black/50 uppercase mt-2 tracking-widest">{stat.label}</p>
-                        </div>
-                    ))}
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 mb-6">
-                    <div className="flex flex-col items-center gap-2">
-                        <ShieldCheck size={16} className="text-black/60" />
-                        <p className="text-[7px] font-black text-black/70 uppercase tracking-[0.2em] leading-none">Secure</p>
-                    </div>
-                    <div className="flex flex-col items-center gap-2">
-                        <Sparkles size={16} className="text-black/60" />
-                        <p className="text-[7px] font-black text-black/70 uppercase tracking-[0.2em] leading-none">Premium</p>
-                    </div>
-                    <div className="flex flex-col items-center gap-2">
-                        <CreditCard size={16} className="text-black/60" />
-                        <p className="text-[7px] font-black text-black/70 uppercase tracking-[0.2em] leading-none">Fair</p>
-                    </div>
-                </div>
-
-                <p className="text-[9px] font-black text-black/50 uppercase tracking-[0.3em] font-sans">Designed in India 🇮🇳</p>
             </div>
         </section>
     );
@@ -1089,27 +982,13 @@ const Home = () => {
                     {renderAllServicesSheet()}
                     {renderSearchOverlay()}
                     {renderSOSOverlay()}
+                    {renderVehicleModal()}
                     <GoldPassModal
                         isOpen={showGoldPassModal}
                         onClose={() => setShowGoldPassModal(false)}
                     />
                     {renderHeader()}
                     {renderHero()}
-
-                    {/* Rapido Style Search Bar - Now triggers the Search Overlay */}
-                    <div className="px-5 mb-2 -mt-8 relative z-30" onClick={() => setIsSearching(true)}>
-                        <div className="relative">
-                            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                                <Search size={18} className="text-black opacity-30" />
-                            </div>
-                            <input
-                                type="text"
-                                readOnly
-                                placeholder="Search for car wash, products..."
-                                className="w-full h-13 bg-white border border-gray-100 rounded-3xl pl-12 pr-4 text-[14px] font-semibold text-black placeholder:text-black/30 outline-none cursor-pointer shadow-xl"
-                            />
-                        </div>
-                    </div>
 
                     <div className="space-y-0">
                         {renderDashboard()}

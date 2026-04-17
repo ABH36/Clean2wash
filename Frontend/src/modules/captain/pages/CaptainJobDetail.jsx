@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     MapPin, Phone, MessageSquare, ChevronLeft, CheckCircle2,
     Shield, Car, Clock, Navigation, Camera, ChevronRight,
-    Zap, ArrowRight, XCircle
+    Zap, ArrowRight, XCircle, Lock, X
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import GoogleMapBox from '../../../components/common/GoogleMapBox';
@@ -17,6 +17,38 @@ import { useTheme } from '../../../context/ThemeContext';
 // Leaflet icon fix removed
 
 const STEPS_ORDER = ['Confirmed', 'En Route', 'Arrived', 'Before Wash', 'Washing', 'After Wash', 'Completed'];
+
+const createSvgDataUri = (svg) => `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+
+const APARTMENT_MARKER_ICON = createSvgDataUri(`
+<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56">
+  <defs>
+    <linearGradient id="apg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF5A1F"/>
+      <stop offset="100%" stop-color="#FF7F2A"/>
+    </linearGradient>
+  </defs>
+  <circle cx="28" cy="28" r="26" fill="#fff"/>
+  <circle cx="28" cy="28" r="24" fill="url(#apg)"/>
+  <path d="M18 37h20V22l-10-6-10 6v15zm4-2v-4h4v4h-4zm0-6v-5h4v5h-4zm6 6v-4h4v4h-4zm0-6v-5h4v5h-4zm6 6v-11h2v11h-2z" fill="#fff"/>
+</svg>
+`);
+
+const CAPTAIN_MARKER_ICON = createSvgDataUri(`
+<svg xmlns="http://www.w3.org/2000/svg" width="58" height="58" viewBox="0 0 58 58">
+  <defs>
+    <linearGradient id="cpg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0B1B39"/>
+      <stop offset="100%" stop-color="#1E88FF"/>
+    </linearGradient>
+  </defs>
+  <circle cx="29" cy="29" r="27" fill="#fff"/>
+  <circle cx="29" cy="29" r="25" fill="url(#cpg)"/>
+  <path d="M19 33h20l-2-7c-.5-1.7-2.1-2.9-3.9-2.9H24.9c-1.8 0-3.4 1.2-3.9 2.9L19 33zm6.5-1.5c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm7 0c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z" fill="#fff"/>
+  <rect x="17" y="32" width="4" height="5" rx="1.5" fill="#fff"/>
+  <rect x="37" y="32" width="4" height="5" rx="1.5" fill="#fff"/>
+</svg>
+`);
 
 const CaptainJobDetail = () => {
     const navigate = useNavigate();
@@ -101,16 +133,55 @@ const CaptainJobDetail = () => {
     const [capturedPhoto, setCapturedPhoto] = useState(null);
     const [capturedPhotoMeta, setCapturedPhotoMeta] = useState(null);
     const fileInputRef = React.useRef(null);
+    const videoRef = React.useRef(null);
+    const canvasRef = React.useRef(null);
     const pinRefs = [React.useRef(), React.useRef(), React.useRef(), React.useRef()];
+
+    const [cameraActive, setCameraActive] = useState(false);
+    const [cameraTimeLeft, setCameraTimeLeft] = useState(60);
+    const [captainLivePosition, setCaptainLivePosition] = useState(null);
 
     useEffect(() => {
         if (liveBooking) setStepIdx(getInitialStep());
     }, [liveBooking?.status]);
 
+    useEffect(() => {
+        if (!('geolocation' in navigator)) return undefined;
+        const watchId = navigator.geolocation.watchPosition(
+            (position) => {
+                setCaptainLivePosition({
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                });
+            },
+            () => { },
+            { enableHighAccuracy: true, maximumAge: 8000, timeout: 12000 }
+        );
+        return () => navigator.geolocation.clearWatch(watchId);
+    }, []);
+
     const isApartmentMission = !!liveBooking?.isApartment || !!liveBooking?.location?.parkingDetails || !!liveBooking?.hubName;
     const missionRouteMeta = [liveBooking?.hubName, liveBooking?.apartmentRoute].filter(Boolean).join(' · ');
     const hasBeforeProof = (liveBooking?.serviceImages?.before?.length || 0) > 0 || liveBooking?.status === 'before_photo';
     const hasAfterProof = (liveBooking?.serviceImages?.after?.length || 0) > 0 || liveBooking?.status === 'after_photo';
+
+    // Phase 8: Live Capture Protocol (60s Window) - Moved to top level for React Compliance
+    useEffect(() => {
+        let timer;
+        if (cameraActive && cameraTimeLeft > 0) {
+            timer = setInterval(() => {
+                setCameraTimeLeft(prev => {
+                    if (prev <= 1) {
+                        closeCamera();
+                        toast.error('Mission window closed. Retake required.', { icon: '⏰' });
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        }
+        return () => clearInterval(timer);
+    }, [cameraActive, cameraTimeLeft]);
 
     if (!liveBooking) {
         return (
@@ -196,6 +267,53 @@ const CaptainJobDetail = () => {
 
     const stepIdx_safe = Math.max(0, Math.min(stepIdx, STEPS_ORDER.length - 1));
     const step = STEPS_ORDER[stepIdx_safe];
+    const apartmentPosition = liveBooking.location?.mapCoordinates
+        ? { lat: liveBooking.location.mapCoordinates.lat, lng: liveBooking.location.mapCoordinates.lng }
+        : liveBooking.location?.address?.coordinates?.lat
+            ? { lat: liveBooking.location.address.coordinates.lat, lng: liveBooking.location.address.coordinates.lng }
+            : liveBooking.location?.coordinates?.lat
+                ? { lat: liveBooking.location.coordinates.lat, lng: liveBooking.location.coordinates.lng }
+                : { lat: 28.6139, lng: 77.2090 };
+
+    const captainSessionPosition = Array.isArray(sessions.captain?.location?.coordinates) && sessions.captain.location.coordinates.length === 2
+        ? { lat: sessions.captain.location.coordinates[1], lng: sessions.captain.location.coordinates[0] }
+        : null;
+
+    const captainMapPosition = captainLivePosition || liveBooking?.tracking?.currentLocation || captainSessionPosition;
+
+    const mapMarkers = [
+        {
+            id: 'apartment',
+            position: apartmentPosition,
+            title: 'Apartment',
+            icon: APARTMENT_MARKER_ICON
+        },
+        ...(captainMapPosition?.lat && captainMapPosition?.lng
+            ? [{
+                id: 'captain',
+                position: captainMapPosition,
+                title: 'Captain',
+                icon: CAPTAIN_MARKER_ICON
+            }]
+            : [])
+    ];
+
+    const mapPolylines = captainMapPosition?.lat && captainMapPosition?.lng
+        ? [{
+            path: [captainMapPosition, apartmentPosition],
+            options: {
+                strokeColor: '#0F172A',
+                strokeOpacity: 0.95,
+                strokeWeight: 4,
+                geodesic: true,
+                icons: [{
+                    icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 4 },
+                    offset: '0',
+                    repeat: '14px'
+                }]
+            }
+        }]
+        : [];
 
     const resetCapturedProof = () => {
         setCapturedPhoto(null);
@@ -223,6 +341,48 @@ const CaptainJobDetail = () => {
             { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
         );
     });
+
+    const openCamera = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, 
+                audio: false 
+            });
+            setCameraActive(true);
+            setCameraTimeLeft(60);
+            setTimeout(() => {
+                if (videoRef.current) videoRef.current.srcObject = stream;
+            }, 100);
+        } catch (err) {
+            console.error('Camera Error:', err);
+            toast.error('Optic sensor access denied. Check permissions.');
+            fileInputRef.current?.click(); // Fallback to traditional picker
+        }
+    };
+
+    const closeCamera = () => {
+        if (videoRef.current?.srcObject) {
+            videoRef.current.srcObject.getTracks().forEach(track => track.stop());
+            videoRef.current.srcObject = null;
+        }
+        setCameraActive(false);
+    };
+
+    const capturePhoto = async () => {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        if (video && canvas) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            setCapturedPhoto(dataUrl);
+            const meta = await captureProofMeta();
+            setCapturedPhotoMeta(meta);
+            closeCamera();
+            toast.success('Visual evidence secured');
+        }
+    };
 
     const handleCapture = async (e) => {
         const file = e.target.files[0];
@@ -392,24 +552,23 @@ const CaptainJobDetail = () => {
                     ))}
                 </div>
 
-                <div className={`relative rounded-2xl overflow-hidden border shadow-soft transition-colors ${isDarkMode ? 'border-white/5 shadow-2xl shadow-black/40' : 'border-gray-100 shadow-sm'}`} style={{ height: 280 }}>
+                <div className={`relative rounded-3xl overflow-hidden border shadow-soft transition-colors ${isDarkMode ? 'border-white/5 shadow-2xl shadow-black/40' : 'border-gray-100 shadow-sm'}`} style={{ height: '80vh', minHeight: 340 }}>
                     <GoogleMapBox
-                        center={liveBooking.location?.mapCoordinates ? { lat: liveBooking.location.mapCoordinates.lat, lng: liveBooking.location.mapCoordinates.lng } :
-                            liveBooking.location?.address?.coordinates?.lat ? { lat: liveBooking.location.address.coordinates.lat, lng: liveBooking.location.address.coordinates.lng } :
-                            liveBooking.location?.coordinates?.lat ? { lat: liveBooking.location.coordinates.lat, lng: liveBooking.location.coordinates.lng } :
-                                { lat: 28.6139, lng: 77.2090 }}
+                        center={captainMapPosition?.lat ? captainMapPosition : apartmentPosition}
                         zoom={15}
-                        markers={[
-                            {
-                                id: 'customer',
-                                position: liveBooking.location?.mapCoordinates ? { lat: liveBooking.location.mapCoordinates.lat, lng: liveBooking.location.mapCoordinates.lng } :
-                                    liveBooking.location?.address?.coordinates?.lat ? { lat: liveBooking.location.address.coordinates.lat, lng: liveBooking.location.address.coordinates.lng } :
-                                    liveBooking.location?.coordinates?.lat ? { lat: liveBooking.location.coordinates.lat, lng: liveBooking.location.coordinates.lng } :
-                                        { lat: 28.6139, lng: 77.2090 },
-                                title: 'Customer Location'
-                            }
-                        ]}
+                        darkMode={false}
+                        markers={mapMarkers}
+                        polylines={mapPolylines}
+                        options={{
+                            disableDefaultUI: true,
+                            zoomControl: true,
+                            gestureHandling: 'greedy'
+                        }}
                     />
+                    <div className="absolute top-3 left-3 z-[1000] flex items-center gap-2 px-3 py-2 rounded-xl bg-white/90 backdrop-blur-md border border-black/5 shadow-md">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[9px] font-black uppercase tracking-widest text-content">Live Route</span>
+                    </div>
                     <button
                         onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(liveBooking.address)}`, '_blank')}
                         className="absolute bottom-3 right-3 bg-brand text-white flex items-center gap-2 px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-md hover:brightness-110 active:scale-95 transition-all z-[1000]"
@@ -525,17 +684,17 @@ const CaptainJobDetail = () => {
                         {capturedPhoto ? (
                             <div className="relative w-full aspect-video rounded-xl overflow-hidden shadow-2xl">
                                 <img src={capturedPhoto} className="w-full h-full object-cover" alt="Captured" />
-                                <button onClick={() => setCapturedPhoto(null)} className="absolute top-2 right-2 w-8 h-8 bg-black/60 rounded-full flex items-center justify-center text-white">
+                                <button onClick={() => setCapturedPhoto(null)} className="absolute top-2 right-2 w-8 h-8 bg-black/60 rounded-full flex items-center justify-center text-white backdrop-blur-md border border-white/20">
                                     <XCircle size={16} />
                                 </button>
                             </div>
                         ) : (
                             <div
-                                onClick={() => fileInputRef.current?.click()}
-                                className="w-16 h-16 bg-brand/10 rounded-full flex items-center justify-center relative overflow-hidden group cursor-pointer"
+                                onClick={openCamera}
+                                className="w-20 h-20 bg-brand/10 border-2 border-brand/20 rounded-[2.5rem] flex items-center justify-center relative overflow-hidden group cursor-pointer shadow-lg shadow-brand/5 active:scale-95 transition-all"
                             >
-                                <Camera size={24} className="text-brand group-hover:scale-110 transition-transform" />
-                                <div className="absolute inset-0 bg-brand/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <div className="absolute inset-0 bg-brand/20 animate-pulse opacity-50" />
+                                <Camera size={32} className="text-brand group-hover:scale-110 transition-transform relative z-10" fill="currentColor" />
                             </div>
                         )}
 
@@ -673,6 +832,66 @@ const CaptainJobDetail = () => {
                     )}
                 </motion.button>
             </div>
+            {/* Live Visual Verification Overlay */}
+            <AnimatePresence>
+                {cameraActive && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] bg-black flex flex-col pt-12"
+                    >
+                        <div className="absolute top-6 left-6 right-6 flex items-center justify-between z-20">
+                            <div className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-2 flex items-center gap-3">
+                                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                                <span className="text-white font-black text-xs uppercase tracking-widest leading-none mt-0.5">Live View</span>
+                            </div>
+                            <div className={`px-4 py-2 rounded-2xl border backdrop-blur-xl transition-colors flex items-center gap-3 ${cameraTimeLeft < 10 ? 'bg-red-500/20 border-red-500/30' : 'bg-white/10 border-white/10'}`}>
+                                <Clock size={16} className={cameraTimeLeft < 10 ? 'text-red-500' : 'text-white'} />
+                                <span className={`font-black text-sm tracking-widest ${cameraTimeLeft < 10 ? 'text-red-500' : 'text-white'}`}>00:{cameraTimeLeft.toString().padStart(2, '0')}s</span>
+                            </div>
+                            <button onClick={closeCamera} className="w-12 h-12 bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center justify-center text-white">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 relative overflow-hidden flex items-center justify-center">
+                            <video 
+                                ref={videoRef} 
+                                autoPlay 
+                                playsInline 
+                                className="w-full h-full object-cover scale-x-[-1] absolute"
+                            />
+                            {/* Visual HUD Focus Frame */}
+                            <div className="relative w-64 h-64 border-2 border-white/20 rounded-[3rem] shadow-[0_0_0_1000px_rgba(0,0,0,0.5)]">
+                                <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-brand rounded-tl-2xl" />
+                                <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-brand rounded-tr-2xl" />
+                                <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-brand rounded-bl-2xl" />
+                                <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-brand rounded-br-2xl" />
+                            </div>
+                        </div>
+
+                        <div className="bg-gradient-to-t from-black via-black/80 to-transparent p-10 flex flex-col items-center gap-6 z-20">
+                            <p className="text-white/40 text-[9px] font-black uppercase tracking-[0.3em] text-center max-w-[200px]">
+                                Center the vehicle within the frame for protocol compliance
+                            </p>
+                            <button 
+                                onClick={capturePhoto}
+                                className="w-20 h-20 bg-white rounded-full flex items-center justify-center p-2 active:scale-90 transition-transform shadow-2xl shadow-white/10"
+                            >
+                                <div className="w-full h-full border-4 border-black/5 rounded-full flex items-center justify-center">
+                                    <div className="w-14 h-14 bg-brand rounded-full shadow-inner" />
+                                </div>
+                            </button>
+                            <div className="flex items-center gap-2 text-white/20">
+                                <Shield size={12} />
+                                <span className="text-[8px] font-black uppercase tracking-widest">Encrypted Stream Protocol 8.2</span>
+                            </div>
+                        </div>
+                        <canvas ref={canvasRef} className="hidden" />
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </CaptainLayout>
     );
 };

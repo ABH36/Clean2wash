@@ -131,7 +131,19 @@ const subscriptionSchema = new mongoose.Schema({
     }],
     skipDates: [{
         type: Date
-    }]
+    }],
+    review: {
+        rejectionReason: {
+            type: String,
+            trim: true,
+            default: ''
+        },
+        reviewedAt: Date,
+        reviewedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Admin'
+        }
+    }
 }, {
     timestamps: true
 });
@@ -148,6 +160,28 @@ const normalizeApplicableValue = (value = '') => String(value)
     .toUpperCase()
     .replace(/[^A-Z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '');
+
+const getBookingServiceAliases = (bookingData = {}) => {
+    const { service = {} } = bookingData;
+    const aliases = new Set();
+
+    [
+        service.id,
+        service.key,
+        service.name,
+        service.title,
+        service.path,
+        service.category,
+        service.metadata?.id,
+        service.metadata?.path,
+        service.metadata?.category
+    ].forEach((value) => {
+        const normalized = normalizeApplicableValue(value);
+        if (normalized) aliases.add(normalized);
+    });
+
+    return aliases;
+};
 
 const deriveSubscriptionModuleScope = (subscription = {}) => {
     if (subscription.moduleScope) return subscription.moduleScope;
@@ -194,7 +228,10 @@ subscriptionSchema.statics.getActiveSubscription = async function (userId, booki
     if (requestedScope) {
         const scoped = validSubscriptions.find((subscription) => {
             const scope = deriveSubscriptionModuleScope(subscription);
-            return scope === requestedScope || scope === 'all';
+            const scopeMatches = scope === requestedScope || scope === 'all';
+            if (!scopeMatches) return false;
+            if (!bookingData) return true;
+            return subscription.isServiceEligible({ ...bookingData, moduleScope: requestedScope });
         });
 
         if (scoped) return scoped;
@@ -249,7 +286,8 @@ subscriptionSchema.methods.addCredits = async function (amount = 1, session = nu
 // Instance method to check service eligibility (Resilient Logic)
 subscriptionSchema.methods.isServiceEligible = function (bookingData) {
     // If no restrictions (Legacy/Global), everything is eligible
-    if (!this.applicableServices || this.applicableServices.length === 0) return true;
+    const effectiveScope = deriveSubscriptionModuleScope(this);
+    const hasExplicitRestrictions = Array.isArray(this.applicableServices) && this.applicableServices.length > 0;
 
     const { service = {}, hub = null, location = {} } = bookingData;
     const category = service.category || '';
@@ -257,9 +295,21 @@ subscriptionSchema.methods.isServiceEligible = function (bookingData) {
     
     const isInstant = (bookingData.schedule?.type || service.schedule?.type) === 'instant';
     const isApartment = !!hub || (location.type !== 'studio' && !!location.hubId) || serviceKey.includes('APARTMENT');
+    const isChauffeur = category === 'Chauffeur' || serviceKey.includes('DRIVER');
+    const serviceAliases = getBookingServiceAliases(bookingData);
+
+    if (!hasExplicitRestrictions) {
+        if (effectiveScope === 'spare-driver' || effectiveScope === 'apartment-wash') {
+            return false;
+        }
+        if (isApartment || isChauffeur) {
+            return false;
+        }
+        return true;
+    }
 
     return this.applicableServices.some(serviceName => {
-        const normalized = serviceName.toUpperCase().replace(/\s+/g, '_');
+        const normalized = normalizeApplicableValue(serviceName);
         
         // Match by Key (Robust)
         if (normalized === 'INSTANT_WASH') {
@@ -272,11 +322,14 @@ subscriptionSchema.methods.isServiceEligible = function (bookingData) {
             return isApartment;
         }
         if (normalized === 'SPARE_DRIVER' || normalized === 'CHAUFFEUR') {
-            return category === 'Chauffeur' || serviceKey.includes('DRIVER');
+            return isChauffeur;
         }
-        
-        // Fallback to substring match
-        return serviceKey.includes(normalized);
+
+        if (serviceAliases.has(normalized)) {
+            return true;
+        }
+
+        return [...serviceAliases].some((alias) => alias.includes(normalized) || normalized.includes(alias));
     });
 };
 

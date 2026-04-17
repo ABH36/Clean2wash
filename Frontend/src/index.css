@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  --brand: #FF6B00;
-  --brand-light: #FF8533;
-  --brand-dark: #CC5600;
-  --brand-rgb: 255, 107, 0;
+  --brand: #f47521;
+  --brand-light: #ff8c42;
+  --brand-dark: #d95e0d;
+  --brand-rgb: 244, 117, 33;
 
   --bg-main: #F8FAFC;
   --bg-surface: #FFFFFF;
@@ -16,15 +16,24 @@
   --border-color: #E2E8F0;
 }
 
-.dark_mode_active {
-  --bg-main: #0F172A;
-  --bg-surface: #1E293B;
-  --bg-surface-hover: #334155;
+/* Driver Theme Specific Override (Fleet Yellow) */
+.driver-theme {
+  --brand: #FACD15;
+  --brand-light: #FFEB3B;
+  --brand-dark: #FBC02D;
+  --brand-rgb: 250, 205, 21;
+}
+
+/* Hardened Theme Synchronization */
+.dark {
+  --bg-main: #0B1222;
+  --bg-surface: #0F172A;
+  --bg-surface-hover: #1E293B;
 
   --text-main: #F8FAFC;
   --text-muted: #94A3B8;
   --text-subtle: #64748B;
-  --border-color: #334155;
+  --border-color: #1E293B;
 }
 
 @theme {
@@ -33,6 +42,7 @@
   --color-brand: var(--brand);
   --color-brand-light: var(--brand-light);
   --color-brand-dark: var(--brand-dark);
+  --color-brand-orange: #f47521;
 
   --color-accent-green: #22C55E;
   --color-accent-yellow: #FACC15;
@@ -48,14 +58,14 @@
   --radius-button: 0.75rem;
 
   --shadow-premium: 0 12px 40px -8px rgba(0, 0, 0, 0.08);
-  --shadow-premium-color: 0 12px 40px -8px rgba(255, 107, 0, 0.2);
+  --shadow-premium-color: 0 12px 40px -8px rgba(250, 205, 21, 0.2);
   --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.03);
   --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
 }
 
 @layer base {
   body {
-    @apply bg-background text-content antialiased;
+    @apply bg-background text-content antialiased transition-colors duration-500;
     font-feature-settings: "cv11", "ss01";
     -webkit-tap-highlight-color: transparent;
   }

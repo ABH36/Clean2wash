@@ -3,58 +3,74 @@ import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
-import LocationIndicator from '../../../components/Location/LocationIndicator';
 import { adminAPI } from '../../../utils/adminApi';
 import { socketService } from '../../../utils/socket';
+import { isFeatureEnabled, syncPlatformConfig } from '../../../utils/platformConfig';
+import { ADMIN_ROUTES_CONFIG } from '../AdminRoutesConfig.jsx';
+import '../../../styles/admin-theme.css';
 import {
-    LayoutDashboard,
-    BarChart3,
-    Building2,
-    Users,
-    User,
-    Settings,
     LogOut,
     Menu,
     X,
     Bell,
     Search,
-    ChevronRight,
     Car,
-    ShieldCheck,
-    MapPin,
-    Tag,
-    Package,
     Moon,
     Sun,
-    Crown,
-    ShoppingBag,
-    UserCheck,
-    Wallet,
-    Zap,
-    History,
-    TrendingUp
+    ChevronDown,
+    Package
 } from 'lucide-react';
-
 
 const AdminLayout = ({ title: propTitle }) => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { logout, getUser } = useAuth();
+    const { logout } = useAuth();
     const { isDarkMode, toggleTheme } = useTheme();
-    const user = getUser('admin') || { email: 'admin@CarWash.in', name: 'Admin' };
     const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 1024);
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [expandedGroups, setExpandedGroups] = useState(['Overview']);
+    const [isLoadingConfig, setIsLoadingConfig] = useState(true);
+
+    // Apply theme to document
+    useEffect(() => {
+        const root = document.documentElement;
+        if (isDarkMode) {
+            root.setAttribute('data-theme', 'dark');
+            root.classList.add('dark');
+        } else {
+            root.setAttribute('data-theme', 'light');
+            root.classList.remove('dark');
+        }
+    }, [isDarkMode]);
+
+    useEffect(() => {
+        const initPlatform = async () => {
+            await syncPlatformConfig();
+            setIsLoadingConfig(false);
+        };
+        initPlatform();
+    }, []);
 
     const getPageTitle = () => {
         if (propTitle) return propTitle;
         const path = location.pathname;
-        if (path === '/admin') return 'Operational IQ';
-        if (path === '/admin/notifications') return 'Intelligence Logs';
-        if (path === '/admin/bookings') return 'Service Registry';
-        if (path === '/admin/users') return 'User Directory';
-        if (path === '/admin/apartment-wash') return 'Apartment Wash Ops';
-        return 'Admin Command';
+        if (path === '/admin') return 'Dashboard';
+        if (path === '/admin/notifications') return 'Notifications';
+        if (path === '/admin/bookings') return 'Bookings';
+        if (path === '/admin/users') {
+            const params = new URLSearchParams(location.search);
+            const type = params.get('type');
+            if (type === 'vendors') return 'Vendors';
+            if (type === 'captains') return 'Captains';
+            if (type === 'staff') return 'Staff';
+            if (type === 'sparedriver') return 'Spare Drivers';
+            return 'Consumers';
+        }
+        if (path === '/admin/apartment-wash') return 'Apartment Wash';
+        if (path === '/admin/studio-wash') return 'Studio Wash';
+        if (path.startsWith('/admin/spare-drivers')) return 'Spare Drivers';
+        return 'Admin Panel';
     };
 
     useEffect(() => {
@@ -79,14 +95,8 @@ const AdminLayout = ({ title: propTitle }) => {
 
     useEffect(() => {
         fetchUnreadCount();
-
-        // Socket listener for new notifications
         socketService.joinAdminRoom();
-
-        const handleNewNotification = () => {
-            fetchUnreadCount();
-        };
-
+        const handleNewNotification = () => fetchUnreadCount();
         socketService.on('new_admin_notification', handleNewNotification);
         socketService.on('sos_alert', handleNewNotification);
         socketService.on('new_booking', handleNewNotification);
@@ -100,43 +110,44 @@ const AdminLayout = ({ title: propTitle }) => {
 
     useEffect(() => { setIsMobileNavOpen(false); }, [location.pathname]);
 
-    const NAV_ITEMS = [
-        { icon: <LayoutDashboard size={18} />, label: 'Dashboard', path: '/admin' },
-        { icon: <Bell size={18} />, label: 'Notifications', path: '/admin/notifications' },
-        { icon: <BarChart3 size={18} />, label: 'Analytics', path: '/admin/analytics' },
-        { icon: <Users size={18} />, label: 'User Management', path: '/admin/users' },
-        { icon: <ShieldCheck size={18} />, label: 'Vendor Registry', path: '/admin/users?type=vendors' },
-        { icon: <ShoppingBag size={18} />, label: 'Product Governance', path: '/admin/products' },
-        { icon: <TrendingUp size={18} />, label: 'Product War-Room', path: '/admin/product-war-room' },
-        { icon: <UserCheck size={18} />, label: 'Chauffeur Drivers', path: '/admin/spare-drivers' },
-        { icon: <Building2 size={18} />, label: 'Apartment Wash Ops', path: '/admin/apartment-wash' },
-        { icon: <Package size={18} />, label: 'Operations Hub', path: '/admin/bookings' },
-        { icon: <Car size={18} />, label: 'Service Catalog', path: '/admin/services' },
-        { icon: <Car size={18} />, label: 'Vehicle Catalog', path: '/admin/vehicle-catalog' },
-        { icon: <MapPin size={18} />, label: 'Hubs & Studio', path: '/admin/hubs' },
-        { icon: <Crown size={18} />, label: 'Subscription Control', path: '/admin/subscriptions' },
-        { icon: <Tag size={18} />, label: 'Promotions', path: '/admin/promotions' },
-        { icon: <Wallet size={18} />, label: 'Audit Ledger', path: '/admin/transactions' },
-        { icon: <History size={18} />, label: 'System Audit Logs', path: '/admin/audit' },
-        { icon: <Settings size={18} />, label: 'System Settings', path: '/admin/settings' },
-    ];
+    const NAV_ITEMS = ADMIN_ROUTES_CONFIG.map(category => ({
+        label: category.category,
+        icon: category.icon,
+        flag: category.flag,
+        children: category.routes.map(route => ({
+            label: route.label,
+            path: route.path,
+            icon: route.icon,
+            flag: route.flag,
+            hidden: route.hidden
+        }))
+    })).filter(item => !item.flag || isFeatureEnabled(item.flag))
+    .map(item => ({
+        ...item,
+        children: item.children?.filter(child => (!child.flag || isFeatureEnabled(child.flag)) && !child.hidden)
+    }));
+
+    const toggleGroup = (label) => {
+        setExpandedGroups(prev => 
+            prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label]
+        );
+    };
 
     return (
-        <div className="min-h-screen bg-background flex flex-col lg:flex-row font-sans selection:bg-brand selection:text-white transition-colors duration-500">
-            {/* Desktop Sidebar */}
+        <div className="admin-panel flex flex-col lg:flex-row font-sans selection:bg-[var(--primary)] selection:text-white">
+            
+            {/* Desktop Sidebar - Clean Professional */}
             <motion.aside
-                animate={{ width: isSidebarOpen ? 280 : 80 }}
-                className="hidden lg:flex bg-[#0B1222] text-white flex-col sticky top-0 h-screen overflow-hidden z-[60] border-r border-white/5 shadow-2xl selection:bg-brand/30"
+                animate={{ width: isSidebarOpen ? 280 : 85 }}
+                className="hidden lg:flex admin-sidebar flex-col sticky top-0 h-screen overflow-hidden z-40 transition-all duration-300 shrink-0"
             >
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none" />
-                <div className="absolute inset-0 bg-gradient-to-b from-brand/5 via-transparent to-brand/5 pointer-events-none" />
-
                 <SidebarContent
                     isSidebarOpen={isSidebarOpen}
                     NAV_ITEMS={NAV_ITEMS}
                     location={location}
                     navigate={navigate}
-                    user={user}
+                    expandedGroups={expandedGroups}
+                    toggleGroup={toggleGroup}
                     onLogout={() => { logout('admin'); navigate('/admin/login'); }}
                 />
             </motion.aside>
@@ -150,24 +161,24 @@ const AdminLayout = ({ title: propTitle }) => {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setIsMobileNavOpen(false)}
-                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] lg:hidden"
+                            className="fixed inset-0 bg-black/50 z-[60] lg:hidden"
                         />
                         <motion.aside
                             initial={{ x: -280 }}
                             animate={{ x: 0 }}
                             exit={{ x: -280 }}
-                            className="fixed top-0 left-0 bottom-0 w-[280px] bg-[#0B1222] text-white flex flex-col z-[80] lg:hidden border-r border-white/10"
+                            className="fixed top-0 left-0 bottom-0 w-[280px] admin-sidebar flex flex-col z-[70] lg:hidden shadow-xl"
                         >
-                            <div className="absolute top-6 right-6 text-white/40 z-10" onClick={() => setIsMobileNavOpen(false)}>
-                                <X size={24} />
+                            <div className="absolute top-6 right-6 text-[var(--text-muted)] hover:text-[var(--text-primary)] z-10 p-2 hover:bg-[var(--card-hover)] rounded-lg transition-colors cursor-pointer" onClick={() => setIsMobileNavOpen(false)}>
+                                <X size={20} />
                             </div>
-                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none" />
                             <SidebarContent
                                 isSidebarOpen={true}
                                 NAV_ITEMS={NAV_ITEMS}
                                 location={location}
                                 navigate={navigate}
-                                user={user}
+                                expandedGroups={expandedGroups}
+                                toggleGroup={toggleGroup}
                                 onLogout={() => { logout('admin'); navigate('/admin/login'); }}
                             />
                         </motion.aside>
@@ -176,88 +187,108 @@ const AdminLayout = ({ title: propTitle }) => {
             </AnimatePresence>
 
             {/* Main Content Area */}
-            <main className="flex-1 flex flex-col min-h-screen min-w-0 relative bg-background overflow-x-hidden pb-16 lg:pb-0">
-                <header className="bg-surface/80 backdrop-blur-xl px-4 lg:px-10 py-3 lg:py-5 border-b border-gray-100/10 flex items-center justify-between sticky top-0 z-50 transition-colors duration-500">
-                    <div className="flex items-center gap-4 lg:gap-8">
+            <main className="flex-1 flex flex-col min-h-screen min-w-0 relative overflow-x-hidden pb-16 lg:pb-0">
+                {/* Clean Professional Topbar */}
+                <header className="bg-[var(--card)] px-6 py-4 border-b border-[var(--border)] flex items-center justify-between sticky top-0 z-40 transition-colors duration-200">
+                    <div className="flex items-center gap-4">
                         <button
                             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                            className="hidden lg:flex p-2.5 bg-background rounded-2xl text-content-subtle hover:text-brand hover:scale-105 active:scale-95 transition-all border border-gray-100/10"
+                            className="hidden lg:flex p-2 bg-[var(--bg-secondary)] rounded-lg text-[var(--text-secondary)] hover:bg-[var(--card-hover)] hover:text-[var(--text-primary)] transition-colors"
                         >
                             {isSidebarOpen ? <X size={18} /> : <Menu size={18} />}
                         </button>
                         <button
                             onClick={() => setIsMobileNavOpen(true)}
-                            className="lg:hidden p-2.5 bg-background rounded-2xl text-content-subtle"
+                            className="lg:hidden p-2 bg-[var(--bg-secondary)] rounded-lg text-[var(--text-secondary)]"
                         >
                             <Menu size={18} />
                         </button>
-                        <div className="h-6 w-px bg-gray-100/20 mx-2 hidden lg:block" />
-                        <h2 className="text-[12px] lg:text-lg font-black text-content tracking-tight uppercase truncate max-w-[120px] lg:max-w-none">
+                        <div className="h-6 w-px bg-[var(--border)] mx-2 hidden lg:block" />
+                        <h2 className="text-xl font-semibold text-[var(--text-primary)] capitalize truncate max-w-[120px] lg:max-w-none">
                             {getPageTitle()}
                         </h2>
-                        <div className="hidden sm:block">
-                            <LocationIndicator variant="minimal" className="!bg-transparent !border-none !p-0 ml-4 opacity-70 hover:opacity-100 transition-opacity" />
-                        </div>
                     </div>
 
-                    <div className="flex items-center gap-3 lg:gap-6">
-                        <div className="hidden lg:flex items-center gap-3 bg-background px-5 py-2.5 rounded-[1.25rem] border border-gray-100/10 focus-within:border-brand transition-all group">
-                            <Search size={16} className="text-content-subtle group-focus-within:text-brand" />
+                    <div className="flex items-center gap-3">
+                        {/* Search Bar - Clean */}
+                        <div className="hidden lg:flex items-center gap-3 bg-[var(--bg-secondary)] px-4 py-2 rounded-lg border border-[var(--border)] focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary-light)] transition-all">
+                            <Search size={16} className="text-[var(--text-muted)]" />
                             <input
                                 type="text"
-                                placeholder="Universal Query..."
-                                className="bg-transparent outline-none text-[11px] font-bold text-content w-48 uppercase tracking-widest"
+                                placeholder="Search..."
+                                className="bg-transparent outline-none text-sm text-[var(--text-primary)] w-56 placeholder:text-[var(--text-muted)]"
                             />
                         </div>
+                        
                         <div className="flex items-center gap-2">
-                            {/* Theme Toggle */}
+                            {/* Theme Toggle - Clean */}
                             <button
                                 onClick={toggleTheme}
-                                className="w-11 h-11 bg-background rounded-2xl flex items-center justify-center text-content-subtle hover:text-brand hover:scale-105 active:scale-95 transition-all border border-gray-100/10"
+                                title="Toggle Theme"
+                                className="w-10 h-10 bg-[var(--bg-secondary)] rounded-lg flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--card-hover)] hover:text-[var(--text-primary)] transition-colors"
                             >
                                 {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
                             </button>
 
+                            {/* Notifications - Clean */}
                             <button
                                 onClick={() => navigate('/admin/notifications')}
-                                className="w-11 h-11 bg-background rounded-2xl flex items-center justify-center text-content-subtle relative hover:text-brand hover:scale-105 active:scale-95 transition-all border border-gray-100/10"
+                                className="w-10 h-10 bg-[var(--bg-secondary)] rounded-lg flex items-center justify-center text-[var(--text-secondary)] relative hover:bg-[var(--card-hover)] hover:text-[var(--text-primary)] transition-colors"
                             >
                                 <Bell size={18} />
                                 {unreadCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-brand text-white text-[8px] font-black flex items-center justify-center rounded-full border-2 border-surface shadow-lg shadow-brand/20">
+                                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-[var(--error)] text-white text-[10px] font-semibold flex items-center justify-center rounded-full">
                                         {unreadCount > 99 ? '99+' : unreadCount}
                                     </span>
                                 )}
                             </button>
-                            <div className="w-px h-8 bg-gray-100/20 mx-1 lg:mx-2" />
-                            <div className="flex items-center gap-3 bg-background pr-4 pl-1.5 py-1.5 rounded-2xl border border-gray-100/10 hover:border-brand/30 transition-all cursor-pointer group">
-                                <div className="w-9 h-9 rounded-xl bg-brand/10 flex items-center justify-center text-brand font-black text-xs shrink-0 group-hover:bg-brand group-hover:text-white transition-all">
-                                    SY
+                            
+                            <div className="h-6 w-px bg-[var(--border)] mx-2" />
+                            
+                            {/* Profile - Clean */}
+                            <div className="flex items-center gap-3 bg-[var(--bg-secondary)] pr-3 pl-2 py-2 rounded-lg hover:bg-[var(--card-hover)] transition-colors cursor-pointer">
+                                <div className="w-8 h-8 rounded-lg bg-[var(--primary)] flex items-center justify-center text-white font-semibold text-sm shrink-0">
+                                    AD
                                 </div>
                                 <div className="hidden sm:block text-left overflow-hidden">
-                                    <p className="text-[10px] font-black text-content leading-none truncate w-20 uppercase">Admin</p>
-                                    <p className="text-[7px] font-black text-brand uppercase tracking-widest mt-1.5 opacity-60">Superuser</p>
+                                    <p className="text-sm font-semibold text-[var(--text-primary)] leading-none truncate w-20">Admin</p>
+                                    <p className="text-xs text-[var(--text-secondary)] mt-0.5">Superuser</p>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </header>
 
-                <div className="p-4 lg:p-10 flex-1 relative">
+                {/* Main Content - Clean */}
+                <div className="p-6 flex-1 relative w-full max-w-full overflow-x-hidden">
                     <AnimatePresence mode="wait">
-                        <motion.div
-                            key={location.pathname}
-                            initial={{ opacity: 0, scale: 0.98 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 1.02 }}
-                            transition={{ duration: 0.2 }}
-                        >
-                            <Outlet />
-                        </motion.div>
+                        {isLoadingConfig ? (
+                            <motion.div 
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="absolute inset-0 flex items-center justify-center bg-[var(--bg)] z-50"
+                            >
+                                <div className="flex flex-col items-center gap-4">
+                                    <div className="w-12 h-12 border-4 border-[var(--border)] border-t-[var(--primary)] rounded-full animate-spin" />
+                                    <p className="text-sm font-semibold text-[var(--text-secondary)]">Loading Dashboard...</p>
+                                </div>
+                            </motion.div>
+                        ) : (
+                            <motion.div
+                                key={location.pathname + location.search}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2, ease: "easeOut" }}
+                                className="fade-in w-full max-w-full"
+                            >
+                                <Outlet />
+                            </motion.div>
+                        )}
                     </AnimatePresence>
                 </div>
 
-                {/* Mobile Bottom Navigation */}
                 <BottomNav
                     NAV_ITEMS={NAV_ITEMS}
                     location={location}
@@ -269,12 +300,12 @@ const AdminLayout = ({ title: propTitle }) => {
     );
 };
 
-const SidebarContent = ({ isSidebarOpen, NAV_ITEMS, location, navigate, onLogout, user }) => (
-    <div className="relative z-10 flex flex-col h-full">
+const SidebarContent = ({ isSidebarOpen, NAV_ITEMS, location, navigate, onLogout, expandedGroups, toggleGroup }) => (
+    <div className="flex flex-col h-full">
         {/* Logo Section */}
-        <div className={`p-8 flex items-center gap-4 mb-10 ${!isSidebarOpen && 'justify-center p-6'}`}>
-            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shrink-0 shadow-[0_8px_30px_rgba(244,117,33,0.3)] hover:rotate-3 transition-transform cursor-pointer">
-                <Car size={26} className="text-brand" />
+        <div className={`p-6 flex items-center gap-3 border-b border-[var(--border)] ${!isSidebarOpen && 'justify-center'}`}>
+            <div className="w-10 h-10 bg-[var(--primary)] rounded-lg flex items-center justify-center shrink-0">
+                <Car size={22} className="text-white" />
             </div>
             {isSidebarOpen && (
                 <motion.div
@@ -283,103 +314,134 @@ const SidebarContent = ({ isSidebarOpen, NAV_ITEMS, location, navigate, onLogout
                     transition={{ delay: 0.1 }}
                     className="flex flex-col"
                 >
-                    <span className="text-xl font-black tracking-tighter leading-none text-white whitespace-nowrap uppercase italic">Carwash <span className="text-brand">O-IQ</span></span>
-                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-white/30 mt-1.5 leading-none">Elite command unit</span>
+                    <span className="text-lg font-semibold text-[var(--text-primary)]">Spare Driver Admin</span>
+                    <span className="text-xs text-[var(--text-secondary)]">Management Panel</span>
                 </motion.div>
             )}
         </div>
 
         {/* Navigation */}
         <nav
-            className="flex-1 px-4 space-y-1.5 overflow-y-auto scrollbar-hide py-2"
+            className="flex-1 px-3 space-y-1 overflow-y-auto scrollbar-hide py-4"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
             <LayoutGroup id="sidebar-nav">
                 {NAV_ITEMS.map((item, i) => {
-                    const isActive = location.pathname === item.path || (item.path !== '/admin' && location.pathname.startsWith(item.path));
+                    const fullPath = location.pathname + location.search;
+                    const isGroup = !!item.children;
+                    const isExpanded = expandedGroups.includes(item.label);
+                    
+                    const isPathActive = (path) => {
+                        if (!path) return false;
+                        if (path.includes('?')) return fullPath === path;
+                        return fullPath === path || (path !== '/admin' && !fullPath.includes('?') && fullPath.startsWith(path));
+                    };
+
+                    const isAnyChildActive = item.children?.some(child => isPathActive(child.path));
+                    const isActive = isGroup ? isAnyChildActive : isPathActive(item.path);
+
                     return (
-                        <motion.button
-                            key={item.label}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: i * 0.03 }}
-                            onClick={() => navigate(item.path)}
-                            className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all group relative overflow-hidden ${isActive
-                                ? 'text-white'
-                                : 'text-white/30 hover:text-white hover:bg-white/[0.03]'
+                        <div key={item.label} className="space-y-1">
+                            <motion.button
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: i * 0.02 }}
+                                onClick={() => isGroup ? toggleGroup(item.label) : navigate(item.path)}
+                                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group relative ${
+                                    isActive && !isGroup
+                                        ? 'bg-[var(--primary)] text-white'
+                                        : (isActive && isGroup 
+                                            ? 'text-[var(--primary)] bg-[var(--primary-light)]' 
+                                            : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover)]')
                                 }`}
-                        >
-                            {isActive && (
-                                <motion.div
-                                    layoutId="active-pill"
-                                    className="absolute inset-0 bg-gradient-to-r from-brand to-orange-500 shadow-[0_10px_20px_rgba(244,117,33,0.3)] z-0"
-                                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                                />
-                            )}
-                            <div className={`relative z-10 shrink-0 transition-all duration-500 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
-                                {item.icon}
-                            </div>
-                            {isSidebarOpen && (
-                                <span className={`relative z-10 text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 ${isActive ? 'translate-x-1' : 'group-hover:translate-x-1'}`}>
-                                    {item.label}
-                                </span>
-                            )}
-                            {isActive && (
-                                <motion.div
-                                    layoutId="active-tick"
-                                    className="absolute left-0 w-1.5 h-6 bg-white rounded-r-full z-20"
-                                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                                />
-                            )}
-                        </motion.button>
+                            >
+                                <div className="shrink-0">
+                                    {item.icon}
+                                </div>
+                                {isSidebarOpen && (
+                                    <div className="flex-1 flex items-center justify-between">
+                                        <span className="text-sm font-medium">
+                                            {item.label}
+                                        </span>
+                                        {isGroup && (
+                                            <ChevronDown size={14} className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                                        )}
+                                    </div>
+                                )}
+                            </motion.button>
+
+                            <AnimatePresence>
+                                {isGroup && isExpanded && isSidebarOpen && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        className="overflow-hidden pl-10 space-y-1"
+                                    >
+                                        {item.children.map((child) => {
+                                            const isChildActive = isPathActive(child.path);
+                                            return (
+                                                <button
+                                                    key={child.label}
+                                                    onClick={() => navigate(child.path)}
+                                                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                                        isChildActive 
+                                                            ? 'text-[var(--primary)] bg-[var(--primary-light)]' 
+                                                            : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover)]'
+                                                    }`}
+                                                >
+                                                    {child.label}
+                                                </button>
+                                            );
+                                        })}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
                     );
                 })}
             </LayoutGroup>
         </nav>
 
-        {/* Footer Actions */}
-        <div className="p-4 mt-auto border-t border-white/5 bg-white/[0.01]">
+        <div className="p-3 mt-auto border-t border-[var(--border)]">
             <button
                 onClick={onLogout}
-                className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-red-600/20 hover:text-red-500 text-white/20 transition-all group relative overflow-hidden"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[var(--error-light)] hover:text-[var(--error)] text-[var(--text-secondary)] transition-colors group"
             >
-                <LogOut size={18} className="relative z-10 group-hover:-translate-x-1 transition-transform" />
-                {isSidebarOpen && <span className="relative z-10 text-[10px] font-black uppercase tracking-[0.2em]">End Operational Link</span>}
+                <LogOut size={18} />
+                {isSidebarOpen && <span className="text-sm font-medium">Logout</span>}
             </button>
         </div>
     </div>
 );
 
 const BottomNav = ({ NAV_ITEMS, location, navigate, setIsMobileNavOpen }) => {
-    const BOTTOM_ITEMS = [
-        NAV_ITEMS.find((item) => item.path === '/admin'),
-        NAV_ITEMS.find((item) => item.path === '/admin/bookings'),
-        NAV_ITEMS.find((item) => item.path === '/admin/users'),
-        NAV_ITEMS.find((item) => item.path === '/admin/services'),
-    ].filter(Boolean);
+    const BOTTOM_ITEMS = NAV_ITEMS.slice(0, 4).map(group => group.children?.[0]).filter(Boolean);
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 h-16 bg-surface/80 backdrop-blur-2xl border-t border-gray-100/10 px-6 flex items-center justify-between lg:hidden z-[60] safe-area-bottom shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+        <nav className="fixed bottom-0 left-0 right-0 h-16 bg-[var(--card)] border-t border-[var(--border)] px-6 flex items-center justify-between lg:hidden z-40 safe-area-bottom transition-colors duration-200">
             {BOTTOM_ITEMS.map((item) => {
                 const isActive = location.pathname === item.path;
                 return (
                     <button
                         key={item.label}
                         onClick={() => navigate(item.path)}
-                        className={`flex flex-col items-center gap-1 transition-all ${isActive ? 'text-brand scale-110' : 'text-content-subtle'}`}
+                        className={`flex flex-col items-center gap-1 transition-colors ${
+                            isActive ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'
+                        }`}
                     >
-                        <div className={`p-1 rounded-lg ${isActive ? 'bg-brand/10' : ''}`}>
-                            {React.cloneElement(item.icon, { size: 18 })}
+                        <div className={`p-1.5 rounded-lg ${isActive ? 'bg-[var(--primary-light)]' : ''}`}>
+                            {item.icon ? React.cloneElement(item.icon, { size: 20 }) : <Package size={20} />}
                         </div>
                     </button>
                 );
             })}
             <button
                 onClick={() => setIsMobileNavOpen(true)}
-                className="flex flex-col items-center gap-1 text-content-subtle group"
+                className="flex flex-col items-center gap-1 text-[var(--text-muted)]"
             >
-                <div className="p-1 rounded-lg group-active:bg-brand/10 group-active:text-brand transition-all">
-                    <Menu size={18} />
+                <div className="p-1.5 rounded-lg">
+                    <Menu size={20} />
                 </div>
             </button>
         </nav>

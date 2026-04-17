@@ -59,7 +59,7 @@ const AdminAuditLogs = () => {
     };
 
     const getActionColor = (action) => {
-        if (action.includes('UPDATE')) return 'text-orange-500 bg-orange-500/10';
+        if (action.includes('UPDATE')) return 'text-[var(--warning)] bg-[var(--warning-light)]';
         if (action.includes('DELETE')) return 'text-red-500 bg-red-500/10';
         if (action.includes('SETTLE')) return 'text-green-500 bg-green-500/10';
         return 'text-brand bg-brand/10';

@@ -62,6 +62,23 @@ class SpareDriverApiClient {
         return data;
     }
 
+    async sendSignupOTP(phone, userData) {
+        return this.request('/auth/send-otp', {
+            method: 'POST',
+            body: JSON.stringify({ phone, userData })
+        });
+    }
+
+    async verifySignupOTP(phone, otp) {
+        const data = await this.request('/auth/verify-otp', {
+            method: 'POST',
+            body: JSON.stringify({ phone, otp })
+        });
+        const token = data.token || data.data?.token;
+        if (token) this.setToken(token);
+        return data;
+    }
+
     async login(credentials) {
         const data = await this.request('/login', {
             method: 'POST',
@@ -79,8 +96,68 @@ class SpareDriverApiClient {
         });
     }
 
+    async getKitPaymentKey() {
+        return this.request('/kit-payment/key');
+    }
+
+    async createKitPaymentOrder() {
+        return this.request('/kit-payment/order', {
+            method: 'POST'
+        });
+    }
+
+    async verifyKitPayment(paymentData) {
+        return this.request('/kit-payment/verify', {
+            method: 'POST',
+            body: JSON.stringify(paymentData)
+        });
+    }
+
+    async getKitConfig() {
+        return this.request('/kit-config');
+    }
+
+    async getPremiumConfig() {
+        return this.request('/premium-config');
+    }
+
+    async submitKitPayment(formData) {
+        return this.request('/kit-payment', {
+            method: 'POST',
+            body: formData,
+        });
+    }
+
     async getProfile() {
         return this.request('/profile');
+    }
+
+    async updateProfilePicture(formData) {
+        return this.request('/profile-picture', {
+            method: 'PATCH',
+            body: formData,
+        });
+    }
+
+    async uploadPoliceVerification(formData) {
+        return this.request('/police-verification', {
+            method: 'PATCH',
+            body: formData,
+        });
+    }
+
+    async updateProfile(payload) {
+        return this.request('/profile', {
+            method: 'PATCH',
+            body: JSON.stringify(payload),
+        });
+    }
+
+    async submitInquiry(payload) {
+        return this.request('/inquiry', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
     }
 
     async getBookings() {
@@ -180,6 +257,13 @@ class SpareDriverApiClient {
         return this.adminRequest(`/admin/drivers/${id}`, {
             method: 'PATCH',
             body: JSON.stringify({ status, adminNote }),
+        });
+    }
+
+    async adminUpdatePremiumVerification(id, action, reason = '') {
+        return this.adminRequest(`/admin/drivers/${id}/premium`, {
+            method: 'PATCH',
+            body: JSON.stringify({ action, reason }),
         });
     }
 

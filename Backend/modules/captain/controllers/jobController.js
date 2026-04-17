@@ -90,7 +90,17 @@ const inferPortfolioCategory = (booking) => {
     return 'Exterior';
 };
 
-const isApartmentBooking = (booking) => !!booking?.location?.hubId || booking?.service?.category === 'Apartment';
+const isApartmentBooking = (booking = {}) => {
+    const parking = booking?.location?.parkingDetails || {};
+    const hasParkingHierarchy = [parking.basement, parking.block, parking.pillar, parking.slotNumber]
+        .some((value) => String(value || '').trim().length > 0);
+    return (
+        !!booking?.location?.hubId ||
+        booking?.service?.category === 'Apartment' ||
+        String(booking?.location?.type || '').toLowerCase() === 'apartment' ||
+        hasParkingHierarchy
+    );
+};
 
 const parseSlotDateTime = (dateValue, timeValue, fallbackOffsetMinutes = 0) => {
     if (!dateValue) return null;
@@ -165,7 +175,7 @@ const getCaptainPayoutAmount = (booking) => {
         booking?.payment?.commission ??
         0
     );
-    const isApartmentProtocol = !!booking?.location?.hubId || booking?.service?.category === 'Apartment';
+    const isApartmentProtocol = isApartmentBooking(booking);
     const payoutBaseAmount = booking?.payment?.method === 'subscription' && !isApartmentProtocol
         ? (baseAmount || totalAmount)
         : totalAmount;
@@ -523,7 +533,7 @@ exports.updateJobStatus = async (req, res) => {
 
         // Elite Hardening: Security PIN Verification 
         // Note: Skip PIN for Apartment Wash as it's an unattended service protocol (Consistent with staffController)
-        const isApartmentProtocol = !!booking.location?.hubId || booking.service?.category === 'Apartment';
+        const isApartmentProtocol = isApartmentBooking(booking);
         if (status === 'washing' && (booking.status === 'before_photo' || booking.status === 'arrived') && !isApartmentProtocol) {
             const providedPin = req.body.securityPin || req.body.pin;
             if (!providedPin || providedPin !== booking.securityPin) {
@@ -603,7 +613,7 @@ exports.updateJobStatus = async (req, res) => {
             let adminCut = 0;
 
             if (booking.payment?.method === 'subscription') {
-                const isApartmentProtocol = !!booking.location?.hubId || booking.service?.category === 'Apartment';
+                const isApartmentProtocol = isApartmentBooking(booking);
                 if (isApartmentProtocol) {
                     // Apartment HUB protocol: Fixed payout for subscription service
                     providerPayout = 10;
@@ -690,6 +700,7 @@ exports.updateJobStatus = async (req, res) => {
         await booking.save();
 
         // ➕ Phase 3: Global Notification Sync (Ecosystem Synchronization)
+        const io = socketService.getIO();
         
         // 1. Sync for specific booking room (for everyone currently viewing this job)
         io.to(booking._id.toString()).emit('booking_status_updated', {

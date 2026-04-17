@@ -415,7 +415,7 @@ const Subscriptions = () => {
                             <ArrowRight className="text-black" size={24} />
                             <span className="text-[10px] font-black uppercase text-black">{scopeUpgradeLabel}</span>
                         </button>
-                        <button onClick={() => navigate('/vehicles')} className="bg-white border border-gray-200 p-6 rounded-2xl flex flex-col items-center gap-3 active:scale-95 transition-all shadow-sm">
+                        <button onClick={() => navigate('/vehicles?from=subscriptions')} className="bg-white border border-gray-200 p-6 rounded-2xl flex flex-col items-center gap-3 active:scale-95 transition-all shadow-sm">
                             <Layout className="text-black" size={24} />
                             <span className="text-[10px] font-black uppercase text-black">Manage Fleet</span>
                         </button>
@@ -565,7 +565,7 @@ const Subscriptions = () => {
                     </button>
                 ))}
 
-                <button onClick={() => navigate('/vehicles')} className="w-full py-6 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center gap-2 text-gray-400 active:scale-95 transition-all">
+                <button onClick={() => navigate('/vehicles?from=subscriptions')} className="w-full py-6 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center gap-2 text-gray-400 active:scale-95 transition-all">
                     <Plus size={24} />
                     <span className="text-[10px] font-black uppercase">Add New Vehicle</span>
                 </button>

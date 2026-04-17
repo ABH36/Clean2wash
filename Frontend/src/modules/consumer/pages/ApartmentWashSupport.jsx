@@ -7,12 +7,12 @@ import MobileLayout from '../components/layout/MobileLayout';
 import api, { bookingAPI } from '../../../utils/api';
 
 const ISSUE_OPTIONS = [
-    { id: 'vehicle_not_available', label: 'Vehicle Not Found' },
-    { id: 'parking_access', label: 'Parking Access Issue' },
-    { id: 'quality_issue', label: 'Wash Quality Issue' },
-    { id: 'captain_issue', label: 'Captain Behaviour' },
-    { id: 'schedule_issue', label: 'Schedule Issue' },
-    { id: 'other', label: 'Other Issue' }
+    { id: 'vehicle_not_available', label: 'Vehicle not found' },
+    { id: 'parking_access', label: 'Parking access issue' },
+    { id: 'quality_issue', label: 'Wash quality issue' },
+    { id: 'captain_issue', label: 'Captain behaviour' },
+    { id: 'schedule_issue', label: 'Schedule issue' },
+    { id: 'other', label: 'Other issue' }
 ];
 
 const formatDate = (value) => {
@@ -101,7 +101,7 @@ const ApartmentWashSupport = () => {
                     <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-black">
                         <ChevronLeft size={20} strokeWidth={2.5} />
                     </button>
-                    <h1 className="text-xl font-black text-black tracking-tight uppercase leading-none">Apartment Support</h1>
+                    <h1 className="text-xl font-black text-black tracking-tight uppercase leading-none">Apartment support</h1>
                 </header>
 
                 <div className="p-5 space-y-5 pb-24">
@@ -111,7 +111,7 @@ const ApartmentWashSupport = () => {
                                 <LifeBuoy size={20} />
                             </div>
                             <div>
-                                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-brand">Linked Support</p>
+                                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-brand">Linked support</p>
                                 <p className="text-[11px] font-bold uppercase tracking-tight text-black/60">Select the apartment wash booking and report the exact issue to admin.</p>
                             </div>
                         </div>
@@ -124,7 +124,7 @@ const ApartmentWashSupport = () => {
                     ) : (
                         <>
                             <div className="space-y-3">
-                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black/40">Select Booking</label>
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black/40">Select booking</label>
                                 <select
                                     value={selectedBookingId}
                                     onChange={(event) => setSelectedBookingId(event.target.value)}
@@ -147,7 +147,7 @@ const ApartmentWashSupport = () => {
                                 >
                                     <div className="flex items-center justify-between gap-3">
                                         <div>
-                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black/35">{selectedBooking.service?.name || 'Apartment Wash'}</p>
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black/35">{selectedBooking.service?.name || 'Apartment wash'}</p>
                                             <p className="mt-1 text-sm font-black uppercase tracking-tight text-black">{selectedBooking.location?.hubId?.name || 'Apartment'}</p>
                                         </div>
                                         <span className="rounded-xl bg-black px-3 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-white">
@@ -172,7 +172,7 @@ const ApartmentWashSupport = () => {
 
                                     {selectedBooking.issues?.length > 0 && (
                                         <div className="rounded-2xl bg-white p-4 border border-black/[0.04]">
-                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black/40">Latest Issues</p>
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black/40">Latest issues</p>
                                             <div className="mt-3 space-y-3">
                                                 {[...selectedBooking.issues].slice(-3).reverse().map((issue, index) => (
                                                     <div key={issue._id || `${issue.type}-${index}`} className="rounded-xl bg-gray-50 px-3 py-3">
@@ -190,7 +190,7 @@ const ApartmentWashSupport = () => {
                             )}
 
                             <div className="space-y-3">
-                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black/40">Issue Type</label>
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black/40">Issue type</label>
                                 <div className="grid grid-cols-2 gap-3">
                                     {ISSUE_OPTIONS.map((option) => (
                                         <button
@@ -205,7 +205,7 @@ const ApartmentWashSupport = () => {
                             </div>
 
                             <div className="space-y-3">
-                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black/40">Describe Issue</label>
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black/40">Describe issue</label>
                                 <textarea
                                     value={description}
                                     onChange={(event) => setDescription(event.target.value)}
@@ -220,7 +220,7 @@ const ApartmentWashSupport = () => {
                                 disabled={submitting || !selectedBookingId}
                                 className="w-full rounded-2xl bg-black py-4 text-[10px] font-black uppercase tracking-[0.2em] text-white disabled:opacity-40"
                             >
-                                {submitting ? 'Sending Issue' : 'Report to Admin'}
+                                {submitting ? 'Sending issue' : 'Report to admin'}
                             </button>
 
                             <div className="rounded-[2rem] border border-amber-100 bg-amber-50 px-4 py-4">

@@ -16,6 +16,8 @@ const { executeWalletTransaction, adjustWalletHold } = require('../../../utils/w
 const { broadcastBookingToDrivers } = require('../../../utils/spareDriverDispatch');
 
 const CHAUFFEUR_DISPATCH_LEAD_MINUTES = 15;
+const NON_TERMINAL_ACTIVE_STATUSES = ['accepted', 'en_route', 'arrived', 'before_photo', 'washing', 'after_photo', 'in_progress', 'active'];
+const NON_TERMINAL_ASSIGNED_STATUSES = ['confirmed', 'assigned'];
 
 const normalizeCapabilityLabel = (value = '') => {
     const normalized = String(value || '').trim().toLowerCase();
@@ -53,6 +55,46 @@ const captainMatchesCapability = (captainVehicleType = '', requestedCapability =
     };
 
     return (compatibilityMap[requestedCapability] || new Set([requestedCapability])).has(captainCapability);
+};
+
+const isApartmentBooking = (booking = {}) => !!booking?.location?.hubId || booking?.service?.category === 'Apartment';
+
+const parseSlotDateTime = (dateValue, timeValue, fallbackOffsetMinutes = 0) => {
+    if (!dateValue) return null;
+
+    const base = new Date(dateValue);
+    if (Number.isNaN(base.getTime())) return null;
+
+    if (!timeValue) {
+        base.setMinutes(base.getMinutes() + fallbackOffsetMinutes);
+        return base;
+    }
+
+    const parsed = new Date(`${base.toDateString()} ${timeValue}`);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+
+    base.setMinutes(base.getMinutes() + fallbackOffsetMinutes);
+    return base;
+};
+
+const isCaptainMissionBlockingInstant = (booking, now = new Date()) => {
+    if (!booking) return false;
+
+    if (NON_TERMINAL_ACTIVE_STATUSES.includes(booking.status)) return true;
+    if (!NON_TERMINAL_ASSIGNED_STATUSES.includes(booking.status)) return false;
+    if (booking?.schedule?.type === 'instant') return true;
+
+    const apartmentMission = isApartmentBooking(booking);
+    const missionStart = parseSlotDateTime(booking?.schedule?.date, booking?.schedule?.timeSlot?.start);
+    const missionEnd = parseSlotDateTime(booking?.schedule?.date, booking?.schedule?.timeSlot?.end, 90);
+
+    if (!missionStart) return apartmentMission;
+
+    const leadWindowMs = (apartmentMission ? 120 : 45) * 60 * 1000;
+    const withinLeadWindow = (missionStart.getTime() - now.getTime()) <= leadWindowMs;
+    const insideMissionWindow = missionEnd ? now <= missionEnd : now >= missionStart;
+
+    return withinLeadWindow || insideMissionWindow;
 };
 
 const getScheduledDispatchTime = (schedule = {}) => {
@@ -254,7 +296,7 @@ exports.getMyBookings = catchAsync(async (req, res, next) => {
 
     const bookings = await Booking.find(filter)
         .populate('vehicle', 'brand model type plate image')
-        .populate('provider.id', 'name phone rating photo')
+        .populate('provider.id', 'name phone rating photo verification')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit));
@@ -281,12 +323,8 @@ exports.getBooking = catchAsync(async (req, res, next) => {
         isActive: true
     })
         .populate('vehicle', 'brand model type plate image compliance')
-        .populate('provider.id', 'name phone rating photo currentLocation')
+        .populate('provider.id', 'name phone status isOnline currentLocation verification')
         .populate('consumer', 'name phone');
-
-    if (!booking) {
-        return next(new AppError('Booking not found', 404));
-    }
 
     res.status(200).json({
         status: 'success',
@@ -650,17 +688,26 @@ exports.createBooking = catchAsync(async (req, res, next) => {
             const Subscription = require('../../../models/Subscription');
             const subscriptionBookingContext = {
                 service: {
+                    id: service.id || service.key || '',
                     category: sanitizedCategory,
                     type: sanitizedServiceType,
                     key: service.key || service.id || '',
                     name: service.name || service.title || '',
+                    title: service.title || service.name || '',
+                    path: trustedServiceMetadata.path || '',
+                    metadata: trustedServiceMetadata,
                     schedule: bookingSchedule
                 },
                 hub: req.body.hubId || req.body.hub || null,
                 location: bookingLocation,
-                destination: bookingDestination
+                destination: bookingDestination,
+                moduleScope: sanitizedServiceType === 'sparedriver' ? 'spare-driver' : undefined
             };
-            const activeSub = await Subscription.getActiveSubscription(req.user.id, subscriptionBookingContext);
+            const activeSub = await Subscription.getActiveSubscription(
+                req.user.id,
+                subscriptionBookingContext,
+                { moduleScope: sanitizedServiceType === 'sparedriver' ? 'spare-driver' : undefined }
+            );
             if (!activeSub) throw new AppError('No active subscription found.', 404);
 
             // eligibility audit
@@ -804,10 +851,58 @@ exports.createBooking = catchAsync(async (req, res, next) => {
                     const eligibleCaptains = requestedCapability && captainsWithTaggedCapability.length > 0
                         ? nearbyCaptains.filter(c => captainMatchesCapability(c.profile?.vehicleType, requestedCapability))
                         : nearbyCaptains;
+                    const eligibleCaptainIds = eligibleCaptains.map((captain) => captain._id);
+                    const blockingMissions = eligibleCaptainIds.length > 0
+                        ? await Booking.find({
+                            'provider.id': { $in: eligibleCaptainIds },
+                            isActive: true,
+                            status: { $in: [...NON_TERMINAL_ASSIGNED_STATUSES, ...NON_TERMINAL_ACTIVE_STATUSES] }
+                        }).select('provider.id status schedule service location').lean()
+                        : [];
 
-                    eligibleCaptains.forEach(c => io.to(c._id.toString()).emit('new_booking_broadcast', broadcastPayload));
+                    const blockedCaptainIds = new Set(
+                        blockingMissions
+                            .filter((mission) => isCaptainMissionBlockingInstant(mission))
+                            .map((mission) => String(mission?.provider?.id || ''))
+                            .filter(Boolean)
+                    );
+
+                    const dispatchReadyCaptains = eligibleCaptains.filter(
+                        (captain) => !blockedCaptainIds.has(String(captain._id))
+                    );
+
+                    dispatchReadyCaptains.forEach(c => io.to(c._id.toString()).emit('new_booking_broadcast', broadcastPayload));
                 } else {
-                    io.emit('new_booking_broadcast', broadcastPayload);
+                    const onlineCaptains = await Captain.find({
+                        isOnline: true,
+                        isActive: true,
+                        isVerified: true
+                    }).select('_id profile.vehicleType').lean();
+
+                    const captainsWithTaggedCapability = onlineCaptains.filter(c => normalizeCapabilityLabel(c.profile?.vehicleType));
+                    const eligibleCaptains = requestedCapability && captainsWithTaggedCapability.length > 0
+                        ? onlineCaptains.filter(c => captainMatchesCapability(c.profile?.vehicleType, requestedCapability))
+                        : onlineCaptains;
+
+                    const eligibleCaptainIds = eligibleCaptains.map((captain) => captain._id);
+                    const blockingMissions = eligibleCaptainIds.length > 0
+                        ? await Booking.find({
+                            'provider.id': { $in: eligibleCaptainIds },
+                            isActive: true,
+                            status: { $in: [...NON_TERMINAL_ASSIGNED_STATUSES, ...NON_TERMINAL_ACTIVE_STATUSES] }
+                        }).select('provider.id status schedule service location').lean()
+                        : [];
+
+                    const blockedCaptainIds = new Set(
+                        blockingMissions
+                            .filter((mission) => isCaptainMissionBlockingInstant(mission))
+                            .map((mission) => String(mission?.provider?.id || ''))
+                            .filter(Boolean)
+                    );
+
+                    eligibleCaptains
+                        .filter((captain) => !blockedCaptainIds.has(String(captain._id)))
+                        .forEach((captain) => io.to(String(captain._id)).emit('new_booking_broadcast', broadcastPayload));
                 }
             } else if (sanitizedServiceType === 'sparedriver') {
                 if (chauffeurDispatchReady) {
@@ -1206,7 +1301,7 @@ exports.settleAdditionalPayment = catchAsync(async (req, res, next) => {
         isActive: true,
         status: 'completed',
         'service.type': 'sparedriver'
-    }).populate('provider.id', 'name phone');
+    }).populate('provider.id', 'name phone verification');
 
     if (!booking) {
         return next(new AppError('Chauffeur booking not found', 404));

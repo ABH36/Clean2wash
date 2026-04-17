@@ -13,8 +13,8 @@ import MobileLayout from '../components/layout/MobileLayout';
 const HARDCODED_SERVICES = [
     {
         id: 'eco',
-        tag: 'Instant Choice',
-        title: 'Doorstep Eco Wash',
+        tag: 'Instant choice',
+        title: 'Doorstep eco wash',
         subtitle: 'Captain washes at your location',
         image: '/assets/instantwash/carwash.png',
         price: '₹299',
@@ -38,8 +38,8 @@ const HARDCODED_SERVICES = [
     },
     {
         id: 'full-wash',
-        tag: 'Clinical Treatment',
-        title: 'Full Studio Clean',
+        tag: 'Clinical treatment',
+        title: 'Full studio clean',
         subtitle: 'Vendor pick-up & drop service',
         image: '/assets/studiowash/studio.png',
         price: '₹1,299',
@@ -77,9 +77,9 @@ const FALLBACK_IMAGES = [
 ];
 
 const STEPS = [
-    { n: '01', title: 'Book Instantly', desc: 'Pick a service & time slot' },
-    { n: '02', title: 'AI Matches', desc: 'Expert captain assigned in 60s' },
-    { n: '03', title: 'Spotless Results', desc: 'CarWash-guaranteed clean car' },
+    { n: '01', title: 'Book instantly', desc: 'Pick a service & time slot' },
+    { n: '02', title: 'AI matches', desc: 'Expert captain assigned in 60s' },
+    { n: '03', title: 'Spotless results', desc: 'CarWash-guaranteed clean car' },
 ];
 
 const VEHICLE_TYPES = [
@@ -233,7 +233,7 @@ const ServiceCard = ({ s, isActive, getPrice, formatPrice, navigate }) => {
                 >
                     {s.provider === 'vendor' ? (
                         <>
-                            Book Pickup <ArrowRight size={13} strokeWidth={4} />
+                            Book pickup <ArrowRight size={13} strokeWidth={4} />
                         </>
                     ) : (
                         <>
@@ -245,8 +245,8 @@ const ServiceCard = ({ s, isActive, getPrice, formatPrice, navigate }) => {
 
             {/* ── Subtitle Membership Link (Subtle Hint) ── */}
             <div className="px-4 pb-3.5 pt-1 border-b border-gray-50">
-                <p className="text-[8px] font-bold text-content-subtle uppercase tracking-[0.15em] leading-none text-center">
-                    Enjoy up to 40% OFF with <span className="text-brand font-black italic underline decoration-brand/20">Black Membership</span>
+                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.15em] leading-none text-center">
+                    Enjoy up to 40% OFF with <span className="text-brand font-black italic underline decoration-brand/20">Black membership</span>
                 </p>
             </div>
             {/* ── Expandable Body ── */}
@@ -278,7 +278,7 @@ const ServiceCard = ({ s, isActive, getPrice, formatPrice, navigate }) => {
                                     {/* section label */}
                                     <div className="flex items-center justify-between px-3.5 py-2.5 bg-gray-50 border-b border-gray-100">
                                         <div>
-                                            <p className="text-[9px] font-black text-content uppercase tracking-widest">Make Your Service</p>
+                                            <p className="text-[9px] font-black text-content uppercase tracking-widest">Make your service</p>
                                             <p className="text-[7.5px] font-bold text-content-subtle">Customize your wash</p>
                                         </div>
                                         <motion.button whileTap={{ scale: 0.95 }}
@@ -288,7 +288,7 @@ const ServiceCard = ({ s, isActive, getPrice, formatPrice, navigate }) => {
                                                 : 'bg-brand text-white shadow-brand/20'
                                                 }`}
                                         >
-                                            View Details
+                                            View details
                                         </motion.button>
                                     </div>
 
@@ -342,7 +342,7 @@ const ServiceCard = ({ s, isActive, getPrice, formatPrice, navigate }) => {
                             {/* Monthly Subscription Plans (Per service) */}
                             {s.plans && s.plans.length > 0 && (
                                 <div className="space-y-2 pb-1">
-                                    <p className="text-[9px] font-black text-content uppercase tracking-widest ml-1 opacity-50 italic">Monthly Wash Cycles</p>
+                                    <p className="text-[9px] font-black text-content uppercase tracking-widest ml-1 opacity-50 italic">Monthly wash cycles</p>
                                     <div className="grid grid-cols-1 gap-2">
                                         {s.plans.map(plan => (
                                             <div key={plan.id} className="bg-gray-50 border border-gray-100 rounded-xl px-3.5 py-3 flex items-center justify-between group hover:border-brand/30 transition-all">
@@ -376,7 +376,7 @@ const ServiceCard = ({ s, isActive, getPrice, formatPrice, navigate }) => {
                                         <Gift size={22} className="text-[#D97706]" strokeWidth={2.5} />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-[10px] font-black text-[#92400E] uppercase tracking-[0.1em] leading-none mb-1.5 opacity-90">Loyalty Offer</p>
+                                        <p className="text-[10px] font-black text-[#92400E] uppercase tracking-[0.1em] leading-none mb-1.5 opacity-90">Loyalty offer</p>
                                         <p className="text-[14px] font-[1000] text-[#111827] tracking-tight leading-none">{offerLabel}</p>
                                     </div>
                                     <motion.button
@@ -498,10 +498,10 @@ const ServiceSelection = () => {
                     <div className="flex items-center gap-3">
                         <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate(-1)}
                             className="w-8 h-8 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center">
-                            <ChevronLeft size={16} strokeWidth={2.5} className="text-content" />
+                            <ChevronLeft size={16} strokeWidth={2.5} className="text-slate-900" />
                         </motion.button>
                         <div>
-                            <h1 className="text-base font-black tracking-tight text-content leading-none">Choose Wash</h1>
+                            <h1 className="text-base font-black tracking-tight text-slate-900 leading-none">Choose wash</h1>
                             <div className="flex items-center gap-1 mt-0.5">
                                 <span className="w-1 h-1 bg-brand rounded-full animate-pulse" />
                                 <p className="text-[8px] text-brand font-black uppercase tracking-widest">Live · Faridabad</p>
@@ -515,7 +515,7 @@ const ServiceSelection = () => {
                             <button key={m}
                                 onClick={() => setMode(m === 'now' ? 'instant' : 'scheduled')}
                                 className={`px-3 py-1.5 rounded-[9px] text-[8.5px] font-black uppercase tracking-wide transition-all ${(m === 'now' && mode === 'instant') || (m === 'later' && mode === 'scheduled')
-                                    ? 'bg-white text-brand shadow-sm' : 'text-content-muted'
+                                    ? 'bg-white text-brand shadow-sm' : 'text-slate-500'
                                     }`}>
                                 {m}
                             </button>
@@ -543,7 +543,7 @@ const ServiceSelection = () => {
                 <div className="flex gap-2 mb-3">
                     {[
                         { id: 'captain', label: 'Car Wash', sub: 'At Home', icon: <Zap size={12} fill="currentColor" /> },
-                        { id: 'vendor', label: 'Studio Wash', sub: 'Pickup & Drop', icon: <Shield size={12} /> }
+                        { id: 'vendor', label: 'Studio wash', sub: 'Pickup & Drop', icon: <Shield size={12} /> }
                     ].map(type => (
                         <button key={type.id}
                             onClick={() => { setServiceType(type.id); setActive(type.id === 'captain' ? 'eco' : 'full-wash'); }}
@@ -557,10 +557,10 @@ const ServiceSelection = () => {
                                 {type.icon}
                             </div>
                             <div className="text-left">
-                                <p className={`font-black text-[10px] uppercase tracking-tight leading-none ${serviceType === type.id ? 'text-brand' : 'text-content'}`}>
+                                <p className={`font-black text-[10px] uppercase tracking-tight leading-none ${serviceType === type.id ? 'text-brand' : 'text-slate-900'}`}>
                                     {type.label}
                                 </p>
-                                <p className="text-[7px] font-bold text-content-subtle uppercase mt-0.5 opacity-70">{type.sub}</p>
+                                <p className="text-[7px] font-bold text-slate-400 uppercase mt-0.5 opacity-70">{type.sub}</p>
                             </div>
                         </button>
                     ))}
@@ -573,7 +573,7 @@ const ServiceSelection = () => {
                             onClick={() => setSelectedVehicle(v.id)}
                             className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all ${selectedVehicle === v.id
                                 ? 'bg-brand text-white border-brand shadow-sm shadow-brand/20'
-                                : 'bg-white border-gray-100 text-content-muted'
+                                : 'bg-white border-gray-100 text-slate-500'
                                 }`}>
                             <Car size={11} strokeWidth={selectedVehicle === v.id ? 3 : 2} />
                             <span className="text-[9px] font-black uppercase tracking-tight">{v.label}</span>
@@ -590,13 +590,13 @@ const ServiceSelection = () => {
                         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
                             className="bg-white rounded-xl border border-gray-100 p-3">
                             <div className="flex items-center justify-between mb-2">
-                                <p className="text-[8.5px] font-black text-content-subtle uppercase tracking-widest">Pick Arrival Slot</p>
+                                <p className="text-[8.5px] font-black text-content-subtle uppercase tracking-widest">Pick arrival slot</p>
                                 <span className="text-[7.5px] font-black text-brand bg-brand/10 px-2 py-0.5 rounded-full uppercase tracking-wide">Fastest</span>
                             </div>
                             <div className="grid grid-cols-3 gap-1.5">
                                 {SLOTS.map(sl => (
                                     <button key={sl.id} onClick={() => setSelectedSlot(sl.id)}
-                                        className={`py-2 rounded-lg text-[9.5px] font-black tracking-tight border transition-all ${selectedSlot === sl.id ? 'bg-brand text-white border-brand shadow-sm' : 'bg-gray-50 border-transparent text-content'
+                                        className={`py-2 rounded-lg text-[9.5px] font-black tracking-tight border transition-all ${selectedSlot === sl.id ? 'bg-brand text-white border-brand shadow-sm' : 'bg-gray-50 border-transparent text-slate-900'
                                             }`}>
                                         {sl.time}
                                     </button>
@@ -627,7 +627,7 @@ const ServiceSelection = () => {
 
                 {/* ── How it Works ── */}
                 <div className="bg-gray-50 rounded-2xl p-4 mt-2">
-                    <p className="text-[8px] font-black text-content-subtle uppercase tracking-[0.2em] mb-3">The CarWash Way</p>
+                    <p className="text-[8px] font-black text-content-subtle uppercase tracking-[0.2em] mb-3">The CarWash way</p>
                     <div className="space-y-3">
                         {STEPS.map(step => (
                             <div key={step.n} className="flex items-center gap-3">
@@ -635,8 +635,8 @@ const ServiceSelection = () => {
                                     {step.n}
                                 </div>
                                 <div>
-                                    <p className="font-black text-[10px] text-content uppercase tracking-tight leading-none">{step.title}</p>
-                                    <p className="text-[8.5px] font-bold text-content-subtle mt-0.5">{step.desc}</p>
+                                    <p className="font-black text-[10px] text-slate-900 uppercase tracking-tight leading-none">{step.title}</p>
+                                    <p className="text-[8.5px] font-bold text-slate-400 mt-0.5">{step.desc}</p>
                                 </div>
                             </div>
                         ))}
@@ -652,7 +652,7 @@ const ServiceSelection = () => {
                     ].map(b => (
                         <div key={b.text} className="flex-1 flex items-center justify-center gap-1.5 bg-white border border-gray-100 rounded-xl py-2.5 shadow-sm">
                             {b.icon}
-                            <span className="text-[7.5px] font-black uppercase tracking-widest text-content-subtle">{b.text}</span>
+                            <span className="text-[7.5px] font-black uppercase tracking-widest text-slate-400">{b.text}</span>
                         </div>
                     ))}
                 </div>

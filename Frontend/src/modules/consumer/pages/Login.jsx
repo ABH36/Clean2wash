@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { ChevronLeft, Phone, Mail, ArrowRight, ShieldCheck, Fingerprint, Zap } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
+import { toast } from 'react-hot-toast';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -15,7 +16,7 @@ const Login = () => {
 
     const handleLogin = async () => {
         if (!identifier) return;
-        
+
         if (loginType === 'phone') {
             if (identifier.length < 10) {
                 setError('Please enter a valid 10-digit phone number.');
@@ -34,6 +35,7 @@ const Login = () => {
         const res = await sendOTP(identifier.trim(), loginType);
         setLoading(false);
         if (res.success) {
+            toast.success(`Testing OTP: ${res.data?.otp || 'sent'}`, { duration: 5000 });
             navigate('/otp-verify', {
                 state: { type: loginType, identifier: identifier.trim(), devOtp: res.data?.otp }
             });
@@ -81,7 +83,7 @@ const Login = () => {
                     <div className="relative aspect-[16/10]">
                         <img
                             src="/assets/carwash/1.png"
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover object-center"
                             alt="Premium Car Wash"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent" />
@@ -92,7 +94,7 @@ const Login = () => {
                                     <div className="w-2 h-2 bg-brand rounded-full animate-pulse" />
                                     <span className="text-[8px] font-black uppercase tracking-[0.2em] text-brand">Secure Access</span>
                                 </div>
-                                <h1 className="text-2xl font-[1000] text-content tracking-tighter uppercase italic leading-none">
+                                <h1 className="text-2xl font-[1000] text-content tracking-tighter uppercase leading-none">
                                     Welcome <span className="text-brand">Back.</span>
                                 </h1>
                             </div>
@@ -136,7 +138,7 @@ const Login = () => {
                                                     const val = e.target.value.replace(/\D/g, '');
                                                     if (val.length <= 10) setIdentifier(val);
                                                 }}
-                                                className="w-full bg-white border border-gray-100 rounded-xl pl-11 pr-4 py-4 font-bold text-content text-base outline-none focus:border-brand/40 shadow-sm transition-all tracking-widest font-mono placeholder:text-gray-100"
+                                                className="w-full bg-white border border-gray-100 rounded-xl pl-11 pr-4 py-4 font-bold text-slate-950 text-base outline-none focus:border-brand/40 shadow-sm transition-all tracking-widest font-mono placeholder:text-gray-300"
                                             />
                                         </div>
                                     </div>
@@ -150,7 +152,7 @@ const Login = () => {
                                             placeholder="your@email.com"
                                             value={identifier}
                                             onChange={(e) => setIdentifier(e.target.value)}
-                                            className="w-full bg-white border border-gray-100 rounded-xl pl-11 pr-4 py-4 font-bold text-content text-sm outline-none focus:border-brand/40 shadow-sm transition-all placeholder:text-gray-100"
+                                            className="w-full bg-white border border-gray-100 rounded-xl pl-11 pr-4 py-4 font-bold text-slate-950 text-sm outline-none focus:border-brand/40 shadow-sm transition-all placeholder:text-gray-300"
                                         />
                                     </div>
                                 )}

@@ -16,11 +16,8 @@ const SHOP_NAV_ITEMS = [
 
 const MAIN_NAV_ITEMS = [
     { id: 'home', to: '/', icon: Home, label: 'Home' },
-    { id: 'instant', to: '/instant-wash', icon: Zap, label: 'Instant' },
-    { id: 'pickup', to: '/full-wash-booking', icon: Truck, label: 'Studio' },
-    { id: 'gallery', to: '/portfolio', icon: ShoppingBag, label: 'Gallery' },
-    { id: 'spare-driver', to: '/spare-driver', icon: UserCheck, label: 'Driver' },
-    { id: 'products', to: '/e-shop', icon: ShoppingBag, label: 'Products' },
+    { id: 'spare-driver', to: '/spare-driver', icon: UserCheck, label: 'Book' },
+    { id: 'bookings', to: '/bookings', icon: Truck, label: 'Bookings' },
     { id: 'profile', to: '/profile', icon: User, label: 'Profile' }
 ];
 

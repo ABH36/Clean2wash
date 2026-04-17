@@ -8,9 +8,9 @@ const MonthlySpareDriver = () => {
     const navigate = useNavigate();
 
     const plans = [
-        { id: 'silver', title: 'Silver Pass', price: '₹4,999', washes: '10 Sessions', tag: 'Best for Work', color: '#94A3B8' },
-        { id: 'gold', title: 'Gold Pass', price: '₹8,999', washes: '22 Sessions', tag: 'Most Popular', color: '#F29F05' },
-        { id: 'plat', title: 'Platinum Pass', price: '₹14,999', washes: 'Unlimited', tag: 'Elite VIP', color: '#6366F1' }
+        { id: 'silver', title: 'Silver pass', price: '₹4,999', washes: '10 sessions', tag: 'Best for work', color: '#94A3B8' },
+        { id: 'gold', title: 'Gold pass', price: '₹8,999', washes: '22 sessions', tag: 'Most popular', color: '#F29F05' },
+        { id: 'plat', title: 'Platinum pass', price: '₹14,999', washes: 'Unlimited', tag: 'Elite VIP', color: '#6366F1' }
     ];
 
     return (
@@ -20,7 +20,7 @@ const MonthlySpareDriver = () => {
                     <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-black">
                         <ChevronLeft size={20} strokeWidth={2.5} />
                     </button>
-                    <h1 className="text-xl font-black text-black tracking-tight uppercase leading-none">Monthly Chauffeur</h1>
+                    <h1 className="text-xl font-black text-black tracking-tight uppercase leading-none">Monthly chauffeur</h1>
                 </header>
 
                 <div className="p-5 space-y-6">
@@ -29,7 +29,7 @@ const MonthlySpareDriver = () => {
                         <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-black mb-6 shadow-xl relative z-10">
                             <Crown size={32} fill="currentColor" />
                         </div>
-                        <h2 className="text-[28px] font-[1000] text-white uppercase tracking-tighter leading-none mb-3 relative z-10">Elite Subscription</h2>
+                        <h2 className="text-[28px] font-[1000] text-white uppercase tracking-tighter leading-none mb-3 relative z-10">Elite subscription</h2>
                         <p className="text-[11px] font-bold text-white/40 uppercase tracking-[0.2em] max-w-[200px] relative z-10">Dedicated professional drivers for your daily commute</p>
                     </div>
 
@@ -65,7 +65,7 @@ const MonthlySpareDriver = () => {
                     <div className="bg-emerald-50 rounded-[2rem] p-6 border border-emerald-100 space-y-4">
                         <div className="flex items-center gap-3">
                             <Zap size={18} className="text-emerald-500" fill="currentColor" />
-                            <h4 className="text-[14px] font-black text-black uppercase tracking-tight">Member Benefits</h4>
+                            <h4 className="text-[14px] font-black text-black uppercase tracking-tight">Member benefits</h4>
                         </div>
                         <div className="grid grid-cols-1 gap-3">
                             {[

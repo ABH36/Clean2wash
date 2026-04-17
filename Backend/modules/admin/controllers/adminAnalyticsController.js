@@ -4,35 +4,37 @@ const User = require('../../../models/User');
 // Get Detailed Analytics (P6)
 exports.getDetailedAnalytics = async (req, res) => {
     try {
-        const { timeRange } = req.query;
+        const { timeRange, category } = req.query;
         let startDate;
         const now = new Date();
+        const SERVICE_TYPE = process.env.SERVICE_TYPE || 'sparedriver';
+        const baseQuery = { isActive: true, 'service.type': SERVICE_TYPE };
+
+        // 1. Unified Filter Engine
+        if (category && category !== 'All' && category !== 'Global history') {
+            baseQuery['service.category'] = category;
+        }
 
         switch (timeRange) {
             case 'Last 7 Days':
-                startDate = new Date(now.setDate(now.getDate() - 7));
+                startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
                 break;
             case 'Last 30 Days':
-                startDate = new Date(now.setDate(now.getDate() - 30));
+                startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
                 break;
             case 'Year-to-Date':
                 startDate = new Date(now.getFullYear(), 0, 1);
                 break;
             default:
-                startDate = new Date(now.setDate(now.getDate() - 30));
+                startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         }
+        baseQuery.createdAt = { $gte: startDate };
 
-        // 1. Revenue Velocity (Daily granularity for small ranges, Monthly for large)
+        // 2. Revenue & Volume Velocity
         const isSmallRange = timeRange === 'Last 7 Days' || timeRange === 'Last 30 Days';
         
         const revenueTimeline = await Booking.aggregate([
-            {
-                $match: {
-                    status: 'completed',
-                    isActive: true,
-                    createdAt: { $gte: startDate }
-                }
-            },
+            { $match: { ...baseQuery, status: 'completed' } },
             {
                 $group: {
                     _id: isSmallRange ? {
@@ -43,20 +45,16 @@ exports.getDetailedAnalytics = async (req, res) => {
                         year: { $year: '$createdAt' },
                         month: { $month: '$createdAt' }
                     },
-                    revenue: { $sum: '$pricing.totalAmount' }
+                    revenue: { $sum: '$pricing.totalAmount' },
+                    bookings: { $sum: 1 }
                 }
             },
             { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 } }
         ]);
 
-        // 2. Operational Composition (Category Distribution)
+        // 3. Operational Composition (Always global Mix unless specified)
         const opsMix = await Booking.aggregate([
-            {
-                $match: {
-                    isActive: true,
-                    createdAt: { $gte: startDate }
-                }
-            },
+            { $match: { createdAt: { $gte: startDate }, isActive: true, 'service.type': SERVICE_TYPE } },
             {
                 $group: {
                     _id: '$service.category',
@@ -65,20 +63,20 @@ exports.getDetailedAnalytics = async (req, res) => {
             }
         ]);
 
-        // 3. User Growth
+        // 4. User Growth
         const userGrowth = await User.countDocuments({
             isActive: true,
             createdAt: { $gte: startDate }
         });
 
-        // 4. Total Revenue for period
+        // 5. Aggregated Metrics
         const periodTotalRevenue = revenueTimeline.reduce((sum, item) => sum + item.revenue, 0);
+        const periodTotalBookings = revenueTimeline.reduce((sum, item) => sum + item.bookings, 0);
 
-        // 5. Active pipeline count
+        // 6. Active pipeline count
         const activeJobs = await Booking.countDocuments({
-            status: { $nin: ['completed', 'cancelled', 'refunded'] },
-            isActive: true,
-            createdAt: { $gte: startDate }
+            ...baseQuery,
+            status: { $nin: ['completed', 'cancelled', 'refunded'] }
         });
 
         res.status(200).json({
@@ -88,6 +86,7 @@ exports.getDetailedAnalytics = async (req, res) => {
                 opsMix,
                 userGrowth,
                 periodTotalRevenue,
+                periodTotalBookings,
                 activeJobs,
                 timeRange
             }

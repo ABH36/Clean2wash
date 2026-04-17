@@ -1,801 +1,893 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import { TrendingUp, Star, Clock, MapPin, ChevronRight, AlertCircle, Zap, FileText, Bell, Route } from 'lucide-react';
+import { 
+    TrendingUp, Star, Clock, MapPin, ChevronRight, AlertCircle, 
+    Zap, FileText, Bell, Route, ShieldCheck, CreditCard, 
+    Radar, ZapOff, MessageSquareText, Wallet, User, Navigation, Loader2, Upload, Phone, Package
+} from 'lucide-react';
 import DriverLayout from '../components/DriverLayout';
 import { spareDriverAPI } from '../../../utils/spareDriverApi';
 import { socketService } from '../../../utils/socket';
 import GoogleMapBox from '../../../components/common/GoogleMapBox';
-
-const SERVICE_ASSETS = {
-    point: 'https://cdn-icons-png.flaticon.com/512/3202/3202926.png',
-    hourly: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
-    full: 'https://cdn-icons-png.flaticon.com/512/2436/2436874.png',
-    outstation: 'https://cdn-icons-png.flaticon.com/512/2330/2330453.png',
-    user: 'https://cdn-icons-png.flaticon.com/512/7077/7077313.png'
-};
-
-const SERVICE_ACCENTS = {
-    point: '#3B82F6',
-    hourly: '#10B981',
-    full: '#F29F05',
-    outstation: '#A855F7'
-};
+import { useTheme } from '../../../context/ThemeContext';
+import DriverLocationPrompt from '../components/DriverLocationPrompt';
 
 const svgToDataUrl = (svg) => `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 
-const createDriverMarkerIcon = (accent = '#F29F05') => svgToDataUrl(`
+const createMarkerIcon = (accent) => svgToDataUrl(`
 <svg width="64" height="78" viewBox="0 0 64 78" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <ellipse cx="32" cy="69" rx="15" ry="5" fill="rgba(15,23,42,0.18)"/>
-  <path d="M32 4C20.954 4 12 12.954 12 24C12 39 32 58 32 58C32 58 52 39 52 24C52 12.954 43.046 4 32 4Z" fill="#101828"/>
-  <path d="M32 7.5C22.887 7.5 15.5 14.887 15.5 24C15.5 36.173 32 52.166 32 52.166C32 52.166 48.5 36.173 48.5 24C48.5 14.887 41.113 7.5 32 7.5Z" fill="#111827" stroke="${accent}" stroke-width="2"/>
-  <circle cx="32" cy="24" r="12.5" fill="white" fill-opacity="0.96"/>
-  <rect x="23" y="23.5" width="18" height="5.2" rx="2.6" fill="${accent}"/>
-  <rect x="26" y="19" width="12" height="4.8" rx="2.2" fill="${accent}" fill-opacity="0.82"/>
-  <circle cx="27" cy="30.5" r="2.6" fill="#111827"/>
-  <circle cx="37" cy="30.5" r="2.6" fill="#111827"/>
+  <ellipse cx="32" cy="69" rx="15" ry="5" fill="rgba(15,23,42,0.1)"/>
+  <path d="M32 4C20.9 4 12 12.9 12 24C12 39 32 58 32 58C32 58 52 39 52 24C52 12.9 43.1 4 32 4Z" fill="#111827" stroke="${accent}" stroke-width="2.5"/>
+  <circle cx="32" cy="24" r="10" fill="white" fill-opacity="0.9"/>
+  <circle cx="32" cy="24" r="5" fill="${accent}"/>
 </svg>
 `);
 
-const createCustomerMarkerIcon = (accent = '#F29F05') => svgToDataUrl(`
-<svg width="72" height="84" viewBox="0 0 72 84" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <ellipse cx="36" cy="75" rx="18" ry="6" fill="rgba(15,23,42,0.16)"/>
-  <path d="M36 5C23.85 5 14 14.85 14 27C14 43.5 36 64 36 64C36 64 58 43.5 58 27C58 14.85 48.15 5 36 5Z" fill="white" stroke="${accent}" stroke-width="2.4"/>
-  <circle cx="36" cy="22" r="10.5" fill="#FFF7ED"/>
-  <circle cx="36" cy="18.6" r="4.2" fill="#F97316"/>
-  <path d="M29.2 28.8C29.2 26.5 31.1 24.6 33.4 24.6H38.6C40.9 24.6 42.8 26.5 42.8 28.8V31.2H29.2V28.8Z" fill="${accent}"/>
-  <rect x="24" y="33.8" width="24" height="6.6" rx="3.3" fill="#111827"/>
-  <circle cx="30" cy="41.8" r="2.8" fill="#111827"/>
-  <circle cx="42" cy="41.8" r="2.8" fill="#111827"/>
-</svg>
-`);
-
-const createDestinationMarkerIcon = () => svgToDataUrl(`
-<svg width="64" height="78" viewBox="0 0 64 78" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <ellipse cx="32" cy="69" rx="15" ry="5" fill="rgba(15,23,42,0.16)"/>
-  <path d="M32 5C20.954 5 12 13.954 12 25C12 40 32 58 32 58C32 58 52 40 52 25C52 13.954 43.046 5 32 5Z" fill="white" stroke="#EF4444" stroke-width="2.4"/>
-  <circle cx="32" cy="25" r="10.5" fill="#FEE2E2"/>
-  <path d="M32 18L35.2 24.5L42 25.4L37 30.1L38.3 36.8L32 33.5L25.7 36.8L27 30.1L22 25.4L28.8 24.5L32 18Z" fill="#EF4444"/>
+const createConsumerMarkerIcon = () => svgToDataUrl(`
+<svg width="68" height="82" viewBox="0 0 68 82" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="34" cy="73" rx="16" ry="5" fill="rgba(15,23,42,0.12)"/>
+  <path d="M34 5C22.4 5 13 14.4 13 26C13 41.8 34 62 34 62C34 62 55 41.8 55 26C55 14.4 45.6 5 34 5Z" fill="white" stroke="#FACD15" stroke-width="2.2"/>
+  <circle cx="34" cy="24" r="11.5" fill="#FEF9C3"/>
+  <rect x="24.5" y="23.2" width="19" height="5.4" rx="2.7" fill="#111827"/>
+  <rect x="28" y="18.6" width="12" height="4.8" rx="2.4" fill="#FACD15"/>
+  <circle cx="29.5" cy="30.7" r="2.7" fill="#111827"/>
+  <circle cx="38.5" cy="30.7" r="2.7" fill="#111827"/>
 </svg>
 `);
 
 const DRIVER_ACTIVE_STATUS = 'active';
 const LIVE_JOB_STATUSES = ['en_route', 'arrived', 'active'];
-
-const isFullDayBooking = (booking) => {
-    const identity = [
-        booking?.service?.metadata?.id,
-        booking?.service?.name,
-        booking?.service?.title
-    ].filter(Boolean).join(' ').toLowerCase();
-
-    return identity.includes('full day') || identity.includes('full-day') || identity.includes('fullday');
+const ADDRESS_PROMPT_COOLDOWN_MS = 3 * 60 * 60 * 1000;
+const KIT_PROMPT_COOLDOWN_MS = 2 * 60 * 60 * 1000;
+const POLICE_PROMPT_COOLDOWN_MS = 4 * 60 * 60 * 1000;
+const DEFAULT_KIT_CONFIG = {
+    title: 'Starter Driver Kit',
+    subtitle: 'Complete payment to unlock your chauffeur dashboard.',
+    kitPrice: 1499,
+    monthlyDeductionAmount: 199,
+    monthlyDeductionMonths: 2,
+    imageUrls: []
+};
+const DEFAULT_PREMIUM_CONFIG = {
+    title: 'Premium Driver Program',
+    subtitle: 'Police-verified chauffeurs get premium trust and booking visibility.',
+    benefits: [
+        'Premium badge on profile and operational identity',
+        'Priority visibility for high-trust customer trips',
+        'Higher confidence score during manual assignment'
+    ]
 };
 
-const getBookedDurationLabel = (booking) => (
-    booking?.service?.duration || booking?.schedule?.estimatedDuration || null
-);
+const loadRazorpayScript = () => new Promise((resolve, reject) => {
+    if (window.Razorpay) return resolve(true);
 
-const isOutstationBooking = (booking) => {
-    const identity = [
-        booking?.service?.metadata?.id,
-        booking?.service?.name,
-        booking?.service?.title
-    ].filter(Boolean).join(' ').toLowerCase();
+    const existingScript = document.querySelector('script[data-razorpay-sdk="true"]');
+    if (existingScript) {
+        existingScript.addEventListener('load', () => resolve(true), { once: true });
+        existingScript.addEventListener('error', () => reject(new Error('Failed to load Razorpay checkout script')), { once: true });
+        return;
+    }
 
-    return identity.includes('outstation');
-};
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.dataset.razorpaySdk = 'true';
+    script.onload = () => resolve(true);
+    script.onerror = () => reject(new Error('Failed to load Razorpay checkout script'));
+    document.body.appendChild(script);
+});
 
-const getServiceKind = (booking) => {
-    const identity = [
-        booking?.service?.metadata?.id,
-        booking?.service?.name,
-        booking?.service?.title
-    ].filter(Boolean).join(' ').toLowerCase();
-
-    if (identity.includes('outstation')) return 'outstation';
-    if (identity.includes('full day') || identity.includes('full-day') || identity.includes('fullday')) return 'full';
-    if (identity.includes('hourly')) return 'hourly';
-    if (identity.includes('point')) return 'point';
-    return 'full';
-};
-
-const hasValidCoords = (location) => (
-    location
-    && typeof location.lat === 'number'
-    && typeof location.lng === 'number'
-    && Number.isFinite(location.lat)
-    && Number.isFinite(location.lng)
-);
-
-const useSmoothedLocation = (targetLocation, duration = 900) => {
-    const [displayLocation, setDisplayLocation] = useState(
-        hasValidCoords(targetLocation) ? targetLocation : null
-    );
-    const frameRef = useRef(null);
-
+const useSmoothedLocation = (target, duration = 900) => {
+    const [display, setDisplay] = useState(target);
+    const frame = useRef();
     useEffect(() => {
-        if (!hasValidCoords(targetLocation)) {
-            return undefined;
-        }
-
-        const startLocation = hasValidCoords(displayLocation) ? displayLocation : targetLocation;
-        const distance = Math.abs(startLocation.lat - targetLocation.lat) + Math.abs(startLocation.lng - targetLocation.lng);
-
-        if (distance < 0.00001) {
-            setDisplayLocation(targetLocation);
-            return undefined;
-        }
-
-        const startedAt = Date.now();
+        if (!target) return;
+        if (!display) return setDisplay(target);
+        const start = display;
+        const startTime = Date.now();
         const tick = () => {
-            const progress = Math.min(1, (Date.now() - startedAt) / duration);
-            setDisplayLocation({
-                lat: startLocation.lat + ((targetLocation.lat - startLocation.lat) * progress),
-                lng: startLocation.lng + ((targetLocation.lng - startLocation.lng) * progress)
+            const p = Math.min(1, (Date.now() - startTime) / duration);
+            setDisplay({
+                lat: start.lat + (target.lat - start.lat) * p,
+                lng: start.lng + (target.lng - start.lng) * p
             });
-
-            if (progress < 1) {
-                frameRef.current = window.requestAnimationFrame(tick);
-            }
+            if (p < 1) frame.current = requestAnimationFrame(tick);
         };
-
-        frameRef.current = window.requestAnimationFrame(tick);
-
-        return () => {
-            if (frameRef.current) {
-                window.cancelAnimationFrame(frameRef.current);
-            }
-        };
-    }, [targetLocation?.lat, targetLocation?.lng, duration]);
-
-    return hasValidCoords(displayLocation) ? displayLocation : (hasValidCoords(targetLocation) ? targetLocation : null);
+        frame.current = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(frame.current);
+    }, [target?.lat, target?.lng]);
+    return display;
 };
 
 const DriverDashboard = () => {
     const navigate = useNavigate();
+    const { isDarkMode } = useTheme();
     const [isOnline, setIsOnline] = useState(false);
     const [driver, setDriver] = useState(null);
     const [bookings, setBookings] = useState([]);
-    const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [consumerLiveLocation, setConsumerLiveLocation] = useState(null);
+    const [kitPopupOpen, setKitPopupOpen] = useState(false);
+    const [kitPaying, setKitPaying] = useState(false);
+    const [kitConfig, setKitConfig] = useState(DEFAULT_KIT_CONFIG);
+    const [premiumConfig, setPremiumConfig] = useState(DEFAULT_PREMIUM_CONFIG);
+    const [policePopupOpen, setPolicePopupOpen] = useState(false);
+    const [addressPopupOpen, setAddressPopupOpen] = useState(false);
+    const [pvrFile, setPvrFile] = useState(null);
+    const [pvrNumber, setPvrNumber] = useState('');
+    const [pvrSubmitting, setPvrSubmitting] = useState(false);
+    const [localCoords, setLocalCoords] = useState(null);
+    const [routePath, setRoutePath] = useState([]);
+    const lastGpsSyncRef = useRef(0);
 
-    const refreshDashboard = async () => {
-        const [profileRes, bookingsRes, transRes] = await Promise.all([
-            spareDriverAPI.getProfile(),
-            spareDriverAPI.getBookings(),
-            spareDriverAPI.getTransactions({ limit: 5 })
-        ]);
+    const hasAddressConfigured = (driverData) => {
+        const street = String(driverData?.address?.street || '').trim();
+        const city = String(driverData?.address?.city || '').trim();
+        return Boolean(street && city);
+    };
 
-        const nextDriver = profileRes?.data?.driver || null;
-        setDriver(nextDriver);
-        setBookings(bookingsRes?.data?.bookings || []);
-        setTransactions(transRes?.data?.transactions || []);
-        setIsOnline(Boolean(nextDriver?.isOnline));
-        return nextDriver;
+    const shouldShowAddressPopup = (driverData) => {
+        if (!driverData?._id) return false;
+        if (!['kit_payment_pending', 'active'].includes(driverData.status)) return false;
+        if (hasAddressConfigured(driverData)) return false;
+        const cooldownKey = `spare_driver_address_prompt_next_at_${driverData._id}`;
+        const nextAllowedAt = Number(localStorage.getItem(cooldownKey) || 0);
+        const shownInSession = sessionStorage.getItem(`spare_driver_address_prompt_shown_${driverData._id}`) === '1';
+        return Date.now() >= nextAllowedAt && !shownInSession;
+    };
+
+    const shouldShowKitPopup = (driverData) => {
+        if (!driverData?._id) return false;
+        if (driverData.status !== 'verified_pending_kit') return false;
+        const cooldownKey = `spare_driver_kit_prompt_next_at_${driverData._id}`;
+        const nextAllowedAt = Number(localStorage.getItem(cooldownKey) || 0);
+        const shownInSession = sessionStorage.getItem(`spare_driver_kit_prompt_shown_${driverData._id}`) === '1';
+        return Date.now() >= nextAllowedAt && !shownInSession;
+    };
+
+    const shouldShowPolicePopup = (driverData) => {
+        if (!driverData?._id) return false;
+        const policeUploaded = Boolean(driverData?.documents?.policeVerification?.url);
+        const policeApproved = driverData?.verification?.policeStatus === 'approved';
+        const policeRejected = driverData?.verification?.policeStatus === 'rejected';
+        const eligible = driverData?.status === 'active' && !policeApproved && (policeRejected || !policeUploaded);
+        if (!eligible) return false;
+        const cooldownKey = `spare_driver_police_prompt_next_at_${driverData._id}`;
+        const nextAllowedAt = Number(localStorage.getItem(cooldownKey) || 0);
+        const shownInSession = sessionStorage.getItem(`spare_driver_police_prompt_shown_${driverData._id}`) === '1';
+        return Date.now() >= nextAllowedAt && !shownInSession;
+    };
+
+    const refresh = async () => {
+        try {
+            const [p, b] = await Promise.all([spareDriverAPI.getProfile(), spareDriverAPI.getBookings()]);
+            setDriver(p.data.driver);
+            setBookings(b.data.bookings || []);
+            setIsOnline(!!p.data.driver.isOnline);
+
+            const driverData = p?.data?.driver;
+            const needsKitPayment = shouldShowKitPopup(driverData);
+            if (needsKitPayment) {
+                setKitPopupOpen(true);
+                if (driverData?._id) {
+                    sessionStorage.setItem(`spare_driver_kit_prompt_shown_${driverData._id}`, '1');
+                }
+                setAddressPopupOpen(false);
+            } else if (driverData?.status !== 'verified_pending_kit') {
+                setKitPopupOpen(false);
+            }
+
+            const needsAddressPopup = shouldShowAddressPopup(driverData);
+
+            if (needsAddressPopup && !needsKitPayment) {
+                setAddressPopupOpen(true);
+                if (driverData?._id) {
+                    sessionStorage.setItem(`spare_driver_address_prompt_shown_${driverData._id}`, '1');
+                }
+            } else if (!needsAddressPopup) {
+                setAddressPopupOpen(false);
+                if (driverData?._id && hasAddressConfigured(driverData)) {
+                    localStorage.removeItem(`spare_driver_address_prompt_next_at_${driverData._id}`);
+                    sessionStorage.removeItem(`spare_driver_address_prompt_shown_${driverData._id}`);
+                }
+            }
+
+            const canTriggerPolicePopup = shouldShowPolicePopup(driverData);
+            if (canTriggerPolicePopup && !needsKitPayment && !needsAddressPopup) {
+                setPolicePopupOpen(true);
+                if (driverData?._id) {
+                    sessionStorage.setItem(`spare_driver_police_prompt_shown_${driverData._id}`, '1');
+                }
+            } else if (!canTriggerPolicePopup) {
+                setPolicePopupOpen(false);
+            }
+
+            const policeUploaded = Boolean(driverData?.documents?.policeVerification?.url);
+            if (policeUploaded) {
+                setPvrFile(null);
+                setPvrNumber(driverData?.documents?.policeVerification?.number || '');
+            }
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
     };
 
     useEffect(() => {
-        const token = localStorage.getItem('chauffeur_token');
-        if (!token) {
-            navigate('/spare-driver/register');
-            return;
-        }
-
-        setLoading(true);
-        refreshDashboard()
-            .catch((error) => {
-                toast.error(error.message || 'Failed to load driver dashboard');
-                navigate('/spare-driver/register');
+        if (!kitPopupOpen) return;
+        spareDriverAPI.getKitConfig()
+            .then((res) => {
+                const config = res?.data?.kitConfig || {};
+                setKitConfig((prev) => ({
+                    ...prev,
+                    ...config,
+                    imageUrls: Array.isArray(config?.imageUrls) ? config.imageUrls : prev.imageUrls
+                }));
             })
-            .finally(() => setLoading(false));
-    }, [navigate]);
+            .catch(() => {});
+    }, [kitPopupOpen]);
 
     useEffect(() => {
-        let watchId = null;
-        if (!isOnline || driver?.status !== DRIVER_ACTIVE_STATUS) {
-            return undefined;
-        }
+        if (!policePopupOpen) return;
+        spareDriverAPI.getPremiumConfig()
+            .then((res) => {
+                const config = res?.data?.premiumConfig || {};
+                setPremiumConfig((prev) => ({
+                    ...prev,
+                    ...config,
+                    benefits: Array.isArray(config?.benefits) ? config.benefits : prev.benefits
+                }));
+            })
+            .catch(() => {});
+    }, [policePopupOpen]);
 
-        if ('geolocation' in navigator) {
-            watchId = navigator.geolocation.watchPosition(
-                (position) => {
-                    const { latitude, longitude } = position.coords;
-
-                    setDriver((current) => current ? ({
-                        ...current,
-                        currentLocation: {
-                            ...(current.currentLocation || {}),
-                            coordinates: [longitude, latitude]
-                        }
-                    }) : current);
-
-                    spareDriverAPI.updateLocation(latitude, longitude).catch((error) => {
-                        console.error('Pulse failed:', error);
-                    });
-
-                    const activeTrip = bookings.find((booking) => LIVE_JOB_STATUSES.includes(booking.status));
-                    if (activeTrip) {
-                        socketService.connect(localStorage.getItem('chauffeur_token'));
-                        socketService.joinBookingRoom(activeTrip._id);
-
-                        const socket = socketService.getSocket();
-                        if (socket) {
-                            socket.emit('update_location', {
-                                bookingId: activeTrip._id,
-                                location: { lat: latitude, lng: longitude }
-                            });
-                        }
-                    }
-                },
-                (error) => console.error('GPS protocol error:', error),
-                { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
-            );
-        }
-
-        return () => {
-            if (watchId !== null) {
-                navigator.geolocation.clearWatch(watchId);
-            }
-        };
-    }, [isOnline, bookings, driver?.status]);
+    useEffect(() => {
+        refresh();
+        const interval = setInterval(refresh, 20000);
+        return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         const token = localStorage.getItem('chauffeur_token');
-        if (!token) return undefined;
-
+        if (!token) return;
         socketService.connect(token);
         const socket = socketService.getSocket();
-        if (!socket) return undefined;
+        if (!socket) return;
 
-        const currentLiveJob =
-            bookings.find((booking) => LIVE_JOB_STATUSES.includes(booking.status)) ||
-            (isOnline && driver?.status === DRIVER_ACTIVE_STATUS
-                ? bookings.find((booking) => booking.status === 'pending')
-                : null);
-
-        if (currentLiveJob?._id) {
-            socketService.joinBookingRoom(currentLiveJob._id);
+        const activeJob = bookings.find(b => LIVE_JOB_STATUSES.includes(b.status));
+        if (activeJob) {
+            socketService.joinBookingRoom(activeJob._id);
         }
 
-        const refreshBookings = () => {
-            spareDriverAPI.getBookings()
-                .then((res) => setBookings(res?.data?.bookings || []))
-                .catch(() => {});
-        };
-
-        const handleNewBooking = (payload) => {
-            toast.success(`New mission arrived: ${payload.serviceName}`, {
-                duration: 8000,
-                style: { background: '#F29F05', color: '#000', fontWeight: 'bold' }
-            });
-            refreshBookings();
-        };
-
-        const handleVerificationUpdate = (payload) => {
-            setDriver((current) => current ? {
-                ...current,
-                status: payload.status,
-                adminNote: payload.adminNote,
-                isOnline: payload.status === DRIVER_ACTIVE_STATUS ? current.isOnline : false
-            } : current);
-
-            if (payload.status !== DRIVER_ACTIVE_STATUS) {
-                setIsOnline(false);
-                setBookings((current) => current.filter((booking) => LIVE_JOB_STATUSES.includes(booking.status)));
+        socket.on('consumer_location_updated', (payload) => {
+            if (activeJob && payload.bookingId === activeJob._id) {
+                setConsumerLiveLocation(payload.location);
             }
+        });
 
-            toast(payload.status === DRIVER_ACTIVE_STATUS ? 'Your account has been approved' : `Driver status updated: ${payload.status}`);
-        };
-
-        const handleConsumerLocation = (payload) => {
-            if (!currentLiveJob?._id || payload?.bookingId !== currentLiveJob._id || !payload?.location) return;
-            setConsumerLiveLocation(payload.location);
-        };
-
-        socket.on('new_booking_broadcast', handleNewBooking);
-        socket.on('booking_status_updated', refreshBookings);
-        socket.on('driver_verification_updated', handleVerificationUpdate);
-        socket.on('consumer_location_updated', handleConsumerLocation);
+        socket.on('booking_status_updated', (payload) => {
+            if (activeJob && payload?.bookingId === activeJob._id) {
+                refresh();
+            }
+        });
+        
+        socket.on('new_booking_broadcast', () => {
+            toast.success("NEW MISSION SIGNAL DETECTED", { 
+                style: { background: '#000', color: '#FACD15', fontWeight: '900' },
+                icon: '⚡'
+            });
+            refresh();
+        });
 
         return () => {
-            socket.off('new_booking_broadcast', handleNewBooking);
-            socket.off('booking_status_updated', refreshBookings);
-            socket.off('driver_verification_updated', handleVerificationUpdate);
-            socket.off('consumer_location_updated', handleConsumerLocation);
+            socket.off('consumer_location_updated');
+            socket.off('new_booking_broadcast');
+            socket.off('booking_status_updated');
         };
-    }, [bookings, driver?.status, isOnline]);
+    }, [bookings]);
 
-    const activeJob =
-        bookings.find((booking) => LIVE_JOB_STATUSES.includes(booking.status)) ||
-        (isOnline && driver?.status === DRIVER_ACTIVE_STATUS
-            ? bookings.find((booking) => booking.status === 'pending')
-            : null);
+    // 📍 Real-time Telemetry & Route Calculation
+    useEffect(() => {
+        if (!isOnline || !('geolocation' in navigator)) return;
+        
+        const activeJob = bookings.find(b => LIVE_JOB_STATUSES.includes(b.status));
+        
+        const watchId = navigator.geolocation.watchPosition(
+            (pos) => {
+                const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                setLocalCoords(coords);
+                
+                if (activeJob) {
+                    socketService.emit('update_location', {
+                        bookingId: activeJob._id,
+                        location: coords
+                    });
+
+                    const now = Date.now();
+                    if (now - lastGpsSyncRef.current >= 12000) {
+                        lastGpsSyncRef.current = now;
+                        spareDriverAPI.updateLocation(coords.lat, coords.lng).catch(() => {});
+                    }
+
+                    // Update Route if consumer location is known
+                    if (consumerLiveLocation && window.google) {
+                        const ds = new window.google.maps.DirectionsService();
+                        ds.route({
+                            origin: coords,
+                            destination: consumerLiveLocation,
+                            travelMode: window.google.maps.TravelMode.DRIVING
+                        }, (result, status) => {
+                            if (status === 'OK' && result.routes[0]) {
+                                setRoutePath(
+                                    result.routes[0].overview_path.map((point) => ({
+                                        lat: point.lat(),
+                                        lng: point.lng()
+                                    }))
+                                );
+                            }
+                        });
+                    }
+                }
+            },
+            (err) => console.warn("GPS Uplink Warning:", err),
+            { enableHighAccuracy: true, maximumAge: 3000, timeout: 5000 }
+        );
+
+        return () => navigator.geolocation.clearWatch(watchId);
+    }, [isOnline, bookings, consumerLiveLocation]);
+
+    const activeJob = bookings.find(b => LIVE_JOB_STATUSES.includes(b.status)) || (isOnline ? bookings.find(b => b.status === 'pending' || b.status === 'confirmed') : null);
 
     useEffect(() => {
+        setRoutePath([]);
         setConsumerLiveLocation(null);
     }, [activeJob?._id]);
 
-    const getJobDisplay = (job) => {
-        if (!job) return null;
+    const driverPosition = useMemo(() => {
+        if (localCoords) return localCoords;
+        if (!driver?.currentLocation?.coordinates) return null;
+        return { lat: driver.currentLocation.coordinates[1], lng: driver.currentLocation.coordinates[0] };
+    }, [driver, localCoords]);
 
+    const smoothedDriver = useSmoothedLocation(driverPosition);
+    const smoothedConsumer = useSmoothedLocation(consumerLiveLocation);
+
+    const mapCenter = useMemo(() => {
+        if (!smoothedDriver && !smoothedConsumer) return { lat: 20.5937, lng: 78.9629 };
+        if (smoothedDriver && !smoothedConsumer) return smoothedDriver;
+        if (!smoothedDriver && smoothedConsumer) return smoothedConsumer;
+        // Calculation of midpoint for better multi-point visibility
         return {
-            customer: job.consumer?.name || 'Customer',
-            pickup: job.location?.address?.street || 'Pick up location',
-            destination: job.location?.destination?.street || job.location?.destination?.address?.street || null,
-            time: job.status === 'pending'
-                ? (job.schedule?.type === 'scheduled' && job.schedule?.date
-                    ? new Date(job.schedule.date).toLocaleString()
-                    : 'Immediate')
-                : 'In Progress',
-            type: job.service?.name || 'Chauffeur Service',
-            reward: `₹${job.pricing?.totalAmount || 0}`
+            lat: (smoothedDriver.lat + smoothedConsumer.lat) / 2,
+            lng: (smoothedDriver.lng + smoothedConsumer.lng) / 2
         };
+    }, [smoothedDriver, smoothedConsumer]);
+
+    const handleToggle = async () => {
+        if (driver?.status !== DRIVER_ACTIVE_STATUS) return toast.error('VERIFICATION REQUIRED');
+        try {
+            const res = await spareDriverAPI.toggleOnline(!isOnline);
+            setIsOnline(res.data.isOnline);
+            refresh();
+        } catch (e) { toast.error('UPLINK ERROR'); }
     };
 
-    const driverPosition = Array.isArray(driver?.currentLocation?.coordinates) && driver.currentLocation.coordinates.length === 2
-        ? {
-            lat: driver.currentLocation.coordinates[1],
-            lng: driver.currentLocation.coordinates[0]
-        }
-        : null;
-    const animatedDriverPosition = useSmoothedLocation(driverPosition, 850);
-    const animatedConsumerPosition = useSmoothedLocation(consumerLiveLocation, 850);
-    const activeServiceKind = useMemo(() => getServiceKind(activeJob), [activeJob]);
-    const activeServiceAccent = SERVICE_ACCENTS[activeServiceKind] || SERVICE_ACCENTS.full;
+    const handleStatus = async (bid, st) => {
+        let pin = st === 'active' ? prompt('ENTER 4-DIGIT SECURITY PIN:') : null;
+        if (st === 'active' && !pin) return;
+        try {
+            await spareDriverAPI.updateBookingStatus(bid, st, pin);
+            refresh();
+            toast.success(`PROTOCOL: ${st.toUpperCase()}`);
+        } catch (e) { toast.error(e.message); }
+    };
 
-    const pickupPosition = animatedConsumerPosition || (
-        activeJob?.location?.address?.coordinates?.lat && activeJob?.location?.address?.coordinates?.lng
-            ? {
-                lat: activeJob.location.address.coordinates.lat,
-                lng: activeJob.location.address.coordinates.lng
+    const handleKitRazorpay = async () => {
+        setKitPaying(true);
+        try {
+            await loadRazorpayScript();
+            const keyRes = await spareDriverAPI.getKitPaymentKey();
+            const orderRes = await spareDriverAPI.createKitPaymentOrder();
+
+            const keyId = keyRes?.data?.key_id;
+            const orderData = orderRes?.data;
+
+            if (!keyId || !orderData?.order_id) {
+                throw new Error('Could not initialize kit payment');
             }
-            : null
-    );
-    const destinationCoordinates = activeJob?.location?.destination?.address?.coordinates || activeJob?.location?.destination?.coordinates;
-    const destinationPosition = destinationCoordinates?.lat && destinationCoordinates?.lng
-        ? {
-            lat: destinationCoordinates.lat,
-            lng: destinationCoordinates.lng
-        }
-        : null;
-    const liveMapMarkers = ['en_route', 'arrived', 'active'].includes(activeJob?.status) && pickupPosition
-        ? [
-            {
-                position: pickupPosition,
-                icon: {
-                    url: createCustomerMarkerIcon(activeServiceAccent),
-                    scaledSize: { width: 48, height: 56 },
-                    anchor: { x: 24, y: 48 }
-                },
-                infoContent: (
-                    <div className="p-1 font-black text-[9px] uppercase text-brand tracking-widest text-center">
-                        {consumerLiveLocation ? 'Live Customer' : 'Customer Terminal'}
-                    </div>
-                )
-            },
-            ...(animatedDriverPosition ? [{
-                position: animatedDriverPosition,
-                icon: {
-                    url: createDriverMarkerIcon(activeServiceAccent),
-                    scaledSize: { width: 46, height: 56 },
-                    anchor: { x: 23, y: 46 }
-                },
-                infoContent: <div className="p-1 font-black text-[9px] uppercase text-green-600 tracking-widest text-center">Your Position</div>
-            }] : []),
-            ...(destinationPosition ? [{
-                position: destinationPosition,
-                icon: {
-                    url: createDestinationMarkerIcon(),
-                    scaledSize: { width: 42, height: 52 },
-                    anchor: { x: 21, y: 44 }
-                },
-                infoContent: <div className="p-1 font-black text-[9px] uppercase text-red-600 tracking-widest text-center">Drop Point</div>
-            }] : [])
-        ]
-        : [];
-    const liveMapCircles = pickupPosition
-        ? [
-            {
-                center: pickupPosition,
-                radius: consumerLiveLocation ? 90 : 150,
-                options: {
-                    strokeColor: activeServiceAccent,
-                    strokeOpacity: 0.22,
-                    strokeWeight: 1,
-                    fillColor: activeServiceAccent,
-                    fillOpacity: consumerLiveLocation ? 0.07 : 0.09
-                }
-            },
-            ...(animatedDriverPosition ? [{
-                center: animatedDriverPosition,
-                radius: 110,
-                options: {
-                    strokeColor: '#111827',
-                    strokeOpacity: 0.18,
-                    strokeWeight: 1,
-                    fillColor: '#111827',
-                    fillOpacity: 0.08
-                }
-            }] : [])
-        ]
-        : [];
 
-    const handleToggleOnline = async () => {
-        if (driver?.status !== DRIVER_ACTIVE_STATUS) {
-            toast.error('Verification approval is required before going online');
+            await new Promise((resolve, reject) => {
+                const razorpay = new window.Razorpay({
+                    key: keyId,
+                    amount: orderData.amount,
+                    currency: orderData.currency || 'INR',
+                    name: 'Spare Driver',
+                    description: 'Spare Driver Starter Kit',
+                    order_id: orderData.order_id,
+                    prefill: {
+                        name: driver?.name || '',
+                        email: driver?.email || '',
+                        contact: driver?.phone || ''
+                    },
+                    theme: { color: '#FACD15' },
+                    handler: async (response) => {
+                        try {
+                            await spareDriverAPI.verifyKitPayment(response);
+                            resolve(true);
+                        } catch (verificationError) {
+                            reject(verificationError);
+                        }
+                    },
+                    modal: {
+                        ondismiss: () => reject(new Error('Kit payment checkout was cancelled'))
+                    }
+                });
+
+                razorpay.on('payment.failed', (event) => {
+                    reject(new Error(event?.error?.description || 'Kit payment failed'));
+                });
+
+                razorpay.open();
+            });
+
+            toast.success('Kit payment submitted successfully');
+            setKitPopupOpen(false);
+            if (driver?._id) {
+                localStorage.setItem(`spare_driver_kit_prompt_next_at_${driver._id}`, String(Date.now() + KIT_PROMPT_COOLDOWN_MS));
+            }
+            await refresh();
+        } catch (error) {
+            toast.error(error.message || 'Could not complete kit payment');
+        } finally {
+            setKitPaying(false);
+        }
+    };
+
+    const handlePoliceVerificationSubmit = async () => {
+        if (!pvrFile) {
+            toast.error('Police verification document is required');
             return;
         }
 
-        const nextStatus = !isOnline;
-        setIsOnline(nextStatus);
-
+        setPvrSubmitting(true);
         try {
-            const response = await spareDriverAPI.toggleOnline(nextStatus);
-            const nextIsOnline = response?.data?.isOnline ?? nextStatus;
-            setIsOnline(nextIsOnline);
-            setDriver((current) => current ? { ...current, isOnline: nextIsOnline } : current);
-
-            const bookingsRes = await spareDriverAPI.getBookings();
-            setBookings(bookingsRes?.data?.bookings || []);
-        } catch (error) {
-            setIsOnline(!nextStatus);
-            toast.error(error.message || 'Failed to update driver status');
+            const formData = new FormData();
+            formData.append('pvrFile', pvrFile);
+            formData.append('pvrNumber', pvrNumber);
+            await spareDriverAPI.uploadPoliceVerification(formData);
+            toast.success('Police verification submitted');
+            setPolicePopupOpen(false);
+            if (driver?._id) {
+                localStorage.setItem(`spare_driver_police_prompt_next_at_${driver._id}`, String(Date.now() + POLICE_PROMPT_COOLDOWN_MS));
+            }
+            await refresh();
+        } catch (err) {
+            toast.error(err.message || 'Could not submit police verification');
+        } finally {
+            setPvrSubmitting(false);
         }
     };
 
-    const handleUpdateStatus = async (bookingId, nextStatus) => {
-        let pin = null;
-        if (nextStatus === 'active') {
-            pin = window.prompt('Enter 4-digit security PIN from customer:');
-            if (!pin) return;
-        }
-
-        try {
-            await spareDriverAPI.updateBookingStatus(bookingId, nextStatus, pin);
-            await refreshDashboard();
-            toast.success(`Trip marked ${nextStatus.replace('_', ' ')}`);
-        } catch (error) {
-            toast.error(error.message || 'Failed to update status');
-        }
+    const handleAddressPopupDismiss = () => {
+        if (!driver?._id) return setAddressPopupOpen(false);
+        const cooldownKey = `spare_driver_address_prompt_next_at_${driver._id}`;
+        localStorage.setItem(cooldownKey, String(Date.now() + ADDRESS_PROMPT_COOLDOWN_MS));
+        setAddressPopupOpen(false);
     };
 
-    const handleCancel = async (bookingId) => {
-        const reason = window.prompt('Please provide a reason for cancellation:');
-        if (reason === null) return;
-
-        try {
-            await spareDriverAPI.cancelBooking(bookingId, reason);
-            await refreshDashboard();
-            toast.success('Booking cancelled successfully');
-        } catch (error) {
-            toast.error(error.message || 'Failed to cancel booking');
+    const showNavigationHUD = activeJob && LIVE_JOB_STATUSES.includes(activeJob.status);
+    const fallbackRoutePath = useMemo(() => {
+        if (!smoothedDriver || !smoothedConsumer) return [];
+        return [smoothedDriver, smoothedConsumer];
+    }, [smoothedDriver, smoothedConsumer]);
+    const liveRoutePath = routePath.length > 1 ? routePath : fallbackRoutePath;
+    const liveDistanceKm = useMemo(() => {
+        if (liveRoutePath.length < 2) return 0;
+        let distance = 0;
+        for (let i = 1; i < liveRoutePath.length; i += 1) {
+            const a = liveRoutePath[i - 1];
+            const b = liveRoutePath[i];
+            const toRad = (value) => (value * Math.PI) / 180;
+            const dLat = toRad(b.lat - a.lat);
+            const dLng = toRad(b.lng - a.lng);
+            const x = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * (Math.sin(dLng / 2) ** 2);
+            const c = 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+            distance += 6371 * c;
         }
-    };
+        return distance;
+    }, [liveRoutePath]);
+    const liveEtaMinutes = useMemo(() => {
+        if (!Number.isFinite(liveDistanceKm) || liveDistanceKm <= 0) return 0;
+        const avgCitySpeedKmH = 22;
+        return Math.max(1, Math.round((liveDistanceKm / avgCitySpeedKmH) * 60));
+    }, [liveDistanceKm]);
 
-    const handleAccept = async (bookingId) => {
-        try {
-            await spareDriverAPI.acceptBooking(bookingId);
-            await refreshDashboard();
-            toast.success('Booking accepted');
-        } catch (error) {
-            toast.error(error.message || 'Failed to accept booking');
-        }
-    };
-
-    const handleReject = async (bookingId) => {
-        const reason = window.prompt('Optional reason for rejecting this request:') || '';
-
-        try {
-            const response = await spareDriverAPI.rejectBooking(bookingId, reason);
-            await refreshDashboard();
-            toast.success(response?.message || 'Booking rejected');
-        } catch (error) {
-            toast.error(error.message || 'Failed to reject booking');
-        }
-    };
-
-    const jobInfo = getJobDisplay(activeJob);
-    const bookedDuration = getBookedDurationLabel(activeJob);
-
-    if (loading) {
-        return (
-            <DriverLayout title="Dashboard">
-                <div className="flex items-center justify-center min-h-[60vh]">
-                    <div className="w-8 h-8 border-2 border-[#F29F05] border-t-transparent rounded-full animate-spin" />
-                </div>
-            </DriverLayout>
-        );
-    }
+    if (loading) return <DriverLayout><div className="flex h-[60vh] items-center justify-center font-black text-brand uppercase tracking-[0.4em] animate-pulse">Syncing Telemetry...</div></DriverLayout>;
 
     return (
-        <DriverLayout title="Dashboard">
-            <div className="px-5 py-6 space-y-5">
-                <div className="border border-black/[0.04] rounded-[1.75rem] bg-white p-4 flex items-center justify-between transition-all duration-500 shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
-                    <div>
-                        <p className="text-[10px] font-black text-black/30 uppercase tracking-widest mb-1">Status</p>
-                        <p className={`text-sm font-black uppercase transition-colors ${isOnline ? 'text-green-600' : 'text-black'}`}>
-                            {isOnline ? 'Online - Preparing Pulse' : 'Offline'}
-                        </p>
-                    </div>
-                    <button
-                        onClick={handleToggleOnline}
-                        disabled={driver?.status !== DRIVER_ACTIVE_STATUS}
-                        className={`w-12 h-6 rounded-sm relative transition-colors duration-300 flex items-center px-0.5 ${isOnline ? 'bg-[#F29F05]' : 'bg-gray-200'} ${driver?.status !== DRIVER_ACTIVE_STATUS ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                        <div className={`w-5 h-5 bg-white rounded-sm shadow transition-transform duration-300 ${isOnline ? 'translate-x-6' : 'translate-x-0'}`} />
-                    </button>
-                </div>
+        <DriverLayout title={showNavigationHUD ? "Navigation Mode" : "Command Center"} hideNav={showNavigationHUD} hideHeader={showNavigationHUD}>
+            {showNavigationHUD ? (
+                /* ── High-Fidelity Navigation HUD (Full Screen Mode) ── */
+                <div className="fixed inset-0 z-0 bg-slate-900 overflow-hidden">
+                    <GoogleMapBox 
+                        center={mapCenter}
+                        zoom={16}
+                        darkMode={false}
+                        options={{ gestureHandling: 'greedy' }}
+                        markers={[
+                            ...(smoothedDriver ? [{ 
+                                position: smoothedDriver, 
+                                icon: { 
+                                    url: createMarkerIcon('#FACD15'), 
+                                    scaledSize: { width: 44, height: 52 },
+                                    anchor: { x: 22, y: 44 }
+                                }
+                            }] : []),
+                            ...(smoothedConsumer ? [{ 
+                                position: smoothedConsumer, 
+                                icon: { 
+                                    url: createConsumerMarkerIcon(),
+                                    scaledSize: { width: 48, height: 56 },
+                                    anchor: { x: 24, y: 46 }
+                                }
+                            }] : [])
+                        ]}
+                        polylines={liveRoutePath.length > 1 ? [{
+                            path: liveRoutePath,
+                            options: {
+                                strokeColor: '#FACD15',
+                                strokeOpacity: 0.9,
+                                strokeWeight: 6,
+                                geodesic: true,
+                                icons: [{
+                                    icon: {
+                                        path: 'M 0,-1 0,1',
+                                        strokeOpacity: 0.75,
+                                        scale: 3
+                                    },
+                                    offset: '0',
+                                    repeat: '12px'
+                                }]
+                            }
+                        }] : []}
+                    />
 
+                    {/* Edge-to-Edge Tactical Navigation Dock (Full Width) */}
+                    <div className="absolute inset-x-0 bottom-0 z-20">
+                        <motion.div 
+                            initial={{ y: 100 }} 
+                            animate={{ y: 0 }} 
+                            className="bg-slate-900/95 backdrop-blur-3xl border-t border-white/10 rounded-t-[2.5rem] p-4 pb-8 shadow-[0_-12px_40px_rgba(0,0,0,0.6)] flex items-center gap-4 overflow-hidden relative"
+                        >
+                            {/* Left: High-Density Telemetry Cluster */}
+                            <div className="flex-shrink-0 flex flex-col items-center justify-center w-20 h-14 bg-white/5 rounded-2xl border border-white/5">
+                                <div className="flex items-center gap-1.5 mb-1">
+                                    <Clock size={12} className="text-brand" />
+                                    <span className="text-[12px] font-black text-white tabular-nums">{liveEtaMinutes ? `${liveEtaMinutes}m` : '--'}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <Route size={12} className="text-brand/50" />
+                                    <span className="text-[10px] font-black text-white/40 tabular-nums">{liveDistanceKm ? `${liveDistanceKm.toFixed(1)}k` : '--'}</span>
+                                </div>
+                            </div>
+
+                            {/* Middle: Mission Target Hub */}
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-0.5">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
+                                    <h4 className="text-[11px] font-black text-white uppercase tracking-tighter truncate">{activeJob.userName || 'VIP Client'}</h4>
+                                </div>
+                                <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.1em] truncate italic">{activeJob.location?.address?.street || 'Scanning Sector...'}</p>
+                            </div>
+
+                            {/* Right: Operational Triggers */}
+                            <div className="flex items-center gap-3 flex-shrink-0">
+                                <motion.button 
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => activeJob?.userPhone ? (window.location.href = `tel:${activeJob.userPhone}`) : toast.error('Uplink Busy: Contact Unavailable')}
+                                    className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-brand"
+                                >
+                                    <Phone size={20} />
+                                </motion.button>
+                                
+                                <motion.button 
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => handleStatus(activeJob._id, activeJob.status === 'en_route' ? 'arrived' : activeJob.status === 'arrived' ? 'active' : 'completed')} 
+                                    className="h-14 px-8 bg-brand text-black rounded-2xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-brand/20"
+                                >
+                                    {activeJob.status === 'en_route' ? 'Arrived' : activeJob.status === 'arrived' ? 'Initiate' : 'Done'}
+                                    <ChevronRight size={16} strokeWidth={3} />
+                                </motion.button>
+                            </div>
+                        </motion.div>
+                    </div>
+                </div>
+            ) : (
+                /* ── Standard Dashboard Interface ── */
+                <div className="px-6 py-6 space-y-6 pb-24">
+                {/* ── Status Cluster ── */}
+                <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className={`rounded-[2.5rem] p-6 border transition-all duration-500 overflow-hidden relative ${isOnline ? 'bg-black border-brand/20 shadow-2xl' : 'bg-surface border-content/[0.04] shadow-sm'}`}>
+                    <AnimatePresence>
+                        {isOnline && (
+                           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 pointer-events-none">
+                               <div className="absolute top-[-20%] right-[-10%] w-[60%] aspect-square bg-brand/10 blur-[80px]" />
+                           </motion.div>
+                        )}
+                    </AnimatePresence>
+                    
+                    <div className="relative z-10 flex justify-between items-start">
+                        <div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-brand animate-pulse' : 'bg-content/20'}`} />
+                                <span className={`text-[10px] font-black uppercase tracking-[0.3em] ${isOnline ? 'text-brand' : 'text-content/30'}`}>System Link</span>
+                            </div>
+                            <h2 className={`text-2xl font-black uppercase tracking-tight leading-none ${isOnline ? 'text-white' : 'text-content'}`}>
+                                {isOnline ? 'Active' : 'Standby'}<br />
+                                <span className={isOnline ? 'text-brand' : 'text-content/40'}>{isOnline ? 'Signal Locked' : 'Offline'}</span>
+                            </h2>
+                        </div>
+                        <button onClick={handleToggle} className={`w-14 h-8 rounded-full transition-all relative ${isOnline ? 'bg-brand shadow-lg shadow-brand/20' : 'bg-content/[0.08]'}`}>
+                            <motion.div animate={{ x: isOnline ? 24 : 4 }} className="absolute top-1 left-0 w-6 h-6 bg-white dark:bg-slate-200 rounded-full shadow-md" />
+                        </button>
+                    </div>
+                </motion.div>
+
+                {/* ── Metrics Grid ── */}
                 <div className="grid grid-cols-3 gap-3">
                     {[
-                        { label: "Today's Pay", value: `₹${driver?.wallet?.balance || 0}`, note: 'wallet' },
-                        { label: 'Rating', value: (driver?.rating || 5.0).toFixed(1), note: 'star' },
-                        { label: 'Status', value: driver?.status === DRIVER_ACTIVE_STATUS ? 'Verified' : 'Reviewing', note: 'shield' },
-                    ].map((item, index) => (
-                        <div key={index} className="border border-black/[0.04] rounded-[1.35rem] p-3 bg-white shadow-[0_14px_30px_rgba(15,23,42,0.05)]">
-                            <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-2">{item.label}</p>
-                            <p className="text-[17px] font-black text-black leading-none">{item.value}</p>
-                            <p className="text-[8px] font-black text-[#F29F05] uppercase mt-1">{item.note}</p>
+                        { l: 'Yield', v: `₹${driver?.wallet?.balance || 0}`, i: Wallet, c: 'text-green-500' },
+                        { l: 'Rating', v: (driver?.rating || 5.0).toFixed(1), i: Star, c: 'text-brand' },
+                        { l: 'Auth', v: 'Elite', i: ShieldCheck, c: 'text-brand' }
+                    ].map((m, i) => (
+                        <div key={i} className="bg-surface border border-content/[0.04] p-4 rounded-[1.8rem] shadow-sm transition-colors duration-500">
+                            <p className="text-[8px] font-black text-content/20 uppercase tracking-widest mb-1">{m.l}</p>
+                            <p className="text-[14px] font-black text-content tracking-tight">{m.v}</p>
+                            <m.i size={10} className={`${m.c} mt-1`} />
                         </div>
                     ))}
                 </div>
 
-                {jobInfo ? (
-                    <div className={`border rounded-[2rem] p-4 space-y-3 transition-all shadow-[0_24px_55px_rgba(15,23,42,0.08)] ${activeJob.status === 'pending' ? 'border-black/[0.04] bg-white' : 'border-[#F29F05]/25 bg-[linear-gradient(180deg,#FFFBF0_0%,#FFFFFF_100%)]'}`}>
-                        <div className="flex items-center justify-between">
-                            <span className={`text-[9px] font-black uppercase tracking-widest ${activeJob.status === 'pending' ? 'text-black/30' : 'text-[#F29F05]'}`}>
-                                {activeJob.status === 'pending' ? 'Available Request' : 'Active Mission'}
-                            </span>
-                            <div className="flex flex-col items-end">
-                                <p className="text-[12px] font-black text-black leading-none">₹{activeJob.pricing?.totalAmount || 0}</p>
-                                <p className="text-[7px] font-bold text-black/25 uppercase tracking-widest mt-0.5">Current Fare</p>
-                            </div>
-                        </div>
-
-                        {isOutstationBooking(activeJob) && (
-                            <div className="bg-blue-600 text-white px-3 py-1.5 rounded-md flex items-center gap-2 w-fit">
-                                <Zap size={10} fill="currentColor" />
-                                <span className="text-[9px] font-black uppercase tracking-widest">Outstation Mission</span>
-                            </div>
-                        )}
-                        {isFullDayBooking(activeJob) && (
-                            <div className="bg-amber-50 text-amber-700 px-3 py-1.5 rounded-md flex items-center gap-2 w-fit border border-amber-100">
-                                <Clock size={10} />
-                                <span className="text-[9px] font-black uppercase tracking-widest">Full Day Shift</span>
-                            </div>
-                        )}
-
-                        <div>
-                            <p className="text-sm font-black text-black uppercase">{jobInfo.type}</p>
-                            <div className="flex items-center justify-between mt-1">
-                                <div className="flex items-center gap-1.5 text-black/40">
-                                    <Clock size={11} />
-                                    <span className="text-[10px] font-black uppercase">{jobInfo.time} ({activeJob.status})</span>
+                {/* ── Mission Node ── */}
+                <AnimatePresence mode="wait">
+                    {activeJob ? (
+                        <motion.div key={activeJob._id} initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className={`rounded-[2.5rem] p-6 border transition-colors duration-500 ${activeJob.status === 'pending' ? 'bg-surface border-content/5 shadow-sm' : 'bg-surface border-brand/10 shadow-lg'}`}>
+                            <div className="flex justify-between items-start mb-6">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${activeJob.status === 'pending' ? 'bg-black text-brand' : 'bg-brand text-black'}`}>
+                                        <Bell size={18} className={activeJob.status === 'pending' ? 'animate-bounce' : ''} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black text-brand uppercase tracking-widest">Live Mission</p>
+                                        <h3 className="text-sm font-black text-content uppercase">{activeJob.service?.name}</h3>
+                                    </div>
                                 </div>
-                                {activeJob.notes?.internal?.includes('[WAITING]') && (
-                                    <span className="text-[7px] font-black text-[#F29F05] bg-[#F29F05]/10 px-1.5 py-0.5 rounded-sm uppercase tracking-widest animate-pulse">
-                                        Wait Charge Applied
-                                    </span>
+                                <div className="text-right">
+                                    <p className="text-xl font-black text-content tabular-nums leading-none">₹{activeJob.pricing?.totalAmount}</p>
+                                    <p className="text-[7px] font-black text-content/20 uppercase mt-1">Est. Payout</p>
+                                </div>
+                            </div>
+                            
+                            <div className="space-y-4 mb-8">
+                                <div className="flex gap-4">
+                                    <MapPin size={16} className="text-brand shrink-0" />
+                                    <div className="min-w-0">
+                                        <p className="text-[8px] font-black text-content/20 uppercase tracking-widest mb-0.5">Pick Logistics</p>
+                                        <p className="text-[11px] font-black text-content uppercase truncate">{activeJob.location?.address?.street}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                {activeJob.status === 'pending' ? (
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button onClick={() => spareDriverAPI.rejectBooking(activeJob._id).then(refresh)} className="h-12 rounded-xl border-2 border-content/[0.04] text-[10px] font-black uppercase text-content/60">Deny</button>
+                                        <button onClick={() => spareDriverAPI.acceptBooking(activeJob._id).then(refresh)} className="h-12 bg-black dark:bg-brand dark:text-black rounded-xl text-[10px] font-black uppercase tracking-widest text-white">Authorize</button>
+                                    </div>
+                                ) : (
+                                    <button 
+                                        onClick={() => handleStatus(activeJob._id, activeJob.status === 'en_route' ? 'arrived' : activeJob.status === 'arrived' ? 'active' : 'completed')} 
+                                        className="w-full h-14 bg-black dark:bg-brand dark:text-black text-brand rounded-2xl font-black text-[12px] uppercase tracking-widest shadow-xl shadow-black/10 flex items-center justify-center gap-3 transition-all active:scale-95"
+                                    >
+                                        Update Protocol <ChevronRight size={18} />
+                                    </button>
                                 )}
                             </div>
-                            {bookedDuration && (
-                                <p className="text-[9px] font-black text-black/35 uppercase tracking-widest mt-2">
-                                    Booked Window: {bookedDuration}
-                                </p>
-                            )}
-                            {isOutstationBooking(activeJob) && (
-                                <p className="text-[9px] font-black text-blue-700 uppercase tracking-widest mt-2">
-                                    Long route trip. Track destination, tolls and return timing carefully.
-                                </p>
-                            )}
+                        </motion.div>
+                    ) : (
+                        <div className="bg-surface border border-content/[0.03] rounded-[2.5rem] p-12 text-center relative overflow-hidden group shadow-sm transition-colors duration-500">
+                             <div className="relative z-10">
+                                <Radar size={40} className="mx-auto mb-6 text-content/10 animate-pulse" />
+                                <p className="text-[10px] font-black text-content/30 uppercase tracking-[0.4em] mb-2 leading-none">Scanning Sector</p>
+                                <h3 className="text-[14px] font-black text-content/60 uppercase">Searching for Priority Missions</h3>
+                             </div>
                         </div>
-
-                        {['active', 'arrived'].includes(activeJob.status) && activeJob.pricing?.breakdown?.filter((item) => item.amount > 0).length > 0 && (
-                            <div className="px-3 py-2 bg-black/[0.02] border border-black/5 rounded-lg space-y-1">
-                                <p className="text-[7px] font-black text-black/20 uppercase tracking-widest mb-1">Fare Breakdown</p>
-                                {activeJob.pricing.breakdown.filter((item) => item.amount > 0).map((item, index) => (
-                                    <div key={index} className="flex items-center justify-between">
-                                        <span className="text-[8px] font-bold text-black/40 uppercase">{item.name}</span>
-                                        <span className="text-[8px] font-black text-black">+₹{item.amount}</span>
-                                    </div>
-                                ))}
+                    )}
+                </AnimatePresence>
+            </div>
+        )}
+        <AnimatePresence>
+                {kitPopupOpen && driver?.status === 'verified_pending_kit' && (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[120] bg-black/80 backdrop-blur-sm px-6 flex items-end justify-center pb-12"
+                    >
+                        <motion.div
+                            initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="w-full max-w-[400px] bg-surface border border-content/[0.08] rounded-[3rem] p-8 shadow-[0_-20px_40px_rgba(0,0,0,0.4)] relative"
+                        >
+                            <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 rounded-full bg-content/[0.1]" />
+                            
+                            <div className="flex flex-col items-center text-center mb-8 pt-4">
+                                <div className="w-16 h-16 rounded-[1.5rem] bg-brand/10 flex items-center justify-center text-brand mb-4">
+                                    <Package size={32} />
+                                </div>
+                                <p className="text-[10px] font-black text-brand uppercase tracking-[0.3em] mb-1">Logistics Required</p>
+                                <h3 className="text-xl font-black text-content uppercase tracking-tighter leading-none">{kitConfig.title || 'Elite Driver Kit'}</h3>
                             </div>
-                        )}
 
-                        {['en_route', 'arrived', 'active'].includes(activeJob.status) && pickupPosition && (
-                            <div className="mt-2 rounded-[1.7rem] border border-black/[0.04] bg-[linear-gradient(180deg,#FFFFFF_0%,#F8FAFC_100%)] p-3 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
-                                <div className="flex items-center justify-between mb-3 px-1">
+                            <div className="space-y-3 mb-8">
+                                <div className="p-4 rounded-2xl bg-content/[0.02] border border-content/[0.05] flex items-center justify-between">
                                     <div>
-                                        <p className="text-[8px] font-black text-black/25 uppercase tracking-[0.24em] leading-none">Live Route Desk</p>
-                                        <p className="text-[12px] font-[1000] text-black uppercase tracking-[0.08em] leading-none mt-2">
-                                            {consumerLiveLocation ? 'Customer Live on Map' : 'Pickup Route Locked'}
-                                        </p>
+                                        <p className="text-[8px] font-black text-content/30 uppercase mb-1">Activation Fee</p>
+                                        <p className="text-lg font-black text-content">₹{driver?.kit?.price || kitConfig.kitPrice || 1499}</p>
                                     </div>
-                                    <div className="rounded-full bg-[#FFF7ED] border border-[#FED7AA] px-3 py-2">
-                                        <span className="text-[8px] font-black uppercase tracking-[0.24em]" style={{ color: activeServiceAccent }}>
-                                            {activeJob.status === 'active' ? 'Trip Active' : activeJob.status === 'arrived' ? 'At Pickup' : 'On Route'}
-                                        </span>
+                                    <div className="text-right">
+                                        <p className="text-[8px] font-black text-content/30 uppercase mb-1">Deduction</p>
+                                        <p className="text-xs font-black text-content uppercase">₹{kitConfig.monthlyDeductionAmount}/mo</p>
                                     </div>
                                 </div>
+                                <p className="text-[10px] font-bold text-content/40 text-center px-4 leading-relaxed uppercase italic">
+                                    "Professional gear is mandatory for Elite service verification."
+                                </p>
+                            </div>
 
-                                <div className="h-[240px] w-full rounded-[1.45rem] overflow-hidden border border-black/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_16px_34px_rgba(15,23,42,0.06)]">
-                                    <GoogleMapBox
-                                        center={pickupPosition}
-                                        zoom={15}
-                                        markers={liveMapMarkers}
-                                        circles={liveMapCircles}
-                                        darkMode={false}
+                            <div className="flex flex-col gap-3">
+                                <button 
+                                    onClick={handleKitRazorpay}
+                                    disabled={kitPaying}
+                                    className="w-full h-14 bg-brand text-black rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-brand/10 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                >
+                                    {kitPaying ? <Loader2 size={16} className="animate-spin" /> : 'Authorize Purchase'}
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        if (driver?._id) localStorage.setItem(`spare_driver_kit_prompt_next_at_${driver._id}`, String(Date.now() + KIT_PROMPT_COOLDOWN_MS));
+                                        setKitPopupOpen(false);
+                                    }}
+                                    className="w-full h-12 rounded-2xl border border-content/[0.05] text-[10px] font-black text-content/40 uppercase tracking-widest active:scale-95 transition-all"
+                                >
+                                    Dismiss Protocol
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+            <AnimatePresence>
+                {addressPopupOpen && !kitPopupOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[120] bg-black/80 backdrop-blur-sm px-6 flex items-end justify-center pb-12"
+                    >
+                        <motion.div
+                            initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="w-full max-w-[400px] bg-surface border border-content/[0.08] rounded-[3rem] p-8 shadow-[0_-20px_40px_rgba(0,0,0,0.4)] relative"
+                        >
+                            <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 rounded-full bg-content/[0.1]" />
+                            
+                            <div className="flex flex-col items-center text-center mb-8 pt-4">
+                                <div className="w-16 h-16 rounded-[1.5rem] bg-brand/10 flex items-center justify-center text-brand mb-4">
+                                    <MapPin size={32} />
+                                </div>
+                                <p className="text-[10px] font-black text-brand uppercase tracking-[0.3em] mb-1">Matching Algorithm</p>
+                                <h3 className="text-xl font-black text-content uppercase tracking-tighter leading-none">Define Base Sector</h3>
+                            </div>
+
+                            <div className="rounded-[1.5rem] border border-brand/20 bg-yellow-50/50 p-4 space-y-3 mb-8">
+                                <div className="flex items-start gap-4">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-brand mt-1.5 shrink-0" />
+                                    <p className="text-[11px] font-black text-content/60 uppercase leading-relaxed">
+                                        Defining your hub allows the system to prioritize missions in your immediate sector.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-3">
+                                <button 
+                                    onClick={() => {
+                                        if (driver?._id) localStorage.setItem(`spare_driver_address_prompt_next_at_${driver._id}`, String(Date.now() + (20 * 60 * 1000)));
+                                        setAddressPopupOpen(false);
+                                        navigate('/spare-driver/address');
+                                    }}
+                                    className="w-full h-14 bg-black dark:bg-brand dark:text-black text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                >
+                                    Configure Sector <ChevronRight size={16} />
+                                </button>
+                                <button 
+                                    onClick={handleAddressPopupDismiss}
+                                    className="w-full h-12 rounded-2xl border border-content/[0.05] text-[10px] font-black text-content/40 uppercase tracking-widest active:scale-95 transition-all"
+                                >
+                                    Standby Mode
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+            <AnimatePresence>
+                {policePopupOpen && !kitPopupOpen && !addressPopupOpen && driver?.status === 'active' && driver?.verification?.policeStatus !== 'approved' && (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[120] bg-black/80 backdrop-blur-sm px-6 flex items-end justify-center pb-12"
+                    >
+                        <motion.div
+                            initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="w-full max-w-[400px] bg-surface border border-content/[0.08] rounded-[3rem] p-8 shadow-[0_-20px_40px_rgba(0,0,0,0.4)] relative"
+                        >
+                            <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 rounded-full bg-content/[0.1]" />
+                            
+                            <div className="flex flex-col items-center text-center mb-8 pt-4">
+                                <div className="w-16 h-16 rounded-[1.5rem] bg-brand/10 flex items-center justify-center text-brand mb-4">
+                                    <ShieldCheck size={32} />
+                                </div>
+                                <p className="text-[10px] font-black text-brand uppercase tracking-[0.3em] mb-1">Security Protocol</p>
+                                <h3 className="text-xl font-black text-content uppercase tracking-tighter leading-none">Police Verification</h3>
+                            </div>
+
+                            <div className="space-y-4 mb-8">
+                                <div className="space-y-2">
+                                    <label className="text-[8px] font-black text-content/30 uppercase tracking-widest ml-4">Certificate ID</label>
+                                    <input
+                                        value={pvrNumber}
+                                        onChange={(e) => setPvrNumber(e.target.value)}
+                                        placeholder="Enter PVR Reference"
+                                        className="w-full h-14 rounded-2xl bg-content/[0.03] border border-content/[0.05] px-6 text-sm font-black text-content placeholder:text-content/20 outline-none focus:border-brand/50 transition-colors"
                                     />
                                 </div>
 
-                                <div className="mt-3 grid grid-cols-2 gap-3">
-                                    <div className="rounded-[1.15rem] border border-black/[0.05] bg-white px-3 py-3">
-                                        <p className="text-[8px] font-black text-black/25 uppercase tracking-[0.22em] leading-none">Customer Marker</p>
-                                        <p className="text-[10px] font-[1000] text-black/70 uppercase leading-snug mt-2">
-                                            {consumerLiveLocation ? 'Live moving position' : 'Pickup point locked'}
-                                        </p>
-                                    </div>
-                                    <div className="rounded-[1.15rem] border border-black/[0.05] bg-white px-3 py-3">
-                                        <p className="text-[8px] font-black text-black/25 uppercase tracking-[0.22em] leading-none">Driver Marker</p>
-                                        <p className="text-[10px] font-[1000] text-black/70 uppercase leading-snug mt-2">
-                                            Smooth premium route view
-                                        </p>
-                                    </div>
-                                </div>
+                                <label className="w-full h-24 rounded-2xl border-2 border-dashed border-content/[0.1] bg-content/[0.01] flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-content/[0.03] transition-all">
+                                    <Upload size={20} className="text-content/30" />
+                                    <span className="text-[10px] font-black text-content/40 uppercase">{pvrFile ? pvrFile.name : 'Upload Doc'}</span>
+                                    <input 
+                                        type="file" accept="image/*,.pdf" className="hidden" 
+                                        onChange={(e) => setPvrFile(e.target.files?.[0] || null)} 
+                                    />
+                                </label>
                             </div>
-                        )}
 
-                        <div className="space-y-1 pt-2 border-t border-black/5">
-                            <div className="flex items-center gap-2 whitespace-nowrap overflow-hidden">
-                                <MapPin size={12} className="text-brand shrink-0" />
-                                <span className="text-[10px] font-black text-black/60 uppercase truncate">{jobInfo.pickup}</span>
-                                <span className="text-[7px] font-black text-brand uppercase ml-auto">Pickup</span>
+                            <div className="flex flex-col gap-3">
+                                <button 
+                                    onClick={handlePoliceVerificationSubmit}
+                                    disabled={pvrSubmitting}
+                                    className="w-full h-14 bg-black dark:bg-brand dark:text-black text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                >
+                                    {pvrSubmitting ? <Loader2 size={16} className="animate-spin" /> : 'Submit Clearance'}
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        if (driver?._id) localStorage.setItem(`spare_driver_police_prompt_next_at_${driver._id}`, String(Date.now() + POLICE_PROMPT_COOLDOWN_MS));
+                                        setPolicePopupOpen(false);
+                                    }}
+                                    className="w-full h-12 rounded-2xl border border-content/[0.05] text-[10px] font-black text-content/40 uppercase tracking-widest active:scale-95 transition-all"
+                                >
+                                    Maybe Later
+                                </button>
                             </div>
-                            {bookedDuration && (
-                                <div className="flex items-center gap-2 whitespace-nowrap overflow-hidden">
-                                    <Clock size={12} className="text-black/25 shrink-0" />
-                                    <span className="text-[10px] font-black text-black/60 uppercase truncate">{bookedDuration}</span>
-                                    <span className="text-[7px] font-black text-amber-700 uppercase ml-auto">
-                                        {isFullDayBooking(activeJob) ? 'Shift Window' : 'Duration'}
-                                    </span>
-                                </div>
-                            )}
-                            {jobInfo.destination && (
-                                <div className="flex items-center gap-2 whitespace-nowrap overflow-hidden">
-                                    <MapPin size={12} className="text-red-500 shrink-0" />
-                                    <span className="text-[10px] font-black text-black/60 uppercase truncate">{jobInfo.destination}</span>
-                                    <span className="text-[7px] font-black text-red-500 uppercase ml-auto">Drop</span>
-                                </div>
-                            )}
-                            {isOutstationBooking(activeJob) && (
-                                <div className="flex items-center gap-2 whitespace-nowrap overflow-hidden">
-                                    <Zap size={12} className="text-blue-500 shrink-0" />
-                                    <span className="text-[10px] font-black text-black/60 uppercase truncate">Stay, tolls and parking follow outstation policy</span>
-                                    <span className="text-[7px] font-black text-blue-600 uppercase ml-auto">Protocol</span>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="space-y-2">
-                            {activeJob.status === 'en_route' && (
-                                <button
-                                    onClick={() => handleUpdateStatus(activeJob._id, 'arrived')}
-                                    className="w-full h-11 text-[10px] font-black uppercase tracking-widest rounded-[1rem] bg-black text-white shadow-[0_14px_30px_rgba(0,0,0,0.16)] flex items-center justify-center gap-2"
-                                >
-                                    Confirm Arrival at Location
-                                </button>
-                            )}
-
-                            {activeJob.status === 'arrived' && (
-                                <button
-                                    onClick={() => handleUpdateStatus(activeJob._id, 'active')}
-                                    className="w-full h-11 text-[10px] font-black uppercase tracking-widest rounded-[1rem] bg-[#F29F05] text-black shadow-[0_16px_32px_rgba(242,159,5,0.24)] flex items-center justify-center gap-2"
-                                >
-                                    Verify PIN and Start Trip
-                                </button>
-                            )}
-
-                            {activeJob.status === 'active' && (
-                                <button
-                                    onClick={() => handleUpdateStatus(activeJob._id, 'completed')}
-                                    className="w-full h-10 text-[10px] font-black uppercase tracking-widest rounded-md bg-green-600 text-white flex items-center justify-center gap-2"
-                                >
-                                    Complete Mission
-                                </button>
-                            )}
-
-                            {['en_route', 'arrived'].includes(activeJob.status) && (
-                                <button
-                                    onClick={() => handleCancel(activeJob._id)}
-                                    className="w-full h-10 text-[10px] font-black uppercase tracking-widest rounded-md border border-red-100 text-red-500 flex items-center justify-center gap-2 mt-2"
-                                >
-                                    Cancel Request
-                                </button>
-                            )}
-
-                            {activeJob.status === 'pending' && (
-                                <div className="grid grid-cols-2 gap-2">
-                                    <button
-                                        onClick={() => handleReject(activeJob._id)}
-                                        className="w-full h-10 text-[10px] font-black uppercase tracking-widest rounded-md border border-red-100 text-red-500 flex items-center justify-center gap-2"
-                                    >
-                                        Reject Request
-                                    </button>
-                                    <button
-                                        onClick={() => handleAccept(activeJob._id)}
-                                        className="w-full h-10 text-[10px] font-black uppercase tracking-widest rounded-md bg-[#F29F05] text-black flex items-center justify-center gap-2"
-                                    >
-                                        Accept Request
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                ) : (
-                    <div className="border border-dashed border-gray-200 rounded-lg p-6 flex flex-col items-center gap-2">
-                        <AlertCircle size={20} className="text-black/15" />
-                        <p className="text-[9px] font-black text-black/25 uppercase tracking-widest text-center">
-                            {isOnline ? 'Waiting for job broadcasts...' : 'Go online to receive jobs'}
-                        </p>
-                    </div>
+                        </motion.div>
+                    </motion.div>
                 )}
-
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                        <p className="text-[9px] font-black text-black/25 uppercase tracking-widest leading-none">Recent Earnings</p>
-                        <button
-                            onClick={() => navigate('/spare-driver/history-log')}
-                            className="text-[9px] font-black text-[#F29F05] uppercase tracking-widest leading-none"
-                        >
-                            View All
-                        </button>
-                    </div>
-
-                    <div className="border border-gray-100 rounded-lg overflow-hidden divide-y divide-gray-50 bg-white">
-                        {transactions.length > 0 ? (
-                            transactions.map((transaction, index) => (
-                                <div key={transaction._id || index} className="px-4 py-3.5 flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center text-green-600">
-                                            <TrendingUp size={14} />
-                                        </div>
-                                        <div>
-                                            <p className="text-[11px] font-black text-black leading-none mb-1 uppercase tracking-tight">Booking Multiplier</p>
-                                            <p className="text-[8px] font-bold text-black/20 uppercase tracking-widest">{new Date(transaction.createdAt).toLocaleDateString()}</p>
-                                        </div>
-                                    </div>
-                                    <p className="text-xs font-black text-green-600 leading-none">+₹{transaction.amount}</p>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="px-4 py-8 text-center bg-gray-50/30">
-                                <p className="text-[8px] font-bold text-black/20 uppercase tracking-widest">No earnings recorded yet</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                <div>
-                    <p className="text-[9px] font-black text-black/25 uppercase tracking-widest mb-3">Driver Hub</p>
-                    <div className="border border-gray-100 rounded-lg divide-y divide-gray-50">
-                        {[
-                            { label: 'Document Center', icon: FileText, action: () => navigate('/spare-driver/profile') },
-                            { label: 'Alert Center', icon: Bell, action: () => navigate('/spare-driver/notifications') },
-                            { label: 'Trip Records', icon: Route, action: () => navigate('/spare-driver/history-log') },
-                        ].map(({ label, icon: Icon, action }, index) => (
-                            <button key={index} onClick={action} className="w-full px-4 py-3.5 flex items-center justify-between active:bg-gray-50 transition-colors">
-                                <div className="flex items-center gap-3">
-                                    <Icon size={14} className="text-black/30" />
-                                    <span className="text-[11px] font-black text-black uppercase tracking-tight">{label}</span>
-                                </div>
-                                <ChevronRight size={13} className="text-black/20" />
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
+            </AnimatePresence>
+            {driver?.status === 'active'
+                && driver?.verification?.policeStatus === 'approved'
+                && !kitPopupOpen
+                && !policePopupOpen
+                && !addressPopupOpen
+                && hasAddressConfigured(driver) && (
+                    <DriverLocationPrompt onLocationSet={refresh} />
+                )}
         </DriverLayout>
     );
 };

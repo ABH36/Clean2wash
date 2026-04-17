@@ -246,7 +246,7 @@ const AdminSettings = () => {
                             <p className="text-[10px] font-black uppercase tracking-[0.2em] group-hover:text-content transition-colors">Cluster: Azure-South-Asia</p>
                         </div>
                     </div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">© 2026 CarWash Intelligence Systems</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">© 2026 Spare Driver Intelligence Systems</p>
                 </div>
             </div>
         </>

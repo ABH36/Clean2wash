@@ -22,9 +22,9 @@ const CaptainOTPVerification = () => {
 
     useEffect(() => {
         if (!phone) {
-            navigate('/captain/login');
+            navigate(type === 'signup' ? '/captain/signup' : '/captain/login');
         }
-    }, [phone, navigate]);
+    }, [phone, navigate, type]);
 
     useEffect(() => {
         if (timeLeft > 0) {
@@ -80,10 +80,10 @@ const CaptainOTPVerification = () => {
 
     const handleResend = async () => {
         try {
-            await captainSendOTP(phone, userData);
+            const res = await captainSendOTP(phone, type === 'signup' ? userData : null);
             setTimeLeft(45);
             setOtp(['', '', '', '']);
-            toast.success('New OTP sent to your phone');
+            toast.success(`Testing OTP: ${res?.data?.otp || 'sent'}`, { duration: 5000 });
         } catch (err) {
             toast.error('Failed to resend OTP');
         }

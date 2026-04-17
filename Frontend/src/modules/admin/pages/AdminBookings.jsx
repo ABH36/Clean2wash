@@ -116,9 +116,9 @@ const AdminBookings = () => {
         socketService.on('specialist_location_pulse', handleLocationPulse);
         socketService.on('SOS_EMERGENCY_ALERT', (data) => {
             console.log('[Admin SOS] 🚨 Emergency received:', data);
-            toast.error(`🚨 SOS ALERT: Booking #${data.bookingId}`, { 
-                duration: 10000, 
-                position: 'top-right' 
+            toast.error(`🚨 SOS ALERT: Booking #${data.bookingId}`, {
+                duration: 10000,
+                position: 'top-right'
             });
             fetchBookings(true);
         });
@@ -147,9 +147,9 @@ const AdminBookings = () => {
     const getStatusColor = (status) => {
         switch (status) {
             case 'pending': return 'bg-amber-50 text-amber-600 border-amber-100';
-            case 'confirmed': return 'bg-blue-50 text-blue-600 border-blue-100';
-            case 'pickup-assigned': return 'bg-orange-50 text-orange-600 border-orange-100';
-            case 'en_route': return 'bg-blue-50 text-blue-600 border-blue-100';
+            case 'confirmed': return 'bg-[var(--primary-light)] text-[var(--primary)] border-[var(--primary)]';
+            case 'pickup-assigned': return 'bg-[var(--warning-light)] text-[var(--warning)] border-[var(--warning)]';
+            case 'en_route': return 'bg-[var(--primary-light)] text-[var(--primary)] border-[var(--primary)]';
             case 'at-studio': return 'bg-violet-50 text-violet-600 border-violet-100';
             case 'in_progress': return 'bg-indigo-50 text-indigo-600 border-indigo-100';
             case 'quality-check': return 'bg-purple-50 text-purple-600 border-purple-100';
@@ -208,7 +208,7 @@ const AdminBookings = () => {
                                 <ShieldAlert size={16} className="text-white" />
                             </div>
                             <div>
-                                <p className="text-white font-black text-sm">{sosCount} Active SOS Alert{sosCount > 1 ? 's' : ''}</p>
+                                <p className="text-white font-black text-sm">{sosCount} Active SOS alert{sosCount > 1 ? 's' : ''}</p>
                                 <p className="text-white/70 text-[9px] font-bold uppercase tracking-widest">Immediate response required</p>
                             </div>
                         </div>
@@ -221,41 +221,41 @@ const AdminBookings = () => {
 
                 {/* Tactical Action Bar */}
                 <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
-                    <div className="flex bg-gray-100 p-1 rounded-2xl w-full lg:w-auto overflow-x-auto">
+                    <div className="flex bg-slate-100 dark:bg-white/5 p-1 rounded-2xl w-full lg:w-auto overflow-x-auto no-scrollbar shadow-inner">
                         {['all', 'pending', 'confirmed', 'en_route', 'in_progress', 'completed', 'cancelled'].map(f => (
                             <button
                                 key={f}
                                 onClick={() => setStatusFilter(f)}
-                                className={`flex-shrink-0 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${statusFilter === f ? 'bg-white text-brand shadow-sm' : 'text-content-subtle'}`}
+                                className={`flex-shrink-0 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${statusFilter === f ? 'bg-white dark:bg-brand text-brand dark:text-black shadow-sm' : 'text-content-subtle opacity-60 hover:opacity-100'}`}
                             >
                                 {f === 'en_route' ? 'En Route' : f}
-                                {f === 'all' && <span className="ml-1 text-brand">{bookings.length}</span>}
+                                {f === 'all' && <span className={statusFilter === f ? "ml-1" : "ml-1 text-brand"}>{bookings.length}</span>}
                             </button>
                         ))}
                     </div>
 
                     <div className="flex items-center gap-3 w-full lg:w-auto">
-                        <div className="flex-1 lg:w-80 bg-white border border-gray-100 rounded-2xl px-4 py-2.5 flex items-center gap-3 shadow-soft">
-                            <Search size={16} className="text-content-subtle" />
+                        <div className="flex-1 lg:w-80 bg-surface border border-slate-200/60 dark:border-white/5 rounded-2xl px-4 py-2.5 flex items-center gap-3 shadow-sm transition-all focus-within:border-brand/50">
+                            <Search size={16} className="text-brand opacity-60" />
                             <input
                                 type="text"
-                                placeholder="Search by ID or Customer..."
-                                className="bg-transparent outline-none text-xs font-bold text-content w-full"
+                                placeholder="Scan payload IDs..."
+                                className="bg-transparent outline-none text-xs font-black text-content w-full placeholder:text-content-subtle placeholder:opacity-30 uppercase tracking-tight"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
                         <button
                             onClick={() => fetchBookings(true)}
-                            className={`p-2.5 bg-white border border-gray-100 rounded-2xl shadow-soft text-content-subtle hover:text-brand transition-all ${refreshing ? 'animate-spin text-brand' : ''}`}
+                            className={`h-11 w-11 bg-surface border border-slate-200/60 dark:border-white/5 rounded-2xl shadow-sm text-content-subtle hover:text-brand transition-all flex items-center justify-center ${refreshing ? 'animate-spin text-brand' : ''}`}
                         >
                             <RefreshCw size={16} />
                         </button>
-                        <div className="flex bg-white border border-gray-100 p-1 rounded-2xl shadow-soft">
-                            <button onClick={() => setViewMode('list')} className={`p-2 rounded-xl transition-all ${viewMode === 'list' ? 'bg-content text-white' : 'text-content-subtle hover:bg-gray-50'}`}>
+                        <div className="flex bg-surface border border-slate-200/60 dark:border-white/5 p-1 rounded-2xl shadow-sm">
+                            <button onClick={() => setViewMode('list')} className={`p-2 rounded-xl transition-all ${viewMode === 'list' ? 'bg-black text-brand shadow-lg' : 'text-content-subtle hover:bg-slate-50 dark:hover:bg-white/5'}`}>
                                 <List size={16} />
                             </button>
-                            <button onClick={() => setViewMode('map')} className={`p-2 rounded-xl transition-all ${viewMode === 'map' ? 'bg-content text-white' : 'text-content-subtle hover:bg-gray-50'}`}>
+                            <button onClick={() => setViewMode('map')} className={`p-2 rounded-xl transition-all ${viewMode === 'map' ? 'bg-black text-brand shadow-lg' : 'text-content-subtle hover:bg-slate-50 dark:hover:bg-white/5'}`}>
                                 <MapIcon size={16} />
                             </button>
                         </div>
@@ -263,12 +263,12 @@ const AdminBookings = () => {
                 </div>
 
                 {/* Category Terminal Tabs */}
-                <div className="flex gap-2 p-1 bg-white border border-gray-100 rounded-2xl w-fit shadow-soft">
+                <div className="flex gap-2 p-1 bg-surface border border-slate-200/60 dark:border-white/5 rounded-2xl w-fit shadow-sm">
                     {['all', 'Doorstep', 'Studio', 'Chauffeur'].map(cat => (
                         <button
                             key={cat}
                             onClick={() => setCategoryFilter(cat)}
-                            className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${categoryFilter === cat ? 'bg-brand text-white shadow-lg' : 'text-content-subtle hover:bg-gray-50'}`}
+                            className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${categoryFilter === cat ? 'bg-brand text-black shadow-[0_10px_20px_rgba(242,159,5,0.2)]' : 'text-content-subtle hover:bg-slate-50 dark:hover:bg-white/5'}`}
                         >
                             {cat}
                         </button>
@@ -277,84 +277,84 @@ const AdminBookings = () => {
 
                 {/* Main Data Terminal */}
                 {viewMode === 'list' ? (
-                    <div className="bg-white rounded-[3rem] border border-gray-100 shadow-soft overflow-hidden">
+                    <div className="bg-surface rounded-3xl border border-slate-200/60 dark:border-white/5 shadow-premium overflow-hidden">
                         <div className="admin-table-container">
-                            <table className="w-full text-left">
-                                <thead className="bg-gray-50/50">
-                                    <tr>
-                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest">Order Node</th>
-                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest">User Entity</th>
-                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest">Service Protocol</th>
-                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest">Current Status</th>
-                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest">Valuation</th>
-                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-widest text-right">Actions</th>
+                            <table className="w-full text-left border-collapse">
+                                <thead className="bg-slate-50/50 dark:bg-white/[0.02]">
+                                    <tr className="border-b border-slate-100 dark:border-white/5">
+                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] opacity-50">Order Node</th>
+                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] opacity-50">User Entity</th>
+                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] opacity-50">Service Protocol</th>
+                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] opacity-50">Current Status</th>
+                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] opacity-50">Valuation</th>
+                                        <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] opacity-50 text-right">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-50">
+                                <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                                     {loading && (
                                         <tr>
-                                            <td colSpan="6" className="px-8 py-20 text-center">
-                                                <div className="w-8 h-8 mx-auto border-4 border-brand/30 border-t-brand rounded-full animate-spin" />
-                                                <p className="text-xs mt-4 font-black text-content-subtle uppercase">Loading Network Data...</p>
+                                            <td colSpan="6" className="px-8 py-32 text-center bg-background/50 backdrop-blur-sm">
+                                                <div className="w-10 h-10 mx-auto border-4 border-brand/20 border-t-brand rounded-full animate-spin" />
+                                                <p className="text-[10px] mt-6 font-black text-content uppercase tracking-[0.25em] opacity-40">Synchronizing network data...</p>
                                             </td>
                                         </tr>
                                     )}
                                     {!loading && filteredBookings.map((booking) => {
-                                        const id = booking.bookingId || booking._id?.substring(0, 8);
-                                        const customerName = booking.consumer?.name || 'Guest';
-                                        const serviceName = booking.service?.name || booking.serviceName || 'Service';
+                                        const id = booking.bookingId || booking._id?.substring(0, 8).toUpperCase();
+                                        const customerName = booking.consumer?.name || 'Authorized Guest';
+                                        const serviceName = booking.service?.name || booking.serviceName || 'Standard Service';
                                         const captainName = booking.provider?.id?.name || booking.provider?.name;
                                         const hasSOS = booking.issues?.some(i => i.type === 'SOS' && i.status === 'open');
-                                        const price = booking.price || '₹0';
+                                        const price = booking.price || (booking.pricing?.totalAmount ? `₹${booking.pricing.totalAmount}` : '₹0');
 
                                         return (
                                             <tr
                                                 key={booking._id}
-                                                className={`hover:bg-gray-50/30 transition-all cursor-pointer group ${hasSOS ? 'bg-red-50/30' : serviceName.toLowerCase().includes('outstation') ? 'bg-blue-50/30' : ''}`}
+                                                className={`hover:bg-slate-50 dark:hover:bg-white/[0.01] transition-all cursor-pointer group ${hasSOS ? 'bg-red-500/5' : serviceName.toLowerCase().includes('outstation') ? 'bg-brand/5' : ''}`}
                                                 onClick={() => setSelectedBooking(booking)}
                                             >
-                                                <td className="px-8 py-5">
-                                                    <div className="flex items-center gap-2">
-                                                        {hasSOS && <ShieldAlert size={12} className="text-red-500 flex-shrink-0" />}
+                                                <td className="px-8 py-6">
+                                                    <div className="flex items-center gap-3">
+                                                        {hasSOS && <ShieldAlert size={14} className="text-red-500 animate-pulse" />}
                                                         <div>
-                                                            <p className="text-xs font-black text-content leading-none truncate max-w-[110px]">{id}</p>
-                                                            <p className="text-[9px] font-bold text-content-subtle mt-1">{new Date(booking.createdAt).toLocaleDateString()}</p>
+                                                            <p className="text-[12px] font-black text-content leading-none tracking-tight uppercase">{id}</p>
+                                                            <p className="text-[9px] font-bold text-content-subtle mt-1.5 opacity-40 uppercase tracking-widest leading-none">{new Date(booking.createdAt).toLocaleDateString()}</p>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-8 py-5">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-xl bg-brand/5 flex items-center justify-center font-black text-brand text-[10px]">
+                                                <td className="px-8 py-6">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-100 dark:border-white/10 flex items-center justify-center font-black text-brand text-[11px] group-hover:bg-brand group-hover:text-black transition-all">
                                                             {customerName[0]}
                                                         </div>
-                                                        <div>
-                                                            <p className="text-xs font-bold text-content">{customerName}</p>
-                                                            <p className="text-[9px] text-content-subtle">{booking.consumer?.phone || ''}</p>
+                                                        <div className="min-w-0">
+                                                            <p className="text-[12px] font-black text-content leading-none truncate uppercase tracking-tight">{customerName}</p>
+                                                            <p className="text-[9px] font-bold text-content-subtle mt-1.5 opacity-40 uppercase tracking-widest leading-none">{booking.consumer?.phone || 'No phone identified'}</p>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-8 py-5">
-                                                    <p className="text-xs font-bold text-content-muted leading-tight">{serviceName}</p>
-                                                    <p className="text-[9px] font-black text-brand uppercase tracking-widest mt-0.5">
-                                                        {booking.schedule?.type === 'scheduled' ? '📅 Scheduled' : '⚡ Instant'}
+                                                <td className="px-8 py-6">
+                                                    <p className="text-[12px] font-black text-content leading-none uppercase tracking-tight">{serviceName}</p>
+                                                    <p className="text-[9px] font-black text-brand uppercase tracking-[0.15em] mt-1.5 flex items-center gap-1.5 opacity-80">
+                                                        {booking.schedule?.type === 'scheduled' ? <><Calendar size={10} /> Scheduled flow</> : <><Zap size={10} /> Instant dispatch</>}
                                                     </p>
                                                 </td>
-                                                <td className="px-8 py-5">
-                                                    <span className={`text-[8px] font-black uppercase px-2.5 py-1 rounded-full border ${getStatusColor(booking.status)}`}>
+                                                <td className="px-8 py-6">
+                                                    <span className={`text-[8px] font-black uppercase px-3 py-1 rounded-lg border tracking-widest ${getStatusColor(booking.status)}`}>
                                                         {booking.status.replace(/[-_]/g, ' ')}
                                                     </span>
                                                     {captainName && (
-                                                        <p className="text-[8px] text-content-subtle mt-1 truncate max-w-[100px]">{captainName}</p>
+                                                        <p className="text-[9px] font-bold text-content-subtle mt-2 opacity-40 uppercase truncate max-w-[120px]">{captainName}</p>
                                                     )}
                                                 </td>
-                                                <td className="px-8 py-5">
-                                                    <p className="text-xs font-black text-content">{price}</p>
+                                                <td className="px-8 py-6">
+                                                    <p className="text-[14px] font-black text-content tabular-nums tracking-tighter">{price}</p>
                                                 </td>
-                                                <td className="px-8 py-5 text-right">
-                                                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                                <td className="px-8 py-6 text-right">
+                                                    <div className="flex items-center justify-end gap-3 opacity-30 group-hover:opacity-100 transition-all">
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); setSelectedBooking(booking); }}
-                                                            className="p-2 bg-gray-50 hover:bg-brand hover:text-white rounded-lg text-content-subtle transition-all"
+                                                            className="h-9 w-9 bg-slate-100 dark:bg-white/10 hover:bg-black dark:hover:bg-brand rounded-xl text-content-subtle hover:text-brand dark:hover:text-black transition-all flex items-center justify-center border border-slate-200/50 dark:border-white/5"
                                                         >
                                                             <ExternalLink size={14} />
                                                         </button>
@@ -365,9 +365,10 @@ const AdminBookings = () => {
                                     })}
                                     {filteredBookings.length === 0 && (
                                         <tr>
-                                            <td colSpan="6" className="px-8 py-20 text-center">
-                                                <AlertCircle size={40} className="mx-auto text-gray-200 mb-4" />
-                                                <p className="text-sm font-black text-content-subtle uppercase tracking-widest">No matching records found in system</p>
+                                            <td colSpan="6" className="px-8 py-32 text-center bg-slate-50/20 dark:bg-white/[0.01]">
+                                                <AlertCircle size={48} className="mx-auto text-content-subtle opacity-10 mb-6" />
+                                                <h3 className="text-lg font-black text-content uppercase tracking-tight">Signal loss</h3>
+                                                <p className="text-[10px] font-black text-content-subtle mt-2 uppercase tracking-widest opacity-40">No matching logistical records identified in current network bandwidth.</p>
                                             </td>
                                         </tr>
                                     )}
@@ -396,17 +397,17 @@ const AdminBookings = () => {
                             animate={{ x: 0 }}
                             exit={{ x: '100%' }}
                             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="w-full max-w-md bg-white h-full relative z-10 shadow-2xl flex flex-col"
+                            className="w-full max-w-md bg-surface h-full relative z-10 shadow-2xl flex flex-col border-l border-slate-200/60 dark:border-white/5"
                         >
                             {/* Drawer Header */}
-                            <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+                            <div className="p-8 border-b border-slate-200/60 dark:border-white/5 flex items-center justify-between bg-slate-50/50 dark:bg-white/[0.02]">
                                 <div>
-                                    <h3 className="text-xl font-black text-content leading-none">{selectedBooking.bookingId || selectedBooking._id || selectedBooking.id}</h3>
-                                    <p className="text-[10px] font-black text-brand uppercase tracking-[0.2em] mt-2">Payload Details</p>
+                                    <h3 className="text-xl font-black text-content leading-none tracking-tight uppercase">{selectedBooking.bookingId || selectedBooking._id?.substring(0, 10).toUpperCase()}</h3>
+                                    <p className="text-[10px] font-black text-brand uppercase tracking-[0.3em] mt-2 opacity-80">Mission payload dispatch</p>
                                 </div>
                                 <button
                                     onClick={() => setSelectedBooking(null)}
-                                    className="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-content-subtle hover:bg-white transition-all"
+                                    className="w-10 h-10 rounded-xl border border-slate-200 dark:border-white/10 flex items-center justify-center text-content-subtle hover:bg-black dark:hover:bg-brand hover:text-brand dark:hover:text-black transition-all"
                                 >
                                     <XCircle size={20} />
                                 </button>
@@ -425,29 +426,29 @@ const AdminBookings = () => {
                                     </span>
                                     {selectedBooking.issues?.some(i => i.type === 'SOS' && i.status === 'open') && (
                                         <span className="text-[9px] font-black text-white bg-red-600 px-3 py-1.5 rounded-full animate-pulse flex items-center gap-1">
-                                            <ShieldAlert size={10} /> SOS ACTIVE
+                                            <ShieldAlert size={10} /> SOS active
                                         </span>
                                     )}
                                     {selectedBooking.service?.name?.toLowerCase().includes('outstation') && (
-                                        <span className="text-[9px] font-black text-white bg-blue-600 px-3 py-1.5 rounded-full flex items-center gap-1 shadow-lg shadow-blue-200">
-                                            <Navigation2 size={10} /> HIGH RISK MISSION
+                                        <span className="text-[9px] font-black text-white bg-[var(--primary)] px-3 py-1.5 rounded-full flex items-center gap-1 shadow-lg shadow-[var(--primary)]/20">
+                                            <Navigation2 size={10} /> High risk mission
                                         </span>
                                     )}
                                 </div>
 
                                 {/* Customer Section */}
-                                <div className="space-y-2">
-                                    <h4 className="text-[9px] font-black text-content-subtle uppercase tracking-widest px-1">Customer</h4>
-                                    <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100 flex items-center gap-4">
-                                        <div className="w-11 h-11 rounded-xl bg-brand text-white flex items-center justify-center font-black text-base">
+                                <div className="space-y-3">
+                                    <h4 className="text-[9px] font-black text-content-subtle uppercase tracking-[0.3em] px-1 opacity-50">Unit Authority</h4>
+                                    <div className="p-4 rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 flex items-center gap-4 group">
+                                        <div className="w-11 h-11 rounded-xl bg-black text-brand flex items-center justify-center font-black text-base shadow-lg group-hover:scale-110 transition-all border border-black">
                                             {(selectedBooking.consumer?.name || 'G')[0]}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-black text-content truncate">{selectedBooking.consumer?.name || 'Guest'}</p>
-                                            <p className="text-[10px] text-content-subtle font-bold">{selectedBooking.consumer?.phone || '—'}</p>
+                                            <p className="text-[13px] font-black text-content truncate uppercase tracking-tight">{selectedBooking.consumer?.name || 'Anonymous Entity'}</p>
+                                            <p className="text-[9px] text-content-subtle font-black uppercase tracking-widest mt-1 opacity-40">{selectedBooking.consumer?.phone || 'NO SECURE LINE'}</p>
                                         </div>
                                         {selectedBooking.consumer?.phone && (
-                                            <a href={`tel:${selectedBooking.consumer.phone}`} className="w-9 h-9 bg-green-500 rounded-xl flex items-center justify-center shadow-md">
+                                            <a href={`tel:${selectedBooking.consumer.phone}`} className="w-9 h-9 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">
                                                 <Phone size={14} className="text-white" />
                                             </a>
                                         )}
@@ -491,7 +492,7 @@ const AdminBookings = () => {
                                             ) : (
                                                 <div className="flex flex-col items-center justify-center py-4 text-white/40">
                                                     <User size={24} className="mb-2 opacity-20" />
-                                                    <p className="text-[10px] font-black uppercase tracking-widest">No Driver Assigned</p>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest">No driver assigned</p>
                                                     <button
                                                         onClick={() => { setAssignmentType('driver'); setIsAssignModalOpen(true); }}
                                                         className="mt-3 px-4 py-2 bg-brand text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-brand/20"
@@ -522,7 +523,7 @@ const AdminBookings = () => {
                                             <div className="mx-1 mt-1 p-3 rounded-xl bg-brand/5 border border-brand/10 space-y-2">
                                                 <div className="flex items-center gap-2 mb-1">
                                                     <Car size={12} className="text-brand" />
-                                                    <span className="text-[9px] font-black uppercase text-brand tracking-widest">Parking Logistics</span>
+                                                    <span className="text-[9px] font-black uppercase text-brand tracking-widest">Parking logistics</span>
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                                                     <div className="flex flex-col">
@@ -554,7 +555,7 @@ const AdminBookings = () => {
                                         )}
                                         <DetailItem icon={<Hash size={14} />} label="Security PIN" value={selectedBooking.securityPin || '—'} />
                                         <DetailItem icon={<Package size={14} />} label="Initial Paid" value={`₹${selectedBooking.pricing?.initialPaidAmount || selectedBooking.pricing?.totalAmount || 0}`} />
-                                        
+
                                         {/* ── Pricing Breakdown for Chauffeur ── */}
                                         {selectedBooking.pricing?.breakdown?.filter(b => b.amount > 0).map((item, idx) => (
                                             <div key={idx} className="mx-1 p-3 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between">
@@ -581,7 +582,7 @@ const AdminBookings = () => {
                                 {selectedBooking.issues?.length > 0 && (
                                     <div className="space-y-2">
                                         <h4 className="text-[9px] font-black text-red-600 uppercase tracking-widest px-1 flex items-center gap-2">
-                                            <ShieldAlert size={11} /> Emergency Alerts & Issues
+                                            <ShieldAlert size={11} /> Emergency alerts & issues
                                         </h4>
                                         <div className="space-y-3">
                                             {selectedBooking.issues.map((issue, idx) => {
@@ -640,24 +641,25 @@ const AdminBookings = () => {
 
                                 {/* Command Control */}
                                 <div className="space-y-3">
-                                    <h4 className="text-[9px] font-black text-content-subtle uppercase tracking-widest px-1">Command Control</h4>
+                                    <h4 className="text-[9px] font-black text-content-subtle uppercase tracking-[0.3em] px-1 opacity-50">Command Protocol</h4>
                                     <div className="grid grid-cols-2 gap-2">
                                         {[
-                                            { val: 'pending', color: 'amber' },
-                                            { val: 'confirmed', color: 'blue' },
-                                            { val: 'en_route', color: 'indigo' },
-                                            { val: 'in_progress', color: 'violet' },
-                                            { val: 'completed', color: 'green' },
-                                            { val: 'cancelled', color: 'red' },
+                                            { val: 'pending', color: 'bg-amber-500' },
+                                            { val: 'confirmed', color: 'bg-[var(--primary)]' },
+                                            { val: 'en_route', color: 'bg-indigo-500' },
+                                            { val: 'in_progress', color: 'bg-violet-500' },
+                                            { val: 'completed', color: 'bg-emerald-500' },
+                                            { val: 'cancelled', color: 'bg-red-500' },
                                         ].map(({ val, color }) => (
                                             <button
                                                 key={val}
                                                 onClick={() => handleUpdateStatus(selectedBooking._id, val)}
-                                                className={`p-2.5 rounded-xl border text-[8px] font-black uppercase tracking-wider transition-all ${selectedBooking.status === val
-                                                    ? 'bg-content text-white border-content shadow-lg'
-                                                    : 'bg-white text-content-subtle border-gray-100 hover:border-brand/30 hover:text-brand'
+                                                className={`p-3 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all relative overflow-hidden group/btn ${selectedBooking.status === val
+                                                    ? `bg-black text-brand border-black shadow-xl`
+                                                    : 'bg-slate-50/50 dark:bg-white/[0.02] text-content-subtle border-slate-200/60 dark:border-white/5 hover:border-brand/50 hover:text-brand'
                                                     }`}
                                             >
+                                                {selectedBooking.status === val && <div className={`absolute top-0 right-0 w-1.5 h-full ${color}`} />}
                                                 {val.replace(/[-_]/g, ' ')}
                                             </button>
                                         ))}
@@ -688,20 +690,19 @@ const AdminBookings = () => {
                                     </button>
                                 </div>
                             </div>
-
                             {/* Drawer Footer */}
-                            <div className="p-5 border-t border-gray-100 bg-gray-50/50 flex gap-3">
+                            <div className="p-6 border-t border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex gap-3">
                                 <button
                                     onClick={() => fetchBookings(true)}
-                                    className="flex-1 h-12 bg-white border border-gray-100 text-content rounded-xl font-black text-[9px] uppercase tracking-widest hover:border-brand hover:text-brand transition-all flex items-center justify-center gap-2"
+                                    className="flex-1 h-12 bg-surface border border-slate-200/60 dark:border-white/10 text-content rounded-xl font-black text-[9px] uppercase tracking-widest hover:border-brand hover:text-brand transition-all flex items-center justify-center gap-2 shadow-sm"
                                 >
-                                    <RefreshCw size={14} /> Refresh
+                                    <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} /> Sync Data
                                 </button>
                                 <button
                                     onClick={() => setSelectedBooking(null)}
-                                    className="flex-1 h-12 bg-content text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-brand transition-all flex items-center justify-center gap-2"
+                                    className="flex-1 h-12 bg-black text-brand rounded-xl font-black text-[9px] uppercase tracking-widest hover:brightness-125 transition-all flex items-center justify-center gap-2 shadow-xl active:scale-95"
                                 >
-                                    <CheckCircle2 size={14} /> Done
+                                    <CheckCircle2 size={14} /> Close Terminal
                                 </button>
                             </div>
                         </motion.div>
@@ -713,7 +714,7 @@ const AdminBookings = () => {
             <AdminModal
                 isOpen={isAssignModalOpen}
                 onClose={() => setIsAssignModalOpen(false)}
-                title="Assign Captain"
+                title="Assign captain"
             >
                 <div className="space-y-4">
                     <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest px-1">
@@ -772,12 +773,12 @@ const AdminBookings = () => {
 };
 
 const DetailItem = ({ icon, label, value }) => (
-    <div className="flex items-center justify-between p-4 rounded-2xl bg-white border border-gray-100 shadow-sm transition-all hover:shadow-soft">
+    <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 transition-all hover:bg-slate-100 dark:hover:bg-white/5">
         <div className="flex items-center gap-3">
-            <div className="text-brand opacity-60">{icon}</div>
-            <span className="text-[9px] font-black uppercase text-content-subtle tracking-widest">{label}</span>
+            <div className="text-brand opacity-60 bg-brand/5 p-2 rounded-lg">{icon}</div>
+            <span className="text-[9px] font-black uppercase text-content-subtle tracking-[0.2em] opacity-50">{label}</span>
         </div>
-        <span className="text-xs font-black text-content">{value}</span>
+        <span className="text-[11px] font-black text-content uppercase tracking-tight">{value}</span>
     </div>
 );
 
@@ -794,14 +795,14 @@ const AdminModal = ({ isOpen, onClose, title, children }) => {
             <motion.div
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                className="bg-white w-full max-w-lg rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-gray-100"
+                className="bg-surface w-full max-w-lg rounded-[2.5rem] shadow-premium relative z-10 overflow-hidden border border-slate-200/60 dark:border-white/5"
             >
-                <div className="px-10 py-8 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
+                <div className="px-10 py-8 border-b border-slate-200/60 dark:border-white/5 flex items-center justify-between bg-slate-50/50 dark:bg-white/[0.02]">
                     <div>
-                        <h2 className="text-xl font-black text-content leading-none">{title}</h2>
-                        <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-2 ml-1">Enterprise Management System</p>
+                        <h2 className="text-xl font-black text-content leading-none tracking-tight uppercase">{title}</h2>
+                        <p className="text-[10px] font-black text-brand uppercase tracking-[0.2em] mt-2 opacity-80">Operational Authorization</p>
                     </div>
-                    <button onClick={onClose} className="p-3 hover:bg-white rounded-2xl border border-gray-100 text-content-subtle transition-all">
+                    <button onClick={onClose} className="p-3 hover:bg-black dark:hover:bg-brand rounded-2xl border border-slate-200 dark:border-white/10 text-content-subtle hover:text-brand dark:hover:text-black transition-all">
                         <XCircle size={20} />
                     </button>
                 </div>
@@ -959,7 +960,7 @@ const LiveMapView = ({ bookings, onSelectBooking }) => {
                         <span className="text-[9px] font-black uppercase tracking-widest text-content-subtle">Pending</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.5)]"></div>
+                        <div className="w-2.5 h-2.5 rounded-full bg-[var(--primary)] shadow-[0_0_10px_var(--primary-light)]"></div>
                         <span className="text-[9px] font-black uppercase tracking-widest text-content-subtle">Dispatched</span>
                     </div>
                     <div className="flex items-center gap-2">

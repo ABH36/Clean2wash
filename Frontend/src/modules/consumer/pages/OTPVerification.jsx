@@ -3,11 +3,12 @@ import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, ShieldCheck, Timer, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
+import { toast } from 'react-hot-toast';
 
 const OTPVerification = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { verifyOTP } = useAuth();
+    const { verifyOTP, sendOTP } = useAuth();
 
     // Get from navigation state (login = no userData, signup = userData)
     const { type, identifier, userData, devOtp } = location.state || { type: 'phone', identifier: '' };
@@ -17,7 +18,14 @@ const OTPVerification = () => {
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState('entering');
     const [error, setError] = useState('');
+    const [resending, setResending] = useState(false);
     const otpRefs = useRef([]);
+
+    useEffect(() => {
+        if (!identifier) {
+            navigate('/login');
+        }
+    }, [identifier, navigate]);
 
     useEffect(() => {
         if (timeLeft > 0) {
@@ -49,11 +57,29 @@ const OTPVerification = () => {
         setLoading(false);
         if (res.success) {
             setStatus('success');
+            toast.success('OTP verified successfully');
             setTimeout(() => navigate('/'), 1500);
         } else {
             setStatus('entering');
             setError(res.error || 'Invalid or expired OTP. Please try again.');
+            toast.error(res.error || 'OTP verification failed');
         }
+    };
+
+    const handleResend = async () => {
+        if (timeLeft > 0 || resending || !identifier) return;
+        setResending(true);
+        setError('');
+        const response = await sendOTP(identifier, type, userData || null);
+        if (response.success) {
+            setTimeLeft(45);
+            setOtp(['', '', '', '']);
+            toast.success(`Testing OTP: ${response.data?.otp || 'sent'}`, { duration: 5000 });
+        } else {
+            setError(response.error || 'Failed to resend OTP');
+            toast.error('Failed to resend OTP');
+        }
+        setResending(false);
     };
 
     return (
@@ -119,7 +145,7 @@ const OTPVerification = () => {
                                     otpRefs.current[i - 1]?.focus();
                                 }
                             }}
-                            className={`w-11 h-13 text-center text-lg font-[1000] rounded-xl border-2 transition-all outline-none shadow-sm ${otp[i] ? 'border-brand bg-white text-brand ring-4 ring-brand/5' : 'border-orange-100 bg-white text-content-subtle focus:border-brand/30'
+                            className={`w-11 h-13 text-center text-lg font-[1000] rounded-xl border-2 transition-all outline-none shadow-sm ${otp[i] ? 'border-brand bg-white text-slate-950 ring-4 ring-brand/5' : 'border-orange-100 bg-white text-slate-400 focus:border-brand/30'
                                 }`}
                         />
                     ))}
@@ -149,7 +175,9 @@ const OTPVerification = () => {
                             {timeLeft > 0 ? (
                                 <span>Resend in <span className="text-brand">0:{timeLeft < 10 ? `0${timeLeft}` : timeLeft}</span></span>
                             ) : (
-                                <button className="text-brand font-black" onClick={() => setTimeLeft(45)}>Resend Code</button>
+                                <button className="text-brand font-black disabled:opacity-50" onClick={handleResend} disabled={resending}>
+                                    {resending ? 'Sending...' : 'Resend Code'}
+                                </button>
                             )}
                         </div>
                         {timeLeft === 0 && (

@@ -2,7 +2,7 @@ const cron = require('node-cron');
 const Subscription = require('../models/Subscription');
 const Booking = require('../models/Booking');
 const Hub = require('../models/Hub');
-const { sendNotification, sendCaptainNotification, sendVendorNotification } = require('./notificationService');
+const { sendNotification, sendCaptainNotification, sendVendorNotification, sendStaffNotification } = require('./notificationService');
 
 const Captain = require('../models/Captain');
 
@@ -198,7 +198,7 @@ const generateDailySubscriptionJobs = async () => {
                     await sendCaptainNotification(assignedStaff._id, {
                         title: 'Mission Assigned 🚗',
                         message: `You have a new Apartment Wash at ${sub.hub?.name}. Slot: ${sub.slot === 'morning' ? '6-9 AM' : '6-8 PM'}. Route sorted by Basement → Block → Pillar.`,
-                        type: 'booking' // Fixed from 'status-update'
+                        type: 'booking'
                     });
                 }
             }

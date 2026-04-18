@@ -7,28 +7,28 @@ const RegistrationStepWrapper = ({ title, subtitle, step, totalSteps, children, 
 
     return (
         <div className="flex flex-col min-h-[550px] relative">
-            {/* Header Section */}
-            <div className="mb-10 relative z-10">
-                <div className="flex items-center justify-between mb-5">
-                    <div className="px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-full">
-                        <span className="text-[8px] font-black text-yellow-500 uppercase tracking-[0.2em]">Step {step} of {totalSteps}</span>
-                    </div>
+            {/* Header Section Centered */}
+            <div className="mb-10 relative z-10 flex flex-col items-center">
+                <div className="w-full flex items-center justify-center relative mb-6">
                     {onBack && (
                         <button
                             onClick={onBack}
-                            className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/40 hover:bg-yellow-500 hover:text-black transition-all active:scale-90 border border-white/5"
+                            className="absolute left-0 w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/40 hover:bg-yellow-500 hover:text-black transition-all active:scale-90 border border-white/5"
                         >
                             <ArrowLeft size={16} strokeWidth={3} />
                         </button>
                     )}
+                    <div className="px-4 py-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-full">
+                        <span className="text-[9px] font-black text-yellow-500 uppercase tracking-[0.2em]">Step {step} of {totalSteps}</span>
+                    </div>
                 </div>
 
-                <h1 className="text-3xl font-black text-white uppercase tracking-tighter leading-[0.9] mb-1">
+                <h1 className="text-3xl font-black text-white uppercase tracking-tighter leading-[0.9] mb-2 text-center">
                     {title.split(' ').map((word, i) => (
-                        <span key={i} className={i === 0 ? "text-white" : "text-yellow-500 block"}>{word} </span>
+                        <span key={i} className={i === 0 ? "text-white" : "text-yellow-500 block mt-1"}>{word} </span>
                     ))}
                 </h1>
-                <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mt-3 leading-relaxed">{subtitle}</p>
+                <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mt-3 leading-relaxed text-center">{subtitle}</p>
 
                 {/* Progress Visualizer */}
                 <div className="mt-8 relative h-1 w-full bg-white/5 rounded-full overflow-hidden">

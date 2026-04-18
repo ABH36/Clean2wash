@@ -1219,7 +1219,7 @@ const SpareDriverBooking = () => {
                 key: razorKeyRes.data.key_id,
                 amount: orderRes.data.amount,
                 currency: 'INR',
-                name: 'Clean2Wash Chauffeur Settlement',
+                name: 'Spare Driver Chauffeur Settlement',
                 description: `Additional payment for ${selectedType?.title || 'chauffeur trip'}`,
                 order_id: orderRes.data.order_id,
                 handler: async (response) => {
@@ -1361,7 +1361,7 @@ const SpareDriverBooking = () => {
                 key: razorKeyRes.data.key_id,
                 amount: orderRes.data.amount,
                 currency: "INR",
-                name: "Clean2Wash Chauffeur",
+                name: "Spare Driver Chauffeur",
                 description: `Booking for ${selectedType.title}`,
                 order_id: orderRes.data.order_id,
                 handler: async (response) => {
@@ -1477,115 +1477,128 @@ const SpareDriverBooking = () => {
 
 
     const renderBookingDetails = () => (
-        <div className="flex-1 flex flex-col bg-gradient-to-b from-[#FFFDF5] to-[#FEF3C7] min-h-screen overflow-hidden">
-            <div className="px-5 pt-4 pb-2 border-b border-[#0F172A]/05">
-                <div className="flex items-center justify-between">
+        <div className="flex-1 flex flex-col bg-[#FBF8EF] min-h-screen">
+            {/* 1. Elite Service Header Card */}
+            <div className="px-5 pt-6 pb-6 bg-white rounded-b-[32px] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border-b border-black/05">
+                <div className="flex items-center gap-4">
+                    {/* Brand/Service Icon */}
+                    <div className="w-14 h-14 bg-gradient-to-br from-[#F59E0B] to-[#D97706] rounded-2xl flex items-center justify-center shadow-lg transform rotate-3">
+                        <span className="text-white text-xl font-[1000]">SD</span>
+                    </div>
                     <div>
-                        <h3 className="text-[18px] font-black text-[#0F172A] tracking-tighter uppercase leading-none">
-                            {selectedType?.title || 'Point to Point'}
+                        <h3 className="text-[22px] font-[1000] text-[#0F172A] tracking-tighter uppercase leading-none">
+                            {selectedType?.title || 'Point To Point'}
                         </h3>
-                        <p className="text-[8px] font-extrabold text-[#F59E0B] uppercase tracking-[0.15em] mt-0.5">
-                            HOORA ELITE <span className="text-[#0F172A]/20 ml-1">• 1/2</span>
-                        </p>
+                        <div className="flex items-center gap-2 mt-1.5">
+                            <div className="px-2 py-0.5 bg-[#F59E0B]/10 rounded-full">
+                                <span className="text-[9px] font-black text-[#F59E0B] uppercase tracking-wider">Hoora Elite</span>
+                            </div>
+                            <span className="text-[#0F172A]/20 text-[10px] font-bold">• Premium Fleet</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div className="px-5 py-3 space-y-3">
-                {/* 2. Compact Toggle */}
-                <div className="p-1 bg-[#0F172A]/05 rounded-lg flex gap-1">
+            <div className="px-5 py-6 space-y-6">
+                {/* 2. Premium Booking Mode Toggle */}
+                <div className="p-1.5 bg-white border border-black/05 rounded-2xl flex gap-1 shadow-sm">
                     <button
                         onClick={() => setBookingDetails((prev) => ({ ...prev, bookingMode: 'instant' }))}
-                        className={`flex-1 h-9 rounded-md text-[9px] font-black uppercase tracking-wider transition-all ${bookingMode === 'instant' ? 'bg-[#0F172A] text-white shadow-sm' : 'bg-transparent text-[#0F172A]/30'}`}
+                        className={`flex-1 h-11 rounded-xl text-[10px] font-[1000] uppercase tracking-widest transition-all duration-300 ${bookingMode === 'instant' ? 'bg-[#0F172A] text-white shadow-md' : 'bg-transparent text-[#0F172A]/30'}`}
                     >
                         Book Now
                     </button>
                     <button
                         onClick={() => setBookingDetails((prev) => ({ ...prev, bookingMode: 'scheduled' }))}
-                        className={`flex-1 h-9 rounded-md text-[9px] font-black uppercase tracking-wider transition-all ${bookingMode === 'scheduled' ? 'bg-[#0F172A] text-white shadow-sm' : 'bg-transparent text-[#0F172A]/30'}`}
+                        className={`flex-1 h-11 rounded-xl text-[10px] font-[1000] uppercase tracking-widest transition-all duration-300 ${bookingMode === 'scheduled' ? 'bg-[#0F172A] text-white shadow-md' : 'bg-transparent text-[#0F172A]/30'}`}
                     >
                         Schedule
                     </button>
                 </div>
 
-                {/* 3. Slim Scheduling */}
-                {bookingMode === 'scheduled' && (
-                    <div className="grid grid-cols-2 gap-2 animate-in fade-in duration-300">
-                        <div className="bg-white rounded-lg p-2.5 border border-[#0F172A]/05 shadow-sm">
-                            <span className="text-[7px] font-bold text-[#0F172A]/30 uppercase tracking-widest block">Date</span>
-                            <input
-                                type="date"
-                                value={bookingDetails.date}
-                                onChange={(e) => setBookingDetails({ ...bookingDetails, date: e.target.value })}
-                                className="w-full text-[11px] font-bold bg-transparent border-none p-0 outline-none text-[#0F172A]"
-                            />
-                        </div>
-                        <div className="bg-white rounded-lg p-2.5 border border-[#0F172A]/05 shadow-sm">
-                            <span className="text-[7px] font-bold text-[#0F172A]/30 uppercase tracking-widest block">Time</span>
-                            <input
-                                type="time"
-                                value={bookingDetails.time}
-                                onChange={(e) => setBookingDetails({ ...bookingDetails, time: e.target.value })}
-                                className="w-full text-[11px] font-bold bg-transparent border-none p-0 outline-none text-[#0F172A]"
-                            />
-                        </div>
-                    </div>
-                )}
+                {/* 3. Date/Time Picker for Scheduled */}
+                <AnimatePresence>
+                    {bookingMode === 'scheduled' && (
+                        <motion.div 
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="grid grid-cols-2 gap-3 overflow-hidden"
+                        >
+                            <div className="bg-white rounded-2xl p-4 border border-black/05 shadow-sm">
+                                <span className="text-[8px] font-black text-black/20 uppercase tracking-[0.2em] block mb-1">Pick Date</span>
+                                <input
+                                    type="date"
+                                    value={bookingDetails.date}
+                                    onChange={(e) => setBookingDetails({ ...bookingDetails, date: e.target.value })}
+                                    className="w-full text-[13px] font-black bg-transparent border-none p-0 outline-none text-[#0F172A] cursor-pointer"
+                                />
+                            </div>
+                            <div className="bg-white rounded-2xl p-4 border border-black/05 shadow-sm">
+                                <span className="text-[8px] font-black text-black/20 uppercase tracking-[0.2em] block mb-1">Pick Time</span>
+                                <input
+                                    type="time"
+                                    value={bookingDetails.time}
+                                    onChange={(e) => setBookingDetails({ ...bookingDetails, time: e.target.value })}
+                                    className="w-full text-[13px] font-black bg-transparent border-none p-0 outline-none text-[#0F172A] cursor-pointer"
+                                />
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
-                {/* 4. Slim Location Row */}
-                <div className="space-y-1.5">
+                {/* 4. Luxury Address Row */}
+                <div className="bg-white rounded-[24px] border border-black/05 shadow-sm overflow-hidden">
                     <div 
                         onClick={() => navigate('/map')}
-                        className="flex items-center justify-between p-3 bg-white border border-[#0F172A]/05 rounded-xl active:opacity-60 transition-all cursor-pointer"
+                        className="flex items-center gap-4 p-5 active:bg-black/02 transition-all cursor-pointer border-b border-black/05"
                     >
-                        <div className="flex items-center gap-2.5 overflow-hidden">
-                            <div className="w-7 h-7 rounded-lg bg-[#0F172A]/03 flex items-center justify-center text-[#0F172A]">
-                                <MapPin size={14} />
-                            </div>
-                            <div className="overflow-hidden">
-                                <p className="text-[7px] font-bold text-[#0F172A]/30 uppercase tracking-widest leading-none mb-0.5">Pickup</p>
-                                <p className="text-[11px] font-bold text-[#0F172A] truncate">
-                                    {selectedAddress?.street || addresses?.find(a => a.isPrimary)?.street || addresses?.[0]?.street || 'Current Location'}
-                                </p>
-                            </div>
+                        <div className="w-10 h-10 rounded-full bg-[#0F172A]/05 flex items-center justify-center text-[#0F172A]">
+                            <MapPin size={18} strokeWidth={2.5} />
                         </div>
-                        <ChevronRight size={14} className="text-[#0F172A]/10" />
+                        <div className="flex-1 overflow-hidden">
+                            <p className="text-[8px] font-black text-black/20 uppercase tracking-[0.2em] mb-1">Current Pickup</p>
+                            <p className="text-[13px] font-black text-[#0F172A] truncate">
+                                {selectedAddress?.street || addresses?.find(a => a.isPrimary)?.street || addresses?.[0]?.street || 'Current Location'}
+                            </p>
+                        </div>
+                        <ChevronRight size={18} className="text-black/10" />
                     </div>
 
                     {requiresDestination && (
                         <div 
                             onClick={() => navigate('/map?from=chauffeur&type=destination')}
-                            className="flex items-center justify-between p-3 bg-white border border-[#0F172A]/05 rounded-xl active:opacity-60 transition-all cursor-pointer"
+                            className="flex items-center gap-4 p-5 active:bg-black/02 transition-all cursor-pointer"
                         >
-                            <div className="flex items-center gap-2.5 overflow-hidden">
-                                <div className="w-7 h-7 rounded-lg bg-[#F59E0B]/05 flex items-center justify-center text-[#F59E0B]">
-                                    <Navigation size={14} />
-                                </div>
-                                <div className="overflow-hidden">
-                                    <p className="text-[7px] font-bold text-[#0F172A]/30 uppercase tracking-widest leading-none mb-0.5">Destination</p>
-                                    <p className="text-[11px] font-bold text-[#0F172A] truncate">
-                                        {destination?.street || 'Select Drop Location'}
-                                    </p>
-                                </div>
+                            <div className="w-10 h-10 rounded-full bg-[#F59E0B]/10 flex items-center justify-center text-[#F59E0B]">
+                                <Navigation size={18} strokeWidth={2.5} />
                             </div>
-                            <ChevronRight size={14} className="text-[#0F172A]/10" />
+                            <div className="flex-1 overflow-hidden">
+                                <p className="text-[8px] font-black text-black/20 uppercase tracking-[0.2em] mb-1">Set Destination</p>
+                                <p className="text-[13px] font-black text-[#0F172A] truncate">
+                                    {destination?.street || 'Where To?'}
+                                </p>
+                            </div>
+                            <ChevronRight size={18} className="text-black/10" />
                         </div>
                     )}
                 </div>
 
-                {/* 5. Minimal Grid Hours */}
+                {/* 5. Modern Duration Selector */}
                 {durationOptions.length > 0 && (
-                    <div className="space-y-1.5">
-                        <label className="text-[8px] font-black text-[#0F172A]/20 uppercase tracking-[0.2em] flex items-center gap-1.5">
-                            <Clock size={9} />
-                            CHAUFFEUR DURATION
+                    <div className="space-y-3">
+                        <label className="text-[9px] font-black text-black/30 uppercase tracking-[0.3em] flex items-center gap-2 px-1">
+                            <Clock size={12} className="text-[#F59E0B]" />
+                            Select Chauffeur Duration
                         </label>
-                        <div className="flex flex-wrap gap-1.5">
+                        <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-hide">
                             {durationOptions.map((d) => (
                                 <button
                                     key={d}
                                     onClick={() => setBookingDetails({ ...bookingDetails, duration: d })}
-                                    className={`flex-1 min-w-[30%] h-9 rounded-lg text-[9px] font-black uppercase transition-all border ${bookingDetails.duration === d ? 'bg-[#0F172A] text-white border-[#0F172A]' : 'bg-white text-[#0F172A]/30 border-[#0F172A]/05'}`}
+                                    className={`flex-shrink-0 px-6 h-12 rounded-2xl text-[11px] font-[1000] uppercase transition-all duration-300 border ${bookingDetails.duration === d 
+                                        ? 'bg-[#0F172A] text-white border-[#0F172A] shadow-lg scale-[1.05]' 
+                                        : 'bg-white text-black/30 border-black/05 hover:border-black/10'}`}
                                 >
                                     {d}
                                 </button>
@@ -1593,20 +1606,30 @@ const SpareDriverBooking = () => {
                         </div>
                     </div>
                 )}
+            </div>
 
-                {/* 6. Slim Pricing Row */}
-                <div className="flex items-center justify-between py-2.5 border-t border-[#0F172A]/05 mt-1">
-                    <span className="text-[9px] font-black text-[#0F172A]/20 uppercase tracking-widest">Total Estimated</span>
-                    <span className="text-[20px] font-black text-[#0F172A] tracking-tighter">
-                        <span className="text-[#F59E0B] mr-0.5">₹</span>{estimatedTotal}
-                    </span>
+            {/* 6. Elite Bottom Checkout Bar */}
+            <div className="mt-auto pb-[100px] px-5">
+                <div className="bg-[#0F172A]/03 p-5 rounded-[24px] flex items-center justify-between">
+                    <div>
+                        <p className="text-[9px] font-black text-black/20 uppercase tracking-widest mb-1">Total Estimated</p>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-[#F59E0B] text-lg font-black">₹</span>
+                            <span className="text-3xl font-[1000] text-[#0F172A] tracking-tighter">{estimatedTotal}</span>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-[8px] font-bold text-[#F59E0B] uppercase tracking-widest">Pricing Policy Applied</p>
+                        <p className="text-[10px] font-black text-black/40 mt-1">Excl. Taxes</p>
+                    </div>
                 </div>
             </div>
 
-            {/* 7. Ultra-Slim CTA */}
-            <div className="fixed bottom-[80px] left-0 right-0 z-50 px-5 px-safe">
+            {/* 7. Unified Action Layer */}
+            <div className="fixed bottom-[90px] left-0 right-0 z-[100] px-5">
                 <div className="max-w-[430px] mx-auto">
-                    <button
+                    <motion.button
+                        whileTap={{ scale: 0.96 }}
                         onClick={() => {
                             if (selectedVehicle) {
                                 setPhase(PHASES.CHECKOUT);
@@ -1614,17 +1637,17 @@ const SpareDriverBooking = () => {
                                 setPhase(PHASES.CONFIRM_VEHICLE);
                             }
                         }}
-                        className="w-full h-14 bg-[#0F172A] text-white rounded-xl flex items-center px-6 shadow-xl active:scale-[0.98] transition-all group"
+                        className="w-full h-[72px] bg-[#0F172A] text-white rounded-[24px] flex items-center justify-between px-8 shadow-[0_20px_40px_rgba(0,0,0,0.3)] group overflow-hidden relative"
                     >
-                        <div className="flex-1 text-left">
-                            <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest leading-none mb-1">Total Pay</p>
-                            <span className="text-[18px] font-bold text-[#F59E0B] tracking-tight">₹{estimatedTotal}</span>
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#F59E0B] to-transparent opacity-0 group-active:opacity-10 transition-opacity" />
+                        <div className="flex flex-col items-start relative z-10">
+                            <span className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] mb-1">Checkout</span>
+                            <span className="text-[18px] font-[1000] tracking-tight">CONTINUE</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[11px] font-bold uppercase tracking-widest text-white">Continue</span>
-                            <ArrowRight size={18} className="text-[#F59E0B]" />
+                        <div className="h-10 w-10 bg-white/10 rounded-full flex items-center justify-center relative z-10">
+                            <ArrowRight size={20} className="text-[#F59E0B]" strokeWidth={3} />
                         </div>
-                    </button>
+                    </motion.button>
                 </div>
             </div>
         </div>
@@ -2711,7 +2734,7 @@ const SpareDriverBooking = () => {
 
             <div className="space-y-2 max-w-[240px]">
                 <h2 className="text-2xl font-[1000] text-black uppercase tracking-tight leading-none">Session<br />Completed</h2>
-                <p className="text-[10px] font-bold text-black/30 uppercase tracking-[0.15em] leading-relaxed">Thank you for traveling with Clean2Wash elite chauffeurs.</p>
+                <p className="text-[10px] font-bold text-black/30 uppercase tracking-[0.15em] leading-relaxed">Thank you for traveling with Spare Driver elite chauffeurs.</p>
             </div>
 
             <div className="w-full bg-white border border-black/[0.03] p-5 rounded-[2rem] space-y-3 shadow-[0_24px_60px_rgba(15,23,42,0.08)]">

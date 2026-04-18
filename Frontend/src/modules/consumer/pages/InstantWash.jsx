@@ -746,7 +746,7 @@ const InstantWash = () => {
         if (user?.id) socketService.joinUserRoom(user.id);
 
         const handleStatusUpdate = (data) => {
-            console.log('Clean-2-Wash: Socket Status Update:', data);
+            console.log('Spare Driver: Socket Status Update:', data);
 
             // Normalize status from data.status or data if directly passed
             const newStatus = data.status;
@@ -864,7 +864,7 @@ const InstantWash = () => {
         const recoverSession = async () => {
             const savedId = sessionStorage.getItem('iw_active_booking_id');
             if (savedId && !activeBookingId) {
-                console.log('Clean-2-Wash: Attempting session recovery for:', savedId);
+                console.log('Spare Driver: Attempting session recovery for:', savedId);
                 try {
                     const res = await apiClient.getBooking(savedId);
                     if (res?.status === 'success' && res?.data?.booking) {
@@ -872,7 +872,7 @@ const InstantWash = () => {
                         
                         // 💎 Isolated Recovery Logic: Only recover if it matches 'captain' (Instant/Express) type
                         if (b.service?.type !== 'captain') {
-                            console.log('Clean-2-Wash: Active booking is not an Instant/Express service, skipping recovery on this page.');
+                            console.log('Spare Driver: Active booking is not an Instant/Express service, skipping recovery on this page.');
                             return;
                         }
 
@@ -885,7 +885,7 @@ const InstantWash = () => {
                     console.error('Session recovery failed:', err);
                     // If the booking no longer exists, clear the stale session ID
                     if (err.message?.includes('404') || err.message?.toLowerCase().includes('not found')) {
-                        console.log('Clean-2-Wash: Clearing stale booking session');
+                        console.log('Spare Driver: Clearing stale booking session');
                         sessionStorage.removeItem('iw_active_booking_id');
                         sessionStorage.removeItem('iw_phase'); // Reset to root phase
                         setActiveBookingId(null);
@@ -3154,7 +3154,7 @@ const InstantWash = () => {
                 icon: <Crown size={18} className="text-brand" fill="currentColor" />, 
                 subtitle: `${user.loyalty.rewardsAvailable} FREE WASH AVAILABLE` 
             }] : []),
-            { id: 'wallet', name: 'Clean2Wash Wallet', icon: <Wallet size={18} className="text-brand" strokeWidth={2.5} />, balance: walletBalance },
+            { id: 'wallet', name: 'Spare Driver Wallet', icon: <Wallet size={18} className="text-brand" strokeWidth={2.5} />, balance: walletBalance },
             { id: 'googlepay', name: 'Google Pay', icon: 'https://upload.wikimedia.org/wikipedia/commons/b/b5/Google_Pay_%28GPay%29_Logo_%282020%29.svg' },
             { id: 'phonepe', name: 'PhonePe', icon: 'https://seeklogo.com/images/P/phonepe-logo-DEB60AD14F-seeklogo.com.png' },
             { id: 'paytm', name: 'Paytm', icon: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo.svg' },
@@ -3442,7 +3442,7 @@ const InstantWash = () => {
                                             key: key_id,
                                             amount: orderAmount,
                                             currency: currency,
-                                            name: 'Clean-2-Wash',
+                                            name: 'Spare Driver',
                                             description: `${activeService?.title || 'Car Wash Service'}`,
                                             image: 'https://cdn-icons-png.flaticon.com/512/3003/3003984.png',
                                             order_id: order_id,

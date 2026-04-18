@@ -296,7 +296,7 @@ const ModelDetail = () => {
                                     </div>
                                     <h3 className="text-white text-2xl font-black italic uppercase leading-none tracking-tight">Ready to Partner?</h3>
                                     <p className="text-white/40 text-[10px] font-bold mt-4 uppercase tracking-[0.2em] leading-relaxed max-w-[200px]">
-                                        Join 50+ {data.tag.split(' ')[0]}s already using Clean2Wash.
+                                        Join 50+ {data.tag.split(' ')[0]}s already using Spare Driver.
                                     </p>
                                     <button
                                         onClick={() => setShowInquiry(true)}

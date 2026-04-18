@@ -193,7 +193,7 @@ const OrderTracking = () => {
                                 <h4 className="text-sm font-black text-content italic uppercase leading-none mb-1">
                                     {order.items.find(it => it.fulfillment?.agentId)?.fulfillment?.name || 'Logistics Specialist'}
                                 </h4>
-                                <p className="text-[10px] font-bold text-content-subtle opacity-70">Clean-2-Wash Certified Partner</p>
+                                <p className="text-[10px] font-bold text-content-subtle opacity-70">Spare Driver Certified Partner</p>
                             </div>
                             <a href={`tel:${order.items.find(it => it.fulfillment?.agentId)?.fulfillment?.phone}`} className="w-12 h-12 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center active:scale-90 transition-transform">
                                 <Phone size={20} />

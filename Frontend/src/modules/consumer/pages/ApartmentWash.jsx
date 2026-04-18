@@ -1805,7 +1805,7 @@ const ApartmentWash = () => {
                                     key: razorpayKey,
                                     amount,
                                     currency,
-                                    name: 'Clean2Wash',
+                                    name: 'Spare Driver',
                                     description: `${selectedPlan.name} - Apartment Subscription`,
                                     image: 'https://cdn-icons-png.flaticon.com/512/3003/3003984.png',
                                     order_id: orderId,

@@ -35,164 +35,151 @@ const Login = () => {
         const res = await sendOTP(identifier.trim(), loginType);
         setLoading(false);
         if (res.success) {
-            toast.success(`Testing OTP: ${res.data?.otp || 'sent'}`, { duration: 5000 });
+            toast.success(`Otp Sent Successfully`, { 
+                icon: '🔑',
+                style: {
+                    borderRadius: '12px',
+                    background: '#0F172A',
+                    color: '#fff',
+                }
+            });
             navigate('/otp-verify', {
                 state: { type: loginType, identifier: identifier.trim(), devOtp: res.data?.otp }
             });
         } else {
-            setError(res.error || 'Failed to send OTP. Please try again.');
+            setError(res.error || 'Failed to send Otp. Please try again.');
         }
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col font-sans relative overflow-hidden text-content">
-            {/* Background Texture/Image */}
-            <div className="absolute inset-0 opacity-[0.03] pointer-events-none">
-                <img src="/assets/carwash/1.png" className="w-full h-full object-cover scale-150 blur-3xl" alt="" />
+        <div className="min-h-screen bg-[#FBF8EF] flex flex-col font-sans relative overflow-hidden text-black">
+            {/* Soft Background Accents */}
+            <div className="absolute inset-0 opacity-[0.4] pointer-events-none">
+                <div className="absolute top-[-15%] right-[-15%] w-[400px] h-[400px] bg-white rounded-full blur-[100px]" />
+                <div className="absolute bottom-[-15%] left-[-15%] w-[400px] h-[400px] bg-[#F59E0B]/10 rounded-full blur-[100px]" />
             </div>
 
-            {/* Premium Header */}
-            <header className="px-6 pt-10 pb-6 flex items-center justify-between relative z-10">
-                <button onClick={() => navigate(-1)}
-                    className="w-10 h-10 bg-white/80 backdrop-blur-md rounded-xl flex items-center justify-center border border-white shadow-sm active:scale-95 transition-all">
-                    <ChevronLeft size={18} className="text-brand" strokeWidth={2.5} />
-                </button>
-                <div className="flex bg-white/50 backdrop-blur-md p-1 rounded-xl border border-white shadow-sm">
-                    <button
-                        onClick={() => { setLoginType('phone'); setIdentifier(''); }}
-                        className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${loginType === 'phone' ? 'bg-brand text-white shadow-lg shadow-brand/20' : 'text-content-subtle'}`}
-                    >
-                        Phone
-                    </button>
-                    <button
-                        onClick={() => { setLoginType('email'); setIdentifier(''); }}
-                        className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${loginType === 'email' ? 'bg-brand text-white shadow-lg shadow-brand/20' : 'text-content-subtle'}`}
-                    >
-                        Email
-                    </button>
-                </div>
-            </header>
-
-            <div className="flex-1 px-8 flex flex-col pt-2 relative z-10">
-                {/* Main Hero Card */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-white rounded-2xl border border-white shadow-2xl shadow-brand/5 overflow-hidden mb-8"
+            {/* Header / Logo Section */}
+            <div className="flex-1 flex flex-col items-center justify-center px-8 relative z-10 pt-12 pb-6">
+                <motion.div 
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="mb-10 flex flex-col items-center"
                 >
-                    <div className="relative aspect-[16/10]">
-                        <img
-                            src="/assets/carwash/1.png"
-                            className="w-full h-full object-cover object-center"
-                            alt="Premium Car Wash"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent" />
-
-                        <div className="absolute bottom-4 left-5 right-5 flex items-end justify-between">
-                            <div>
-                                <div className="flex items-center gap-1.5 mb-1">
-                                    <div className="w-2 h-2 bg-brand rounded-full animate-pulse" />
-                                    <span className="text-[8px] font-black uppercase tracking-[0.2em] text-brand">Secure Access</span>
-                                </div>
-                                <h1 className="text-2xl font-[1000] text-content tracking-tighter uppercase leading-none">
-                                    Welcome <span className="text-brand">Back.</span>
-                                </h1>
-                            </div>
-                            <div className="w-10 h-10 bg-white/90 backdrop-blur-md rounded-xl border border-white shadow-xl flex items-center justify-center">
-                                <Fingerprint size={20} className="text-brand" />
-                            </div>
+                    {/* Premium Spare Driver Monogram */}
+                    <div className="w-20 h-20 mb-5 relative">
+                        <div className="absolute inset-0 bg-[#F59E0B] rounded-full blur-[15px] opacity-20 animate-pulse" />
+                        <div className="relative w-full h-full bg-gradient-to-br from-[#F59E0B] to-[#D97706] rounded-full flex items-center justify-center shadow-xl border-4 border-white">
+                            <span className="text-white text-3xl font-[1000] tracking-tighter">SD</span>
                         </div>
+                    </div>
+                    <h1 className="text-3xl font-[1000] tracking-tighter uppercase leading-none text-[#0F172A]">
+                        Spare <span className="text-[#F59E0B]">Driver</span>
+                    </h1>
+                    <div className="flex items-center gap-3 mt-4 opacity-40">
+                        <div className="h-[1px] w-8 bg-black/20" />
+                        <span className="text-[9px] font-black uppercase tracking-[0.3em] whitespace-nowrap">Safe • Reliable • On Time</span>
+                        <div className="h-[1px] w-8 bg-black/20" />
                     </div>
                 </motion.div>
 
-                {/* Input Section */}
-                <div className="space-y-6 flex-1">
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={loginType}
-                            initial={{ opacity: 0, x: 10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -10 }}
+                {/* Login Form Container */}
+                <div className="w-full max-w-sm space-y-6">
+                    {/* Method Toggle */}
+                    <div className="flex bg-white p-1.5 rounded-2xl border border-black/05 shadow-sm">
+                        <button
+                            onClick={() => { setLoginType('phone'); setIdentifier(''); }}
+                            className={`flex-1 py-3.5 rounded-xl text-[11px] font-[1000] uppercase tracking-widest transition-all ${loginType === 'phone' ? 'bg-[#F59E0B] text-black shadow-lg shadow-[#F59E0B]/20' : 'text-black/30'}`}
                         >
-                            <label className="text-[10px] font-black text-brand uppercase tracking-[0.3em] mb-3 block ml-1 opacity-70">
-                                {loginType === 'phone' ? 'Identification Number' : 'Digital Address'}
-                            </label>
+                            Phone
+                        </button>
+                        <button
+                            onClick={() => { setLoginType('email'); setIdentifier(''); }}
+                            className={`flex-1 py-3.5 rounded-xl text-[11px] font-[1000] uppercase tracking-widest transition-all ${loginType === 'email' ? 'bg-[#F59E0B] text-black shadow-lg shadow-[#F59E0B]/20' : 'text-black/30'}`}
+                        >
+                            Email
+                        </button>
+                    </div>
 
-                            <div className="relative">
+                    {/* Inputs */}
+                    <div className="space-y-4">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={loginType}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className="relative"
+                            >
                                 {loginType === 'phone' ? (
-                                    <div className="flex gap-3">
-                                        <div className="bg-white border border-gray-100 rounded-xl px-4 flex items-center gap-2 flex-shrink-0 shadow-sm transition-all focus-within:border-brand/40">
+                                    <div className="flex gap-2">
+                                        <div className="bg-white border border-black/10 rounded-2xl px-5 flex items-center gap-2 flex-shrink-0 shadow-sm">
                                             <span className="text-sm">🇮🇳</span>
-                                            <span className="font-black text-brand text-xs">+91</span>
+                                            <span className="font-black text-[#0F172A] text-xs">+91</span>
                                         </div>
                                         <div className="relative flex-1">
-                                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-brand/30">
-                                                <Phone size={16} strokeWidth={2.5} />
-                                            </div>
                                             <input
                                                 type="tel"
                                                 maxLength={10}
-                                                placeholder="00000 00000"
+                                                autoFocus
+                                                placeholder="Enter Phone Number"
                                                 value={identifier}
                                                 onChange={(e) => {
                                                     const val = e.target.value.replace(/\D/g, '');
                                                     if (val.length <= 10) setIdentifier(val);
                                                 }}
-                                                className="w-full bg-white border border-gray-100 rounded-xl pl-11 pr-4 py-4 font-bold text-slate-950 text-base outline-none focus:border-brand/40 shadow-sm transition-all tracking-widest font-mono placeholder:text-gray-300"
+                                                className="w-full bg-white border border-black/10 rounded-2xl px-6 py-4.5 font-black text-[#0F172A] text-base outline-none focus:border-[#F59E0B] transition-all tracking-[0.1em] placeholder:text-black/10 shadow-sm"
                                             />
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="relative">
-                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-brand/30">
-                                            <Mail size={16} strokeWidth={2.5} />
-                                        </div>
-                                        <input
-                                            type="email"
-                                            placeholder="your@email.com"
-                                            value={identifier}
-                                            onChange={(e) => setIdentifier(e.target.value)}
-                                            className="w-full bg-white border border-gray-100 rounded-xl pl-11 pr-4 py-4 font-bold text-slate-950 text-sm outline-none focus:border-brand/40 shadow-sm transition-all placeholder:text-gray-300"
-                                        />
-                                    </div>
+                                    <input
+                                        type="email"
+                                        autoFocus
+                                        placeholder="Enter Email Address"
+                                        value={identifier}
+                                        onChange={(e) => setIdentifier(e.target.value)}
+                                        className="w-full bg-white border border-black/10 rounded-2xl px-6 py-4.5 font-black text-[#0F172A] text-sm outline-none focus:border-[#F59E0B] transition-all placeholder:text-black/10 shadow-sm"
+                                    />
                                 )}
-                            </div>
-                        </motion.div>
-                    </AnimatePresence>
+                            </motion.div>
+                        </AnimatePresence>
 
-                    {error && (
-                        <p className="text-red-500 text-xs font-bold uppercase tracking-wide">{error}</p>
-                    )}
-                    <div className="pt-2">
+                        {error && (
+                            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-[10px] font-black uppercase tracking-widest text-center">{error}</motion.p>
+                        )}
+
                         <motion.button
                             disabled={!identifier || loading}
                             whileTap={{ scale: 0.98 }}
                             onClick={handleLogin}
-                            className={`w-full h-14 rounded-xl font-black text-[10px] uppercase tracking-[0.4em] flex items-center justify-between px-10 shadow-2xl transition-all ${identifier ? 'bg-brand text-white shadow-brand/30 ring-4 ring-brand/10' : 'bg-gray-100 text-content-subtle shadow-transparent'
+                            className={`w-full h-15 rounded-2xl font-[1000] text-[11px] uppercase tracking-[0.4em] flex items-center justify-center gap-3 transition-all ${identifier && !loading ? 'bg-[#0F172A] text-white shadow-2xl shadow-black/20' : 'bg-black/05 text-black/20'
                                 }`}
                         >
-                            <span>{loading ? 'Processing...' : 'Continue'}</span>
-                            {loading ? (
-                                <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                            ) : (
-                                <Zap size={18} fill="currentColor" strokeWidth={0} />
-                            )}
+                            <span>{loading ? 'Verifying...' : 'Continue'}</span>
+                            {!loading && <ArrowRight size={18} strokeWidth={4} />}
                         </motion.button>
                     </div>
 
-                    <div className="text-center">
-                        <p className="text-content-subtle text-[10px] font-bold uppercase tracking-widest opacity-60">
-                            Don't have an account?{' '}
-                            <Link to="/signup" className="text-brand font-black ml-1 border-b border-brand/20 pb-0.5 opacity-100">JOIN clean2wash</Link>
+                    <div className="text-center pt-2">
+                        <p className="text-black/30 text-[10px] font-black uppercase tracking-[0.2em]">
+                            New to Spare Driver?{' '}
+                            <Link to="/signup" className="text-[#F59E0B] font-[1000] ml-1 border-b-2 border-[#F59E0B]/30 pb-0.5">Create Account</Link>
                         </p>
                     </div>
                 </div>
+            </div>
 
-                {/* Footer Security */}
-                <div className="mt-auto pb-8 flex items-center justify-center gap-3 opacity-30">
-                    <ShieldCheck size={14} className="text-brand" />
-                    <p className="text-[8px] font-black text-content uppercase tracking-[0.3em]">End-to-End Encryption</p>
+            {/* Footer / Legal */}
+            <div className="pb-12 pt-6 px-8 text-center relative z-10 flex flex-col items-center gap-4">
+                <div className="flex items-center gap-3 opacity-30">
+                    <ShieldCheck size={16} className="text-[#0F172A]" />
+                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#0F172A]">Safe & Secure Portal</span>
                 </div>
+                <div className="h-[1px] w-12 bg-[#F59E0B]/30 rounded-full" />
+                <p className="text-[8px] text-black/20 uppercase tracking-[0.15em] font-black px-6 leading-relaxed">
+                    By logging in, you agree to our Service Terms and Privacy Policy.
+                </p>
             </div>
         </div>
     );

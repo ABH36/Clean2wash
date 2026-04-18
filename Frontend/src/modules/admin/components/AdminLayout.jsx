@@ -55,7 +55,7 @@ const AdminLayout = ({ title: propTitle }) => {
     const getPageTitle = () => {
         if (propTitle) return propTitle;
         const path = location.pathname;
-        if (path === '/admin') return 'Dashboard';
+        if (path === '/admin') return 'Spare Driver Ops';
         if (path === '/admin/notifications') return 'Notifications';
         if (path === '/admin/bookings') return 'Bookings';
         if (path === '/admin/users') {
@@ -67,9 +67,8 @@ const AdminLayout = ({ title: propTitle }) => {
             if (type === 'sparedriver') return 'Spare Drivers';
             return 'Consumers';
         }
-        if (path === '/admin/apartment-wash') return 'Apartment Wash';
-        if (path === '/admin/studio-wash') return 'Studio Wash';
         if (path.startsWith('/admin/spare-drivers')) return 'Spare Drivers';
+        if (path.startsWith('/admin/promotions')) return 'Campaigns';
         return 'Admin Panel';
     };
 

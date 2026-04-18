@@ -649,7 +649,7 @@ const FullWashBooking = () => {
         if (user?.id) socketService.joinUserRoom(user.id);
 
         const handleStatusUpdate = (data) => {
-            console.log('Clean-2-Wash: Socket Status Update:', data);
+            console.log('Spare Driver: Socket Status Update:', data);
 
             // Normalize status from data.status or data if directly passed
             const newStatus = data.status;
@@ -756,7 +756,7 @@ const FullWashBooking = () => {
         const recoverSession = async () => {
             const savedId = sessionStorage.getItem('fw_active_booking_id');
             if (savedId && !activeBookingId) {
-                console.log('Clean-2-Wash: Attempting session recovery for:', savedId);
+                console.log('Spare Driver: Attempting session recovery for:', savedId);
                 try {
                     const res = await apiClient.getBooking(savedId);
                     if (res?.status === 'success' && res?.data?.booking) {
@@ -764,7 +764,7 @@ const FullWashBooking = () => {
                         
                         // 💎 Isolated Recovery Logic: Only recover if it matches 'vendor' (Studio) type
                         if (b.service?.type !== 'vendor') {
-                            console.log('Clean-2-Wash: Active booking is not a Studio service, skipping recovery on this page.');
+                            console.log('Spare Driver: Active booking is not a Studio service, skipping recovery on this page.');
                             return;
                          }
 
@@ -779,14 +779,14 @@ const FullWashBooking = () => {
                             if (['pending'].includes(b.status)) setPhase(PHASES.FINDING);
                             else if (['confirmed', 'accepted', 'assigned', 'pickup-assigned', 'en_route', 'at-studio', 'in_progress'].includes(b.status)) setPhase(PHASES.LIVE_TRACK);
                         } else {
-                            console.log('Clean-2-Wash: Found active Studio booking for different car, keeping isolated.');
+                            console.log('Spare Driver: Found active Studio booking for different car, keeping isolated.');
                         }
                     }
                 } catch (err) {
                     console.error('Session recovery failed:', err);
                     // Standardize cleanup if the backend forcefully pruned or we hit an invalid state
                     if (err.message?.includes('404') || err.message?.toLowerCase().includes('not found')) {
-                        console.log('Clean-2-Wash: Clearing stale booking session');
+                        console.log('Spare Driver: Clearing stale booking session');
                         sessionStorage.removeItem('fw_active_booking_id');
                         sessionStorage.removeItem('fw_phase');
                         setActiveBookingId(null);
@@ -3173,7 +3173,7 @@ const FullWashBooking = () => {
                 icon: <Crown size={20} className="text-brand" fill="currentColor" />, 
                 subtitle: `${userSubscription.monthlyCredits - userSubscription.usedCredits} ${userSubscription.plan || 'Premium'} WASH LEFT` 
             }] : []),
-            { id: 'wallet', name: 'Clean2Wash Wallet', icon: <Wallet size={20} strokeWidth={2.5} />, balance: walletBalance },
+            { id: 'wallet', name: 'Spare Driver Wallet', icon: <Wallet size={20} strokeWidth={2.5} />, balance: walletBalance },
             { id: 'googlepay', name: 'Google Pay', icon: 'https://cdn-icons-png.flaticon.com/512/6124/6124998.png' },
             { id: 'phonepe', name: 'PhonePe', icon: 'https://img.icons8.com/color/480/phonepe.png' },
             { id: 'paytm', name: 'Paytm', icon: 'https://img.icons8.com/color/480/paytm.png' },
@@ -3430,7 +3430,7 @@ const FullWashBooking = () => {
                                             key: key_id,
                                             amount: orderAmount,
                                             currency: currency,
-                                            name: 'Clean-2-Wash',
+                                            name: 'Spare Driver',
                                             description: `${activeService?.title || 'Car Wash Service'}`,
                                             image: 'https://cdn-icons-png.flaticon.com/512/3003/3003984.png', // Public URL to avoid localhost loopback CORS issues
                                             order_id: order_id,

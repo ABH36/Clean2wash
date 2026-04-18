@@ -31,11 +31,18 @@ const AppError = require('./utils/AppError');
 
 // Import routes
 const consumerRoutes = require('./modules/consumer/routes/consumerRoutes');
-const captainRoutes = require('./modules/captain/routes/captainRoutes');
 const spareDriverRoutes = require('./modules/sparedrivers/routes/spareDriverRoutes');
 const adminRoutes = require('./modules/admin/routes/adminRoutes');
-const vendorRoutes = require('./modules/vendor/routes/vendorRoutes');
-const staffRoutes = require('./modules/staff/routes/staffRoutes');
+const PLATFORM_MODE = process.env.PLATFORM_MODE || 'SPARE_DRIVER';
+const captainRoutes = PLATFORM_MODE !== 'SPARE_DRIVER'
+    ? require('./modules/captain/routes/captainRoutes')
+    : null;
+const vendorRoutes = PLATFORM_MODE !== 'SPARE_DRIVER'
+    ? require('./modules/vendor/routes/vendorRoutes')
+    : null;
+const staffRoutes = PLATFORM_MODE !== 'SPARE_DRIVER'
+    ? require('./modules/staff/routes/staffRoutes')
+    : null;
 const globalErrorHandler = require('./controllers/errorController');
 const maintenanceMiddleware = require('./middleware/maintenanceMiddleware');
 
@@ -133,11 +140,13 @@ app.get('/api/health', (req, res) => {
 
 // API routes
 app.use('/api/consumer', consumerRoutes);
-app.use('/api/captain', captainRoutes);
 app.use('/api/sparedrivers', spareDriverRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/vendor', vendorRoutes);
-app.use('/api/staff', staffRoutes);
+if (PLATFORM_MODE !== 'SPARE_DRIVER') {
+    app.use('/api/captain', captainRoutes);
+    app.use('/api/vendor', vendorRoutes);
+    app.use('/api/staff', staffRoutes);
+}
 
 // Serve uploaded driver documents as static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -166,8 +175,10 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`.yellow.bold);
     console.log(`📱 Consumer API: http://localhost:${PORT}/api/consumer`.cyan.bold);
-    console.log(`👷 Captain API: http://localhost:${PORT}/api/captain`.cyan.bold);
     console.log(`🚗 SpareDriver API: http://localhost:${PORT}/api/sparedrivers`.cyan.bold);
+    if (PLATFORM_MODE !== 'SPARE_DRIVER') {
+        console.log(`👷 Captain API: http://localhost:${PORT}/api/captain`.cyan.bold);
+    }
     console.log(`🏥 Health Check: http://localhost:${PORT}/api/health`.green.bold);
     console.log(`📡 Socket.io initialized on port ${PORT}`.magenta.bold);
 

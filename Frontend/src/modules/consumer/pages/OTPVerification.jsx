@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, ShieldCheck, Timer, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, ShieldCheck, Timer, RefreshCw, CheckCircle2, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { toast } from 'react-hot-toast';
 
@@ -57,12 +57,12 @@ const OTPVerification = () => {
         setLoading(false);
         if (res.success) {
             setStatus('success');
-            toast.success('OTP verified successfully');
-            setTimeout(() => navigate('/'), 1500);
+            toast.success('Verification Successful', { style: { background: '#0F172A', color: '#fff', borderRadius: '12px' } });
+            setTimeout(() => navigate('/'), 800);
         } else {
             setStatus('entering');
-            setError(res.error || 'Invalid or expired OTP. Please try again.');
-            toast.error(res.error || 'OTP verification failed');
+            setError(res.error || 'Invalid Verification Code');
+            toast.error(res.error || 'Verification Failed');
         }
     };
 
@@ -74,70 +74,67 @@ const OTPVerification = () => {
         if (response.success) {
             setTimeLeft(45);
             setOtp(['', '', '', '']);
-            toast.success(`Testing OTP: ${response.data?.otp || 'sent'}`, { duration: 5000 });
+            toast.success(`New Code Sent`, { icon: '📨', style: { background: '#0F172A', color: '#fff', borderRadius: '12px' } });
         } else {
-            setError(response.error || 'Failed to resend OTP');
-            toast.error('Failed to resend OTP');
+            setError(response.error || 'Failed To Resend Code');
         }
         setResending(false);
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-white via-orange-50/20 to-white flex flex-col font-sans relative overflow-hidden text-content">
-            {/* Subtle Brand Blobs */}
-            <div className="absolute -top-24 -left-24 w-64 h-64 bg-brand/5 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-1/4 -right-20 w-40 h-40 bg-brand/5 rounded-full blur-2xl pointer-events-none" />
+        <div className="min-h-screen bg-[#FBF8EF] flex flex-col font-sans relative overflow-hidden text-black">
+            {/* Soft Background Accents */}
+            <div className="absolute inset-0 opacity-[0.4] pointer-events-none">
+                <div className="absolute top-[-15%] left-[-15%] w-[400px] h-[400px] bg-white rounded-full blur-[100px]" />
+                <div className="absolute bottom-[-15%] right-[-15%] w-[400px] h-[400px] bg-[#F59E0B]/10 rounded-full blur-[100px]" />
+            </div>
 
-            <header className="px-6 pt-12 pb-6 relative z-10">
+            <header className="px-6 pt-12 pb-4 relative z-10 flex items-center justify-between">
                 <button onClick={() => navigate(-1)}
-                    className="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-orange-100 shadow-sm active:scale-90 transition-all">
-                    <ChevronLeft size={18} className="text-brand" strokeWidth={2.5} />
+                    className="w-10 h-10 bg-white border border-black/05 shadow-sm rounded-xl flex items-center justify-center active:scale-95 transition-all text-[#F59E0B]">
+                    <ChevronLeft size={18} strokeWidth={2.5} />
                 </button>
+                <div className="bg-white px-3 py-1.5 rounded-full border border-black/05 shadow-sm flex items-center gap-2">
+                    <ShieldCheck size={12} className="text-[#0F172A]" />
+                    <span className="text-[10px] font-black text-[#0F172A] uppercase tracking-wider leading-none">Secure Link</span>
+                </div>
             </header>
 
-            <div className="flex-1 px-8 flex flex-col pt-2 relative z-10">
-                <motion.div
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                >
-                    {/* Hero Image Section - More Compact */}
-                    <div className="w-full aspect-[16/7] bg-orange-50 rounded-xl overflow-hidden mb-6 border border-orange-100 shadow-lg shadow-brand/5 relative group">
-                        <img
-                            src="/assets/carwash/6.png"
-                            alt="Security Verification"
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 opacity-90"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-brand/20 via-transparent to-transparent opacity-60" />
-                        <div className="absolute bottom-3 left-3 flex items-center gap-2">
-                            <div className="w-7 h-7 bg-white/90 backdrop-blur-md rounded-lg flex items-center justify-center border border-orange-100 shadow-sm">
-                                <ShieldCheck size={14} className="text-brand" />
-                            </div>
+            <div className="flex-1 px-8 flex flex-col relative z-10 pt-4">
+                <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center mb-10 text-center">
+                    {/* Premium Spare Driver Monogram */}
+                    <div className="w-20 h-20 mb-6 relative">
+                        <div className="absolute inset-0 bg-[#F59E0B] rounded-full blur-[15px] opacity-20 animate-pulse" />
+                        <div className="relative w-full h-full bg-gradient-to-br from-[#F59E0B] to-[#D97706] rounded-full flex items-center justify-center shadow-xl border-4 border-white">
+                            <span className="text-white text-3xl font-[1000] tracking-tighter">SD</span>
                         </div>
                     </div>
 
-                    <h1 className="text-2xl font-[1000] text-content tracking-tighter leading-tight mb-1.5 uppercase italic">
-                        Verify <span className="text-brand">Identity.</span>
+                    <h1 className="text-2xl font-[1000] tracking-tighter leading-tight mb-2 uppercase text-[#0F172A]">
+                        Verify <span className="text-[#F59E0B]">Account</span>
                     </h1>
-                    <p className="text-content-subtle text-[8px] font-black mb-8 leading-relaxed uppercase tracking-[0.2em] opacity-80">
-                        Code sent to <span className="text-brand font-black ml-1 border-b border-brand/20">{identifier}</span>
+                    <p className="text-black/30 text-[9px] font-black leading-relaxed uppercase tracking-[0.2em] max-w-[220px]">
+                        We've sent a code to your registered <span className="text-black font-black">{identifier}</span>
                     </p>
-
-                    {devOtp && (
-                        <div className="bg-brand/10 border border-brand/20 rounded-lg p-3 mb-6 text-center">
-                            <p className="text-[10px] font-bold text-brand uppercase tracking-widest">
-                                Dev Mode OTP Auto-filled: {devOtp}
-                            </p>
-                        </div>
-                    )}
                 </motion.div>
 
-                <div className="flex justify-center gap-2.5 mb-8">
+                {/* Dev Mode Notification */}
+                {devOtp && (
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white border border-black/05 rounded-xl p-3.5 mb-8 text-center shadow-sm">
+                        <p className="text-[10px] font-black text-[#F59E0B] uppercase tracking-widest">
+                            Testing Mode: Code Pre-Filled
+                        </p>
+                    </motion.div>
+                )}
+
+                <div className="flex justify-center gap-3 mb-10">
                     {[0, 1, 2, 3].map((i) => (
                         <input
                             key={i}
                             ref={(el) => (otpRefs.current[i] = el)}
                             type="tel"
                             maxLength={1}
+                            autoFocus={i === 0}
                             value={otp[i]}
                             onChange={(e) => handleOtpChange(e.target.value, i)}
                             onKeyDown={(e) => {
@@ -145,53 +142,58 @@ const OTPVerification = () => {
                                     otpRefs.current[i - 1]?.focus();
                                 }
                             }}
-                            className={`w-11 h-13 text-center text-lg font-[1000] rounded-xl border-2 transition-all outline-none shadow-sm ${otp[i] ? 'border-brand bg-white text-slate-950 ring-4 ring-brand/5' : 'border-orange-100 bg-white text-slate-400 focus:border-brand/30'
+                            className={`w-14 h-16 text-center text-2xl font-[1000] rounded-2xl border-2 transition-all outline-none shadow-sm ${otp[i] ? 'border-[#F59E0B] bg-white text-[#0F172A]' : 'border-black/05 bg-white text-black/20 focus:border-[#F59E0B]/50'
                                 }`}
                         />
                     ))}
                 </div>
 
                 {error && (
-                    <p className="text-red-500 text-xs font-bold uppercase tracking-wide mb-2">{error}</p>
+                    <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-[10px] font-black uppercase tracking-widest text-center mb-6">{error}</motion.p>
                 )}
-                <div className="space-y-5">
+
+                <div className="space-y-6 max-w-sm mx-auto w-full">
                     <motion.button
                         disabled={otp.join('').length < 4 || loading}
-                        whileTap={{ scale: 0.97 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={handleVerify}
-                        className={`w-full h-13 rounded-xl font-black text-[10px] uppercase tracking-[0.3em] flex items-center justify-center transition-all shadow-xl ${otp.join('').length === 4 ? 'bg-brand text-white shadow-brand/20' : 'bg-gray-100 text-content-subtle'
+                        className={`w-full h-15 rounded-2xl font-[1000] text-[11px] uppercase tracking-[0.4em] flex items-center justify-center transition-all shadow-2xl ${otp.join('').length === 4 ? 'bg-[#0F172A] text-white shadow-black/20' : 'bg-black/05 text-black/20'
                             }`}
                     >
                         {status === 'verifying' ? (
-                            <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                            <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                         ) : status === 'success' ? (
-                            <CheckCircle2 size={20} />
-                        ) : 'Confirm OTP'}
+                            <CheckCircle2 size={24} />
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <span>Verify Code</span>
+                                <ArrowRight size={18} strokeWidth={4} />
+                            </div>
+                        )}
                     </motion.button>
 
-                    <div className="flex items-center justify-between px-1">
-                        <div className="flex items-center gap-2 text-content-subtle font-bold text-[8px] uppercase tracking-widest opacity-80">
-                            <Timer size={10} className="text-brand" />
+                    <div className="flex items-center justify-center px-1">
+                        <div className="text-black/20 font-black text-[10px] uppercase tracking-widest">
                             {timeLeft > 0 ? (
-                                <span>Resend in <span className="text-brand">0:{timeLeft < 10 ? `0${timeLeft}` : timeLeft}</span></span>
+                                <div className="flex items-center gap-2">
+                                    <Timer size={14} className="text-[#F59E0B]" />
+                                    <span>Resend in <span className="text-black">0:{timeLeft < 10 ? `0${timeLeft}` : timeLeft}</span></span>
+                                </div>
                             ) : (
-                                <button className="text-brand font-black disabled:opacity-50" onClick={handleResend} disabled={resending}>
-                                    {resending ? 'Sending...' : 'Resend Code'}
+                                <button className="text-[#F59E0B] font-[1000] border-b-2 border-[#F59E0B]/30 pb-0.5" onClick={handleResend} disabled={resending}>
+                                    {resending ? 'Sending...' : 'Request New Code'}
                                 </button>
                             )}
                         </div>
-                        {timeLeft === 0 && (
-                            <button className="flex items-center gap-1.5 text-brand font-black text-[8px] uppercase tracking-widest">
-                                <RefreshCw size={8} />
-                                via Email
-                            </button>
-                        )}
                     </div>
                 </div>
 
-                <div className="mt-auto pb-8 flex items-center justify-center gap-2 opacity-20">
-                    <ShieldCheck size={10} className="text-brand" />
-                    <p className="text-[7px] font-black text-content uppercase tracking-[0.2em]">Verified Secure Access</p>
+                {/* Secure Trust Mark */}
+                <div className="mt-auto pb-10 flex flex-col items-center gap-4 opacity-20">
+                    <div className="flex items-center gap-2">
+                        <ShieldCheck size={18} className="text-[#0F172A]" />
+                        <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#0F172A]">Safe Link Protocol Active</span>
+                    </div>
                 </div>
             </div>
         </div>

@@ -1,90 +1,63 @@
-import React, { useMemo } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import React from 'react';
+import { NavLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Heart, ShoppingCart, User, Gift, Zap, Truck, ShoppingBag, UserCheck } from 'lucide-react';
-import { useCart } from '../../../../context/CartContext';
-import { useAuth } from '../../../../context/AuthContext';
-import PremiumBadge from '../membership/PremiumBadge';
-import ServiceHUD from './ServiceHUD';
+import { Home, User, Zap, Calendar } from 'lucide-react';
 
-const SHOP_NAV_ITEMS = [
-    { id: 'shop', to: '/e-shop', icon: Home, label: 'Shop' },
-    { id: 'wishlist', to: '/e-shop', icon: Heart, label: 'Wishlist' },
-    { id: 'cart', to: '/cart', icon: ShoppingCart, label: 'Cart' },
-    { id: 'account', to: '/profile', icon: User, label: 'Account' }
-];
-
-const MAIN_NAV_ITEMS = [
+const NAV_ITEMS = [
     { id: 'home', to: '/', icon: Home, label: 'Home' },
-    { id: 'spare-driver', to: '/spare-driver', icon: UserCheck, label: 'Book' },
-    { id: 'bookings', to: '/bookings', icon: Truck, label: 'Bookings' },
-    { id: 'profile', to: '/profile', icon: User, label: 'Profile' }
+    { id: 'spare-driver', to: '/spare-driver', icon: Zap, label: 'Book' },
+    { id: 'bookings', to: '/bookings', icon: Calendar, label: 'Activity' },
+    { id: 'profile', to: '/profile', icon: User, label: 'Account' }
 ];
 
-const MobileLayout = ({ children, hideNav = false }) => {
-    const { cartCount } = useCart();
-    const { isBlackPassMember } = useAuth();
-    const location = useLocation();
+const MobileLayout = ({ children, hideNav = false }) => (
+    <div className="mobile-container bg-[#FBF8EF]">
+        <main className="flex-1 pb-24">
+            {children}
+        </main>
 
-    // Determine if we are in the shop flow
-    const isShopFlow = useMemo(() => {
-        const path = location.pathname;
-        return path.startsWith('/e-shop') || path === '/cart';
-    }, [location.pathname]);
-
-    const items = isShopFlow ? SHOP_NAV_ITEMS : MAIN_NAV_ITEMS;
-
-    return (
-        <div className="mobile-container bg-[#FAFAFA]">
-            <main className="flex-1 pb-10">
-                {children}
-                <ServiceHUD />
-            </main>
-
-            {!hideNav && (
-                <nav className={`fixed bottom-0 left-0 right-0 backdrop-blur-xl border-t px-4 py-3 pb-4 flex items-center justify-between z-[100] transition-colors duration-300 ${isShopFlow ? 'bg-white/95 border-gray-100' : 'bg-[#FFF5EE] border-[#FFE4D1]'
-                    }`}>
-                    {items.map((tab) => (
+        {!hideNav && (
+            <div className="fixed bottom-6 left-0 right-0 z-[1000] px-6">
+                <nav className="max-w-[430px] mx-auto h-20 rounded-[28px] shadow-[0_12px_40px_rgba(0,0,0,0.12)] border border-white/20 px-6 flex items-center justify-between transition-all duration-300 backdrop-blur-2xl bg-white/95">
+                    {NAV_ITEMS.map((tab) => (
                         <NavLink
                             key={tab.id}
                             to={tab.to}
                             end={tab.to === '/'}
-                            className={({ isActive }) => `flex flex-col items-center gap-1.5 relative transition-all active:scale-95 ${isActive ? 'text-brand' : (isShopFlow ? 'text-[#A0A0A0]' : 'text-[#8E7E74]')
-                                }`}
+                            className={({ isActive }) => `flex flex-col items-center gap-1.5 relative transition-all active:scale-90 ${
+                                isActive ? 'text-[#0F172A]' : 'text-black/30'
+                            }`}
                         >
                             {({ isActive }) => (
                                 <>
                                     <div className="relative">
-                                        <tab.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
-
-                                        {/* Shop: Cart Badge */}
-                                        {isShopFlow && tab.id === 'cart' && cartCount > 0 && (
-                                            <span className="absolute -top-1 -right-1.5 w-4 h-4 bg-brand text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-white">
-                                                {cartCount}
-                                            </span>
-                                        )}
-
-                                        {tab.id === 'profile' && isBlackPassMember && (
-                                            <div className="absolute -top-2 -right-3 scale-[0.45]">
-                                                <PremiumBadge />
-                                            </div>
-                                        )}
+                                        <tab.icon
+                                            size={22}
+                                            strokeWidth={isActive ? 3 : 2}
+                                            className={isActive ? 'text-[#F59E0B]' : 'text-black/30'}
+                                        />
                                     </div>
-                                    <span className={`text-[9px] font-[1000] uppercase tracking-widest ${isActive ? 'text-brand' : (isShopFlow ? 'text-[#A0A0A0]' : 'text-[#8E7E74]')
-                                        }`}>
+
+                                    <span className={`text-[9px] font-[1000] uppercase tracking-wider ${
+                                        isActive ? 'text-[#0F172A]' : 'text-black/20'
+                                    }`}>
                                         {tab.label}
                                     </span>
-                                    {isShopFlow && isActive && (
-                                        <motion.div layoutId="nav-dot-global" className="absolute -bottom-2 w-1 h-1 bg-brand rounded-full" />
+
+                                    {isActive && (
+                                        <motion.div
+                                            layoutId="nav-indicator"
+                                            className="absolute -bottom-3 w-1 h-1 bg-[#F59E0B] rounded-full shadow-[0_0_10px_#F59E0B]"
+                                        />
                                     )}
                                 </>
                             )}
                         </NavLink>
                     ))}
                 </nav>
-            )}
-        </div>
-    );
-};
+            </div>
+        )}
+    </div>
+);
 
 export default MobileLayout;

@@ -432,7 +432,7 @@ const MapScreen = () => {
                             whileTap={{ scale: 0.98 }}
                             onClick={handleConfirm}
                             disabled={isGeocoding}
-                            className="w-full bg-black text-white h-13 rounded-2xl font-black text-[12px] uppercase tracking-[0.2em] shadow-xl flex items-center justify-center transition-all disabled:opacity-50"
+                            className="w-full bg-black text-white h-12 rounded-2xl font-black text-[12px] uppercase tracking-[0.2em] shadow-xl flex items-center justify-center transition-all disabled:opacity-50"
                         >
                             {isGeocoding ? 'Locating...' : 'Confirm Location'}
                         </motion.button>

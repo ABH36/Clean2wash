@@ -93,7 +93,7 @@ const PaymentCheckout = () => {
                 key: keyRes.data.key_id,
                 amount: order_amount,
                 currency: currency,
-                name: 'Clean-2-Wash',
+                name: 'Spare Driver',
                 description: `Payment for ${serviceName}`,
                 image: '/logo192.png',
                 order_id: order_id,

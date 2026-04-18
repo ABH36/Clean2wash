@@ -82,7 +82,7 @@ const SpareDriverHistory = () => {
                 key: razorKeyRes.data.key_id,
                 amount: orderRes.data.amount,
                 currency: 'INR',
-                name: 'Clean2Wash Chauffeur Settlement',
+                name: 'Spare Driver Chauffeur Settlement',
                 description: `Pending payment for ${trip.service?.name || 'chauffeur trip'}`,
                 order_id: orderRes.data.order_id,
                 handler: async (response) => {

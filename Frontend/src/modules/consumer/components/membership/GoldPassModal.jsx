@@ -70,7 +70,7 @@ const GoldPassModal = ({ isOpen, onClose }) => {
                 key: key_id,
                 amount: amount, // Amount in paise as returned by backend
                 currency: currency,
-                name: 'Clean2Wash Gold',
+                name: 'Spare Driver Gold',
                 description: 'Gold Pass Premium Membership',
                 image: 'https://cdn-icons-png.flaticon.com/512/3003/3003984.png', // Public URL to avoid localhost loopback CORS issues
                 order_id: order_id,

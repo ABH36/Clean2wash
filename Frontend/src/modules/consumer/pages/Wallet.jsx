@@ -96,7 +96,7 @@ const Wallet = () => {
                 key: key_id,
                 amount: orderAmount,
                 currency: currency,
-                name: 'Clean-2-Wash',
+                name: 'Spare Driver',
                 description: `Wallet recharge: ₹${selectedAmt}`,
                 image: 'https://cdn-icons-png.flaticon.com/512/3003/3003984.png',
                 order_id: order_id,

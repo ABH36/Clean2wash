@@ -14,9 +14,9 @@ const ServiceHUD = () => {
 
     // 🏎️ Find the most relevant "Live" booking for the user
     // We prioritize bookings that are being actively serviced over just "confirmed"
-    const liveBooking = bookings?.find(b => 
-        ['en_route', 'arrived', 'active', 'in_progress', 'washing', 'picking-up', 'at-studio', 'quality-check', 'ready-for-delivery', 'out_for_delivery'].includes(b.status)
-    ) || bookings?.find(b => ['pending', 'confirmed', 'assigned', 'pickup-assigned'].includes(b.status));
+    const liveBooking = bookings?.find((b) =>
+        ['en_route', 'arrived', 'active'].includes(b.status)
+    ) || bookings?.find((b) => ['pending', 'confirmed', 'assigned', 'accepted'].includes(b.status));
 
     if (!liveBooking && !activeSOS) return null;
 
@@ -25,10 +25,7 @@ const ServiceHUD = () => {
     const statusColor = liveBooking?.timelineStatus?.color || 'brand';
 
     const handleHUDClick = () => {
-        if (isChauffeur) navigate('/spare-driver');
-        else if (liveBooking.service?.category === 'Apartment') navigate('/apartment-wash');
-        else if (liveBooking.service?.category === 'Studio' || liveBooking.service?.type === 'vendor') navigate('/full-wash-booking');
-        else navigate('/instant-wash?mode=track');
+        navigate('/spare-driver');
     };
 
     return (
@@ -101,7 +98,7 @@ const ServiceHUD = () => {
                     )}
 
                     {/* Background Subtle Progress */}
-                    {['washing', 'in_progress'].includes(liveBooking?.status) && (
+                    {['active'].includes(liveBooking?.status) && (
                         <div className="absolute bottom-0 left-0 h-1 bg-brand/10 w-full overflow-hidden">
                             <motion.div 
                                 initial={{ x: '-100%' }}

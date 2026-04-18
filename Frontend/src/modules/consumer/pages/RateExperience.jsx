@@ -117,7 +117,7 @@ const RateExperience = () => {
                 </motion.div>
                 <h2 className="text-2xl font-black tracking-tight text-content mb-2">Thank you!</h2>
                 <p className="text-sm font-bold text-content-subtle">
-                    {chauffeurMode ? 'Your chauffeur feedback helps us improve every trip.' : 'Your feedback makes Clean2Wash better for everyone.'}
+                    {chauffeurMode ? 'Your chauffeur feedback helps us improve every trip.' : 'Your feedback makes Spare Driver better for everyone.'}
                 </p>
                 <div className="mt-6 w-8 h-1 bg-brand rounded-full animate-pulse mx-auto" />
             </div>

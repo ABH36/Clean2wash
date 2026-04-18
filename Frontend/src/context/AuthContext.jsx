@@ -687,7 +687,7 @@ export const AuthProvider = ({ children }) => {
         if (sessions.consumer?.token) {
             const loadSubscription = async () => {
                 try {
-                    const response = await apiClient.getSubscription();
+                    const response = await apiClient.getSubscription({ serviceKey: 'SPARE_DRIVER' });
                     if (response?.data?.subscription) {
                         setUserSubscription(response.data.subscription);
                     } else {
@@ -708,17 +708,11 @@ export const AuthProvider = ({ children }) => {
     }, [sessions.consumer?.token]);
 
     const isGoldPassMember = useMemo(() => {
-        if (!userSubscription) return false;
-        const planName = userSubscription.planName || userSubscription.name || userSubscription.plan || '';
-        const isActive = userSubscription.status === 'active' || userSubscription.status === 'Active';
-        return isActive && (planName.toLowerCase().includes('gold') || planName.toLowerCase().includes('black'));
+        return false;
     }, [userSubscription]);
 
     const isBlackPassMember = useMemo(() => {
-        if (!userSubscription) return false;
-        const planName = userSubscription.planName || userSubscription.name || userSubscription.plan || '';
-        const isActive = userSubscription.status === 'active' || userSubscription.status === 'Active';
-        return isActive && planName.toLowerCase().includes('black');
+        return false;
     }, [userSubscription]);
 
     // Wallet management with backend integration

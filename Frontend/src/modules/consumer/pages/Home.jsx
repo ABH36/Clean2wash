@@ -12,8 +12,6 @@ import { useAuth } from '../../../context/AuthContext';
 import { serviceAPI } from '../../../utils/api';
 import LocationIndicator from '../../../components/Location/LocationIndicator';
 import MobileLayout from '../components/layout/MobileLayout';
-import PremiumBadge from '../components/membership/PremiumBadge';
-import GoldPassModal from '../components/membership/GoldPassModal';
 import Header from '../../../components/common/Header';
 
 // 🏎️ Chauffeur Service Visuals
@@ -21,8 +19,6 @@ import pImg from '../../../assets/chauffeur/point.png';
 import hImg from '../../../assets/chauffeur/hourly.png';
 import oImg from '../../../assets/chauffeur/outstation.png';
 import fImg from '../../../assets/chauffeur/full.png';
-import gImg from '../../../assets/chauffeur/garage.png';
-import sImg from '../../../assets/chauffeur/sos.png';
 
 const CountdownTimer = ({ targetTime }) => {
     const [timeLeft, setTimeLeft] = useState('');
@@ -56,19 +52,12 @@ const Home = () => {
     const [showSOS, setShowSOS] = useState(false);
     const [sosCountdown, setSosCountdown] = useState(5);
     const [sosActive, setSosActive] = useState(false);
-    const [showGoldPassModal, setShowGoldPassModal] = useState(false);
-    const { getUser, userSubscription, isGoldPassMember, bookings, dispatchSOS, vehicles, vehiclesLoading } = useAuth();
+    const { getUser, bookings, dispatchSOS, vehicles } = useAuth();
     const user = getUser('consumer');
 
     // ═══════════════════════════════════════════════════════════════
     // 🚨 SPARE DRIVER ONLY MODE - FEATURE FLAGS
     // ═══════════════════════════════════════════════════════════════
-    const SHOW_CAR_WASH = false;        // Hide car wash services
-    const SHOW_ESHOP = false;           // Hide e-shop/products
-    const SHOW_STUDIO = false;          // Hide studio services
-    const SHOW_APARTMENT_WASH = false;  // Hide apartment wash
-    const SHOW_INSTANT_WASH = false;    // Hide instant wash
-    const SHOW_FULL_WASH = false;       // Hide full wash/studio booking
     // ═══════════════════════════════════════════════════════════════
 
     const triggerSOS = () => {
@@ -158,11 +147,9 @@ const Home = () => {
 
     const userBookings = bookings?.filter(b => b.consumer === user?.id || b.consumer?.id === user?.id || b.userId === user?.id) || [];
 
-    // Find active booking for live tracking banner
+    // Reserved for future spare-driver live card integration.
     const activeBooking = useMemo(() => {
-        return userBookings.find(b =>
-            ['pending', 'confirmed', 'assigned', 'en_route', 'arrived', 'before_photo', 'picked-up', 'in_progress', 'washing', 'after_photo', 'pickup-assigned', 'at-studio', 'quality-check', 'ready-for-delivery'].includes(b.status)
-        );
+        return userBookings.find((b) => ['pending', 'confirmed', 'assigned', 'en_route', 'arrived', 'active'].includes(b.status));
     }, [userBookings]);
 
     const DEFAULT_BANNERS = [
@@ -178,11 +165,11 @@ const Home = () => {
         },
         {
             id: 'def-2',
-            title: 'Studio Shine Level',
-            subtitle: 'Ultra-premium detailing & coating',
-            image: '/assets/carwash/3.png',
+            title: 'Hourly Chauffeur Access',
+            subtitle: 'Book verified drivers for flexible city movement',
+            image: '/assets/chauffeur/hourly.png',
             theme: 'light',
-            path: '/studios'
+            path: '/spare-driver'
         }
     ];
 
@@ -212,7 +199,7 @@ const Home = () => {
     }, [displayBanners.length, activeBanner]);
 
     const handleBannerClick = (banner) => {
-        navigate(banner.path || '/services');
+        navigate(banner.path || '/spare-driver');
     };
 
     const renderHero = () => (
@@ -378,7 +365,7 @@ const Home = () => {
                             <input
                                 autoFocus
                                 type="text"
-                                placeholder="Search car wash, products..."
+                                placeholder="Search chauffeur services, bookings, support..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full h-12 bg-gray-50 border border-gray-100 rounded-2xl pl-12 pr-10 text-[14px] font-bold text-black outline-none focus:border-brand/30 transition-all"
@@ -408,7 +395,7 @@ const Home = () => {
                         <div className="px-5 mb-8">
                             <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em] mb-4">Popular Searches</p>
                             <div className="flex flex-wrap gap-2">
-                                {['Instant Wash', 'Polish', 'Shampoo', 'Driver', 'Subscription'].map(tag => (
+                                {['Point to Point', 'Hourly Driver', 'Full Day', 'Outstation', 'SOS'].map(tag => (
                                     <button
                                         key={tag}
                                         onClick={() => setSearchQuery(tag)}
@@ -505,30 +492,11 @@ const Home = () => {
     );
 
     // Memoized Sections
-    const studioServices = useMemo(() => services.filter(s => s.metadata?.category?.toLowerCase() === 'studio' || s.category?.toLowerCase() === 'studio').slice(0, 3), [services]);
-    const expansionItems = useMemo(() => promotionalCards.filter(c => c.type === 'Expansion'), [promotionalCards]);
     const sliderCards = useMemo(() => {
         const dbCards = [...promotionalCards];
-
         const cards = [];
-
-        // 1. Premium Gold Pass Card (Evergreen) - HIDE if car wash is hidden
-        if (SHOW_CAR_WASH) {
-            const goldCard = {
-                id: 'static-gold-pass',
-                title: 'Gold Pass Membership',
-                subtitle: '30% OFF ON ALL SERVICES FOREVER',
-                badge: 'PREMIUM',
-                theme: 'dark',
-                cta: 'Purchase Now',
-                image: '/assets/carwashsubscription/7.png',
-                action: () => setShowGoldPassModal(true)
-            };
-            cards.push(goldCard);
-        }
-
-        // 2. Refer & Earn Card (Growth Protocol) - ALWAYS SHOW
-        const referCard = {
+        
+        cards.push({
             id: 'static-refer-earn',
             title: 'Refer & Earn Rewards',
             subtitle: 'Share and get ₹50 credits',
@@ -537,26 +505,10 @@ const Home = () => {
             cta: 'Invite Friends',
             image: '/assets/carwash/2.png',
             path: '/refer'
-        };
-        cards.push(referCard);
-
-        // 3. Special Shop Offer (Retention) - HIDE if e-shop is hidden
-        if (SHOW_ESHOP) {
-            const shopCard = {
-                id: 'static-shop-offer',
-                title: 'Spare Driver Flash Sale',
-                subtitle: 'Up to 20% OFF on car care kits',
-                badge: 'MEGA OFFER',
-                theme: 'dark',
-                cta: 'Visit E-Shop',
-                image: '/assets/product-accessories/product.png',
-                path: '/e-shop'
-            };
-            cards.push(shopCard);
-        }
+        });
 
         return [...cards, ...dbCards];
-    }, [promotionalCards, isGoldPassMember, SHOW_CAR_WASH, SHOW_ESHOP]);
+    }, [promotionalCards]);
 
     // Loop logic for the promotional cards carousel
     useEffect(() => {
@@ -566,24 +518,6 @@ const Home = () => {
         }, 6000); 
         return () => clearInterval(timer);
     }, [sliderCards?.length]);
-
-    const exploreItems = useMemo(() => {
-        // High-Fidelity Utility Row (Mission Critical Hub) - SPARE DRIVER FOCUSED
-        const items = [];
-        
-        // Only show non-car wash items
-        if (!SHOW_ESHOP) {
-            // Hide Products/E-shop
-        } else {
-            items.push({ title: 'Products', image: '/assets/product-accessories/product.png', path: '/e-shop' });
-        }
-        
-        // Always show these
-        items.push({ title: 'My Garage', image: gImg, path: '/vehicles' });
-        items.push({ title: 'SOS Alert', image: sImg, action: 'triggerSOS' });
-        
-        return items;
-    }, [SHOW_ESHOP]);
 
     const renderVehicleModal = () => (
         <AnimatePresence>
@@ -660,14 +594,8 @@ const Home = () => {
     );
 
     const viewMoreServices = [
-        // Only show Spare Driver related services
-        ...(SHOW_INSTANT_WASH ? [{ title: 'Instant Wash', icon: Car, color: '#F29F05', path: '/instant-wash' }] : []),
-        ...(SHOW_APARTMENT_WASH ? [{ title: 'Apartments', icon: Building, color: '#6366F1', path: '/apartment-wash' }] : []),
-        { title: 'Appointment', icon: Calendar, color: '#3B82F6', path: '/full-wash-booking' },
         { title: 'Spare Drivers', icon: User, color: '#FF8533', path: '/spare-driver' },
         { title: 'Alerts', icon: Bell, color: '#A855F7', path: '/notifications' },
-        { title: 'E-Shop', icon: ShoppingBag, color: '#10B981', path: '/e-shop' },
-        { title: 'Studio Wash', icon: HomeIcon, color: '#6366F1', path: '/studios' },
         { title: 'SOS', icon: AlertTriangle, color: '#EF4444', path: '/safety/sos' },
         { title: 'Support', icon: Heart, color: '#EC4899', path: '/help' },
         { title: 'Vehicle', icon: Truck, color: '#3B82F6', path: '/vehicles' },
@@ -797,15 +725,15 @@ const Home = () => {
 
     const renderDashboard = () => {
         return (
-            <div className="pb-6 space-y-8">
-                {/* Professional Service Cards - Clean Premium Design */}
-                <section className="px-5 -mt-8 relative z-30">
-                    <div className="grid grid-cols-2 gap-4">
+            <div className="pb-2 space-y-6 bg-[#FBF8EF]/40 transition-colors">
+                {/* Professional Service Cards - Compact Luxury Design */}
+                <section className="px-5 -mt-10 relative z-30">
+                    <div className="grid grid-cols-2 gap-3">
                         {[
-                            { id: 'point', title: 'Point to Point', desc: 'Inner-city one way move', image: pImg },
-                            { id: 'hourly', title: 'Hourly Booking', desc: 'Flexible rental by hour', image: hImg },
-                            { id: 'full', title: 'Full Day', desc: 'Dedicated 8hr city shift', image: fImg },
-                            { id: 'outstation', title: 'Outstation', desc: 'Safe inter-city travel', image: oImg }
+                            { id: 'point', title: 'Point to Point', desc: 'One way move', image: pImg, color: '#F59E0B' },
+                            { id: 'hourly', title: 'Hourly', desc: 'Rent by hour', image: hImg, color: '#F59E0B' },
+                            { id: 'full', title: 'Full Day', desc: '8hr city shift', image: fImg, color: '#F59E0B' },
+                            { id: 'outstation', title: 'Outstation', desc: 'Inter-city travel', image: oImg, color: '#F59E0B' }
                         ].map((item, idx) => (
                             <motion.button
                                 key={item.id}
@@ -818,30 +746,36 @@ const Home = () => {
                                         setShowVehicleModal(true);
                                     }
                                 }}
-                                className="bg-white rounded-[12px] p-4 text-left flex flex-col justify-between h-[230px] shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-black/[0.03] group relative"
+                                className="bg-white rounded-[24px] p-3 text-left flex flex-col justify-between h-[195px] shadow-[0_10px_30px_rgba(245,158,11,0.08)] border border-[#F59E0B]/10 group relative overflow-hidden"
                             >
-                                <div className="space-y-1">
-                                    <h4 className="text-[14px] font-[900] text-black uppercase tracking-tight leading-tight">{item.title}</h4>
-                                    <p className="text-[9px] font-medium text-black/40 leading-snug">{item.desc}</p>
-                                    <div className="pt-1.5 flex items-center gap-1">
-                                        <span className="text-[10px] font-black text-[#F59E0B]">
+                                <div className="absolute top-0 right-0 w-16 h-16 bg-[#F59E0B]/5 rounded-bl-[40px] -mr-4 -mt-4 transition-all group-hover:scale-150" />
+                                
+                                <div className="space-y-0.5 relative z-10">
+                                    <h4 className="text-[12px] font-[1000] text-black uppercase tracking-tight leading-tight">{item.title}</h4>
+                                    <p className="text-[7.5px] font-bold text-black/30 uppercase tracking-[0.1em]">{item.desc}</p>
+                                    <div className="pt-1.5">
+                                        <span className="text-[12px] font-[1000] text-[#F59E0B]">
                                             {services.find(s => s.id === item.id || s.title?.toLowerCase().includes(item.id))?.price || (item.id === 'point' ? '₹499' : item.id === 'hourly' ? '₹799' : item.id === 'full' ? '₹999' : '₹2499')}
                                         </span>
                                     </div>
                                 </div>
                                 
-                                <div className="relative mt-2 flex flex-col items-center">
-                                    <div className="w-full h-28 flex items-center justify-center">
+                                <div className="relative mt-auto flex flex-col items-center">
+                                    <motion.div 
+                                        animate={{ y: [0, -6, 0] }}
+                                        transition={{ repeat: Infinity, duration: 4, ease: "easeInOut", delay: idx * 0.2 }}
+                                        className="w-full h-24 flex items-center justify-center -mb-2"
+                                    >
                                         <img 
                                             src={item.image} 
-                                            className="h-full w-auto object-contain transform group-hover:scale-110 group-hover:-translate-y-2 transition-all duration-700 drop-shadow-[0_20px_30px_rgba(0,0,0,0.1)] mix-blend-multiply" 
+                                            className="h-full w-auto object-contain transform group-hover:scale-110 transition-all duration-700 drop-shadow-[0_15px_15px_rgba(245,158,11,0.2)] mix-blend-multiply" 
                                             alt={item.title} 
                                         />
-                                    </div>
+                                    </motion.div>
                                     
-                                    <div className="w-full mt-3 h-10 bg-black text-white rounded-[8px] flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest group-hover:bg-[#F59E0B] transition-colors duration-300">
-                                        <span>Book Now</span>
-                                        <ArrowRight size={12} strokeWidth={3} />
+                                    <div className="w-full h-8 bg-black text-white rounded-[12px] flex items-center justify-center gap-1.5 text-[8.5px] font-black uppercase tracking-widest group-hover:bg-[#F59E0B] transition-colors duration-300 shadow-lg relative z-10">
+                                        <span>Select</span>
+                                        <ArrowRight size={10} strokeWidth={4} />
                                     </div>
                                 </div>
                             </motion.button>
@@ -850,14 +784,14 @@ const Home = () => {
                 </section>
 
                 {/* Studio Detailing - Premium Section */}
-                {SHOW_STUDIO && studioServices.length > 0 && (
+                {false && (
                     <section className="px-5">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-[15px] font-black text-black opacity-40 uppercase tracking-widest">Studio Detailing</h3>
-                            <button onClick={() => navigate('/studios')} className="text-[10px] font-black text-brand uppercase tracking-widest">Show All</button>
+                            <button onClick={() => navigate('/spare-driver')} className="text-[10px] font-black text-brand uppercase tracking-widest">Show All</button>
                         </div>
                         <div className="grid grid-cols-1 gap-3">
-                            {studioServices.map((service) => (
+                            {[].map((service) => (
                                 <motion.div
                                     key={service.id}
                                     whileTap={{ scale: 0.98 }}
@@ -903,24 +837,24 @@ const Home = () => {
                                 onClick={() => card.action ? card.action() : navigate(card.path)}
                                 className={`flex-shrink-0 w-full h-full`}
                             >
-                                <div className={`${card.theme === 'dark' ? 'bg-black' : 'bg-brand/5'} relative overflow-hidden group w-full h-full flex items-center px-10 border-b border-black/[0.03] cursor-pointer`}>
-                                    <div className={`absolute right-[-2%] top-[-20%] w-56 h-56 ${card.theme === 'dark' ? 'bg-brand/20' : 'bg-brand/10'} rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700`} />
-                                    <div className="relative z-10 flex-1">
-                                        <div className="flex items-center gap-2 mb-1.5">
-                                            <div className="w-1 h-1 bg-brand rounded-full animate-pulse" />
-                                            <span className="text-[10px] font-black text-brand uppercase tracking-[0.3em] block">{card.badge}</span>
-                                        </div>
-                                        <h3 className={`text-[20px] font-[1000] uppercase leading-none tracking-tighter ${card.theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                                            {card.title}
-                                        </h3>
-                                        <p className={`text-[9px] font-bold uppercase tracking-widest mt-1.5 line-clamp-1 ${card.theme === 'dark' ? 'text-white/40' : 'text-black/40'}`}>
-                                            {card.subtitle}
-                                        </p>
-                                        <div className="mt-3 flex items-center gap-2">
-                                            <span className={`text-[9px] font-black uppercase tracking-tight ${card.theme === 'dark' ? 'text-brand' : 'text-black'}`}>{card.cta}</span>
-                                            <ArrowRight size={12} className={card.theme === 'dark' ? 'text-brand' : 'text-black'} />
-                                        </div>
-                                    </div>
+                                <div className={`${card.theme === 'dark' ? 'bg-black' : 'bg-[#FBF8EF]'} relative overflow-hidden group w-full h-full flex items-center px-10 border-b border-black/[0.03] cursor-pointer`}>
+                                     <div className={`absolute right-[-2%] top-[-20%] w-56 h-56 ${card.theme === 'dark' ? 'bg-[#F59E0B]/10' : 'bg-[#F59E0B]/5'} rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700`} />
+                                     <div className="relative z-10 flex-1">
+                                         <div className="flex items-center gap-2 mb-1.5">
+                                             <div className="w-1 h-1 bg-[#F59E0B] rounded-full animate-pulse" />
+                                             <span className="text-[10px] font-black text-[#F59E0B] uppercase tracking-[0.3em] block">{card.badge}</span>
+                                         </div>
+                                         <h3 className={`text-[20px] font-[1000] uppercase leading-none tracking-tighter ${card.theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                                             {card.title}
+                                         </h3>
+                                         <p className={`text-[9px] font-bold uppercase tracking-widest mt-1.5 line-clamp-1 ${card.theme === 'dark' ? 'text-white/40' : 'text-black/40'}`}>
+                                             {card.subtitle}
+                                         </p>
+                                         <div className="mt-3 flex items-center gap-2">
+                                             <span className={`text-[9px] font-black uppercase tracking-tight ${card.theme === 'dark' ? 'text-[#F59E0B]' : 'text-black'}`}>{card.cta}</span>
+                                             <ArrowRight size={12} className={card.theme === 'dark' ? 'text-[#F59E0B]' : 'text-black'} />
+                                         </div>
+                                     </div>
                                     <div className="absolute right-[8%] bottom-[-5%] w-32 h-32 opacity-30 rotate-[10deg] group-hover:rotate-0 transition-transform duration-700">
                                         <img src={card.image} className="w-full h-full object-contain" alt="" onError={(e) => { e.target.style.display = 'none'; }} />
                                     </div>
@@ -934,7 +868,7 @@ const Home = () => {
                         {sliderCards.map((_, i) => (
                             <div 
                                 key={i} 
-                                className={`h-1 rounded-full transition-all duration-300 ${i === activePromo ? 'w-4 bg-brand' : 'w-1 bg-white/20'}`} 
+                                className={`h-1 rounded-full transition-all duration-300 ${i === activePromo ? 'w-4 bg-[#F59E0B]' : 'w-1 bg-white/20'}`} 
                             />
                         ))}
                     </div>
@@ -983,10 +917,6 @@ const Home = () => {
                     {renderSearchOverlay()}
                     {renderSOSOverlay()}
                     {renderVehicleModal()}
-                    <GoldPassModal
-                        isOpen={showGoldPassModal}
-                        onClose={() => setShowGoldPassModal(false)}
-                    />
                     {renderHeader()}
                     {renderHero()}
 

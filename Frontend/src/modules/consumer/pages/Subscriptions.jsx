@@ -175,7 +175,7 @@ const Subscriptions = () => {
                     key: razorpayKey,
                     amount: orderData.amount,
                     currency: orderData.currency || 'INR',
-                    name: 'Clean2Wash',
+                    name: 'Spare Driver',
                     description: `${selectedPlan.name} Subscription`,
                     image: 'https://cdn-icons-png.flaticon.com/512/3003/3003984.png', // Public URL to avoid localhost loopback CORS issues
                     order_id: orderData.id,

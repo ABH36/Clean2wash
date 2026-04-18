@@ -88,7 +88,7 @@ const CartPage = () => {
                 key: keyRes.data.key,
                 amount: razorpayOrderRes.data.amount,
                 currency: razorpayOrderRes.data.currency,
-                name: 'Clean-2-Wash',
+                name: 'Spare Driver',
                 description: `Payment for Product Order #${productOrder.orderId}`,
                 order_id: razorpayOrderRes.data.id,
                 handler: async (response) => {

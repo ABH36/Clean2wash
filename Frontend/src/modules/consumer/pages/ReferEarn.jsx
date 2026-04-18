@@ -44,7 +44,7 @@ const ReferEarn = () => {
 
     const handleShare = async () => {
         const shareData = {
-            title: 'Clean2Wash referral',
+            title: 'Spare Driver referral',
             text: `Get ${referralData.rewardDetails.friendGets} off on your first premium car wash with my code: ${referralData.referralCode}`,
             url: window.location.origin
         };

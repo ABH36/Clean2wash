@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
@@ -29,7 +29,20 @@ const AdminLayout = ({ title: propTitle }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 1024);
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
-    const [expandedGroups, setExpandedGroups] = useState(['Overview']);
+    const [expandedGroups, setExpandedGroups] = useState([
+        'Dashboard & Analytics', 
+        'Operations', 
+        'Driver Management', 
+        'User Management',
+        'Services',
+        'Products',
+        'Vehicle Management',
+        'Finance',
+        'Infrastructure',
+        'Growth & Marketing',
+        'Super Admin Control',
+        'System'
+    ]);
     const [isLoadingConfig, setIsLoadingConfig] = useState(true);
 
     // Apply theme to document
@@ -282,7 +295,14 @@ const AdminLayout = ({ title: propTitle }) => {
                                 transition={{ duration: 0.2, ease: "easeOut" }}
                                 className="fade-in w-full max-w-full"
                             >
-                                <Outlet />
+                                <Suspense fallback={
+                                    <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+                                        <div className="w-10 h-10 border-4 border-[var(--border)] border-t-[var(--primary)] rounded-full animate-spin" />
+                                        <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-widest">Waking modules...</p>
+                                    </div>
+                                }>
+                                    <Outlet />
+                                </Suspense>
                             </motion.div>
                         )}
                     </AnimatePresence>

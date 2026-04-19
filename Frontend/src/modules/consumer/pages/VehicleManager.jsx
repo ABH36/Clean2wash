@@ -208,86 +208,83 @@ const VehicleManager = () => {
     return (
         <MobileLayout>
             <div className="min-h-screen bg-slate-50 font-sans pb-32">
-                {/* ── Compact Header ── */}
-                <header className="px-5 pt-8 pb-4 bg-white sticky top-0 z-[60] border-b border-gray-100 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => navigate(-1)} className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-all">
-                            <ChevronLeft size={22} className="text-slate-900" />
+                <header className="px-4 py-3 flex items-center justify-between bg-white sticky top-0 z-[60] border-b border-gray-100 backdrop-blur-xl">
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => navigate(-1)} className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center active:scale-95 transition-all">
+                            <ChevronLeft size={18} className="text-slate-900" />
                         </button>
                         <div>
-                            <h1 className="text-[20px] font-bold text-slate-900 tracking-tight leading-none">My garage</h1>
-                            <p className="text-[11px] text-slate-400 font-medium mt-1.5">Manage your fleet</p>
+                            <h1 className="text-[17px] font-[1000] text-slate-900 tracking-tighter uppercase leading-none">My Garage</h1>
                         </div>
                     </div>
-                    <button onClick={openAdd} className="h-10 px-4 bg-slate-900 text-white rounded-xl text-[12px] font-bold flex items-center gap-2 active:scale-95 transition-all">
-                        <Plus size={16} /> New vehicle
+                    <button onClick={openAdd} className="h-9 px-4 bg-slate-900 text-[#FF9900] rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 active:scale-95 transition-all shadow-lg">
+                        <Plus size={14} strokeWidth={3} /> Add New
                     </button>
                 </header>
 
-                <div className="px-5 pt-6 space-y-5">
-                    {/* ── Vehicle List ── */}
+                <div className="px-4 pt-4 space-y-5">
                     <AnimatePresence mode="popLayout">
-                        {vehicles.map((v, i) => {
+                        {vehicles.map((v) => {
                             const insStatus = getExpiryStatus(v.compliance?.insuranceExpiry || v.insuranceExpiry);
                             const pucStatus = getExpiryStatus(v.compliance?.pucExpiry || v.PUCExpiry);
                             const vId = v._id || v.id;
                             return (
                                 <motion.div key={vId} layout initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-                                    className={`bg-white rounded-[2rem] border overflow-hidden transition-all ${v.isPrimary ? 'border-brand/30 shadow-lg' : 'border-gray-100 shadow-sm'}`}>
-                                    <div className="relative h-44 overflow-hidden">
+                                    className={`bg-white rounded-[28px] border overflow-hidden transition-all ${v.isPrimary ? 'border-[#FF9900]/20 shadow-xl' : 'border-gray-50 shadow-sm'}`}>
+                                    <div className="relative h-40 overflow-hidden">
                                         <img src={v.image || v.img || getTypeImage(v.type)} alt="" className="w-full h-full object-cover" />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent" />
-                                        <div className="absolute top-4 right-4 flex gap-2">
+                                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/20 to-transparent" />
+                                        <div className="absolute top-3 right-3 flex gap-2">
                                             {v.isPrimary && (
-                                                <div className="bg-brand text-slate-900 text-[9px] font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1.5">
-                                                    <CheckCircle2 size={12} /> Primary vehicle
+                                                <div className="bg-[#FF9900] text-slate-900 text-[8px] font-black px-3 py-1 rounded-full shadow-lg flex items-center gap-1.5 uppercase tracking-widest">
+                                                    <CheckCircle2 size={10} strokeWidth={3} /> Primary
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
+                                        <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
                                             <div>
-                                                <p className="text-brand text-[10px] font-bold uppercase tracking-widest mb-1">{v.brand}</p>
-                                                <h3 className="text-white text-[20px] font-bold leading-none">{v.model}</h3>
+                                                <p className="text-[#FF9900] text-[9px] font-black uppercase tracking-[0.2em] mb-1">{v.brand}</p>
+                                                <h3 className="text-white text-[18px] font-[1000] uppercase tracking-tighter leading-none">{v.model}</h3>
                                             </div>
-                                            <div className="bg-white/95 px-3 py-1.5 rounded-xl border border-white flex flex-col items-center">
-                                                <span className="text-[11px] font-bold text-slate-900 tracking-widest">{v.plate.replace(/\s/g, '').toUpperCase()}</span>
+                                            <div className="bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/20 flex flex-col items-center shadow-lg">
+                                                <span className="text-[10px] font-black text-slate-900 tracking-[0.15em]">{v.plate.replace(/\s/g, '').toUpperCase()}</span>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="p-4 space-y-4">
-                                        <div className="grid grid-cols-2 gap-3">
+                                        <div className="grid grid-cols-2 gap-2">
                                             {insStatus && (
-                                                <div className={`p-2.5 rounded-2xl border ${insStatus.bg} ${insStatus.color.replace('text-', 'border-')}/10 flex items-center gap-3`}>
-                                                    <ShieldAlert size={16} className={insStatus.color} />
+                                                <div className={`p-2 rounded-xl border ${insStatus.bg} ${insStatus.color.replace('text-', 'border-')}/10 flex items-center gap-2.5`}>
+                                                    <ShieldAlert size={14} className={insStatus.color} strokeWidth={3} />
                                                     <div className="min-w-0">
-                                                        <p className="text-[13px] font-bold leading-none mb-1">Insurance</p>
-                                                        <p className={`text-[10px] font-bold opacity-60`}>{insStatus.label}</p>
+                                                        <p className="text-[10px] font-black text-slate-900 uppercase tracking-tight leading-none mb-1">Insurance</p>
+                                                        <p className={`text-[8px] font-black uppercase tracking-widest opacity-60 leading-none`}>{insStatus.label}</p>
                                                     </div>
                                                 </div>
                                             )}
                                             {pucStatus && (
-                                                <div className={`p-2.5 rounded-2xl border ${pucStatus.bg} ${pucStatus.color.replace('text-', 'border-')}/10 flex items-center gap-3`}>
-                                                    <Zap size={16} className={pucStatus.color} />
+                                                <div className={`p-2 rounded-xl border ${pucStatus.bg} ${pucStatus.color.replace('text-', 'border-')}/10 flex items-center gap-2.5`}>
+                                                    <Zap size={14} className={pucStatus.color} strokeWidth={3} />
                                                     <div className="min-w-0">
-                                                        <p className="text-[13px] font-bold leading-none mb-1">Pollution</p>
-                                                        <p className={`text-[10px] font-bold opacity-60`}>{pucStatus.label}</p>
+                                                        <p className="text-[10px] font-black text-slate-900 uppercase tracking-tight leading-none mb-1">Pollution</p>
+                                                        <p className={`text-[8px] font-black uppercase tracking-widest opacity-60 leading-none`}>{pucStatus.label}</p>
                                                     </div>
                                                 </div>
                                             )}
                                         </div>
 
-                                        <div className="flex items-center justify-between border-t border-slate-50 pt-3">
+                                        <div className="flex items-center justify-between border-t border-gray-50 pt-3">
                                             <div className="flex gap-2">
                                                 {!v.isPrimary ? (
-                                                    <button onClick={() => handleSetPrimary(vId)} className="h-9 px-4 bg-slate-100 text-slate-600 text-[11px] font-bold rounded-xl active:scale-95 transition-all">Set as primary</button>
+                                                    <button onClick={() => handleSetPrimary(vId)} className="h-8 px-4 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest rounded-lg active:scale-95 transition-all">Set Primary</button>
                                                 ) : (
-                                                    <span className="h-9 px-4 bg-emerald-50 text-emerald-600 text-[11px] font-bold rounded-xl flex items-center gap-1.5 border border-emerald-100">Ready for service</span>
+                                                    <span className="h-8 px-4 bg-[#FF9900]/10 text-[#FF9900] text-[9px] font-black uppercase tracking-widest rounded-lg flex items-center gap-1.5 border border-[#FF9900]/10">Service Ready</span>
                                                 )}
                                             </div>
                                             <div className="flex gap-1.5">
-                                                <button onClick={() => openEdit(v)} className="w-9 h-9 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center border border-slate-100 active:scale-90 transition-all"><Edit3 size={14} /></button>
-                                                <button onClick={() => handleDelete(vId)} className="w-9 h-9 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center border border-rose-100 active:scale-90 transition-all"><Trash2 size={14} /></button>
+                                                <button onClick={() => openEdit(v)} className="w-8 h-8 bg-slate-50 text-slate-400 rounded-lg flex items-center justify-center border border-gray-100 active:scale-90 transition-all"><Edit3 size={12} /></button>
+                                                <button onClick={() => handleDelete(vId)} className="w-8 h-8 bg-rose-50 text-rose-500 rounded-lg flex items-center justify-center border border-rose-100 active:scale-90 transition-all"><Trash2 size={12} /></button>
                                             </div>
                                         </div>
                                     </div>
@@ -296,27 +293,26 @@ const VehicleManager = () => {
                         })}
                     </AnimatePresence>
 
-                    {/* ── Fleet Registry ── */}
-                    <div className="pt-8 space-y-5">
-                        <div className="flex items-center justify-between">
+                    <div className="pt-4 space-y-4">
+                        <div className="flex items-center justify-between px-1">
                             <div>
-                                <h2 className="text-[17px] font-bold text-slate-900 leading-none">Vehicle registry</h2>
-                                <p className="text-[11px] text-slate-400 font-medium mt-1.5">Register from our direct model catalog</p>
+                                <h2 className="text-[13px] font-[1000] text-slate-900 uppercase tracking-tight leading-none">Catalog Library</h2>
+                                <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mt-1">Register from direct models</p>
                             </div>
-                            <div className="bg-slate-100 text-slate-400 h-7 px-3 rounded-full flex items-center gap-1.5 text-[10px] font-bold">
-                                <Radar size={12} /> {filteredCatalog.length}
+                            <div className="bg-slate-900 text-[#FF9900] h-6 px-3 rounded-full flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest">
+                                <Radar size={10} strokeWidth={3} /> {filteredCatalog.length}
                             </div>
                         </div>
 
                         <div className="relative">
-                            <div className="absolute inset-y-0 left-4 flex items-center text-slate-400"><Search size={16} /></div>
-                            <input type="text" placeholder="Search your model (e.g. Creta, Thar)" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full h-12 pl-11 pr-4 bg-white border border-gray-100 rounded-2xl text-[13px] font-bold outline-none focus:border-brand/40 shadow-sm" />
+                            <div className="absolute inset-y-0 left-4 flex items-center text-[#FF9900]"><Search size={14} strokeWidth={3} /></div>
+                            <input type="text" placeholder="SEARCH MODELS (E.G. CRETA, THAR)..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full h-11 pl-10 pr-4 bg-white border border-gray-100 rounded-xl text-[11px] font-black uppercase tracking-widest outline-none focus:border-[#FF9900]/20 shadow-sm" />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4 pb-12">
+                        <div className="grid grid-cols-2 gap-3 pb-12">
                             {loadingCatalog ? (
-                                [1, 2, 3, 4].map(n => <div key={n} className="h-40 bg-white rounded-[1.8rem] animate-pulse" />)
+                                [1, 2, 3, 4].map(n => <div key={n} className="h-36 bg-gray-50 rounded-[22px] animate-pulse" />)
                             ) : (
                                 filteredCatalog.map((m, idx) => {
                                     const isMatched = matchedCatalogIds.has(m._id);
@@ -326,14 +322,14 @@ const VehicleManager = () => {
                                                 if (isMatched) { navigate(-1); } 
                                                 else { setForm({ ...BLANK_FORM, brand: m.brand, model: m.model, type: m.type }); setShowSheet(true); }
                                             }}
-                                            className={`relative h-44 rounded-[1.8rem] overflow-hidden shadow-sm group border-2 ${isMatched ? 'border-brand' : 'border-transparent'}`}
+                                            className={`relative h-36 rounded-[22px] overflow-hidden shadow-sm group border-2 ${isMatched ? 'border-[#FF9900]' : 'border-transparent'}`}
                                         >
                                             <img src={m.image || 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=400&q=80'} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="" />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-transparent to-transparent" />
-                                            {isMatched && ( <div className="absolute top-3 right-3 bg-brand text-[8px] font-bold px-2 py-0.5 rounded-full">MATCHED</div> )}
+                                            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent" />
+                                            {isMatched && ( <div className="absolute top-2 right-2 bg-[#FF9900] text-slate-900 text-[7px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">Matched</div> )}
                                             <div className="absolute bottom-3 left-3 right-3">
-                                                <p className="text-white/50 text-[9px] font-bold uppercase tracking-widest leading-none mb-1">{m.brand}</p>
-                                                <h3 className="text-white text-[13px] font-bold leading-tight truncate">{m.model}</h3>
+                                                <p className="text-[#FF9900] text-[8px] font-black uppercase tracking-[0.15em] leading-none mb-1">{m.brand}</p>
+                                                <h3 className="text-white text-[11px] font-[1000] uppercase tracking-tight leading-tight truncate">{m.model}</h3>
                                             </div>
                                         </motion.div>
                                     );
@@ -343,63 +339,62 @@ const VehicleManager = () => {
                     </div>
                 </div>
 
-                {/* ── Vehicle Sheet ── */}
                 <AnimatePresence>
                     {showSheet && (
                         <>
-                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={closeSheet} className="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-[1000]" />
-                            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} className="fixed inset-x-0 bottom-0 bg-white rounded-t-[2.5rem] z-[1001] p-8 pb-12 shadow-2xl overflow-y-auto max-h-[90vh]">
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={closeSheet} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[1000]" />
+                            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} className="fixed inset-x-0 bottom-0 bg-white rounded-t-[32px] z-[1001] p-6 pb-10 shadow-2xl overflow-y-auto max-h-[88vh]">
                                 <div className="flex items-center justify-between mb-8">
-                                    <h2 className="text-xl font-bold text-slate-900">{editId ? 'Vehicle settings' : 'Register vehicle'}</h2>
-                                    <button onClick={closeSheet} className="w-9 h-9 bg-slate-50 rounded-full flex items-center justify-center text-slate-400"><X size={18} /></button>
+                                    <h2 className="text-[16px] font-[1000] text-slate-900 uppercase tracking-tight">{editId ? 'Vehicle Settings' : 'Register Vehicle'}</h2>
+                                    <button onClick={closeSheet} className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400"><X size={16} /></button>
                                 </div>
-                                <div className="space-y-6">
-                                    <div className="space-y-3">
-                                        <p className="text-[11px] font-bold text-slate-400 ml-1">Vehicle plate number</p>
+                                <div className="space-y-5">
+                                    <div className="space-y-1.5">
+                                        <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Plate Number</p>
                                         <div className="flex gap-2">
-                                            <input placeholder="Ex: KA05M1234" value={form.plate} onChange={e => setField('plate', e.target.value.toUpperCase())}
-                                                className={`flex-1 h-14 bg-slate-50 border ${errors.plate ? 'border-red-200' : 'border-slate-100'} rounded-2xl px-5 font-bold text-slate-900 outline-none`} />
-                                            <button onClick={handleVahanFetch} disabled={isFetching} className="w-14 h-14 bg-brand text-slate-900 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-all">
-                                                {isFetching ? <RefreshCw size={22} className="animate-spin" /> : <ShieldAlert size={22} />}
+                                            <input placeholder="EX: KA05M1234" value={form.plate} onChange={e => setField('plate', e.target.value.toUpperCase())}
+                                                className={`flex-1 h-12 bg-slate-50 border ${errors.plate ? 'border-rose-200' : 'border-gray-100'} rounded-xl px-5 font-black text-[12px] text-slate-900 uppercase tracking-widest outline-none focus:border-[#FF9900]/30`} />
+                                            <button onClick={handleVahanFetch} disabled={isFetching} className="w-12 h-12 bg-slate-900 text-[#FF9900] rounded-xl flex items-center justify-center shadow-lg active:scale-95 transition-all">
+                                                {isFetching ? <RefreshCw size={18} className="animate-spin" /> : <Radar size={18} strokeWidth={3} />}
                                             </button>
                                         </div>
-                                        <p className="text-[10px] text-slate-400 font-medium">Identify vehicle details automatically via Vahan API</p>
+                                        <p className="text-[8px] text-slate-400 font-black uppercase tracking-tight ml-1">Identify vehicle automatically via Vahan API</p>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <p className="text-[11px] font-bold text-slate-400 ml-1">Brand</p>
-                                            <select value={form.brand} onChange={e => setField('brand', e.target.value)} className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold text-slate-900 outline-none">
-                                                <option value="">Select</option>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1.5">
+                                            <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Brand</p>
+                                            <select value={form.brand} onChange={e => setField('brand', e.target.value)} className="w-full h-11 bg-slate-50 border border-gray-100 rounded-xl px-4 font-black text-[11px] text-slate-900 uppercase outline-none focus:border-[#FF9900]/30">
+                                                <option value="">SELECT</option>
                                                 {dynamicBrands.map(b => <option key={b} value={b}>{b}</option>)}
                                             </select>
                                         </div>
-                                        <div className="space-y-2">
-                                            <p className="text-[11px] font-bold text-slate-400 ml-1">Category</p>
-                                            <select value={form.type} onChange={e => setField('type', e.target.value)} className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold text-slate-900 outline-none">
+                                        <div className="space-y-1.5">
+                                            <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Category</p>
+                                            <select value={form.type} onChange={e => setField('type', e.target.value)} className="w-full h-11 bg-slate-50 border border-gray-100 rounded-xl px-4 font-black text-[11px] text-slate-900 uppercase outline-none focus:border-[#FF9900]/30">
                                                 {dynamicTypes.map(t => <option key={t.type || t.name} value={t.type || t.name}>{t.name || t.type}</option>)}
                                             </select>
                                         </div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <p className="text-[11px] font-bold text-slate-400 ml-1">Full model name</p>
-                                        <input placeholder="Ex: Creta 1.5 Diesel" value={form.model} onChange={e => setField('model', e.target.value)}
-                                            className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-5 font-bold text-slate-900 outline-none" />
+                                    <div className="space-y-1.5">
+                                        <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Full Model Description</p>
+                                        <input placeholder="EX: CRETA 1.5 DIESEL" value={form.model} onChange={e => setField('model', e.target.value)}
+                                            className="w-full h-12 bg-slate-50 border border-gray-100 rounded-xl px-5 font-black text-[12px] text-slate-900 uppercase tracking-tight outline-none focus:border-[#FF9900]/30" />
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <p className="text-[11px] font-bold text-slate-400 ml-1">Insurance expiry</p>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1.5">
+                                            <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">Insurance Expiry</p>
                                             <input type="date" value={form.insuranceExpiry} onChange={e => setField('insuranceExpiry', e.target.value)}
-                                                className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold text-slate-900 outline-none" />
+                                                className="w-full h-11 bg-slate-50 border border-gray-100 rounded-xl px-4 font-black text-[11px] text-slate-900 outline-none focus:border-[#FF9900]/30" />
                                         </div>
-                                        <div className="space-y-2">
-                                            <p className="text-[11px] font-bold text-slate-400 ml-1">Pollution (PUC)</p>
+                                        <div className="space-y-1.5">
+                                            <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest ml-1">PUC Expiry</p>
                                             <input type="date" value={form.PUCExpiry} onChange={e => setField('PUCExpiry', e.target.value)}
-                                                className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold text-slate-900 outline-none" />
+                                                className="w-full h-11 bg-slate-50 border border-gray-100 rounded-xl px-4 font-black text-[11px] text-slate-900 outline-none focus:border-[#FF9900]/30" />
                                         </div>
                                     </div>
-                                    <button onClick={handleSave} disabled={isSaving} className="w-full h-15 bg-slate-900 text-white rounded-2xl font-bold flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-30 shadow-xl">
-                                        {isSaving ? <RefreshCw size={22} className="animate-spin" /> : <CheckCircle2 size={22} />}
-                                        {editId ? 'Apply updates' : 'Register vehicle'}
+                                    <button onClick={handleSave} disabled={isSaving} className="w-full h-14 bg-slate-900 text-[#FF9900] rounded-xl font-black text-[12px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-30 shadow-xl mt-4">
+                                        {isSaving ? <RefreshCw size={18} className="animate-spin" /> : <CheckCircle2 size={18} strokeWidth={3} />}
+                                        {editId ? 'Apply Updates' : 'Secure Vehicle'}
                                     </button>
                                 </div>
                             </motion.div>

@@ -56,7 +56,7 @@ const Login = () => {
             {/* Soft Background Accents */}
             <div className="absolute inset-0 opacity-[0.4] pointer-events-none">
                 <div className="absolute top-[-15%] right-[-15%] w-[400px] h-[400px] bg-white rounded-full blur-[100px]" />
-                <div className="absolute bottom-[-15%] left-[-15%] w-[400px] h-[400px] bg-[#F59E0B]/10 rounded-full blur-[100px]" />
+                <div className="absolute bottom-[-15%] left-[-15%] w-[400px] h-[400px] bg-[#FF9900]/10 rounded-full blur-[100px]" />
             </div>
 
             {/* Header / Logo Section */}
@@ -69,7 +69,7 @@ const Login = () => {
                     {/* Premium Spare Driver Monogram */}
                     <div className="w-20 h-20 mb-5 relative">
                         <div className="absolute inset-0 bg-[#F59E0B] rounded-full blur-[15px] opacity-20 animate-pulse" />
-                        <div className="relative w-full h-full bg-gradient-to-br from-[#F59E0B] to-[#D97706] rounded-full flex items-center justify-center shadow-xl border-4 border-white">
+                        <div className="relative w-full h-full bg-gradient-to-br from-[#FF9900] to-[#D97706] rounded-full flex items-center justify-center shadow-xl border-4 border-white">
                             <span className="text-white text-3xl font-[1000] tracking-tighter">SD</span>
                         </div>
                     </div>

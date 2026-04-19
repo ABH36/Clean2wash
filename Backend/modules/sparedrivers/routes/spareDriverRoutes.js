@@ -3,11 +3,17 @@ const router = express.Router();
 const ctrl = require('../controllers/spareDriverController');
 const authMiddleware = require('../../../middleware/authMiddleware');
 
+// Import earnings routes
+const earningsRoutes = require('./earningsRoutes');
+
 // Public driver auth
 router.post('/auth/send-otp', ctrl.sendSignupOTP);
 router.post('/auth/verify-otp', ctrl.verifySignupOTP);
 router.post('/register', ctrl.register);
 router.post('/login', ctrl.login);
+
+// ── EARNINGS & PAYOUTS ─────────────────────────────────────────
+router.use('/earnings', earningsRoutes);
 
 // Protected driver routes
 router.post(
@@ -77,5 +83,8 @@ router.patch('/admin/bookings/:id/assign', authMiddleware.protect, authMiddlewar
 router.patch('/admin/bookings/:id/release', authMiddleware.protect, authMiddleware.restrictTo('admin'), ctrl.adminReleaseBooking);
 router.patch('/admin/bookings/:id/cancel', authMiddleware.protect, authMiddleware.restrictTo('admin'), ctrl.adminCancelBooking);
 router.patch('/admin/bookings/:id/issue', authMiddleware.protect, authMiddleware.restrictTo('admin'), ctrl.adminUpdateBookingIssue);
+
+// ── EARNINGS ROUTES ────────────────────────────────────────────
+router.use('/earnings', earningsRoutes);
 
 module.exports = router;

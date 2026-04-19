@@ -37,10 +37,10 @@ const PHASES = {
 
 // 🛠️ Asset Protocol: Unique Service Identities
 const SERVICE_ASSETS = {
-    'point': { icon: 'https://cdn-icons-png.flaticon.com/512/3202/3202926.png', color: '#3B82F6', pulse: 'animate-pulse' }, // Premium Car
-    'hourly': { icon: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png', color: '#10B981', pulse: 'animate-bounce' }, // Driver
-    'full': { icon: 'https://cdn-icons-png.flaticon.com/512/2436/2436874.png', color: '#F29F05', pulse: 'animate-pulse' }, // specialist
-    'outstation': { icon: 'https://cdn-icons-png.flaticon.com/512/2330/2330453.png', color: '#A855F7', pulse: 'animate-pulse' }, // Trip
+    'point': { icon: 'https://cdn-icons-png.flaticon.com/512/3202/3202926.png', color: '#1E293B', pulse: 'animate-pulse' }, // Slate-800
+    'hourly': { icon: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png', color: '#1E293B', pulse: 'animate-bounce' }, 
+    'full': { icon: 'https://cdn-icons-png.flaticon.com/512/2436/2436874.png', color: '#FF9900', pulse: 'animate-pulse' }, // Brand
+    'outstation': { icon: 'https://cdn-icons-png.flaticon.com/512/2330/2330453.png', color: '#334155', pulse: 'animate-pulse' },
     'user': 'https://cdn-icons-png.flaticon.com/512/7077/7077313.png'
 };
 
@@ -56,7 +56,7 @@ const CHAUFFEUR_SEARCH_STARTED_KEY = 'chauffeur_search_started_at';
 
 const svgToDataUrl = (svg) => `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 
-const createDriverMarkerIcon = (accent = '#F29F05') => svgToDataUrl(`
+const createDriverMarkerIcon = (accent = '#FF9900') => svgToDataUrl(`
 <svg width="64" height="78" viewBox="0 0 64 78" fill="none" xmlns="http://www.w3.org/2000/svg">
   <ellipse cx="32" cy="69" rx="15" ry="5" fill="rgba(15,23,42,0.18)"/>
   <path d="M32 4C20.954 4 12 12.954 12 24C12 39 32 58 32 58C32 58 52 39 52 24C52 12.954 43.046 4 32 4Z" fill="#101828"/>
@@ -72,10 +72,10 @@ const createDriverMarkerIcon = (accent = '#F29F05') => svgToDataUrl(`
 const USER_AND_CAR_MARKER = svgToDataUrl(`
 <svg width="72" height="84" viewBox="0 0 72 84" fill="none" xmlns="http://www.w3.org/2000/svg">
   <ellipse cx="36" cy="75" rx="18" ry="6" fill="rgba(15,23,42,0.16)"/>
-  <path d="M36 5C23.85 5 14 14.85 14 27C14 43.5 36 64 36 64C36 64 58 43.5 58 27C58 14.85 48.15 5 36 5Z" fill="white" stroke="#F29F05" stroke-width="2.4"/>
+  <path d="M36 5C23.85 5 14 14.85 14 27C14 43.5 36 64 36 64C36 64 58 43.5 58 27C58 14.85 48.15 5 36 5Z" fill="white" stroke="#FF9900" stroke-width="2.4"/>
   <circle cx="36" cy="24.5" r="12.5" fill="#FFF7ED"/>
   <circle cx="36" cy="20.2" r="4.6" fill="#F97316"/>
-  <path d="M28 30.6C28 27.9 30.2 25.7 32.9 25.7H39.1C41.8 25.7 44 27.9 44 30.6V33H28V30.6Z" fill="#F29F05"/>
+  <path d="M28 30.6C28 27.9 30.2 25.7 32.9 25.7H39.1C41.8 25.7 44 27.9 44 30.6V33H28V30.6Z" fill="#FF9900"/>
   <rect x="23" y="34.2" width="26" height="7" rx="3.5" fill="#111827"/>
   <rect x="27.5" y="28.8" width="17" height="6.1" rx="2.6" fill="#111827"/>
   <circle cx="29.5" cy="42.8" r="3.1" fill="#111827"/>
@@ -522,7 +522,8 @@ const SpareDriverBooking = () => {
             bookingMode: 'instant',
             date: scheduledSlot.date,
             time: scheduledSlot.time,
-            duration: '4 Hours'
+            duration: '4 Hours',
+            bookingFor: 'Own'
         };
     });
 
@@ -622,6 +623,7 @@ const SpareDriverBooking = () => {
             waitChargePerMinute: Number.isFinite(Number(rules.waitChargePerMinute)) ? Number(rules.waitChargePerMinute) : 2,
             nightAllowance: Number.isFinite(Number(rules.nightAllowance)) ? Number(rules.nightAllowance) : 300,
             outstationAllowancePerDay: Number.isFinite(Number(rules.outstationAllowancePerDay)) ? Number(rules.outstationAllowancePerDay) : 500,
+            minimumWalletBalance: Number.isFinite(Number(rules.minimumWalletBalance)) ? Number(rules.minimumWalletBalance) : 1000,
             gstPercent: Number.isFinite(Number(rules.gstPercent)) ? Number(rules.gstPercent) : 0,
             gstInclusive: Boolean(rules.gstInclusive)
         };
@@ -680,30 +682,111 @@ const SpareDriverBooking = () => {
 
         return options;
     }, [addresses, currentLocation, selectedAddress]);
-    const estimatedSubtotal = useMemo(() => {
-        if (!selectedType || !selectedVehicle) return 0;
+    // 🎯 RAPIDO-STYLE DYNAMIC PRICING PREVIEW WITH REAL-TIME BREAKDOWN
+    const dynamicPricingBreakdown = useMemo(() => {
+        if (!selectedType || !selectedVehicle) {
+            return {
+                baseAmount: 0,
+                nightAllowance: 0,
+                outstationAllowance: 0,
+                subtotal: 0,
+                gstAmount: 0,
+                total: 0,
+                breakdown: []
+            };
+        }
+
         const vehicleMultiplier = getVehicleMultiplier(selectedVehicle, vehicleTypes);
         const slotPrice = getDurationSlotPrice(selectedType, bookingDetails.duration);
+        
+        let baseAmount = 0;
         if (slotPrice !== null) {
-            return Math.round(slotPrice * vehicleMultiplier);
+            baseAmount = Math.round(slotPrice * vehicleMultiplier);
+        } else {
+            const durationMultiplier = calculateDurationMultiplier(selectedServiceKind, bookingDetails.duration);
+            baseAmount = Math.round((selectedType.basePrice || 0) * vehicleMultiplier * durationMultiplier);
         }
-        const durationMultiplier = calculateDurationMultiplier(selectedServiceKind, bookingDetails.duration);
-        return Math.round((selectedType.basePrice || 0) * vehicleMultiplier * durationMultiplier);
-    }, [bookingDetails.duration, selectedServiceKind, selectedType, selectedVehicle, vehicleTypes]);
-    const estimatedGstAmount = useMemo(() => {
-        if (!commercialRules.gstPercent || estimatedSubtotal <= 0) return 0;
 
-        const rawAmount = commercialRules.gstInclusive
-            ? (estimatedSubtotal * commercialRules.gstPercent) / (100 + commercialRules.gstPercent)
-            : (estimatedSubtotal * commercialRules.gstPercent) / 100;
+        const breakdown = [];
+        let subtotal = baseAmount;
 
-        return Math.max(0, Math.round(rawAmount));
-    }, [commercialRules.gstInclusive, commercialRules.gstPercent, estimatedSubtotal]);
-    const estimatedTotal = useMemo(() => (
-        commercialRules.gstInclusive
-            ? estimatedSubtotal
-            : estimatedSubtotal + estimatedGstAmount
-    ), [commercialRules.gstInclusive, estimatedGstAmount, estimatedSubtotal]);
+        // Add base fare to breakdown
+        breakdown.push({
+            label: 'Base Fare',
+            amount: baseAmount,
+            type: 'base',
+            icon: '🚗'
+        });
+
+        // 🌙 Night Allowance Detection (11 PM - 5 AM)
+        let nightAllowance = 0;
+        if (bookingDetails?.time) {
+            const [hours] = bookingDetails.time.split(':').map(Number);
+            const isNightSlot = hours >= 23 || hours < 5;
+            if (isNightSlot && commercialRules.nightAllowance > 0) {
+                nightAllowance = commercialRules.nightAllowance;
+                subtotal += nightAllowance;
+                breakdown.push({
+                    label: 'Night Allowance',
+                    amount: nightAllowance,
+                    type: 'surcharge',
+                    icon: '🌙',
+                    description: '11 PM - 5 AM slot'
+                });
+            }
+        }
+
+        // 🏨 Outstation Allowance Detection
+        let outstationAllowance = 0;
+        if (selectedServiceKind === 'outstation' && commercialRules.outstationAllowancePerDay > 0) {
+            const days = Math.max(1, Math.ceil(getDurationHours(bookingDetails.duration, 24) / 24));
+            outstationAllowance = days * commercialRules.outstationAllowancePerDay;
+            subtotal += outstationAllowance;
+            breakdown.push({
+                label: `Stay & Food Allowance (${days} day${days > 1 ? 's' : ''})`,
+                amount: outstationAllowance,
+                type: 'surcharge',
+                icon: '🏨',
+                description: 'Driver accommodation'
+            });
+        }
+
+        // 💰 GST Calculation
+        let gstAmount = 0;
+        if (commercialRules.gstPercent > 0) {
+            const rawGstAmount = commercialRules.gstInclusive
+                ? (subtotal * commercialRules.gstPercent) / (100 + commercialRules.gstPercent)
+                : (subtotal * commercialRules.gstPercent) / 100;
+            gstAmount = Math.max(0, Math.round(rawGstAmount));
+
+            if (gstAmount > 0) {
+                breakdown.push({
+                    label: `GST (${commercialRules.gstPercent}%)`,
+                    amount: gstAmount,
+                    type: 'tax',
+                    icon: '📋',
+                    description: commercialRules.gstInclusive ? 'Included in fare' : 'Added to fare'
+                });
+            }
+        }
+
+        const total = commercialRules.gstInclusive ? subtotal : subtotal + gstAmount;
+
+        return {
+            baseAmount,
+            nightAllowance,
+            outstationAllowance,
+            subtotal,
+            gstAmount,
+            total,
+            breakdown,
+            hasExtraCharges: nightAllowance > 0 || outstationAllowance > 0
+        };
+    }, [selectedType, selectedVehicle, vehicleTypes, bookingDetails.duration, bookingDetails.time, selectedServiceKind, commercialRules]);
+
+    const estimatedSubtotal = dynamicPricingBreakdown.subtotal;
+    const estimatedGstAmount = dynamicPricingBreakdown.gstAmount;
+    const estimatedTotal = dynamicPricingBreakdown.total;
     const estimatedReserveAmount = useMemo(() => {
         const bookedHours = getDurationHours(bookingDetails?.duration, 1);
         const effectiveHourlyRate = bookedHours > 0
@@ -1413,7 +1496,7 @@ const SpareDriverBooking = () => {
                     email: getUser('consumer')?.email || "",
                     contact: getUser('consumer')?.phone || ""
                 },
-                theme: { color: "#F29F05" },
+                theme: { color: "#FF9900" },
                 modal: { ondismiss: () => setIsProcessing(false) }
             };
 
@@ -1478,39 +1561,38 @@ const SpareDriverBooking = () => {
 
     const renderBookingDetails = () => (
         <div className="flex-1 flex flex-col bg-[#FBF8EF] min-h-screen">
-            {/* 1. Elite Service Header Card */}
-            <div className="px-5 pt-6 pb-6 bg-white rounded-b-[32px] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border-b border-black/05">
-                <div className="flex items-center gap-4">
-                    {/* Brand/Service Icon */}
-                    <div className="w-14 h-14 bg-gradient-to-br from-[#F59E0B] to-[#D97706] rounded-2xl flex items-center justify-center shadow-lg transform rotate-3">
-                        <span className="text-white text-xl font-[1000]">SD</span>
-                    </div>
-                    <div>
-                        <h3 className="text-[22px] font-[1000] text-[#0F172A] tracking-tighter uppercase leading-none">
-                            {selectedType?.title || 'Point To Point'}
-                        </h3>
-                        <div className="flex items-center gap-2 mt-1.5">
-                            <div className="px-2 py-0.5 bg-[#F59E0B]/10 rounded-full">
-                                <span className="text-[9px] font-black text-[#F59E0B] uppercase tracking-wider">Hoora Elite</span>
-                            </div>
-                            <span className="text-[#0F172A]/20 text-[10px] font-bold">• Premium Fleet</span>
-                        </div>
-                    </div>
+            {/* 1. Elite Service Header - Integrated & Compact */}
+            <div className="px-4 py-3 bg-white border-b border-black/05 flex items-center gap-3">
+                <div className="w-12 h-12 bg-[#FBF8EF] rounded-2xl flex items-center justify-center border border-black/05 shadow-sm overflow-hidden p-1">
+                    <img 
+                        src={SERVICE_CARD_IMAGES[selectedServiceKind] || pointImg} 
+                        className="w-full h-full object-contain" 
+                        alt={selectedType?.title}
+                    />
+                </div>
+                <div className="flex-1">
+                    <h3 className="text-[18px] font-[1000] text-[#0F172A] tracking-tighter uppercase leading-none">
+                        {selectedType?.title || 'Point To Point'}
+                    </h3>
+                    <p className="text-[9px] font-bold text-[#FF9900] uppercase tracking-widest mt-1">Premium Chauffeur Service</p>
+                </div>
+                <div className="px-2.5 py-1 bg-black/05 rounded-full border border-black/05">
+                    <span className="text-[8px] font-black text-[#0F172A] uppercase tracking-widest">₹{selectedType?.basePrice} Start</span>
                 </div>
             </div>
 
-            <div className="px-5 py-6 space-y-6">
+            <div className="px-4 py-4 space-y-5">
                 {/* 2. Premium Booking Mode Toggle */}
-                <div className="p-1.5 bg-white border border-black/05 rounded-2xl flex gap-1 shadow-sm">
+                <div className="p-1 bg-white border border-black/05 rounded-xl flex gap-1 shadow-sm">
                     <button
                         onClick={() => setBookingDetails((prev) => ({ ...prev, bookingMode: 'instant' }))}
-                        className={`flex-1 h-11 rounded-xl text-[10px] font-[1000] uppercase tracking-widest transition-all duration-300 ${bookingMode === 'instant' ? 'bg-[#0F172A] text-white shadow-md' : 'bg-transparent text-[#0F172A]/30'}`}
+                        className={`flex-1 h-9 rounded-lg text-[9px] font-[1000] uppercase tracking-widest transition-all duration-300 ${bookingMode === 'instant' ? 'bg-[#0F172A] text-white shadow-md' : 'bg-transparent text-[#0F172A]/30'}`}
                     >
                         Book Now
                     </button>
                     <button
                         onClick={() => setBookingDetails((prev) => ({ ...prev, bookingMode: 'scheduled' }))}
-                        className={`flex-1 h-11 rounded-xl text-[10px] font-[1000] uppercase tracking-widest transition-all duration-300 ${bookingMode === 'scheduled' ? 'bg-[#0F172A] text-white shadow-md' : 'bg-transparent text-[#0F172A]/30'}`}
+                        className={`flex-1 h-9 rounded-lg text-[9px] font-[1000] uppercase tracking-widest transition-all duration-300 ${bookingMode === 'scheduled' ? 'bg-[#0F172A] text-white shadow-md' : 'bg-transparent text-[#0F172A]/30'}`}
                     >
                         Schedule
                     </button>
@@ -1548,38 +1630,38 @@ const SpareDriverBooking = () => {
                 </AnimatePresence>
 
                 {/* 4. Luxury Address Row */}
-                <div className="bg-white rounded-[24px] border border-black/05 shadow-sm overflow-hidden">
+                <div className="bg-white rounded-[20px] border border-black/05 shadow-sm overflow-hidden">
                     <div 
                         onClick={() => navigate('/map')}
-                        className="flex items-center gap-4 p-5 active:bg-black/02 transition-all cursor-pointer border-b border-black/05"
+                        className="flex items-center gap-3 p-3.5 active:bg-black/02 transition-all cursor-pointer border-b border-black/05"
                     >
-                        <div className="w-10 h-10 rounded-full bg-[#0F172A]/05 flex items-center justify-center text-[#0F172A]">
-                            <MapPin size={18} strokeWidth={2.5} />
+                        <div className="w-8 h-8 rounded-full bg-[#0F172A]/05 flex items-center justify-center text-[#0F172A]">
+                            <MapPin size={16} strokeWidth={2.5} />
                         </div>
                         <div className="flex-1 overflow-hidden">
-                            <p className="text-[8px] font-black text-black/20 uppercase tracking-[0.2em] mb-1">Current Pickup</p>
-                            <p className="text-[13px] font-black text-[#0F172A] truncate">
+                            <p className="text-[7.5px] font-[1000] text-black/20 uppercase tracking-[0.2em] mb-0.5">Current Pickup</p>
+                            <p className="text-[12px] font-black text-[#0F172A] truncate">
                                 {selectedAddress?.street || addresses?.find(a => a.isPrimary)?.street || addresses?.[0]?.street || 'Current Location'}
                             </p>
                         </div>
-                        <ChevronRight size={18} className="text-black/10" />
+                        <ChevronRight size={14} className="text-black/10" />
                     </div>
 
                     {requiresDestination && (
                         <div 
                             onClick={() => navigate('/map?from=chauffeur&type=destination')}
-                            className="flex items-center gap-4 p-5 active:bg-black/02 transition-all cursor-pointer"
+                            className="flex items-center gap-3 p-3.5 active:bg-black/02 transition-all cursor-pointer"
                         >
-                            <div className="w-10 h-10 rounded-full bg-[#F59E0B]/10 flex items-center justify-center text-[#F59E0B]">
-                                <Navigation size={18} strokeWidth={2.5} />
+                            <div className="w-8 h-8 rounded-full bg-[#FF9900]/10 flex items-center justify-center text-[#FF9900]">
+                                <Navigation size={16} strokeWidth={2.5} />
                             </div>
                             <div className="flex-1 overflow-hidden">
-                                <p className="text-[8px] font-black text-black/20 uppercase tracking-[0.2em] mb-1">Set Destination</p>
-                                <p className="text-[13px] font-black text-[#0F172A] truncate">
+                                <p className="text-[7.5px] font-[1000] text-black/20 uppercase tracking-[0.2em] mb-0.5">Set Destination</p>
+                                <p className="text-[12px] font-black text-[#0F172A] truncate">
                                     {destination?.street || 'Where To?'}
                                 </p>
                             </div>
-                            <ChevronRight size={18} className="text-black/10" />
+                            <ChevronRight size={14} className="text-black/10" />
                         </div>
                     )}
                 </div>
@@ -1588,7 +1670,7 @@ const SpareDriverBooking = () => {
                 {durationOptions.length > 0 && (
                     <div className="space-y-3">
                         <label className="text-[9px] font-black text-black/30 uppercase tracking-[0.3em] flex items-center gap-2 px-1">
-                            <Clock size={12} className="text-[#F59E0B]" />
+                            <Clock size={12} className="text-[#FF9900]" />
                             Select Chauffeur Duration
                         </label>
                         <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-hide">
@@ -1606,48 +1688,137 @@ const SpareDriverBooking = () => {
                         </div>
                     </div>
                 )}
-            </div>
 
-            {/* 6. Elite Bottom Checkout Bar */}
-            <div className="mt-auto pb-[100px] px-5">
-                <div className="bg-[#0F172A]/03 p-5 rounded-[24px] flex items-center justify-between">
-                    <div>
-                        <p className="text-[9px] font-black text-black/20 uppercase tracking-widest mb-1">Total Estimated</p>
-                        <div className="flex items-baseline gap-1">
-                            <span className="text-[#F59E0B] text-lg font-black">₹</span>
-                            <span className="text-3xl font-[1000] text-[#0F172A] tracking-tighter">{estimatedTotal}</span>
-                        </div>
+                {/* 6. Booking Beneficiary Selector */}
+                <div className="space-y-3">
+                    <label className="text-[9px] font-black text-black/30 uppercase tracking-[0.3em] flex items-center gap-2 px-1">
+                        <User size={12} className="text-[#FF9900]" />
+                        Who is this driver for?
+                    </label>
+                    <div className="flex gap-3 px-1">
+                        {['Own', 'Family / Others'].map((option) => (
+                            <button
+                                key={option}
+                                onClick={() => setBookingDetails(prev => ({ ...prev, bookingFor: option }))}
+                                className={`flex-1 h-12 rounded-2xl text-[11px] font-[1000] uppercase transition-all duration-300 border flex items-center justify-center gap-2 ${bookingDetails.bookingFor === option 
+                                    ? 'bg-[#0F172A] text-white border-[#0F172A] shadow-md scale-[1.02]' 
+                                    : 'bg-white text-black/30 border-black/05 hover:bg-black/02'}`}
+                            >
+                                <div className={`w-1.5 h-1.5 rounded-full ${bookingDetails.bookingFor === option ? 'bg-[#FF9900]' : 'bg-transparent border border-black/10'}`} />
+                                {option}
+                            </button>
+                        ))}
                     </div>
-                    <div className="text-right">
-                        <p className="text-[8px] font-bold text-[#F59E0B] uppercase tracking-widest">Pricing Policy Applied</p>
-                        <p className="text-[10px] font-black text-black/40 mt-1">Excl. Taxes</p>
+                </div>
+
+                {/* 6. Dynamic Service Insights & Price Engine Details */}
+                <div className="space-y-4 pt-2">
+                    <label className="text-[9px] font-black text-black/30 uppercase tracking-[0.3em] flex items-center gap-2 px-1">
+                        <Info size={12} className="text-[#FF9900]" />
+                        Service Policy & Insights
+                    </label>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                        {/* 💰 Wallet Requirement Card */}
+                        <div className="bg-white rounded-[24px] p-4 border border-black/05 shadow-sm space-y-2 relative overflow-hidden group">
+                             <div className="absolute top-0 right-0 w-12 h-12 bg-emerald-500/5 rounded-bl-[30px] -mr-3 -mt-3" />
+                             <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                                    <CreditCard size={12} />
+                                </div>
+                                <span className="text-[8px] font-black text-black/20 uppercase tracking-widest">Entry Limit</span>
+                             </div>
+                             <p className="text-[14px] font-[1000] text-[#0F172A] uppercase tracking-tight">
+                                Min {formatInr(commercialRules.minimumWalletBalance)}
+                             </p>
+                             <p className="text-[7.5px] font-bold text-black/30 uppercase leading-none">Min wallet balance required</p>
+                        </div>
+
+                        {/* ⏱️ Waiting Charge Card */}
+                        <div className="bg-white rounded-[24px] p-4 border border-black/05 shadow-sm space-y-2 relative overflow-hidden group">
+                             <div className="absolute top-0 right-0 w-12 h-12 bg-blue-500/5 rounded-bl-[30px] -mr-3 -mt-3" />
+                             <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                                    <Timer size={12} />
+                                </div>
+                                <span className="text-[8px] font-black text-black/20 uppercase tracking-widest">Post-Grace</span>
+                             </div>
+                             <p className="text-[14px] font-[1000] text-[#0F172A] uppercase tracking-tight">
+                                {formatInr(commercialRules.waitChargePerMinute)}/min
+                             </p>
+                             <p className="text-[7.5px] font-bold text-black/30 uppercase leading-none">After {commercialRules.waitingGraceMinutes}m grace</p>
+                        </div>
+
+                        {/* 🌙 Night Allowance Card */}
+                        <div className="bg-white rounded-[24px] p-4 border border-black/05 shadow-sm space-y-2 relative overflow-hidden group">
+                             <div className="absolute top-0 right-0 w-12 h-12 bg-indigo-500/5 rounded-bl-[30px] -mr-3 -mt-3" />
+                             <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                                    <Clock size={12} />
+                                </div>
+                                <span className="text-[8px] font-black text-black/30 uppercase tracking-widest leading-none">Night Fee</span>
+                             </div>
+                             <p className="text-[14px] font-[1000] text-[#0F172A] uppercase tracking-tight">
+                                {formatInr(commercialRules.nightAllowance)}
+                             </p>
+                             <p className="text-[7.5px] font-bold text-black/30 uppercase leading-none">10 PM - 06 AM SLOTS</p>
+                        </div>
+
+                        {/* 🛣️ Outstation Allowance Card */}
+                        {isOutstationService && (
+                            <div className="bg-white rounded-[24px] p-4 border border-black/05 shadow-sm space-y-2 relative overflow-hidden group">
+                             <div className="absolute top-0 right-0 w-12 h-12 bg-orange-500/5 rounded-bl-[30px] -mr-3 -mt-3" />
+                             <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center">
+                                    <MapPin size={12} />
+                                </div>
+                                <span className="text-[8px] font-black text-black/20 uppercase tracking-widest">Food & Stay</span>
+                             </div>
+                             <p className="text-[14px] font-[1000] text-[#0F172A] uppercase tracking-tight">
+                                {formatInr(commercialRules.outstationAllowancePerDay)}/day
+                             </p>
+                             <p className="text-[7.5px] font-bold text-black/30 uppercase leading-none">Pilot Daily Allowance</p>
+                        </div>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* 7. Unified Action Layer */}
+            {/* 6. Elite Bottom Checkout Bar */}
+            {/* 7. Unified Slim Luxury Action Bar */}
             <div className="fixed bottom-[90px] left-0 right-0 z-[100] px-5">
                 <div className="max-w-[430px] mx-auto">
-                    <motion.button
-                        whileTap={{ scale: 0.96 }}
-                        onClick={() => {
-                            if (selectedVehicle) {
-                                setPhase(PHASES.CHECKOUT);
-                            } else {
-                                setPhase(PHASES.CONFIRM_VEHICLE);
-                            }
-                        }}
-                        className="w-full h-[72px] bg-[#0F172A] text-white rounded-[24px] flex items-center justify-between px-8 shadow-[0_20px_40px_rgba(0,0,0,0.3)] group overflow-hidden relative"
-                    >
-                        <div className="absolute inset-0 bg-gradient-to-r from-[#F59E0B] to-transparent opacity-0 group-active:opacity-10 transition-opacity" />
-                        <div className="flex flex-col items-start relative z-10">
-                            <span className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] mb-1">Checkout</span>
-                            <span className="text-[18px] font-[1000] tracking-tight">CONTINUE</span>
+                    <div className="bg-[#0F172A] rounded-[26px] p-2 pr-2 pl-6 shadow-[0_24px_48px_rgba(0,0,0,0.3)] border border-white/10 flex items-center justify-between overflow-hidden relative group">
+                        {/* Interactive Sparkle Effect */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/05 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                        
+                        <div className="flex flex-col">
+                            <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em] mb-0.5">Total Est.</span>
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-[#FF9900] text-[13px] font-[1000]">₹</span>
+                                <span className="text-[22px] font-[1000] text-white tracking-tighter tabular-nums leading-none">
+                                    {estimatedTotal}
+                                </span>
+                            </div>
                         </div>
-                        <div className="h-10 w-10 bg-white/10 rounded-full flex items-center justify-center relative z-10">
-                            <ArrowRight size={20} className="text-[#F59E0B]" strokeWidth={3} />
-                        </div>
-                    </motion.button>
+
+                        <motion.button
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() => {
+                                if (selectedVehicle) {
+                                    setPhase(PHASES.CHECKOUT);
+                                } else {
+                                    setPhase(PHASES.CONFIRM_VEHICLE);
+                                }
+                            }}
+                            className="h-[52px] px-7 bg-[#FF9900] rounded-[20px] flex items-center gap-3 shadow-lg shadow-[#FF9900]/10 active:shadow-none transition-all"
+                        >
+                            <span className="text-[12px] font-[1000] text-[#0F172A] uppercase tracking-wider">Continue</span>
+                            <div className="w-7 h-7 bg-[#0F172A]/10 rounded-full flex items-center justify-center">
+                                <ArrowRight size={16} className="text-[#0F172A]" strokeWidth={3} />
+                            </div>
+                        </motion.button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1667,7 +1838,7 @@ const SpareDriverBooking = () => {
             <div className="px-5 py-3 space-y-3">
                 <div className="bg-white rounded-xl p-4 border border-[#0F172A]/05 shadow-sm space-y-2">
                     <label className="text-[8px] font-bold text-[#0F172A]/30 uppercase tracking-widest flex items-center gap-2">
-                        <Car size={10} className="text-[#F59E0B]" />
+                        <Car size={10} className="text-[#FF9900]" />
                         MY VEHICLES
                     </label>
                     <div className="grid grid-cols-1 gap-2 max-h-[160px] overflow-y-auto pr-1">
@@ -1682,10 +1853,10 @@ const SpareDriverBooking = () => {
                                 </div>
                                 <div className="flex-1">
                                     <h4 className={`text-[12px] font-bold leading-none uppercase ${(selectedVehicle?._id || selectedVehicle?.id) === (v._id || v.id) ? 'text-white' : 'text-[#0F172A]/40'}`}>{v.brand}</h4>
-                                    <p className={`text-[8px] font-bold uppercase tracking-widest mt-1 ${(selectedVehicle?._id || selectedVehicle?.id) === (v._id || v.id) ? 'text-[#F59E0B]' : 'text-[#0F172A]/20'}`}>{v.plate}</p>
+                                    <p className={`text-[8px] font-bold uppercase tracking-widest mt-1 ${(selectedVehicle?._id || selectedVehicle?.id) === (v._id || v.id) ? 'text-[#FF9900]' : 'text-[#0F172A]/20'}`}>{v.plate}</p>
                                 </div>
                                 {(selectedVehicle?._id || selectedVehicle?.id) === (v._id || v.id) && (
-                                    <Check size={14} strokeWidth={4} className="text-[#F59E0B]" />
+                                    <Check size={14} strokeWidth={4} className="text-[#FF9900]" />
                                 )}
                             </button>
                         ))}
@@ -1697,12 +1868,12 @@ const SpareDriverBooking = () => {
                         <div>
                             <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest mb-1 leading-none">Trip Fee</p>
                             <p className="text-2xl font-black text-white tracking-tighter leading-none">
-                                <span className="text-[#F59E0B] mr-1">₹</span>{estimatedTotal}
+                                <span className="text-[#FF9900] mr-1">₹</span>{estimatedTotal}
                             </p>
                         </div>
                         <div className="text-right">
                             <div className="flex items-center gap-1.5 justify-end">
-                                <ShieldCheck size={12} className="text-[#F59E0B]" />
+                                <ShieldCheck size={12} className="text-[#FF9900]" />
                                 <span className="text-[9px] font-bold uppercase tracking-tight text-white/60">Verified Profile</span>
                             </div>
                         </div>
@@ -1715,7 +1886,7 @@ const SpareDriverBooking = () => {
                 <div className="max-w-[430px] mx-auto flex items-center gap-3 bg-[#0F172A] p-4 rounded-xl shadow-xl">
                     <div className="flex-shrink-0">
                         <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest leading-none mb-1">Estimated Total</p>
-                        <p className="text-[18px] font-bold text-[#F59E0B] tracking-tight leading-none">₹{estimatedTotal}</p>
+                        <p className="text-[18px] font-bold text-[#FF9900] tracking-tight leading-none">₹{estimatedTotal}</p>
                     </div>
                     <button
                         onClick={() => setPhase(PHASES.CHECKOUT)}
@@ -1723,7 +1894,7 @@ const SpareDriverBooking = () => {
                         className="flex-1 h-12 bg-white text-[#0F172A] rounded-lg font-bold text-[11px] uppercase tracking-widest active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-20"
                     >
                         Review
-                        <ChevronRight size={14} strokeWidth={3} className="text-[#F59E0B]" />
+                        <ChevronRight size={14} strokeWidth={3} className="text-[#FF9900]" />
                     </button>
                 </div>
             </div>
@@ -1756,7 +1927,7 @@ const SpareDriverBooking = () => {
                                     scaledSize: { width: 32, height: 32 },
                                     anchor: { x: 16, y: 32 }
                                 },
-                                infoContent: <div className="p-1 font-black text-[9px] uppercase text-brand tracking-widest">Your Terminal</div>
+                                infoContent: <div className="p-1 font-[1000] text-[9px] uppercase text-[#FF9900] tracking-widest">Your Terminal</div>
                             },
                             ...(driverAssigned && animatedDriverLocation ? [{
                                 position: animatedDriverLocation,
@@ -1854,9 +2025,9 @@ const SpareDriverBooking = () => {
                             </div>
                         </div>
                         <div>
-                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand/10 border border-brand/20 rounded-full mb-3">
-                                <Radar className={`w-3 h-3 text-brand ${driverAssigned ? '' : 'animate-spin'}`} />
-                                <span className="text-[8px] font-black text-brand uppercase tracking-[0.2em]">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#FF9900]/10 border border-[#FF9900]/20 rounded-full mb-3">
+                                <Radar className={`w-3 h-3 text-[#FF9900] ${driverAssigned ? '' : 'animate-spin'}`} />
+                                <span className="text-[8px] font-black text-[#FF9900] uppercase tracking-[0.2em]">
                                     {driverAssigned
                                         ? (bookingDetails?.status === 'arrived' ? 'Driver reached pickup' : 'Driver accepted request')
                                         : (lookingTime > 120 ? 'Phase 1: Local grid (1.0 km)' : 'Phase 2: Expanded network scan')}
@@ -2246,7 +2417,7 @@ const SpareDriverBooking = () => {
 
             <div className="bg-white rounded-[1.5rem] border border-black/[0.04] p-5 shadow-xl relative overflow-hidden">
                 <div className="flex items-center gap-4 relative z-10">
-                    <div className="w-14 h-14 bg-brand/10 rounded-xl flex items-center justify-center text-brand border border-brand/20">
+                    <div className="w-14 h-14 bg-[#FF9900]/10 rounded-xl flex items-center justify-center text-[#FF9900] border border-[#FF9900]/20">
                         <User size={24} />
                     </div>
                     <div>
@@ -2764,7 +2935,7 @@ const SpareDriverBooking = () => {
                 ))}
 
                 <div className="flex items-center justify-between pt-2">
-                    <span className="text-[9px] font-black text-brand uppercase tracking-widest">Grand Total</span>
+                    <span className="text-[9px] font-black text-[#FF9900] uppercase tracking-widest">Grand Total</span>
                     <span className="text-xl font-[1000] text-black tracking-tight leading-none">{formatInr(bookingDetails?.pricing?.totalAmount)}</span>
                 </div>
                 
@@ -2860,7 +3031,7 @@ const SpareDriverBooking = () => {
                 <div className="flex items-center justify-between">
                     <div>
                         <h3 className="text-[18px] font-black text-[#0F172A] tracking-tighter leading-none uppercase">Summary</h3>
-                        <p className="text-[8px] font-extrabold text-[#F59E0B] uppercase tracking-[0.2em] mt-0.5">HOORA ELITE • 2/2</p>
+                        <p className="text-[8px] font-extrabold text-[#FF9900] uppercase tracking-[0.2em] mt-0.5">HOORA ELITE • 2/2</p>
                     </div>
                 </div>
             </div>
@@ -2878,7 +3049,7 @@ const SpareDriverBooking = () => {
                             </div>
                         </div>
                         <div className="flex items-start gap-3">
-                            <div className="w-7 h-7 rounded-lg bg-[#F59E0B]/05 flex items-center justify-center text-[#F59E0B]">
+                            <div className="w-7 h-7 rounded-lg bg-[#FF9900]/05 flex items-center justify-center text-[#FF9900]">
                                 <Navigation size={14} />
                             </div>
                             <div className="overflow-hidden">
@@ -2897,29 +3068,100 @@ const SpareDriverBooking = () => {
                         </div>
                         <div>
                             <p className="text-[7px] font-bold text-[#0F172A]/30 uppercase tracking-widest mb-0.5">Vehicle</p>
-                            <p className="text-[9px] font-black text-[#F59E0B] uppercase truncate">{selectedVehicle ? `${selectedVehicle.brand}` : '-'}</p>
+                            <p className="text-[9px] font-black text-[#FF9900] uppercase truncate">{selectedVehicle ? `${selectedVehicle.brand}` : '-'}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 🎯 RAPIDO-STYLE DYNAMIC PRICING BREAKDOWN */}
+                <div className="bg-white rounded-xl p-4 border border-[#0F172A]/05 shadow-sm space-y-3">
+                    <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-[10px] font-black text-[#0F172A]/40 uppercase tracking-widest">Fare Breakdown</h4>
+                        {dynamicPricingBreakdown.hasExtraCharges && (
+                            <span className="px-2 py-0.5 bg-[#FF9900]/10 text-[#FF9900] text-[7px] font-black uppercase tracking-wider rounded-full">
+                                Extra Charges Applied
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Dynamic Breakdown Items */}
+                    <div className="space-y-2.5">
+                        {dynamicPricingBreakdown.breakdown.map((item, index) => (
+                            <motion.div
+                                key={index}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: index * 0.1 }}
+                                className={`flex items-center justify-between py-2 ${
+                                    index < dynamicPricingBreakdown.breakdown.length - 1 ? 'border-b border-[#0F172A]/05' : ''
+                                }`}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <span className="text-base">{item.icon}</span>
+                                    <div>
+                                        <p className="text-[10px] font-bold text-[#0F172A] uppercase leading-none">
+                                            {item.label}
+                                        </p>
+                                        {item.description && (
+                                            <p className="text-[7px] font-bold text-[#0F172A]/30 uppercase tracking-wider mt-0.5">
+                                                {item.description}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                                <p className={`text-[11px] font-black uppercase tracking-tight ${
+                                    item.type === 'surcharge' ? 'text-[#FF9900]' : 
+                                    item.type === 'tax' ? 'text-blue-600' : 
+                                    'text-[#0F172A]'
+                                }`}>
+                                    {item.type === 'tax' && commercialRules.gstInclusive ? '' : '+'}₹{item.amount}
+                                </p>
+                            </motion.div>
+                        ))}
+                    </div>
+
+                    {/* Total Section */}
+                    <div className="pt-3 border-t-2 border-[#0F172A]/10">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-[8px] font-bold text-[#0F172A]/30 uppercase tracking-widest mb-1">Total Payable</p>
+                                <p className="text-[20px] font-black text-[#0F172A] tracking-tighter leading-none">
+                                    ₹{dynamicPricingBreakdown.total}
+                                </p>
+                            </div>
+                            <div className="text-right">
+                                <div className="flex items-center gap-1 justify-end mb-1">
+                                    <ShieldCheck size={10} className="text-emerald-500" />
+                                    <span className="text-[7px] font-bold uppercase tracking-tight text-emerald-600">Transparent</span>
+                                </div>
+                                <p className="text-[7px] font-bold text-[#0F172A]/20 uppercase">No Hidden Fees</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Reserve Amount Info */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
+                    <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                            <Lock size={14} className="text-blue-600" />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-[9px] font-black text-blue-900 uppercase tracking-wide leading-none mb-1">
+                                Wallet Reserve: ₹{estimatedReserveAmount}
+                            </p>
+                            <p className="text-[7px] font-bold text-blue-600/60 leading-tight">
+                                2-hour reserve held for potential overtime. Released if trip ends on time.
+                            </p>
                         </div>
                     </div>
                 </div>
 
                 <div className="bg-[#0F172A] text-white rounded-xl p-4 flex items-center gap-4 shadow-lg border border-[#0F172A]/05">
-                    <Shield size={18} className="text-[#F59E0B]" />
+                    <Shield size={18} className="text-[#FF9900]" />
                     <div>
                         <p className="text-[11px] font-bold text-white uppercase tracking-wide leading-none mb-1">Premium Insurance</p>
                         <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">₹5L Cover Active</p>
-                    </div>
-                </div>
-
-                <div className="bg-[#0F172A] text-white rounded-xl p-5 shadow-xl relative overflow-hidden">
-                    <div className="flex items-center justify-between border-b border-white/05 pb-3">
-                        <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Base Fee</span>
-                        <span className="text-sm font-bold text-white">₹{estimatedTotal}</span>
-                    </div>
-                    <div className="flex items-center justify-between pt-3">
-                        <p className="text-[30px] font-black text-[#F59E0B] tracking-tighter leading-none">
-                            <span className="text-xs mr-1 opacity-40">₹</span>{estimatedTotal}
-                        </p>
-                        <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest text-right">TOTAL<br/>PAYABLE</p>
                     </div>
                 </div>
             </div>
@@ -2933,7 +3175,7 @@ const SpareDriverBooking = () => {
                         className="w-full h-12 bg-white text-[#0F172A] rounded-lg font-bold text-[12px] uppercase tracking-widest active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                     >
                         {isProcessing ? 'Processing...' : 'Confirm & Pay'}
-                        <ChevronRight size={16} strokeWidth={3} className="text-[#F59E0B]" />
+                        <ChevronRight size={16} strokeWidth={3} className="text-[#FF9900]" />
                     </button>
                 </div>
             </div>
@@ -2965,7 +3207,7 @@ const SpareDriverBooking = () => {
     if (!vehiclesLoading && vehicles && vehicles.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-white font-sans">
-                <Loader2 className="w-10 h-10 text-brand animate-spin mb-4" strokeWidth={3} />
+                <Loader2 className="w-10 h-10 text-[#FF9900] animate-spin mb-4" strokeWidth={3} />
                 <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.3em] animate-pulse">Initializing Direct Registry...</p>
             </div>
         );

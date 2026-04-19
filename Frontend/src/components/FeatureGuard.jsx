@@ -12,7 +12,7 @@ const FeatureGuard = ({ feature, children, fallback = '/admin', requiredRoles = 
     const adminUser = getUser('admin');
 
     // 1. Check Platform Feature Flag (Global)
-    if (!isFeatureEnabled(feature)) {
+    if (feature && !isFeatureEnabled(feature)) {
         console.warn(`[GUARD] Feature "${feature}" is disabled globally.`);
         return <Navigate to={fallback} replace />;
     }

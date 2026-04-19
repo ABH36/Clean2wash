@@ -25,6 +25,8 @@ import AddressManager from './modules/consumer/pages/AddressManager';
 import Wallet from './modules/consumer/pages/Wallet';
 import SOSActive from './modules/consumer/pages/SOSActive';
 import EmergencySOS from './modules/consumer/pages/EmergencySOS';
+import KYCVerification from './modules/consumer/pages/KYCVerification';
+import ComplianceCenter from './modules/consumer/pages/ComplianceCenter';
 
 import SpareDriverBooking from './modules/consumer/pages/SpareDriverBooking';
 import SpareDriverHistory from './modules/consumer/pages/SpareDriverHistory';
@@ -123,6 +125,8 @@ function App() {
                                             <Route path="/notifications" element={P('consumer', <Notifications />)} />
                                             <Route path="/sos-active" element={P('consumer', <SOSActive />)} />
                                             <Route path="/safety/sos" element={P('consumer', <EmergencySOS />)} />
+                                            <Route path="/kyc-verification" element={P('consumer', <KYCVerification />)} />
+                                            <Route path="/compliance" element={P('consumer', <ComplianceCenter />)} />
 
                                             <Route element={P('admin', <AdminPanelLayout />)}>
                                                 {getFlattenedRoutes().map((route) => (

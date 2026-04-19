@@ -10,6 +10,13 @@ import { useAuth } from '../../../context/AuthContext';
 
 const TABS = ['Active', 'Past', 'Cancelled'];
 const ACTIVE_STATUSES = ['pending', 'confirmed', 'accepted', 'assigned', 'en_route', 'arrived', 'active'];
+const isSpareDriverBooking = (booking = {}) => (
+    booking?.service?.type === 'sparedriver'
+    || booking?.type === 'sparedriver'
+    || booking?.service?.category === 'Chauffeur'
+    || String(booking?.serviceName || '').toLowerCase().includes('chauffeur')
+    || String(booking?.serviceName || '').toLowerCase().includes('spare driver')
+);
 
 const getDisplayStatus = (status) => {
     const mapping = {
@@ -64,67 +71,56 @@ const BookingCard = ({ booking, onNavigate }) => (
         }}
         className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden"
     >
-        <div className="relative h-28 overflow-hidden">
+        <div className="relative h-24 overflow-hidden">
             <img src={booking.carImg} alt="" className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent" />
-            <div className={`absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-bold ${booking.statusColor} shadow-md`}>
-                {booking.status === 'Completed' && <CheckCircle2 size={12} />}
-                {booking.status === 'Cancelled' && <XCircle size={12} />}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 to-transparent" />
+            <div className={`absolute top-2.5 left-2.5 flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider ${booking.statusColor} shadow-md`}>
+                {booking.status === 'Completed' && <CheckCircle2 size={10} />}
+                {booking.status === 'Cancelled' && <XCircle size={10} />}
                 {['Searching', 'En route', 'Trip active'].includes(booking.status) && (
                     <div className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
                 )}
                 {booking.status}
             </div>
-            <div className="absolute bottom-3 left-3 space-y-1">
-                <p className="text-white font-bold text-[15px] leading-none">{booking.service}</p>
-                <p className="text-white/40 text-[9px] font-medium leading-none">{booking.bookingId}</p>
-            </div>
-            <div className="absolute bottom-3 right-3 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
-                <p className="text-white font-bold text-[14px] leading-none">{booking.amount}</p>
+            <div className="absolute bottom-2.5 left-2.5">
+                <p className="text-white font-[1000] text-[13px] uppercase tracking-tight leading-none mb-1">{booking.service}</p>
+                <div className="flex items-center gap-2">
+                    <p className="text-white/40 text-[8px] font-black tracking-widest leading-none uppercase">{booking.bookingId}</p>
+                    <span className="w-1 h-1 bg-white/20 rounded-full" />
+                    <p className="text-[#FF9900] font-black text-[12px] leading-none uppercase">{booking.amount}</p>
+                </div>
             </div>
         </div>
 
-        <div className="p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
+        <div className="px-3.5 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
                 {booking.driverImg ? (
-                    <img src={booking.driverImg} className="w-9 h-9 rounded-xl object-cover border border-slate-50 shadow-sm" alt="" />
+                    <img src={booking.driverImg} className="w-8 h-8 rounded-lg object-cover border border-slate-50 shadow-sm" alt="" />
                 ) : (
-                    <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
-                        <Navigation size={16} className="text-slate-300" />
+                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-100">
+                        <Navigation size={14} className="text-slate-300" />
                     </div>
                 )}
                 <div>
-                    <h4 className="text-[13px] font-bold text-slate-800 leading-none mb-1.5">{booking.driver}</h4>
-                    <p className="text-[10px] text-slate-400 font-medium leading-none">{booking.date}</p>
+                    <h4 className="text-[11px] font-black text-slate-800 leading-none mb-1 uppercase tracking-tight">{booking.driver}</h4>
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest leading-none">{booking.date}</p>
                 </div>
             </div>
 
             <div className="flex items-center gap-2">
                 {['En route', 'Trip active'].includes(booking.status) && (
-                    <div className="flex items-center gap-1.5 bg-blue-50 text-blue-500 px-3 py-1.5 rounded-xl border border-blue-100/30">
-                        <Clock size={12} strokeWidth={3} />
-                        <span className="font-bold text-[11px]">{booking.eta}</span>
+                    <div className="flex items-center gap-1 bg-[#FF9900]/10 text-[#FF9900] px-2.5 py-1.5 rounded-lg border border-[#FF9900]/20">
+                        <Clock size={10} strokeWidth={3} />
+                        <span className="font-black text-[9px] uppercase">{booking.eta}</span>
                     </div>
                 )}
                 {booking.status === 'Completed' && !booking.rated && (
-                    <div className="flex items-center gap-1 bg-amber-50 text-amber-500 px-3 py-1.5 rounded-xl border border-amber-100/30">
-                        <Star size={12} fill="currentColor" />
-                        <span className="font-bold text-[11px]">Rate</span>
+                    <div className="flex items-center gap-1 bg-[#FF9900]/05 text-[#FF9900] px-2.5 py-1.5 rounded-lg border border-[#FF9900]/10">
+                        <Star size={10} fill="currentColor" />
+                        <span className="font-black text-[9px] uppercase">Rate</span>
                     </div>
                 )}
-                {booking.status === 'Completed' && booking.rated && (
-                    <div className="flex items-center gap-1 bg-emerald-50 text-emerald-500 px-3 py-1.5 rounded-xl border border-emerald-100/30">
-                        <Star size={12} fill="currentColor" />
-                        <span className="font-bold text-[11px]">{booking.rating}</span>
-                    </div>
-                )}
-                {booking.status === 'Cancelled' && (
-                    <div className="flex items-center gap-1.5 bg-slate-50 text-slate-400 px-3 py-1.5 rounded-xl border border-slate-100">
-                        <RotateCcw size={12} strokeWidth={3} />
-                        <span className="font-bold text-[11px]">Rebook</span>
-                    </div>
-                )}
-                <ChevronRight size={16} className="text-slate-200" />
+                <ChevronRight size={14} className="text-slate-200" />
             </div>
         </div>
     </motion.div>
@@ -136,7 +132,10 @@ const MyBookings = () => {
     const [activeTab, setActiveTab] = useState('Active');
 
     const userBookings = useMemo(
-        () => (bookings || []).filter((b) => b.consumer === user?.id || b.consumer?.id === user?.id || b.userId === user?.id),
+        () => (bookings || []).filter((b) =>
+            (b.consumer === user?.id || b.consumer?.id === user?.id || b.userId === user?.id)
+            && isSpareDriverBooking(b)
+        ),
         [bookings, user?.id]
     );
 
@@ -152,31 +151,30 @@ const MyBookings = () => {
     return (
         <MobileLayout>
             <div className="bg-slate-50 min-h-screen pb-32">
-                <header className="px-5 pt-8 pb-4 bg-white sticky top-0 z-[60] border-b border-gray-100 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => navigate(-1)} className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-all">
-                            <ChevronLeft size={22} className="text-slate-900" />
+                <header className="px-4 py-3 bg-white sticky top-0 z-[60] border-b border-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => navigate(-1)} className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center active:scale-95 transition-all">
+                            <ChevronLeft size={18} className="text-slate-900" />
                         </button>
                         <div>
-                            <h1 className="text-[20px] font-bold text-slate-900 tracking-tight leading-none">My bookings</h1>
-                            <p className="text-[11px] text-slate-400 font-medium mt-1.5">Track your spare driver requests</p>
+                            <h1 className="text-[17px] font-[1000] text-slate-900 tracking-tighter uppercase leading-none">My Bookings</h1>
                         </div>
                     </div>
                 </header>
 
-                <div className="px-5 pt-6 space-y-5">
+                <div className="px-4 pt-4 space-y-4">
                     <div className="flex bg-white p-1 rounded-2xl border border-gray-100 shadow-sm">
                         {TABS.map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
-                                className={`flex-1 py-2.5 rounded-xl font-bold text-[12px] transition-all flex items-center justify-center gap-2 ${
+                                className={`flex-1 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
                                     activeTab === tab ? 'bg-slate-900 text-white shadow-md' : 'text-slate-400'
                                 }`}
                             >
                                 {tab}
-                                <span className={`h-4.5 px-1.5 rounded-lg flex items-center justify-center text-[9px] font-bold ${
-                                    activeTab === tab ? 'bg-white/10 text-white' : 'bg-slate-50 text-slate-400'
+                                <span className={`h-4.5 px-2 rounded-lg flex items-center justify-center text-[9px] font-black ${
+                                    activeTab === tab ? 'bg-[#FF9900] text-slate-900' : 'bg-slate-50 text-slate-400'
                                 }`}>
                                     {mappedBookings[tab].length}
                                 </span>
@@ -199,17 +197,18 @@ const MyBookings = () => {
 
                     <button
                         onClick={() => navigate('/spare-driver')}
-                        className="w-full bg-slate-900 p-5 rounded-[2rem] flex items-center gap-4 border border-white/5 active:scale-[0.98] transition-all group shadow-xl"
+                        className="w-full bg-slate-900 px-4 py-3.5 rounded-[22px] flex items-center gap-4 border border-white/5 active:scale-[0.98] transition-all group shadow-xl relative overflow-hidden"
                     >
-                        <div className="w-11 h-11 bg-brand rounded-2xl flex items-center justify-center shrink-0">
-                            <Zap size={22} className="text-slate-900" fill="currentColor" />
+                        <div className="absolute top-0 right-0 w-20 h-20 bg-[#FF9900]/10 rounded-bl-full -mr-8 -mt-8 blur-xl" />
+                        <div className="w-10 h-10 bg-[#FF9900] rounded-xl flex items-center justify-center shrink-0 relative z-10 transition-transform group-hover:rotate-12">
+                            <Zap size={20} className="text-slate-900" fill="currentColor" />
                         </div>
-                        <div className="flex-1 text-left">
-                            <p className="text-white font-bold text-[15px] leading-tight mb-1">Book a chauffeur</p>
-                            <p className="text-white/40 text-[10px] font-medium leading-none">Point, hourly, full-day, or outstation</p>
+                        <div className="flex-1 text-left relative z-10">
+                            <p className="text-white font-[1000] text-[13px] uppercase tracking-tight leading-none mb-1">New Booking</p>
+                            <p className="text-white/40 text-[9px] font-black uppercase tracking-widest leading-none">Chauffeur Service</p>
                         </div>
-                        <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white/20 group-hover:text-brand transition-colors">
-                            <ArrowRight size={18} />
+                        <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white/20 group-hover:text-[#FF9900] transition-colors relative z-10">
+                            <ArrowRight size={16} />
                         </div>
                     </button>
                 </div>

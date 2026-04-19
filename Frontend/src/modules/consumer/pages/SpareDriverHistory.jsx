@@ -121,13 +121,23 @@ const SpareDriverHistory = () => {
 
     return (
         <MobileLayout>
-            <div className="min-h-screen bg-white flex flex-col">
-                <Header title="Chauffeur history" showBack={true} />
+            <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+                <header className="px-4 py-3 flex items-center justify-between bg-white sticky top-0 z-[60] border-b border-gray-100 backdrop-blur-xl">
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => navigate(-1)} className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center active:scale-95 transition-all">
+                            <ChevronLeft size={18} className="text-slate-900" />
+                        </button>
+                        <div>
+                            <h1 className="text-[17px] font-[1000] text-slate-900 tracking-tighter uppercase leading-none">Trip Logs</h1>
+                        </div>
+                    </div>
+                </header>
 
                 <div className="p-5 space-y-4">
                     {loading ? (
-                        <div className="flex justify-center py-20">
-                            <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                        <div className="flex flex-col items-center justify-center py-24">
+                            <div className="w-10 h-10 border-[3px] border-gray-50 border-t-[#FF9900] rounded-full animate-spin shadow-lg" />
+                            <p className="mt-4 text-[9px] font-black text-slate-300 uppercase tracking-widest">Sinking Archives</p>
                         </div>
                     ) : orderedTrips.length > 0 ? (
                         orderedTrips.map((trip) => {
@@ -137,123 +147,114 @@ const SpareDriverHistory = () => {
                             const hasPendingSettlement = trip.payment?.status === 'settlement_pending' && Number(trip.payment?.pendingAmount || 0) > 0;
 
                             return (
-                                <motion.div
-                                    key={trip._id}
-                                    whileTap={{ scale: 0.98 }}
-                                    className={`bg-white border rounded-[2rem] p-5 shadow-[0_8px_30px_rgba(0,0,0,0.03)] space-y-4 relative overflow-hidden group ${isSelected ? 'border-brand/40 ring-1 ring-brand/20' : 'border-gray-100'}`}
-                                >
-                                    <div className="absolute top-0 right-0 p-4">
-                                        <p className="text-[14px] font-black text-black leading-none">{formatMoney(trip.pricing?.totalAmount)}</p>
+                                <motion.div key={trip._id} whileTap={{ scale: 0.98 }}
+                                    className={`bg-white border rounded-[28px] p-4 shadow-sm space-y-4 relative overflow-hidden group transition-all ${isSelected ? 'border-[#FF9900]/40 ring-1 ring-[#FF9900]/10 shadow-xl' : 'border-gray-50'}`}>
+                                    <div className="absolute top-4 right-4 text-right">
+                                        <p className="text-[13px] font-[1000] text-slate-900 leading-none">{formatMoney(trip.pricing?.totalAmount)}</p>
+                                        <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mt-1">Settled Assets</p>
                                     </div>
 
                                     <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-brand/10 rounded-xl flex items-center justify-center text-brand border border-brand/20 text-xs font-black">
-                                            <History size={20} strokeWidth={2.5} />
+                                        <div className="w-11 h-11 bg-[#FF9900]/10 rounded-[14px] flex items-center justify-center text-[#FF9900] border border-[#FF9900]/20 shadow-inner">
+                                            <History size={18} strokeWidth={3} />
                                         </div>
                                         <div>
-                                            <h3 className="text-[13px] font-black text-black uppercase tracking-tight leading-none mb-1">
-                                                {trip.service?.name || 'Chauffeur Service'}
+                                            <h3 className="text-[11px] font-[1000] text-slate-900 uppercase tracking-tight leading-none mb-1.5">
+                                                {trip.service?.name || 'Professional Chauffeur'}
                                             </h3>
                                             <div className="flex items-center gap-2">
-                                                <div className={`w-1.5 h-1.5 rounded-full ${trip.status === 'completed' ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                                                <p className="text-[9px] font-bold text-black/30 uppercase tracking-widest">
-                                                    {trip.status} - {new Date(trip.createdAt).toLocaleDateString('en-IN')}
+                                                <div className={`w-1.5 h-1.5 rounded-full ${trip.status === 'completed' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]'}`} />
+                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                                    Trip {trip.status} • {new Date(trip.createdAt).toLocaleDateString('en-IN')}
                                                 </p>
                                             </div>
-                                            <div className="flex items-center gap-2 flex-wrap mt-2">
-                                                <span className="px-2 py-1 rounded-md bg-gray-100 text-black/60 text-[8px] font-bold tracking-wide">
+                                            <div className="flex items-center gap-1.5 flex-wrap mt-2.5">
+                                                <span className="px-2 py-1 rounded-md bg-slate-50 text-slate-400 text-[7px] font-black tracking-widest uppercase border border-gray-100">
                                                     #{trip.bookingId || trip._id?.slice(-6)}
                                                 </span>
                                                 {trip.payment?.status && (
-                                                    <span className="px-2 py-1 rounded-md bg-blue-50 text-blue-600 text-[8px] font-bold tracking-wide">
-                                                        Payment {trip.payment.status.replace('_', ' ')}
+                                                    <span className={`px-2 py-1 rounded-md text-[7px] font-black tracking-widest uppercase border ${trip.payment.status === 'paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-400 border-gray-100'}`}>
+                                                        {trip.payment.status}
                                                     </span>
                                                 )}
                                                 {trip.payment?.status === 'settlement_pending' && Number(trip.payment?.pendingAmount || 0) > 0 && (
-                                                    <span className="px-2 py-1 rounded-md bg-amber-50 text-amber-700 text-[8px] font-bold tracking-wide">
-                                                        Due {formatMoney(trip.payment.pendingAmount)}
+                                                    <span className="px-2 py-1 rounded-md bg-amber-50 text-amber-600 border border-amber-100 text-[7px] font-black tracking-widest uppercase">
+                                                        Debt {formatMoney(trip.payment.pendingAmount)}
                                                     </span>
                                                 )}
                                                 {trip.feedback?.rating && (
-                                                    <span className="px-2 py-1 rounded-md bg-emerald-50 text-emerald-600 text-[8px] font-bold tracking-wide">
-                                                        Rated {trip.feedback.rating}/5
+                                                    <span className="px-2 py-1 rounded-md bg-[#FF9900]/10 text-[#FF9900] border border-[#FF9900]/20 text-[7px] font-black tracking-widest uppercase">
+                                                        Rated {trip.feedback.rating}★
                                                     </span>
                                                 )}
                                                 {issueCount > 0 && (
-                                                    <span className="px-2 py-1 rounded-md bg-red-50 text-red-600 text-[8px] font-bold tracking-wide">
-                                                        {issueCount} issue{issueCount > 1 ? 's' : ''} open
+                                                    <span className="px-2 py-1 rounded-md bg-rose-50 text-rose-600 border border-rose-100 text-[7px] font-black tracking-widest uppercase">
+                                                        {issueCount} Alert{issueCount > 1 ? 's' : ''}
                                                     </span>
                                                 )}
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4 pt-2 border-t border-black/[0.03]">
+                                    <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-50">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-6 h-6 bg-gray-50 rounded-lg flex items-center justify-center">
-                                                <Clock size={12} className="text-black/40" />
+                                            <div className="w-6 h-6 bg-slate-50 rounded-lg flex items-center justify-center border border-gray-50 shadow-inner">
+                                                <Clock size={12} className="text-slate-400" />
                                             </div>
-                                            <span className="text-[10px] font-black text-black/60 uppercase">
+                                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-tight leading-none">
                                                 {new Date(trip.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-2 justify-end">
-                                            <span className="text-[10px] font-black text-black/60 uppercase">
-                                                Driver: {trip.provider?.id?.name || 'Assigned'}
+                                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-tight leading-none">
+                                                Pilot: {trip.provider?.id?.name || 'Assigned'}
                                             </span>
-                                            <Star size={10} fill="#F29F05" className="text-brand" />
+                                            <Star size={10} fill="#FF9900" className="text-[#FF9900]" />
                                         </div>
                                     </div>
 
-                                    <div className="space-y-2 border-t border-black/[0.03] pt-3">
-                                        <div className="flex items-start gap-2">
-                                            <MapPin size={12} className="text-brand mt-0.5 shrink-0" />
-                                            <span className="text-[10px] font-black text-black/55 uppercase">
+                                    <div className="space-y-2.5 border-t border-slate-50 pt-3">
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-3 h-3 rounded-full bg-[#FF9900]/10 border border-[#FF9900]/20 flex items-center justify-center mt-0.5 shrink-0">
+                                                <div className="w-1 h-1 rounded-full bg-[#FF9900]" />
+                                            </div>
+                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-tight leading-tight">
                                                 {getTripAddress(trip)}
                                             </span>
                                         </div>
                                         {destination && (
-                                            <div className="flex items-start gap-2">
-                                                <MapPin size={12} className="text-red-500 mt-0.5 shrink-0" />
-                                                <span className="text-[10px] font-black text-black/45 uppercase">
+                                            <div className="flex items-start gap-3">
+                                                <div className="w-3 h-3 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center mt-0.5 shrink-0">
+                                                    <div className="w-1 h-1 rounded-full bg-rose-500" />
+                                                </div>
+                                                <span className="text-[9px] font-black text-slate-300 uppercase tracking-tight leading-tight">
                                                     {destination}
                                                 </span>
                                             </div>
                                         )}
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-3 pt-1">
+                                    <div className="grid grid-cols-2 gap-3 pt-2">
                                         {hasPendingSettlement ? (
                                             <>
-                                                <button
-                                                    onClick={() => handleSettlement(trip, 'wallet')}
-                                                    disabled={settlingTripId === trip._id}
-                                                    className="h-11 rounded-xl bg-amber-400 text-black text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
-                                                >
-                                                    {settlingTripId === trip._id ? 'Processing' : 'Pay wallet'}
+                                                <button onClick={() => handleSettlement(trip, 'wallet')} disabled={settlingTripId === trip._id}
+                                                    className="h-11 rounded-[16px] bg-[#FF9900] text-slate-900 text-[10px] font-black uppercase tracking-[0.15em] active:scale-95 transition-all shadow-lg shadow-[#FF9900]/20 disabled:opacity-50">
+                                                    {settlingTripId === trip._id ? 'Processing' : 'Vault Payout'}
                                                 </button>
-                                                <button
-                                                    onClick={() => handleSettlement(trip, 'online')}
-                                                    disabled={settlingTripId === trip._id}
-                                                    className="h-11 rounded-xl bg-black text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
-                                                >
-                                                    {settlingTripId === trip._id ? 'Opening' : 'Pay balance'}
+                                                <button onClick={() => handleSettlement(trip, 'online')} disabled={settlingTripId === trip._id}
+                                                    className="h-11 rounded-[16px] bg-slate-900 text-[#FF9900] text-[10px] font-black uppercase tracking-[0.15em] active:scale-95 transition-all shadow-lg disabled:opacity-50">
+                                                    {settlingTripId === trip._id ? 'Opening' : 'Gateway Settle'}
                                                 </button>
                                             </>
                                         ) : (
                                             <>
-                                                <button
-                                                    onClick={() => navigate(`/rate?id=${trip._id}`)}
-                                                    disabled={trip.status !== 'completed'}
-                                                    className="h-11 rounded-xl bg-black text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-40"
-                                                >
-                                                    {trip.feedback?.rating ? 'Update rating' : 'Rate trip'}
+                                                <button onClick={() => navigate(`/rate?id=${trip._id}`)} disabled={trip.status !== 'completed'}
+                                                    className={`h-11 rounded-[16px] text-[10px] font-black uppercase tracking-[0.15em] active:scale-95 transition-all shadow-lg ${trip.feedback?.rating ? 'bg-slate-100 text-slate-400 border border-gray-100 shadow-none' : 'bg-slate-900 text-[#FF9900]'}`}>
+                                                    {trip.feedback?.rating ? 'Audit Submitted' : 'Submit Audit'}
                                                 </button>
-                                                <button
-                                                    onClick={() => navigate(`/spare-driver/support?bookingId=${trip._id}`)}
-                                                    className="h-11 rounded-xl border border-gray-100 text-black/50 text-[10px] font-black uppercase tracking-widest"
-                                                >
-                                                    Support
+                                                <button onClick={() => navigate(`/spare-driver/support?bookingId=${trip._id}`)}
+                                                    className="h-11 rounded-[16px] border border-gray-100 text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] shadow-sm active:scale-95 transition-all">
+                                                    Incident Help
                                                 </button>
                                             </>
                                         )}

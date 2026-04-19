@@ -23,7 +23,10 @@ const featureGuard = require('../../../middleware/featureGuard');
 // ── SPARE DRIVER SERVICES (NEW PRICING ENGINE) ─────────────────
 const serviceRoutes = require('./serviceRoutes');
 const pricingRoutes = require('./pricingRoutes');
+const surgePricingRoutes = require('./surgePricingRoutes');
 const payoutRoutes = require('./payoutRoutes');
+const penaltyRoutes = require('./penaltyRoutes');
+const walletRoutes = require('./walletRoutes');
 
 // Public Admin Route
 router.post('/login', adminAuthController.login);
@@ -45,6 +48,7 @@ router.get('/analytics', adminAnalyticsController.getDetailedAnalytics);
 router.get('/users', adminController.getUsers);
 router.post('/users', adminController.createUser);
 router.patch('/users/:id', adminController.updateUser);
+router.patch('/users/:id/kyc', adminController.updateUserKyc);
 router.delete('/users/:id', adminController.deleteUser);
 router.get('/bookings', adminController.getAllBookings);
 
@@ -122,7 +126,12 @@ router.patch('/apartment-wash/subscriptions/:id/review', featureGuard.guard('APA
 // ── SPARE DRIVER SERVICES (NEW PRICING ENGINE) ─────────────────
 router.use('/spare-driver/services', serviceRoutes);
 router.use('/spare-driver/pricing', pricingRoutes);
+router.use('/spare-driver/surge-pricing', surgePricingRoutes);
 router.use('/spare-driver/payouts', payoutRoutes);
+
+// ── FINANCE MANAGEMENT ─────────────────────────────────────────
+router.use('/finance/penalties', penaltyRoutes);
+router.use('/finance/wallets', walletRoutes);
 
 // ── Vehicle Catalog CRUD ──────────────────────────────────────
 router.get('/vehicle-types', adminVehicleController.getVehicleTypes);

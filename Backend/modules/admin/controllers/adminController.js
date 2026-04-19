@@ -768,6 +768,48 @@ exports.getStudioWashConsole = async (req, res) => {
     }
 };
 
+// Specialized KYC update for Consumers
+exports.updateUserKyc = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, note } = req.body;
+
+        const user = await User.findById(id);
+        if (!user) {
+            return res.status(404).json({ status: 'fail', message: 'User not found' });
+        }
+
+        user.kyc = user.kyc || {};
+        user.kyc.status = status;
+        user.kyc.note = note || '';
+        user.kyc.reviewedAt = new Date();
+
+        if (status === 'verified') {
+            user.isVerified = true;
+        } else if (status === 'rejected') {
+            user.isVerified = false;
+        }
+
+        await user.save({ validateBeforeSave: false });
+
+        // Notify user via Socket
+        const io = socketService.getIO();
+        io.to(user._id.toString()).emit('kyc_status_updated', {
+            status,
+            message: status === 'verified' ? 'Identity verified successfully' : 'Identity verification rejected'
+        });
+
+        res.status(200).json({
+            status: 'success',
+            message: `KYC status updated to ${status}`,
+            data: { user }
+        });
+    } catch (error) {
+        console.error('Update KYC Error:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to update KYC status' });
+    }
+};
+
 exports.getAllBookings = async (req, res) => {
     try {
         const bookings = await Booking.find()

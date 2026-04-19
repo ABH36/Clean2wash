@@ -8,15 +8,23 @@ const ServiceHUD = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { bookings, activeSOS, dispatchSOS } = useAuth();
+    const isSpareDriverBooking = (booking = {}) => (
+        booking?.service?.type === 'sparedriver'
+        || booking?.type === 'sparedriver'
+        || booking?.service?.category === 'Chauffeur'
+        || String(booking?.serviceName || '').toLowerCase().includes('chauffeur')
+        || String(booking?.serviceName || '').toLowerCase().includes('spare driver')
+    );
 
     // 🛡️ HUD Visibility Protocol: Hide on Home Page as per clean-dashboard policy
     if (location.pathname === '/' || location.pathname.startsWith('/spare-driver')) return null;
 
     // 🏎️ Find the most relevant "Live" booking for the user
     // We prioritize bookings that are being actively serviced over just "confirmed"
-    const liveBooking = bookings?.find((b) =>
+    const spareBookings = (bookings || []).filter(isSpareDriverBooking);
+    const liveBooking = spareBookings.find((b) =>
         ['en_route', 'arrived', 'active'].includes(b.status)
-    ) || bookings?.find((b) => ['pending', 'confirmed', 'assigned', 'accepted'].includes(b.status));
+    ) || spareBookings.find((b) => ['pending', 'confirmed', 'assigned', 'accepted'].includes(b.status));
 
     if (!liveBooking && !activeSOS) return null;
 
@@ -39,7 +47,7 @@ const ServiceHUD = () => {
                 <div className="bg-white/80 backdrop-blur-2xl border border-white/50 rounded-[2rem] p-3 shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex items-center gap-3 overflow-hidden">
                     {/* Visual Indicator */}
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
-                        liveBooking?.status === 'in_progress' ? 'bg-brand' : 'bg-black'
+                        liveBooking?.status === 'active' ? 'bg-brand' : 'bg-black'
                     }`}>
                         {isChauffeur ? <Car className="text-white" size={24} /> : <Zap className="text-white" size={24} />}
                         {liveBooking?.status === 'en_route' && (

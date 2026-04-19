@@ -10,6 +10,8 @@ const isChauffeurBooking = (booking = {}) => (
     booking.service?.category === 'Chauffeur'
     || booking.service?.type === 'sparedriver'
     || String(booking.service?.name || '').toLowerCase().includes('driver')
+    || String(booking.serviceName || '').toLowerCase().includes('driver')
+    || booking.type === 'sparedriver'
 );
 
 const formatMoney = (booking = {}) => {
@@ -67,8 +69,8 @@ const RateExperience = () => {
 
     const chauffeurMode = useMemo(() => isChauffeurBooking(booking || {}), [booking]);
     const performer = booking?.provider?.id || {};
-    const performerLabel = chauffeurMode ? 'Chauffeur' : (booking?.provider?.type === 'vendor' ? 'Service Hub' : 'Captain');
-    const successRoute = chauffeurMode ? `/spare-driver/history?bookingId=${bookingId}` : '/bookings';
+    const performerLabel = 'Chauffeur';
+    const successRoute = `/spare-driver/history?bookingId=${bookingId}`;
 
     const toggleTag = (tag) => {
         setSelectedTags((prev) => (
@@ -117,9 +119,26 @@ const RateExperience = () => {
                 </motion.div>
                 <h2 className="text-2xl font-black tracking-tight text-content mb-2">Thank you!</h2>
                 <p className="text-sm font-bold text-content-subtle">
-                    {chauffeurMode ? 'Your chauffeur feedback helps us improve every trip.' : 'Your feedback makes Spare Driver better for everyone.'}
+                    Your chauffeur feedback helps us improve every trip.
                 </p>
                 <div className="mt-6 w-8 h-1 bg-brand rounded-full animate-pulse mx-auto" />
+            </div>
+        );
+    }
+
+    if (booking && !chauffeurMode) {
+        return (
+            <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 text-center">
+                <h2 className="text-2xl font-black tracking-tight text-content mb-2">Spare driver only</h2>
+                <p className="text-sm font-bold text-content-subtle max-w-[280px]">
+                    This feedback screen is available only for spare driver trips.
+                </p>
+                <button
+                    onClick={() => navigate('/spare-driver/history')}
+                    className="mt-8 h-12 px-8 rounded-2xl bg-brand text-white font-black text-sm"
+                >
+                    Open Trip History
+                </button>
             </div>
         );
     }
@@ -164,9 +183,7 @@ const RateExperience = () => {
                 </div>
 
                 <div className="text-center">
-                    <p className="font-black text-content text-base mb-4">
-                        {chauffeurMode ? 'How was your chauffeur trip?' : 'How was your experience?'}
-                    </p>
+                    <p className="font-black text-content text-base mb-4">How was your chauffeur trip?</p>
                     <div className="flex justify-center gap-3">
                         {[1, 2, 3, 4, 5].map((i) => (
                             <motion.button
@@ -215,7 +232,7 @@ const RateExperience = () => {
                     <p className="text-[9px] font-black text-content-subtle uppercase tracking-widest mb-2">Add a note (optional)</p>
                     <textarea
                         rows={3}
-                        placeholder={chauffeurMode ? 'Tell us about the trip, timing, and driver behaviour...' : 'Tell us more about your experience...'}
+                        placeholder="Tell us about the trip, timing, and driver behaviour..."
                         value={comment}
                         onChange={(e) => setComment(e.target.value)}
                         className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-content outline-none focus:border-brand/30 placeholder:text-content-subtle resize-none"
@@ -227,7 +244,7 @@ const RateExperience = () => {
                     <div className="text-left">
                         <p className="font-black text-sm text-content-muted">Add Photos</p>
                         <p className="text-[9px] font-bold text-content-subtle">
-                            {chauffeurMode ? 'Optional trip proof or issue reference' : 'Before & after shots welcome'}
+                            Optional trip proof or issue reference
                         </p>
                     </div>
                 </button>

@@ -73,16 +73,23 @@ const AdminWalletSystem = () => {
         }
 
         try {
-            const res = await adminAPI.adjustWallet(selectedWallet._id, adjustmentData);
+            const res = await adminAPI.adjustWallet(selectedWallet._id, {
+                userType: selectedWallet.userType,
+                type: adjustmentData.type,
+                amount: adjustmentData.amount,
+                reason: adjustmentData.reason
+            });
             if (res.status === 'success') {
                 fetchWallets();
                 fetchStats();
                 setAdjustmentModal(false);
                 setAdjustmentData({ amount: '', reason: '', type: 'CREDIT' });
                 setSelectedWallet(null);
+                alert(`Wallet ${adjustmentData.type.toLowerCase()}ed successfully`);
             }
         } catch (err) {
             console.error("Failed to adjust wallet:", err);
+            alert(err.message || 'Failed to adjust wallet');
         }
     };
 
@@ -233,18 +240,18 @@ const AdminWalletSystem = () => {
                                                 </div>
                                                 <div>
                                                     <p className="text-sm font-semibold text-[var(--text-primary)] leading-none mb-1">
-                                                        {wallet.user?.name || 'Unknown User'}
+                                                        {wallet.name || 'Unknown User'}
                                                     </p>
                                                     <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">
-                                                        {wallet.user?.phone || 'No phone'}
+                                                        {wallet.phone || wallet.driverId || 'No phone'}
                                                     </p>
                                                 </div>
                                             </div>
                                         </td>
 
                                         <td className="text-center">
-                                            <span className={`badge ${wallet.user?.role === 'driver' ? 'badge-warning' : 'badge-neutral'}`}>
-                                                {wallet.user?.role || 'customer'}
+                                            <span className={`badge ${wallet.userType === 'driver' ? 'badge-warning' : 'badge-neutral'}`}>
+                                                {wallet.userType}
                                             </span>
                                         </td>
 
@@ -252,6 +259,11 @@ const AdminWalletSystem = () => {
                                             <div className="text-lg font-semibold text-[var(--text-primary)]">
                                                 {formatCurrency(wallet.balance || 0)}
                                             </div>
+                                            {wallet.holdAmount > 0 && (
+                                                <div className="text-xs text-[var(--warning)] font-medium">
+                                                    Hold: {formatCurrency(wallet.holdAmount)}
+                                                </div>
+                                            )}
                                         </td>
 
                                         <td className="text-center">
@@ -276,7 +288,7 @@ const AdminWalletSystem = () => {
                                             <div className="flex items-center justify-center gap-2">
                                                 <Clock size={12} className="text-[var(--text-muted)]" />
                                                 <span className="text-xs font-medium text-[var(--text-secondary)]">
-                                                    {wallet.lastActivity ? new Date(wallet.lastActivity).toLocaleDateString() : 'No activity'}
+                                                    {wallet.createdAt ? new Date(wallet.createdAt).toLocaleDateString() : 'No activity'}
                                                 </span>
                                             </div>
                                         </td>
@@ -325,7 +337,7 @@ const AdminWalletSystem = () => {
                         <div className="mb-6">
                             <h2 className="text-xl font-semibold text-[var(--text-primary)] tracking-tight leading-none">Wallet Adjustment</h2>
                             <p className="text-xs font-medium text-[var(--primary)] uppercase tracking-wide mt-1">
-                                {selectedWallet.user?.name}
+                                {selectedWallet.name}
                             </p>
                         </div>
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 import { apiClient } from '../utils/api';
 
@@ -13,19 +13,35 @@ export const LocationProvider = ({ children }) => {
     const [loading, setLoading] = useState(false);
     const [isInitializing, setIsInitializing] = useState(true);
     const [showLocationPrompt, setShowLocationPrompt] = useState(false);
-    const [selectedAddress, setSelectedAddressState] = useState(() => {
-        const saved = localStorage.getItem('clean2wash_selected_address');
-        return saved ? JSON.parse(saved) : null;
-    });
+    const [selectedAddress, setSelectedAddressState] = useState(null);
+
+    // Dynamic key based on user ID to prevent cross-user leakage
+    const storageKey = useMemo(() => 
+        user?.id ? `c2w_selected_address_${user.id}` : 'c2w_selected_address_guest'
+    , [user?.id]);
+
+    // Load from localStorage when user/key changes
+    useEffect(() => {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+            try {
+                setSelectedAddressState(JSON.parse(saved));
+            } catch (e) {
+                console.error("Failed to parse saved address", e);
+            }
+        } else {
+            setSelectedAddressState(null);
+        }
+    }, [storageKey]);
 
     const setSelectedAddress = useCallback((addr) => {
         setSelectedAddressState(addr);
         if (addr) {
-            localStorage.setItem('clean2wash_selected_address', JSON.stringify(addr));
+            localStorage.setItem(storageKey, JSON.stringify(addr));
         } else {
-            localStorage.removeItem('clean2wash_selected_address');
+            localStorage.removeItem(storageKey);
         }
-    }, []);
+    }, [storageKey]);
 
     /**
      * Fetch saved addresses from backend
@@ -39,7 +55,15 @@ export const LocationProvider = ({ children }) => {
 
             if (response.status === 'success') {
                 const addresses = response.data.addresses;
+                const recentAddresses = response.data.recentAddresses || [];
+                
                 setSavedAddresses(addresses);
+                
+                // Store recent addresses in state (we'll add this)
+                if (window.recentAddressesCache) {
+                    window.recentAddressesCache = recentAddresses;
+                }
+                
                 const primary = addresses.find(a => a.isPrimary) || addresses[0] || null;
                 setPrimaryAddress(primary);
 
@@ -172,6 +196,28 @@ export const LocationProvider = ({ children }) => {
     };
 
     /**
+     * Get address suggestions based on current location and usage patterns
+     */
+    const getAddressSuggestions = async (lat, lng, city) => {
+        try {
+            const params = new URLSearchParams();
+            if (lat) params.append('lat', lat);
+            if (lng) params.append('lng', lng);
+            if (city) params.append('city', city);
+
+            const response = await apiClient.request(`/profile/addresses/suggestions?${params.toString()}`);
+
+            if (response.status === 'success') {
+                return response.data.suggestions || [];
+            }
+            return [];
+        } catch (error) {
+            console.error('Failed to get suggestions:', error);
+            return [];
+        }
+    };
+
+    /**
      * CRUD: Update address
      */
     const updateAddress = async (addressId, updates) => {
@@ -248,6 +294,7 @@ export const LocationProvider = ({ children }) => {
         } else {
             setSavedAddresses([]);
             setPrimaryAddress(null);
+            setSelectedAddress(null); // Clear selected address on logout
             setIsInitializing(false);
             setShowLocationPrompt(false);
         }
@@ -270,7 +317,8 @@ export const LocationProvider = ({ children }) => {
         setShowLocationPrompt,
         selectedAddress,
         setSelectedAddress,
-        saveLocation
+        saveLocation,
+        getAddressSuggestions
     };
 
     return (

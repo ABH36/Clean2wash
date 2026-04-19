@@ -123,6 +123,30 @@ const ComplianceCenter = () => {
                         <ShieldCheck size={140} className="absolute -bottom-10 -right-10 text-white/[0.03] -rotate-12 pointer-events-none" />
                     </motion.div>
 
+                    {/* ── User KYC Status (The Missing Piece) ── */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                        className="bg-white rounded-2xl p-5 border border-gray-100 flex items-center justify-between shadow-sm relative overflow-hidden"
+                    >
+                        <div className="flex items-center gap-4 relative z-10">
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${useAuth().user?.isVerified ? 'bg-green-50 border-green-100 text-green-600' : 'bg-orange-50 border-orange-100 text-orange-600'}`}>
+                                <ShieldCheck size={24} strokeWidth={2.5} />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-[1000] text-slate-900 uppercase italic">Identity Verification</h3>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mt-0.5">
+                                    {useAuth().user?.isVerified ? 'Protocol Level 2 Verified' : 'Complete KYC to unlock rewards'}
+                                </p>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={() => navigate('/kyc-verification')}
+                            className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${useAuth().user?.isVerified ? 'bg-slate-50 text-slate-400' : 'bg-[#FF9900] text-white shadow-lg shadow-[#FF9900]/20'}`}
+                        >
+                            {useAuth().user?.isVerified ? 'Verified' : 'Verify Now'}
+                        </button>
+                    </motion.div>
+
                     {/* ── Filters ── */}
                     <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
                         {['All', 'Expired', 'Insurance', 'PUC'].map(f => (

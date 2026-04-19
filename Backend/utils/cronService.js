@@ -2,7 +2,7 @@ const cron = require('node-cron');
 const Subscription = require('../models/Subscription');
 const Booking = require('../models/Booking');
 const Hub = require('../models/Hub');
-const { sendNotification, sendCaptainNotification, sendVendorNotification } = require('./notificationService');
+const { sendNotification, sendCaptainNotification, sendVendorNotification, sendStaffNotification } = require('./notificationService');
 
 const Captain = require('../models/Captain');
 
@@ -45,11 +45,11 @@ const generateDailySubscriptionJobs = async () => {
                 const basementA = a.parkingDetails?.basement || '';
                 const basementB = b.parkingDetails?.basement || '';
                 if (basementA !== basementB) return basementA.localeCompare(basementB);
-                
+
                 const blockA = a.parkingDetails?.block || '';
                 const blockB = b.parkingDetails?.block || '';
                 if (blockA !== blockB) return blockA.localeCompare(blockB);
-                
+
                 const pillarA = a.parkingDetails?.pillar || '';
                 const pillarB = b.parkingDetails?.pillar || '';
                 return pillarA.localeCompare(pillarB);
@@ -66,7 +66,7 @@ const generateDailySubscriptionJobs = async () => {
 
             const staffLoadCount = {}; // { captainId: count }
             let staffIndex = 0;
-            
+
             for (const sub of subscriptions) {
                 const shouldSkipToday = Array.isArray(sub.skipDates) && sub.skipDates.some((skipDate) => {
                     const normalized = new Date(skipDate);
@@ -104,14 +104,14 @@ const generateDailySubscriptionJobs = async () => {
                     while (attempts < specialists.length) {
                         const potentialStaff = specialists[staffIndex % specialists.length];
                         const staffId = potentialStaff._id.toString();
-                        
+
                         if ((staffLoadCount[staffId] || 0) < 10) {
                             assignedStaff = potentialStaff;
                             staffLoadCount[staffId] = (staffLoadCount[staffId] || 0) + 1;
                             staffIndex++;
                             break;
                         }
-                        
+
                         staffIndex++; // Move to next specialist
                         attempts++;
                     }
@@ -124,7 +124,7 @@ const generateDailySubscriptionJobs = async () => {
 
                 if (!assignedStaff) {
                     console.warn(`[Cron] 🚩 ASSIGNMENT ALERT: No verified captains mapped to apartment hub ${hub.name}.`);
-                    continue; 
+                    continue;
                 }
 
                 const bookingData = {
@@ -198,7 +198,7 @@ const generateDailySubscriptionJobs = async () => {
                     await sendCaptainNotification(assignedStaff._id, {
                         title: 'Mission Assigned 🚗',
                         message: `You have a new Apartment Wash at ${sub.hub?.name}. Slot: ${sub.slot === 'morning' ? '6-9 AM' : '6-8 PM'}. Route sorted by Basement → Block → Pillar.`,
-                        type: 'booking' // Fixed from 'status-update'
+                        type: 'booking'
                     });
                 }
             }
@@ -228,7 +228,7 @@ const processSubscriptionExpiries = async () => {
 
         for (const sub of expiringNow) {
             const isFullyEnded = sub.endDate < today;
-            
+
             if (isFullyEnded) {
                 sub.status = 'expired';
                 await sub.save();

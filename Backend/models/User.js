@@ -71,6 +71,21 @@ const userSchema = new mongoose.Schema({
             isPrimary: { type: Boolean, default: false },
             addedAt: { type: Date, default: Date.now }
         }],
+        // Recent Addresses (Track frequently used locations)
+        recentAddresses: [{
+            street: { type: String, required: true },
+            city: { type: String, required: true },
+            state: { type: String },
+            pincode: { type: String },
+            landmark: { type: String },
+            coordinates: {
+                lat: { type: Number, required: true },
+                lng: { type: Number, required: true }
+            },
+            usageCount: { type: Number, default: 1 },
+            lastUsedAt: { type: Date, default: Date.now },
+            source: { type: String, enum: ['booking', 'manual', 'search'], default: 'booking' }
+        }],
         // Captain / SpareDriver specific
         vehicleType: { type: String, default: '' },
         plate: { type: String, default: '' },

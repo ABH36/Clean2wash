@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
     ChevronLeft,
+    ChevronRight,
     MessageSquare,
     Phone,
     ArrowRight,
@@ -195,141 +196,117 @@ const SpareDriverSupport = () => {
     return (
         <MobileLayout>
             <div className="min-h-screen bg-white flex flex-col">
-                <Header title="Chauffeur support" showBack={true} />
-
-                <div className="p-5 space-y-6">
-                    <div className="bg-brand/5 rounded-[2.5rem] p-6 border border-brand/20 relative overflow-hidden text-center flex flex-col items-center">
-                        <div className="absolute top-0 right-0 w-32 h-full bg-brand/10 skew-x-[-15deg]" />
-                        <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-brand mb-4 shadow-xl border border-brand/10">
-                            <MessageSquare size={24} strokeWidth={2.5} />
+                <header className="px-4 py-3 flex items-center justify-between bg-white sticky top-0 z-[60] border-b border-gray-100 backdrop-blur-xl">
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => navigate(-1)} className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center active:scale-95 transition-all">
+                            <ChevronLeft size={18} className="text-slate-900" />
+                        </button>
+                        <div>
+                            <h1 className="text-[17px] font-[1000] text-slate-900 tracking-tighter uppercase leading-none">Support Desk</h1>
                         </div>
-                        <h2 className="text-[20px] font-black text-black uppercase tracking-tight leading-none mb-1">Live help desk</h2>
-                        <p className="text-[10px] font-bold text-black/40 uppercase tracking-widest">Use the fastest route based on your issue</p>
+                    </div>
+                </header>
+
+                <div className="px-4 pb-24 space-y-4 pt-4">
+                    <div className="bg-[#FF9900]/05 rounded-[22px] p-5 border border-[#FF9900]/15 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-24 h-full bg-[#FF9900]/05 skew-x-[-15deg] group-hover:bg-[#FF9900]/10 transition-colors" />
+                        <div className="flex items-center gap-4 relative z-10">
+                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-[#FF9900] shadow-md border border-[#FF9900]/10">
+                                <MessageSquare size={18} strokeWidth={3} />
+                            </div>
+                            <div>
+                                <h2 className="text-[15px] font-[1000] text-black uppercase tracking-tight leading-none mb-1">Live Help Desk</h2>
+                                <p className="text-[8px] font-black text-black/30 uppercase tracking-[0.2em]">24/7 Driver Support Center</p>
+                            </div>
+                        </div>
                     </div>
 
                     {supportBookingId && (
-                        <div className="border border-[#F29F05]/25 bg-[#FFFBF0] rounded-3xl p-4 flex items-start gap-3">
-                            <AlertTriangle size={18} className="text-[#F29F05] shrink-0 mt-0.5" />
-                            <div>
-                                <p className="text-[9px] font-black text-black/30 uppercase tracking-widest">
-                                    {activeBookingId ? 'Active booking' : 'History booking'}
-                                </p>
-                                <p className="text-[11px] font-black text-black uppercase mt-1">
-                                    Support linked to booking {supportBookingId.slice(-8)}
-                                </p>
-                                <div className="mt-3 flex items-center gap-2 flex-wrap">
-                                    <span className="px-2 py-1 rounded-md bg-black text-white text-[8px] font-black uppercase tracking-widest">
-                                        {loadingBooking ? 'Loading trip...' : getSupportStatusLabel(supportBooking?.status)}
+                        <div className="border border-[#FF9900]/20 bg-slate-50/50 rounded-[22px] p-4 flex items-start gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-[#FF9900] flex items-center justify-center shrink-0">
+                                <AlertTriangle size={14} className="text-white" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-[10px] font-black text-black uppercase tracking-tight">Active Ticket Context</p>
+                                <p className="text-[9px] font-bold text-black/40 uppercase tracking-widest mt-0.5">Booking #{supportBookingId.slice(-8)}</p>
+                                <div className="mt-3 flex items-center gap-1.5 flex-wrap">
+                                    <span className="px-2 py-1 rounded-md bg-slate-900 text-white text-[8px] font-black uppercase tracking-widest">
+                                        {loadingBooking ? 'SYNCING...' : (getSupportStatusLabel(supportBooking?.status) || 'PENDING')}
                                     </span>
-                                    {supportBooking?.payment?.status && (
-                                        <span className="px-2 py-1 rounded-md bg-gray-100 text-black/60 text-[8px] font-black uppercase tracking-widest">
-                                            Payment {supportBooking.payment.status}
-                                        </span>
-                                    )}
-                                    {supportBooking?.service?.name && (
-                                        <span className="px-2 py-1 rounded-md bg-brand/10 text-brand text-[8px] font-black uppercase tracking-widest">
-                                            {supportBooking.service.name}
-                                        </span>
-                                    )}
+                                    <span className="px-2 py-1 rounded-md bg-[#FF9900]/10 text-[#FF9900] text-[8px] font-black uppercase tracking-widest">
+                                        Support Ready
+                                    </span>
                                 </div>
-                                <button
-                                    onClick={() => navigate(activeBookingId ? '/spare-driver' : '/spare-driver/history')}
-                                    className="mt-3 text-[9px] font-black text-[#F29F05] uppercase tracking-widest inline-flex items-center gap-1"
-                                >
-                                    {activeBookingId ? 'Return to active trip' : 'Back to history'}
-                                    <ArrowRight size={12} />
-                                </button>
                             </div>
                         </div>
                     )}
 
-                    <div className="grid grid-cols-1 gap-4">
+                    <div className="grid grid-cols-1 gap-3">
                         {SUPPORT_ACTIONS.map((action) => (
                             <motion.button
                                 key={action.id}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => handleAction(action.id)}
-                                className="bg-white border border-gray-100 rounded-3xl p-5 text-left shadow-[0_8px_30px_rgba(0,0,0,0.03)] flex items-center gap-5 group"
+                                className="bg-white border border-gray-100 rounded-[22px] p-x4 py-4 text-left flex items-center gap-4 group active:bg-gray-50 transition-all shadow-sm"
                             >
-                                <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-all bg-gray-50 group-hover:scale-110">
-                                    <action.icon size={22} style={{ color: action.color }} strokeWidth={2.5} />
+                                <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-all bg-slate-50 border border-slate-100">
+                                    <action.icon size={18} style={{ color: action.color }} strokeWidth={3} />
                                 </div>
                                 <div className="flex-1">
-                                    <h3 className="text-[14px] font-black text-black uppercase tracking-tight mb-1">{action.title}</h3>
-                                    <p className="text-[10px] font-bold text-black/40 uppercase tracking-widest leading-none">{action.desc}</p>
-                                    <span className="inline-flex items-center gap-1 mt-3 text-[9px] font-black uppercase tracking-widest text-[#F29F05]">
-                                        {action.cta}
-                                        <ArrowRight size={12} />
-                                    </span>
+                                    <h3 className="text-[12px] font-[1000] text-black uppercase tracking-tight">{action.title}</h3>
+                                    <p className="text-[9px] font-bold text-black/30 uppercase tracking-widest mt-0.5">{action.desc}</p>
                                 </div>
+                                <ChevronRight size={14} className="text-slate-200" />
                             </motion.button>
                         ))}
                     </div>
 
-                    <div className="bg-white border border-gray-100 rounded-[2rem] p-5 shadow-[0_8px_30px_rgba(0,0,0,0.03)] space-y-4">
+                    <div className="bg-white border border-slate-100 rounded-[28px] p-5 shadow-sm space-y-4">
                         <div>
-                            <p className="text-[9px] font-black text-black/30 uppercase tracking-widest">Issue reporter</p>
-                            <h3 className="text-[15px] font-black text-black uppercase tracking-tight mt-1">
-                                {supportBookingId ? 'Report spare driver issue to admin' : 'Issue reporting needs a trip context'}
-                            </h3>
+                            <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em] mb-1">Issue Reporter</p>
+                            <h3 className="text-[13px] font-[1000] text-slate-900 uppercase">Describe your concern</h3>
                         </div>
 
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-1.5">
                             {ISSUE_OPTIONS.map((type) => (
                                 <button
                                     key={type.id}
                                     onClick={() => setSelectedIssueType(type.id)}
-                                    className={`px-3 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-colors ${selectedIssueType === type.id ? 'bg-black text-white border-black' : 'bg-gray-50 text-black/60 border-gray-100'}`}
+                                    className={`px-3 py-2 rounded-lg border text-[8px] font-black uppercase tracking-widest transition-all ${selectedIssueType === type.id ? 'bg-slate-900 text-white border-slate-900 shadow-md' : 'bg-slate-50 text-slate-400 border-slate-100'}`}
                                 >
                                     {type.label}
                                 </button>
                             ))}
                         </div>
 
-                        <div className="rounded-2xl border border-black/[0.05] bg-gray-50/70 px-4 py-3">
-                            <div className="flex items-center justify-between gap-3">
-                                <div>
-                                    <p className="text-[9px] font-black text-black/30 uppercase tracking-widest">Support hint</p>
-                                    <p className="text-[11px] font-black text-black uppercase mt-1">{selectedIssueMeta.hint}</p>
-                                </div>
-                                <span className={`px-2 py-1 rounded-md text-[8px] font-black uppercase ${
-                                    selectedIssueMeta.priority === 'Critical'
-                                        ? 'bg-red-100 text-red-600'
-                                        : selectedIssueMeta.priority === 'Urgent'
-                                            ? 'bg-orange-100 text-orange-600'
-                                            : selectedIssueMeta.priority === 'High'
-                                                ? 'bg-yellow-100 text-yellow-700'
-                                                : 'bg-blue-100 text-blue-600'
-                                }`}>
-                                    {selectedIssueMeta.priority}
-                                </span>
-                            </div>
-                        </div>
-
                         <textarea
-                            rows={4}
+                            rows={3}
                             value={issueDescription}
                             onChange={(event) => setIssueDescription(event.target.value)}
-                            placeholder={supportBookingId ? 'Explain what happened so admin can take action quickly...' : 'Start or open a spare driver trip to report an issue'}
+                            placeholder="Explain the issue for quick support..."
                             disabled={!supportBookingId || submittingIssue}
-                            className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-[12px] font-bold text-black resize-none outline-none focus:border-black disabled:bg-gray-50 disabled:text-black/30"
+                            className="w-full border border-slate-100 bg-slate-50/50 rounded-xl px-4 py-3 text-[11px] font-bold text-slate-900 resize-none outline-none focus:border-[#FF9900]/30 transition-all placeholder:text-slate-300"
                         />
 
                         <button
                             onClick={handleSubmitIssue}
                             disabled={!supportBookingId || submittingIssue}
-                            className="w-full bg-black text-white h-12 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] disabled:opacity-40"
+                            className={`w-full h-12 rounded-xl font-[1000] text-[11px] uppercase tracking-widest transition-all shadow-xl ${
+                                selectedIssueType === 'sos' 
+                                    ? 'bg-red-600 text-white shadow-red-200' 
+                                    : 'bg-slate-900 text-white'
+                            } disabled:opacity-30`}
                         >
-                            {submittingIssue ? 'Sending...' : (selectedIssueType === 'sos' ? 'Send SOS alert' : 'Submit support issue')}
+                            {submittingIssue ? 'Sending...' : (selectedIssueType === 'sos' ? 'Send SOS alert' : 'Submit feedback')}
                         </button>
                     </div>
 
                     {supportBooking?.issues?.length > 0 && (
-                        <div className="bg-white border border-gray-100 rounded-[2rem] p-5 shadow-[0_8px_30px_rgba(0,0,0,0.03)] space-y-4">
+                        <div className="bg-white border border-gray-100 rounded-[22px] p-5 shadow-sm space-y-4">
                             <div>
                                 <p className="text-[9px] font-black text-black/30 uppercase tracking-widest">Support timeline</p>
-                                <h3 className="text-[15px] font-black text-black uppercase tracking-tight mt-1">
-                                    Latest trip issues and admin status
+                                <h3 className="text-[13px] font-black text-black uppercase tracking-tight mt-1">
+                                    Active Ticket Status
                                 </h3>
                             </div>
 
@@ -362,39 +339,39 @@ const SpareDriverSupport = () => {
                     <div className="grid grid-cols-2 gap-3">
                         <button
                             onClick={() => window.location.href = 'tel:112'}
-                            className="rounded-2xl border border-red-100 bg-red-50 px-4 py-4 text-left"
+                            className="rounded-[22px] border border-red-50 bg-red-50/50 px-4 py-4 text-left transition-all active:scale-[0.98]"
                         >
-                            <Phone size={18} className="text-red-600 mb-3" />
-                            <p className="text-[10px] font-black text-black uppercase tracking-widest">Emergency</p>
-                            <p className="text-[13px] font-black text-red-600 mt-1">Call 112</p>
+                            <Phone size={18} className="text-red-600 mb-2" />
+                            <p className="text-[11px] font-[1000] text-red-600 uppercase">Emergency</p>
+                            <p className="text-[8px] font-bold text-red-900/40 uppercase tracking-widest">Call 112</p>
                         </button>
 
                         <button
                             onClick={() => navigate(supportBookingId ? `/spare-driver/history?bookingId=${supportBookingId}` : '/spare-driver/history')}
-                            className="rounded-2xl border border-gray-100 bg-white px-4 py-4 text-left"
+                            className="rounded-[22px] border border-slate-100 bg-white px-4 py-4 text-left transition-all active:scale-[0.98] shadow-sm"
                         >
-                            <Clock size={18} className="text-[#F29F05] mb-3" />
-                            <p className="text-[10px] font-black text-black uppercase tracking-widest">Past trips</p>
-                            <p className="text-[13px] font-black text-black mt-1">Open history</p>
+                            <Clock size={18} className="text-[#FF9900] mb-2" />
+                            <p className="text-[11px] font-[1000] text-slate-900 uppercase">History</p>
+                            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Old Trips</p>
                         </button>
                     </div>
 
-                    <div className="pt-8 border-t border-black/[0.03] space-y-4">
-                        <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em] text-center">Frequently asked questions</p>
+                    <div className="pt-4 border-t border-black/[0.03] space-y-3">
+                        <p className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] text-center">Frequently asked questions</p>
                         {FAQS.map((faq, index) => {
                             const open = expandedFaq === index;
                             return (
                                 <button
                                     key={faq.question}
                                     onClick={() => setExpandedFaq(open ? -1 : index)}
-                                    className="w-full bg-gray-50 p-4 rounded-xl border border-black/[0.02] text-left"
+                                    className="w-full bg-slate-50/50 p-4 rounded-xl border border-slate-100 text-left transition-all active:bg-slate-100"
                                 >
                                     <div className="flex items-center justify-between gap-4">
-                                        <span className="text-[11px] font-black text-black/60 uppercase">{faq.question}</span>
-                                        <ChevronDown size={14} className={`text-black/20 transition-transform ${open ? 'rotate-180' : ''}`} />
+                                        <span className="text-[10px] font-black text-slate-800 uppercase tracking-tight">{faq.question}</span>
+                                        <ChevronDown size={12} className={`text-slate-300 transition-transform ${open ? 'rotate-180' : ''}`} />
                                     </div>
                                     {open && (
-                                        <p className="mt-3 text-[11px] font-bold text-black/55 leading-relaxed normal-case">
+                                        <p className="mt-2 text-[10px] font-bold text-slate-400 leading-relaxed">
                                             {faq.answer}
                                         </p>
                                     )}

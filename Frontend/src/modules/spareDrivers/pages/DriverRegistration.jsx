@@ -1,335 +1,294 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-    User, Mail, Phone, Lock, FileText, Camera, ShieldCheck, Clock, CheckCircle2, 
-    Loader2, AlertCircle, MapPin, CreditCard, RefreshCw, Trophy, Sparkles, 
-    ChevronRight, ArrowRight, Navigation, Shield, Fingerprint, ChevronLeft, Zap
+    User, Mail, Phone, Lock, ChevronRight, FileText, Camera,
+    ShieldCheck, CheckCircle2, Loader2, AlertCircle, MapPin,
+    Clock, CreditCard, GraduationCap, Briefcase, Globe, Award,
+    Check, Zap
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { spareDriverAPI } from '../../../utils/spareDriverApi';
-import { toast } from 'react-hot-toast';
+import RegistrationStepWrapper from '../components/RegistrationStepWrapper';
+import spareDriverLogo from '../../../assets/spareDriverLogo.png';
 
-const STEPS = { REGISTER: 0, OTP_VERIFY: 1, UPLOAD_DOCS: 2, VERIFYING: 3, KIT_REQUIRED: 4, KIT_REVIEW: 5, SUCCESS: 6 };
-const DRIVER_STATUS = {
-    PENDING_DOCS: 'pending_docs',
-    PENDING_VERIFICATION: 'pending_verification',
-    VERIFIED_PENDING_KIT: 'verified_pending_kit',
-    KIT_PAYMENT_PENDING: 'kit_payment_pending',
-    ACTIVE: 'active'
-};
-
-const resolveDriverStep = (status) => {
-    if (status === DRIVER_STATUS.PENDING_DOCS) return STEPS.UPLOAD_DOCS;
-    if (status === DRIVER_STATUS.PENDING_VERIFICATION) return STEPS.VERIFYING;
-    if (status === DRIVER_STATUS.VERIFIED_PENDING_KIT) return STEPS.KIT_REQUIRED;
-    if (status === DRIVER_STATUS.KIT_PAYMENT_PENDING) return STEPS.KIT_REVIEW;
-    if (status === DRIVER_STATUS.ACTIVE) return STEPS.SUCCESS;
-    return STEPS.REGISTER;
-};
-
-const normalizeIndianPhone = (value = '') => String(value).replace(/\D/g, '').slice(0, 10);
-const isValidIndianMobile = (value = '') => /^[6-9]\d{9}$/.test(String(value || ''));
-
-const DocUpload = ({ label, icon: Icon, file, onChange, captureMode = '', helperText = 'JPG, PNG, WEBP - MAX 5MB' }) => {
-    const [preview, setPreview] = useState(null);
-    useEffect(() => {
-        if (!file) { setPreview(null); return; }
-        const url = URL.createObjectURL(file);
-        setPreview(url);
-        return () => URL.revokeObjectURL(url);
-    }, [file]);
-
-    return (
-        <label className={`block group relative overflow-hidden rounded-[1.8rem] border-2 transition-all duration-300 cursor-pointer ${file 
-            ? 'border-brand bg-brand/5' 
-            : 'border-content/[0.03] bg-content/[0.02] hover:border-brand/30 hover:bg-surface active:scale-95'}`}>
-            <input type="file" accept="image/*" capture={captureMode || undefined} className="hidden" onChange={onChange} />
-            <div className="p-4 flex items-center gap-4">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all overflow-hidden relative ${file ? 'bg-black text-brand' : 'bg-surface border border-content/[0.03] text-content/15 group-hover:scale-105'}`}>
-                    {preview ? <img src={preview} alt="preview" className="w-full h-full object-cover" /> : <Icon size={24} />}
-                </div>
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                        <span className={`text-[12px] font-black uppercase tracking-tight transition-colors ${file ? 'text-content' : 'text-content/40'}`}>{label}</span>
-                        {file && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-4 h-4 bg-brand text-black rounded-full flex items-center justify-center"><CheckCircle2 size={10} strokeWidth={4} /></motion.div>}
-                    </div>
-                    <p className={`text-[9px] font-black uppercase tracking-widest mt-1.5 truncate transition-opacity ${file ? 'text-brand' : 'text-content/20'}`}>
-                        {file ? 'Saved Successfully' : helperText}
-                    </p>
-                </div>
-                {!file && <div className="w-10 h-10 rounded-xl border border-content/[0.05] bg-surface flex items-center justify-center text-content/15 group-hover:bg-black group-hover:text-brand transition-all"><ArrowRight size={16} /></div>}
-            </div>
-        </label>
-    );
+const STEPS = {
+    IDENTITY: 1,
+    DRIVING: 2,
+    FINANCIAL: 3,
+    PROFILE_EDU: 4,
+    SAFETY: 5,
+    VERIFYING: 6,
+    SUCCESS: 7
 };
 
 const DriverRegistration = () => {
     const navigate = useNavigate();
-    const [step, setStep] = useState(STEPS.REGISTER);
-    const [authMode, setAuthMode] = useState('login');
+    const [step, setStep] = useState(STEPS.IDENTITY);
     const [loading, setLoading] = useState(false);
+    const [paying, setPaying] = useState(false);
     const [error, setError] = useState('');
-    const [driverSnapshot, setDriverSnapshot] = useState(null);
-    const [form, setForm] = useState({ name: '', email: '', phone: '', password: '' });
-    const [docs, setDocs] = useState({ aadhaarFront: null, aadhaarBack: null, panCard: null, drivingLicense: null, selfie: null });
-    const [otpDigits, setOtpDigits] = useState(['', '', '', '']);
-    const [otpTimeLeft, setOtpTimeLeft] = useState(45);
-    const [selfieCameraOpen, setSelfieCameraOpen] = useState(false);
-    const [selfieTimeLeft, setSelfieTimeLeft] = useState(30);
-    const otpInputRefs = useRef([]);
-    const selfieVideoRef = useRef(null);
-    const selfieStreamRef = useRef(null);
 
-    const completedDocCount = Object.values(docs).filter(Boolean).length;
+    const [form, setForm] = useState({
+        name: '', email: '', phone: '', password: '',
+        aadhaarNumber: '', panNumber: '',
+        licenseNumber: '', licenseExpiry: '', experienceYears: '', badgeNumber: '',
+        accountName: '', accountNumber: '', ifscCode: '', bankName: '', upiId: '',
+        city: '', languages: [], availability: 'full-time',
+        qualification: '', university: '', passingYear: '', experienceSummary: '',
+        criminalDeclaration: false
+    });
 
-    useEffect(() => {
-        if (step === STEPS.OTP_VERIFY && otpTimeLeft > 0) {
-            const t = setTimeout(() => setOtpTimeLeft(c => c - 1), 1000);
-            return () => clearTimeout(t);
-        }
-    }, [step, otpTimeLeft]);
-
-    useEffect(() => {
-        if (selfieCameraOpen) {
-            const t = setInterval(() => setSelfieTimeLeft(c => {
-                if (c <= 1) { clearInterval(t); setSelfieCameraOpen(false); return 0; }
-                return c - 1;
-            }), 1000);
-            return () => clearInterval(t);
-        }
-    }, [selfieCameraOpen]);
-
-    useEffect(() => {
-        if (!selfieCameraOpen) return;
-        (async () => {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
-                selfieStreamRef.current = stream;
-                if (selfieVideoRef.current) selfieVideoRef.current.srcObject = stream;
-            } catch (e) { setError('Camera denied'); setSelfieCameraOpen(false); }
-        })();
-        return () => selfieStreamRef.current?.getTracks().forEach(t => t.stop());
-    }, [selfieCameraOpen]);
+    const [docs, setDocs] = useState({
+        aadhaarCard: null, panCard: null, passportPhoto: null,
+        drivingLicense: null, experienceProof: null, badge: null,
+        policeVerification: null, academicDoc: null
+    });
 
     useEffect(() => {
         const token = localStorage.getItem('chauffeur_token');
-        if (token) {
-            spareDriverAPI.getProfile()
-                .then(res => {
-                    setDriverSnapshot(res.data.driver);
-                    setStep(resolveDriverStep(res.data.driver.status));
-                }).catch(() => spareDriverAPI.clearToken());
-        }
+        if (!token) return;
+        spareDriverAPI.getProfile().then(res => {
+            const s = res.data?.driver?.status || res.driver?.status;
+            if (s === 'pending_verification') setStep(STEPS.VERIFYING);
+            else if (s === 'active') setStep(STEPS.SUCCESS);
+        }).catch(() => { });
     }, []);
 
-    const handleRegister = async (e) => {
-        e.preventDefault();
-        const p = normalizeIndianPhone(form.phone);
-        if (!isValidIndianMobile(p)) return setError('Invalid Indian Mobile');
+    const handleNext = () => step < STEPS.SAFETY ? setStep(step + 1) : handleSubmit();
+    const handleBack = () => step > 1 && setStep(step - 1);
+
+    const handleSubmit = async () => {
         setLoading(true); setError('');
         try {
-            const res = await spareDriverAPI.sendSignupOTP(p, { ...form, phone: p });
-            setOtpDigits(['', '', '', '']); setOtpTimeLeft(45); setStep(STEPS.OTP_VERIFY);
-            toast.success(`OTP: ${res.data.otp || 'sent'}`);
-        } catch (e) { setError(e.message); } finally { setLoading(false); }
+            // 1. Initial Registration
+            await spareDriverAPI.register(form);
+            const formData = new FormData();
+            formData.append('role', 'spare_driver');
+            Object.keys(docs).forEach(key => { if (docs[key]) formData.append(key, docs[key]); });
+            await spareDriverAPI.uploadDocs(formData);
+            setStep(STEPS.VERIFYING);
+        } catch (err) {
+            setError(err.message || 'Verification Protocol Failed');
+        } finally { setLoading(false); }
     };
 
-    const handleLogin = async (e) => {
-        e.preventDefault();
-        const p = normalizeIndianPhone(form.phone);
-        if (!isValidIndianMobile(p)) return setError('Invalid Mobile');
-        setLoading(true); setError('');
-        try {
-            const res = await spareDriverAPI.login({ phone: p, password: form.password });
-            setDriverSnapshot(res.data.driver);
-            setStep(resolveDriverStep(res.data.driver.status));
-        } catch (e) { setError(e.message); } finally { setLoading(false); }
-    };
-
-    const handleVerifyOtp = async () => {
-        const otp = otpDigits.join('');
-        if (otp.length < 4) return setError('Enter 4 digits');
-        setLoading(true);
-        try {
-            const res = await spareDriverAPI.verifySignupOTP(form.phone, otp);
-            setDriverSnapshot(res.data.driver); setStep(STEPS.UPLOAD_DOCS);
-        } catch (e) { setError(e.message); } finally { setLoading(false); }
-    };
-
-    const handleResendOtp = async () => {
-        setLoading(true);
-        try {
-            await spareDriverAPI.sendSignupOTP(form.phone, form);
-            setOtpTimeLeft(45); toast.success("New code sent");
-        } catch (e) { setError(e.message); } finally { setLoading(false); }
-    };
-
-    const handleCaptureSelfie = async () => {
-        if (!selfieVideoRef.current) return;
-        const v = selfieVideoRef.current;
-        const c = document.createElement('canvas');
-        c.width = v.videoWidth; c.height = v.videoHeight;
-        c.getContext('2d').drawImage(v, 0, 0);
-        const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.9));
-        setDocs(d => ({ ...d, selfie: new File([blob], 'selfie.jpg', { type: 'image/jpeg' }) }));
-        setSelfieCameraOpen(false);
-    };
-
-    const handleUpload = async () => {
-        if (completedDocCount < 5) return setError('Upload all files');
-        setLoading(true);
-        try {
-            const fd = new FormData();
-            Object.keys(docs).forEach(k => fd.append(k, docs[k]));
-            const res = await spareDriverAPI.uploadDocs(fd);
-            setDriverSnapshot(res.data.driver); setStep(STEPS.VERIFYING);
-        } catch (e) { setError(e.message); } finally { setLoading(false); }
-    };
-
-    if (step === STEPS.REGISTER) return (
-        <div className="min-h-[100svh] px-6 flex flex-col justify-center bg-background mx-auto max-w-[430px] transition-colors duration-500 driver-theme">
-            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-surface rounded-[2.8rem] p-8 shadow-2xl relative overflow-hidden border border-content/[0.04]">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 blur-[40px]" />
-                <div className="relative z-10 space-y-8">
-                    <div>
-                        <p className="text-[10px] font-black text-brand uppercase tracking-[0.3em] mb-2">Driver Portal</p>
-                        <h1 className="text-[28px] font-black text-content tracking-tighter uppercase leading-tight">Driver <span className="text-brand">{authMode === 'register' ? 'Sign Up' : 'Login'}</span></h1>
-                    </div>
-                    <form onSubmit={authMode === 'register' ? handleRegister : handleLogin} className="space-y-4">
-                        {authMode === 'register' && (
-                            <>
-                                <div className="space-y-1">
-                                    <label className="text-[9px] font-black text-content/20 uppercase tracking-widest px-2">Full Name</label>
-                                    <div className="h-15 bg-content/[0.04] border border-content/[0.03] rounded-2xl flex items-center px-6 gap-3 focus-within:border-brand transition-all">
-                                        <User size={18} className="text-content/20" />
-                                        <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="ENTER FULL NAME" className="flex-1 bg-transparent text-[14px] font-black text-content outline-none placeholder:text-content/10" />
-                                    </div>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[9px] font-black text-content/20 uppercase tracking-widest px-2">Email Address</label>
-                                    <div className="h-15 bg-content/[0.04] border border-content/[0.03] rounded-2xl flex items-center px-6 gap-3 focus-within:border-brand transition-all">
-                                        <Mail size={18} className="text-content/20" />
-                                        <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="EMAIL@EXAMPLE.COM" className="flex-1 bg-transparent text-[14px] font-black text-content outline-none placeholder:text-content/10" />
-                                    </div>
-                                </div>
-                            </>
-                        )}
-                        <div className="space-y-1">
-                            <label className="text-[9px] font-black text-content/20 uppercase tracking-widest px-2">Phone Number</label>
-                            <div className="h-15 bg-content/[0.04] border border-content/[0.03] rounded-2xl flex items-center px-6 gap-3 focus-within:border-brand transition-all">
-                                <Phone size={18} className="text-content/20" />
-                                <input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="MOBILE NUMBER" className="flex-1 bg-transparent text-[14px] font-black text-content outline-none placeholder:text-content/10" />
+    const renderStep = () => {
+        switch (step) {
+            case STEPS.IDENTITY:
+                return (
+                    <RegistrationStepWrapper step={1} totalSteps={5} title="Identity Legal" subtitle="Spare Driver Verification Initiated" onNext={handleNext}>
+                        <div className="space-y-6">
+                            <InputField label="Full Name" icon={User} value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder="Govt ID Name" />
+                            <InputField label="Aadhaar Phone" icon={Phone} value={form.phone} onChange={v => setForm({ ...form, phone: v })} placeholder="Linked Mobile" />
+                            <div className="grid grid-cols-2 gap-4">
+                                <InputField label="Aadhaar No" icon={ShieldCheck} value={form.aadhaarNumber} onChange={v => setForm({ ...form, aadhaarNumber: v })} placeholder="12 Digits" />
+                                <InputField label="PAN No" icon={CreditCard} value={form.panNumber} onChange={v => setForm({ ...form, panNumber: v })} placeholder="ABCDE1234F" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <DocButton label="Aadhaar Side A" file={docs.aadhaarCard} onChange={f => setDocs({ ...docs, aadhaarCard: f })} />
+                                <DocButton label="PAN Card" file={docs.panCard} onChange={f => setDocs({ ...docs, panCard: f })} />
                             </div>
                         </div>
-                        <div className="space-y-1">
-                            <label className="text-[9px] font-black text-content/20 uppercase tracking-widest px-2">Password</label>
-                            <div className="h-15 bg-content/[0.04] border border-content/[0.03] rounded-2xl flex items-center px-6 gap-3 focus-within:border-brand transition-all">
-                                <Lock size={18} className="text-content/20" />
-                                <input type="password" value={form.password} onChange={e => setForm({...form, password: e.target.value})} placeholder="••••••••" className="flex-1 bg-transparent text-[14px] font-black text-content outline-none placeholder:text-content/10" />
+                    </RegistrationStepWrapper>
+                );
+            case STEPS.DRIVING:
+                return (
+                    <RegistrationStepWrapper step={2} totalSteps={5} title="Driving Credentials" subtitle="Core Operational Authority layer" onBack={handleBack} onNext={handleNext}>
+                        <div className="space-y-6">
+                            <InputField label="License Number" icon={Award} value={form.licenseNumber} onChange={v => setForm({ ...form, licenseNumber: v })} placeholder="DL-XXX" />
+                            <div className="grid grid-cols-2 gap-4">
+                                <InputField label="DL Expiry" icon={Clock} type="date" value={form.licenseExpiry} onChange={v => setForm({ ...form, licenseExpiry: v })} />
+                                <InputField label="Exp Years" icon={Briefcase} type="number" value={form.experienceYears} onChange={v => setForm({ ...form, experienceYears: v })} placeholder="e.g. 5" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <DocButton label="DL Front" file={docs.drivingLicense} onChange={f => setDocs({ ...docs, drivingLicense: f })} />
+                                <DocButton label="Exp Proof" file={docs.experienceProof} onChange={f => setDocs({ ...docs, experienceProof: f })} />
                             </div>
                         </div>
-                        {error && <p className="text-[10px] font-black text-red-500 uppercase px-2">{error}</p>}
-                        <button disabled={loading} className="w-full h-15 bg-brand text-black rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg shadow-brand/10">
-                            {loading ? <Loader2 className="animate-spin" /> : <>{authMode === 'register' ? 'Create Account' : 'Login Now'} <ArrowRight size={18} /></>}
-                        </button>
-                    </form>
-                    <button onClick={() => setAuthMode(m => m === 'login' ? 'register' : 'login')} className="w-full text-center text-[10px] font-black text-content/30 uppercase tracking-[0.2em]">
-                        {authMode === 'login' ? 'New Driver? Sign Up' : 'Already have an account? Login'}
-                    </button>
-                </div>
-            </motion.div>
-        </div>
-    );
-
-    if (step === STEPS.OTP_VERIFY) return (
-        <div className="min-h-[100svh] px-6 flex flex-col justify-center bg-background mx-auto max-w-[430px] transition-colors duration-500 driver-theme">
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-surface border border-content/[0.04] rounded-[2.8rem] p-8 shadow-2xl space-y-10">
-                <div className="text-center">
-                    <div className="w-20 h-20 bg-brand/10 rounded-[2.2rem] flex items-center justify-center text-brand mx-auto mb-4 border border-brand/20">
-                        <Fingerprint size={36} />
+                    </RegistrationStepWrapper>
+                );
+            case STEPS.FINANCIAL:
+                return (
+                    <RegistrationStepWrapper step={3} totalSteps={5} title="Financial Matrix" subtitle="Secured payout routing system" onBack={handleBack} onNext={handleNext}>
+                        <div className="space-y-6">
+                            <InputField label="Account Name" icon={User} value={form.accountName} onChange={v => setForm({ ...form, accountName: v })} placeholder="Bank Holder Name" />
+                            <InputField label="Account Number" icon={CreditCard} value={form.accountNumber} onChange={v => setForm({ ...form, accountNumber: v })} placeholder="Bank Account No" />
+                            <div className="grid grid-cols-2 gap-4">
+                                <InputField label="IFSC Code" icon={Globe} value={form.ifscCode} onChange={v => setForm({ ...form, ifscCode: v })} placeholder="HDFC0001" />
+                                <InputField label="UPI ID" icon={Zap} value={form.upiId} onChange={v => setForm({ ...form, upiId: v })} placeholder="user@upi" />
+                            </div>
+                        </div>
+                    </RegistrationStepWrapper>
+                );
+            case STEPS.PROFILE_EDU:
+                return (
+                    <RegistrationStepWrapper step={4} totalSteps={5} title="Professional Profile" subtitle="Showcase your background" onBack={handleBack} onNext={handleNext}>
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-2 gap-4">
+                                <InputField label="City" icon={MapPin} value={form.city} onChange={v => setForm({ ...form, city: v })} />
+                                <SelectField label="Availability" icon={Clock} value={form.availability} onChange={v => setForm({ ...form, availability: v })} options={['full-time', 'part-time']} />
+                            </div>
+                            <div className="pt-4 border-t border-white/5 space-y-4">
+                                <h4 className="text-[10px] font-black text-yellow-500 uppercase tracking-widest">Education Layer</h4>
+                                <InputField label="Degress/Qualification" icon={GraduationCap} value={form.qualification} onChange={v => setForm({ ...form, qualification: v })} />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <InputField label="University" icon={Globe} value={form.university} onChange={v => setForm({ ...form, university: v })} />
+                                    <InputField label="Year" icon={Clock} value={form.passingYear} onChange={v => setForm({ ...form, passingYear: v })} />
+                                </div>
+                            </div>
+                        </div>
+                    </RegistrationStepWrapper>
+                );
+            case STEPS.SAFETY:
+                return (
+                    <RegistrationStepWrapper step={5} totalSteps={5} title="Safety Protocol" subtitle="Final trust synchronization" onBack={handleBack} onNext={handleNext} loading={loading}>
+                        <div className="space-y-8">
+                            <div className="p-6 bg-yellow-500/5 rounded-3xl border border-yellow-500/10">
+                                <p className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                    <ShieldCheck size={14} /> Police Verification
+                                </p>
+                                <DocButton label="Verification Certificate" file={docs.policeVerification} onChange={f => setDocs({ ...docs, policeVerification: f })} transparent isFull />
+                            </div>
+                            <label className="flex items-start gap-4 p-5 bg-white/5 border border-white/5 rounded-2xl cursor-pointer group">
+                                <div className={`mt-0.5 w-5 h-5 rounded-lg border flex items-center justify-center transition-all ${form.criminalDeclaration ? 'bg-yellow-500 border-yellow-500 scale-110' : 'bg-transparent border-white/10'}`}>
+                                    {form.criminalDeclaration && <Check size={12} className="text-black" strokeWidth={4} />}
+                                </div>
+                                <input type="checkbox" className="hidden" checked={form.criminalDeclaration} onChange={e => setForm({ ...form, criminalDeclaration: e.target.checked })} />
+                                <p className="text-[9px] font-black text-white/40 uppercase leading-relaxed group-hover:text-white/60 transition-colors">I declare zero criminal records and affirm validity of data.</p>
+                            </label>
+                            {error && <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3"><AlertCircle size={16} className="text-red-500" /><p className="text-[10px] font-black text-red-400 uppercase">{error}</p></div>}
+                        </div>
+                    </RegistrationStepWrapper>
+                );
+            case STEPS.VERIFYING:
+                return (
+                    <div className="py-12 text-center space-y-10">
+                        <div className="relative w-24 h-24 mx-auto flex items-center justify-center">
+                            <div className="absolute inset-0 bg-yellow-500/20 rounded-full blur-2xl animate-pulse" />
+                            <Clock size={48} className="text-yellow-500 relative z-10 animate-spin" style={{ animationDuration: '3s' }} />
+                        </div>
+                        <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Analysis Active</h2>
+                        <div className="space-y-4 pt-4">
+                            {['Protocol Initiated', 'KYC Analysis', 'Admin Consensus'].map((s, i) => (
+                                <div key={i} className="flex items-center gap-4 px-6 py-4 bg-white/5 rounded-2xl border border-white/5">
+                                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${i === 0 ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/30' : 'bg-white/5 text-white/20'}`}>
+                                        <Check size={14} strokeWidth={4} />
+                                    </div>
+                                    <span className={`text-[10px] font-black uppercase tracking-widest ${i === 0 ? 'text-white' : 'text-white/20'}`}>{s}</span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                    <h2 className="text-[24px] font-black text-content tracking-tighter uppercase">Verification</h2>
-                    <p className="text-[10px] font-black text-content/30 uppercase tracking-[0.2em] mt-2">Enter code sent to link</p>
-                </div>
-                <div className="flex justify-center gap-3">
-                    {otpDigits.map((d, i) => (
-                        <input key={i} ref={el => otpInputRefs.current[i] = el} type="tel" maxLength={1} value={d} onChange={e => {
-                            const n = [...otpDigits]; n[i] = e.target.value.slice(-1); setOtpDigits(n);
-                            if (e.target.value && i < 3) otpInputRefs.current[i+1]?.focus();
-                        }} className="w-16 h-20 bg-content/[0.04] border border-content/[0.05] rounded-2xl text-center text-3xl font-black text-content outline-none focus:border-brand" />
-                    ))}
-                </div>
-                {error && <p className="text-center text-[10px] font-black text-red-500 uppercase">{error}</p>}
-                <div className="space-y-4">
-                    <button onClick={handleVerifyOtp} disabled={loading} className="w-full h-15 bg-brand text-black rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-brand/10 active:scale-95 transition-all">Verify & Link</button>
-                    <div className="text-center">{otpTimeLeft > 0 ? <p className="text-[10px] font-black text-content/20 uppercase tracking-widest">Resend in {otpTimeLeft}s</p> : <button onClick={handleResendOtp} className="text-[10px] font-black text-brand uppercase tracking-widest border-b border-brand pb-0.5">Request New Code</button>}</div>
-                </div>
-            </motion.div>
-        </div>
-    );
-
-    if (step === STEPS.UPLOAD_DOCS) return (
-        <div className="min-h-[100svh] px-6 py-10 bg-background mx-auto max-w-[430px] transition-colors duration-500 driver-theme">
-            <div className="mb-8">
-                <p className="text-[10px] font-black text-brand uppercase tracking-[0.3em] mb-2">Registry Dossier</p>
-                <h2 className="text-[28px] font-black text-content tracking-tighter uppercase leading-tight">Compliance Setup</h2>
-                <div className="mt-8 flex items-center gap-4 p-5 bg-surface rounded-[2.2rem] border border-content/[0.03] transition-colors shadow-sm">
-                    <div className="w-12 h-12 bg-black text-brand rounded-2xl flex items-center justify-center font-black text-lg">{completedDocCount}/5</div>
-                    <div className="flex-1 bg-content/5 h-1.5 rounded-full overflow-hidden">
-                        <div className="bg-brand h-full transition-all duration-700" style={{ width: `${(completedDocCount/5)*100}%` }} />
+                );
+            case STEPS.SUCCESS:
+                return (
+                    <div className="py-12 text-center space-y-12">
+                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-24 h-24 bg-yellow-500 rounded-[2rem] flex items-center justify-center mx-auto shadow-2xl shadow-yellow-500/40">
+                            <CheckCircle2 size={48} className="text-black" strokeWidth={3} />
+                        </motion.div>
+                        <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Spare Driver Active</h2>
+                        <button onClick={() => navigate('/spare-driver/dashboard')} className="w-full h-16 bg-white text-black text-[12px] font-black uppercase tracking-[0.3em] rounded-2xl shadow-2xl hover:bg-yellow-500 hover:text-black transition-all active:scale-95 italic">Enter Dashboard</button>
                     </div>
-                </div>
-            </div>
-            <div className="space-y-3 pb-32">
-                <DocUpload label="Aadhaar Front" icon={FileText} file={docs.aadhaarFront} onChange={e => setDocs({...docs, aadhaarFront: e.target.files[0]})} />
-                <DocUpload label="Aadhaar Back" icon={FileText} file={docs.aadhaarBack} onChange={e => setDocs({...docs, aadhaarBack: e.target.files[0]})} />
-                <DocUpload label="PAN Identity" icon={CreditCard} file={docs.panCard} onChange={e => setDocs({...docs, panCard: e.target.files[0]})} />
-                <DocUpload label="Driving License" icon={Shield} file={docs.drivingLicense} onChange={e => setDocs({...docs, drivingLicense: e.target.files[0]})} />
-                <div onClick={() => setSelfieCameraOpen(true)}>
-                    <DocUpload label="Live Photo (Selfie)" icon={Camera} file={docs.selfie} onChange={() => {}} helperText="SCAN OPERATOR FACE" />
-                </div>
-                {error && <p className="p-3 bg-red-50 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest text-center">{error}</p>}
-            </div>
-            <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-full px-6 max-w-[430px]">
-                <button onClick={handleUpload} disabled={loading || completedDocCount < 5} className={`w-full h-18 rounded-[2rem] font-black uppercase tracking-widest shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all ${completedDocCount === 5 ? 'bg-brand text-black' : 'bg-content/10 text-content/20 opacity-30 cursor-not-allowed'}`}>
-                    {loading ? <Loader2 className="animate-spin" /> : <>Complete Enrollment <Navigation size={20} className="rotate-45" /></>}
-                </button>
-            </div>
-            <AnimatePresence>
-                {selfieCameraOpen && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-6">
-                        <div className="absolute top-10 text-center">
-                            <p className="text-[11px] font-black text-brand uppercase tracking-[0.4em] mb-2">Biometric Analysis</p>
-                            <p className="text-white uppercase font-black text-sm">Position Inside Scanner</p>
-                        </div>
-                        <div className="relative w-full aspect-[3/4] max-w-[320px] rounded-[3rem] overflow-hidden bg-slate-900 border border-brand/20 shadow-2xl shadow-brand/10">
-                            <video ref={selfieVideoRef} autoPlay playsInline muted className="w-full h-full object-cover grayscale brightness-110" />
-                            <div className="absolute inset-0 border-[30px] border-black/40 rounded-[3rem] pointer-events-none" />
-                        </div>
-                        <div className="mt-12 flex gap-4 w-full max-w-[320px]">
-                            <button onClick={() => setSelfieCameraOpen(false)} className="px-8 h-15 rounded-2xl border border-white/10 text-white/30 text-[11px] font-black uppercase">Abort</button>
-                            <button onClick={handleCaptureSelfie} className="flex-1 h-15 bg-brand text-black rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl">Capture Photo</button>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
-    );
+                );
+            default: return null;
+        }
+    };
 
     return (
-        <div className="min-h-[100svh] px-10 flex flex-col items-center justify-center bg-background text-center transition-colors duration-500 driver-theme">
-            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="space-y-8">
-                <div className="w-24 h-24 bg-brand/10 rounded-full flex items-center justify-center mx-auto animate-pulse text-brand border border-brand/20">
-                    <ShieldCheck size={48} />
+        <div className="min-h-screen bg-[#0A0F0D] font-sans selection:bg-yellow-500/30 select-none overflow-x-hidden">
+            <div className="fixed top-[-20%] left-[-10%] w-[60%] h-[50%] bg-yellow-500/5 rounded-full blur-[150px] animate-pulse pointer-events-none" />
+            <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[40%] bg-yellow-500/5 rounded-full blur-[120px] pointer-events-none" />
+
+            <div className="max-w-[800px] mx-auto px-4 pt-4 pb-12 relative z-10 text-center">
+                {/* 🏷️ Custom Centered Header */}
+                <div className="flex flex-col items-center mb-4">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="w-32 h-32 drop-shadow-[0_15px_40px_rgba(234,179,8,0.2)]"
+                    >
+                        <img
+                            src={spareDriverLogo}
+                            alt="Spare Driver Logo"
+                            className="w-full h-full object-contain hover:scale-110 transition-all duration-500"
+                        />
+                    </motion.div>
                 </div>
-                <div>
-                    <h1 className="text-2xl font-black uppercase tracking-tight text-content">Verification Pending</h1>
-                    <p className="text-[11px] font-black text-content/30 uppercase tracking-[0.3em] mt-4 max-w-[200px] mx-auto leading-relaxed">Your profile is synced with the hub. Awaiting final operational clearance from Admin.</p>
-                </div>
-                <button onClick={() => navigate('/spare-driver/dashboard')} className="w-full h-15 bg-brand text-black rounded-2xl font-black uppercase tracking-widest active:scale-95 transition-all shadow-xl shadow-brand/20">Go to Dashboard</button>
-            </motion.div>
+
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={step}
+                        initial={{ opacity: 0, y: 30, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, scale: 1.02, y: -20 }}
+                        transition={{ type: "spring", duration: 0.6 }}
+                        className="bg-white/[0.02] backdrop-blur-3xl border border-white/5 rounded-[3rem] p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)] relative overflow-hidden text-left"
+                    >
+                        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-yellow-500/20 to-transparent" />
+                        {renderStep()}
+                    </motion.div>
+                </AnimatePresence>
+            </div>
         </div>
     );
 };
+
+const InputField = ({ label, icon: Icon, type = "text", value, onChange, placeholder }) => (
+    <div className="space-y-2 group">
+        <label className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] px-2 block group-focus-within:text-yellow-500 transition-colors uppercase leading-none">{label}</label>
+        <div className="relative">
+            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-yellow-500 transition-all pointer-events-none">
+                <Icon size={16} strokeWidth={2.5} />
+            </div>
+            <input
+                type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+                className="w-full h-14 bg-white/[0.03] border border-white/5 rounded-2xl pl-14 pr-6 text-[12px] font-bold text-white placeholder:text-white/10 outline-none focus:border-yellow-500/50 transition-all shadow-inner"
+            />
+        </div>
+    </div>
+);
+
+const SelectField = ({ label, icon: Icon, value, onChange, options }) => (
+    <div className="space-y-2 group">
+        <label className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] px-2 block group-focus-within:text-yellow-500 transition-colors uppercase leading-none">{label}</label>
+        <div className="relative">
+            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-yellow-500">
+                <Icon size={16} strokeWidth={2.5} />
+            </div>
+            <select
+                value={value} onChange={e => onChange(e.target.value)}
+                className="w-full h-14 bg-white/[0.03] border border-white/5 rounded-2xl pl-14 pr-10 text-[12px] font-black text-white outline-none focus:border-yellow-500/50 appearance-none transition-all uppercase tracking-widest"
+            >
+                {options.map(opt => <option key={opt} value={opt} className="bg-[#0A0F0D]">{opt}</option>)}
+            </select>
+            <div className="absolute right-5 top-1/2 -translate-y-1/2 text-white/20 pointer-events-none group-focus-within:text-yellow-500">
+                <ChevronRight size={16} className="rotate-90" />
+            </div>
+        </div>
+    </div>
+);
+
+const DocButton = ({ label, file, onChange, isFull, transparent }) => (
+    <div className={`space-y-2 group ${isFull ? 'w-full' : ''}`}>
+        <label className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] px-2 block leading-none">{label}</label>
+        <label className={`relative flex flex-col items-center justify-center gap-3 h-28 rounded-3xl border border-dashed transition-all cursor-pointer overflow-hidden ${file ? 'bg-yellow-500/10 border-yellow-500/40 shadow-inner' : 'bg-white/[0.02] border-white/10 hover:border-yellow-500/50'}`}>
+            {file ? (
+                <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center gap-2">
+                    <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center shadow-lg shadow-yellow-500/40 border border-white/20 animate-bounce">
+                        <Check size={20} className="text-black" strokeWidth={4} />
+                    </div>
+                </motion.div>
+            ) : (
+                <>
+                    <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-white/20 group-hover:text-yellow-500 transition-all">
+                        <Camera size={20} strokeWidth={2.5} />
+                    </div>
+                    <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">Attach Securely</span>
+                </>
+            )}
+            <input type="file" className="hidden" accept="image/*,.pdf" onChange={e => onChange(e.target.files[0])} />
+        </label>
+    </div>
+);
 
 export default DriverRegistration;

@@ -189,6 +189,10 @@ server.listen(PORT, () => {
     // Start Daily Cron Service (Subscription Job Generator)
     const { initCronService } = require('./utils/cronService');
     initCronService();
+
+    // Start Weekly Payout Job (Runs every Monday at 12:00 AM)
+    const WeeklyPayoutJob = require('./jobs/weeklyPayoutJob');
+    WeeklyPayoutJob.init();
 });
 
 module.exports = app;

@@ -1,101 +1,356 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, ArrowDownLeft, ArrowUpRight, Download, Loader2, Wallet, ShieldCheck, Zap } from 'lucide-react';
-import DriverLayout from '../components/DriverLayout';
-import { spareDriverAPI } from '../../../utils/spareDriverApi';
 import { motion } from 'framer-motion';
+import {
+    DollarSign, TrendingUp, Calendar, Clock, Award,
+    ArrowUpRight, ArrowDownLeft, Wallet, Download,
+    RefreshCw, ChevronRight, AlertCircle, CheckCircle
+} from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { driverAPI } from '../../../utils/driverApi';
 
 const DriverEarnings = () => {
+    const [activeTab, setActiveTab] = useState('today');
     const [loading, setLoading] = useState(true);
-    const [data, setData] = useState({
-        balance: 0,
-        transactions: [],
-        monthlyEarnings: 0,
-        jobsDone: 0
-    });
+    const [todayEarnings, setTodayEarnings] = useState(null);
+    const [weeklyEarnings, setWeeklyEarnings] = useState(null);
+    const [monthlyEarnings, setMonthlyEarnings] = useState(null);
+    const [summary, setSummary] = useState(null);
+    const [payoutHistory, setPayoutHistory] = useState([]);
+    const [withdrawalModal, setWithdrawalModal] = useState(false);
+    const [withdrawalAmount, setWithdrawalAmount] = useState('');
+    const [withdrawalReason, setWithdrawalReason] = useState('');
 
     useEffect(() => {
-        const load = async () => {
-            try {
-                const [p, t] = await Promise.all([spareDriverAPI.getProfile(), spareDriverAPI.getTransactions()]);
-                const txs = t.data.transactions || [];
-                const now = new Date();
-                const start = new Date(now.getFullYear(), now.getMonth(), 1);
-                
-                setData({
-                    balance: p.data.driver?.wallet?.balance || 0,
-                    transactions: txs,
-                    monthlyEarnings: txs.filter(x => x.type === 'credit' && new Date(x.createdAt) >= start).reduce((a, b) => a + b.amount, 0),
-                    jobsDone: txs.filter(x => x.category === 'SERVICE_BOOKING' && x.type === 'credit').length
-                });
-            } catch (e) { console.error(e); }
+        loadEarningsData();
+    }, [activeTab]);
+
+    const loadEarningsData = async () => {
+        setLoading(true);
+        try {
+            const [summaryRes, payoutsRes] = await Promise.all([
+                driverAPI.getEarningsSummary(),
+                driverAPI.getPayoutHistory({ limit: 5 })
+            ]);
+
+            if (summaryRes.status === 'success') {
+                setSummary(summaryRes.data);
+            }
+
+            if (payoutsRes.status === 'success') {
+                setPayoutHistory(payoutsRes.data.payouts || []);
+            }
+
+            // Load tab-specific data
+            if (activeTab === 'today') {
+                const res = await driverAPI.getTodayEarnings();
+                if (res.status === 'success') {
+                    setTodayEarnings(res.data);
+                }
+            } else if (activeTab === 'weekly') {
+                const res = await driverAPI.getWeeklyEarnings();
+                if (res.status === 'success') {
+                    setWeeklyEarnings(res.data);
+                }
+            } else if (activeTab === 'monthly') {
+                const res = await driverAPI.getMonthlyEarnings();
+                if (res.status === 'success') {
+                    setMonthlyEarnings(res.data);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load earnings:', error);
+            toast.error('Failed to load earnings data');
+        } finally {
             setLoading(false);
-        };
-        load();
-    }, []);
+        }
+    };
 
-    if (loading) return <DriverLayout title="Finance"><div className="flex h-[60vh] items-center justify-center font-black text-brand uppercase tracking-[0.4em] animate-pulse">Syncing Vault...</div></DriverLayout>;
+    const handleWithdrawal = async () => {
+        if (!withdrawalAmount || parseFloat(withdrawalAmount) <= 0) {
+            toast.error('Please enter a valid amount');
+            return;
+        }
 
-    return (
-        <DriverLayout title="Finance Console">
-            <div className="px-6 py-6 space-y-6 pb-24">
-                {/* ── Yield Matrix ── */}
-                <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-black rounded-[2.8rem] p-8 shadow-2xl relative overflow-hidden text-center border border-white/5 transition-colors duration-500">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand/10 blur-[60px]" />
-                    <p className="text-[10px] font-black text-brand uppercase tracking-[0.4em] mb-4">Secured Balance</p>
-                    <h2 className="text-5xl font-black text-white tracking-tighter leading-none mb-8">₹{data.balance}</h2>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                        <button className="h-14 bg-brand text-black rounded-2xl font-black text-[12px] uppercase tracking-widest active:scale-95 transition-all">Withdraw</button>
-                        <button className="h-14 bg-white/5 border border-white/5 text-white/40 rounded-2xl flex items-center justify-center active:scale-95"><Download size={20} /></button>
-                    </div>
-                </motion.div>
+        try {
+            const res = await driverAPI.requestWithdrawal({
+                amount: parseFloat(withdrawalAmount),
+                reason: withdrawalReason
+            });
 
-                {/* ── Telemetry ── */}
+            if (res.status === 'success') {
+                toast.success('Withdrawal request submitted successfully');
+                setWithdrawalModal(false);
+                setWithdrawalAmount('');
+                setWithdrawalReason('');
+                loadEarningsData();
+            }
+        } catch (error) {
+            toast.error(error.message || 'Failed to submit withdrawal request');
+        }
+    };
+
+    const formatCurrency = (amount) => `₹${amount?.toLocaleString() || 0}`;
+
+    const renderTodayEarnings = () => {
+        if (!todayEarnings) return null;
+
+        return (
+            <div className="space-y-6">
+                {/* Today's Stats */}
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-surface border border-content/[0.04] p-6 rounded-[2rem] shadow-sm transition-colors duration-500">
-                        <p className="text-[9px] font-black text-content/20 uppercase tracking-widest mb-2">Monthly Cycle</p>
-                        <p className="text-2xl font-black text-content tracking-tight">₹{data.monthlyEarnings}</p>
-                        <div className="flex items-center gap-1.5 mt-2 bg-brand/10 w-fit px-3 py-1 rounded-full">
-                            <Zap size={10} className="text-brand fill-brand" />
-                            <span className="text-[8px] font-black uppercase text-brand">Peak Yield</span>
+                    <div className="bg-white rounded-2xl p-4 border border-gray-100">
+                        <div className="flex items-center gap-2 mb-2">
+                            <DollarSign size={16} className="text-emerald-600" />
+                            <p className="text-xs font-bold text-gray-500 uppercase">Earnings</p>
                         </div>
+                        <h3 className="text-2xl font-black text-gray-900">{formatCurrency(todayEarnings.totalEarnings)}</h3>
                     </div>
-                    <div className="bg-surface border border-content/[0.04] p-6 rounded-[2rem] shadow-sm transition-colors duration-500">
-                        <p className="text-[9px] font-black text-content/20 uppercase tracking-widest mb-2">Missions Log</p>
-                        <p className="text-2xl font-black text-content tracking-tight">{data.jobsDone}</p>
-                        <div className="flex items-center gap-1.5 mt-2 bg-content/[0.05] w-fit px-3 py-1 rounded-full">
-                            <ShieldCheck size={10} className="text-content/30" />
-                            <span className="text-[8px] font-black uppercase text-content/30">Verified</span>
+
+                    <div className="bg-white rounded-2xl p-4 border border-gray-100">
+                        <div className="flex items-center gap-2 mb-2">
+                            <TrendingUp size={16} className="text-blue-600" />
+                            <p className="text-xs font-bold text-gray-500 uppercase">Trips</p>
                         </div>
+                        <h3 className="text-2xl font-black text-gray-900">{todayEarnings.totalTrips}</h3>
+                    </div>
+
+                    <div className="bg-white rounded-2xl p-4 border border-gray-100">
+                        <div className="flex items-center gap-2 mb-2">
+                            <Clock size={16} className="text-purple-600" />
+                            <p className="text-xs font-bold text-gray-500 uppercase">Hours</p>
+                        </div>
+                        <h3 className="text-2xl font-black text-gray-900">{todayEarnings.totalHours.toFixed(1)}h</h3>
+                    </div>
+
+                    <div className="bg-white rounded-2xl p-4 border border-gray-100">
+                        <div className="flex items-center gap-2 mb-2">
+                            <Award size={16} className="text-amber-600" />
+                            <p className="text-xs font-bold text-gray-500 uppercase">Avg/Trip</p>
+                        </div>
+                        <h3 className="text-2xl font-black text-gray-900">{formatCurrency(todayEarnings.avgEarningPerTrip)}</h3>
                     </div>
                 </div>
 
-                {/* ── Archive ── */}
-                <div className="space-y-4">
-                    <p className="text-[10px] font-black text-content/30 uppercase tracking-[0.3em] px-2">Operational Ledger</p>
-                    <div className="bg-surface border border-content/[0.04] rounded-[2.2rem] overflow-hidden shadow-sm divide-y divide-content/[0.04] transition-colors duration-500">
-                        {data.transactions.length > 0 ? data.transactions.map((tx, i) => (
-                            <div key={i} className="p-5 flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${tx.type === 'credit' ? 'bg-brand/10 text-brand' : 'bg-content/[0.05] text-content/20'}`}>
-                                        {tx.type === 'credit' ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}
-                                    </div>
+                {/* Today's Trips */}
+                {todayEarnings.bookings && todayEarnings.bookings.length > 0 && (
+                    <div className="bg-white rounded-2xl p-4 border border-gray-100">
+                        <h4 className="text-sm font-black text-gray-900 uppercase mb-3">Today's Trips</h4>
+                        <div className="space-y-2">
+                            {todayEarnings.bookings.map((booking, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
                                     <div>
-                                        <p className="text-[11px] font-black text-content uppercase leading-none mb-1">{tx.description || tx.category}</p>
-                                        <p className="text-[8px] font-black text-content/20 uppercase tracking-widest">{new Date(tx.createdAt).toLocaleDateString()} • {tx._id.slice(-6).toUpperCase()}</p>
+                                        <p className="text-xs font-bold text-gray-900">#{booking.bookingId}</p>
+                                        <p className="text-xs text-gray-500">{new Date(booking.completedAt).toLocaleTimeString()}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm font-black text-emerald-600">{formatCurrency(booking.earning)}</p>
+                                        <p className="text-xs text-gray-500">{booking.duration}h</p>
                                     </div>
                                 </div>
-                                <p className={`text-sm font-black ${tx.type === 'credit' ? 'text-content' : 'text-content/40'}`}>
-                                    {tx.type === 'credit' ? '+' : '-'}₹{tx.amount}
-                                </p>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    const renderWeeklyEarnings = () => {
+        if (!weeklyEarnings) return null;
+
+        return (
+            <div className="space-y-6">
+                {/* Weekly Stats */}
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white rounded-2xl p-4 border border-gray-100">
+                        <div className="flex items-center gap-2 mb-2">
+                            <DollarSign size={16} className="text-emerald-600" />
+                            <p className="text-xs font-bold text-gray-500 uppercase">Total Earnings</p>
+                        </div>
+                        <h3 className="text-2xl font-black text-gray-900">{formatCurrency(weeklyEarnings.totalEarnings)}</h3>
+                    </div>
+
+                    <div className="bg-white rounded-2xl p-4 border border-gray-100">
+                        <div className="flex items-center gap-2 mb-2">
+                            <AlertCircle size={16} className="text-red-600" />
+                            <p className="text-xs font-bold text-gray-500 uppercase">Penalties</p>
+                        </div>
+                        <h3 className="text-2xl font-black text-red-600">-{formatCurrency(weeklyEarnings.totalPenalties)}</h3>
+                    </div>
+
+                    <div className="bg-white rounded-2xl p-4 border border-gray-100 col-span-2">
+                        <div className="flex items-center gap-2 mb-2">
+                            <CheckCircle size={16} className="text-blue-600" />
+                            <p className="text-xs font-bold text-gray-500 uppercase">Net Earnings</p>
+                        </div>
+                        <h3 className="text-3xl font-black text-blue-600">{formatCurrency(weeklyEarnings.netEarnings)}</h3>
+                    </div>
+                </div>
+
+                {/* Daily Breakdown */}
+                <div className="bg-white rounded-2xl p-4 border border-gray-100">
+                    <h4 className="text-sm font-black text-gray-900 uppercase mb-3">Daily Breakdown</h4>
+                    <div className="space-y-2">
+                        {Object.entries(weeklyEarnings.dailyBreakdown).map(([day, data]) => (
+                            <div key={day} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                                <div>
+                                    <p className="text-xs font-bold text-gray-900">{day}</p>
+                                    <p className="text-xs text-gray-500">{data.trips} trips • {data.hours.toFixed(1)}h</p>
+                                </div>
+                                <p className="text-sm font-black text-emerald-600">{formatCurrency(data.earnings)}</p>
                             </div>
-                        )) : (
-                           <div className="py-20 text-center opacity-20 text-content"><Wallet size={32} className="mx-auto mb-4" /><p className="text-[10px] font-black uppercase tracking-widest">No Logs Found</p></div>
-                        )}
+                        ))}
                     </div>
                 </div>
             </div>
-        </DriverLayout>
+        );
+    };
+
+    return (
+        <div className="min-h-screen bg-gray-50 pb-20">
+            {/* Header */}
+            <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 text-white p-6">
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 className="text-2xl font-black uppercase tracking-tight">Earnings</h1>
+                        <p className="text-xs text-emerald-100 uppercase tracking-wide mt-1">Track your income</p>
+                    </div>
+                    <button
+                        onClick={loadEarningsData}
+                        className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center"
+                    >
+                        <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                    </button>
+                </div>
+
+                {/* Summary Cards */}
+                {summary && (
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
+                            <p className="text-xs text-emerald-100 uppercase mb-1">Pending Payout</p>
+                            <h3 className="text-2xl font-black">{formatCurrency(summary.pendingPayout)}</h3>
+                        </div>
+                        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
+                            <p className="text-xs text-emerald-100 uppercase mb-1">Lifetime</p>
+                            <h3 className="text-2xl font-black">{formatCurrency(summary.lifetime.totalEarnings)}</h3>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Tabs */}
+            <div className="bg-white border-b border-gray-200 px-4 flex gap-2 overflow-x-auto">
+                {['today', 'weekly', 'monthly', 'payouts'].map((tab) => (
+                    <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`px-4 py-3 text-xs font-black uppercase tracking-wide whitespace-nowrap ${
+                            activeTab === tab
+                                ? 'text-emerald-600 border-b-2 border-emerald-600'
+                                : 'text-gray-500'
+                        }`}
+                    >
+                        {tab}
+                    </button>
+                ))}
+            </div>
+
+            {/* Content */}
+            <div className="p-4">
+                {loading ? (
+                    <div className="flex items-center justify-center py-20">
+                        <RefreshCw size={32} className="animate-spin text-emerald-600" />
+                    </div>
+                ) : (
+                    <>
+                        {activeTab === 'today' && renderTodayEarnings()}
+                        {activeTab === 'weekly' && renderWeeklyEarnings()}
+                        {activeTab === 'payouts' && (
+                            <div className="space-y-4">
+                                <button
+                                    onClick={() => setWithdrawalModal(true)}
+                                    className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black uppercase tracking-wide"
+                                >
+                                    Request Withdrawal
+                                </button>
+
+                                {payoutHistory.map((payout) => (
+                                    <div key={payout._id} className="bg-white rounded-2xl p-4 border border-gray-100">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className={`px-3 py-1 rounded-full text-xs font-black uppercase ${
+                                                payout.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' :
+                                                payout.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
+                                                'bg-gray-100 text-gray-700'
+                                            }`}>
+                                                {payout.status}
+                                            </span>
+                                            <p className="text-lg font-black text-gray-900">{formatCurrency(payout.payoutAmount)}</p>
+                                        </div>
+                                        <p className="text-xs text-gray-500">
+                                            {new Date(payout.payoutPeriod.start).toLocaleDateString()} - {new Date(payout.payoutPeriod.end).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
+
+            {/* Withdrawal Modal */}
+            {withdrawalModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-white rounded-3xl p-6 w-full max-w-md"
+                    >
+                        <h3 className="text-xl font-black uppercase mb-4">Request Withdrawal</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Amount</label>
+                                <input
+                                    type="number"
+                                    value={withdrawalAmount}
+                                    onChange={(e) => setWithdrawalAmount(e.target.value)}
+                                    placeholder="Enter amount"
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-lg font-bold"
+                                />
+                                {summary && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Available: {formatCurrency(summary.pendingPayout)}
+                                    </p>
+                                )}
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Reason (Optional)</label>
+                                <textarea
+                                    value={withdrawalReason}
+                                    onChange={(e) => setWithdrawalReason(e.target.value)}
+                                    placeholder="Enter reason"
+                                    rows={3}
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm"
+                                />
+                            </div>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setWithdrawalModal(false)}
+                                    className="flex-1 py-3 border border-gray-200 rounded-xl font-black uppercase text-sm"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleWithdrawal}
+                                    className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-black uppercase text-sm"
+                                >
+                                    Submit
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+        </div>
     );
 };
 

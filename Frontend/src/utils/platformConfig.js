@@ -32,9 +32,9 @@ let currentConfig = {
 export const syncPlatformConfig = async () => {
     try {
         const response = await adminAPI.get('/platform-config');
-        if (response.data?.status === 'success') {
-            currentConfig.mode = response.data.data.mode;
-            currentConfig.flags = response.data.data.flags;
+        if (response?.status === 'success') {
+            currentConfig.mode = response.data.mode;
+            currentConfig.flags = response.data.flags;
             console.log(`[SYNC] Platform Config Updated: ${currentConfig.mode}`);
             return true;
         }

@@ -40,7 +40,7 @@ const Header = ({ title, showBack = false, onBackClick, onMenuClick, showMenu = 
                         className="relative flex-shrink-0"
                     >
                         <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-[12px] bg-black shadow-lg border border-white/5 relative overflow-hidden group">
-                            <div className="absolute inset-0 bg-gradient-to-tr from-[#F59E0B] to-transparent opacity-20 group-hover:opacity-40 transition-opacity" />
+                            <div className="absolute inset-0 bg-gradient-to-tr from-[#FF9900] to-transparent opacity-20 group-hover:opacity-40 transition-opacity" />
                             <span className="relative z-10 tracking-tighter">CW</span>
                         </div>
                     </motion.div>
@@ -48,16 +48,16 @@ const Header = ({ title, showBack = false, onBackClick, onMenuClick, showMenu = 
 
                 <div 
                     className="flex flex-col min-w-0 cursor-pointer"
-                    onClick={() => navigate('/map')}
+                    onClick={() => navigate('/addresses')}
                 >
                     <div className="flex items-center gap-1">
-                        <h1 className="text-[13px] font-[1000] uppercase tracking-tight text-[#F59E0B]">
+                        <h1 className="text-[13px] font-[1000] uppercase tracking-tighter text-[#FF9900]">
                             {title || 'Spare Driver'}
                         </h1>
-                        {!title && <ChevronDown size={10} className="text-[#F59E0B]/50" />}
+                        {!title && <ChevronDown size={10} className="text-[#FF9900]/50" />}
                     </div>
                     <div className="flex items-center gap-1 opacity-60">
-                        <MapPin size={9} strokeWidth={3} className="text-[#F59E0B]" />
+                        <MapPin size={9} strokeWidth={3} className="text-[#FF9900]" />
                         <span className="text-[10px] font-bold truncate max-w-[150px]">
                             {locationName}
                         </span>
@@ -75,7 +75,7 @@ const Header = ({ title, showBack = false, onBackClick, onMenuClick, showMenu = 
                     }`}
                 >
                     <Bell size={20} />
-                    <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-[#F59E0B] rounded-full border-2 border-inherit" />
+                    <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-[#FF9900] rounded-full border-2 border-inherit" />
                 </motion.button>
 
                 <motion.button

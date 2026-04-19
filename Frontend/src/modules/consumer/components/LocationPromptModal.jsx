@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Navigation, Search, X, Loader2, ShieldCheck, ChevronRight } from 'lucide-react';
+import { MapPin, Navigation, Search, X, Loader2, ShieldCheck, ChevronRight, LocateFixed } from 'lucide-react';
 import { useGeoLocation } from '../../../hooks/useGeoLocation';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -22,13 +22,15 @@ const LocationPromptModal = () => {
             setIsDetecting(true);
             const coords = await detectCurrentLocation();
             if (coords) {
-                await saveLocation(coords.lat, coords.lng, 'My Sector');
-                toast.success('Sector synchronized! ✨');
+                // Here we usually fetch address from coordinates using reverse geocoding
+                // For now, saveLocation handles the API call
+                await saveLocation(coords.lat, coords.lng, 'Current Location');
+                toast.success('Location synchronized! ✨');
                 setShowLocationPrompt(false);
             }
         } catch (error) {
             console.error('Detection failed:', error);
-            toast.error('GSP Uplink Failed. Use manual entry.');
+            toast.error('Location Access Denied. Please search manually.');
         } finally {
             setIsDetecting(false);
         }
@@ -37,73 +39,92 @@ const LocationPromptModal = () => {
     return (
         <AnimatePresence>
             {showLocationPrompt && (
-                <div className="fixed inset-0 z-[1000] flex items-end justify-center px-4 pb-10">
+                <>
+                    {/* Backdrop */}
                     <motion.div 
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        initial={{ opacity: 0 }} 
+                        animate={{ opacity: 1 }} 
+                        exit={{ opacity: 0 }}
                         onClick={() => setShowLocationPrompt(false)}
-                        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[2500]"
                     />
 
+                    {/* Bottom Sheet */}
                     <motion.div
-                        initial={{ y: "100%", opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: "100%", opacity: 0 }}
-                        transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                        className="relative w-full max-w-[420px] bg-slate-900 border border-white/10 rounded-[3.5rem] overflow-hidden shadow-[0_-24px_60px_rgba(0,0,0,0.5)]"
+                        initial={{ y: "100%" }}
+                        animate={{ y: 0 }}
+                        exit={{ y: "100%" }}
+                        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                        className="fixed bottom-0 left-0 right-0 bg-white rounded-t-[32px] z-[2501] px-6 pt-2 pb-10 shadow-[0_-20px_50px_rgba(0,0,0,0.15)] safe-area-bottom"
                     >
-                        {/* Interactive Swipe Indicator */}
-                        <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 rounded-full bg-white/10" />
+                        {/* Pull Bar */}
+                        <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mt-2 mb-8" onClick={() => setShowLocationPrompt(false)} />
 
-                        <div className="p-10">
-                            {/* Tactical Header */}
-                            <div className="flex flex-col items-center text-center mb-10 pt-4">
-                                <div className="w-20 h-20 rounded-[2rem] bg-brand/10 flex items-center justify-center text-brand mb-6 relative">
-                                    <div className="absolute inset-0 bg-brand/20 rounded-[2rem] animate-ping opacity-30 pointer-events-none" />
-                                    <MapPin size={40} strokeWidth={2.5} />
+                        <div className="flex flex-col items-center text-center">
+                            {/* Animated Icon Header */}
+                            <div className="relative mb-6">
+                                <motion.div 
+                                    animate={{ scale: [1, 1.1, 1], opacity: [0.5, 0.2, 0.5] }}
+                                    transition={{ repeat: Infinity, duration: 2 }}
+                                    className="absolute inset-0 bg-[#FF9900]/20 rounded-full blur-xl"
+                                />
+                                <div className="w-20 h-20 bg-[#FF9900]/10 rounded-[2.5rem] flex items-center justify-center text-[#FF9900] relative border border-[#FF9900]/10">
+                                    <MapPin size={36} strokeWidth={2.5} />
                                 </div>
-                                <p className="text-[10px] font-black text-brand uppercase tracking-[0.4em] mb-2 leading-none">Sector Discovery</p>
-                                <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none mb-4">
-                                    Set Your <span className="text-brand">Service</span> Zone
+                            </div>
+
+                            <div className="space-y-2 mb-10">
+                                <h2 className="text-[24px] font-[1000] text-black uppercase tracking-tighter leading-none">
+                                    Set Your <span className="text-[#FF9900]">Service</span> Zone
                                 </h2>
-                                <p className="text-xs font-bold text-white/40 max-w-[280px] leading-relaxed">
-                                    We need your precise coordinates to synchronize detailing experts in your sector.
+                                <p className="text-[11px] font-bold text-black/40 uppercase tracking-widest max-w-[280px] leading-relaxed">
+                                    Help us find your sector to synchronize professional detailers near you.
                                 </p>
                             </div>
 
-                            {/* Action Controllers */}
-                            <div className="space-y-3">
-                                <button
+                            {/* Action Buttons */}
+                            <div className="w-full space-y-4">
+                                <motion.button
+                                    whileTap={{ scale: 0.96 }}
                                     onClick={handleDetectLocation}
                                     disabled={isDetecting || contextLoading}
-                                    className="w-full h-18 bg-brand text-black rounded-3xl font-black text-[13px] uppercase tracking-widest flex items-center justify-between px-8 group active:scale-95 transition-all shadow-xl shadow-brand/10 disabled:opacity-50"
+                                    className="w-full h-16 bg-[#FF9900] text-white rounded-2xl flex items-center justify-center gap-3 font-black text-[13px] uppercase tracking-[0.15em] shadow-xl shadow-[#FF9900]/20 disabled:grayscale transition-all"
                                 >
-                                    <div className="flex items-center gap-4">
-                                        {isDetecting ? <Loader2 size={24} className="animate-spin" /> : <Navigation size={22} fill="currentColor" />}
-                                        <span>{isDetecting ? 'Syncing...' : 'Detect Sector'}</span>
-                                    </div>
-                                    <ChevronRight size={20} />
-                                </button>
+                                    {isDetecting ? (
+                                        <>
+                                            <Loader2 size={20} className="animate-spin" />
+                                            <span>Syncing GPS...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <LocateFixed size={20} />
+                                            <span>Use Current Location</span>
+                                        </>
+                                    )}
+                                </motion.button>
 
-                                <button
+                                <motion.button
+                                    whileTap={{ scale: 0.96 }}
                                     onClick={() => { setShowLocationPrompt(false); navigate('/addresses'); }}
-                                    className="w-full h-16 bg-white/5 border border-white/5 text-white/80 rounded-3xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all hover:bg-white/10"
+                                    className="w-full h-16 bg-white border-2 border-black/05 text-black rounded-2xl flex items-center justify-center gap-3 font-black text-[11px] uppercase tracking-[0.15em] hover:bg-gray-50 transition-all"
                                 >
                                     <Search size={18} />
-                                    <span>Manual Search</span>
-                                </button>
+                                    <span>Search Location Manually</span>
+                                </motion.button>
                             </div>
 
-                            {/* Trust Matrix */}
-                            <div className="mt-10 pt-8 border-t border-white/5 flex flex-col items-center gap-4">
-                                <div className="flex items-center gap-2 px-6 py-2 bg-white/5 rounded-full">
-                                    <ShieldCheck size={14} className="text-brand" />
-                                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">End-to-End Encrypted Sync</span>
+                            {/* Trust Indicator */}
+                            <div className="mt-8 pt-6 border-t border-gray-100 w-full flex items-center justify-center gap-4">
+                                <div className="flex items-center gap-2">
+                                    <ShieldCheck size={14} className="text-emerald-500" />
+                                    <span className="text-[9px] font-black text-black/30 uppercase tracking-widest">Encrypted Data Uplink</span>
                                 </div>
-                                <p className="text-[8px] font-black text-white/10 uppercase tracking-[0.5em]">System Uplink // Active</p>
+                                <div className="w-1 h-1 bg-gray-200 rounded-full" />
+                                <span className="text-[9px] font-black text-black/20 uppercase tracking-widest">v2.0 Active</span>
                             </div>
                         </div>
                     </motion.div>
-                </div>
+                </>
             )}
         </AnimatePresence>
     );

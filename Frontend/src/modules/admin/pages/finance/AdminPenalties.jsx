@@ -39,12 +39,14 @@ const AdminPenalties = () => {
     });
 
     const penaltyTypes = [
-        { value: 'CANCELLATION', label: 'Cancellation Penalty' },
-        { value: 'LATE_ARRIVAL', label: 'Late Arrival' },
+        { value: 'CANCELLATION_BEFORE_TRIP', label: 'Cancellation Before Trip' },
+        { value: 'CANCELLATION_AFTER_START', label: 'Cancellation After Start' },
         { value: 'NO_SHOW', label: 'No Show' },
-        { value: 'POOR_BEHAVIOR', label: 'Poor Behavior' },
-        { value: 'VEHICLE_CONDITION', label: 'Vehicle Condition' },
-        { value: 'OVERTIME', label: 'Overtime Penalty' },
+        { value: 'LATE_ARRIVAL', label: 'Late Arrival' },
+        { value: 'CUSTOMER_COMPLAINT', label: 'Customer Complaint' },
+        { value: 'DOCUMENT_VIOLATION', label: 'Document Violation' },
+        { value: 'BEHAVIOR_VIOLATION', label: 'Behavior Violation' },
+        { value: 'SAFETY_VIOLATION', label: 'Safety Violation' },
         { value: 'OTHER', label: 'Other' }
     ];
 
@@ -89,7 +91,10 @@ const AdminPenalties = () => {
         }
 
         try {
-            const res = await adminAPI.addPenalty(newPenalty);
+            const res = await adminAPI.addPenalty({
+                ...newPenalty,
+                autoApply: true // Auto-apply the penalty
+            });
             if (res.status === 'success') {
                 fetchPenalties();
                 fetchStats();
@@ -97,15 +102,15 @@ const AdminPenalties = () => {
                 setNewPenalty({
                     userId: '',
                     userType: 'driver',
-                    type: 'CANCELLATION',
+                    type: 'CANCELLATION_BEFORE_TRIP',
                     amount: '',
                     reason: ''
                 });
-                alert('Penalty added successfully');
+                alert('Penalty added and applied successfully');
             }
         } catch (err) {
             console.error("Failed to add penalty:", err);
-            alert('Failed to add penalty');
+            alert(err.message || 'Failed to add penalty');
         }
     };
 

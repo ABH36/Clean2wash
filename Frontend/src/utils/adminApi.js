@@ -110,6 +110,13 @@ class ApiClient {
         });
     }
 
+    async updateUserKyc(userId, kycData) {
+        return this.request(`/users/${userId}/kyc`, {
+            method: 'PATCH',
+            body: JSON.stringify(kycData)
+        });
+    }
+
     async getPendingBookings() {
         return this.request('/bookings/pending');
     }
@@ -595,5 +602,71 @@ export const adminAPI = {
         method: 'POST',
         body: JSON.stringify({ transactionId })
     }),
-    getPayoutStats: () => apiClient.request('/spare-driver/payouts/stats')
+    getPayoutStats: () => apiClient.request('/spare-driver/payouts/stats'),
+
+    // ── WALLET ADMIN MANAGEMENT ──────────────────────────────────
+    // Wallet Management
+    getWallets: (params) => {
+        const query = new URLSearchParams(params).toString();
+        return apiClient.request(`/finance/wallets${query ? `?${query}` : ''}`);
+    },
+    getWalletStats: () => apiClient.request('/finance/wallets/stats'),
+    adjustWallet: (userId, data) => apiClient.request(`/finance/wallets/${userId}/adjust`, {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+    }),
+    holdWalletAmount: (userId, data) => apiClient.request(`/finance/wallets/${userId}/hold`, {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+    }),
+    releaseWalletHold: (userId, data) => apiClient.request(`/finance/wallets/${userId}/release`, {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+    }),
+    getWalletTransactions: (userId, params) => {
+        const query = new URLSearchParams(params).toString();
+        return apiClient.request(`/finance/wallets/${userId}/transactions${query ? `?${query}` : ''}`);
+    },
+
+    // ── PENALTIES MANAGEMENT ──────────────────────────────────────
+    // Penalties
+    getPenalties: (params) => {
+        const query = new URLSearchParams(params).toString();
+        return apiClient.request(`/finance/penalties${query ? `?${query}` : ''}`);
+    },
+    getPenaltyStats: () => apiClient.request('/finance/penalties/stats'),
+    addPenalty: (data) => apiClient.request('/finance/penalties', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }),
+    updatePenaltyStatus: (id, data) => apiClient.request(`/finance/penalties/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+    }),
+    applyPenalty: (id) => apiClient.request(`/finance/penalties/${id}/apply`, {
+        method: 'PATCH'
+    }),
+    waivePenalty: (id, reason) => apiClient.request(`/finance/penalties/${id}/waive`, {
+        method: 'PATCH',
+        body: JSON.stringify({ reason })
+    }),
+    getPenaltyTypes: () => apiClient.request('/finance/penalties/types'),
+
+    // ── DRIVER PAYOUTS (Enhanced) ─────────────────────────────────
+    // Driver Payouts (Enhanced)
+    getDriverPayouts: (params) => {
+        const query = new URLSearchParams(params).toString();
+        return apiClient.request(`/spare-driver/payouts${query ? `?${query}` : ''}`);
+    },
+    markPayoutAsPaid: (id, data) => apiClient.request(`/spare-driver/payouts/${id}/process`, {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }),
+
+    // Generic HTTP methods
+    get: (endpoint, options) => apiClient.get(endpoint, options),
+    post: (endpoint, body, options) => apiClient.post(endpoint, body, options),
+    put: (endpoint, body, options) => apiClient.put(endpoint, body, options),
+    patch: (endpoint, body, options) => apiClient.patch(endpoint, body, options),
+    delete: (endpoint, options) => apiClient.delete(endpoint, options)
 };

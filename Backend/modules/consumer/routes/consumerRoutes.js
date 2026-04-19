@@ -96,6 +96,10 @@ router.put('/profile/addresses/:addressId', locationController.updateAddress);
 router.delete('/profile/addresses/:addressId', locationController.deleteAddress);
 router.patch('/profile/addresses/:addressId/primary', locationController.setPrimaryAddress);
 
+// Address Intelligence Routes (Phase 2 - Recent & Suggestions)
+router.post('/profile/addresses/track-usage', locationController.trackAddressUsage);
+router.get('/profile/addresses/suggestions', locationController.getAddressSuggestions);
+
 // Vehicle routes
 router.get('/vehicles', vehicleController.getMyVehicles);
 router.post('/vehicles', vehicleController.addVehicle);

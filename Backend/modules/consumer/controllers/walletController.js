@@ -186,7 +186,7 @@ exports.verifyWalletPayment = catchAsync(async (req, res, next) => {
     }
 });
 
-// Withdraw money from wallet (Logs as PENDING for admin approval)
+// Withdraw money from wallet (Locks as PENDING for admin approval)
 exports.withdrawMoney = catchAsync(async (req, res, next) => {
     const { amount } = req.body;
 
@@ -194,34 +194,37 @@ exports.withdrawMoney = catchAsync(async (req, res, next) => {
         return next(new AppError('Invalid amount.', 400));
     }
 
-    const { balance, transaction } = await executeWalletTransaction(
+    // Safety Protocol: Use 'hold' to reserve balance for admin review
+    const { balance, heldBalance, totalBalance, transaction } = await adjustWalletHold(
         req.user._id,
         amount,
-        'debit',
+        'hold',
         {
             category: 'WITHDRAWAL',
             description: `Withdrawal request for INR ${amount} to bank`,
-            referenceId: `TXN-WDR-${Date.now()}`,
-            referenceType: 'withdrawal',
+            referenceId: `WDR-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+            referenceType: 'withdrawal_request',
             paymentMethod: 'bank',
-            status: 'pending' // Correctly handled by helper now
+            status: 'pending' 
         }
     );
 
     const { sendNotification } = require('../../../utils/notificationService');
     await sendNotification(req.user._id, {
         title: 'Withdrawal Pending',
-        message: `Your request for INR ${amount} is under review.`,
+        message: `Your request for INR ${amount} is under review. Funds are reserved.`,
         type: 'payment',
         priority: 'medium',
-        metaData: { amount, type: 'debit', status: 'pending' }
+        metaData: { amount, type: 'debit', status: 'pending', heldBalance }
     });
 
     res.status(200).json({
         status: 'success',
-        message: `Withdrawal request for INR ${amount} submitted.`,
+        message: `Withdrawal request for INR ${amount} submitted and funds reserved.`,
         data: {
             balance,
+            heldBalance,
+            totalBalance,
             transaction
         }
     });

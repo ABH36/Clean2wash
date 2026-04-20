@@ -15,9 +15,18 @@ exports.triggerSOS = catchAsync(async (req, res, next) => {
         return next(new AppError('Valid location coordinates are required to trigger SOS', 400));
     }
 
+    const Booking = require('../../../models/Booking');
+    
+    // Find active booking for this user
+    const activeBooking = await Booking.findOne({
+        user: req.user.id,
+        status: { $in: ['assigned', 'en_route', 'arrived', 'washing', 'after_photo', 'quality-check'] }
+    }).populate('captain', 'name phone profile.avatar currentLocation');
+
     // A. Create the SOS Alert record
     const sosAlert = await SOSAlert.create({
         consumer: req.user.id,
+        booking: activeBooking?._id,
         location: {
             type: 'Point',
             coordinates: coordinates,
@@ -27,7 +36,12 @@ exports.triggerSOS = catchAsync(async (req, res, next) => {
         photo
     });
 
-    const populatedSOS = await SOSAlert.findById(sosAlert._id).populate('consumer', 'name phone profile.trustedContacts');
+    const populatedSOS = await SOSAlert.findById(sosAlert._id)
+        .populate('consumer', 'name phone profile.trustedContacts')
+        .populate({
+            path: 'booking',
+            populate: { path: 'captain', select: 'name phone profile.avatar currentLocation vehicleType plate' }
+        });
 
     // B. Radius Search: 5km (5000 meters)
     const lng = coordinates[0];
@@ -98,15 +112,26 @@ exports.triggerSOS = catchAsync(async (req, res, next) => {
         console.log(`[SOS] Alerting Trusted Contact: ${contact.name} (${contact.phone})`);
     });
 
-    // D. SOCKET BROADCAST for the Responders Map
+    // D. SOCKET BROADCAST Enhanced for Admin Command Center
     const io = socketService.getIO();
     if (io) {
+        io.to('admin_room').emit('sos_alert', {
+            sosId: populatedSOS._id,
+            status: populatedSOS.status,
+            consumer: populatedSOS.consumer,
+            booking: populatedSOS.booking,
+            location: populatedSOS.location,
+            description: populatedSOS.description,
+            timestamp: populatedSOS.createdAt
+        });
+        
+        // Also keep legacy emit if needed by other components
         io.emit('new_sos_alert', {
-            sosId: sosAlert._id,
+            sosId: populatedSOS._id,
             consumerId: req.user.id,
             consumerName: populatedSOS.consumer.name,
-            location: { lng, lat, address },
-            description
+            location: { lng, lat, address: populatedSOS.location.address },
+            description: populatedSOS.description
         });
     }
 

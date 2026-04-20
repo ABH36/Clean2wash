@@ -22,10 +22,10 @@ const OrderDetails = () => {
 
     if (!order) {
         return (
-            <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-10 text-center">
+            <div className="min-h-screen bg-white/[0.02] flex flex-col items-center justify-center p-10 text-center">
                 <ShoppingBag size={48} className="text-gray-200 mb-4" />
                 <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight italic">Order Not Found</h2>
-                <p className="text-slate-500 text-[10px] font-bold mt-2 uppercase tracking-widest leading-relaxed">We couldn't find the order with ID: <span className="text-brand">#{id}</span></p>
+                <p className="text-white/40 text-[10px] font-bold mt-2 uppercase tracking-widest leading-relaxed">We couldn't find the order with ID: <span className="text-brand">#{id}</span></p>
                 <button onClick={() => navigate('/')} className="mt-8 px-8 py-3 bg-brand text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand/20">Go Home</button>
             </div>
         );
@@ -83,12 +83,12 @@ const OrderDetails = () => {
     const timeline = getTimeline(order.status);
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-white/[0.02]">
             {/* ── Header ── */}
-            <header className="px-4 pt-10 pb-4 bg-white sticky top-0 z-50 border-b border-gray-100">
+            <header className="px-4 pt-10 pb-4 bg-white/5 sticky top-0 z-50 border-b border-white/5">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <button onClick={() => navigate(-1)} className="w-9 h-9 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform">
+                        <button onClick={() => navigate(-1)} className="w-9 h-9 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-center active:scale-90 transition-transform">
                             <ChevronLeft size={18} strokeWidth={2.5} className="text-slate-900" />
                         </button>
                         <div>
@@ -96,7 +96,7 @@ const OrderDetails = () => {
                             <p className="text-[9px] text-brand font-black uppercase tracking-widest mt-0.5">#{order.bookingId || order.id || order._id}</p>
                         </div>
                     </div>
-                    <button className="flex items-center gap-1.5 bg-gray-50 border border-gray-100 px-3 py-2 rounded-xl text-slate-500 text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all">
+                    <button className="flex items-center gap-1.5 bg-white/[0.02] border border-white/5 px-3 py-2 rounded-xl text-white/40 text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all">
                         <Download size={13} strokeWidth={2.5} /> Tracking
                     </button>
                 </div>
@@ -105,7 +105,7 @@ const OrderDetails = () => {
             <div className="px-4 py-4 space-y-4 pb-28">
 
                 {/* ── Status Banner ── */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-soft p-5 text-center relative overflow-hidden">
+                <div className="bg-white/5 rounded-2xl border border-white/5 shadow-soft p-5 text-center relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
                     <div className="relative z-10">
                         <div className={`w-14 h-14 rounded-2xl mx-auto flex items-center justify-center mb-4 ${order.status === 'completed' ? 'bg-green-500 text-white' : 'bg-brand text-white animate-pulse'
@@ -127,13 +127,13 @@ const OrderDetails = () => {
 
                 {/* ── Security PIN ── */}
                 {['pickup-assigned', 'accepted', 'assigned'].includes(order.status) && order.securityPin && (
-                    <div className="bg-amber-50 rounded-2xl border-2 border-dashed border-amber-200 p-6 text-center space-y-3 shadow-amber-500/5 shadow-xl">
+                    <div className="bg-amber-50 rounded-2xl border-white/5 border-dashed border-amber-200 p-6 text-center space-y-3 shadow-amber-500/5 shadow-2xl shadow-black/50">
                         <div className="flex items-center justify-center gap-2 text-amber-600 font-extrabold text-[10px] uppercase tracking-widest italic animate-pulse">
                             <ShieldCheck size={16} /> Security Handover Protocol
                         </div>
                         <div className="flex justify-center gap-2 py-2">
                             {String(order.securityPin).split('').map((digit, i) => (
-                                <div key={i} className="w-12 h-16 bg-white border-2 border-amber-100 rounded-xl flex items-center justify-center text-3xl font-black text-amber-600 shadow-sm font-mono">
+                                <div key={i} className="w-12 h-16 bg-white/5 border-white/5 border-amber-100 rounded-xl flex items-center justify-center text-3xl font-black text-amber-600  font-mono">
                                     {digit}
                                 </div>
                             ))}
@@ -146,7 +146,7 @@ const OrderDetails = () => {
                 )}
 
                 {/* ── Timeline ── */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden">
+                <div className="bg-white/5 rounded-2xl border border-white/5 shadow-soft overflow-hidden">
                     <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
                         <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Live Track History</p>
                         <span className="text-[8px] font-black text-brand bg-brand/10 px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">Live</span>
@@ -157,15 +157,15 @@ const OrderDetails = () => {
                             return (
                                 <div key={step.label} className="flex items-start gap-4 py-3 relative">
                                     {i < timeline.length - 1 && (
-                                        <div className={`absolute left-[17px] top-11 w-px h-6 ${step.done ? 'bg-brand' : 'bg-gray-100'}`} />
+                                        <div className={`absolute left-[17px] top-11 w-px h-6 ${step.done ? 'bg-brand' : 'bg-white/[0.05]'}`} />
                                     )}
-                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border-2 transition-all duration-500 ${
-                                        isActive ? 'bg-brand border-brand text-white shadow-xl shadow-brand/40 scale-110' :
-                                        step.done ? 'bg-brand/10 border-brand/20 text-brand' : 'bg-gray-50 border-gray-100 text-gray-300'
+                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border-white/5 transition-all duration-500 ${
+                                        isActive ? 'bg-brand border-brand text-white shadow-2xl shadow-black/50 shadow-brand/40 scale-110' :
+                                        step.done ? 'bg-brand/10 border-brand/20 text-brand' : 'bg-white/[0.02] border-white/5 text-gray-300'
                                     }`}>
                                         {isActive ? (
                                             <div className="relative">
-                                                <div className="absolute inset-0 bg-white rounded-full animate-ping opacity-20" />
+                                                <div className="absolute inset-0 bg-white/5 rounded-full animate-ping opacity-20" />
                                                 {step.icon}
                                             </div>
                                         ) : step.icon}
@@ -184,7 +184,7 @@ const OrderDetails = () => {
 
                 {/* ── Service Evidence (Photos) ── */}
                 {(order.serviceImages?.before?.length > 0 || order.serviceImages?.after?.length > 0) && (
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-soft p-5">
+                    <div className="bg-white/5 rounded-2xl border border-white/5 shadow-soft p-5">
                         <BeforeAfterSlider 
                             before={order.serviceImages.before} 
                             after={order.serviceImages.after} 
@@ -194,14 +194,14 @@ const OrderDetails = () => {
                 )}
 
                 {/* ── Order Content ── */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden">
+                <div className="bg-white/5 rounded-2xl border border-white/5 shadow-soft overflow-hidden">
                     <div className="px-5 py-4 border-b border-gray-50">
                         <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Order Summary</p>
                     </div>
                     <div className="p-4 space-y-3">
                         {order.items?.length > 0 ? order.items.map((item, idx) => (
                             <div key={idx} className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-100 overflow-hidden">
+                                <div className="w-10 h-10 bg-white/[0.02] rounded-lg flex items-center justify-center border border-white/5 overflow-hidden">
                                     <img src={item.image || "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=100&q=80"} className="w-8 h-8 object-contain" alt="" />
                                 </div>
                                 <div className="flex-1">
@@ -212,7 +212,7 @@ const OrderDetails = () => {
                             </div>
                         )) : (
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-100 overflow-hidden">
+                                <div className="w-10 h-10 bg-white/[0.02] rounded-lg flex items-center justify-center border border-white/5 overflow-hidden">
                                     <ShoppingBag size={18} className="text-content-subtle" />
                                 </div>
                                 <div className="flex-1">
@@ -226,7 +226,7 @@ const OrderDetails = () => {
                 </div>
 
                 {/* ── Bill Breakdown ── */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-soft p-5 space-y-3">
+                <div className="bg-white/5 rounded-2xl border border-white/5 shadow-soft p-5 space-y-3">
                     <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                         <span>Total Payable</span>
                         <span className="text-slate-900 font-black text-base">₹{(order.pricing?.totalAmount || order.amount || order.price || 0).toLocaleString()}</span>
@@ -240,8 +240,8 @@ const OrderDetails = () => {
             </div>
 
             {/* ── Footer ── */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-100 px-6 py-4 flex gap-4 z-50">
-                <button className="flex-1 h-12 bg-gray-50 border border-gray-100 rounded-xl text-slate-900 font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all">
+            <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-white/5 px-6 py-4 flex gap-4 z-50">
+                <button className="flex-1 h-12 bg-white/[0.02] border border-white/5 rounded-xl text-slate-900 font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all">
                     <MessageSquare size={16} /> Support
                 </button>
                 <button onClick={() => navigate('/')} className="flex-1 h-12 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">

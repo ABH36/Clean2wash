@@ -135,7 +135,7 @@ const VendorServices = () => {
                 key={s._id}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className={`bg-surface rounded-[2.5rem] border border-gray-100/10 shadow-soft overflow-hidden group hover:border-brand/30 transition-all relative ${viewMode === 'list' ? 'flex flex-col md:flex-row items-center p-6 md:p-4 gap-6 md:gap-0' : 'p-8 space-y-7'}`}
+                className={`bg-surface rounded-[2.5rem] border border-white/5/10 shadow-soft overflow-hidden group hover:border-brand/30 transition-all relative ${viewMode === 'list' ? 'flex flex-col md:flex-row items-center p-6 md:p-4 gap-6 md:gap-0' : 'p-8 space-y-7'}`}
             >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-brand/10 transition-colors" />
 
@@ -148,7 +148,7 @@ const VendorServices = () => {
                         <div className="flex items-center gap-2">
                             <h3 className="text-lg font-black text-content tracking-tight uppercase leading-none truncate">{s.name}</h3>
                             {!s.isActive && (
-                                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-background border border-gray-100/10 text-content-subtle text-[8px] font-black uppercase tracking-widest shrink-0">
+                                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-background border border-white/5/10 text-content-subtle text-[8px] font-black uppercase tracking-widest shrink-0">
                                     <div className="w-1 h-1 bg-gray-400 rounded-full" />
                                     Paused
                                 </div>
@@ -158,13 +158,13 @@ const VendorServices = () => {
                     </div>
 
                     {viewMode === 'list' && (
-                        <div className="md:px-8 md:border-x border-gray-100/5 md:mx-8 hidden md:block">
+                        <div className="md:px-8 md:border-x border-white/5/5 md:mx-8 hidden md:block">
                             <span className="text-2xl font-black tracking-tighter text-content leading-none">₹{s.price}</span>
                         </div>
                     )}
                 </div>
 
-                <div className={`w-full ${viewMode === 'grid' ? 'flex items-center justify-between pt-5 border-t border-gray-100/5' : 'flex items-center justify-between md:justify-end gap-4 md:gap-3 w-full md:w-auto relative z-10'}`}>
+                <div className={`w-full ${viewMode === 'grid' ? 'flex items-center justify-between pt-5 border-t border-white/5/5' : 'flex items-center justify-between md:justify-end gap-4 md:gap-3 w-full md:w-auto relative z-10'}`}>
                     {(viewMode === 'grid' || (typeof window !== 'undefined' && window.innerWidth < 768)) && (
                         <div className="flex flex-col">
                             <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-0.5 opacity-50">Operational Cost</p>
@@ -174,19 +174,19 @@ const VendorServices = () => {
                     <div className="flex gap-2">
                         <button
                             onClick={() => handleOpenDrawer(s)}
-                            className="w-11 h-11 bg-background border border-gray-100/10 rounded-xl flex items-center justify-center text-content-subtle hover:text-brand hover:border-brand/40 transition-all shadow-sm group/btn"
+                            className="w-11 h-11 bg-background border border-white/5/10 rounded-xl flex items-center justify-center text-content-subtle hover:text-brand hover:border-brand/40 transition-all  group/btn"
                         >
                             <Edit3 size={18} className="group-hover/btn:scale-110 transition-transform" />
                         </button>
                         <button
                             onClick={() => handleToggleActive(s)}
-                            className={`w-11 h-11 rounded-xl border flex items-center justify-center transition-all shadow-sm group/btn ${s.isActive ? 'bg-green-500/10 border-green-500/20 text-green-600' : 'bg-red-500/10 border-red-500/20 text-red-600'}`}
+                            className={`w-11 h-11 rounded-xl border flex items-center justify-center transition-all  group/btn ${s.isActive ? 'bg-green-500/10 border-green-500/20 text-green-600' : 'bg-red-500/10 border-red-500/20 text-red-600'}`}
                         >
                             <Power size={18} className="group-hover/btn:scale-110 transition-transform" />
                         </button>
                         <button
                             onClick={() => setShowDeleteConfirm(s._id)}
-                            className="w-11 h-11 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl flex items-center justify-center md:opacity-0 group-hover:opacity-100 transition-all shadow-sm group/btn"
+                            className="w-11 h-11 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl flex items-center justify-center md:opacity-0 group-hover:opacity-100 transition-all  group/btn"
                         >
                             <Trash2 size={18} className="group-hover/btn:scale-110 transition-transform" />
                         </button>
@@ -201,11 +201,11 @@ const VendorServices = () => {
             <div className="space-y-8">
                 {/* Actions Bar */}
                 <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                    <div className="flex items-center gap-2 bg-surface border border-gray-100/10 p-1 rounded-2xl shadow-soft">
-                        <button onClick={() => setViewMode('grid')} className={`p-2.5 rounded-xl transition-all ${viewMode === 'grid' ? 'bg-background text-brand border border-gray-100/10 shadow-sm' : 'text-content-muted'}`}>
+                    <div className="flex items-center gap-2 bg-surface border border-white/5/10 p-1 rounded-2xl shadow-soft">
+                        <button onClick={() => setViewMode('grid')} className={`p-2.5 rounded-xl transition-all ${viewMode === 'grid' ? 'bg-background text-brand border border-white/5/10 ' : 'text-content-muted'}`}>
                             <LayoutGrid size={18} />
                         </button>
-                        <button onClick={() => setViewMode('list')} className={`p-2.5 rounded-xl transition-all ${viewMode === 'list' ? 'bg-background text-brand border border-gray-100/10 shadow-sm' : 'text-content-muted'}`}>
+                        <button onClick={() => setViewMode('list')} className={`p-2.5 rounded-xl transition-all ${viewMode === 'list' ? 'bg-background text-brand border border-white/5/10 ' : 'text-content-muted'}`}>
                             <List size={18} />
                         </button>
                     </div>
@@ -218,7 +218,7 @@ const VendorServices = () => {
                                 placeholder="Filter catalog..."
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
-                                className="w-full h-12 bg-surface border border-gray-100/10 rounded-xl pl-12 pr-4 outline-none focus:border-brand shadow-soft text-content"
+                                className="w-full h-12 bg-surface border border-white/5/10 rounded-xl pl-12 pr-4 outline-none focus:border-brand shadow-soft text-content"
                             />
                         </div>
                         <button
@@ -231,10 +231,10 @@ const VendorServices = () => {
                 </div>
 
                 {/* Categories Tab */}
-                <div className="flex gap-2 bg-surface border border-gray-100/10 p-1 rounded-2xl w-fit overflow-x-auto max-w-full shadow-soft">
+                <div className="flex gap-2 bg-surface border border-white/5/10 p-1 rounded-2xl w-fit overflow-x-auto max-w-full shadow-soft">
                     {['All', ...CATEGORIES].map(t => (
                         <button key={t} onClick={() => setActiveTab(t)}
-                            className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === t ? 'bg-background text-brand border border-gray-100/10 shadow-sm' : 'text-content-muted hover:text-content'}`}>
+                            className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === t ? 'bg-background text-brand border border-white/5/10 ' : 'text-content-muted hover:text-content'}`}>
                             {t}
                         </button>
                     ))}
@@ -253,9 +253,9 @@ const VendorServices = () => {
                     ) : (
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                            className="py-20 flex flex-col items-center gap-4 text-center bg-surface border border-dashed border-gray-100/10 rounded-[3rem] shadow-soft"
+                            className="py-20 flex flex-col items-center gap-4 text-center bg-surface border border-dashed border-white/5/10 rounded-[3rem] shadow-soft"
                         >
-                            <div className="w-16 h-16 bg-background border border-gray-100/10 rounded-full flex items-center justify-center text-content-subtle">
+                            <div className="w-16 h-16 bg-background border border-white/5/10 rounded-full flex items-center justify-center text-content-subtle">
                                 <Sparkles size={24} />
                             </div>
                             <div>
@@ -285,14 +285,14 @@ const VendorServices = () => {
                         <motion.aside
                             initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
                             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="fixed top-0 right-0 bottom-0 w-full max-w-md bg-surface z-[210] shadow-2xl flex flex-col border-l border-gray-100/10"
+                            className="fixed top-0 right-0 bottom-0 w-full max-w-md bg-surface z-[210] shadow-2xl flex flex-col border-l border-white/5/10"
                         >
-                            <div className="px-8 py-8 border-b border-gray-100/10 flex items-center justify-between">
+                            <div className="px-8 py-8 border-b border-white/5/10 flex items-center justify-between">
                                 <div>
                                     <h2 className="text-xl font-black text-content tracking-tight uppercase tracking-tighter">Service <span className="text-brand">Forge</span></h2>
                                     <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-1">Configure your tactical studio offering</p>
                                 </div>
-                                <button onClick={() => setDrawerOpen(false)} className="w-10 h-10 bg-background border border-gray-100/10 rounded-xl flex items-center justify-center text-content-muted">
+                                <button onClick={() => setDrawerOpen(false)} className="w-10 h-10 bg-background border border-white/5/10 rounded-xl flex items-center justify-center text-content-muted">
                                     <X size={20} />
                                 </button>
                             </div>
@@ -305,7 +305,7 @@ const VendorServices = () => {
                                         placeholder="e.g. Ceramic Protection Plus"
                                         value={form.name}
                                         onChange={e => setForm({ ...form, name: e.target.value })}
-                                        className="w-full h-14 bg-background border border-gray-100/10 rounded-2xl px-6 text-sm font-bold text-content outline-none focus:border-brand transition-all"
+                                        className="w-full h-14 bg-background border border-white/5/10 rounded-2xl px-6 text-sm font-bold text-content outline-none focus:border-brand transition-all"
                                     />
                                 </div>
 
@@ -315,7 +315,7 @@ const VendorServices = () => {
                                         <select
                                             value={form.category}
                                             onChange={e => setForm({ ...form, category: e.target.value })}
-                                            className="w-full h-14 bg-background border border-gray-100/10 rounded-2xl px-6 text-sm font-bold text-content outline-none focus:border-brand transition-all appearance-none"
+                                            className="w-full h-14 bg-background border border-white/5/10 rounded-2xl px-6 text-sm font-bold text-content outline-none focus:border-brand transition-all appearance-none"
                                         >
                                             {CATEGORIES.map(c => <option key={c} value={c} className="bg-surface text-content">{c}</option>)}
                                         </select>
@@ -327,7 +327,7 @@ const VendorServices = () => {
                                             placeholder="1299"
                                             value={form.price}
                                             onChange={e => setForm({ ...form, price: e.target.value })}
-                                            className="w-full h-14 bg-background border border-gray-100/10 rounded-2xl px-6 text-sm font-bold text-content outline-none focus:border-brand transition-all font-mono"
+                                            className="w-full h-14 bg-background border border-white/5/10 rounded-2xl px-6 text-sm font-bold text-content outline-none focus:border-brand transition-all font-mono"
                                         />
                                     </div>
                                 </div>
@@ -337,7 +337,7 @@ const VendorServices = () => {
                                     <select
                                         value={form.type}
                                         onChange={e => setForm({ ...form, type: e.target.value })}
-                                        className="w-full h-14 bg-background border border-gray-100/10 rounded-2xl px-6 text-sm font-bold text-content outline-none focus:border-brand transition-all appearance-none"
+                                        className="w-full h-14 bg-background border border-white/5/10 rounded-2xl px-6 text-sm font-bold text-content outline-none focus:border-brand transition-all appearance-none"
                                     >
                                         {['Standard', 'Premium', 'Elite', 'Waterless', 'Steam', 'Chemical', 'Pro', 'Wash'].map(t => (
                                             <option key={t} value={t} className="bg-surface text-content">{t}</option>
@@ -351,7 +351,7 @@ const VendorServices = () => {
                                         placeholder="Describe the tactical advantages of this service..."
                                         value={form.description}
                                         onChange={e => setForm({ ...form, description: e.target.value })}
-                                        className="w-full h-32 bg-background border border-gray-100/10 rounded-2xl p-6 text-sm font-bold text-content outline-none focus:border-brand transition-all resize-none"
+                                        className="w-full h-32 bg-background border border-white/5/10 rounded-2xl p-6 text-sm font-bold text-content outline-none focus:border-brand transition-all resize-none"
                                     />
                                 </div>
 
@@ -362,7 +362,7 @@ const VendorServices = () => {
                                             <button
                                                 key={d}
                                                 onClick={() => setForm({ ...form, time: d })}
-                                                className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${form.time === d ? 'bg-brand/10 border-brand text-brand shadow-sm' : 'bg-background border-gray-100/10 text-content-muted'}`}
+                                                className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${form.time === d ? 'bg-brand/10 border-brand text-brand ' : 'bg-background border-white/5/10 text-content-muted'}`}
                                             >
                                                 {d}
                                             </button>
@@ -371,11 +371,11 @@ const VendorServices = () => {
                                 </div>
                             </div>
 
-                            <div className="p-8 border-t border-gray-100/10 bg-background/50 backdrop-blur">
+                            <div className="p-8 border-t border-white/5/10 bg-background/50 backdrop-blur">
                                 <button
                                     onClick={handleSave}
                                     disabled={saving}
-                                    className="w-full h-16 bg-content text-surface rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-content/20 hover:bg-brand transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                                    className="w-full h-16 bg-content text-surface rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-2xl shadow-black/50 shadow-content/20 hover:bg-brand transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                                 >
                                     {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Check size={18} strokeWidth={3} /> {editTarget ? 'Update Registry' : 'Deploy Service'}</>}
                                 </button>
@@ -394,9 +394,9 @@ const VendorServices = () => {
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
-                            className="relative bg-surface w-full max-w-sm rounded-[3rem] p-10 text-center space-y-6 border border-gray-100/10 shadow-2xl"
+                            className="relative bg-surface w-full max-w-sm rounded-[3rem] p-10 text-center space-y-6 border border-white/5/10 shadow-2xl"
                         >
-                            <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-[2rem] flex items-center justify-center mx-auto shadow-xl shadow-red-500/10 border border-red-500/20">
+                            <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-[2rem] flex items-center justify-center mx-auto shadow-2xl shadow-black/50 shadow-red-500/10 border border-red-500/20">
                                 <AlertTriangle size={36} />
                             </div>
                             <div>
@@ -404,7 +404,7 @@ const VendorServices = () => {
                                 <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-2 px-4">This will permanently remove the service from your active studio catalog.</p>
                             </div>
                             <div className="flex gap-4">
-                                <button onClick={() => setShowDeleteConfirm(null)} className="flex-1 h-14 bg-background border border-gray-100/10 text-content-muted rounded-2xl font-black uppercase text-[10px] tracking-widest hover:text-content transition-colors">Cancel</button>
+                                <button onClick={() => setShowDeleteConfirm(null)} className="flex-1 h-14 bg-background border border-white/5/10 text-content-muted rounded-2xl font-black uppercase text-[10px] tracking-widest hover:text-content transition-colors">Cancel</button>
                                 <button onClick={() => handleDelete(showDeleteConfirm)} className="flex-1 h-14 bg-red-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-red-500/20 hover:bg-red-600 transition-colors">Delete</button>
                             </div>
                         </motion.div>

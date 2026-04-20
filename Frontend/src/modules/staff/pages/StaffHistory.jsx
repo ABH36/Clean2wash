@@ -68,7 +68,7 @@ const StaffHistory = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        className={`p-6 rounded-[2.5rem] border relative overflow-hidden group ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white border-gray-100 shadow-soft'}`}
+                        className={`p-6 rounded-[2.5rem] border relative overflow-hidden group ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white/5 border-white/5 shadow-soft'}`}
                     >
                         <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
                             <CheckCircle2 size={48} className={isDarkMode ? 'text-white' : 'text-gray-400'} />
@@ -87,7 +87,7 @@ const StaffHistory = () => {
                             <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Financial Logs</h3>
                             <div className="w-1.5 h-1.5 bg-brand rounded-full animate-pulse" />
                         </div>
-                        <button onClick={fetchEarnings} className={`p-2 rounded-full transition-all ${isDarkMode ? 'bg-white/5 text-white/40 active:bg-white/10' : 'bg-gray-100 text-gray-400 active:bg-gray-200'}`}>
+                        <button onClick={fetchEarnings} className={`p-2 rounded-full transition-all ${isDarkMode ? 'bg-white/5 text-white/40 active:bg-white/10' : 'bg-white/[0.05] text-gray-400 active:bg-gray-200'}`}>
                             <RefreshCcw size={14} className={loading ? 'animate-spin' : ''} />
                         </button>
                     </div>
@@ -102,10 +102,10 @@ const StaffHistory = () => {
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: idx * 0.05 }}
                                         onClick={() => navigate(`/staff/task/${entry.id}`)}
-                                        className={`p-5 rounded-[2.5rem] border flex items-center justify-between group cursor-pointer transition-all duration-500 overflow-hidden relative ${isDarkMode ? 'bg-[#1E293B] border-white/5 hover:border-brand/30' : 'bg-white shadow-soft border-gray-100 hover:border-brand/20'}`}
+                                        className={`p-5 rounded-[2.5rem] border flex items-center justify-between group cursor-pointer transition-all duration-500 overflow-hidden relative ${isDarkMode ? 'bg-[#1E293B] border-white/5 hover:border-brand/30' : 'bg-white/5 shadow-soft border-white/5 hover:border-brand/20'}`}
                                     >
                                         <div className="flex items-center gap-5 relative z-10">
-                                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 group-hover:bg-brand group-hover:text-white ${isDarkMode ? 'bg-white/5 text-white/40' : 'bg-gray-50 text-gray-400'}`}>
+                                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 group-hover:bg-brand group-hover:text-white ${isDarkMode ? 'bg-white/5 text-white/40' : 'bg-white/[0.02] text-gray-400'}`}>
                                                 <Award size={24} />
                                             </div>
                                             <div>

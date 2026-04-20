@@ -219,6 +219,12 @@ export const AuthProvider = ({ children }) => {
         // 1. Register Device Token
         const syncFCM = async () => {
             try {
+                // Check if Firebase is properly configured
+                if (!import.meta.env.VITE_FIREBASE_API_KEY || import.meta.env.VITE_FIREBASE_API_KEY === 'YOUR_API_KEY') {
+                    console.log('🔥 FCM: Firebase not configured, skipping token sync');
+                    return;
+                }
+
                 const fcmToken = await requestForToken();
                 if (!fcmToken) return;
 
@@ -239,7 +245,8 @@ export const AuthProvider = ({ children }) => {
                 }
                 console.log('🚀 FCM: Token synced with backend');
             } catch (err) {
-                console.warn('❌ FCM Sync Error:', err);
+                console.warn('❌ FCM Sync Error:', err.message || err);
+                // Don't throw error, just log it
             }
         };
 
@@ -315,8 +322,10 @@ export const AuthProvider = ({ children }) => {
                 ...consumer
             };
 
+            const needsSignup = response.needsSignup || response.data?.needsSignup || false;
+
             login('consumer', userSession);
-            return { success: true, data: { consumer: userSession, token } };
+            return { success: true, data: { consumer: userSession, token, needsSignup } };
         } catch (error) {
             console.error('Verify OTP error:', error);
             return { success: false, error: error.message };
@@ -988,8 +997,11 @@ export const AuthProvider = ({ children }) => {
     const adminLogin = useCallback(async (email, password) => {
         try {
             const response = await adminAPI.login(email, password);
-            const token = response.token || response.data?.token;
-            const adminData = response.data?.admin || response.admin || response.data;
+            
+            // Response structure from /api/superadmin/auth/login:
+            // { success: true, message: '...', data: { admin, token, mustChangePassword } }
+            const token = response.data?.token;
+            const adminData = response.data?.admin;
 
             if (token) {
                 adminAPI.setToken(token);
@@ -1000,7 +1012,9 @@ export const AuthProvider = ({ children }) => {
                 name: adminData.name,
                 email: adminData.email,
                 role: 'admin',
+                roleDetails: adminData.role, // Include role with permissions
                 token,
+                mustChangePassword: response.data?.mustChangePassword,
                 ...adminData
             };
 

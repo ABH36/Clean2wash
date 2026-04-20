@@ -54,12 +54,12 @@ const StaffProfile = () => {
         <StaffLayout title="Terminal Control" subtitle="Staff Node">
             <div className="space-y-8">
                 {/* Profile Card */}
-                <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} rounded-[3rem] p-8 border text-center group relative overflow-hidden transition-all duration-500`}>
+                <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white/5 border-white/5 shadow-soft'} rounded-[3rem] p-8 border text-center group relative overflow-hidden transition-all duration-500`}>
                     <div className="relative w-28 h-28 mx-auto mb-6">
                         <div className="absolute inset-0 bg-brand/20 rounded-[2.5rem] rotate-6 scale-105 group-hover:rotate-12 transition-transform duration-500" />
                         <img
                             src={STAFF_DATA.image}
-                            className={`relative z-10 w-full h-full object-cover rounded-[2.5rem] border-4 ${isDarkMode ? 'border-[#1E293B]' : 'border-white'} shadow-xl`}
+                            className={`relative z-10 w-full h-full object-cover rounded-[2.5rem] border-4 ${isDarkMode ? 'border-[#1E293B]' : 'border-white'} shadow-2xl shadow-black/50`}
                             alt="Profile"
                         />
                         <button className={`absolute -bottom-2 -right-2 w-10 h-10 bg-brand text-white rounded-full flex items-center justify-center border-4 ${isDarkMode ? 'border-[#1E293B]' : 'border-white'} shadow-lg z-20`}>
@@ -74,7 +74,7 @@ const StaffProfile = () => {
                             <p className={`text-[8px] font-black uppercase tracking-widest mb-1 ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Attached Hub</p>
                             <p className={`text-xs font-black uppercase tracking-tighter ${isDarkMode ? 'text-white' : 'text-content'}`}>{STAFF_DATA.hub}</p>
                         </div>
-                        <div className={`w-px h-8 self-center ${isDarkMode ? 'bg-white/5' : 'bg-gray-100'}`} />
+                        <div className={`w-px h-8 self-center ${isDarkMode ? 'bg-white/5' : 'bg-white/[0.05]'}`} />
                         <div className="flex-1">
                             <p className={`text-[8px] font-black uppercase tracking-widest mb-1 ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Clearance</p>
                             <p className="text-xs font-black text-brand uppercase tracking-tighter">{STAFF_DATA.role}</p>
@@ -91,10 +91,10 @@ const StaffProfile = () => {
                         <button
                             key={i}
                             onClick={() => navigate(item.path)}
-                            className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} w-full flex items-center justify-between p-6 rounded-[2.5rem] border group hover:border-brand/40 transition-all duration-500`}
+                            className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white/5 border-white/5 shadow-soft'} w-full flex items-center justify-between p-6 rounded-[2.5rem] border group hover:border-brand/40 transition-all duration-500`}
                         >
                             <div className="flex items-center gap-5">
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 ${isDarkMode ? 'bg-white/5 text-white/40 group-hover:bg-brand group-hover:text-white' : 'bg-gray-50 text-content-subtle group-hover:bg-brand group-hover:text-white'}`}>
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 ${isDarkMode ? 'bg-white/5 text-white/40 group-hover:bg-brand group-hover:text-white' : 'bg-white/[0.02] text-content-subtle group-hover:bg-brand group-hover:text-white'}`}>
                                     {item.icon}
                                 </div>
                                 <div className="text-left">

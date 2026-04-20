@@ -104,7 +104,7 @@ const AdminSettings = () => {
                 sub: s.description || 'Defense Protocol',
                 status: s.value === true ? 'ACTIVE' : 'INACTIVE',
                 color: s.value === true ? 'text-brand' : 'text-content-subtle',
-                bg: s.value === true ? 'bg-brand/10' : 'bg-gray-100/5',
+                bg: s.value === true ? 'bg-brand/10' : 'bg-white/[0.05]/5',
                 type: 'toggle'
             }))
         }
@@ -114,7 +114,7 @@ const AdminSettings = () => {
         <>
             <div className="max-w-6xl mx-auto space-y-10">
                 {/* Tactical Command Bar */}
-                <div className="flex flex-col lg:flex-row items-center justify-between gap-6 bg-white p-8 rounded-[3rem] border border-gray-100 shadow-soft relative overflow-hidden group">
+                <div className="flex flex-col lg:flex-row items-center justify-between gap-6 bg-white/5 p-8 rounded-[3rem] border border-white/5 shadow-soft relative overflow-hidden group">
                     <div className="flex items-center gap-5 z-10">
                         <div className="w-16 h-16 bg-content text-white rounded-[1.5rem] flex items-center justify-center shadow-2xl shadow-content/20 group-hover:bg-brand transition-all">
                             <Terminal size={28} />
@@ -126,12 +126,12 @@ const AdminSettings = () => {
                     </div>
 
                     <div className="flex items-center gap-4 w-full lg:w-auto z-10">
-                        <div className="relative flex-1 lg:w-80">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-content-subtle" size={16} />
+                        <div className="flex-1 lg:w-80 bg-white/[0.02] border border-white/5 rounded-[1.25rem] px-4 py-2 flex items-center gap-3 transition-all focus-within:border-brand focus-within:bg-white/5">
+                            <Search className="text-content-subtle" size={16} />
                             <input
                                 type="text"
                                 placeholder="Query parameters..."
-                                className="w-full h-14 bg-gray-50 border border-gray-100 rounded-[1.25rem] pl-12 pr-4 text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all"
+                                className="w-full h-10 bg-transparent text-xs font-bold text-content outline-none"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                             />
@@ -171,10 +171,10 @@ const AdminSettings = () => {
                                         <motion.div
                                             key={j}
                                             whileHover={{ y: -5 }}
-                                            className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-soft text-left hover:border-brand hover:shadow-2xl transition-all group relative overflow-hidden flex flex-col"
+                                            className="bg-white/5 p-8 rounded-[3rem] border border-white/5 shadow-soft text-left hover:border-brand hover:shadow-2xl transition-all group relative overflow-hidden flex flex-col"
                                         >
                                             <div className="flex justify-between items-start mb-8 relative z-10">
-                                                <div className={`w-12 h-12 ${item.bg} ${item.color} rounded-2xl flex items-center justify-center group-hover:bg-content group-hover:text-white transition-all shadow-sm`}>
+                                                <div className={`w-12 h-12 ${item.bg} ${item.color} rounded-2xl flex items-center justify-center group-hover:bg-content group-hover:text-white transition-all `}>
                                                     {React.cloneElement(item.icon, { size: 24 })}
                                                 </div>
                                                 {item.status && (
@@ -199,13 +199,13 @@ const AdminSettings = () => {
                                                         >
                                                             <motion.div
                                                                 animate={{ x: item.value === true ? 24 : 0 }}
-                                                                className="w-6 h-6 bg-white rounded-full shadow-lg"
+                                                                className="w-6 h-6 bg-white/5 rounded-full shadow-lg"
                                                             />
                                                         </div>
                                                     ) : (
                                                         <input
                                                             type={typeof item.value === 'number' ? 'number' : 'text'}
-                                                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-xs font-bold text-content outline-none focus:border-brand transition-all"
+                                                            className="w-full bg-white/[0.02] border border-white/5 rounded-xl px-4 py-2 text-xs font-bold text-content outline-none focus:border-brand transition-all"
                                                             value={item.value}
                                                             onChange={(e) => {
                                                                 const val = typeof item.value === 'number' ? Number(e.target.value) : e.target.value;
@@ -234,7 +234,7 @@ const AdminSettings = () => {
                 )}
 
                 {/* Infrastructure Integrity Manifest */}
-                <div className="flex flex-col md:flex-row items-center justify-between text-content-subtle border-t border-gray-100 pt-10 px-6 gap-6 mb-10">
+                <div className="flex flex-col md:flex-row items-center justify-between text-content-subtle border-t border-white/5 pt-10 px-6 gap-6 mb-10">
                     <div className="flex items-center gap-6">
                         <div className="flex items-center gap-2 group cursor-pointer">
                             <Github size={14} className="group-hover:text-brand transition-colors" />

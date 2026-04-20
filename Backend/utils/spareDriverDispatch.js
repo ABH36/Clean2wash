@@ -1,5 +1,5 @@
 const SpareDriver = require('../models/SpareDriver');
-const { getIO } = require('../socketService');
+const { getIO } = require('../services/enhancedSocketService');
 const { sendSpareDriverNotification } = require('./notificationService');
 
 const REJECTION_STATUS = 'sparedriver_rejected';

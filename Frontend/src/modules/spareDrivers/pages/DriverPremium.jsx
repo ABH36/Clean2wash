@@ -86,9 +86,9 @@ const DriverPremium = () => {
     return (
         <DriverLayout title="Premium Driver">
             <div className="px-6 py-6 pb-28 space-y-5">
-                <div className="rounded-[2rem] border border-black/[0.05] bg-white p-5 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
+                <div className="rounded-[2rem] border border-black/[0.05] bg-white/5 p-5 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
                     <p className="text-[9px] font-black text-brand uppercase tracking-widest">Premium Program</p>
-                    <h2 className="text-[20px] font-black text-black uppercase tracking-tight leading-tight mt-2">{config.title}</h2>
+                    <h2 className="text-[20px] font-black text-white uppercase tracking-tight leading-tight mt-2">{config.title}</h2>
                     <p className="text-[10px] font-black text-black/35 uppercase tracking-wider mt-2">{config.subtitle}</p>
                 </div>
 
@@ -96,15 +96,15 @@ const DriverPremium = () => {
                     {(config.benefits || []).map((benefit) => (
                         <div key={benefit} className="flex items-start gap-2">
                             <span className="mt-1 w-1.5 h-1.5 rounded-full bg-brand shrink-0" />
-                            <p className="text-[10px] font-black text-black uppercase leading-relaxed">{benefit}</p>
+                            <p className="text-[10px] font-black text-white uppercase leading-relaxed">{benefit}</p>
                         </div>
                     ))}
                 </div>
 
-                <div className="rounded-[1.3rem] border border-black/[0.05] bg-white p-4 space-y-3">
+                <div className="rounded-[1.3rem] border border-black/[0.05] bg-white/5 p-4 space-y-3">
                     <p className="text-[9px] font-black text-black/30 uppercase tracking-widest">Police Verification Status</p>
                     <div className="flex items-center justify-between">
-                        <p className="text-[12px] font-black text-black uppercase">{policeStatus}</p>
+                        <p className="text-[12px] font-black text-white uppercase">{policeStatus}</p>
                         {isApproved && <ShieldCheck size={16} className="text-green-600" />}
                     </div>
                 </div>
@@ -117,11 +117,11 @@ const DriverPremium = () => {
                                 value={pvrNumber}
                                 onChange={(event) => setPvrNumber(event.target.value)}
                                 placeholder="Enter reference number"
-                                className="w-full h-11 border border-gray-200 rounded-xl px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                className="w-full h-11 border border-white/10 rounded-xl px-3 text-[11px] font-black text-white outline-none focus:border-black"
                             />
                         </div>
 
-                        <label className="w-full h-20 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center gap-2 text-[10px] font-black text-black/55 uppercase cursor-pointer">
+                        <label className="w-full h-20 rounded-xl border-white/5 border-dashed border-gray-300 flex items-center justify-center gap-2 text-[10px] font-black text-black/55 uppercase cursor-pointer">
                             <Upload size={16} />
                             {pvrFile ? pvrFile.name : 'Upload police verification document'}
                             <input

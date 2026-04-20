@@ -133,13 +133,13 @@ const CaptainLocationSelector = () => {
     return (
         <div className="min-h-screen bg-[#F8FAFC]">
             {/* Header */}
-            <header className="px-5 pt-12 pb-5 bg-white sticky top-0 z-[1000] border-b border-gray-100 shadow-sm">
+            <header className="px-5 pt-12 pb-5 bg-white/5 sticky top-0 z-[1000] border-b border-white/5 ">
                 <div className="flex items-center gap-4">
-                    <button onClick={() => navigate(-1)} className="w-10 h-10 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center active:scale-90 transition-transform">
-                        <ChevronLeft size={20} strokeWidth={3} className="text-black" />
+                    <button onClick={() => navigate(-1)} className="w-10 h-10 bg-white/[0.02] border border-white/5 rounded-2xl flex items-center justify-center active:scale-90 transition-transform">
+                        <ChevronLeft size={20} strokeWidth={3} className="text-white" />
                     </button>
                     <div>
-                        <h1 className="text-[17px] font-[1000] tracking-tight text-black uppercase leading-none">Working Area</h1>
+                        <h1 className="text-[17px] font-[1000] tracking-tight text-white uppercase leading-none">Working Area</h1>
                         <p className="text-[9px] text-brand font-black uppercase tracking-[0.2em] mt-1.5">Set Your Location</p>
                     </div>
                 </div>
@@ -157,18 +157,18 @@ const CaptainLocationSelector = () => {
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Search any area, city or junction..."
-                            className="w-full bg-white border border-black/[0.06] rounded-[1.8rem] pl-12 pr-4 py-4 text-[13px] font-bold text-black outline-none focus:border-brand shadow-sm transition-all"
+                            className="w-full bg-white/5 border border-black/[0.06] rounded-[1.8rem] pl-12 pr-4 py-4 text-[13px] font-bold text-white outline-none focus:border-brand  transition-all"
                         />
                         {isGeocoding && (
                             <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                                <div className="w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                                <div className="w-4 h-4 border-white/5 border-brand border-t-transparent rounded-full animate-spin" />
                             </div>
                         )}
                     </form>
                 </div>
 
                 {/* Map Interface */}
-                <div className="flex-1 relative m-5 rounded-[2.5rem] overflow-hidden border-2 border-white shadow-2xl z-0 bg-gray-100">
+                <div className="flex-1 relative m-5 rounded-[2.5rem] overflow-hidden border-white/5 border-white shadow-2xl z-0 bg-white/[0.05]">
                     <GoogleMapBox 
                         center={mapCenter} 
                         zoom={15} 
@@ -189,13 +189,13 @@ const CaptainLocationSelector = () => {
                     <div className="absolute top-4 right-4 flex flex-col gap-2 z-[400]">
                         <button
                             onClick={handleLocate}
-                            className={`w-11 h-11 rounded-2xl bg-white text-black shadow-xl flex items-center justify-center transition-all ${isLocating ? 'animate-spin' : 'active:scale-90 hover:bg-gray-50'}`}
+                            className={`w-11 h-11 rounded-2xl bg-white/5 text-white shadow-2xl shadow-black/50 flex items-center justify-center transition-all ${isLocating ? 'animate-spin' : 'active:scale-90 hover:bg-white/[0.02]'}`}
                         >
                             <Locate size={20} strokeWidth={2.5} className={isLocating ? 'text-brand' : ''} />
                         </button>
                         <button
                             onClick={() => navigate('/captain')}
-                            className="w-11 h-11 rounded-2xl bg-white text-black shadow-xl flex items-center justify-center transition-all active:scale-90 hover:bg-gray-50"
+                            className="w-11 h-11 rounded-2xl bg-white/5 text-white shadow-2xl shadow-black/50 flex items-center justify-center transition-all active:scale-90 hover:bg-white/[0.02]"
                         >
                             <X size={20} strokeWidth={2.5} />
                         </button>
@@ -203,7 +203,7 @@ const CaptainLocationSelector = () => {
 
                     {/* Selection Indicator Point */}
                     <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                        <div className="w-8 h-8 border-2 border-brand/50 rounded-full flex items-center justify-center">
+                        <div className="w-8 h-8 border-white/5 border-brand/50 rounded-full flex items-center justify-center">
                             <div className="w-2 h-2 bg-brand rounded-full animate-pulse" />
                         </div>
                     </div>
@@ -214,7 +214,7 @@ const CaptainLocationSelector = () => {
                     <motion.div
                         initial={{ y: 20, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
-                        className="bg-white rounded-[2.5rem] p-6 shadow-2xl border border-gray-100 relative overflow-hidden"
+                        className="bg-white/5 rounded-[2.5rem] p-6 shadow-2xl border border-white/5 relative overflow-hidden"
                     >
                         <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full -mr-16 -mt-16 blur-2xl" />
 
@@ -223,8 +223,8 @@ const CaptainLocationSelector = () => {
                                 <Compass size={24} strokeWidth={2.5} />
                             </div>
                             <div className="flex-1 min-w-0">
-                                <h3 className="text-[12px] font-black text-black/20 uppercase tracking-[0.2em] mb-1">Selected Region</h3>
-                                <p className="text-[14px] font-[1000] text-black leading-tight line-clamp-2 uppercase tracking-tight">
+                                <h3 className="text-[12px] font-black text-white/20 uppercase tracking-[0.2em] mb-1">Selected Region</h3>
+                                <p className="text-[14px] font-[1000] text-white leading-tight line-clamp-2 uppercase tracking-tight">
                                     {isGeocoding ? 'Locating...' : addressName}
                                 </p>
                             </div>
@@ -234,11 +234,11 @@ const CaptainLocationSelector = () => {
                             whileTap={{ scale: 0.95 }}
                             disabled={isSaving || isGeocoding}
                             onClick={handleConfirm}
-                            className={`w-full py-5 rounded-[1.8rem] font-black text-[13px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-2xl transition-all ${isSaving ? 'bg-gray-100 text-black/20' : 'bg-black text-white active:bg-brand active:shadow-brand/20'
+                            className={`w-full py-5 rounded-[1.8rem] font-black text-[13px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-2xl transition-all ${isSaving ? 'bg-white/[0.05] text-white/20' : 'bg-black text-white active:bg-brand active:shadow-brand/20'
                                 }`}
                         >
                             {isSaving ? (
-                                <>Setting Region... <div className="w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin" /></>
+                                <>Setting Region... <div className="w-4 h-4 border-white/5 border-brand border-t-transparent rounded-full animate-spin" /></>
                             ) : (
                                 <>Start Waiting Here <ArrowRight size={18} strokeWidth={3} /></>
                             )}

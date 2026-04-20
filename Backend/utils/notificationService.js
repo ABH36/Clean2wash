@@ -2,7 +2,7 @@ const Notification = require('../models/Notification');
 const User = require('../models/User');
 const Captain = require('../models/Captain');
 const SpareDriver = require('../models/SpareDriver');
-const socketService = require('../socketService');
+const socketService = require('../services/enhancedSocketService');
 const firebaseService = require('./firebaseService');
 
 /**
@@ -68,21 +68,25 @@ const triggerNotification = async (userId, role, data) => {
                 'admin': 'new_admin_notification'
             };
 
-            const room = field === 'isAdmin' ? 'admin_room' : userId.toString();
+            // Safely convert userId to string, handle undefined/null
+            const room = field === 'isAdmin' ? 'admin_room' : (userId?._id || userId)?.toString();
             const event = socketEventMap[role.toLowerCase()] || 'new_notification';
 
-            io.to(room).emit(event, {
-                notification: {
-                    id: notification._id,
-                    title,
-                    message,
-                    type,
-                    priority,
-                    createdAt: notification.createdAt,
-                    isNew: true,
-                    metaData: notification.data
-                }
-            });
+            // Only emit if room is valid
+            if (room) {
+                io.to(room).emit(event, {
+                    notification: {
+                        id: notification._id,
+                        title,
+                        message,
+                        type,
+                        priority,
+                        createdAt: notification.createdAt,
+                        isNew: true,
+                        metaData: notification.data
+                    }
+                });
+            }
         }
 
         // 4. Multi-Channel Delivery: FCM (Background/Mobile)

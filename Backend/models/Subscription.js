@@ -1,3 +1,8 @@
+/**
+ * APARTMENT WASH / SUBSCRIPTION MODEL
+ * Handles monthly wash memberships for apartment residents.
+ * (Not associated with the Chauffeur/Spare Driver flow)
+ */
 const mongoose = require('mongoose');
 
 const subscriptionSchema = new mongoose.Schema({

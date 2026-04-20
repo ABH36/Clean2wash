@@ -189,16 +189,16 @@ const CaptainJobDetail = () => {
                 <div className="flex flex-col items-center justify-center min-h-[90vh] px-8 text-center relative overflow-hidden transition-colors duration-500">
                     <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-center pointer-events-none">
                         <motion.div animate={{ scale: [1, 1.5], opacity: [0.3, 0] }} transition={{ repeat: Infinity, duration: 4, ease: "easeOut" }}
-                            className={`absolute w-64 h-64 border-2 rounded-full ${isDarkMode ? 'border-brand/40' : 'border-brand/20'}`} />
+                            className={`absolute w-64 h-64 border-white/5 rounded-full ${isDarkMode ? 'border-brand/40' : 'border-brand/20'}`} />
                         <motion.div animate={{ scale: [1, 1.5], opacity: [0.2, 0] }} transition={{ repeat: Infinity, duration: 4, ease: "easeOut", delay: 1.5 }}
                             className={`absolute w-96 h-96 border rounded-full ${isDarkMode ? 'border-brand/30' : 'border-brand/10'}`} />
                     </div>
 
                     <div className="relative z-10 flex flex-col items-center">
-                        <div className={`w-24 h-24 rounded-[40px] flex items-center justify-center mb-8 border shadow-xl relative transition-all ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-brand/5 border-brand/10'}`}>
+                        <div className={`w-24 h-24 rounded-[40px] flex items-center justify-center mb-8 border shadow-2xl shadow-black/50 relative transition-all ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-brand/5 border-brand/10'}`}>
                             <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 8, ease: "linear" }}
-                                className={`absolute inset-0 border-2 border-dashed rounded-[40px] opacity-30 ${isDarkMode ? 'border-white' : 'border-brand'}`} />
-                            <div className={`w-16 h-16 rounded-[30px] flex items-center justify-center border shadow-inner transition-colors ${isDarkMode ? 'bg-[#1E293B] border-white/10' : 'bg-white border-brand/10'}`}>
+                                className={`absolute inset-0 border-white/5 border-dashed rounded-[40px] opacity-30 ${isDarkMode ? 'border-white' : 'border-brand'}`} />
+                            <div className={`w-16 h-16 rounded-[30px] flex items-center justify-center border shadow-inner transition-colors ${isDarkMode ? 'bg-[#1E293B] border-white/10' : 'bg-white/5 border-brand/10'}`}>
                                 <Zap size={32} className="text-brand" fill="currentColor" />
                             </div>
                         </div>
@@ -215,7 +215,7 @@ const CaptainJobDetail = () => {
 
                             {pendingRequest ? (
                                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                                    className={`mt-4 p-5 rounded-3xl border text-left transition-all ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white border-gray-100 shadow-xl'}`}>
+                                    className={`mt-4 p-5 rounded-3xl border text-left transition-all ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/5 border-white/5 shadow-2xl shadow-black/50'}`}>
                                     <div className="flex justify-between items-start mb-4">
                                         <div>
                                             <p className="text-brand text-[9px] font-black uppercase tracking-widest mb-1">Service</p>
@@ -227,7 +227,7 @@ const CaptainJobDetail = () => {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3 mb-6">
-                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isDarkMode ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-100'}`}>
+                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isDarkMode ? 'bg-white/5 border border-white/10' : 'bg-white/[0.02] border border-white/5'}`}>
                                             <MapPin size={16} className="text-brand" fill="currentColor" strokeWidth={1.5} />
                                         </div>
                                         <div className="min-w-0 flex-1">
@@ -236,7 +236,7 @@ const CaptainJobDetail = () => {
                                         </div>
                                     </div>
                                     <motion.button whileTap={{ scale: 0.97 }} onClick={() => handleAcceptRequest(pendingRequest.id)}
-                                        className={`w-full h-12 rounded-2xl font-black text-sm text-white shadow-xl transition-all flex items-center justify-center gap-2 ${isAccepting ? 'bg-green-500 shadow-green-500/20' : 'bg-brand shadow-brand/30'}`}>
+                                        className={`w-full h-12 rounded-2xl font-black text-sm text-white shadow-2xl shadow-black/50 transition-all flex items-center justify-center gap-2 ${isAccepting ? 'bg-green-500 shadow-green-500/20' : 'bg-brand shadow-brand/30'}`}>
                                         {isAccepting ? (
                                             <>Accepting... <Zap size={15} className="animate-pulse" /></>
                                         ) : (
@@ -252,7 +252,7 @@ const CaptainJobDetail = () => {
                         </div>
                         {!pendingRequest && (
                             <motion.button whileTap={{ scale: 0.96 }} onClick={() => navigate('/captain')}
-                                className={`group flex items-center gap-4 px-8 py-4 rounded-3xl transition-all shadow-xl ${isDarkMode ? 'bg-white/5 border border-white/10 hover:bg-white/10' : 'bg-white border border-gray-100 hover:bg-gray-50'}`}>
+                                className={`group flex items-center gap-4 px-8 py-4 rounded-3xl transition-all shadow-2xl shadow-black/50 ${isDarkMode ? 'bg-white/5 border border-white/10 hover:bg-white/10' : 'bg-white/5 border border-white/5 hover:bg-white/[0.02]'}`}>
                                 <span className={`text-xs font-black uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-content'}`}>Go to Dashboard</span>
                                 <div className="w-8 h-8 bg-brand rounded-xl flex items-center justify-center group-hover:bg-brand-dark transition-all">
                                     <ArrowRight size={16} className="text-white" strokeWidth={3} />
@@ -520,9 +520,9 @@ const CaptainJobDetail = () => {
 
     return (
         <CaptainLayout hideNav>
-            <header className={`${isDarkMode ? 'bg-[#1E293B]/70 border-white/5' : 'bg-white/70 border-gray-100'} backdrop-blur-xl px-4 pt-10 pb-4 border-b sticky top-0 z-40 transition-colors duration-500`}>
+            <header className={`${isDarkMode ? 'bg-[#1E293B]/70 border-white/5' : 'bg-white/70 border-white/5'} backdrop-blur-xl px-4 pt-10 pb-4 border-b sticky top-0 z-40 transition-colors duration-500`}>
                 <div className="flex items-center gap-3">
-                    <button onClick={() => navigate('/captain')} className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-gray-50 border-gray-100 text-content'}`}>
+                    <button onClick={() => navigate('/captain')} className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-white/[0.02] border-white/5 text-content'}`}>
                         <ChevronLeft size={18} strokeWidth={2.5} />
                     </button>
                     <div className="flex-1">
@@ -537,22 +537,22 @@ const CaptainJobDetail = () => {
                 <div className="flex items-center gap-2">
                     {STEPS_ORDER.map((s, i) => (
                         <React.Fragment key={s}>
-                            <div className={`flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center border-2 transition-all ${i < stepIdx ? 'bg-green-500 border-green-500' :
+                            <div className={`flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center border-white/5 transition-all ${i < stepIdx ? 'bg-green-500 border-green-500' :
                                 i === stepIdx ? `${cfg.bg} border-transparent` :
-                                    isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white border-gray-100'}`}>
+                                    isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/5 border-white/5'}`}>
                                 {i < stepIdx
                                     ? <CheckCircle2 size={14} className="text-white" strokeWidth={3} />
                                     : <span className={`text-[9px] font-black ${i === stepIdx ? 'text-white' : isDarkMode ? 'text-white/20' : 'text-gray-300'}`}>{i + 1}</span>
                                 }
                             </div>
                             {i < STEPS_ORDER.length - 1 && (
-                                <div className={`flex-1 h-1 rounded-full transition-all ${i < stepIdx ? 'bg-green-400' : isDarkMode ? 'bg-white/5' : 'bg-gray-100'}`} />
+                                <div className={`flex-1 h-1 rounded-full transition-all ${i < stepIdx ? 'bg-green-400' : isDarkMode ? 'bg-white/5' : 'bg-white/[0.05]'}`} />
                             )}
                         </React.Fragment>
                     ))}
                 </div>
 
-                <div className={`relative rounded-3xl overflow-hidden border shadow-soft transition-colors ${isDarkMode ? 'border-white/5 shadow-2xl shadow-black/40' : 'border-gray-100 shadow-sm'}`} style={{ height: '80vh', minHeight: 340 }}>
+                <div className={`relative rounded-3xl overflow-hidden border shadow-soft transition-colors ${isDarkMode ? 'border-white/5 shadow-2xl shadow-black/40' : 'border-white/5 '}`} style={{ height: '80vh', minHeight: 340 }}>
                     <GoogleMapBox
                         center={captainMapPosition?.lat ? captainMapPosition : apartmentPosition}
                         zoom={15}
@@ -565,19 +565,19 @@ const CaptainJobDetail = () => {
                             gestureHandling: 'greedy'
                         }}
                     />
-                    <div className="absolute top-3 left-3 z-[1000] flex items-center gap-2 px-3 py-2 rounded-xl bg-white/90 backdrop-blur-md border border-black/5 shadow-md">
+                    <div className="absolute top-3 left-3 z-[1000] flex items-center gap-2 px-3 py-2 rounded-xl bg-white/90 backdrop-blur-md border border-black/5 shadow-2xl shadow-black/40">
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                         <span className="text-[9px] font-black uppercase tracking-widest text-content">Live Route</span>
                     </div>
                     <button
                         onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(liveBooking.address)}`, '_blank')}
-                        className="absolute bottom-3 right-3 bg-brand text-white flex items-center gap-2 px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-md hover:brightness-110 active:scale-95 transition-all z-[1000]"
+                        className="absolute bottom-3 right-3 bg-brand text-white flex items-center gap-2 px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-2xl shadow-black/40 hover:brightness-110 active:scale-95 transition-all z-[1000]"
                     >
                         <Navigation size={12} strokeWidth={2.5} /> Navigate
                     </button>
                 </div>
 
-                <div className={`rounded-2xl border px-4 py-4 flex items-start gap-3 transition-all duration-500 ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/20' : 'bg-white border-gray-100 shadow-soft'}`}>
+                <div className={`rounded-2xl border px-4 py-4 flex items-start gap-3 transition-all duration-500 ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/20' : 'bg-white/5 border-white/5 shadow-soft'}`}>
                     <div className="w-9 h-9 bg-brand/10 rounded-xl flex items-center justify-center flex-shrink-0">
                         <MapPin size={16} className="text-brand" fill="currentColor" strokeWidth={1.5} />
                     </div>
@@ -627,7 +627,7 @@ const CaptainJobDetail = () => {
                     </motion.div>
                 )}
 
-                <div className={`rounded-2xl border px-4 py-4 transition-all duration-500 ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl' : 'bg-white border-gray-100 shadow-soft'}`}>
+                <div className={`rounded-2xl border px-4 py-4 transition-all duration-500 ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl' : 'bg-white/5 border-white/5 shadow-soft'}`}>
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
                             <div className="w-11 h-11 bg-brand/10 border border-brand/20 rounded-xl overflow-hidden flex items-center justify-center">
@@ -639,9 +639,21 @@ const CaptainJobDetail = () => {
                             </div>
                             <div>
                                 <p className={`font-black text-sm ${isDarkMode ? 'text-white' : 'text-content'}`}>{liveBooking.userName || 'Customer'}</p>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                    <span className={`text-[9px] font-bold ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>★ {liveBooking.userRating || 4.9}</span>
-                                    <span className={`text-[9px] font-bold ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>· Verified User</span>
+                                <div className="flex items-center gap-2 mt-1">
+                                    {liveBooking.isUserVerified ? (
+                                        <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-gradient-to-r from-amber-500/20 to-emerald-500/20 border border-amber-500/30 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.1)]">
+                                            <Shield size={10} className="text-amber-500" fill="currentColor" />
+                                            <span className="text-[9px] font-black uppercase tracking-wider text-amber-600">Verified Elite</span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-gray-500/10 border border-gray-500/20 rounded-full">
+                                            <Shield size={9} className="text-gray-400" />
+                                            <span className="text-[8px] font-black uppercase tracking-widest text-white/40">{liveBooking.userKycStatus === 'pending' ? 'Verification Pending' : 'Basic Trust'}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex items-center gap-1 px-2 py-0.5 bg-brand/5 border border-brand/10 rounded-full">
+                                        <span className="text-[8px] font-black uppercase tracking-widest text-brand">⭐ {liveBooking.userRating || 5.0}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -672,7 +684,7 @@ const CaptainJobDetail = () => {
 
                 {['Before Wash', 'After Wash'].includes(step) && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                        className={`w-full flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-8 transition-all space-y-4 ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
+                        className={`w-full flex flex-col items-center justify-center border-white/5 border-dashed rounded-2xl p-8 transition-all space-y-4 ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/[0.02] border-white/10'}`}>
                         <input
                             type="file"
                             accept="image/*"
@@ -691,7 +703,7 @@ const CaptainJobDetail = () => {
                         ) : (
                             <div
                                 onClick={openCamera}
-                                className="w-20 h-20 bg-brand/10 border-2 border-brand/20 rounded-[2.5rem] flex items-center justify-center relative overflow-hidden group cursor-pointer shadow-lg shadow-brand/5 active:scale-95 transition-all"
+                                className="w-20 h-20 bg-brand/10 border-white/5 border-brand/20 rounded-[2.5rem] flex items-center justify-center relative overflow-hidden group cursor-pointer shadow-lg shadow-brand/5 active:scale-95 transition-all"
                             >
                                 <div className="absolute inset-0 bg-brand/20 animate-pulse opacity-50" />
                                 <Camera size={32} className="text-brand group-hover:scale-110 transition-transform relative z-10" fill="currentColor" />
@@ -707,7 +719,7 @@ const CaptainJobDetail = () => {
                             </p>
                         </div>
                         <div className="flex items-center gap-2">
-                            <div className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'bg-white/5 text-white/40' : 'bg-white text-gray-400'}`}>
+                            <div className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'bg-white/5 text-white/40' : 'bg-white/5 text-gray-400'}`}>
                                 Portfolio Check: {step === 'Before Wash' ? (isApartmentMission ? 'Vehicle Proof & Slot Match' : 'Identity & Entry') : 'Job Completion'}
                             </div>
                             <div className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 ${isDarkMode ? 'bg-brand/10 text-brand' : 'bg-brand/5 text-brand'}`}>
@@ -762,11 +774,11 @@ const CaptainJobDetail = () => {
                                             }
                                         }
                                     }}
-                                    className={`w-14 h-16 rounded-xl text-center text-3xl font-black transition-all outline-none border-2 ${pinInput[index] && pinInput[index] !== ' '
+                                    className={`w-14 h-16 rounded-xl text-center text-3xl font-black transition-all outline-none border-white/5 ${pinInput[index] && pinInput[index] !== ' '
                                         ? 'border-brand bg-brand/10 text-brand shadow-lg shadow-brand/10'
                                         : isDarkMode
                                             ? 'bg-black/40 border-white/10 text-white focus:border-white/30'
-                                            : 'bg-white border-gray-200 text-content focus:border-brand shadow-sm'
+                                            : 'bg-white/5 border-white/10 text-content focus:border-brand '
                                         }`}
                                 />
                             ))}
@@ -776,7 +788,7 @@ const CaptainJobDetail = () => {
 
                 {(stepIdx >= 3 || step === 'Washing') && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                        className={`rounded-2xl border p-4 space-y-3 transition-all duration-500 ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl' : 'bg-white border-gray-100 shadow-soft'}`}>
+                        className={`rounded-2xl border p-4 space-y-3 transition-all duration-500 ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl' : 'bg-white/5 border-white/5 shadow-soft'}`}>
                         <p className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Service Checklist</p>
                         {(liveBooking.service?.features?.length > 0 ? liveBooking.service.features : ['Exterior Foam Wash', 'Interior Vacuum', 'Microfiber Dry', 'Tire Dressing']).map((item, i) => (
                             <div key={item} className="flex items-center gap-3">
@@ -790,14 +802,14 @@ const CaptainJobDetail = () => {
                 )}
             </div>
 
-            <div className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md backdrop-blur-md border-t px-4 py-4 z-50 transition-all duration-500 ${isDarkMode ? 'bg-[#1E293B]/90 border-white/5 shadow-[0_-15px_50px_rgba(0,0,0,0.4)]' : 'bg-white/90 border-gray-100 shadow-[0_-15px_40px_rgba(0,0,0,0.05)]'}`}>
+            <div className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md backdrop-blur-md border-t px-4 py-4 z-50 transition-all duration-500 ${isDarkMode ? 'bg-[#1E293B]/90 border-white/5 shadow-[0_-15px_50px_rgba(0,0,0,0.4)]' : 'bg-white/90 border-white/5 shadow-[0_-15px_40px_rgba(0,0,0,0.05)]'}`}>
                 {['Arrived', 'Before Wash'].includes(step) && (
                     <div className="grid grid-cols-1 gap-3 mb-3">
                         <motion.button
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             onClick={handleReportIssue}
-                            className="w-full h-12 rounded-2xl border-2 border-red-500/30 text-red-500 font-black text-[10px] uppercase tracking-widest bg-red-500/5 hover:bg-red-500/10 transition-colors"
+                            className="w-full h-12 rounded-2xl border-white/5 border-red-500/30 text-red-500 font-black text-[10px] uppercase tracking-widest bg-red-500/5 hover:bg-red-500/10 transition-colors"
                         >
                             Vehicle Not Found / Access Issue
                         </motion.button>
@@ -806,7 +818,7 @@ const CaptainJobDetail = () => {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 onClick={handleSkipService}
-                                className="w-full h-12 rounded-2xl border-2 border-gray-300/50 text-gray-700 font-black text-[10px] uppercase tracking-widest bg-gray-100/70 hover:bg-gray-200 transition-colors"
+                                className="w-full h-12 rounded-2xl border-white/5 border-gray-300/50 text-white/80 font-black text-[10px] uppercase tracking-widest bg-white/[0.05]/70 hover:bg-gray-200 transition-colors"
                             >
                                 Skip Today&apos;s Wash
                             </motion.button>
@@ -824,7 +836,7 @@ const CaptainJobDetail = () => {
                         <span className="text-white font-black text-sm uppercase tracking-wider">{cfg.cta}</span>
                     </div>
                     {isVerifying ? (
-                        <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <div className="w-6 h-6 border-white/5 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
                         <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md shadow-inner">
                             <ArrowRight size={18} className="text-white" strokeWidth={3} />
@@ -863,7 +875,7 @@ const CaptainJobDetail = () => {
                                 className="w-full h-full object-cover scale-x-[-1] absolute"
                             />
                             {/* Visual HUD Focus Frame */}
-                            <div className="relative w-64 h-64 border-2 border-white/20 rounded-[3rem] shadow-[0_0_0_1000px_rgba(0,0,0,0.5)]">
+                            <div className="relative w-64 h-64 border-white/5 border-white/20 rounded-[3rem] shadow-[0_0_0_1000px_rgba(0,0,0,0.5)]">
                                 <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-brand rounded-tl-2xl" />
                                 <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-brand rounded-tr-2xl" />
                                 <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-brand rounded-bl-2xl" />
@@ -877,7 +889,7 @@ const CaptainJobDetail = () => {
                             </p>
                             <button 
                                 onClick={capturePhoto}
-                                className="w-20 h-20 bg-white rounded-full flex items-center justify-center p-2 active:scale-90 transition-transform shadow-2xl shadow-white/10"
+                                className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center p-2 active:scale-90 transition-transform shadow-2xl shadow-white/10"
                             >
                                 <div className="w-full h-full border-4 border-black/5 rounded-full flex items-center justify-center">
                                     <div className="w-14 h-14 bg-brand rounded-full shadow-inner" />

@@ -459,7 +459,7 @@ const CaptainHome = () => {
     return (
         <CaptainLayout>
             {/* ── Header ── */}
-            <header className={`${isDarkMode ? 'bg-[#0F172A]' : 'bg-gray-50'} px-4 pt-10 pb-4 sticky top-0 z-40 transition-colors duration-500`}>
+            <header className={`${isDarkMode ? 'bg-[#0F172A]' : 'bg-white/[0.02]'} px-4 pt-10 pb-4 sticky top-0 z-40 transition-colors duration-500`}>
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex-1">
                         <p className={`${isDarkMode ? 'text-white/40' : 'text-content-subtle'} text-[9px] font-black uppercase tracking-widest`}>Captain App</p>
@@ -469,19 +469,19 @@ const CaptainHome = () => {
                     <div className="flex items-center gap-1.5">
                         <button
                             onClick={toggleDarkMode}
-                            className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 border border-white/10 text-brand' : 'bg-gray-100 border border-gray-200 text-brand'}`}
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 border border-white/10 text-brand' : 'bg-white/[0.05] border border-white/10 text-brand'}`}
                         >
                             {isDarkMode ? <Sun size={14} /> : <Moon size={14} />}
                         </button>
                         <button
                             onClick={() => navigate('/captain/notifications')}
-                            className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' : 'bg-gray-100 border-gray-200 text-gray-400 hover:text-brand'}`}>
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' : 'bg-white/[0.05] border-white/10 text-gray-400 hover:text-brand'}`}>
                             <Bell size={14} />
                         </button>
                         <motion.button whileTap={{ scale: 0.95 }} onClick={handleToggleOnline}
                             className={`flex items-center gap-1.5 px-2 py-1.5 rounded-xl border font-black text-[10px] uppercase tracking-widest transition-all ${online
                                 ? isDarkMode ? 'bg-green-500/15 border-green-500/30 text-green-400' : 'bg-green-500/10 border-green-200 text-green-600'
-                                : isDarkMode ? 'bg-white/5 border-white/10 text-white/20' : 'bg-gray-100 border-gray-200 text-gray-400'}`}>
+                                : isDarkMode ? 'bg-white/5 border-white/10 text-white/20' : 'bg-white/[0.05] border-white/10 text-gray-400'}`}>
                             {online ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
                             {online ? 'ON' : 'OFF'}
                         </motion.button>
@@ -496,11 +496,11 @@ const CaptainHome = () => {
                         { label: 'Rating', value: `${currentRating.toFixed(1)}★`, color: 'text-amber-500' },
                         { label: 'Status', value: online ? 'ON' : 'OFF', color: online ? 'text-green-500' : 'text-brand' },
                     ].map(s => (
-                        <div key={s.label} className={`${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white border-gray-100 shadow-sm'} border rounded-xl px-2 py-3 text-center transition-all duration-500 hover:scale-105 active:scale-95 cursor-pointer`}>
+                        <div key={s.label} className={`${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white/5 border-white/5 '} border rounded-xl px-2 py-3 text-center transition-all duration-500 hover:scale-105 active:scale-95 cursor-pointer`}>
                             {captainJobsLoading ? (
                                 <div className="space-y-2">
                                     <div className={`h-4 w-10 mx-auto rounded-md animate-pulse ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`} />
-                                    <div className={`h-2 w-8 mx-auto rounded-md animate-pulse ${isDarkMode ? 'bg-white/5' : 'bg-gray-100'}`} />
+                                    <div className={`h-2 w-8 mx-auto rounded-md animate-pulse ${isDarkMode ? 'bg-white/5' : 'bg-white/[0.05]'}`} />
                                 </div>
                             ) : (
                                 <>
@@ -514,7 +514,7 @@ const CaptainHome = () => {
             </header>
 
             {/* ── Full-Screen Rapido-Style Map Layer ── */}
-            <div className="relative w-full shadow-md z-30" style={{ height: 320 }}>
+            <div className="relative w-full shadow-2xl shadow-black/40 z-30" style={{ height: 320 }}>
                 {positionReady && (
                     <GoogleMapBox
                         center={captainPosition}
@@ -569,7 +569,7 @@ const CaptainHome = () => {
                 {!positionReady && (
                     <div className={`w-full h-full flex items-center justify-center ${isDarkMode ? 'bg-[#1E293B]' : 'bg-slate-100'}`}>
                         <div className="flex flex-col items-center gap-3">
-                            <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                            <div className="w-8 h-8 border-white/5 border-brand border-t-transparent rounded-full animate-spin" />
                             <p className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/30' : 'text-gray-400'}`}>Acquiring GPS...</p>
                         </div>
                     </div>
@@ -579,7 +579,7 @@ const CaptainHome = () => {
                 <div className="absolute top-4 left-4 right-4 z-[500] flex items-center justify-between pointer-events-none">
                     <div className={`flex items-center gap-2 px-3 py-2 rounded-2xl backdrop-blur-xl border shadow-2xl pointer-events-auto ${online
                         ? isDarkMode ? 'bg-green-500/20 border-green-500/30 text-green-400' : 'bg-green-500/15 border-green-400/40 text-green-700'
-                        : isDarkMode ? 'bg-black/50 border-white/10 text-white/50' : 'bg-white/80 border-gray-200 text-gray-500'
+                        : isDarkMode ? 'bg-black/50 border-white/10 text-white/50' : 'bg-white/80 border-white/10 text-white/40'
                         }`}>
                         <span className={`w-2 h-2 rounded-full ${online ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`} />
                         <span className="font-black text-[10px] uppercase tracking-widest">
@@ -594,13 +594,13 @@ const CaptainHome = () => {
                     <div className="flex flex-col gap-2 pointer-events-auto">
                         <button
                             onClick={() => setRecenter(r => !r)}
-                            className={`w-10 h-10 rounded-2xl backdrop-blur-xl border flex items-center justify-center shadow-xl transition-all active:scale-90 ${recenter ? 'bg-brand border-brand text-white shadow-brand/20' : isDarkMode ? 'bg-black/50 border-white/10 text-white hover:bg-white/20' : 'bg-white/80 border-gray-200 text-content hover:bg-white'}`}
+                            className={`w-10 h-10 rounded-2xl backdrop-blur-xl border flex items-center justify-center shadow-2xl shadow-black/50 transition-all active:scale-90 ${recenter ? 'bg-brand border-brand text-white shadow-brand/20' : isDarkMode ? 'bg-black/50 border-white/10 text-white hover:bg-white/20' : 'bg-white/80 border-white/10 text-content hover:bg-white/5'}`}
                         >
                             <Locate size={16} strokeWidth={2.5} />
                         </button>
                         <button
                             onClick={() => navigate('/captain/area-select')}
-                            className={`w-10 h-10 rounded-2xl backdrop-blur-xl border flex items-center justify-center shadow-xl transition-all active:scale-90 ${isDarkMode ? 'bg-black/50 border-white/10 text-brand' : 'bg-white/80 border-gray-200 text-brand'}`}
+                            className={`w-10 h-10 rounded-2xl backdrop-blur-xl border flex items-center justify-center shadow-2xl shadow-black/50 transition-all active:scale-90 ${isDarkMode ? 'bg-black/50 border-white/10 text-brand' : 'bg-white/80 border-white/10 text-brand'}`}
                         >
                             <Compass size={16} strokeWidth={2.5} />
                         </button>
@@ -633,7 +633,7 @@ const CaptainHome = () => {
                     <motion.div
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className={`p-4 rounded-[2rem] border-2 shadow-2xl overflow-hidden relative ${isDarkMode ? 'bg-[#1E293B] border-brand/30' : 'bg-white border-brand/20'}`}
+                        className={`p-4 rounded-[2rem] border-white/5 shadow-2xl overflow-hidden relative ${isDarkMode ? 'bg-[#1E293B] border-brand/30' : 'bg-white/5 border-brand/20'}`}
                     >
                         {/* Shimmering background for urgency */}
                         <div className="absolute inset-0 bg-gradient-to-r from-brand/5 via-transparent to-brand/5 animate-pulse" />
@@ -649,12 +649,12 @@ const CaptainHome = () => {
                                         <p className="text-brand text-[9px] font-black uppercase tracking-widest leading-none">Confim Attendance Now</p>
                                     </div>
                                 </div>
-                                <div className={`px-3 py-1.5 rounded-xl border font-black text-[10px] tabular-nums ${isDarkMode ? 'bg-white/5 border-white/10 text-white/40' : 'bg-gray-50 border-gray-100 text-gray-400'}`}>
+                                <div className={`px-3 py-1.5 rounded-xl border font-black text-[10px] tabular-nums ${isDarkMode ? 'bg-white/5 border-white/10 text-white/40' : 'bg-white/[0.02] border-white/5 text-gray-400'}`}>
                                     Starts in <CountdownTimer targetTime={needsCommitment.schedule} />
                                 </div>
                             </div>
 
-                            <div className={`p-4 rounded-2xl mb-4 border transition-all ${isDarkMode ? 'bg-black/20 border-white/5 shadow-inner' : 'bg-gray-50 border-gray-100'}`}>
+                            <div className={`p-4 rounded-2xl mb-4 border transition-all ${isDarkMode ? 'bg-black/20 border-white/5 shadow-inner' : 'bg-white/[0.02] border-white/5'}`}>
                                 <div className="flex justify-between items-start mb-2">
                                     <h3 className={`font-black text-base leading-none ${isDarkMode ? 'text-white' : 'text-content'}`}>{needsCommitment.serviceName}</h3>
                                     <p className="font-black text-sm text-brand">{needsCommitment.price}</p>
@@ -681,7 +681,7 @@ const CaptainHome = () => {
                                 whileTap={{ scale: 0.96 }}
                                 disabled={isCommitting === needsCommitment.id}
                                 onClick={() => handleCommit(needsCommitment.id)}
-                                className={`w-full h-12 rounded-2xl font-black text-sm text-white shadow-xl transition-all flex items-center justify-center gap-3 bg-brand shadow-brand/30`}
+                                className={`w-full h-12 rounded-2xl font-black text-sm text-white shadow-2xl shadow-black/50 transition-all flex items-center justify-center gap-3 bg-brand shadow-brand/30`}
                             >
                                 {isCommitting === needsCommitment.id ? (
                                     <>Synchronizing Protocol... <Zap size={15} className="animate-pulse" /></>
@@ -710,7 +710,7 @@ const CaptainHome = () => {
                                         key={isBatch ? `batch-${mission.items[0].itemId}` : `${mission.orderId}-${mission._id}`}
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
-                                        className={`p-4 rounded-[1.5rem] border shadow-lg relative overflow-hidden ${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100'}`}
+                                        className={`p-4 rounded-[1.5rem] border shadow-lg relative overflow-hidden ${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white/5 border-white/5'}`}
                                     >
                                         <div className="flex items-start justify-between relative z-10">
                                             <div className="flex-1">
@@ -744,7 +744,7 @@ const CaptainHome = () => {
                                         <motion.button
                                             whileTap={{ scale: 0.95 }}
                                             onClick={() => handleAcceptProductMission(mission.orderId, mission._id, isBatch, mission.items)}
-                                            className="w-full mt-4 h-10 bg-black text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-black/20 flex items-center justify-center gap-2"
+                                            className="w-full mt-4 h-10 bg-black text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-2xl shadow-black/50 shadow-black/20 flex items-center justify-center gap-2"
                                         >
                                             {isBatch ? 'Claim Batch Missions' : 'Claim Pickup Mission'} <ArrowRight size={14} />
                                         </motion.button>
@@ -758,7 +758,7 @@ const CaptainHome = () => {
                 {/* ── Verification Banner ── */}
                 {!user.isVerified && (
                     <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                        className={`p-4 rounded-2xl border flex items-center gap-4 ${isDarkMode ? 'bg-orange-500/10 border-orange-500/20 shadow-lg shadow-orange-500/5' : 'bg-orange-50 border-orange-100 shadow-sm'}`}>
+                        className={`p-4 rounded-2xl border flex items-center gap-4 ${isDarkMode ? 'bg-orange-500/10 border-orange-500/20 shadow-lg shadow-orange-500/5' : 'bg-orange-50 border-orange-100 '}`}>
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isDarkMode ? 'bg-orange-500/20' : 'bg-orange-100'}`}>
                             <Clock size={20} className="text-orange-500" strokeWidth={2.5} />
                         </div>
@@ -776,7 +776,7 @@ const CaptainHome = () => {
                         animate={{ opacity: 1, y: 0 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => navigate('/captain/apartment-route')}
-                        className={`w-full rounded-[2rem] border p-4 text-left flex items-center justify-between gap-4 ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/20' : 'bg-white border-gray-100 shadow-soft'}`}
+                        className={`w-full rounded-[2rem] border p-4 text-left flex items-center justify-between gap-4 ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/20' : 'bg-white/5 border-white/5 shadow-soft'}`}
                     >
                         <div className="flex items-center gap-3 min-w-0">
                             <div className="w-11 h-11 rounded-2xl bg-brand/10 border border-brand/10 flex items-center justify-center">
@@ -795,7 +795,7 @@ const CaptainHome = () => {
                 {/* ── Active Job Card ── */}
                 {activeJob && (
                     <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-                        className={`rounded-2xl border p-4 transition-all duration-500 flex flex-col gap-4 cursor-pointer hover:brightness-105 active:scale-[0.98] ${isDarkMode ? 'bg-brand border-white/10' : 'bg-[#0F172A] border-white/5 text-white'} shadow-xl`}
+                        className={`rounded-2xl border p-4 transition-all duration-500 flex flex-col gap-4 cursor-pointer hover:brightness-105 active:scale-[0.98] ${isDarkMode ? 'bg-brand border-white/10' : 'bg-[#0F172A] border-white/5 text-white'} shadow-2xl shadow-black/50`}
                         onClick={() => navigate(`/captain/job?id=${activeJob.id}`)}>
                         <div className="flex items-center gap-4">
                             <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDarkMode ? 'bg-white/20' : 'bg-brand/20'}`}>
@@ -847,15 +847,15 @@ const CaptainHome = () => {
                                 animate={{ y: 0, scale: 1 }}
                                 exit={{ y: "100%", opacity: 0 }}
                                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                                className="w-full max-w-md bg-white rounded-[2.5rem] shadow-[0_-15px_60px_rgba(0,0,0,0.3)] overflow-hidden"
+                                className="w-full max-w-md bg-white/5 rounded-[2.5rem] shadow-[0_-15px_60px_rgba(0,0,0,0.3)] overflow-hidden"
                             >
                                 {/* Request Header - High Energy */}
                                 <div className="bg-brand px-6 py-5 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-3 h-3 bg-white rounded-full animate-ping" />
+                                        <div className="w-3 h-3 bg-white/5 rounded-full animate-ping" />
                                         <h2 className="text-white font-[1000] text-[15px] uppercase tracking-widest leading-none">New Instant Request</h2>
                                     </div>
-                                    <div className="bg-black/10 px-3 py-1.5 rounded-xl border border-white/20">
+                                    <div className="bg-white/10 px-3 py-1.5 rounded-xl border border-white/20">
                                         <span className="text-white font-black text-xs tabular-nums">{timeLeft}s remaining</span>
                                     </div>
                                 </div>
@@ -868,39 +868,39 @@ const CaptainHome = () => {
                                                 <div className="px-2 py-0.5 bg-brand/10 border border-brand/20 rounded-md">
                                                     <span className="text-brand font-black text-[9px] uppercase tracking-tighter">Instant Wash</span>
                                                 </div>
-                                                <div className="px-2 py-0.5 bg-black/5 rounded-md">
-                                                    <span className="text-black/40 font-black text-[9px] uppercase tracking-tighter">
+                                                <div className="px-2 py-0.5 bg-white/5 rounded-md">
+                                                    <span className="text-white/40 font-black text-[9px] uppercase tracking-tighter">
                                                         {getJobDistance(pendingRequests[0]) || 'Nearby'}
                                                     </span>
                                                 </div>
                                             </div>
-                                            <h3 className="text-2xl font-[1000] text-black tracking-tighter leading-none mb-2">
+                                            <h3 className="text-2xl font-[1000] text-white tracking-tighter leading-none mb-2">
                                                 {pendingRequests[0].serviceName}
                                             </h3>
                                             <div className="flex items-center gap-2">
                                                 <Car size={14} className="text-black/30" />
-                                                <span className="text-[13px] font-black text-black/60 uppercase tracking-tight">{pendingRequests[0].vehicle}</span>
+                                                <span className="text-[13px] font-black text-white/60 uppercase tracking-tight">{pendingRequests[0].vehicle}</span>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-[10px] font-black text-black/20 uppercase tracking-widest mb-1">Your Earnings</p>
-                                            <p className="text-3xl font-[1000] text-black tracking-tighter tabular-nums leading-none">
+                                            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-1">Your Earnings</p>
+                                            <p className="text-3xl font-[1000] text-white tracking-tighter tabular-nums leading-none">
                                                 {pendingRequests[0].price}
                                             </p>
                                         </div>
                                     </div>
 
                                     {/* Location Detail - Rapido Style Pin Map Icon */}
-                                    <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100 flex items-start gap-4">
+                                    <div className="bg-white/[0.02] rounded-2xl p-5 border border-white/5 flex items-start gap-4">
                                         <div className="relative mt-1">
-                                            <div className="w-10 h-10 bg-brand text-black rounded-xl flex items-center justify-center shadow-lg shadow-brand/20">
+                                            <div className="w-10 h-10 bg-brand text-white rounded-xl flex items-center justify-center shadow-lg shadow-brand/20">
                                                 <MapPin size={22} fill="currentColor" />
                                             </div>
                                             <div className="absolute top-full left-1/2 -translate-x-1/2 w-0.5 h-6 bg-brand/20 border-l border-dashed border-brand/50 mt-1" />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-[10px] font-black text-black/30 uppercase tracking-widest mb-1">Pickup Address</p>
-                                            <p className="text-[14px] font-[1000] text-black leading-tight mb-1 truncate">
+                                            <p className="text-[14px] font-[1000] text-white leading-tight mb-1 truncate">
                                                 {pendingRequests[0].address}
                                             </p>
                                             <p className="text-[12px] font-bold text-brand leading-none truncate">
@@ -914,7 +914,7 @@ const CaptainHome = () => {
                                         <motion.button
                                             whileTap={{ scale: 0.95 }}
                                             onClick={() => handleDecline(pendingRequests[0].id)}
-                                            className="w-20 h-16 flex items-center justify-center rounded-2xl bg-gray-100 hover:bg-gray-200 text-black/40 transition-colors"
+                                            className="w-20 h-16 flex items-center justify-center rounded-2xl bg-white/[0.05] hover:bg-gray-200 text-white/40 transition-colors"
                                         >
                                             <X size={24} strokeWidth={3} />
                                         </motion.button>
@@ -933,7 +933,7 @@ const CaptainHome = () => {
                                     </div>
 
                                     {/* Dynamic Progress Bar at very bottom */}
-                                    <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-gray-100">
+                                    <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-white/[0.05]">
                                         <motion.div
                                             initial={{ width: "100%" }}
                                             animate={{ width: `${(timeLeft / 30) * 100}%` }}
@@ -950,8 +950,8 @@ const CaptainHome = () => {
                 {/* ── Offline hint when offline ── */}
                 {!online && !activeJob && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                        className={`p-5 rounded-2xl border flex flex-col items-center gap-3 text-center transition-all ${isDarkMode ? 'bg-white/3 border-white/5' : 'bg-white border-gray-100 shadow-sm'}`}>
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${isDarkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
+                        className={`p-5 rounded-2xl border flex flex-col items-center gap-3 text-center transition-all ${isDarkMode ? 'bg-white/3 border-white/5' : 'bg-white/5 border-white/5 '}`}>
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${isDarkMode ? 'bg-white/5' : 'bg-white/[0.02]'}`}>
                             <ToggleLeft size={28} className={isDarkMode ? 'text-white/20' : 'text-gray-300'} />
                         </div>
                         <div>
@@ -974,17 +974,17 @@ const CaptainHome = () => {
                                 Protocols Active <Shield size={10} className="fill-brand" />
                             </div>
                         </div>
-                        <div className={`rounded-3xl border p-4 transition-all duration-500 overflow-hidden space-y-4 ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/30' : 'bg-white border-gray-100 shadow-soft'}`}>
+                        <div className={`rounded-3xl border p-4 transition-all duration-500 overflow-hidden space-y-4 ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/30' : 'bg-white/5 border-white/5 shadow-soft'}`}>
                             {activeJobs.map((job, i) => {
                                 const isCurrent = job.id === activeJob?.id || job._id === activeJob?._id;
                                 return (
                                     <div key={job.id} className="relative pl-6">
                                         {/* Timeline Line */}
                                         {i < activeJobs.length - 1 && (
-                                            <div className={`absolute left-[5px] top-4 w-[2px] h-[calc(100%+8px)] transition-colors ${isCurrent ? 'bg-brand' : isDarkMode ? 'bg-white/5' : 'bg-gray-100'}`} />
+                                            <div className={`absolute left-[5px] top-4 w-[2px] h-[calc(100%+8px)] transition-colors ${isCurrent ? 'bg-brand' : isDarkMode ? 'bg-white/5' : 'bg-white/[0.05]'}`} />
                                         )}
                                         {/* Dot */}
-                                        <div className={`absolute left-0 top-1 w-3 h-3 rounded-full border-2 z-10 transition-all ${isCurrent ? 'bg-brand border-white' : isDarkMode ? 'bg-[#0F172A] border-white/10' : 'bg-white border-gray-200'}`} />
+                                        <div className={`absolute left-0 top-1 w-3 h-3 rounded-full border-white/5 z-10 transition-all ${isCurrent ? 'bg-brand border-white' : isDarkMode ? 'bg-[#0F172A] border-white/10' : 'bg-white/5 border-white/10'}`} />
 
                                         <div onClick={() => navigate(`/captain/job?id=${job.id}`)} className={`group block p-3 rounded-2xl border transition-all active:scale-95 ${isCurrent ? (isDarkMode ? 'bg-brand/10 border-brand/20' : 'bg-brand/5 border-brand/10') : 'border-transparent'}`}>
                                             <div className="flex justify-between items-start">
@@ -1027,7 +1027,7 @@ const CaptainHome = () => {
                 {/* ── Recent Completed Jobs ── */}
                 <section className="space-y-2">
                     <p className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Today's Completed Jobs</p>
-                    <div className={`rounded-2xl border transition-all duration-500 overflow-hidden ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl' : 'bg-white border-gray-100 shadow-soft'}`}>
+                    <div className={`rounded-2xl border transition-all duration-500 overflow-hidden ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl' : 'bg-white/5 border-white/5 shadow-soft'}`}>
                         {completedJobs.length > 0 ? completedJobs.slice(0, 5).map((job, i, arr) => (
                             <div key={job.id} className={`flex items-center gap-3 px-4 py-3.5 ${i < arr.length - 1 ? (isDarkMode ? 'border-b border-white/5' : 'border-b border-gray-50') : ''}`}>
                                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${isDarkMode ? 'bg-green-500/10' : 'bg-green-50'}`}>
@@ -1061,7 +1061,7 @@ const CaptainHome = () => {
                 </section>
 
                 {/* ── Performance Card ── */}
-                <div className={`${isDarkMode ? 'bg-brand shadow-brand/20' : 'bg-[#0F172A] shadow-content/20'} rounded-2xl p-4 flex items-center gap-4 relative overflow-hidden shadow-xl transition-all duration-500`}
+                <div className={`${isDarkMode ? 'bg-brand shadow-brand/20' : 'bg-[#0F172A] shadow-content/20'} rounded-2xl p-4 flex items-center gap-4 relative overflow-hidden shadow-2xl shadow-black/50 transition-all duration-500`}
                     onClick={() => navigate('/captain/earnings')} role="button">
                     <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${isDarkMode ? 'bg-white/20' : 'bg-brand/20'}`}>
                         <TrendingUp size={22} className={isDarkMode ? 'text-white' : 'text-brand'} />

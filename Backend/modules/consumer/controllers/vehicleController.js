@@ -315,7 +315,26 @@ exports.getComplianceStatus = catchAsync(async (req, res, next) => {
 
 // Get all unique brands from catalog
 exports.getUniqueBrands = catchAsync(async (req, res, next) => {
-    const brands = await VehicleModel.distinct('brand', { isActive: true });
+    let { type } = req.query;
+    const query = { isActive: true };
+    
+    if (type) {
+        if (type === '4 Wheeler') {
+            query.type = { $nin: ['Bike', 'Scooter', 'Superbike'] };
+        } else if (type === '2 Wheeler') {
+            query.type = { $in: ['Bike', 'Scooter', 'Superbike'] };
+        } else {
+            query.type = type;
+        }
+    }
+
+    let brands = await VehicleModel.distinct('brand', query);
+    
+    // Fallback: If no brands found for the specific type (e.g. data mismatch), 
+    // fetch all active brands so the user isn't stuck with an empty screen
+    if (!brands || brands.length === 0) {
+        brands = await VehicleModel.distinct('brand', { isActive: true });
+    }
     
     res.status(200).json({
         status: 'success',

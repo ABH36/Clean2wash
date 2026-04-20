@@ -131,7 +131,7 @@ const VendorHome = () => {
                                     initial={{ opacity: 0, scale: 0.95 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     transition={{ delay: i * 0.1 }}
-                                    className="min-w-[300px] bg-gradient-to-br from-orange-50 to-white p-6 rounded-[2rem] border-2 border-orange-100 shadow-xl shadow-orange-500/5 relative overflow-hidden group"
+                                    className="min-w-[300px] bg-gradient-to-br from-orange-50 to-white p-6 rounded-[2rem] border-white/5 border-orange-100 shadow-2xl shadow-black/50 shadow-orange-500/5 relative overflow-hidden group"
                                 >
                                     <div className="relative z-10">
                                         <div className="flex justify-between items-start mb-4">
@@ -174,7 +174,7 @@ const VendorHome = () => {
                             initial={{ opacity: 0, y: 15 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.1 }}
-                            className="bg-surface p-5 md:p-8 rounded-[2.5rem] border border-gray-100/10 shadow-soft relative overflow-hidden group hover:border-brand/30 transition-all"
+                            className="bg-surface p-5 md:p-8 rounded-[2.5rem] border border-white/5/10 shadow-soft relative overflow-hidden group hover:border-brand/30 transition-all"
                         >
                             <div className="relative z-10">
                                 <p className="text-[9px] md:text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] mb-2">{s.label}</p>
@@ -195,7 +195,7 @@ const VendorHome = () => {
                     {/* Recent Jobs */}
                     <div className="lg:col-span-2 space-y-6">
                         {loading ? (
-                            <div className="flex items-center justify-center py-20 bg-surface rounded-[2.5rem] border border-gray-100/10">
+                            <div className="flex items-center justify-center py-20 bg-surface rounded-[2.5rem] border border-white/5/10">
                                 <div className="w-10 h-10 border-4 border-brand/20 border-t-brand rounded-full animate-spin shadow-lg shadow-brand/20" />
                             </div>
                         ) : (
@@ -219,12 +219,12 @@ const VendorHome = () => {
                                             key={job.id}
                                             layoutId={job.id}
                                             onClick={() => navigate(job.isProduct ? `/vendor/product-order/${job.id}` : `/vendor/order/${job.id}`)}
-                                            className="bg-surface p-6 rounded-[2.5rem] border border-gray-100/10 shadow-soft group hover:border-brand/40 transition-all cursor-pointer relative overflow-hidden active:scale-95"
+                                            className="bg-surface p-6 rounded-[2.5rem] border border-white/5/10 shadow-soft group hover:border-brand/40 transition-all cursor-pointer relative overflow-hidden active:scale-95"
                                         >
                                             <div className="relative z-10 space-y-5">
                                                 <div className="flex justify-between items-start">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 bg-background rounded-2xl flex items-center justify-center text-brand border border-gray-100/5 shadow-inner">
+                                                        <div className="w-10 h-10 bg-background rounded-2xl flex items-center justify-center text-brand border border-white/5/5 shadow-inner">
                                                             <Package size={20} />
                                                         </div>
                                                         <div>
@@ -232,7 +232,7 @@ const VendorHome = () => {
                                                             <p className="text-[9px] font-bold text-content-subtle uppercase tracking-tight opacity-50">{job.time}</p>
                                                         </div>
                                                     </div>
-                                                    <div className={`px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-[0.2em] shadow-sm ${getStatusStyles(job.rawStatus)}`}>
+                                                    <div className={`px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-[0.2em]  ${getStatusStyles(job.rawStatus)}`}>
                                                         {job.status}
                                                     </div>
                                                 </div>
@@ -245,7 +245,7 @@ const VendorHome = () => {
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center gap-2 pt-4 border-t border-gray-100/5">
+                                                <div className="flex items-center gap-2 pt-4 border-t border-white/5/5">
                                                     <MapPin size={10} className="text-brand" />
                                                     <span className="text-[10px] font-bold text-content-subtle uppercase tracking-tighter truncate">{job.address}</span>
                                                 </div>
@@ -255,8 +255,8 @@ const VendorHome = () => {
                                         </motion.div>
                                     ))}
                                     {JOBS.length === 0 && (
-                                        <div className="col-span-full text-center py-24 bg-surface rounded-[3rem] border border-dashed border-gray-100/20 flex flex-col items-center gap-4">
-                                            <div className="w-16 h-16 bg-background rounded-[1.5rem] flex items-center justify-center text-content-subtle/20 border border-gray-100/10 shadow-inner">
+                                        <div className="col-span-full text-center py-24 bg-surface rounded-[3rem] border border-dashed border-white/5/20 flex flex-col items-center gap-4">
+                                            <div className="w-16 h-16 bg-background rounded-[1.5rem] flex items-center justify-center text-content-subtle/20 border border-white/5/10 shadow-inner">
                                                 <Package size={32} />
                                             </div>
                                             <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em]">No active operations in sector</p>
@@ -276,7 +276,7 @@ const VendorHome = () => {
                                     <button
                                         key={action.label}
                                         onClick={() => navigate(action.path)}
-                                        className="w-full bg-surface p-5 rounded-[1.8rem] border border-gray-100/10 shadow-soft flex items-center justify-between group hover:border-brand/40 transition-all hover:-translate-y-1 active:scale-95"
+                                        className="w-full bg-surface p-5 rounded-[1.8rem] border border-white/5/10 shadow-soft flex items-center justify-between group hover:border-brand/40 transition-all hover:-translate-y-1 active:scale-95"
                                     >
                                         <div className="flex items-center gap-4">
                                             <div className={`w-10 h-10 ${action.color} rounded-2xl flex items-center justify-center text-white shadow-lg shadow-${action.color.split('-')[1]}/20`}>
@@ -308,7 +308,7 @@ const VendorHome = () => {
                                 </p>
                                 <button
                                     onClick={() => navigate('/vendor/reports')}
-                                    className="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 group-hover:bg-brand group-hover:text-white group-hover:border-brand shadow-xl"
+                                    className="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 group-hover:bg-brand group-hover:text-white group-hover:border-brand shadow-2xl shadow-black/50"
                                 >
                                     Detailed Analytics <ChevronRight size={14} />
                                 </button>

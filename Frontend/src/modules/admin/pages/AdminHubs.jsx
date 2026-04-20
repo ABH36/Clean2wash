@@ -168,12 +168,12 @@ const AdminHubs = () => {
                 </div>
                 {/* Infrastructure Control Header */}
                 <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
-                    <div className="flex bg-gray-100 p-1 rounded-2xl w-full lg:w-auto overflow-x-auto scrollbar-hide">
+                    <div className="flex bg-white/[0.05] p-1 rounded-2xl w-full lg:w-auto overflow-x-auto scrollbar-hide">
                         {['All', 'Online', 'Offline'].map(tab => (
                             <button
                                 key={tab}
                                 onClick={() => setFilter(tab)}
-                                className={`flex-1 lg:px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${filter === tab ? 'bg-white text-brand shadow-sm' : 'text-content-subtle hover:text-content'}`}
+                                className={`flex-1 lg:px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${filter === tab ? 'bg-white/5 text-brand ' : 'text-content-subtle hover:text-content'}`}
                             >
                                 {tab}
                             </button>
@@ -181,7 +181,7 @@ const AdminHubs = () => {
                     </div>
 
                     <div className="flex items-center gap-3 w-full lg:w-auto">
-                        <div className="flex-1 lg:w-72 bg-white border border-gray-100 rounded-2xl px-4 py-2.5 flex items-center gap-3 shadow-soft group focus-within:border-brand transition-all">
+                        <div className="flex-1 lg:w-72 bg-white/5 border border-white/5 rounded-2xl px-4 py-2.5 flex items-center gap-3 shadow-soft group focus-within:border-brand transition-all">
                             <Search size={16} className="text-content-subtle group-focus-within:text-brand" />
                             <input
                                 type="text"
@@ -191,9 +191,9 @@ const AdminHubs = () => {
                                 onChange={(e) => setSearch(e.target.value)}
                             />
                         </div>
-                        <div className="flex bg-gray-100 p-1 rounded-2xl">
-                            <button onClick={() => setView('grid')} className={`p-2 rounded-xl transition-all ${view === 'grid' ? 'bg-white text-brand shadow-sm' : 'text-content-subtle'}`}><LayoutGrid size={18} /></button>
-                            <button onClick={() => setView('list')} className={`p-2 rounded-xl transition-all ${view === 'list' ? 'bg-white text-brand shadow-sm' : 'text-content-subtle'}`}><List size={18} /></button>
+                        <div className="flex bg-white/[0.05] p-1 rounded-2xl">
+                            <button onClick={() => setView('grid')} className={`p-2 rounded-xl transition-all ${view === 'grid' ? 'bg-white/5 text-brand ' : 'text-content-subtle'}`}><LayoutGrid size={18} /></button>
+                            <button onClick={() => setView('list')} className={`p-2 rounded-xl transition-all ${view === 'list' ? 'bg-white/5 text-brand ' : 'text-content-subtle'}`}><List size={18} /></button>
                         </div>
                         <button
                             onClick={handleOpenAdd}
@@ -206,12 +206,12 @@ const AdminHubs = () => {
 
                 {/* Hub Grid/List */}
                 {pageLoading ? (
-                    <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[2.5rem] border border-gray-100 shadow-soft">
+                    <div className="flex flex-col items-center justify-center py-20 bg-white/5 rounded-[2.5rem] border border-white/5 shadow-soft">
                         <div className="w-12 h-12 border-4 border-brand border-t-transparent rounded-full animate-spin mb-4" />
                         <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em]">Scanning Node Grid...</p>
                     </div>
                 ) : filteredHubs.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[2.5rem] border border-gray-100 shadow-soft">
+                    <div className="flex flex-col items-center justify-center py-20 bg-white/5 rounded-[2.5rem] border border-white/5 shadow-soft">
                         <MapPin size={40} className="text-gray-100 mb-4" />
                         <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em]">No operational nodes detected</p>
                     </div>
@@ -223,20 +223,20 @@ const AdminHubs = () => {
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ delay: i * 0.05 }}
-                                className="bg-white rounded-[2.5rem] border border-gray-100 shadow-soft overflow-hidden group hover:border-brand transition-all flex flex-col"
+                                className="bg-white/5 rounded-[2.5rem] border border-white/5 shadow-soft overflow-hidden group hover:border-brand transition-all flex flex-col"
                             >
                                 <div className="p-8 pb-4">
                                     <div className="flex justify-between items-start mb-6">
-                                        <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-brand border border-gray-100 group-hover:bg-brand group-hover:text-white transition-all shadow-sm">
+                                        <div className="w-14 h-14 bg-white/[0.02] rounded-2xl flex items-center justify-center text-brand border border-white/5 group-hover:bg-brand group-hover:text-white transition-all ">
                                             <MapPin size={28} />
                                         </div>
                                         <div className="flex flex-col items-end gap-1.5">
                                             <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-lg ${hub.status === 'Online' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
                                                 {hub.status}
                                             </span>
-                                            <div className="flex gap-1">
-                                                <button onClick={() => handleOpenEdit(hub)} className="w-7 h-7 bg-gray-50 rounded-lg flex items-center justify-center text-content hover:bg-brand hover:text-white transition-all"><Edit2 size={12} /></button>
-                                                <button onClick={() => setDeleteConfirm({ isOpen: true, id: hub.id })} className="w-7 h-7 bg-gray-50 rounded-lg flex items-center justify-center text-content hover:bg-red-500 hover:text-white transition-all"><Trash2 size={12} /></button>
+                                            <div className="flex gap-1.5">
+                                                <button onClick={() => handleOpenEdit(hub)} className="w-9 h-9 bg-white/[0.02] rounded-xl flex items-center justify-center text-content hover:bg-brand hover:text-white border border-white/5 transition-all"><Edit2 size={16} /></button>
+                                                <button onClick={() => setDeleteConfirm({ isOpen: true, id: hub.id })} className="w-9 h-9 bg-white/[0.02] rounded-xl flex items-center justify-center text-content hover:bg-red-500 hover:text-white border border-white/5 transition-all"><Trash2 size={16} /></button>
                                             </div>
                                         </div>
                                     </div>
@@ -276,7 +276,7 @@ const AdminHubs = () => {
                                 </div>
 
                                 <div className="px-4 pb-4">
-                                    <button className="w-full h-12 bg-gray-50 rounded-2xl flex items-center justify-center gap-2 group-hover:bg-content group-hover:text-white transition-all overflow-hidden relative">
+                                    <button className="w-full h-12 bg-white/[0.02] rounded-2xl flex items-center justify-center gap-2 group-hover:bg-content group-hover:text-white transition-all overflow-hidden relative">
                                         <span className="text-[10px] font-black uppercase tracking-widest z-10">Configure Node</span>
                                         <Navigation size={14} className="group-hover:translate-x-3 transition-all duration-300" />
                                     </button>
@@ -285,10 +285,10 @@ const AdminHubs = () => {
                         ))}
                     </div>
                 ) : (
-                    <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-soft overflow-hidden">
+                    <div className="bg-white/5 rounded-[2.5rem] border border-white/5 shadow-soft overflow-hidden">
                         <div className="admin-table-container">
                             <table className="w-full text-left">
-                                <thead className="bg-gray-50/50">
+                                <thead className="bg-white/[0.02]/50">
                                     <tr>
                                         <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest">Node / Location</th>
                                         <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest">Management</th>
@@ -299,10 +299,10 @@ const AdminHubs = () => {
                                 </thead>
                                 <tbody className="divide-y divide-gray-50">
                                     {filteredHubs.map(hub => (
-                                        <tr key={hub.id} className="group hover:bg-gray-50/30 transition-all">
+                                        <tr key={hub.id} className="group hover:bg-white/[0.02]/30 transition-all">
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 rounded-2xl bg-gray-50 flex items-center justify-center text-brand border border-gray-100 group-hover:bg-brand group-hover:text-white transition-all">
+                                                    <div className="w-10 h-10 rounded-2xl bg-white/[0.02] flex items-center justify-center text-brand border border-white/5 group-hover:bg-brand group-hover:text-white transition-all">
                                                         <MapPin size={18} />
                                                     </div>
                                                     <div>
@@ -335,8 +335,8 @@ const AdminHubs = () => {
                                                         {hub.status}
                                                     </span>
                                                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                                        <button onClick={() => handleOpenEdit(hub)} className="p-2 bg-gray-50 hover:bg-brand hover:text-white rounded-xl text-content-subtle transition-all"><Edit2 size={13} /></button>
-                                                        <button onClick={() => setDeleteConfirm({ isOpen: true, id: hub.id })} className="p-2 bg-gray-50 hover:bg-red-500 hover:text-white rounded-xl text-content-subtle transition-all"><Trash2 size={13} /></button>
+                                                        <button onClick={() => handleOpenEdit(hub)} className="p-2 bg-white/[0.02] hover:bg-brand hover:text-white rounded-xl text-content-subtle transition-all"><Edit2 size={13} /></button>
+                                                        <button onClick={() => setDeleteConfirm({ isOpen: true, id: hub.id })} className="p-2 bg-white/[0.02] hover:bg-red-500 hover:text-white rounded-xl text-content-subtle transition-all"><Trash2 size={13} /></button>
                                                     </div>
                                                 </div>
                                             </td>
@@ -364,14 +364,14 @@ const AdminHubs = () => {
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="bg-white w-[95%] md:w-full max-w-3xl rounded-[2rem] md:rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-gray-100 max-h-[90vh] overflow-y-auto"
+                            className="bg-white/5 w-[95%] md:w-full max-w-3xl rounded-[2rem] md:rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-white/5 max-h-[90vh] overflow-y-auto"
                         >
-                            <div className="px-6 md:px-10 py-6 md:py-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                            <div className="px-6 md:px-10 py-6 md:py-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]/50">
                                 <div>
                                     <h2 className="text-xl font-black text-content leading-none uppercase">{editingHub ? 'Update Node Configuration' : 'Deploy New Node'}</h2>
                                     <p className="text-[10px] font-black text-brand uppercase tracking-widest mt-2 px-1">Infrastructure Control Terminal</p>
                                 </div>
-                                <button onClick={() => setIsModalOpen(false)} className="p-3 bg-white hover:bg-gray-50 rounded-2xl border border-gray-100 text-content-subtle transition-all">
+                                <button onClick={() => setIsModalOpen(false)} className="p-3 bg-white/5 hover:bg-white/[0.02] rounded-2xl border border-white/5 text-content-subtle transition-all">
                                     <X size={20} />
                                 </button>
                             </div>
@@ -383,7 +383,7 @@ const AdminHubs = () => {
                                             <input
                                                 required
                                                 placeholder="e.g. Cyber Node Alpha"
-                                                className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
+                                                className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white/5 transition-all "
                                                 value={formData.name}
                                                 onChange={e => setFormData({ ...formData, name: e.target.value })}
                                             />
@@ -393,7 +393,7 @@ const AdminHubs = () => {
                                             <input
                                                 required
                                                 placeholder="e.g. Gurugram"
-                                                className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
+                                                className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white/5 transition-all "
                                                 value={formData.city}
                                                 onChange={e => setFormData({ ...formData, city: e.target.value })}
                                             />
@@ -401,7 +401,7 @@ const AdminHubs = () => {
                                         <div className="space-y-1.5">
                                             <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Station Type</label>
                                             <select
-                                                className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm appearance-none"
+                                                className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white/5 transition-all  appearance-none"
                                                 value={formData.type}
                                                 onChange={e => setFormData({ ...formData, type: e.target.value })}
                                             >
@@ -413,7 +413,7 @@ const AdminHubs = () => {
                                         <div className="space-y-1.5">
                                             <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Ops Status</label>
                                             <select
-                                                className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm appearance-none"
+                                                className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white/5 transition-all  appearance-none"
                                                 value={formData.status}
                                                 onChange={e => setFormData({ ...formData, status: e.target.value })}
                                             >
@@ -427,7 +427,7 @@ const AdminHubs = () => {
                                                 required
                                                 type="number"
                                                 placeholder="e.g. 24"
-                                                className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
+                                                className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white/5 transition-all "
                                                 value={formData.captains}
                                                 onChange={e => setFormData({ ...formData, captains: e.target.value })}
                                             />
@@ -435,7 +435,7 @@ const AdminHubs = () => {
                                         <div className="space-y-1.5">
                                             <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Managed By (Vendor)</label>
                                             <select
-                                                className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm appearance-none"
+                                                className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white/5 transition-all  appearance-none"
                                                 value={formData.vendor}
                                                 onChange={e => {
                                                     const selectedVendor = vendors.find(v => v._id === e.target.value);
@@ -457,13 +457,13 @@ const AdminHubs = () => {
                                             <input
                                                 required
                                                 placeholder="e.g. John Doe"
-                                                className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
+                                                className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white/5 transition-all "
                                                 value={formData.manager}
                                                 onChange={e => setFormData({ ...formData, manager: e.target.value })}
                                             />
                                         </div>
 
-                                        <div className="col-span-full pt-4 border-t border-gray-100 space-y-4">
+                                        <div className="col-span-full pt-4 border-t border-white/5 space-y-4">
                                             <div className="flex items-center justify-between">
                                                 <div>
                                                     <h4 className="text-[10px] font-black text-content uppercase tracking-widest leading-none">Society Configuration</h4>
@@ -474,7 +474,7 @@ const AdminHubs = () => {
                                                     onClick={() => setFormData({ ...formData, metadata: { ...formData.metadata, isSociety: !formData.metadata.isSociety } })}
                                                     className={`w-12 h-6 rounded-full transition-all relative ${formData.metadata?.isSociety ? 'bg-brand' : 'bg-gray-200'}`}
                                                 >
-                                                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${formData.metadata?.isSociety ? 'left-7' : 'left-1'}`} />
+                                                    <div className={`absolute top-1 w-4 h-4 bg-white/5 rounded-full transition-all ${formData.metadata?.isSociety ? 'left-7' : 'left-1'}`} />
                                                 </button>
                                             </div>
 
@@ -488,7 +488,7 @@ const AdminHubs = () => {
                                                         <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Tower / Blocks (Comma separated)</label>
                                                         <input
                                                             placeholder="Block A, Block B, Tower 1"
-                                                            className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand"
+                                                            className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand"
                                                             value={formData.metadata.blocks}
                                                             onChange={e => setFormData({ ...formData, metadata: { ...formData.metadata, blocks: e.target.value } })}
                                                         />
@@ -497,7 +497,7 @@ const AdminHubs = () => {
                                                         <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Parking Levels (Comma separated)</label>
                                                         <input
                                                             placeholder="B1, B2, Ground"
-                                                            className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand"
+                                                            className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand"
                                                             value={formData.metadata.parkingLevels}
                                                             onChange={e => setFormData({ ...formData, metadata: { ...formData.metadata, parkingLevels: e.target.value } })}
                                                         />
@@ -539,7 +539,7 @@ const AdminHubs = () => {
                                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                                className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 relative z-10 border border-gray-100 shadow-2xl text-center"
+                                className="bg-white/5 w-full max-w-sm rounded-[2.5rem] p-8 relative z-10 border border-white/5 shadow-2xl text-center"
                             >
                                 <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
                                     <Trash2 size={32} />
@@ -550,7 +550,7 @@ const AdminHubs = () => {
                                 <div className="flex gap-3">
                                     <button
                                         onClick={() => setDeleteConfirm({ isOpen: false, id: null })}
-                                        className="flex-1 bg-gray-100 text-content-subtle py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all"
+                                        className="flex-1 bg-white/[0.05] text-content-subtle py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all"
                                     >
                                         Cancel
                                     </button>

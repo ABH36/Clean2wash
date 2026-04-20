@@ -609,6 +609,10 @@ export const authAPI = {
     getProfile: () => consumerApiClient.getProfile(),
     updateProfile: (data) => consumerApiClient.updateProfile(data),
     updateAddress: (data) => consumerApiClient.updateAddress(data),
+    submitKYC: (kycData) => consumerApiClient.request('/profile/kyc', {
+        method: 'POST',
+        body: JSON.stringify(kycData)
+    }),
 };
 
 export const captainAPI = {
@@ -676,8 +680,37 @@ export const vehicleAPI = {
     updateVehicle: (id, data) => apiClient.updateVehicle(id, data),
     deleteVehicle: (id) => apiClient.deleteVehicle(id),
     getVehicleTypes: () => apiClient.getVehicleTypes(),
-    getVehicleBrands: () => apiClient.get("/vehicles/brands"),
+    getVehicleBrands: (params) => {
+        const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+        return apiClient.get(`/vehicles/brands${query}`);
+    },
     getVehicleModels: (params) => apiClient.getVehicleModels(params),
+};
+
+export const chatAPI = {
+    getChatMessages: (bookingId) => apiClient.request(`/chat/${bookingId}`, { baseURL: '/api' }),
+    sendChatMessage: (messageData) => apiClient.request('/chat/send', {
+        method: 'POST',
+        body: JSON.stringify(messageData),
+        baseURL: '/api'
+    }),
+    markChatAsRead: (bookingId) => apiClient.request(`/chat/${bookingId}/read`, {
+        method: 'PATCH',
+        baseURL: '/api'
+    }),
+    sendLocation: (locationData) => apiClient.request('/chat/location', {
+        method: 'POST',
+        body: JSON.stringify(locationData),
+        baseURL: '/api'
+    }),
+    getUnreadCount: () => apiClient.request('/chat/unread-count', { baseURL: '/api' }),
+    getActiveChats: () => apiClient.request('/chat/active', { baseURL: '/api' }),
+    uploadChatFile: (formData) => apiClient.request('/chat/upload', {
+        method: 'POST',
+        body: formData,
+        headers: {},
+        baseURL: '/api'
+    })
 };
 
 export const bookingAPI = {
@@ -734,13 +767,18 @@ export const serviceAPI = {
     requestApartmentLead: (data) => apiClient.requestApartmentLead(data),
     getServicePlans: (id) => apiClient.getServicePlans(id),
     calculatePricing: (data) => apiClient.calculatePricing(data),
+    calculateSpareDriverPricing: (data) => apiClient.request('/services/spare-driver/calculate-pricing', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }),
+    getPricingBreakdown: (serviceType) => apiClient.request(`/services/spare-driver/pricing-breakdown?serviceType=${serviceType}`),
     getTimeSlots: (params) => apiClient.getTimeSlots(params),
     validateAvailability: (data) => apiClient.validateServiceAvailability(data),
     validateCoupon: (code, amount) => apiClient.validateCoupon(code, amount),
     getPlatformStats: () => apiClient.getPlatformStats(),
     getPortfolio: () => apiClient.getPortfolio(),
     likePortfolioItem: (id) => apiClient.request(`/portfolio/${id}/like`, { method: 'PATCH' }),
-    getChauffeurServices: () => apiClient.getServices({ category: 'Chauffeur' }),
+    getChauffeurServices: () => apiClient.request('/services/spare-driver/service-types'),
     getStats: () => apiClient.getStats(),
     getPromotions: () => apiClient.getPromotions(),
     search: (q) => apiClient.request(`/services/search?q=${encodeURIComponent(q)}`),
@@ -754,3 +792,8 @@ export const referralAPI = {
     getStats: () => apiClient.getReferralStats(),
 };
 
+export const supportAPI = {
+    getMyTickets: () => apiClient.get('/support/tickets'),
+    createTicket: (data) => apiClient.post('/support/tickets', data),
+    getTicket: (id) => apiClient.get(`/support/tickets/${id}`),
+};

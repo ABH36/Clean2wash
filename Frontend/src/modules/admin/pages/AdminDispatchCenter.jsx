@@ -207,7 +207,7 @@ const AdminDispatchCenter = () => {
             case 'HIGH': return 'text-red-600 bg-red-50 border-red-200';
             case 'MEDIUM': return 'text-amber-600 bg-amber-50 border-amber-200';
             case 'LOW': return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-            default: return 'text-gray-600 bg-gray-50 border-gray-200';
+            default: return 'text-white/60 bg-white/[0.02] border-white/10';
         }
     };
 
@@ -265,10 +265,10 @@ const AdminDispatchCenter = () => {
                     >
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{stat.label}</p>
+                                <p className="text-xs font-semibold text-white/40 uppercase tracking-wide">{stat.label}</p>
                                 <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
                             </div>
-                            <div className={`w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center ${stat.color}`}>
+                            <div className={`w-12 h-12 rounded-xl bg-white/[0.05] flex items-center justify-center ${stat.color}`}>
                                 {stat.icon}
                             </div>
                         </div>
@@ -291,7 +291,7 @@ const AdminDispatchCenter = () => {
                         {pendingBookings.length === 0 ? (
                             <div className="text-center py-8">
                                 <CheckCircle size={48} className="text-emerald-500 mx-auto mb-4" />
-                                <p className="text-sm font-semibold text-gray-500">No pending bookings</p>
+                                <p className="text-sm font-semibold text-white/40">No pending bookings</p>
                             </div>
                         ) : (
                             pendingBookings.map((booking) => (
@@ -299,7 +299,7 @@ const AdminDispatchCenter = () => {
                                     key={booking.id}
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    className="p-4 bg-[var(--bg-secondary)] rounded-lg border border-[var(--border)] hover:shadow-md transition-all"
+                                    className="p-4 bg-[var(--bg-secondary)] rounded-lg border border-[var(--border)] hover:shadow-2xl shadow-black/40 transition-all"
                                 >
                                     <div className="flex items-start justify-between mb-3">
                                         <div className="flex items-center gap-3">
@@ -379,7 +379,7 @@ const AdminDispatchCenter = () => {
                                 key={driver.id}
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                className="p-3 bg-[var(--bg-secondary)] rounded-lg border border-[var(--border)] hover:shadow-md transition-all"
+                                className="p-3 bg-[var(--bg-secondary)] rounded-lg border border-[var(--border)] hover:shadow-2xl shadow-black/40 transition-all"
                             >
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-3">
@@ -523,7 +523,7 @@ const AdminDispatchCenter = () => {
                                     .map((driver) => (
                                         <div 
                                             key={driver.id}
-                                            className="p-4 bg-[var(--bg-secondary)] rounded-lg border border-[var(--border)] hover:shadow-md transition-all cursor-pointer"
+                                            className="p-4 bg-[var(--bg-secondary)] rounded-lg border border-[var(--border)] hover:shadow-2xl shadow-black/40 transition-all cursor-pointer"
                                             onClick={() => assignBooking(selectedBooking.id, driver.id)}
                                         >
                                             <div className="flex items-center justify-between">

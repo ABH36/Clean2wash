@@ -22,7 +22,7 @@ const DocumentThumb = ({ url, label }) => (
             </div>
         )}
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 text-center">
-            <span className="text-[10px] font-black uppercase tracking-widest text-white shadow-sm">{label}</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-white ">{label}</span>
         </div>
     </a>
 );
@@ -268,7 +268,7 @@ const DriverDetails = () => {
                             </div>
                         </div>
                     ) : (
-                        <div className="flex-1 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-2xl flex flex-col items-center justify-center text-center p-6">
+                        <div className="flex-1 border-white/5 border-dashed border-slate-200 dark:border-white/10 rounded-2xl flex flex-col items-center justify-center text-center p-6">
                             <CreditCard size={32} className="text-content-subtle opacity-30 mb-3" />
                             <p className="text-sm font-black text-content">No Link Established</p>
                             <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-1 opacity-70">Operative has not synced bank matrix</p>

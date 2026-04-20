@@ -111,7 +111,7 @@ const GoogleMapBox = ({
 
     if (loadError) {
         return (
-            <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 gap-3 p-8 text-center">
+            <div className="w-full h-full flex flex-col items-center justify-center bg-white/[0.05] gap-3 p-8 text-center">
                 <span className="text-2xl">🗺️</span>
                 <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">
                     Map unavailable — API not configured
@@ -122,7 +122,7 @@ const GoogleMapBox = ({
 
     if (!isLoaded) {
         return (
-            <div className="w-full h-full flex items-center justify-center bg-gray-50">
+            <div className="w-full h-full flex items-center justify-center bg-white/[0.02]">
                 <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
             </div>
         );
@@ -131,7 +131,7 @@ const GoogleMapBox = ({
     // Bail out early if center coords are not ready yet
     if (!center || typeof center.lat !== 'number' || typeof center.lng !== 'number') {
         return (
-            <div className="w-full h-full flex items-center justify-center bg-gray-50">
+            <div className="w-full h-full flex items-center justify-center bg-white/[0.02]">
                 <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
             </div>
         );

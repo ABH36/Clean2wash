@@ -109,8 +109,8 @@ const CaptainProfileEdit = () => {
                 {label}
             </label>
             <div className={`relative flex items-center border rounded-2xl px-4 transition-all focus-within:border-brand ${readOnly
-                ? isDarkMode ? 'bg-white/3 border-white/5' : 'bg-gray-100 border-gray-200'
-                : isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white border-gray-100 shadow-sm'
+                ? isDarkMode ? 'bg-white/3 border-white/5' : 'bg-white/[0.05] border-white/10'
+                : isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white/5 border-white/5 '
                 }`}>
                 <Icon size={16} className={`${isDarkMode ? 'text-brand/40' : 'text-brand/50'} mr-3 flex-shrink-0`} />
                 <input
@@ -133,10 +133,10 @@ const CaptainProfileEdit = () => {
 
     return (
         <CaptainLayout>
-            <div className={`min-h-screen ${isDarkMode ? 'bg-[#0F172A]' : 'bg-gray-50'} pb-36 transition-colors duration-500`}>
+            <div className={`min-h-screen ${isDarkMode ? 'bg-[#0F172A]' : 'bg-white/[0.02]'} pb-36 transition-colors duration-500`}>
                 {/* Header */}
-                <header className={`${isDarkMode ? 'bg-[#1E293B]/80 border-white/5' : 'bg-white/80 border-gray-100'} backdrop-blur-xl px-4 pt-12 pb-6 sticky top-0 z-40 border-b flex items-center gap-4`}>
-                    <button onClick={() => navigate(-1)} className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-gray-50 border-gray-100 text-content'}`}>
+                <header className={`${isDarkMode ? 'bg-[#1E293B]/80 border-white/5' : 'bg-white/80 border-white/5'} backdrop-blur-xl px-4 pt-12 pb-6 sticky top-0 z-40 border-b flex items-center gap-4`}>
+                    <button onClick={() => navigate(-1)} className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-white/[0.02] border-white/5 text-content'}`}>
                         <ChevronLeft size={18} strokeWidth={2.5} />
                     </button>
                     <div>
@@ -158,7 +158,7 @@ const CaptainProfileEdit = () => {
                                     </div>
                                 )}
                             </div>
-                            <label className="absolute -bottom-2 -right-2 w-10 h-10 bg-brand text-white rounded-2xl flex items-center justify-center shadow-xl border-4 border-inherit transition-transform active:scale-90 hover:bg-brand/90 cursor-pointer">
+                            <label className="absolute -bottom-2 -right-2 w-10 h-10 bg-brand text-white rounded-2xl flex items-center justify-center shadow-2xl shadow-black/50 border-4 border-inherit transition-transform active:scale-90 hover:bg-brand/90 cursor-pointer">
                                 <Camera size={18} strokeWidth={2.5} />
                                 <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
                             </label>
@@ -221,7 +221,7 @@ const CaptainProfileEdit = () => {
                                 <label className={`text-[10px] uppercase tracking-[0.2em] font-black ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>
                                     Experience Level
                                 </label>
-                                <div className={`relative flex items-center border rounded-2xl px-4 transition-all focus-within:border-brand ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white border-gray-100 shadow-sm'}`}>
+                                <div className={`relative flex items-center border rounded-2xl px-4 transition-all focus-within:border-brand ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white/5 border-white/5 '}`}>
                                     <Briefcase size={16} className={`${isDarkMode ? 'text-brand/40' : 'text-brand/50'} mr-3 flex-shrink-0`} />
                                     <select
                                         value={formData.experience}
@@ -285,7 +285,7 @@ const CaptainProfileEdit = () => {
                         className={`w-full h-14 bg-brand text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-brand/40 flex items-center justify-center gap-3 transition-all ${saving ? 'opacity-70' : ''}`}
                     >
                         {saving ? (
-                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            <div className="w-5 h-5 border-white/5 border-white/30 border-t-white rounded-full animate-spin" />
                         ) : (
                             <><Save size={16} strokeWidth={3} /> Save Changes</>
                         )}

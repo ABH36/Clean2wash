@@ -3,7 +3,7 @@ import { useTheme } from '../../../../context/ThemeContext';
 const MobileLayout = ({ children }) => {
     const { isDarkMode } = useTheme();
     return (
-        <div className={`mobile-container min-h-screen transition-colors duration-500 ${isDarkMode ? 'bg-[#0F172A]' : 'bg-gray-50'}`}>
+        <div className={`mobile-container min-h-screen transition-colors duration-500 ${isDarkMode ? 'bg-[#0F172A]' : 'bg-white/[0.02]'}`}>
             <main className="flex-1">
                 {children}
             </main>

@@ -33,6 +33,11 @@ const AppError = require('./utils/AppError');
 const consumerRoutes = require('./modules/consumer/routes/consumerRoutes');
 const spareDriverRoutes = require('./modules/sparedrivers/routes/spareDriverRoutes');
 const adminRoutes = require('./modules/admin/routes/adminRoutes');
+const superadminRoutes = require('./modules/superadmin/routes/index');
+const chatRoutes = require('./routes/chatRoutes');
+const voiceCallRoutes = require('./routes/voiceCallRoutes');
+const trackingRoutes = require('./routes/trackingRoutes');
+const zoneRoutes = require('./routes/zoneRoutes');
 const PLATFORM_MODE = process.env.PLATFORM_MODE || 'SPARE_DRIVER';
 const captainRoutes = PLATFORM_MODE !== 'SPARE_DRIVER'
     ? require('./modules/captain/routes/captainRoutes')
@@ -96,7 +101,15 @@ app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
+// Import response formatter and rate limiting middleware
+const responseFormatter = require('./middleware/responseFormatter');
+const rateLimitMiddleware = require('./middleware/rateLimitMiddleware');
 
+// Response formatter middleware (must be early in the chain)
+app.use(responseFormatter.addRequestId);
+app.use(responseFormatter.attachResponseHelpers);
+app.use(responseFormatter.trackResponseTime);
+app.use(responseFormatter.setCorsHeaders);
 
 // Rate limiting
 const limiter = rateLimit({
@@ -142,6 +155,11 @@ app.get('/api/health', (req, res) => {
 app.use('/api/consumer', consumerRoutes);
 app.use('/api/sparedrivers', spareDriverRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/superadmin', superadminRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/calls', voiceCallRoutes);
+app.use('/api/tracking', trackingRoutes);
+app.use('/api/zones', zoneRoutes);
 if (PLATFORM_MODE !== 'SPARE_DRIVER') {
     app.use('/api/captain', captainRoutes);
     app.use('/api/vendor', vendorRoutes);
@@ -163,12 +181,13 @@ app.use(globalErrorHandler);
 const http = require('http');
 const server = http.createServer(app);
 
-// Initialize Socket.io
-const { init } = require('./socketService');
-const io = init(server);
+// Initialize Enhanced Socket.io with robust error handling
+const enhancedSocket = require('./services/enhancedSocketService');
+enhancedSocket.init(server);
+console.log('✅ Enhanced Socket.IO initialized with auto-reconnect & error recovery');
 
-// Make io accessible globally if needed, or just require it in controllers
-app.set('io', io);
+// Make io accessible globally if needed
+app.set('io', enhancedSocket.getIO ? enhancedSocket.getIO() : null);
 
 // Start server
 const PORT = process.env.PORT || 5000;
@@ -193,6 +212,11 @@ server.listen(PORT, () => {
     // Start Weekly Payout Job (Runs every Monday at 12:00 AM)
     const WeeklyPayoutJob = require('./jobs/weeklyPayoutJob');
     WeeklyPayoutJob.init();
+
+    // Start Dispatch Queue Processor (Auto-assign drivers to bookings)
+    const dispatchService = require('./services/dispatchService');
+    dispatchService.startQueueProcessor();
+    console.log(`🚀 Dispatch Engine started - Auto-assignment active`.green.bold);
 });
 
 module.exports = app;

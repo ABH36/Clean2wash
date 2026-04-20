@@ -21,10 +21,10 @@ const CaptainSupport = () => {
 
     return (
         <CaptainLayout>
-            <div className={`min-h-screen ${isDarkMode ? 'bg-[#0F172A]' : 'bg-white'} pb-32 transition-colors duration-500`}>
+            <div className={`min-h-screen ${isDarkMode ? 'bg-[#0F172A]' : 'bg-white/5'} pb-32 transition-colors duration-500`}>
                 {/* ── Minimal Header ── */}
                 <header className="px-6 pt-16 pb-6 sticky top-0 bg-inherit z-40">
-                    <button onClick={() => navigate(-1)} className={`w-8 h-8 rounded-full flex items-center justify-center mb-6 ${isDarkMode ? 'bg-white/5 text-white' : 'bg-gray-100 text-content'}`}>
+                    <button onClick={() => navigate(-1)} className={`w-8 h-8 rounded-full flex items-center justify-center mb-6 ${isDarkMode ? 'bg-white/5 text-white' : 'bg-white/[0.05] text-content'}`}>
                         <ChevronLeft size={16} />
                     </button>
                     <h1 className={`text-3xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>Support</h1>
@@ -34,9 +34,9 @@ const CaptainSupport = () => {
                     {/* ── Quick Help Section ── */}
                     <section>
                         <p className={`text-[10px] uppercase tracking-[0.2em] font-bold mb-4 ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Assigned Hub Manager</p>
-                        <div className={`p-5 rounded-3xl border ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-gray-50 border-gray-100'} flex items-center justify-between`}>
+                        <div className={`p-5 rounded-3xl border ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white/[0.02] border-white/5'} flex items-center justify-between`}>
                             <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-[1.25rem] overflow-hidden border-2 transition-colors ${isDarkMode ? 'border-white/10' : 'border-white'}`}>
+                                <div className={`w-12 h-12 rounded-[1.25rem] overflow-hidden border-white/5 transition-colors ${isDarkMode ? 'border-white/10' : 'border-white'}`}>
                                     <img src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=200&q=80" alt="Manager" className="w-full h-full object-cover" />
                                 </div>
                                 <div>
@@ -61,7 +61,7 @@ const CaptainSupport = () => {
                             ].map((ch, i) => (
                                 <button key={i} className="w-full flex items-center justify-between group">
                                     <div className="flex items-center gap-4">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDarkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDarkMode ? 'bg-white/5' : 'bg-white/[0.02]'}`}>
                                             <ch.icon size={18} className={ch.color} />
                                         </div>
                                         <div className="text-left">
@@ -91,7 +91,7 @@ const CaptainSupport = () => {
 
                 {/* ── Floating Help Button ── */}
                 <div className="fixed bottom-10 left-6 right-6">
-                    <button className="w-full h-14 bg-brand text-white rounded-2xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-brand/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <button className="w-full h-14 bg-brand text-white rounded-2xl font-bold text-xs uppercase tracking-widest shadow-2xl shadow-black/50 shadow-brand/20 active:scale-95 transition-all flex items-center justify-center gap-2">
                         <LifeBuoy size={18} />
                         SOS Emergency
                     </button>

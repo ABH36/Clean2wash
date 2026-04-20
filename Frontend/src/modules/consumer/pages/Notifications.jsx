@@ -157,74 +157,78 @@ const Notifications = () => {
 
     return (
         <MobileLayout>
-            {/* ── Header ── */}
-            <header className="px-4 py-3 flex items-center justify-between bg-white sticky top-0 z-[60] border-b border-gray-100 backdrop-blur-xl">
-                <div className="flex items-center gap-3">
-                    <button onClick={() => navigate(-1)} className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center active:scale-95 transition-all">
-                        <ChevronLeft size={18} className="text-slate-900" />
-                    </button>
-                    <div>
-                        <h1 className="text-[17px] font-[1000] text-slate-900 tracking-tighter uppercase leading-none">Notifications</h1>
+            <div className="bg-[#0A0F0D] min-h-screen">
+                {/* ── Header ── */}
+                <header className="px-4 py-6 flex items-center justify-between bg-[#0A0F0D]/90 sticky top-0 z-[60] border-b border-white/5 backdrop-blur-xl">
+                    <div className="flex items-center gap-3">
+                        <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate(-1)} className="w-10 h-10 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center">
+                            <ChevronLeft size={18} className="text-white" strokeWidth={3} />
+                        </motion.button>
+                        <div>
+                            <h1 className="text-lg font-[1000] text-white tracking-tighter leading-none">Notifications</h1>
+                        </div>
                     </div>
-                </div>
-                <div className="flex items-center gap-1.5">
-                    <button onClick={fetchNotifications} className={`p-2 rounded-lg bg-gray-50 text-slate-400 active:scale-75 transition-all ${loading ? 'animate-spin' : ''}`}>
-                        <RefreshCw size={14} />
-                    </button>
-                    {notifications.length > 0 && (
-                        <button onClick={handleClearAll} className="p-2 rounded-lg bg-rose-50 text-rose-500 active:scale-75 transition-all border border-rose-100">
-                            <Trash2 size={14} />
+                    <div className="flex items-center gap-2">
+                        <div className="w-10 h-10 bg-[#F59E0B]/10 rounded-2xl flex items-center justify-center border border-[#F59E0B]/20">
+                            <Sparkles size={16} className="text-[#F59E0B]" fill="currentColor" />
+                        </div>
+                        <button onClick={fetchNotifications} className={`w-10 h-10 rounded-2xl bg-white/5 text-white/20 flex items-center justify-center active:scale-75 transition-all ${loading ? 'animate-spin' : ''}`}>
+                            <RefreshCw size={16} strokeWidth={3} />
                         </button>
-                    )}
-                </div>
-            </header>
+                        {notifications.length > 0 && (
+                            <button onClick={handleClearAll} className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-500 active:scale-75 transition-all border border-rose-500/10 flex items-center justify-center">
+                                <Trash2 size={16} strokeWidth={3} />
+                            </button>
+                        )}
+                    </div>
+                </header>
 
             <div className="px-5 pb-24 pt-6 min-h-[70vh]">
                 <AnimatePresence mode="wait">
                     {loading && notifications.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-24">
-                            <div className="w-10 h-10 border-[3px] border-gray-50 border-t-[#FF9900] rounded-full animate-spin shadow-lg" />
-                            <p className="mt-4 text-[9px] font-black text-slate-300 uppercase tracking-widest">Identifying Alerts</p>
+                        <div className="flex flex-col items-center justify-center py-32">
+                            <div className="w-10 h-10 border-[3px] border-white/5 border-t-[#F59E0B] rounded-full animate-spin shadow-[0_0_15px_rgba(245,158,11,0.2)]" />
+                            <p className="mt-6 text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">Decrypting feed...</p>
                         </div>
                     ) : notifications.length === 0 ? (
-                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center justify-center py-20 text-center">
-                            <div className="w-20 h-20 bg-slate-900 rounded-[2.5rem] flex items-center justify-center mb-6 shadow-2xl border border-white/5 relative overflow-hidden">
-                                <Inbox size={32} className="text-[#FF9900]" />
-                                <div className="absolute inset-0 bg-gradient-to-tr from-[#FF9900]/10 to-transparent opacity-50" />
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center py-20 text-center">
+                            <div className="w-24 h-24 bg-white/[0.03] rounded-[2.5rem] flex items-center justify-center mb-8 border border-white/10 relative overflow-hidden group shadow-2xl">
+                                <Inbox size={36} className="text-[#F59E0B] group-hover:scale-110 transition-transform duration-500" />
+                                <div className="absolute inset-0 bg-gradient-to-tr from-[#F59E0B]/5 to-transparent" />
                             </div>
-                            <h2 className="text-[15px] font-[1000] text-slate-900 uppercase tracking-tight">Inbox Clear</h2>
-                            <p className="text-[9px] text-slate-400 mt-2 max-w-[200px] leading-relaxed uppercase font-black tracking-tight">
-                                No new communication hashes found. We'll notify you for trip and payout updates.
+                            <h2 className="text-[17px] font-black text-white tracking-tighter">No active data</h2>
+                            <p className="text-[10px] text-white/20 mt-3 max-w-[220px] leading-relaxed uppercase font-black tracking-widest">
+                                Your secure encrypted feed is currently empty. We'll alert you on trip updates.
                             </p>
-                            <button onClick={() => navigate('/spare-driver')} className="mt-8 h-11 px-8 bg-slate-900 text-[#FF9900] rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 active:scale-95 transition-all shadow-xl">
-                                Return to Driver Hub <ArrowRight size={14} />
+                            <button onClick={() => navigate('/spare-driver')} className="mt-10 h-14 px-10 bg-white text-black rounded-[1.25rem] text-[11px] font-black uppercase tracking-[0.2em] flex items-center gap-3 active:scale-95 transition-all shadow-2xl shadow-white/5">
+                                Return to Driver Hub <ArrowRight size={16} strokeWidth={3} />
                             </button>
                         </motion.div>
                     ) : (
                         <div className="space-y-6">
                             {newN.length > 0 && (
-                                <section className="space-y-4">
+                                <section className="space-y-5">
                                     <div className="flex items-center justify-between px-1">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-[#FF9900] animate-pulse" />
-                                            <h2 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Recent Activity</h2>
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="w-2 h-2 rounded-full bg-[#F59E0B] animate-pulse shadow-[0_0_8px_#F59E0B]" />
+                                            <h2 className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Fresh pulse</h2>
                                         </div>
-                                        <button onClick={handleMarkAllAsRead} className="text-[9px] font-black text-[#FF9900] uppercase tracking-tighter">Sweep as read</button>
+                                        <button onClick={handleMarkAllAsRead} className="text-[10px] font-black text-[#F59E0B] uppercase tracking-tighter">Sweep all</button>
                                     </div>
                                     <div className="space-y-2">
                                         {newN.map((n, i) => (
-                                            <NotifCard key={n.id} notif={n} delay={i * 0.05} onClick={() => handleNotificationClick(n)} />
+                                            <NotifCard key={n.id} n={n} delay={i * 0.05} onClick={() => handleNotificationClick(n)} />
                                         ))}
                                     </div>
                                 </section>
                             )}
 
                             {oldN.length > 0 && (
-                                <section className="space-y-4">
-                                    <h2 className="text-[10px] font-black text-slate-300 uppercase tracking-widest px-1">Archive History</h2>
+                                <section className="space-y-5">
+                                    <h2 className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] px-1">Archived history</h2>
                                     <div className="space-y-2">
                                         {oldN.map((n, i) => (
-                                            <NotifCard key={n.id} notif={n} delay={i * 0.03} onClick={() => handleNotificationClick(n)} />
+                                            <NotifCard key={n.id} n={n} delay={i * 0.03} onClick={() => handleNotificationClick(n)} />
                                         ))}
                                     </div>
                                 </section>
@@ -233,45 +237,46 @@ const Notifications = () => {
                     )}
                 </AnimatePresence>
             </div>
+          </div>
         </MobileLayout>
     );
 };
 
 const getIconForType = (type) => {
     switch (type) {
-        case 'booking': return { icon: <Calendar size={16} className="text-indigo-500" strokeWidth={3} />, bg: 'bg-indigo-50/50' };
-        case 'payment': case 'wallet': case 'payout': return { icon: <Wallet size={16} className="text-emerald-500" strokeWidth={3} />, bg: 'bg-emerald-50/50' };
-        case 'promotion': return { icon: <Gift size={16} className="text-rose-500" strokeWidth={3} />, bg: 'bg-rose-50/50' };
-        case 'service': return { icon: <Sparkles size={16} className="text-[#FF9900]" strokeWidth={3} />, bg: 'bg-[#FF9900]/10' };
-        case 'support': case 'sos': return { icon: <ShieldCheck size={16} className="text-red-500" strokeWidth={3} />, bg: 'bg-red-50/50' };
-        case 'verification': return { icon: <CheckCircle2 size={16} className="text-blue-500" strokeWidth={3} />, bg: 'bg-blue-50/50' };
-        default: return { icon: <Bell size={16} className="text-slate-400" strokeWidth={3} />, bg: 'bg-slate-50' };
+        case 'booking': return { icon: <Calendar size={18} className="text-indigo-400" strokeWidth={3} />, bg: 'bg-indigo-400/10' };
+        case 'payment': case 'wallet': case 'payout': return { icon: <Wallet size={18} className="text-emerald-400" strokeWidth={3} />, bg: 'bg-emerald-400/10' };
+        case 'promotion': return { icon: <Gift size={18} className="text-rose-400" strokeWidth={3} />, bg: 'bg-rose-400/10' };
+        case 'service': return { icon: <Sparkles size={18} className="text-[#F59E0B]" strokeWidth={3} />, bg: 'bg-[#F59E0B]/10' };
+        case 'support': case 'sos': return { icon: <ShieldCheck size={18} className="text-rose-500" strokeWidth={3} />, bg: 'bg-rose-500/10' };
+        case 'verification': return { icon: <CheckCircle2 size={18} className="text-blue-400" strokeWidth={3} />, bg: 'bg-blue-400/10' };
+        default: return { icon: <Bell size={18} className="text-white/20" strokeWidth={3} />, bg: 'bg-white/5' };
     }
 };
 
-const NotifCard = ({ notif: n, delay, onClick }) => {
+const NotifCard = ({ n, delay, onClick }) => {
     const { icon, bg } = getIconForType(n.type);
     return (
         <motion.div
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}
+            initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay }}
             onClick={onClick}
-            className={`relative flex items-start gap-4 p-4 rounded-[22px] border transition-all active:scale-[0.98] cursor-pointer ${n.isNew 
-                ? 'bg-white border-[#FF9900]/20 shadow-lg shadow-[#FF9900]/5 ring-1 ring-[#FF9900]/5' 
-                : 'bg-white border-gray-50 opacity-80'}`}
+            className={`relative flex items-start gap-4 p-5 rounded-[2rem] border transition-all active:scale-[0.98] cursor-pointer shadow-2xl ${n.isNew 
+                ? 'bg-white/[0.04] border-[#F59E0B]/30 ring-1 ring-[#F59E0B]/5' 
+                : 'bg-white/[0.02] border-white/5 opacity-40 hover:opacity-100'}`}
         >
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${bg} border border-white/50 shadow-inner`}>
+            <div className={`w-12 h-12 rounded-[1.25rem] flex items-center justify-center shrink-0 ${bg} border border-white/5 shadow-inner`}>
                 {icon}
             </div>
             <div className="flex-1 min-w-0 pt-0.5">
-                <div className="flex items-center justify-between gap-2 mb-1">
-                    <h3 className={`text-[12px] font-[1000] truncate uppercase tracking-tight ${n.isNew ? 'text-slate-900' : 'text-slate-400'}`}>{n.title}</h3>
-                    <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest shrink-0">{n.time}</span>
+                <div className="flex items-center justify-between gap-3 mb-1.5">
+                    <h3 className={`text-[13px] font-black truncate tracking-tighter ${n.isNew ? 'text-white' : 'text-white/60'}`}>{n.title}</h3>
+                    <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em] shrink-0">{n.time}</span>
                 </div>
-                <p className={`text-[10px] leading-relaxed uppercase font-bold tracking-tight ${n.isNew ? 'text-slate-600' : 'text-slate-400'}`}>{n.desc}</p>
+                <p className={`text-[10px] leading-relaxed uppercase font-black tracking-widest ${n.isNew ? 'text-white/40' : 'text-white/20'}`}>{n.desc}</p>
             </div>
             {n.isNew && (
-                <div className="absolute top-4 right-4 flex gap-0.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#FF9900] shadow-[0_0_8px_rgba(255,153,0,0.5)]" />
+                <div className="absolute top-5 right-5">
+                    <div className="w-2 h-2 rounded-full bg-[#F59E0B] shadow-[0_0_10px_#F59E0B]" />
                 </div>
             )}
         </motion.div>

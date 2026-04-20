@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
     Zap, Shield, Droplets, CheckCircle2, Clock, Car,
-    Star, Plus, Minus, Gift
+    Star, Plus, Minus, Gift, Sparkles
 } from 'lucide-react';
 import MobileLayout from '../components/layout/MobileLayout';
 
@@ -145,28 +145,28 @@ const ServiceCard = ({ s, isActive, getPrice, formatPrice, navigate }) => {
         <div className={`rounded-xl overflow-hidden border transition-all duration-300 ${s.provider === 'vendor'
             ? (isActive
                 ? 'border-purple-500/40 shadow-[0_4px_16px_-4px_rgba(168,85,247,0.16)]'
-                : 'border-gray-100 shadow-[0_1px_6px_rgba(0,0,0,0.05)]')
+                : 'border-white/5 shadow-[0_1px_6px_rgba(0,0,0,0.05)]')
             : (isActive
                 ? 'border-brand/40 shadow-[0_4px_16px_-4px_rgba(255,107,0,0.16)]'
-                : 'border-gray-100 shadow-[0_1px_6px_rgba(0,0,0,0.05)]')
+                : 'border-white/5 shadow-[0_1px_6px_rgba(0,0,0,0.05)]')
             }`}>
 
             {/* ── Title Bar (Clean & Light) ── */}
             <button
                 onClick={() => setOpen(v => !v)}
                 className={`w-full flex items-center justify-between px-4 py-3 border-b group ${s.provider === 'vendor'
-                    ? 'bg-purple-50 border-purple-100'
-                    : 'bg-white border-gray-50'
+                    ? 'bg-white/[0.05] border-white/10'
+                    : 'bg-white/[0.03] border-white/5'
                     }`}
             >
                 <div className="flex items-center gap-2.5">
-                    <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_8px_rgba(${s.provider === 'vendor' ? '168,85,247' : '255,107,0'},0.4)] ${s.provider === 'vendor' ? 'bg-purple-500' : 'bg-brand'
+                    <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.4)] ${s.provider === 'vendor' ? 'bg-purple-500' : 'bg-[#F59E0B]'
                         }`} />
-                    <span className={`font-[1000] text-[13px] tracking-tight uppercase ${s.provider === 'vendor' ? 'text-purple-700' : 'text-content'
+                    <span className={`font-[1000] text-[13px] tracking-tight ${s.provider === 'vendor' ? 'text-purple-400' : 'text-white'
                         }`}>{s.title}</span>
                 </div>
                 <div className={`transition-transform duration-300 ${open ? 'rotate-180' : ''}`}>
-                    <ChevronDown size={14} className={`text-content/30 group-hover:${s.provider === 'vendor' ? 'text-purple-500' : 'text-brand'}`} strokeWidth={3} />
+                    <ChevronDown size={14} className={`text-white/20 group-hover:${s.provider === 'vendor' ? 'text-purple-400' : 'text-[#F59E0B]'}`} strokeWidth={3} />
                 </div>
             </button>
 
@@ -177,14 +177,14 @@ const ServiceCard = ({ s, isActive, getPrice, formatPrice, navigate }) => {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
 
                 {/* tag badge */}
-                <div className="absolute bottom-2 left-4 px-2 py-0.5 bg-white/90 backdrop-blur-sm rounded-md shadow-sm">
-                    <p className={`text-[7px] font-black uppercase tracking-wider ${s.provider === 'vendor' ? 'text-purple-600' : 'text-brand'
+                <div className="absolute bottom-2 left-4 px-2 py-0.5 bg-black/50 backdrop-blur-md rounded-md border border-white/10 ">
+                    <p className={`text-[7px] font-black uppercase tracking-wider ${s.provider === 'vendor' ? 'text-purple-400' : 'text-[#F59E0B]'
                         }`}>{s.tag}</p>
                 </div>
 
                 {/* provider badge */}
                 {s.provider === 'vendor' && (
-                    <div className="absolute top-2 left-4 px-2 py-0.5 bg-purple-500 text-white rounded-md shadow-sm">
+                    <div className="absolute top-2 left-4 px-2 py-0.5 bg-purple-500 text-white rounded-md ">
                         <p className="text-[6px] font-black uppercase tracking-wider flex items-center gap-1">
                             <Shield size={8} strokeWidth={2.5} />
                             Pickup
@@ -195,7 +195,7 @@ const ServiceCard = ({ s, isActive, getPrice, formatPrice, navigate }) => {
                 {/* active status tick */}
                 {isActive && (
                     <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
-                        className={`absolute top-2 right-3 w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-lg ${s.provider === 'vendor' ? 'bg-purple-500' : 'bg-brand'
+                        className={`absolute top-2 right-3 w-5 h-5 rounded-full flex items-center justify-center border border-white/20 shadow-lg ${s.provider === 'vendor' ? 'bg-purple-500' : 'bg-[#F59E0B]'
                             }`}
                     >
                         <CheckCircle2 size={10} className="text-white" strokeWidth={3} />
@@ -204,31 +204,31 @@ const ServiceCard = ({ s, isActive, getPrice, formatPrice, navigate }) => {
             </div>
 
             {/* ── Info Row (Price/Quick CTA) ── */}
-            <div className={`flex items-center justify-between px-4 py-4 ${s.provider === 'vendor' ? 'bg-purple-50' : 'bg-white'
+            <div className={`flex items-center justify-between px-4 py-4 ${s.provider === 'vendor' ? 'bg-white/[0.05]' : 'bg-white/[0.02]'
                 }`}>
                 <div className="space-y-1">
                     <div className="flex items-baseline gap-1.5 leading-none">
-                        <span className="text-[20px] font-[1000] text-content tracking-tighter">₹{startPrice}</span>
-                        {origPrice && <span className="text-[11px] font-bold text-content-subtle line-through opacity-30">₹{origPrice}</span>}
+                        <span className="text-[20px] font-black text-white tracking-tighter">₹{startPrice}</span>
+                        {origPrice && <span className="text-[11px] font-bold text-white/20 line-through">₹{origPrice}</span>}
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="flex items-center gap-1 opacity-60">
-                            <Clock size={9} className="text-brand" strokeWidth={3} />
-                            <span className="text-[8.5px] font-black text-content-subtle uppercase tracking-wider">{s.duration}</span>
+                            <Clock size={9} className="text-[#F59E0B]" strokeWidth={3} />
+                            <span className="text-[8.5px] font-black text-white/40 uppercase tracking-widest">{s.duration}</span>
                         </div>
-                        <div className="flex items-center gap-1 opacity-80">
-                            <Star size={9} fill="#FBBF24" className="text-amber-400" />
-                            <span className="text-[10px] font-black text-content">{s.rating ?? 4.5}</span>
-                            <span className="text-[8px] font-bold text-content-subtle opacity-50">({(s.reviews ?? 500).toLocaleString()})</span>
+                        <div className="flex items-center gap-1">
+                            <Star size={9} fill="#F59E0B" className="text-[#F59E0B]" />
+                            <span className="text-[10px] font-black text-white">{s.rating ?? 4.5}</span>
+                            <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest ml-1">({(s.reviews ?? 500).toLocaleString()})</span>
                         </div>
                     </div>
                 </div>
                 <motion.button
                     whileTap={{ scale: 0.94 }}
                     onClick={handleBook}
-                    className={`h-10 px-8 rounded-xl font-[1000] text-[10px] uppercase tracking-widest shadow-lg border-b-2 transition-all hover:active:border-b-0 active:translate-y-0.5 ${s.provider === 'vendor'
-                        ? 'bg-purple-500 text-white shadow-purple-500/20 border-purple-600/20 hover:bg-purple-600'
-                        : 'bg-brand text-white shadow-brand/20 border-brand-dark/20 hover:bg-brand-dark'
+                    className={`h-10 px-8 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-2xl transition-all active:scale-95 ${s.provider === 'vendor'
+                        ? 'bg-purple-600 text-white shadow-purple-600/20'
+                        : 'bg-[#F59E0B] text-black shadow-[#F59E0B]/20'
                         }`}
                 >
                     {s.provider === 'vendor' ? (
@@ -244,9 +244,9 @@ const ServiceCard = ({ s, isActive, getPrice, formatPrice, navigate }) => {
             </div>
 
             {/* ── Subtitle Membership Link (Subtle Hint) ── */}
-            <div className="px-4 pb-3.5 pt-1 border-b border-gray-50">
-                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.15em] leading-none text-center">
-                    Enjoy up to 40% OFF with <span className="text-brand font-black italic underline decoration-brand/20">Black membership</span>
+            <div className="px-4 pb-3.5 pt-1 border-b border-white/5">
+                <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] leading-none text-center">
+                    Enjoy up to 40% OFF with <span className="text-[#F59E0B] font-black italic underline decoration-[#F59E0B]/20">Black membership</span>
                 </p>
             </div>
             {/* ── Expandable Body ── */}
@@ -258,7 +258,7 @@ const ServiceCard = ({ s, isActive, getPrice, formatPrice, navigate }) => {
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.25, ease: 'easeInOut' }}
-                        className="overflow-hidden border-t border-gray-100"
+                        className="overflow-hidden border-t border-white/5"
                     >
                         <div className="px-4 pt-3 pb-4 space-y-4">
 
@@ -266,26 +266,26 @@ const ServiceCard = ({ s, isActive, getPrice, formatPrice, navigate }) => {
                             <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
                                 {s.features.map(f => (
                                     <div key={f} className="flex items-center gap-1.5">
-                                        <CheckCircle2 size={9} className={`${s.provider === 'vendor' ? 'text-purple-500' : 'text-brand'} shrink-0`} strokeWidth={3} />
-                                        <span className="text-[9px] font-semibold text-content-subtle leading-tight">{f}</span>
+                                        <CheckCircle2 size={9} className={`${s.provider === 'vendor' ? 'text-purple-500' : 'text-[#F59E0B]'} shrink-0`} strokeWidth={3} />
+                                        <span className="text-[9px] font-black uppercase text-white/40 tracking-tight leading-tight">{f}</span>
                                     </div>
                                 ))}
                             </div>
 
                             {/* Add-ons */}
                             {s.addons && s.addons.length > 0 && (
-                                <div className="rounded-xl border border-gray-100 overflow-hidden">
+                                <div className="rounded-xl border border-white/5 overflow-hidden">
                                     {/* section label */}
-                                    <div className="flex items-center justify-between px-3.5 py-2.5 bg-gray-50 border-b border-gray-100">
+                                    <div className="flex items-center justify-between px-3.5 py-2.5 bg-white/[0.03] border-b border-white/5">
                                         <div>
-                                            <p className="text-[9px] font-black text-content uppercase tracking-widest">Make your service</p>
-                                            <p className="text-[7.5px] font-bold text-content-subtle">Customize your wash</p>
+                                            <p className="text-[9px] font-black text-white uppercase tracking-widest">Experience</p>
+                                            <p className="text-[7.5px] font-black text-white/20 uppercase">Customization</p>
                                         </div>
                                         <motion.button whileTap={{ scale: 0.95 }}
                                             onClick={(e) => { e.stopPropagation(); navigate(`/service/${s.id}`); }}
-                                            className={`px-3 py-1.5 rounded-lg font-black text-[8px] uppercase tracking-widest shadow-sm ${s.provider === 'vendor'
-                                                ? 'bg-purple-500 text-white shadow-purple-500/20'
-                                                : 'bg-brand text-white shadow-brand/20'
+                                            className={`px-3 py-1.5 rounded-lg font-black text-[8px] uppercase tracking-widest shadow-2xl ${s.provider === 'vendor'
+                                                ? 'bg-purple-600 text-white'
+                                                : 'bg-[#F59E0B] text-black'
                                                 }`}
                                         >
                                             View details
@@ -293,7 +293,7 @@ const ServiceCard = ({ s, isActive, getPrice, formatPrice, navigate }) => {
                                     </div>
 
                                     {/* rows */}
-                                    <div className="divide-y divide-gray-50 bg-white">
+                                    <div className="divide-y divide-white/5 bg-white/[0.01]">
                                         {s.addons.map(addon => {
                                             const checked = checkedAddons.includes(addon.id);
                                             return (
@@ -301,26 +301,26 @@ const ServiceCard = ({ s, isActive, getPrice, formatPrice, navigate }) => {
                                                     <div className="flex items-center gap-2.5 flex-1 min-w-0">
                                                         <button
                                                             onClick={() => toggle(addon.id)}
-                                                            className={`w-4.5 h-[18px] w-[18px] rounded border-[1.5px] flex-shrink-0 flex items-center justify-center transition-all ${checked
-                                                                ? (s.provider === 'vendor' ? 'bg-purple-500 border-purple-500' : 'bg-brand border-brand')
-                                                                : 'border-gray-300 bg-white'
+                                                            className={`w-4.5 h-[18px] w-[18px] rounded border flex-shrink-0 flex items-center justify-center transition-all ${checked
+                                                                ? (s.provider === 'vendor' ? 'bg-purple-500 border-purple-500' : 'bg-[#F59E0B] border-[#F59E0B]')
+                                                                : 'border-white/20 bg-white/5'
                                                                 }`}
                                                         >
-                                                            {checked && <CheckCircle2 size={10} className="text-white" strokeWidth={3} />}
+                                                            {checked && <CheckCircle2 size={10} className={s.provider === 'vendor' ? 'text-white' : 'text-black'} strokeWidth={3} />}
                                                         </button>
-                                                        <span className="text-[10px] font-semibold text-content leading-snug truncate">{addon.name}</span>
+                                                        <span className="text-[10px] font-black text-white/60 uppercase tracking-tight leading-snug truncate">{addon.name}</span>
                                                     </div>
                                                     <div className="flex items-center gap-1.5 ml-2 shrink-0">
-                                                        <span className="text-[11px] font-black text-content">₹{addon.price}</span>
+                                                        <span className="text-[11px] font-black text-white italic">₹{addon.price}</span>
                                                         {addon.included ? (
-                                                            <div className="w-5 h-5 rounded-md bg-green-50 border border-green-100 flex items-center justify-center">
-                                                                <CheckCircle2 size={10} className="text-green-500" strokeWidth={2.5} />
+                                                            <div className="w-5 h-5 rounded-md bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                                                                <CheckCircle2 size={10} className="text-emerald-500" strokeWidth={2.5} />
                                                             </div>
                                                         ) : (
                                                             <button onClick={() => toggle(addon.id)}
                                                                 className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${checked
-                                                                    ? (s.provider === 'vendor' ? 'bg-purple-500 border-purple-500 text-white' : 'bg-brand border-brand text-white')
-                                                                    : 'border-gray-200 text-content-subtle'
+                                                                    ? (s.provider === 'vendor' ? 'bg-purple-500 border-purple-500 text-white' : 'bg-[#F59E0B] border-[#F59E0B] text-black')
+                                                                    : 'border-white/10 text-white/20'
                                                                     }`}
                                                             >
                                                                 {checked
@@ -342,22 +342,22 @@ const ServiceCard = ({ s, isActive, getPrice, formatPrice, navigate }) => {
                             {/* Monthly Subscription Plans (Per service) */}
                             {s.plans && s.plans.length > 0 && (
                                 <div className="space-y-2 pb-1">
-                                    <p className="text-[9px] font-black text-content uppercase tracking-widest ml-1 opacity-50 italic">Monthly wash cycles</p>
+                                    <p className="text-[9px] font-black text-white/20 uppercase tracking-widest ml-1 italic">Cycles & Payouts</p>
                                     <div className="grid grid-cols-1 gap-2">
                                         {s.plans.map(plan => (
-                                            <div key={plan.id} className="bg-gray-50 border border-gray-100 rounded-xl px-3.5 py-3 flex items-center justify-between group hover:border-brand/30 transition-all">
+                                            <div key={plan.id} className="bg-white/[0.03] border border-white/5 rounded-xl px-3.5 py-3 flex items-center justify-between group hover:border-[#F59E0B]/30 transition-all">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-brand border border-gray-100 italic font-black text-[12px]">
+                                                    <div className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center text-[#F59E0B] border border-white/10 italic font-black text-[12px] shadow-lg">
                                                         {plan.label.match(/\d+/)?.[0] || '1'}
                                                     </div>
                                                     <div>
-                                                        <p className="text-[11px] font-black text-content uppercase tracking-tight leading-none">{plan.label}</p>
-                                                        <p className="text-[8px] font-bold text-content-subtle mt-1 opacity-60">₹{plan.perWash}/wash</p>
+                                                        <p className="text-[11px] font-black text-white uppercase tracking-tight leading-none">{plan.label}</p>
+                                                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mt-1">₹{plan.perWash}/wash</p>
                                                     </div>
                                                 </div>
                                                 <div className="text-right flex items-center gap-3">
-                                                    <span className="text-[14px] font-black text-content tracking-tighter italic">₹{plan.total}</span>
-                                                    <button onClick={handleBook} className="w-6 h-6 bg-brand text-white rounded-lg flex items-center justify-center shadow-sm">
+                                                    <span className="text-[14px] font-black text-white italic italic tracking-tighter">₹{plan.total}</span>
+                                                    <button onClick={handleBook} className="w-6 h-6 bg-[#F59E0B] text-black rounded-lg flex items-center justify-center shadow-lg">
                                                         <ChevronRight size={12} strokeWidth={3} />
                                                     </button>
                                                 </div>
@@ -370,19 +370,19 @@ const ServiceCard = ({ s, isActive, getPrice, formatPrice, navigate }) => {
                             {/* ── Loyalty Offer Banner (Bottom of Detail Flow) ── */}
                             {offerLabel && (
                                 <motion.div
-                                    className="flex items-center gap-4 bg-[#FFFBEB] border border-amber-100 rounded-2xl p-4 shadow-sm"
+                                    className="flex items-center gap-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 "
                                 >
-                                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-amber-50">
-                                        <Gift size={22} className="text-[#D97706]" strokeWidth={2.5} />
+                                    <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center shrink-0  border border-white/10">
+                                        <Gift size={22} className="text-[#F59E0B]" strokeWidth={2.5} />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-[10px] font-black text-[#92400E] uppercase tracking-[0.1em] leading-none mb-1.5 opacity-90">Loyalty offer</p>
-                                        <p className="text-[14px] font-[1000] text-[#111827] tracking-tight leading-none">{offerLabel}</p>
+                                        <p className="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em] leading-none mb-1.5 opacity-60 italic">Loyalty offer</p>
+                                        <p className="text-[14px] font-black text-white italic tracking-tighter leading-none">{offerLabel}</p>
                                     </div>
                                     <motion.button
                                         whileTap={{ scale: 0.95 }}
                                         onClick={(e) => { e.stopPropagation(); navigate('/subscriptions'); }}
-                                        className="h-11 px-7 bg-[#FF7D00] text-white rounded-xl font-[1000] text-[10px] uppercase tracking-wider shadow-md shadow-brand/20 shrink-0 flex items-center justify-center transition-all active:scale-95"
+                                        className="h-11 px-7 bg-[#F59E0B] text-black rounded-xl font-black text-[10px] uppercase tracking-wider shadow-2xl shadow-[#F59E0B]/20 shrink-0 flex items-center justify-center transition-all active:scale-95"
                                     >
                                         Avail
                                     </motion.button>
@@ -394,14 +394,14 @@ const ServiceCard = ({ s, isActive, getPrice, formatPrice, navigate }) => {
                             <motion.button
                                 whileTap={{ scale: 0.97 }}
                                 onClick={handleBook}
-                                className="w-full h-11 bg-brand text-white rounded-xl font-black text-[11px] uppercase tracking-widest shadow-lg shadow-brand/20 flex items-center justify-center gap-2 relative overflow-hidden"
+                                className="w-full h-11 bg-white text-black rounded-xl font-black text-[11px] uppercase tracking-widest shadow-2xl flex items-center justify-center gap-2 relative overflow-hidden"
                             >
                                 <span>Book {s.title}</span>
                                 <ChevronRight size={13} strokeWidth={3} />
                                 <motion.div
                                     animate={{ x: ['100%', '-200%'] }}
                                     transition={{ repeat: Infinity, duration: 2.5, ease: 'linear' }}
-                                    className="absolute inset-y-0 w-8 bg-white/10 skew-x-12 pointer-events-none"
+                                    className="absolute inset-y-0 w-8 bg-black/5 skew-x-12 pointer-events-none"
                                 />
                             </motion.button>
                         </div>
@@ -491,37 +491,38 @@ const ServiceSelection = () => {
 
     return (
         <MobileLayout>
-            {/* ── Sticky Header ── */}
-            <header className="px-4 pt-10 pb-4 bg-white sticky top-0 z-50 border-b border-gray-100">
-                {/* Row 1: back + title + mode toggle */}
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                        <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate(-1)}
-                            className="w-8 h-8 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center">
-                            <ChevronLeft size={16} strokeWidth={2.5} className="text-slate-900" />
-                        </motion.button>
-                        <div>
-                            <h1 className="text-base font-black tracking-tight text-slate-900 leading-none">Choose wash</h1>
-                            <div className="flex items-center gap-1 mt-0.5">
-                                <span className="w-1 h-1 bg-brand rounded-full animate-pulse" />
-                                <p className="text-[8px] text-brand font-black uppercase tracking-widest">Live · Faridabad</p>
+            <div className="bg-[#0A0F0D] min-h-screen">
+                {/* ── Sticky Header ── */}
+                <header className="px-4 pt-10 pb-4 bg-[#0A0F0D]/90 sticky top-0 z-50 border-b border-white/5 backdrop-blur-xl">
+                    {/* Row 1: back + title + mode toggle */}
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                            <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate(-1)}
+                                className="w-10 h-10 bg-white/[0.03] border border-white/10 rounded-2xl flex items-center justify-center">
+                                <ChevronLeft size={20} strokeWidth={3} className="text-white" />
+                            </motion.button>
+                            <div>
+                                <h1 className="text-lg font-[1000] tracking-tighter text-white leading-none">Choose wash</h1>
+                                <div className="flex items-center gap-1 mt-2">
+                                    <span className="w-1.5 h-1.5 bg-[#F59E0B] rounded-full animate-pulse" />
+                                    <p className="text-[8px] text-[#F59E0B] font-black uppercase tracking-widest leading-none">Faridabad protocol active</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Now / Later */}
-                    <div className="bg-gray-100 p-0.5 rounded-xl flex gap-0.5">
-                        {['now', 'later'].map(m => (
-                            <button key={m}
-                                onClick={() => setMode(m === 'now' ? 'instant' : 'scheduled')}
-                                className={`px-3 py-1.5 rounded-[9px] text-[8.5px] font-black uppercase tracking-wide transition-all ${(m === 'now' && mode === 'instant') || (m === 'later' && mode === 'scheduled')
-                                    ? 'bg-white text-brand shadow-sm' : 'text-slate-500'
-                                    }`}>
-                                {m}
-                            </button>
-                        ))}
+                        {/* Now / Later */}
+                        <div className="bg-white/[0.03] p-1 rounded-xl flex gap-1 border border-white/5">
+                            {['now', 'later'].map(m => (
+                                <button key={m}
+                                    onClick={() => setMode(m === 'now' ? 'instant' : 'scheduled')}
+                                    className={`px-3 py-1.5 rounded-[9px] text-[8.5px] font-black uppercase tracking-widest transition-all ${(m === 'now' && mode === 'instant') || (m === 'later' && mode === 'scheduled')
+                                        ? 'bg-white text-black ' : 'text-white/20'
+                                        }`}>
+                                    {m}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                </div>
 
                 {/* Date Picker (scheduled) */}
                 <AnimatePresence>
@@ -530,7 +531,7 @@ const ServiceSelection = () => {
                             className="flex gap-2 mb-3 overflow-x-auto pb-0.5 no-scrollbar">
                             {['Today', 'Tomorrow', '27 Feb', '28 Feb'].map((d, i) => (
                                 <button key={d}
-                                    className={`flex-shrink-0 px-3.5 py-1.5 rounded-lg text-[8.5px] font-black uppercase tracking-wide border transition-all ${i === 0 ? 'bg-brand text-white border-brand shadow-sm' : 'bg-gray-50 border-gray-100 text-content-muted'
+                                    className={`flex-shrink-0 px-3.5 py-1.5 rounded-lg text-[8.5px] font-black uppercase tracking-[0.2em] border transition-all ${i === 0 ? 'bg-[#F29F05] text-black border-[#F29F05] ' : 'bg-white/[0.03] border-white/10 text-white/40'
                                         }`}>
                                     {d}
                                 </button>
@@ -542,25 +543,25 @@ const ServiceSelection = () => {
                 {/* Service Type Switcher */}
                 <div className="flex gap-2 mb-3">
                     {[
-                        { id: 'captain', label: 'Car Wash', sub: 'At Home', icon: <Zap size={12} fill="currentColor" /> },
+                        { id: 'captain', label: 'Car Wash', sub: 'At Home', icon: <Droplets size={12} fill="currentColor" /> },
                         { id: 'vendor', label: 'Studio wash', sub: 'Pickup & Drop', icon: <Shield size={12} /> }
                     ].map(type => (
                         <button key={type.id}
                             onClick={() => { setServiceType(type.id); setActive(type.id === 'captain' ? 'eco' : 'full-wash'); }}
-                            className={`flex-1 flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 transition-all ${serviceType === type.id
-                                ? 'border-brand bg-brand/[0.03]'
-                                : 'border-gray-100 bg-gray-50/60 opacity-60 hover:opacity-90'
+                            className={`flex-1 flex items-center gap-3 px-3 py-3 rounded-xl border transition-all ${serviceType === type.id
+                                ? 'border-[#F59E0B]/50 bg-[#F59E0B]/5 shadow-lg shadow-[#F59E0B]/5'
+                                : 'border-white/5 bg-white/[0.02] opacity-40 hover:opacity-100'
                                 }`}
                         >
-                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-colors ${serviceType === type.id ? 'bg-brand text-white shadow-sm shadow-brand/25' : 'bg-white text-content-subtle border border-gray-100'
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all ${serviceType === type.id ? 'bg-[#F59E0B] text-black shadow-lg shadow-[#F59E0B]/20' : 'bg-white/5 text-white/20 border border-white/10'
                                 }`}>
                                 {type.icon}
                             </div>
-                            <div className="text-left">
-                                <p className={`font-black text-[10px] uppercase tracking-tight leading-none ${serviceType === type.id ? 'text-brand' : 'text-slate-900'}`}>
+                            <div className="text-left leading-none">
+                                <p className={`font-black text-[10px] uppercase tracking-tighter italic ${serviceType === type.id ? 'text-white' : 'text-white/40'}`}>
                                     {type.label}
                                 </p>
-                                <p className="text-[7px] font-bold text-slate-400 uppercase mt-0.5 opacity-70">{type.sub}</p>
+                                <p className="text-[7.5px] font-black uppercase tracking-widest text-white/20 mt-1">{type.sub}</p>
                             </div>
                         </button>
                     ))}
@@ -571,12 +572,12 @@ const ServiceSelection = () => {
                     {VEHICLE_TYPES.map(v => (
                         <button key={v.id}
                             onClick={() => setSelectedVehicle(v.id)}
-                            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all ${selectedVehicle === v.id
-                                ? 'bg-brand text-white border-brand shadow-sm shadow-brand/20'
-                                : 'bg-white border-gray-100 text-slate-500'
+                            className={`flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${selectedVehicle === v.id
+                                ? 'bg-white text-black border-white shadow-2xl'
+                                : 'bg-white/[0.03] border-white/5 text-white/20'
                                 }`}>
                             <Car size={11} strokeWidth={selectedVehicle === v.id ? 3 : 2} />
-                            <span className="text-[9px] font-black uppercase tracking-tight">{v.label}</span>
+                            <span className="text-[9px] font-[1000] tracking-tighter">{v.label}</span>
                         </button>
                     ))}
                 </div>
@@ -588,15 +589,15 @@ const ServiceSelection = () => {
                 <AnimatePresence>
                     {mode === 'scheduled' && (
                         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-                            className="bg-white rounded-xl border border-gray-100 p-3">
-                            <div className="flex items-center justify-between mb-2">
-                                <p className="text-[8.5px] font-black text-content-subtle uppercase tracking-widest">Pick arrival slot</p>
-                                <span className="text-[7.5px] font-black text-brand bg-brand/10 px-2 py-0.5 rounded-full uppercase tracking-wide">Fastest</span>
+                            className="bg-white/[0.03] rounded-2xl border border-white/5 p-4 shadow-xl">
+                            <div className="flex items-center justify-between mb-4">
+                                <p className="text-[8.5px] font-black text-white/20 uppercase tracking-[0.2em] italic">Pick arrival slot</p>
+                                <span className="text-[7.5px] font-[1000] text-[#F59E0B] bg-[#F59E0B]/10 px-2.5 py-1 rounded-full uppercase tracking-widest border border-[#F59E0B]/20">Fastest</span>
                             </div>
-                            <div className="grid grid-cols-3 gap-1.5">
+                            <div className="grid grid-cols-3 gap-2">
                                 {SLOTS.map(sl => (
                                     <button key={sl.id} onClick={() => setSelectedSlot(sl.id)}
-                                        className={`py-2 rounded-lg text-[9.5px] font-black tracking-tight border transition-all ${selectedSlot === sl.id ? 'bg-brand text-white border-brand shadow-sm' : 'bg-gray-50 border-transparent text-slate-900'
+                                        className={`py-2 rounded-xl text-[9.5px] font-black tracking-tight border transition-all ${selectedSlot === sl.id ? 'bg-[#F29F05] text-black border-[#F29F05] shadow-lg shadow-[#F29F05]/20' : 'bg-white/5 border-white/10 text-white/40'
                                             }`}>
                                         {sl.time}
                                     </button>
@@ -626,17 +627,17 @@ const ServiceSelection = () => {
                 ))}
 
                 {/* ── How it Works ── */}
-                <div className="bg-gray-50 rounded-2xl p-4 mt-2">
-                    <p className="text-[8px] font-black text-content-subtle uppercase tracking-[0.2em] mb-3">The CarWash way</p>
-                    <div className="space-y-3">
+                <div className="bg-white/[0.03] rounded-2xl p-5 border border-white/5">
+                    <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mb-4 italic">Platform Logic</p>
+                    <div className="space-y-4">
                         {STEPS.map(step => (
-                            <div key={step.n} className="flex items-center gap-3">
-                                <div className="w-7 h-7 rounded-lg bg-white shadow-sm border border-gray-100 flex items-center justify-center font-black text-[9px] text-brand shrink-0">
+                            <div key={step.n} className="flex items-center gap-4">
+                                <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-[10px] text-[#F59E0B] shrink-0 shadow-lg italic">
                                     {step.n}
                                 </div>
                                 <div>
-                                    <p className="font-black text-[10px] text-slate-900 uppercase tracking-tight leading-none">{step.title}</p>
-                                    <p className="text-[8.5px] font-bold text-slate-400 mt-0.5">{step.desc}</p>
+                                    <p className="font-black text-[11px] text-white italic uppercase tracking-tighter leading-none">{step.title}</p>
+                                    <p className="text-[9px] font-black text-white/20 uppercase tracking-widest mt-1 opacity-60 leading-none">{step.desc}</p>
                                 </div>
                             </div>
                         ))}
@@ -644,19 +645,20 @@ const ServiceSelection = () => {
                 </div>
 
                 {/* ── Trust Badges ── */}
-                <div className="flex gap-2 pb-4">
+                <div className="flex gap-2 pb-6">
                     {[
-                        { icon: <Shield size={13} className="text-green-500" />, text: 'Insured' },
+                        { icon: <Shield size={13} className="text-emerald-500" />, text: 'Insured' },
                         { icon: <Droplets size={13} className="text-blue-500" />, text: 'Eco-Safe' },
-                        { icon: <Zap size={13} className="text-brand" fill="#FF6B00" />, text: 'Instant' },
+                        { icon: <Zap size={13} className="text-[#F59E0B]" fill="currentColor" />, text: 'Instant' },
                     ].map(b => (
-                        <div key={b.text} className="flex-1 flex items-center justify-center gap-1.5 bg-white border border-gray-100 rounded-xl py-2.5 shadow-sm">
+                        <div key={b.text} className="flex-1 flex items-center justify-center gap-2 bg-white/[0.03] border border-white/5 rounded-2xl py-3 shadow-xl">
                             {b.icon}
-                            <span className="text-[7.5px] font-black uppercase tracking-widest text-slate-400">{b.text}</span>
+                            <span className="text-[7.5px] font-black uppercase tracking-[0.2em] text-white/20">{b.text}</span>
                         </div>
                     ))}
                 </div>
             </div>
+          </div>
         </MobileLayout>
     );
 };

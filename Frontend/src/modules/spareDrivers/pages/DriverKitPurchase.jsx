@@ -140,16 +140,16 @@ const DriverKitPurchase = () => {
     return (
         <DriverLayout title="Kit Purchasing">
             <div className="px-6 py-6 pb-28 space-y-5">
-                <div className="rounded-[2rem] border border-black/[0.05] bg-white p-5 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
+                <div className="rounded-[2rem] border border-black/[0.05] bg-white/5 p-5 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
                     <p className="text-[9px] font-black text-brand uppercase tracking-widest">Driver Activation</p>
-                    <h2 className="text-[20px] font-black text-black uppercase tracking-tight leading-tight mt-2">{kitConfig.title || 'Starter Driver Kit'}</h2>
+                    <h2 className="text-[20px] font-black text-white uppercase tracking-tight leading-tight mt-2">{kitConfig.title || 'Starter Driver Kit'}</h2>
                     <p className="text-[10px] font-black text-black/35 uppercase tracking-wider mt-2">{kitConfig.subtitle}</p>
                 </div>
 
                 {Array.isArray(kitConfig.imageUrls) && kitConfig.imageUrls.length > 0 && (
                     <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1">
                         {kitConfig.imageUrls.map((imageUrl, index) => (
-                            <div key={`${imageUrl}-${index}`} className="snap-start shrink-0 w-[84%] rounded-[1.2rem] overflow-hidden border border-black/[0.06] bg-white">
+                            <div key={`${imageUrl}-${index}`} className="snap-start shrink-0 w-[84%] rounded-[1.2rem] overflow-hidden border border-black/[0.06] bg-white/5">
                                 <img src={imageUrl} alt={`Kit visual ${index + 1}`} className="w-full h-40 object-cover" loading="lazy" />
                             </div>
                         ))}
@@ -159,11 +159,11 @@ const DriverKitPurchase = () => {
                 <div className="rounded-[1.5rem] border border-brand/20 bg-yellow-50/50 p-4 space-y-3">
                     <div className="flex items-center justify-between">
                         <p className="text-[9px] font-black text-black/30 uppercase tracking-widest">Payable Now</p>
-                        <p className="text-[18px] font-black text-black">₹{driver?.kit?.price || kitConfig.kitPrice || 1499}</p>
+                        <p className="text-[18px] font-black text-white">₹{driver?.kit?.price || kitConfig.kitPrice || 1499}</p>
                     </div>
                     <div className="flex items-center justify-between">
                         <p className="text-[9px] font-black text-black/30 uppercase tracking-widest">Monthly Recovery</p>
-                        <p className="text-[10px] font-black text-black uppercase">₹{kitConfig.monthlyDeductionAmount || 0} x {kitConfig.monthlyDeductionMonths || 0}</p>
+                        <p className="text-[10px] font-black text-white uppercase">₹{kitConfig.monthlyDeductionAmount || 0} x {kitConfig.monthlyDeductionMonths || 0}</p>
                     </div>
                 </div>
 
@@ -193,7 +193,7 @@ const DriverKitPurchase = () => {
 
                 <button
                     onClick={() => navigate('/spare-driver/dashboard')}
-                    className="w-full h-11 border border-gray-200 rounded-xl text-[10px] font-black text-black/55 uppercase"
+                    className="w-full h-11 border border-white/10 rounded-xl text-[10px] font-black text-black/55 uppercase"
                 >
                     Back to Dashboard
                 </button>

@@ -573,7 +573,7 @@ const ApartmentWash = () => {
                             {(activeSubscription?.hub?.name || selectedApartment?.name || 'Apartment pending')}{' • '}{(activeSubscription?.slot || selectedSlot?.label || 'Slot pending')}
                         </p>
                     </div>
-                    <div className="rounded-2xl bg-yellow-400 px-3 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-black">
+                    <div className="rounded-2xl bg-yellow-400 px-3 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-white">
                         Pending
                     </div>
                 </div>
@@ -607,7 +607,7 @@ const ApartmentWash = () => {
             </div>
 
             {activationSummary && (
-                <div className="rounded-3xl border border-yellow-100 bg-yellow-50 px-5 py-4 shadow-sm">
+                <div className="rounded-3xl border border-yellow-100 bg-yellow-50 px-5 py-4 ">
                     <p className="text-[10px] font-black uppercase tracking-[0.24em] text-yellow-700">Request logged</p>
                     <p className="mt-2 text-[11px] font-[1000] uppercase tracking-tight text-yellow-900">
                         {activationSummary.plan || activeSubscription?.plan || 'Apartment Wash'} has been submitted for admin review.
@@ -618,13 +618,13 @@ const ApartmentWash = () => {
                 </div>
             )}
 
-            <div className="rounded-3xl border border-black/[0.04] bg-white p-5 shadow-sm space-y-4">
+            <div className="rounded-3xl border border-black/[0.04] bg-white/5 p-5  space-y-4">
                 <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-2xl bg-gray-50 flex items-center justify-center text-brand">
+                    <div className="w-11 h-11 rounded-2xl bg-white/[0.02] flex items-center justify-center text-brand">
                         <PencilLine size={20} />
                     </div>
                     <div>
-                        <p className="text-[12px] font-[1000] uppercase tracking-tight text-black">Update request details</p>
+                        <p className="text-[12px] font-[1000] uppercase tracking-tight text-white">Update request details</p>
                         <p className="text-[9px] font-black uppercase tracking-[0.18em] text-black/30 mt-1">Update your vehicle, parking route, or slot before approval.</p>
                     </div>
                 </div>
@@ -641,7 +641,7 @@ const ApartmentWash = () => {
                                 carNumber: matchedVehicle ? (matchedVehicle.plate || matchedVehicle.plateNumber) : current.carNumber
                             }));
                         }}
-                        className="w-full rounded-2xl border border-black/[0.06] bg-gray-50 px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20"
+                        className="w-full rounded-2xl border border-black/[0.06] bg-white/[0.02] px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20"
                     >
                         <option value="">Select vehicle</option>
                         {vehicles.map((vehicle) => (
@@ -650,16 +650,16 @@ const ApartmentWash = () => {
                     </select>
 
                     <div className="grid grid-cols-2 gap-3">
-                        <input value={parkingDetails.basement} onChange={(e) => setParkingDetails((current) => ({ ...current, basement: e.target.value }))} placeholder="Basement / Level" className="w-full rounded-2xl border border-black/[0.06] bg-gray-50 px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20" />
-                        <input value={parkingDetails.block} onChange={(e) => setParkingDetails((current) => ({ ...current, block: e.target.value }))} placeholder="Block / Tower" className="w-full rounded-2xl border border-black/[0.06] bg-gray-50 px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20" />
+                        <input value={parkingDetails.basement} onChange={(e) => setParkingDetails((current) => ({ ...current, basement: e.target.value }))} placeholder="Basement / Level" className="w-full rounded-2xl border border-black/[0.06] bg-white/[0.02] px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20" />
+                        <input value={parkingDetails.block} onChange={(e) => setParkingDetails((current) => ({ ...current, block: e.target.value }))} placeholder="Block / Tower" className="w-full rounded-2xl border border-black/[0.06] bg-white/[0.02] px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20" />
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                        <input value={parkingDetails.pillar} onChange={(e) => setParkingDetails((current) => ({ ...current, pillar: e.target.value }))} placeholder="Pillar / Slot" className="w-full rounded-2xl border border-black/[0.06] bg-gray-50 px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20" />
+                        <input value={parkingDetails.pillar} onChange={(e) => setParkingDetails((current) => ({ ...current, pillar: e.target.value }))} placeholder="Pillar / Slot" className="w-full rounded-2xl border border-black/[0.06] bg-white/[0.02] px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20" />
                         <select value={selectedSlot?.id || activeSubscription?.slot || ''} onChange={(e) => {
                             const slot = apartmentSlots.find((entry) => entry.id === e.target.value);
                             setSelectedSlot(slot || null);
-                        }} className="w-full rounded-2xl border border-black/[0.06] bg-gray-50 px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20">
+                        }} className="w-full rounded-2xl border border-black/[0.06] bg-white/[0.02] px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20">
                             <option value="">Select slot</option>
                             {apartmentSlots.map((slot) => (
                                 <option key={slot.id} value={slot.id}>{slot.label}</option>
@@ -691,7 +691,7 @@ const ApartmentWash = () => {
             <div className="grid grid-cols-2 gap-3">
                 <button
                     onClick={() => navigate('/apartment-wash/history')}
-                    className="w-full rounded-3xl border border-black/[0.05] bg-white px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-black"
+                    className="w-full rounded-3xl border border-black/[0.05] bg-white/5 px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-white"
                 >
                     View history
                 </button>
@@ -722,7 +722,7 @@ const ApartmentWash = () => {
                 </p>
             </div>
 
-            <div className="rounded-3xl border border-red-100 bg-red-50 px-5 py-5 shadow-sm">
+            <div className="rounded-3xl border border-red-100 bg-red-50 px-5 py-5 ">
                 <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-600">Request Not Approved</p>
                 <p className="mt-2 text-[11px] font-[1000] uppercase tracking-tight text-red-900">
                     {(activeSubscription?.hub?.name || selectedApartment?.name || 'Apartment')}{' • '}{(activeSubscription?.slot || selectedSlot?.label || 'Slot pending')}
@@ -787,7 +787,7 @@ const ApartmentWash = () => {
                                 {(activeSubscription?.hub?.name || selectedApartment?.name || 'Apartment pending')}{' • '}{(activeSubscription?.slot || selectedSlot?.label || 'Slot pending')}
                             </p>
                         </div>
-                        <div className={`rounded-2xl px-3 py-2 text-[9px] font-black uppercase tracking-[0.2em] ${activeSubscription?.status === 'paused' ? 'bg-yellow-400 text-black' : 'bg-emerald-500 text-white'}`}>
+                        <div className={`rounded-2xl px-3 py-2 text-[9px] font-black uppercase tracking-[0.2em] ${activeSubscription?.status === 'paused' ? 'bg-yellow-400 text-white' : 'bg-emerald-500 text-white'}`}>
                             {activeSubscription?.status || 'active'}
                         </div>
                     </div>
@@ -815,7 +815,7 @@ const ApartmentWash = () => {
                 </div>
 
                 {activationSummary && (
-                    <div className="rounded-3xl border border-emerald-100 bg-emerald-50 px-5 py-4 shadow-sm">
+                    <div className="rounded-3xl border border-emerald-100 bg-emerald-50 px-5 py-4 ">
                         <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-600">Subscription activated</p>
                         <p className="mt-2 text-[11px] font-[1000] uppercase tracking-tight text-emerald-900">
                             {activationSummary.plan || activeSubscription?.plan || 'Apartment Wash'} is now active.
@@ -830,14 +830,14 @@ const ApartmentWash = () => {
                     <button
                         onClick={handlePauseResume}
                         disabled={managementSaving}
-                        className="w-full rounded-3xl border border-black/[0.04] bg-white px-5 py-4 text-left shadow-sm"
+                        className="w-full rounded-3xl border border-black/[0.04] bg-white/5 px-5 py-4 text-left "
                     >
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-brand">
+                            <div className="w-12 h-12 rounded-2xl bg-white/[0.02] flex items-center justify-center text-brand">
                                 {activeSubscription?.status === 'paused' ? <PlayCircle size={22} /> : <PauseCircle size={22} />}
                             </div>
                             <div className="flex-1">
-                                <p className="text-[12px] font-[1000] uppercase tracking-tight text-black">
+                                <p className="text-[12px] font-[1000] uppercase tracking-tight text-white">
                                     {activeSubscription?.status === 'paused' ? 'Resume daily service' : 'Pause service'}
                                 </p>
                                 <p className="text-[9px] font-black uppercase tracking-[0.18em] text-black/30 mt-1">
@@ -847,13 +847,13 @@ const ApartmentWash = () => {
                         </div>
                     </button>
 
-                    <div className="rounded-3xl border border-black/[0.04] bg-white p-5 shadow-sm space-y-4">
+                    <div className="rounded-3xl border border-black/[0.04] bg-white/5 p-5  space-y-4">
                         <div className="flex items-center gap-3">
-                            <div className="w-11 h-11 rounded-2xl bg-gray-50 flex items-center justify-center text-brand">
+                            <div className="w-11 h-11 rounded-2xl bg-white/[0.02] flex items-center justify-center text-brand">
                                 <SkipForward size={20} />
                             </div>
                             <div>
-                                <p className="text-[12px] font-[1000] uppercase tracking-tight text-black">Skip specific date</p>
+                                <p className="text-[12px] font-[1000] uppercase tracking-tight text-white">Skip specific date</p>
                                 <p className="text-[9px] font-black uppercase tracking-[0.18em] text-black/30 mt-1">Use this when the vehicle is unavailable or you are away.</p>
                             </div>
                         </div>
@@ -862,7 +862,7 @@ const ApartmentWash = () => {
                                 type="date"
                                 value={skipTodayDate}
                                 onChange={(e) => setSkipTodayDate(e.target.value)}
-                                className="flex-1 rounded-2xl border border-black/[0.06] bg-gray-50 px-4 py-3 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20"
+                                className="flex-1 rounded-2xl border border-black/[0.06] bg-white/[0.02] px-4 py-3 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20"
                             />
                             <button
                                 onClick={handleSkipToday}
@@ -875,13 +875,13 @@ const ApartmentWash = () => {
                     </div>
                 </div>
 
-                <div className="rounded-3xl border border-black/[0.04] bg-white p-5 shadow-sm space-y-4">
+                <div className="rounded-3xl border border-black/[0.04] bg-white/5 p-5  space-y-4">
                     <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-2xl bg-gray-50 flex items-center justify-center text-brand">
+                        <div className="w-11 h-11 rounded-2xl bg-white/[0.02] flex items-center justify-center text-brand">
                             <PencilLine size={20} />
                         </div>
                         <div>
-                            <p className="text-[12px] font-[1000] uppercase tracking-tight text-black">Update parking & slot</p>
+                            <p className="text-[12px] font-[1000] uppercase tracking-tight text-white">Update parking & slot</p>
                             <p className="text-[9px] font-black uppercase tracking-[0.18em] text-black/30 mt-1">Save any vehicle, parking, or slot change for the apartment from here.</p>
                         </div>
                     </div>
@@ -898,7 +898,7 @@ const ApartmentWash = () => {
                                     carNumber: matchedVehicle ? (matchedVehicle.plate || matchedVehicle.plateNumber) : current.carNumber
                                 }));
                             }}
-                            className="w-full rounded-2xl border border-black/[0.06] bg-gray-50 px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20"
+                            className="w-full rounded-2xl border border-black/[0.06] bg-white/[0.02] px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20"
                         >
                             <option value="">Select vehicle</option>
                             {vehicles.map((vehicle) => (
@@ -907,16 +907,16 @@ const ApartmentWash = () => {
                         </select>
 
                         <div className="grid grid-cols-2 gap-3">
-                            <input value={parkingDetails.basement} onChange={(e) => setParkingDetails((current) => ({ ...current, basement: e.target.value }))} placeholder="Basement / Level" className="w-full rounded-2xl border border-black/[0.06] bg-gray-50 px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20" />
-                            <input value={parkingDetails.block} onChange={(e) => setParkingDetails((current) => ({ ...current, block: e.target.value }))} placeholder="Block / Tower" className="w-full rounded-2xl border border-black/[0.06] bg-gray-50 px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20" />
+                            <input value={parkingDetails.basement} onChange={(e) => setParkingDetails((current) => ({ ...current, basement: e.target.value }))} placeholder="Basement / Level" className="w-full rounded-2xl border border-black/[0.06] bg-white/[0.02] px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20" />
+                            <input value={parkingDetails.block} onChange={(e) => setParkingDetails((current) => ({ ...current, block: e.target.value }))} placeholder="Block / Tower" className="w-full rounded-2xl border border-black/[0.06] bg-white/[0.02] px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20" />
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
-                            <input value={parkingDetails.pillar} onChange={(e) => setParkingDetails((current) => ({ ...current, pillar: e.target.value }))} placeholder="Pillar / Slot" className="w-full rounded-2xl border border-black/[0.06] bg-gray-50 px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20" />
+                            <input value={parkingDetails.pillar} onChange={(e) => setParkingDetails((current) => ({ ...current, pillar: e.target.value }))} placeholder="Pillar / Slot" className="w-full rounded-2xl border border-black/[0.06] bg-white/[0.02] px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20" />
                             <select value={selectedSlot?.id || activeSubscription?.slot || ''} onChange={(e) => {
                                 const slot = apartmentSlots.find((entry) => entry.id === e.target.value);
                                 setSelectedSlot(slot || null);
-                            }} className="w-full rounded-2xl border border-black/[0.06] bg-gray-50 px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20">
+                            }} className="w-full rounded-2xl border border-black/[0.06] bg-white/[0.02] px-4 py-4 text-[11px] font-[1000] uppercase tracking-tight outline-none focus:border-brand/20">
                                 <option value="">Select slot</option>
                                 {apartmentSlots.map((slot) => (
                                     <option key={slot.id} value={slot.id}>{slot.label}</option>
@@ -948,7 +948,7 @@ const ApartmentWash = () => {
                 <div className="grid grid-cols-2 gap-3">
                     <button
                         onClick={() => navigate('/apartment-wash/history')}
-                        className="w-full rounded-3xl border border-black/[0.05] bg-white px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-black"
+                        className="w-full rounded-3xl border border-black/[0.05] bg-white/5 px-5 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-white"
                     >
                         Wash history
                     </button>
@@ -992,10 +992,10 @@ const ApartmentWash = () => {
             </div>
 
             <div className="relative group">
-                <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-black/20 group-focus-within:text-brand transition-colors" />
+                <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-brand transition-colors" />
                 <input
                     placeholder="Search apartment name, area, or landmark"
-                    className="w-full bg-gray-50/70 border border-black/[0.03] px-14 py-5 rounded-3xl text-[11px] font-[1000] text-black outline-none focus:border-brand/20 transition-all shadow-sm placeholder:text-black/25 tracking-[0.08em] font-outfit"
+                    className="w-full bg-white/[0.02]/70 border border-black/[0.03] px-14 py-5 rounded-3xl text-[11px] font-[1000] text-white outline-none focus:border-brand/20 transition-all  placeholder:text-black/25 tracking-[0.08em] font-outfit"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -1007,16 +1007,16 @@ const ApartmentWash = () => {
                 </div>
             )}
 
-            <div className="flex gap-2 p-1 bg-gray-100 rounded-2xl">
+            <div className="flex gap-2 p-1 bg-white/[0.05] rounded-2xl">
                 <button
                     onClick={() => setViewMode('list')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-white shadow-md text-brand' : 'text-content-muted hover:text-content'}`}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-white/5 shadow-2xl shadow-black/40 text-brand' : 'text-content-muted hover:text-content'}`}
                 >
                     <ListIcon size={16} /> List
                 </button>
                 <button
                     onClick={() => setViewMode('map')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'map' ? 'bg-white shadow-md text-brand' : 'text-content-muted hover:text-content'}`}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'map' ? 'bg-white/5 shadow-2xl shadow-black/40 text-brand' : 'text-content-muted hover:text-content'}`}
                 >
                     <MapIcon size={16} /> Map
                 </button>
@@ -1029,7 +1029,7 @@ const ApartmentWash = () => {
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="rounded-[2.2rem] overflow-hidden border border-black/[0.04] bg-white shadow-[0_24px_50px_rgba(15,23,42,0.08)] relative"
+                        className="rounded-[2.2rem] overflow-hidden border border-black/[0.04] bg-white/5 shadow-[0_24px_50px_rgba(15,23,42,0.08)] relative"
                     >
                         <div className="relative h-[56svh]">
                             <GoogleMapBox
@@ -1040,9 +1040,9 @@ const ApartmentWash = () => {
                                     position: apt.location.coordinates,
                                     icon: getApartmentMarkerIcon(String(selectedApartment?._id) === String(apt._id) ? 'selected' : 'default'),
                                     infoContent: (
-                                        <div className="p-0 min-w-[180px] bg-white rounded-2xl overflow-hidden font-outfit shadow-2xl border border-gray-100">
-                                            <div className="p-3 bg-gray-50/50 border-b border-gray-100">
-                                                <h4 className="font-black text-[11px] uppercase text-black leading-none">{apt.name}</h4>
+                                        <div className="p-0 min-w-[180px] bg-white/5 rounded-2xl overflow-hidden font-outfit shadow-2xl border border-white/5">
+                                            <div className="p-3 bg-white/[0.02]/50 border-b border-white/5">
+                                                <h4 className="font-black text-[11px] uppercase text-white leading-none">{apt.name}</h4>
                                             </div>
                                             <div className="p-3">
                                                 <div className="flex items-center gap-1.5 mb-3 opacity-60">
@@ -1051,7 +1051,7 @@ const ApartmentWash = () => {
                                                 </div>
                                                 <button
                                                     onClick={() => handleApartmentClick(apt)}
-                                                    className="w-full bg-brand text-white text-[9px] h-9 rounded-lg font-black uppercase tracking-widest active:scale-95 transition-all shadow-md shadow-brand/20 flex items-center justify-center gap-2"
+                                                    className="w-full bg-brand text-white text-[9px] h-9 rounded-lg font-black uppercase tracking-widest active:scale-95 transition-all shadow-2xl shadow-black/40 shadow-brand/20 flex items-center justify-center gap-2"
                                                 >
                                                     {apt.isSearchFallback ? 'Register & Continue' : 'Select Apartment'} <ArrowRight size={12} />
                                                 </button>
@@ -1086,13 +1086,13 @@ const ApartmentWash = () => {
                                 </div>
                             </div>
                         </div>
-                        <div className="border-t border-black/[0.04] bg-white p-4">
+                        <div className="border-t border-black/[0.04] bg-white/5 p-4">
                             <div className="flex items-center justify-between gap-3">
                                 <div>
                                     <p className="text-[9px] font-black uppercase tracking-[0.22em] text-brand/70">Visible Apartments</p>
                                     <p className="mt-1 text-[11px] font-bold text-content-subtle">Registered apartments remain visible while you search.</p>
                                 </div>
-                                <div className="rounded-full bg-gray-100 px-3 py-2 text-[9px] font-black uppercase tracking-[0.18em] text-content-subtle">
+                                <div className="rounded-full bg-white/[0.05] px-3 py-2 text-[9px] font-black uppercase tracking-[0.18em] text-content-subtle">
                                     {filteredApartments.length} shown
                                 </div>
                             </div>
@@ -1108,7 +1108,7 @@ const ApartmentWash = () => {
                     >
                         {fetching ? (
                             <div className="py-20 flex flex-col items-center justify-center gap-3">
-                                <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                                <div className="w-8 h-8 border-white/5 border-brand border-t-transparent rounded-full animate-spin" />
                                 <span className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Loading apartments...</span>
                             </div>
                         ) : filteredApartments.length > 0 ? (
@@ -1118,10 +1118,10 @@ const ApartmentWash = () => {
                                     whileTap={{ scale: 0.98 }}
                                     onClick={() => handleApartmentClick(apt)}
                                     disabled={registeringApartment}
-                                    className="bg-white border border-black/[0.03] rounded-3xl p-4 flex items-center gap-4 text-left shadow-sm active:bg-gray-50 transition-all group relative overflow-hidden"
+                                    className="bg-white/5 border border-black/[0.03] rounded-3xl p-4 flex items-center gap-4 text-left  active:bg-white/[0.02] transition-all group relative overflow-hidden"
                                 >
                                     <div className="absolute top-0 right-0 w-24 h-24 bg-brand/5 rounded-full -mr-12 -mt-12 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    <div className="w-16 h-16 rounded-2xl bg-gray-50 overflow-hidden flex-shrink-0 border border-black/[0.03] flex items-center justify-center p-3">
+                                    <div className="w-16 h-16 rounded-2xl bg-white/[0.02] overflow-hidden flex-shrink-0 border border-black/[0.03] flex items-center justify-center p-3">
                                         {apt.iconUrl ? (
                                             <img
                                                 src={apt.iconUrl}
@@ -1134,7 +1134,7 @@ const ApartmentWash = () => {
                                         )}
                                     </div>
                                     <div className="flex-1 relative z-10">
-                                        <h3 className="text-[13px] font-[1000] text-black uppercase tracking-tight">{apt.name}</h3>
+                                        <h3 className="text-[13px] font-[1000] text-white uppercase tracking-tight">{apt.name}</h3>
                                         <div className="flex items-center gap-1.5 mt-1.5">
                                             <MapPin size={10} className="text-brand" strokeWidth={3} />
                                             <span className="text-[9px] font-black text-black/30 uppercase tracking-[0.15em] leading-none font-outfit">
@@ -1147,14 +1147,14 @@ const ApartmentWash = () => {
                                             </div>
                                         )}
                                     </div>
-                                    <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-brand group-hover:text-white transition-all">
+                                    <div className="w-8 h-8 rounded-full bg-white/[0.02] flex items-center justify-center group-hover:bg-brand group-hover:text-white transition-all">
                                         <ChevronRight size={14} strokeWidth={3} />
                                     </div>
                                 </motion.button>
                             ))
                         ) : (
-                            <div className="py-20 text-center space-y-4 bg-gray-50/50 rounded-[2.5rem] border border-dashed border-gray-200">
-                                <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto shadow-sm">
+                            <div className="py-20 text-center space-y-4 bg-white/[0.02]/50 rounded-[2.5rem] border border-dashed border-white/10">
+                                <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto ">
                                     <Building className="text-gray-200" size={32} />
                                 </div>
                                 <div className="space-y-1">
@@ -1179,7 +1179,7 @@ const ApartmentWash = () => {
                                         setViewMode('map');
                                         toast.success('Search result added. Select it from map or list.');
                                     }}
-                                    className="bg-black text-white px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-xl shadow-black/10"
+                                    className="bg-black text-white px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-2xl shadow-black/50 shadow-black/10"
                                 >
                                     Search On Map
                                 </button>
@@ -1207,9 +1207,9 @@ const ApartmentWash = () => {
         >
             <div className="space-y-5">
                 <div className="space-y-3">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-black/[0.05] bg-white px-3 py-2 shadow-sm">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-black/[0.05] bg-white/5 px-3 py-2 ">
                         <Search size={12} className="text-brand" />
-                        <span className="text-[9px] font-black uppercase tracking-[0.22em] text-black/40">Apartment search</span>
+                        <span className="text-[9px] font-black uppercase tracking-[0.22em] text-white/40">Apartment search</span>
                     </div>
                     <div className="space-y-2">
                         <h2 className="text-[2rem] font-[1000] text-content uppercase tracking-tighter leading-none">
@@ -1221,12 +1221,12 @@ const ApartmentWash = () => {
                     </div>
                 </div>
 
-                <div className="rounded-[2rem] border border-black/[0.05] bg-white p-4 shadow-[0_24px_50px_rgba(15,23,42,0.08)]">
+                <div className="rounded-[2rem] border border-black/[0.05] bg-white/5 p-4 shadow-[0_24px_50px_rgba(15,23,42,0.08)]">
                     <div className="relative">
-                        <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-black/20" />
+                        <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20" />
                         <input
                             placeholder="Enter full apartment name"
-                            className="w-full rounded-[1.75rem] border border-black/[0.05] bg-gray-50 px-14 py-5 text-[12px] font-[1000] text-black outline-none transition-all placeholder:text-black/25 focus:border-brand/20 focus:bg-white"
+                            className="w-full rounded-[1.75rem] border border-black/[0.05] bg-white/[0.02] px-14 py-5 text-[12px] font-[1000] text-white outline-none transition-all placeholder:text-black/25 focus:border-brand/20 focus:bg-white/5"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -1243,7 +1243,7 @@ const ApartmentWash = () => {
                                         : 'No registered apartment matched yet'}
                         </p>
                         {normalizedApartmentSearch.length >= 3 && (
-                            <span className="rounded-full bg-white px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-black/60 shadow-sm">
+                            <span className="rounded-full bg-white/5 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-white/60 ">
                                 {step1SearchResults.length} result{step1SearchResults.length === 1 ? '' : 's'}
                             </span>
                         )}
@@ -1258,12 +1258,12 @@ const ApartmentWash = () => {
 
                 {fetching && normalizedApartmentSearch.length >= 3 ? (
                     <div className="py-16 flex flex-col items-center justify-center gap-3">
-                        <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                        <div className="w-8 h-8 border-white/5 border-brand border-t-transparent rounded-full animate-spin" />
                         <span className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Searching apartments...</span>
                     </div>
                 ) : normalizedApartmentSearch.length < 3 ? (
-                    <div className="rounded-[2rem] border border-dashed border-black/10 bg-gray-50/70 px-6 py-12 text-center">
-                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-white shadow-sm">
+                    <div className="rounded-[2rem] border border-dashed border-black/10 bg-white/[0.02]/70 px-6 py-12 text-center">
+                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-white/5 ">
                             <Building className="text-black/15" size={30} />
                         </div>
                         <h3 className="text-sm font-black uppercase tracking-tight text-content">Start with the apartment name</h3>
@@ -1279,7 +1279,7 @@ const ApartmentWash = () => {
                                 whileTap={{ scale: 0.985 }}
                                 onClick={() => handleApartmentClick(apt)}
                                 disabled={registeringApartment}
-                                className="w-full rounded-[2rem] border border-black/[0.05] bg-white p-4 text-left shadow-[0_18px_35px_rgba(15,23,42,0.05)] transition-all active:scale-[0.99] disabled:opacity-60"
+                                className="w-full rounded-[2rem] border border-black/[0.05] bg-white/5 p-4 text-left shadow-[0_18px_35px_rgba(15,23,42,0.05)] transition-all active:scale-[0.99] disabled:opacity-60"
                             >
                                 <div className="flex items-center gap-4">
                                     <div className="flex h-16 w-16 items-center justify-center rounded-[1.4rem] bg-[#faf7f2] text-brand">
@@ -1297,7 +1297,7 @@ const ApartmentWash = () => {
 
                                     <div className="min-w-0 flex-1">
                                         <div className="flex items-center gap-2">
-                                            <h3 className="truncate text-[14px] font-[1000] uppercase tracking-tight text-black">{apt.name}</h3>
+                                            <h3 className="truncate text-[14px] font-[1000] uppercase tracking-tight text-white">{apt.name}</h3>
                                             <span className={`shrink-0 rounded-full px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.16em] ${apt.isSearchFallback ? 'bg-brand/10 text-brand' : 'bg-emerald-50 text-emerald-700'}`}>
                                                 {apt.isSearchFallback ? 'New result' : 'Registered'}
                                             </span>
@@ -1319,7 +1319,7 @@ const ApartmentWash = () => {
                     </div>
                 ) : (
                     <div className="rounded-[2rem] border border-dashed border-brand/20 bg-brand/5 px-6 py-10 text-center">
-                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-white text-brand shadow-sm">
+                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-white/5 text-brand ">
                             <Building size={30} />
                         </div>
                         <h3 className="text-sm font-black uppercase tracking-tight text-content">Apartment not found</h3>
@@ -1343,7 +1343,7 @@ const ApartmentWash = () => {
                                 setSearchFallbackResults([mappedApartment]);
                                 toast.success('New apartment result added. Tap it to continue.');
                             }}
-                            className="mt-5 rounded-2xl bg-black px-6 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-white shadow-xl shadow-black/10"
+                            className="mt-5 rounded-2xl bg-black px-6 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-white shadow-2xl shadow-black/50 shadow-black/10"
                         >
                             Add New Apartment Result
                         </button>
@@ -1384,16 +1384,16 @@ const ApartmentWash = () => {
                                             carNumber: v.plate || v.plateNumber,
                                             vehicleId: v._id
                                         })}
-                                        className={`p-4 rounded-3xl border flex items-center gap-4 transition-all active:scale-[0.98] ${parkingDetails.vehicleId === v._id ? 'border-brand bg-brand/5 shadow-lg shadow-brand/5' : 'border-black/[0.03] bg-white shadow-sm'}`}
+                                        className={`p-4 rounded-3xl border flex items-center gap-4 transition-all active:scale-[0.98] ${parkingDetails.vehicleId === v._id ? 'border-brand bg-brand/5 shadow-lg shadow-brand/5' : 'border-black/[0.03] bg-white/5 '}`}
                                     >
-                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${parkingDetails.vehicleId === v._id ? 'bg-brand text-white' : 'bg-gray-50 text-black/20'}`}>
+                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${parkingDetails.vehicleId === v._id ? 'bg-brand text-white' : 'bg-white/[0.02] text-white/20'}`}>
                                             <Car size={20} strokeWidth={2.5} />
                                         </div>
                                         <div className="text-left flex-1">
-                                            <p className="text-[11px] font-[1000] text-black uppercase tracking-tight">{v.brand} {v.model}</p>
-                                            <p className="text-[8.5px] font-black text-black/20 uppercase tracking-[0.2em] mt-1 font-outfit">{v.plate || v.plateNumber}</p>
+                                            <p className="text-[11px] font-[1000] text-white uppercase tracking-tight">{v.brand} {v.model}</p>
+                                            <p className="text-[8.5px] font-black text-white/20 uppercase tracking-[0.2em] mt-1 font-outfit">{v.plate || v.plateNumber}</p>
                                         </div>
-                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all ${parkingDetails.vehicleId === v._id ? 'border-brand bg-brand text-white' : 'border-black/[0.05] bg-transparent'}`}>
+                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center border-white/5 transition-all ${parkingDetails.vehicleId === v._id ? 'border-brand bg-brand text-white' : 'border-black/[0.05] bg-transparent'}`}>
                                             {parkingDetails.vehicleId === v._id && <Check size={12} strokeWidth={4} />}
                                         </div>
                                     </button>
@@ -1402,9 +1402,9 @@ const ApartmentWash = () => {
                                 <button
                                     type="button"
                                     onClick={() => navigate('/vehicles?from=apartment-wash')}
-                                    className="p-4 rounded-3xl border border-dashed border-gray-300 bg-gray-50 flex items-center gap-4 transition-all active:scale-[0.98] hover:border-brand hover:bg-brand/5"
+                                    className="p-4 rounded-3xl border border-dashed border-gray-300 bg-white/[0.02] flex items-center gap-4 transition-all active:scale-[0.98] hover:border-brand hover:bg-brand/5"
                                 >
-                                    <div className="w-12 h-12 rounded-2xl bg-white border border-gray-200 flex items-center justify-center text-gray-400">
+                                    <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-400">
                                         <Plus size={20} strokeWidth={2.5} />
                                     </div>
                                     <div className="text-left flex-1">
@@ -1418,13 +1418,13 @@ const ApartmentWash = () => {
                             <button
                                 type="button"
                                 onClick={() => navigate('/vehicles?from=apartment-wash')}
-                                className="p-8 rounded-[2.5rem] border-2 border-dashed border-gray-200 bg-white flex flex-col items-center justify-center gap-4 text-center group hover:border-brand hover:bg-brand/5 transition-all"
+                                className="p-8 rounded-[2.5rem] border-white/5 border-dashed border-white/10 bg-white/5 flex flex-col items-center justify-center gap-4 text-center group hover:border-brand hover:bg-brand/5 transition-all"
                             >
-                                <div className="w-16 h-16 rounded-3xl bg-gray-50 flex items-center justify-center text-black/10 group-hover:bg-brand group-hover:text-white transition-all">
+                                <div className="w-16 h-16 rounded-3xl bg-white/[0.02] flex items-center justify-center text-black/10 group-hover:bg-brand group-hover:text-white transition-all">
                                     <Car size={32} />
                                 </div>
                                 <div>
-                                    <p className="text-[12px] font-[1000] text-black uppercase tracking-tighter">No active vehicles</p>
+                                    <p className="text-[12px] font-[1000] text-white uppercase tracking-tighter">No active vehicles</p>
                                     <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mt-1">Please register your vehicle to continue</p>
                                 </div>
                                 <div className="bg-black text-white px-6 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest mt-2">
@@ -1435,14 +1435,14 @@ const ApartmentWash = () => {
                     </div>
                 </div>
 
-                <div className="pt-2 border-t border-gray-100 space-y-4">
+                <div className="pt-2 border-t border-white/5 space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label className="text-[9px] font-black text-black/30 uppercase tracking-[0.2em] ml-2">Level / Floor</label>
                             <div className="relative">
                                 <select
                                     required
-                                    className="w-full bg-gray-50/50 border border-black/[0.03] px-5 py-4 rounded-2xl text-[11px] font-[1000] text-black outline-none focus:border-brand/20 shadow-sm appearance-none font-outfit"
+                                    className="w-full bg-white/[0.02]/50 border border-black/[0.03] px-5 py-4 rounded-2xl text-[11px] font-[1000] text-white outline-none focus:border-brand/20  appearance-none font-outfit"
                                     value={parkingDetails.basement}
                                     onChange={(e) => setParkingDetails({ ...parkingDetails, basement: e.target.value })}
                                 >
@@ -1459,7 +1459,7 @@ const ApartmentWash = () => {
                                         </>
                                     )}
                                 </select>
-                                <ChevronDown size={14} className="absolute right-5 top-1/2 -translate-y-1/2 text-black/20 pointer-events-none" />
+                                <ChevronDown size={14} className="absolute right-5 top-1/2 -translate-y-1/2 text-white/20 pointer-events-none" />
                             </div>
                         </div>
                         <div className="space-y-2">
@@ -1468,7 +1468,7 @@ const ApartmentWash = () => {
                                 <div className="relative">
                                     <select
                                         required
-                                        className="w-full bg-gray-50/50 border border-black/[0.03] px-5 py-4 rounded-2xl text-[11px] font-[1000] text-black outline-none focus:border-brand/20 shadow-sm appearance-none font-outfit"
+                                        className="w-full bg-white/[0.02]/50 border border-black/[0.03] px-5 py-4 rounded-2xl text-[11px] font-[1000] text-white outline-none focus:border-brand/20  appearance-none font-outfit"
                                         value={parkingDetails.block}
                                         onChange={(e) => setParkingDetails({ ...parkingDetails, block: e.target.value })}
                                     >
@@ -1477,12 +1477,12 @@ const ApartmentWash = () => {
                                             <option key={block} value={block}>{block}</option>
                                         ))}
                                     </select>
-                                    <ChevronDown size={14} className="absolute right-5 top-1/2 -translate-y-1/2 text-black/20 pointer-events-none" />
+                                    <ChevronDown size={14} className="absolute right-5 top-1/2 -translate-y-1/2 text-white/20 pointer-events-none" />
                                 </div>
                             ) : (
                                 <input
                                     required placeholder="e.g. Tower A"
-                                    className="w-full bg-gray-50/50 border border-black/[0.03] px-5 py-4 rounded-2xl text-[11px] font-[1000] text-black outline-none focus:border-brand/20 shadow-sm uppercase placeholder:text-black/10 font-outfit"
+                                    className="w-full bg-white/[0.02]/50 border border-black/[0.03] px-5 py-4 rounded-2xl text-[11px] font-[1000] text-white outline-none focus:border-brand/20  uppercase placeholder:text-black/10 font-outfit"
                                     value={parkingDetails.block}
                                     onChange={(e) => setParkingDetails({ ...parkingDetails, block: e.target.value })}
                                 />
@@ -1498,7 +1498,7 @@ const ApartmentWash = () => {
                             type={selectedApartment.metadata?.pillarRange ? "number" : "text"}
                             min={selectedApartment.metadata?.pillarRange?.min}
                             max={selectedApartment.metadata?.pillarRange?.max}
-                            className="w-full bg-gray-50/50 border border-black/[0.03] px-5 py-4 rounded-2xl text-[11px] font-[1000] text-black outline-none focus:border-brand/20 shadow-sm uppercase placeholder:text-black/10 font-outfit"
+                            className="w-full bg-white/[0.02]/50 border border-black/[0.03] px-5 py-4 rounded-2xl text-[11px] font-[1000] text-white outline-none focus:border-brand/20  uppercase placeholder:text-black/10 font-outfit"
                             value={parkingDetails.pillar}
                             onChange={(e) => setParkingDetails({ ...parkingDetails, pillar: e.target.value })}
                         />
@@ -1539,8 +1539,8 @@ const ApartmentWash = () => {
 
             <div className="grid grid-cols-1 gap-4">
                 {plans.length === 0 ? (
-                    <div className="bg-white border border-dashed border-black/10 rounded-3xl p-12 text-center flex flex-col items-center gap-4">
-                        <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center text-black/10">
+                    <div className="bg-white/5 border border-dashed border-black/10 rounded-3xl p-12 text-center flex flex-col items-center gap-4">
+                        <div className="w-16 h-16 bg-white/[0.02] rounded-full flex items-center justify-center text-black/10">
                             <Calendar size={32} />
                         </div>
                         <p className="text-[11px] font-black text-black/30 uppercase tracking-[0.2em]">No apartment plans are available yet</p>
@@ -1553,13 +1553,13 @@ const ApartmentWash = () => {
                             setSelectedPlan(plan);
                             setStep(4);
                         }}
-                        className={`relative p-6 rounded-[32px] border-2 cursor-pointer transition-all ${plan.popular
+                        className={`relative p-6 rounded-[32px] border-white/5 cursor-pointer transition-all ${plan.popular
                                 ? 'bg-gradient-to-br from-neutral-900 via-black to-neutral-800 text-white border-white/5 shadow-2xl shadow-black/20'
-                                : 'bg-white text-black border-black/[0.04] shadow-xl shadow-black/[0.02]'
+                                : 'bg-white/5 text-white border-black/[0.04] shadow-2xl shadow-black/50 shadow-black/[0.02]'
                             }`}
                     >
                         {plan.popular && (
-                            <div className="absolute -top-3 left-6 px-4 py-1.5 bg-brand text-black text-[9px] font-[1000] uppercase tracking-[0.2em] rounded-full shadow-lg z-20">
+                            <div className="absolute -top-3 left-6 px-4 py-1.5 bg-brand text-white text-[9px] font-[1000] uppercase tracking-[0.2em] rounded-full shadow-lg z-20">
                                 Elite choice
                             </div>
                         )}
@@ -1578,19 +1578,19 @@ const ApartmentWash = () => {
                                 <div className="flex items-baseline justify-end gap-0.5">
                                     <span className="text-[32px] font-[1000] leading-none tracking-tighter">₹{plan.price}</span>
                                 </div>
-                                <p className={`text-[9px] font-[1000] uppercase tracking-widest mt-1.5 font-outfit ${plan.popular ? 'text-white/30' : 'text-black/20'}`}>
+                                <p className={`text-[9px] font-[1000] uppercase tracking-widest mt-1.5 font-outfit ${plan.popular ? 'text-white/30' : 'text-white/20'}`}>
                                     PER {String(plan.interval || 'MONTH').toUpperCase().replace('LY', '')}
                                 </p>
                             </div>
                         </div>
 
                         <div className={`flex items-center gap-4 pt-5 border-t ${plan.popular ? 'border-white/10' : 'border-black/[0.05]'}`}>
-                            <div className={`flex items-center gap-2 px-3 py-2 rounded-xl ${plan.popular ? 'bg-white/5' : 'bg-gray-50'}`}>
+                            <div className={`flex items-center gap-2 px-3 py-2 rounded-xl ${plan.popular ? 'bg-white/5' : 'bg-white/[0.02]'}`}>
                                 <Calendar size={13} className="text-brand" strokeWidth={3} />
                                 <span className="text-[10px] font-black uppercase tracking-tight">{plan.washes || 10} washes</span>
                             </div>
                             <div className="flex-1 overflow-hidden">
-                                <span className={`text-[11px] font-[1000] uppercase tracking-wide block truncate ${plan.popular ? 'text-white/80' : 'text-black/60'}`}>
+                                <span className={`text-[11px] font-[1000] uppercase tracking-wide block truncate ${plan.popular ? 'text-white/80' : 'text-white/60'}`}>
                                     {plan.desc || 'Professional recurring apartment wash coverage'}
                                 </span>
                             </div>
@@ -1602,7 +1602,7 @@ const ApartmentWash = () => {
                 ))}
             </div>
 
-            <div className="bg-gray-50 border border-gray-100 p-5 rounded-xl flex gap-4 items-center">
+            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-xl flex gap-4 items-center">
                 <ShieldCheck size={20} className="text-blue-600 shrink-0" />
                 <p className="text-[10px] font-black text-blue-900 uppercase tracking-widest leading-tight">Dry-wash-first service protocol designed for clean, repeatable apartment operations.</p>
             </div>
@@ -1634,23 +1634,23 @@ const ApartmentWash = () => {
                             whileTap={{ scale: 0.98 }}
                             onClick={() => slot.available !== false && handleSlotSelect(slot)}
                             disabled={slot.available === false}
-                            className="w-full bg-white border border-black/[0.03] rounded-3xl p-5 flex items-center justify-between shadow-sm active:bg-gray-50 transition-all text-left relative overflow-hidden group disabled:opacity-45 disabled:cursor-not-allowed"
+                            className="w-full bg-white/5 border border-black/[0.03] rounded-3xl p-5 flex items-center justify-between  active:bg-white/[0.02] transition-all text-left relative overflow-hidden group disabled:opacity-45 disabled:cursor-not-allowed"
                         >
                             <div className="absolute top-0 right-0 w-24 h-24 bg-brand/5 rounded-full -mr-12 -mt-12 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
                             <div className="flex items-center gap-4 relative z-10">
-                                <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-black/20 group-hover:text-brand transition-colors">
+                                <div className="w-14 h-14 bg-white/[0.02] rounded-2xl flex items-center justify-center text-white/20 group-hover:text-brand transition-colors">
                                     <SlotIcon size={26} strokeWidth={2.5} />
                                 </div>
                                 <div>
-                                    <h3 className="text-[13px] font-[1000] text-black uppercase tracking-tight">{slot.label}</h3>
+                                    <h3 className="text-[13px] font-[1000] text-white uppercase tracking-tight">{slot.label}</h3>
                                     <p className="text-[10px] font-black text-black/30 uppercase tracking-[0.15em] mt-1.5 font-outfit">{slot.time}</p>
                                 </div>
                             </div>
                             <div className="flex flex-col items-end gap-1.5 relative z-10">
-                                <div className={`px-3 py-1 rounded-lg text-[9px] font-[1000] uppercase tracking-widest shadow-sm ${slot.available === false ? 'bg-red-50 text-red-600 shadow-red-500/5' : 'bg-emerald-50 text-emerald-600 shadow-emerald-500/5'}`}>
+                                <div className={`px-3 py-1 rounded-lg text-[9px] font-[1000] uppercase tracking-widest  ${slot.available === false ? 'bg-red-50 text-red-600 shadow-red-500/5' : 'bg-emerald-50 text-emerald-600 shadow-emerald-500/5'}`}>
                                     {slot.available === false ? 'Full' : `${slot.remaining ?? 10} Left`}
                                 </div>
-                                <span className="text-[9px] font-black text-black/40 uppercase tracking-widest">{slot.time || 'Premium slot'}</span>
+                                <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">{slot.time || 'Premium slot'}</span>
                             </div>
                         </motion.button>
                     )
@@ -1681,14 +1681,14 @@ const ApartmentWash = () => {
             className="px-5 pt-4 space-y-6 pb-32"
         >
             <div className="flex flex-col items-center text-center py-6">
-                <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center text-green-600 mb-4 border border-green-100 shadow-sm">
+                <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center text-green-600 mb-4 border border-green-100 ">
                     <ShieldCheck size={40} strokeWidth={2.5} />
                 </div>
                 <h2 className="text-2xl font-[1000] text-content uppercase tracking-tighter">Review subscription request</h2>
                 <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest mt-1">Confirm your apartment, vehicle, plan, and slot before payment.</p>
             </div>
 
-            <div className="bg-white border border-black/[0.03] rounded-[32px] overflow-hidden shadow-xl">
+            <div className="bg-white/5 border border-black/[0.03] rounded-[32px] overflow-hidden shadow-2xl shadow-black/50">
                 <div className="bg-black p-8 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-brand/20 rounded-full -mr-16 -mt-16 blur-3xl opacity-50" />
                     <div className="flex justify-between items-start relative z-10">
@@ -1705,50 +1705,50 @@ const ApartmentWash = () => {
                     </div>
                 </div>
 
-                <div className="p-8 space-y-7 bg-white">
+                <div className="p-8 space-y-7 bg-white/5">
                     <div className="grid grid-cols-2 gap-y-7 gap-x-6">
                         <div className="space-y-2">
                             <div className="flex items-center gap-2">
                                 <Building size={12} className="text-brand" strokeWidth={3} />
-                                <p className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] leading-none font-outfit">Apartment</p>
+                                <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em] leading-none font-outfit">Apartment</p>
                             </div>
-                            <p className="text-[12px] font-[1000] text-black uppercase tracking-tight leading-tight">{selectedApartment.name}</p>
+                            <p className="text-[12px] font-[1000] text-white uppercase tracking-tight leading-tight">{selectedApartment.name}</p>
                         </div>
                         <div className="space-y-2">
                             <div className="flex items-center gap-2">
                                 <Car size={12} className="text-brand" strokeWidth={3} />
-                                <p className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] leading-none font-outfit">Vehicle</p>
+                                <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em] leading-none font-outfit">Vehicle</p>
                             </div>
-                            <p className="text-[12px] font-[1000] text-black uppercase tracking-tight leading-none">{parkingDetails.carModel}</p>
+                            <p className="text-[12px] font-[1000] text-white uppercase tracking-tight leading-none">{parkingDetails.carModel}</p>
                             <span className="text-[9px] font-black text-brand uppercase tracking-[0.15em] leading-none font-outfit">{parkingDetails.carNumber}</span>
                         </div>
                         <div className="space-y-2">
                             <div className="flex items-center gap-2">
                                 <MapPin size={12} className="text-brand" strokeWidth={3} />
-                                <p className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] leading-none font-outfit">Parking</p>
+                                <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em] leading-none font-outfit">Parking</p>
                             </div>
-                            <p className="text-[12px] font-[1000] text-black uppercase tracking-tight leading-none">{parkingDetails.basement}{' • '}{parkingDetails.block}</p>
-                            <span className="text-[9px] font-black text-black/40 uppercase tracking-widest leading-none font-outfit">Pillar {parkingDetails.pillar}</span>
+                            <p className="text-[12px] font-[1000] text-white uppercase tracking-tight leading-none">{parkingDetails.basement}{' • '}{parkingDetails.block}</p>
+                            <span className="text-[9px] font-black text-white/40 uppercase tracking-widest leading-none font-outfit">Pillar {parkingDetails.pillar}</span>
                         </div>
                         <div className="space-y-2">
                             <div className="flex items-center gap-2">
                                 <Clock size={12} className="text-brand" strokeWidth={3} />
-                                <p className="text-[9px] font-black text-black/20 uppercase tracking-[0.2em] leading-none font-outfit">Schedule</p>
+                                <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em] leading-none font-outfit">Schedule</p>
                             </div>
-                            <p className="text-[12px] font-[1000] text-black uppercase tracking-tight leading-none">{selectedSlot.label}</p>
-                            <span className="text-[9px] font-black text-black/40 uppercase tracking-widest leading-none font-outfit">{selectedSlot.time}</span>
+                            <p className="text-[12px] font-[1000] text-white uppercase tracking-tight leading-none">{selectedSlot.label}</p>
+                            <span className="text-[9px] font-black text-white/40 uppercase tracking-widest leading-none font-outfit">{selectedSlot.time}</span>
                         </div>
                     </div>
 
                     <div className="pt-7 border-t border-black/[0.03]">
-                        <div className="flex justify-between items-center bg-gray-50/50 p-5 rounded-2xl border border-black/[0.02]">
+                        <div className="flex justify-between items-center bg-white/[0.02]/50 p-5 rounded-2xl border border-black/[0.02]">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-white border border-black/[0.03] flex items-center justify-center text-black/20">
+                                <div className="w-10 h-10 rounded-xl bg-white/5 border border-black/[0.03] flex items-center justify-center text-white/20">
                                     <CreditCard size={18} strokeWidth={2.5} />
                                 </div>
                                 <div>
                                     <span className="text-[10px] font-black text-black/30 uppercase tracking-widest block leading-none mb-1 font-outfit">Payment Gateway</span>
-                                    <span className="text-[11px] font-[1000] text-black uppercase tracking-tight">Razorpay secure</span>
+                                    <span className="text-[11px] font-[1000] text-white uppercase tracking-tight">Razorpay secure</span>
                                 </div>
                             </div>
                             <div className="flex items-center gap-1.5 text-emerald-500">
@@ -1892,7 +1892,7 @@ const ApartmentWash = () => {
                 >
                     <div className="absolute inset-0 bg-brand/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                     {loading ? (
-                        <div className="w-5 h-5 border-2 border-brand border-t-white rounded-full animate-spin" />
+                        <div className="w-5 h-5 border-white/5 border-brand border-t-white rounded-full animate-spin" />
                     ) : (
                         <>
                             <span className="relative z-10">Pay & send request</span>
@@ -1907,31 +1907,31 @@ const ApartmentWash = () => {
     // 🛡️ Safe Render Guard: Never show Asset Management if redirect is imminent
     if (!vehiclesLoading && vehicles && vehicles.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-white">
+            <div className="flex flex-col items-center justify-center min-h-screen bg-[#0A0F0D]">
                 <Loader2 className="w-10 h-10 text-brand animate-spin mb-4" strokeWidth={3} />
-                <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.3em] animate-pulse">Initializing direct registry...</p>
+                <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] animate-pulse">Initializing direct registry...</p>
             </div>
         );
     }
 
     return (
         <MobileLayout hideNav={manageMode ? false : step < 5}>
-            <div className="bg-white min-h-screen font-sans">
+            <div className="bg-white/5 min-h-screen font-sans">
                 {/* Header */}
-                <header className="px-5 pt-10 pb-6 bg-white sticky top-0 z-40 border-b border-black/[0.03]">
+                <header className="px-5 pt-10 pb-6 bg-white/5 sticky top-0 z-40 border-b border-black/[0.03]">
                     <div className="flex items-center justify-between gap-4">
                         <button
                             onClick={() => step > 1 ? setStep(step - 1) : navigate('/')}
-                            className="w-11 h-11 bg-gray-50 rounded-2xl flex items-center justify-center active:scale-90 transition-transform shadow-sm"
+                            className="w-11 h-11 bg-white/[0.02] rounded-2xl flex items-center justify-center active:scale-90 transition-transform "
                         >
-                            <ArrowLeft size={20} className="text-black" strokeWidth={2.5} />
+                            <ArrowLeft size={20} className="text-white" strokeWidth={2.5} />
                         </button>
                         <div className="flex-1 flex flex-col items-center">
                             <div className="flex items-center gap-1.5 mb-0.5">
                                 <div className="w-1 h-1 rounded-full bg-brand animate-pulse" />
-                                <span className="text-[9px] font-[1000] text-black/20 uppercase tracking-[0.3em] leading-none font-outfit">APARTMENT SERVICE</span>
+                                <span className="text-[9px] font-[1000] text-white/20 uppercase tracking-[0.3em] leading-none font-outfit">APARTMENT SERVICE</span>
                             </div>
-                            <h1 className="text-[13px] font-[1000] text-black uppercase tracking-tight">{apartmentService?.title || 'Apartment Wash'}</h1>
+                            <h1 className="text-[13px] font-[1000] text-white uppercase tracking-tight">{apartmentService?.title || 'Apartment Wash'}</h1>
                         </div>
                         <div className="w-11 h-11 bg-black rounded-2xl flex items-center justify-center text-white shadow-lg shadow-black/10">
                             <Building size={20} strokeWidth={2.5} />
@@ -1940,7 +1940,7 @@ const ApartmentWash = () => {
 
                     {/* Progress Bar (Apple-Style) */}
                     <div className="mt-8 px-2">
-                        <div className="h-[3px] w-full bg-black/5 rounded-full overflow-hidden flex gap-1">
+                        <div className="h-[3px] w-full bg-white/5 rounded-full overflow-hidden flex gap-1">
                             {[1, 2, 3, 4, 5].map((s) => (
                                 <motion.div
                                     key={s}
@@ -1956,7 +1956,7 @@ const ApartmentWash = () => {
                         </div>
                         <div className="flex justify-between mt-3 px-0.5">
                             <span className="text-[8px] font-black text-brand uppercase tracking-widest leading-none">Step 0{step}</span>
-                            <span className="text-[8px] font-[1000] text-black/20 uppercase tracking-widest leading-none">/ 05</span>
+                            <span className="text-[8px] font-[1000] text-white/20 uppercase tracking-widest leading-none">/ 05</span>
                         </div>
                     </div>
                 </header>
@@ -1970,7 +1970,7 @@ const ApartmentWash = () => {
                             className="min-h-[50vh] flex flex-col items-center justify-center gap-4"
                         >
                             <Loader2 className="w-10 h-10 text-brand animate-spin" strokeWidth={3} />
-                            <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.3em]">Syncing apartment pass...</p>
+                            <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">Syncing apartment pass...</p>
                         </motion.div>
                     ) : manageMode ? (
                         renderActiveSubscriptionManager()

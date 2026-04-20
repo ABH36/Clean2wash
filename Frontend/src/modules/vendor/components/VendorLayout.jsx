@@ -272,11 +272,11 @@ const VendorLayout = ({ children, title, subtitle }) => {
             {/* ── Main Content ── */}
             <main className="flex-1 overflow-y-auto relative h-screen">
                 {/* Header */}
-                <header className="bg-surface/80 backdrop-blur-xl border-b border-gray-100/10 px-4 md:px-6 py-3 md:py-4 flex items-center justify-between sticky top-0 z-50 transition-colors duration-500">
+                <header className="bg-surface/80 backdrop-blur-xl border-b border-white/5/10 px-4 md:px-6 py-3 md:py-4 flex items-center justify-between sticky top-0 z-50 transition-colors duration-500">
                     <div className="flex items-center gap-4">
                         <button
                             onClick={() => setIsMobileDrawerOpen(true)}
-                            className="md:hidden w-10 h-10 bg-background rounded-xl flex items-center justify-center text-content border border-gray-100/10"
+                            className="md:hidden w-10 h-10 bg-background rounded-xl flex items-center justify-center text-content border border-white/5/10"
                         >
                             <Menu size={20} />
                         </button>
@@ -290,7 +290,7 @@ const VendorLayout = ({ children, title, subtitle }) => {
                         </div>
                     </div>
                     <div className="flex items-center gap-2 md:gap-3">
-                        <div className="hidden lg:flex items-center bg-background border border-gray-100/10 rounded-xl px-3 py-2">
+                        <div className="hidden lg:flex items-center bg-background border border-white/5/10 rounded-xl px-3 py-2">
                             <Search size={13} className="text-content-subtle" />
                             <input
                                 type="text"
@@ -302,14 +302,14 @@ const VendorLayout = ({ children, title, subtitle }) => {
                         {/* Theme Toggle */}
                         <button
                             onClick={toggleTheme}
-                            className="w-9 h-9 md:w-10 md:h-10 bg-background rounded-xl flex items-center justify-center text-content-subtle border border-gray-100/10 hover:text-brand transition-all"
+                            className="w-9 h-9 md:w-10 md:h-10 bg-background rounded-xl flex items-center justify-center text-content-subtle border border-white/5/10 hover:text-brand transition-all"
                         >
                             {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
                         </button>
 
                         <NotificationBell />
                         <div
-                            className="w-9 h-9 md:w-10 md:h-10 rounded-xl overflow-hidden border-2 border-gray-100/10 cursor-pointer hover:border-brand/30 transition-all shadow-lg"
+                            className="w-9 h-9 md:w-10 md:h-10 rounded-xl overflow-hidden border-white/5 border-white/5/10 cursor-pointer hover:border-brand/30 transition-all shadow-lg"
                             onClick={() => navigate('/vendor/settings')}
                         >
                             <img
@@ -335,9 +335,9 @@ const VendorLayout = ({ children, title, subtitle }) => {
                                     <motion.div
                                         initial={{ opacity: 0, scale: 0.9 }}
                                         animate={{ opacity: 1, scale: 1 }}
-                                        className="bg-surface border border-gray-100/10 shadow-2xl rounded-[3rem] p-10 max-w-md w-full flex flex-col items-center"
+                                        className="bg-surface border border-white/5/10 shadow-2xl rounded-[3rem] p-10 max-w-md w-full flex flex-col items-center"
                                     >
-                                        <div className={`w-20 h-20 rounded-[2rem] flex items-center justify-center mb-8 shadow-xl ${user.verificationStatus === 'rejected' ? 'bg-red-500 text-white shadow-red-500/30' : 'bg-brand text-white shadow-brand/30'}`}>
+                                        <div className={`w-20 h-20 rounded-[2rem] flex items-center justify-center mb-8 shadow-2xl shadow-black/50 ${user.verificationStatus === 'rejected' ? 'bg-red-500 text-white shadow-red-500/30' : 'bg-brand text-white shadow-brand/30'}`}>
                                             {user.verificationStatus === 'rejected' ? <XCircle size={36} /> : <ShieldAlert size={36} />}
                                         </div>
                                         <h2 className="text-2xl font-black text-content leading-none uppercase tracking-tighter mb-4">Security Clearance <br /><span className="text-brand">Required</span></h2>
@@ -348,7 +348,7 @@ const VendorLayout = ({ children, title, subtitle }) => {
                                         </p>
 
                                         <div className="grid grid-cols-2 gap-4 w-full">
-                                            <div className="bg-background p-4 rounded-3xl border border-gray-100/10">
+                                            <div className="bg-background p-4 rounded-3xl border border-white/5/10">
                                                 <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-1.5">Current Status</p>
                                                 <div className="flex items-center gap-2 justify-center">
                                                     <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${user.verificationStatus === 'rejected' ? 'bg-red-500' : 'bg-brand'}`} />
@@ -357,7 +357,7 @@ const VendorLayout = ({ children, title, subtitle }) => {
                                                     </span>
                                                 </div>
                                             </div>
-                                            <div className="bg-background p-4 rounded-3xl border border-gray-100/10 flex flex-col justify-center">
+                                            <div className="bg-background p-4 rounded-3xl border border-white/5/10 flex flex-col justify-center">
                                                 <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-1.5">Support Port</p>
                                                 <span className="text-[10px] font-black text-content uppercase tracking-tighter">VND-OPS-0421</span>
                                             </div>

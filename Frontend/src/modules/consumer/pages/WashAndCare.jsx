@@ -11,27 +11,27 @@ const WashAndCare = () => {
     const navigate = useNavigate();
 
     const renderHeader = () => (
-        <header className="px-6 pt-6 pb-2 flex items-center justify-between bg-white sticky top-0 z-50">
+        <header className="px-6 pt-6 pb-2 flex items-center justify-between bg-white/5 sticky top-0 z-50">
             <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-[#F29F05] rounded-xl flex items-center justify-center shadow-lg shadow-orange-200">
                     <MapPin size={20} className="text-white" />
                 </div>
                 <div className="text-left">
                     <div className="flex items-center gap-1">
-                        <span className="text-[13px] font-black text-black uppercase tracking-tight">Rajshree Apollo</span>
+                        <span className="text-[13px] font-black text-white uppercase tracking-tight">Rajshree Apollo</span>
                         <ChevronDown size={14} className="text-[#F29F05]" />
                     </div>
                     <p className="text-[10px] font-bold text-black/30 uppercase tracking-widest leading-none mt-1">Indore</p>
                 </div>
             </div>
 
-            <div className="flex items-center gap-3 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100">
+            <div className="flex items-center gap-3 bg-white/[0.02] px-4 py-2 rounded-xl border border-white/5">
                 <div className="text-right">
-                    <span className="text-[11px] font-black text-black leading-none uppercase">Baleno</span>
-                    <p className="text-[8px] font-bold text-black/40 uppercase mt-1">Maruti Suzuki</p>
+                    <span className="text-[11px] font-black text-white leading-none uppercase">Baleno</span>
+                    <p className="text-[8px] font-bold text-white/40 uppercase mt-1">Maruti Suzuki</p>
                 </div>
-                <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm">
-                    <Car size={18} className="text-black" />
+                <div className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center ">
+                    <Car size={18} className="text-white" />
                 </div>
             </div>
         </header>
@@ -49,10 +49,10 @@ const WashAndCare = () => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6 }}
                     >
-                        <h2 className="text-[18px] font-black text-black leading-none uppercase italic tracking-tighter opacity-40 mb-1">
+                        <h2 className="text-[18px] font-black text-white leading-none uppercase italic tracking-tighter opacity-40 mb-1">
                             Premium Clean
                         </h2>
-                        <h1 className="text-[36px] font-black text-black leading-[0.85] uppercase italic tracking-tighter">
+                        <h1 className="text-[36px] font-black text-white leading-[0.85] uppercase italic tracking-tighter">
                             DOORSTEP<br />
                             <span className="text-[#F29F05] text-[42px] text-stroke-black">WASHING</span>
                         </h1>
@@ -64,11 +64,11 @@ const WashAndCare = () => {
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ delay: 0.5, type: 'spring' }}
-                    className="absolute top-8 right-8 z-30 w-20 h-20 bg-white rounded-full p-1 shadow-2xl border-4 border-[#F29F05]/10 flex flex-col items-center justify-center rotate-12"
+                    className="absolute top-8 right-8 z-30 w-20 h-20 bg-white/5 rounded-full p-1 shadow-2xl border-4 border-[#F29F05]/10 flex flex-col items-center justify-center rotate-12"
                 >
                     <div className="bg-green-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full mb-1 uppercase tracking-widest">ECO SAVE</div>
-                    <span className="text-[18px] font-black text-black leading-none italic">75%</span>
-                    <span className="text-[8px] font-black text-black/40 uppercase leading-none mt-1 font-outfit">Less Water</span>
+                    <span className="text-[18px] font-black text-white leading-none italic">75%</span>
+                    <span className="text-[8px] font-black text-white/40 uppercase leading-none mt-1 font-outfit">Less Water</span>
                 </motion.div>
 
                 {/* Main Illustration */}
@@ -93,7 +93,7 @@ const WashAndCare = () => {
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.4 + (i * 0.1) }}
-                            className="flex items-center gap-2.5 bg-white/90 backdrop-blur-md text-black px-2.5 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-md border border-white w-fit"
+                            className="flex items-center gap-2.5 bg-white/90 backdrop-blur-md text-white px-2.5 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-2xl shadow-black/40 border border-white w-fit"
                         >
                             <feat.icon size={11} className="text-[#F29F05]" />
                             {feat.label}
@@ -119,13 +119,13 @@ const WashAndCare = () => {
                 <motion.div
                     whileTap={{ scale: 0.96 }}
                     onClick={() => navigate('/instant-wash')}
-                    className="bg-white p-5 rounded-2xl shadow-xl border border-gray-100 h-[195px] flex flex-col justify-between group overflow-hidden relative"
+                    className="bg-white/5 p-5 rounded-2xl shadow-2xl shadow-black/50 border border-white/5 h-[195px] flex flex-col justify-between group overflow-hidden relative"
                 >
                     <div className="z-10">
                         <div className="bg-orange-50 w-9 h-9 rounded-xl flex items-center justify-center mb-3 text-[#F29F05] group-hover:bg-[#F29F05] group-hover:text-white transition-all duration-300">
                             <Car size={18} />
                         </div>
-                        <h3 className="text-[13px] font-[900] text-black uppercase leading-tight tracking-tight">
+                        <h3 className="text-[13px] font-[900] text-white uppercase leading-tight tracking-tight">
                             PREMIUM<br />WASH & CARE
                         </h3>
                     </div>
@@ -140,11 +140,11 @@ const WashAndCare = () => {
                 <motion.div
                     whileTap={{ scale: 0.96 }}
                     onClick={() => navigate('/subscriptions')}
-                    className="bg-black p-5 rounded-2xl shadow-xl h-[195px] flex flex-col justify-between group relative overflow-hidden"
+                    className="bg-black p-5 rounded-2xl shadow-2xl shadow-black/50 h-[195px] flex flex-col justify-between group relative overflow-hidden"
                 >
                     <div className="z-10">
                         <div className="flex items-center justify-between mb-3">
-                            <div className="bg-[#F29F05] w-9 h-9 rounded-xl flex items-center justify-center text-black">
+                            <div className="bg-[#F29F05] w-9 h-9 rounded-xl flex items-center justify-center text-white">
                                 <Clock size={18} />
                             </div>
                             <span className="bg-red-600 text-white text-[7px] font-black px-2 py-1 rounded-lg uppercase tracking-widest leading-none">Save 50%</span>
@@ -165,15 +165,15 @@ const WashAndCare = () => {
             <motion.div
                 whileTap={{ scale: 0.98 }}
                 onClick={() => navigate('/instant-wash')}
-                className="bg-white p-7 rounded-2xl shadow-xl border border-gray-100 flex items-center justify-between h-[130px] group overflow-hidden relative"
+                className="bg-white/5 p-7 rounded-2xl shadow-2xl shadow-black/50 border border-white/5 flex items-center justify-between h-[130px] group overflow-hidden relative"
             >
                 <div className="flex flex-col gap-1 z-10">
                     <div className="flex items-center gap-2 mb-1">
                         <span className="w-2 h-2 rounded-full bg-[#F29F05] animate-ping" />
                         <span className="text-[10px] font-black text-[#F29F05] uppercase tracking-[0.2em] italic">Instant Connect</span>
                     </div>
-                    <h3 className="text-[20px] font-[900] text-black uppercase leading-none tracking-tight">BIKE WASH & CARE</h3>
-                    <p className="text-[10px] font-black text-black/20 mt-2 uppercase tracking-widest">Prices starting at ₹149 only</p>
+                    <h3 className="text-[20px] font-[900] text-white uppercase leading-none tracking-tight">BIKE WASH & CARE</h3>
+                    <p className="text-[10px] font-black text-white/20 mt-2 uppercase tracking-widest">Prices starting at ₹149 only</p>
                 </div>
                 <div className="w-32 h-full z-10">
                     <img src="/assets/carwash/1.png" className="w-full h-full object-contain group-hover:rotate-6 transition-transform duration-500" alt="bike wash" />
@@ -187,19 +187,19 @@ const WashAndCare = () => {
 
     const renderclean2washAdvantage = () => (
         <div className="px-5 mt-4 mb-4">
-            <div className="bg-[#0A0A0A] rounded-xl p-5 relative overflow-hidden shadow-xl border border-white/5">
+            <div className="bg-[#0A0A0A] rounded-xl p-5 relative overflow-hidden shadow-2xl shadow-black/50 border border-white/5">
                 {/* Subtle Accent */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-[#F29F05]/5 rounded-full blur-3xl -mr-16 -mt-16" />
 
                 <div className="relative z-10 text-center mb-6">
-                    <div className="inline-block bg-[#F29F05] text-black text-[8px] font-black px-2 py-0.5 rounded-lg uppercase tracking-[0.2em] mb-2">The Advantage</div>
+                    <div className="inline-block bg-[#F29F05] text-white text-[8px] font-black px-2 py-0.5 rounded-lg uppercase tracking-[0.2em] mb-2">The Advantage</div>
                     <h3 className="text-white text-[18px] font-black uppercase italic tracking-tighter leading-none">clean2wash VS. LOCAL</h3>
                 </div>
 
                 <div className="grid grid-cols-3 items-center gap-2 relative z-10 border-b border-white/5 pb-6">
                     <div className="text-center group">
                         <div className="w-10 h-10 bg-[#F29F05] rounded-xl mx-auto flex items-center justify-center mb-2 shadow-lg group-hover:scale-110 transition-transform">
-                            <Zap size={16} className="text-black" />
+                            <Zap size={16} className="text-white" />
                         </div>
                         <p className="text-[8px] font-black text-[#F29F05] uppercase tracking-widest leading-tight">High Tech<br />Solutions</p>
                     </div>
@@ -230,7 +230,7 @@ const WashAndCare = () => {
                 {/* Bottom Trigger */}
                 <button
                     onClick={() => navigate('/instant-wash')}
-                    className="mt-6 w-full bg-[#F29F05] text-black py-3 rounded-xl font-[1000] uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
+                    className="mt-6 w-full bg-[#F29F05] text-white py-3 rounded-xl font-[1000] uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
                 >
                     Compare Detailed Features
                     <ArrowRight size={14} />

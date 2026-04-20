@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Booking = require('../../../models/Booking');
 const Captain = require('../../../models/Captain');
 const Portfolio = require('../../../models/Portfolio');
@@ -207,6 +208,10 @@ const formatBookingForCaptain = (b) => {
         vehicle: vehicle.brand && vehicle.model ? `${vehicle.brand} ${vehicle.model}` : (vehicle.type || 'Vehicle'),
         userName: consumer.name || 'Customer',
         userPhone: consumer.phone || '',
+        userPhoto: consumer.profile?.avatar || '',
+        userRating: consumer.rating || 5.0,
+        userKycStatus: consumer.kyc?.status || 'none',
+        isUserVerified: consumer.kyc?.status === 'verified',
         address: addressStr,
         price: `₹${b.pricing?.totalAmount || 0}`,
         payoutAmount: providerPayoutAmount,
@@ -305,7 +310,7 @@ exports.getPendingJobs = async (req, res) => {
         }
 
         let findQuery = Booking.find(query)
-            .populate('consumer', 'name phone')
+            .populate('consumer', 'name phone kyc rating profile.avatar')
             .populate('vehicle', 'brand model type');
 
         // MongoDB restriction: sort() cannot be used with $near as it already sorts by proximity
@@ -331,12 +336,17 @@ exports.getPendingJobs = async (req, res) => {
 };
 
 exports.acceptJob = async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
         const { id } = req.params;
         const captainId = req.captain?._id || req.auth?.id || req.captain?.id;
         const blockingMission = await findCaptainBlockingMission(captainId);
 
         if (blockingMission && String(blockingMission._id) !== String(id)) {
+            await session.abortTransaction();
+            session.endSession();
             return res.status(403).json({
                 status: 'fail',
                 message: `Mission Conflict: Finish or clear your current ${getConflictSummary(blockingMission)} before accepting another request.`,
@@ -346,8 +356,8 @@ exports.acceptJob = async (req, res) => {
 
         // Phase 7: Slot Conflict Engine
         // Prevent specialist from accepting an instant job if a scheduled slot is starting soon
-        const captain = await Captain.findById(captainId);
-        const targetJob = await Booking.findById(id).populate('vehicle', 'brand model type typeRef');
+        const captain = await Captain.findById(captainId).session(session);
+        const targetJob = await Booking.findById(id).populate('vehicle', 'brand model type typeRef').session(session);
         if (targetJob?.schedule?.type === 'instant') {
             const bufferMinutes = 20; // Re-deployment/Travel buffer
             const estimatedDuration = parseInt(targetJob.service?.duration) || 30; // Default 30 min wash
@@ -360,13 +370,15 @@ exports.acceptJob = async (req, res) => {
                 'schedule.type': 'scheduled',
                 isActive: true,
                 'schedule.date': { $gte: new Date() }
-            }).sort({ 'schedule.date': 1 });
+            }).sort({ 'schedule.date': 1 }).session(session);
 
             if (upcomingTask) {
                 // If a scheduled task starts before this instant job can likely finish + buffer
                 // Note: Simplified date check for now
                 const scheduledTime = new Date(upcomingTask.schedule.date);
                 if (scheduledTime < jobEndTime) {
+                    await session.abortTransaction();
+                    session.endSession();
                     return res.status(403).json({
                         status: 'fail',
                         message: `Mission Conflict: This job would overlap with your next scheduled mission at ${upcomingTask.schedule.timeSlot?.start || 'soon'}.`,
@@ -379,6 +391,8 @@ exports.acceptJob = async (req, res) => {
         const requestedCapability = getBookingCapability(targetJob);
         const captainCapability = normalizeCapabilityLabel(captain?.profile?.vehicleType);
         if (requestedCapability && captainCapability && !captainMatchesCapability(captain.profile?.vehicleType, requestedCapability)) {
+            await session.abortTransaction();
+            session.endSession();
             return res.status(403).json({
                 status: 'fail',
                 message: `Capability mismatch: This ${requestedCapability.toUpperCase()} request is not enabled for your captain profile.`,
@@ -386,30 +400,42 @@ exports.acceptJob = async (req, res) => {
             });
         }
 
-        // Atomically update the booking status from 'pending' to 'confirmed'
+        // 🛡️ ATOMIC UPDATE: Race condition protection
         // This ensures only one captain can successfully accept the job in a race condition.
         const booking = await Booking.findOneAndUpdate(
             {
                 _id: id,
                 status: 'pending',
                 isActive: true,
-                'provider.id': null // Double check it has no provider assigned
+                $or: [
+                    { 'provider.id': null },
+                    { 'provider.id': { $exists: false } }
+                ]
             },
             {
                 $set: {
                     status: 'confirmed',
                     'provider.id': captainId,
                     'provider.type': 'captain',
+                    'provider.model': 'Captain',
                     'tracking.assignedAt': new Date()
-                }
+                },
+                $inc: { __v: 1 } // 🔒 Optimistic locking
             },
-            { new: true } // Return the updated document
-        ).populate('consumer', 'name phone');
+            { 
+                new: true,
+                session,
+                runValidators: true
+            }
+        ).populate('consumer', 'name phone kyc rating profile.avatar');
 
         if (!booking) {
-            return res.status(404).json({
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(409).json({
                 status: 'fail',
-                message: 'Job no longer available or already accepted by another captain.'
+                message: 'Job no longer available or already accepted by another captain.',
+                code: 'BOOKING_CONFLICT'
             });
         }
 
@@ -422,7 +448,11 @@ exports.acceptJob = async (req, res) => {
             oldValue: { status: 'pending' },
             newValue: { status: 'confirmed', providerId: captainId },
             req
-        });
+        }, session);
+
+        // Commit transaction before socket/notification operations
+        await session.commitTransaction();
+        session.endSession();
 
         // Notify via Socket.io (Instantly updates UI from "Finding" to "Tracking")
         try {
@@ -488,6 +518,8 @@ exports.acceptJob = async (req, res) => {
             data: { job: formatted }
         });
     } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
         console.error('Captain acceptJob error:', error);
         res.status(500).json({
             status: 'error',
@@ -782,7 +814,7 @@ exports.updateJobStatus = async (req, res) => {
         }
 
         const populated = await Booking.findById(booking._id)
-            .populate('consumer', 'name phone')
+            .populate('consumer', 'name phone kyc rating profile.avatar')
             .populate('vehicle', 'brand model type');
         const formatted = formatBookingForCaptain(populated);
 
@@ -809,7 +841,7 @@ exports.getMyJob = async (req, res) => {
             'provider.id': req.captain.id,
             isActive: true
         })
-            .populate('consumer', 'name phone')
+            .populate('consumer', 'name phone kyc rating profile.avatar')
             .populate('vehicle', 'brand model type plate')
             .populate('location.hubId', 'name city vendor');
 
@@ -843,7 +875,7 @@ exports.getMyJobs = async (req, res) => {
         if (status) filter.status = status;
 
         const jobs = await Booking.find(filter)
-            .populate('consumer', 'name phone')
+            .populate('consumer', 'name phone kyc rating profile.avatar')
             .populate('vehicle', 'brand model type plate')
             .populate('location.hubId', 'name city vendor')
             .sort({
@@ -884,7 +916,7 @@ exports.getEarnings = async (req, res) => {
             'provider.id': captainId,
             status: 'completed',
             isActive: true
-        }).populate('consumer', 'name').populate('vehicle', 'brand model type');
+        }).populate('consumer', 'name kyc rating profile.avatar').populate('vehicle', 'brand model type');
 
         const totalEarned = completed.reduce((sum, b) => sum + getCaptainPayoutAmount(b), 0);
 
@@ -947,7 +979,7 @@ exports.getHistory = async (req, res) => {
         else filter.status = { $in: ['completed', 'cancelled'] };
 
         const jobs = await Booking.find(filter)
-            .populate('consumer', 'name phone')
+            .populate('consumer', 'name phone kyc rating profile.avatar')
             .populate('vehicle', 'brand model type')
             .sort({ createdAt: -1 })
             .skip(skip)
@@ -1047,7 +1079,7 @@ exports.getDashboard = async (req, res) => {
             isActive: true
         })
             .select('pricing.totalAmount pricing.baseAmount payment.providerPayoutAmount payment.platformCommissionAmount payment.commission payment.method tracking.completedAt createdAt updatedAt service consumer vehicle location')
-            .populate('consumer', 'name')
+            .populate('consumer', 'name kyc rating profile.avatar')
             .populate('vehicle', 'brand model type')
             .populate('location.hubId', 'name city vendor');
 
@@ -1055,14 +1087,14 @@ exports.getDashboard = async (req, res) => {
             status: 'pending',
             isActive: true,
             $or: [{ 'service.type': 'captain' }, { 'provider.type': 'captain' }]
-        }).limit(10).populate('consumer', 'name').populate('vehicle', 'brand model type typeRef') : [];
+        }).limit(10).populate('consumer', 'name kyc rating profile.avatar').populate('vehicle', 'brand model type typeRef') : [];
 
         const myActive = await Booking.find({
             'provider.id': captainId,
             status: { $in: NON_TERMINAL_STATUSES },
             isActive: true
         })
-            .populate('consumer', 'name phone')
+            .populate('consumer', 'name phone kyc rating profile.avatar')
             .populate('vehicle', 'brand model type')
             .populate('location.hubId', 'name city vendor')
             .sort({

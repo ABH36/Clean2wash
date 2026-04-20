@@ -1,3 +1,8 @@
+/**
+ * APARTMENT WASH / PLAN MODEL
+ * Defines plans for the monthly wash subscription service.
+ * (Not associated with the Chauffeur/Spare Driver flow)
+ */
 const mongoose = require('mongoose');
 
 const subscriptionPlanSchema = new mongoose.Schema({

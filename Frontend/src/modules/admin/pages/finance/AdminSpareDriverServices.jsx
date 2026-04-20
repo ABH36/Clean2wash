@@ -104,30 +104,30 @@ const AdminSpareDriverServices = () => {
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`admin-card ${!service.isActive ? 'opacity-60' : ''}`}
+                className={`admin-card flex flex-col h-full ${!service.isActive ? 'opacity-60' : ''}`}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-4">
-                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${
-                            service.isActive ? 'bg-[var(--primary-light)] text-[var(--primary)]' : 'bg-gray-100 text-gray-400'
+                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center border ${
+                            service.isActive ? 'bg-[var(--primary-light)] text-[var(--primary)] border-[var(--primary)]' : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] border-[var(--border)]'
                         }`}>
                             {getServiceIcon(service.type)}
                         </div>
                         <div>
-                            <h3 className="text-lg font-bold text-gray-900">{service.name}</h3>
-                            <p className="text-sm text-gray-600">{service.description}</p>
+                            <h3 className="text-lg font-bold text-[var(--text-primary)]">{service.name}</h3>
+                            <p className="text-sm text-[var(--text-muted)]">{service.description}</p>
                         </div>
                     </div>
                     <button
                         onClick={() => toggleService(service.type)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all border group/power ${
                             service.isActive
-                                ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                ? 'bg-[var(--success-light)] text-[var(--success-text)] border-[var(--success)]'
+                                : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] border-[var(--border)]'
                         }`}
                     >
-                        <Power size={14} />
+                        <Power size={18} className="group-hover/power:scale-110 transition-transform" />
                         {service.isActive ? 'Active' : 'Inactive'}
                     </button>
                 </div>
@@ -135,7 +135,7 @@ const AdminSpareDriverServices = () => {
                 {/* Pricing Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
                             Base Price (₹)
                         </label>
                         <input
@@ -149,7 +149,7 @@ const AdminSpareDriverServices = () => {
                     {service.type === 'hourly' && (
                         <>
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
                                     Hourly Rate (₹)
                                 </label>
                                 <input
@@ -160,7 +160,7 @@ const AdminSpareDriverServices = () => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
                                     Subscriber Rate (₹)
                                 </label>
                                 <input
@@ -174,7 +174,7 @@ const AdminSpareDriverServices = () => {
                     )}
 
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
                             Included Hours
                         </label>
                         <input
@@ -186,7 +186,7 @@ const AdminSpareDriverServices = () => {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-2">
                             Overtime Rate (₹/hour)
                         </label>
                         <input
@@ -200,13 +200,13 @@ const AdminSpareDriverServices = () => {
 
                 {/* Vehicle Multipliers */}
                 <div className="mb-6">
-                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-3">
                         Vehicle Multipliers
                     </label>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {Object.entries(formData.vehicleMultipliers).map(([type, value]) => (
                             <div key={type}>
-                                <label className="block text-xs font-medium text-gray-600 mb-1 capitalize">
+                                <label className="block text-xs font-medium text-[var(--text-muted)] mb-1 capitalize">
                                     {type}
                                 </label>
                                 <input
@@ -229,14 +229,14 @@ const AdminSpareDriverServices = () => {
 
                 {/* Features */}
                 <div className="mb-6">
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-white/80 mb-2">
                         Features
                     </label>
                     <div className="flex flex-wrap gap-2">
                         {service.features.map((feature, idx) => (
                             <span
                                 key={idx}
-                                className="px-3 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full"
+                                className="px-3 py-1 bg-[var(--bg-secondary)] text-[var(--text-primary)] text-xs font-medium rounded-full border border-[var(--border)]"
                             >
                                 {feature}
                             </span>
@@ -245,23 +245,25 @@ const AdminSpareDriverServices = () => {
                 </div>
 
                 {/* Save Button */}
-                <button
-                    onClick={handleSave}
-                    disabled={saving === service.type}
-                    className="btn-primary w-full flex items-center justify-center gap-2"
-                >
-                    {saving === service.type ? (
-                        <>
-                            <RefreshCw size={16} className="animate-spin" />
-                            Saving...
-                        </>
-                    ) : (
-                        <>
-                            <Save size={16} />
-                            Save Changes
-                        </>
-                    )}
-                </button>
+                <div className="mt-auto pt-6 border-t border-[var(--border)]">
+                    <button
+                        onClick={handleSave}
+                        disabled={saving === service.type}
+                        className="btn-primary w-full flex items-center justify-center gap-2 group/save"
+                    >
+                        {saving === service.type ? (
+                            <>
+                                <RefreshCw size={20} className="animate-spin" />
+                                Saving...
+                            </>
+                        ) : (
+                            <>
+                                <Save size={18} className="group-hover/save:scale-110 transition-transform" />
+                                Save Changes
+                            </>
+                        )}
+                    </button>
+                </div>
             </motion.div>
         );
     };
@@ -280,17 +282,17 @@ const AdminSpareDriverServices = () => {
             <div className="admin-card">
                 <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Spare Driver Services</h1>
-                        <p className="text-sm text-gray-600 mt-1">
+                        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Spare Driver Services</h1>
+                        <p className="text-sm text-[var(--text-muted)] mt-1 font-medium">
                             Configure service types, pricing, and vehicle multipliers
                         </p>
                     </div>
                     <div className="flex gap-3">
                         <button
                             onClick={loadServices}
-                            className="btn-secondary flex items-center gap-2"
+                            className="btn-secondary h-11 flex items-center gap-2 group/refresh"
                         >
-                            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                            <RefreshCw size={18} className={`${loading ? 'animate-spin' : 'group-hover/refresh:rotate-180 transition-transform duration-500'}`} />
                             Refresh
                         </button>
                         {services.length === 0 && (
@@ -324,10 +326,10 @@ const AdminSpareDriverServices = () => {
                         >
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{stat.label}</p>
-                                    <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
+                                    <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">{stat.label}</p>
+                                    <p className="text-2xl font-bold text-[var(--text-primary)] mt-1">{stat.value}</p>
                                 </div>
-                                <div className={`w-12 h-12 rounded-xl bg-${stat.color}-100 flex items-center justify-center text-${stat.color}-600`}>
+                                <div className={`w-12 h-12 rounded-xl bg-[var(--${stat.color}-light)] flex items-center justify-center text-[var(--${stat.color})] border border-[var(--${stat.color})]`}>
                                     {stat.icon}
                                 </div>
                             </div>
@@ -347,7 +349,7 @@ const AdminSpareDriverServices = () => {
                 <div className="admin-card text-center py-16">
                     <Car size={48} className="mx-auto text-gray-400 mb-4" />
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">No Services Found</h3>
-                    <p className="text-gray-600 mb-6">Initialize default services to get started</p>
+                    <p className="text-white/60 mb-6">Initialize default services to get started</p>
                     <button
                         onClick={initializeServices}
                         className="btn-primary inline-flex items-center gap-2"

@@ -87,7 +87,7 @@ const ProductDetail = () => {
 
     if (loading) return (
         <MobileLayout hideNav={true}>
-            <div className="bg-white min-h-screen flex items-center justify-center">
+            <div className="bg-white/5 min-h-screen flex items-center justify-center">
                 <div className="w-10 h-10 border-4 border-brand border-t-transparent rounded-full animate-spin" />
             </div>
         </MobileLayout>
@@ -108,12 +108,12 @@ const ProductDetail = () => {
 
     return (
         <MobileLayout hideNav={true}>
-            <div className="bg-white min-h-screen pb-32">
+            <div className="bg-white/5 min-h-screen pb-32">
                 {/* ── STICKY TOP NAV ── */}
                 <div className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl px-5 pt-8 pb-4 flex items-center justify-between border-b border-black/[0.03]">
                     <button
                         onClick={() => navigate(-1)}
-                        className="w-10 h-10 bg-white border border-gray-100 rounded-xl flex items-center justify-center text-content shadow-sm active:scale-90 transition-transform"
+                        className="w-10 h-10 bg-white/5 border border-white/5 rounded-xl flex items-center justify-center text-content  active:scale-90 transition-transform"
                     >
                         <ArrowLeft size={20} />
                     </button>
@@ -121,17 +121,17 @@ const ProductDetail = () => {
                     <div className="flex items-center gap-3">
                         <button
                             onClick={() => toggleWishlist(product)}
-                            className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm active:scale-90 transition-transform ${inWishlist ? 'bg-brand/10 text-brand' : 'bg-gray-50 text-content-subtle'}`}
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center  active:scale-90 transition-transform ${inWishlist ? 'bg-brand/10 text-brand' : 'bg-white/[0.02] text-content-subtle'}`}
                         >
                             <Heart size={20} className={inWishlist ? 'fill-brand' : ''} />
                         </button>
                         <button
                             onClick={() => navigate('/cart')}
-                            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-content relative shadow-sm active:scale-90 transition-transform"
+                            className="w-10 h-10 bg-white/[0.02] rounded-xl flex items-center justify-center text-content relative  active:scale-90 transition-transform"
                         >
                             <ShoppingCart size={20} />
                             {cartCount > 0 && (
-                                <span className="absolute -top-1 -right-1 w-5 h-5 bg-black text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white">
+                                <span className="absolute -top-1 -right-1 w-5 h-5 bg-black text-white text-[10px] font-black rounded-full flex items-center justify-center border-white/5 border-white">
                                     {cartCount}
                                 </span>
                             )}
@@ -144,7 +144,7 @@ const ProductDetail = () => {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="relative aspect-square rounded-3xl bg-gray-50 overflow-hidden border border-gray-100 flex items-center justify-center p-8 group"
+                        className="relative aspect-square rounded-3xl bg-white/[0.02] overflow-hidden border border-white/5 flex items-center justify-center p-8 group"
                     >
                         {/* Subtle Glow like Home Page Expansion Banner */}
                         <div className="absolute inset-0 bg-gradient-to-tr from-brand/5 via-transparent to-brand/10 opacity-60 group-hover:scale-110 transition-transform duration-700" />
@@ -167,7 +167,7 @@ const ProductDetail = () => {
                         </div>
 
                         {/* Share Button */}
-                        <button className="absolute bottom-6 right-6 w-10 h-10 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center text-content-subtle shadow-lg active:scale-95 transition-all border border-gray-100">
+                        <button className="absolute bottom-6 right-6 w-10 h-10 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center text-content-subtle shadow-lg active:scale-95 transition-all border border-white/5">
                             <Share2 size={18} />
                         </button>
                     </motion.div>
@@ -206,7 +206,7 @@ const ProductDetail = () => {
                             <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mt-2">Inclusive of all taxes</p>
                         </div>
 
-                        <div className="flex items-center h-12 bg-gray-50 rounded-2xl p-1 border border-gray-100">
+                        <div className="flex items-center h-12 bg-white/[0.02] rounded-2xl p-1 border border-white/5">
                             <button
                                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
                                 className="w-10 h-full flex items-center justify-center text-content-subtle active:scale-90 transition-transform"
@@ -225,17 +225,17 @@ const ProductDetail = () => {
 
                     {/* Features Grid */}
                     <div className="grid grid-cols-3 gap-3">
-                        <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 flex flex-col items-center text-center gap-2">
+                        <div className="bg-white/[0.02] p-3 rounded-2xl border border-white/5 flex flex-col items-center text-center gap-2">
                             <Truck size={18} className="text-content-subtle" />
                             <span className="text-[8px] font-black text-content uppercase tracking-widest leading-none mx-[-10px]">
                                 {deliveryEta.split(' ')[0]}<br />{deliveryEta.split(' ').slice(1).join(' ')}
                             </span>
                         </div>
-                        <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 flex flex-col items-center text-center gap-2">
+                        <div className="bg-white/[0.02] p-3 rounded-2xl border border-white/5 flex flex-col items-center text-center gap-2">
                             <RefreshCw size={18} className="text-content-subtle" />
                             <span className="text-[8px] font-black text-content uppercase tracking-widest leading-none">7 Days<br />Refund</span>
                         </div>
-                        <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 flex flex-col items-center text-center gap-2">
+                        <div className="bg-white/[0.02] p-3 rounded-2xl border border-white/5 flex flex-col items-center text-center gap-2">
                             <ShieldCheck size={18} className="text-content-subtle" />
                             <span className="text-[8px] font-black text-content uppercase tracking-widest leading-none">Safe<br />Payment</span>
                         </div>
@@ -244,7 +244,7 @@ const ProductDetail = () => {
 
                     {/* Tabs Section */}
                     <div className="space-y-4 pt-4">
-                        <div className="flex items-center gap-6 border-b border-gray-100">
+                        <div className="flex items-center gap-6 border-b border-white/5">
                             {['description', 'specifications', 'reviews'].map(tab => (
                                 <button
                                     key={tab}
@@ -310,7 +310,7 @@ const ProductDetail = () => {
                                 <div className="space-y-6">
                                     {reviewsLoading ? (
                                         <div className="flex justify-center py-10">
-                                            <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                                            <div className="w-6 h-6 border-white/5 border-brand border-t-transparent rounded-full animate-spin" />
                                         </div>
                                     ) : reviews.length === 0 ? (
                                         <div className="text-center py-10">
@@ -354,7 +354,7 @@ const ProductDetail = () => {
                                 <h3 className="text-base font-black uppercase tracking-tight leading-none mb-1">Need Help?</h3>
                                 <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Talk to our experts</p>
                             </div>
-                            <button className="bg-brand text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl shadow-brand/20 active:scale-95 transition-transform">
+                            <button className="bg-brand text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-2xl shadow-black/50 shadow-brand/20 active:scale-95 transition-transform">
                                 <MessageCircle size={24} />
                             </button>
                         </div>
@@ -365,13 +365,13 @@ const ProductDetail = () => {
                 </div>
 
                 {/* ── STICKY FOOTER CTA ── */}
-                <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/10 backdrop-blur-3xl px-5 py-6 flex items-center gap-4 border-t border-gray-100/50">
+                <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/10 backdrop-blur-3xl px-5 py-6 flex items-center gap-4 border-t border-white/5/50">
                     <button
                         onClick={() => {
                             addToCart(product, quantity);
                             navigate('/cart');
                         }}
-                        className="flex-[0.4] h-14 bg-gray-50 border border-gray-100 rounded-2xl text-content text-[11px] font-black uppercase tracking-widest hover:bg-gray-100 transition-colors shadow-sm"
+                        className="flex-[0.4] h-14 bg-white/[0.02] border border-white/5 rounded-2xl text-content text-[11px] font-black uppercase tracking-widest hover:bg-white/[0.05] transition-colors "
                     >
                         Buy Now
                     </button>

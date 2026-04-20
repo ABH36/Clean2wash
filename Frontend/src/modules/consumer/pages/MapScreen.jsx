@@ -251,7 +251,7 @@ const MapScreen = () => {
                 anchor: window.google?.maps ? new window.google.maps.Point(21, 42) : undefined
             },
             infoContent: (
-                <div className="p-0 min-w-[180px] bg-white rounded-2xl overflow-hidden font-outfit shadow-2xl border border-gray-100">
+                <div className="p-0 min-w-[180px] bg-white/5 rounded-2xl overflow-hidden font-outfit shadow-2xl border border-white/5">
                     <div className="relative h-24">
                         <img src={studio.image} className="w-full h-full object-cover" alt={studio.name} />
                         <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-md px-1.5 py-0.5 rounded-lg flex items-center gap-1">
@@ -260,7 +260,7 @@ const MapScreen = () => {
                         </div>
                     </div>
                     <div className="p-3">
-                        <h4 className="font-black text-[11px] uppercase tracking-tight mb-1 text-black truncate">{studio.name}</h4>
+                        <h4 className="font-black text-[11px] uppercase tracking-tight mb-1 text-white truncate">{studio.name}</h4>
                         <div className="flex items-center justify-between mt-2">
                             <div>
                                 <p className="text-[7px] font-black text-gray-400 uppercase tracking-widest leading-none">Starting from</p>
@@ -280,7 +280,7 @@ const MapScreen = () => {
     ];
 
     return (
-        <div className="h-screen w-full bg-white relative overflow-hidden flex flex-col font-sans">
+        <div className="h-screen w-full bg-white/5 relative overflow-hidden flex flex-col font-sans">
             {/* ── Background Map Surface ── */}
             <div className="absolute inset-0 z-0">
                 <GoogleMapBox 
@@ -329,18 +329,18 @@ const MapScreen = () => {
                 <div className="flex items-center justify-between">
                     <button
                         onClick={() => navigate(-1)}
-                        className="w-10 h-10 bg-white shadow-xl rounded-full flex items-center justify-center text-black active:scale-95 transition-all border border-black/[0.03]"
+                        className="w-10 h-10 bg-white/5 shadow-2xl shadow-black/50 rounded-full flex items-center justify-center text-white active:scale-95 transition-all border border-black/[0.03]"
                     >
                         <ChevronLeft size={20} strokeWidth={3} />
                     </button>
                     <div />
-                    <button className="w-10 h-10 bg-white shadow-xl rounded-full flex items-center justify-center text-black border border-black/[0.03]">
+                    <button className="w-10 h-10 bg-white/5 shadow-2xl shadow-black/50 rounded-full flex items-center justify-center text-white border border-black/[0.03]">
                         <MapIcon size={18} className="text-black/30" />
                     </button>
                 </div>
 
                 <div className="relative group">
-                    <div className="absolute inset-y-0 left-5 flex items-center text-black/20">
+                    <div className="absolute inset-y-0 left-5 flex items-center text-white/20">
                         <Search size={18} strokeWidth={3} />
                     </div>
                     <input
@@ -349,7 +349,7 @@ const MapScreen = () => {
                         placeholder="Search area, street or building..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full h-12 bg-white/90 backdrop-blur-xl border border-black/05 pl-12 pr-12 text-[13px] font-bold text-black placeholder:text-black/20 rounded-2xl shadow-xl focus:ring-0 outline-none"
+                        className="w-full h-12 bg-white/90 backdrop-blur-xl border border-black/05 pl-12 pr-12 text-[13px] font-bold text-white placeholder:text-white/20 rounded-2xl shadow-2xl shadow-black/50 focus:ring-0 outline-none"
                     />
                     <button
                         onClick={handleLocateMe}
@@ -373,12 +373,12 @@ const MapScreen = () => {
                                     onClick={() => handleSearchResultSelect(loc)}
                                     className="w-full flex items-center gap-3 p-3 hover:bg-black/[0.02] rounded-xl transition-all"
                                 >
-                                    <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-black/10">
+                                    <div className="w-8 h-8 rounded-lg bg-white/[0.02] flex items-center justify-center text-black/10">
                                         <MapPin size={16} />
                                     </div>
                                     <div className="text-left flex-1 min-w-0">
-                                        <h4 className="text-[12px] font-black text-black uppercase truncate">{loc.label}</h4>
-                                        <p className="text-[9px] font-bold text-black/20 uppercase tracking-tighter truncate">{loc.address}</p>
+                                        <h4 className="text-[12px] font-black text-white uppercase truncate">{loc.label}</h4>
+                                        <p className="text-[9px] font-bold text-white/20 uppercase tracking-tighter truncate">{loc.address}</p>
                                     </div>
                                 </button>
                             ))}
@@ -389,17 +389,17 @@ const MapScreen = () => {
 
             {/* ── Bottom Interface Card ── */}
             <div className="absolute bottom-4 left-4 right-4 z-50">
-                <div className="bg-white rounded-[28px] p-5 shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-black/[0.03]">
+                <div className="bg-white/5 rounded-[28px] p-5 shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-black/[0.03]">
                     <div className="flex items-start gap-4 mb-5">
                         <div className="w-10 h-10 bg-[#0F172A]/03 rounded-xl flex items-center justify-center text-[#F59E0B] flex-shrink-0">
                             <MapPin size={20} strokeWidth={3} />
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between mb-0.5">
-                                <h3 className="text-[8px] font-black text-black/20 uppercase tracking-widest">Selected Location</h3>
+                                <h3 className="text-[8px] font-black text-white/20 uppercase tracking-widest">Selected Location</h3>
                                 <button onClick={handleEdit} className="text-[#F59E0B] text-[9px] font-black uppercase tracking-widest leading-none">Change</button>
                             </div>
-                            <h4 className="text-[14px] font-[1000] text-black uppercase tracking-tight leading-tight truncate">
+                            <h4 className="text-[14px] font-[1000] text-white uppercase tracking-tight leading-tight truncate">
                                 {selectedLocation.label}
                             </h4>
                             <p className="text-[9px] font-bold text-black/30 uppercase tracking-tighter truncate mt-0.5">
@@ -409,20 +409,20 @@ const MapScreen = () => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-2.5 mb-5">
-                        <div className="bg-gray-50/70 py-2.5 px-3 rounded-xl border border-black/[0.01] flex items-center gap-2">
+                        <div className="bg-white/[0.02]/70 py-2.5 px-3 rounded-xl border border-black/[0.01] flex items-center gap-2">
                             <div className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] animate-pulse" />
-                            <span className="text-[9px] font-black text-black uppercase tracking-tight">Active Zone</span>
+                            <span className="text-[9px] font-black text-white uppercase tracking-tight">Active Zone</span>
                         </div>
-                        <div className="bg-gray-50/70 py-2.5 px-3 rounded-xl border border-black/[0.01] flex items-center gap-2">
+                        <div className="bg-white/[0.02]/70 py-2.5 px-3 rounded-xl border border-black/[0.01] flex items-center gap-2">
                             <Zap size={10} className="text-[#F59E0B]" fill="currentColor" />
-                            <span className="text-[9px] font-black text-black uppercase tracking-tight">Elite Care</span>
+                            <span className="text-[9px] font-black text-white uppercase tracking-tight">Elite Care</span>
                         </div>
                     </div>
 
                     <div className="space-y-3">
                         <button
                             onClick={handleLocateMe}
-                            className="w-full h-12 bg-white border border-black/10 text-black rounded-2xl font-[1000] text-[11px] uppercase tracking-[0.15em] flex items-center justify-center gap-2 shadow-sm active:bg-gray-50 transition-all"
+                            className="w-full h-12 bg-white/5 border border-black/10 text-white rounded-2xl font-[1000] text-[11px] uppercase tracking-[0.15em] flex items-center justify-center gap-2  active:bg-white/[0.02] transition-all"
                         >
                             <Locate size={14} className="text-[#F59E0B]" strokeWidth={3} />
                             Use Current Location
@@ -432,7 +432,7 @@ const MapScreen = () => {
                             whileTap={{ scale: 0.98 }}
                             onClick={handleConfirm}
                             disabled={isGeocoding}
-                            className="w-full bg-black text-white h-12 rounded-2xl font-black text-[12px] uppercase tracking-[0.2em] shadow-xl flex items-center justify-center transition-all disabled:opacity-50"
+                            className="w-full bg-black text-white h-12 rounded-2xl font-black text-[12px] uppercase tracking-[0.2em] shadow-2xl shadow-black/50 flex items-center justify-center transition-all disabled:opacity-50"
                         >
                             {isGeocoding ? 'Locating...' : 'Confirm Location'}
                         </motion.button>

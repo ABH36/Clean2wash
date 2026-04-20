@@ -44,9 +44,9 @@ const MyOrders = () => {
         <MobileLayout hideNav>
             <div className="bg-slate-50 min-h-screen pb-32">
                 {/* ── Compact Header ── */}
-                <header className="px-5 pt-8 pb-4 bg-white sticky top-0 z-[60] border-b border-gray-100 flex items-center justify-between">
+                <header className="px-5 pt-8 pb-4 bg-white/5 sticky top-0 z-[60] border-b border-white/5 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <button onClick={() => navigate(-1)} className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-all">
+                        <button onClick={() => navigate(-1)} className="w-10 h-10 bg-white/[0.02] rounded-xl flex items-center justify-center active:scale-95 transition-all">
                             <ChevronLeft size={22} className="text-slate-900" />
                         </button>
                         <div>
@@ -56,7 +56,7 @@ const MyOrders = () => {
                     </div>
                     <button 
                         onClick={handleRefresh}
-                        className={`p-2 rounded-lg bg-gray-50 text-slate-400 active:scale-75 transition-all ${refreshing ? 'animate-spin' : ''}`}
+                        className={`p-2 rounded-lg bg-white/[0.02] text-slate-400 active:scale-75 transition-all ${refreshing ? 'animate-spin' : ''}`}
                     >
                         <RefreshCw size={18} />
                     </button>
@@ -64,13 +64,13 @@ const MyOrders = () => {
 
                 <div className="px-5 pt-6 space-y-5">
                     {/* ── Tab Selector ── */}
-                    <div className="flex bg-white p-1 rounded-2xl border border-gray-100 shadow-sm">
+                    <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5 ">
                         {TABS.map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
                                 className={`flex-1 py-2.5 rounded-xl font-bold text-[12px] transition-all flex items-center justify-center gap-2 ${activeTab === tab 
-                                    ? 'bg-slate-900 text-white shadow-md' 
+                                    ? 'bg-slate-900 text-white shadow-2xl shadow-black/40' 
                                     : 'text-slate-400'}`}
                             >
                                 {tab}
@@ -90,7 +90,7 @@ const MyOrders = () => {
                             className="space-y-4"
                         >
                             {list.length === 0 ? (
-                                <div className="text-center py-20 bg-white rounded-[2.5rem] border border-dashed border-gray-200">
+                                <div className="text-center py-20 bg-white/5 rounded-[2.5rem] border border-dashed border-white/10">
                                     <ShoppingBag size={32} className="text-slate-100 mx-auto mb-3" />
                                     <p className="text-[12px] font-bold text-slate-300">No orders here</p>
                                     <button onClick={() => navigate('/shop')} className="mt-6 text-brand font-bold text-[11px] underline underline-offset-4">Explore products</button>
@@ -106,7 +106,7 @@ const MyOrders = () => {
                     {/* ── Shop Banner ── */}
                     <button 
                         onClick={() => navigate('/shop')}
-                        className="w-full bg-slate-900 p-5 rounded-[2rem] flex items-center gap-4 border border-white/5 active:scale-[0.98] transition-all group shadow-xl"
+                        className="w-full bg-slate-900 p-5 rounded-[2rem] flex items-center gap-4 border border-white/5 active:scale-[0.98] transition-all group shadow-2xl shadow-black/50"
                     >
                         <div className="w-11 h-11 bg-brand rounded-2xl flex items-center justify-center shrink-0">
                             <Tag size={20} className="text-slate-900" fill="currentColor" />
@@ -143,7 +143,7 @@ const OrderCard = ({ order, onTrack }) => {
         <motion.div
             whileTap={{ scale: 0.99 }}
             onClick={onTrack}
-            className="bg-white rounded-[1.8rem] border border-gray-100 shadow-sm overflow-hidden p-4 group"
+            className="bg-white/5 rounded-[1.8rem] border border-white/5  overflow-hidden p-4 group"
         >
             <div className="flex gap-4">
                 <div className="w-16 h-16 rounded-xl bg-slate-50 border border-slate-100 overflow-hidden shrink-0 relative">

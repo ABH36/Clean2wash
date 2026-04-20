@@ -66,7 +66,7 @@ const badgeClass = (status = '') => {
         completed: 'bg-green-50 text-green-700',
         cancelled: 'bg-red-50 text-red-700'
     };
-    return map[status] || 'bg-gray-50 text-gray-700';
+    return map[status] || 'bg-white/[0.02] text-white/80';
 };
 
 const toLatLng = (booking = {}) => {
@@ -273,13 +273,13 @@ const AdminStudioWash = () => {
 
     return (
         <div className="space-y-4">
-            <div className="bg-white border border-gray-100 rounded-[1.2rem] p-5 shadow-[0_14px_28px_rgba(15,23,42,0.06)] flex items-center justify-between gap-4 flex-wrap">
+            <div className="bg-white/5 border border-white/5 rounded-[1.2rem] p-5 shadow-[0_14px_28px_rgba(15,23,42,0.06)] flex items-center justify-between gap-4 flex-wrap">
                 <div>
                     <p className="text-[9px] font-black text-black/35 uppercase tracking-[0.22em]">Studio Wash Ops</p>
-                    <h2 className="text-[24px] font-black text-black uppercase leading-tight mt-2">Manage Full Wash Workflow</h2>
+                    <h2 className="text-[24px] font-black text-white uppercase leading-tight mt-2">Manage Full Wash Workflow</h2>
                     <p className="text-[10px] font-bold text-black/45 mt-2">Bookings, staff assignment, studio services, and operational map are centralized here.</p>
                 </div>
-                <button onClick={() => loadConsole(true)} className={`h-10 px-4 rounded-xl border border-gray-200 text-[10px] font-black uppercase ${refreshing ? 'text-brand' : 'text-black/55'}`}>
+                <button onClick={() => loadConsole(true)} className={`h-10 px-4 rounded-xl border border-white/10 text-[10px] font-black uppercase ${refreshing ? 'text-brand' : 'text-black/55'}`}>
                     <RefreshCw size={14} className={`inline-block mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                     Refresh
                 </button>
@@ -294,15 +294,15 @@ const AdminStudioWash = () => {
                     { label: 'Staff', value: m.activeStaff || 0, icon: User },
                     { label: 'Pickup Gaps', value: m.unassignedPickup || 0, icon: Calendar }
                 ].map((item) => (
-                    <div key={item.label} className="bg-white border border-gray-100 rounded-[1rem] p-3.5 shadow-[0_10px_20px_rgba(15,23,42,0.04)]">
+                    <div key={item.label} className="bg-white/5 border border-white/5 rounded-[1rem] p-3.5 shadow-[0_10px_20px_rgba(15,23,42,0.04)]">
                         <item.icon size={14} className="text-brand" />
                         <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mt-2">{item.label}</p>
-                        <p className="text-[22px] font-black text-black mt-1">{item.value}</p>
+                        <p className="text-[22px] font-black text-white mt-1">{item.value}</p>
                     </div>
                 ))}
             </div>
 
-            <div className="flex gap-2 p-1 bg-white border border-gray-200 rounded-xl w-fit">
+            <div className="flex gap-2 p-1 bg-white/5 border border-white/10 rounded-xl w-fit">
                 {STUDIO_SECTIONS.map((item) => (
                     <button
                         key={item}
@@ -316,10 +316,10 @@ const AdminStudioWash = () => {
 
             {section === 'overview' && (
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                    <div className="bg-white border border-gray-100 rounded-[1rem] p-4">
-                        <h3 className="text-[14px] font-black text-black uppercase">Active Studio Trips</h3>
-                        <p className="text-[10px] font-bold text-black/40 mt-1">Map with route polyline between pickup and destination/studio.</p>
-                        <div className="h-[420px] rounded-xl overflow-hidden border border-gray-100 mt-4">
+                    <div className="bg-white/5 border border-white/5 rounded-[1rem] p-4">
+                        <h3 className="text-[14px] font-black text-white uppercase">Active Studio Trips</h3>
+                        <p className="text-[10px] font-bold text-white/40 mt-1">Map with route polyline between pickup and destination/studio.</p>
+                        <div className="h-[420px] rounded-xl overflow-hidden border border-white/5 mt-4">
                             <GoogleMapBox
                                 center={mapCenter}
                                 zoom={13}
@@ -329,20 +329,20 @@ const AdminStudioWash = () => {
                             />
                         </div>
                     </div>
-                    <div className="bg-white border border-gray-100 rounded-[1rem] p-4 space-y-3">
-                        <h3 className="text-[14px] font-black text-black uppercase">Operational Shortcuts</h3>
-                        <button onClick={() => navigate('/admin/users?type=vendors')} className="w-full h-11 rounded-xl border border-gray-200 px-4 flex items-center justify-between text-[10px] font-black uppercase text-black/70">
+                    <div className="bg-white/5 border border-white/5 rounded-[1rem] p-4 space-y-3">
+                        <h3 className="text-[14px] font-black text-white uppercase">Operational Shortcuts</h3>
+                        <button onClick={() => navigate('/admin/users?type=vendors')} className="w-full h-11 rounded-xl border border-white/10 px-4 flex items-center justify-between text-[10px] font-black uppercase text-black/70">
                             Open Vendor Registry <ChevronRight size={14} />
                         </button>
-                        <button onClick={() => navigate('/admin/users?type=staff')} className="w-full h-11 rounded-xl border border-gray-200 px-4 flex items-center justify-between text-[10px] font-black uppercase text-black/70">
+                        <button onClick={() => navigate('/admin/users?type=staff')} className="w-full h-11 rounded-xl border border-white/10 px-4 flex items-center justify-between text-[10px] font-black uppercase text-black/70">
                             Open Staff Registry <ChevronRight size={14} />
                         </button>
-                        <button onClick={() => navigate('/admin/services')} className="w-full h-11 rounded-xl border border-gray-200 px-4 flex items-center justify-between text-[10px] font-black uppercase text-black/70">
+                        <button onClick={() => navigate('/admin/services')} className="w-full h-11 rounded-xl border border-white/10 px-4 flex items-center justify-between text-[10px] font-black uppercase text-black/70">
                             Open Service Inventory <ChevronRight size={14} />
                         </button>
-                        <div className="border border-gray-100 rounded-xl p-4 mt-2">
-                            <p className="text-[9px] font-black text-black/40 uppercase tracking-widest">Selected Booking</p>
-                            <p className="text-[14px] font-black text-black uppercase mt-1">{selectedBooking?.bookingId || 'No booking selected'}</p>
+                        <div className="border border-white/5 rounded-xl p-4 mt-2">
+                            <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">Selected Booking</p>
+                            <p className="text-[14px] font-black text-white uppercase mt-1">{selectedBooking?.bookingId || 'No booking selected'}</p>
                             <p className="text-[10px] font-bold text-black/50 mt-1">{selectedBooking?.serviceName || '-'}</p>
                             <span className={`inline-flex mt-2 px-2 py-1 rounded-md text-[9px] font-black uppercase ${badgeClass(selectedBooking?.status)}`}>
                                 {selectedBooking?.status || 'idle'}
@@ -353,17 +353,17 @@ const AdminStudioWash = () => {
             )}
 
             {section === 'bookings' && (
-                <div className="bg-white border border-gray-100 rounded-[1rem] p-4 space-y-3">
+                <div className="bg-white/5 border border-white/5 rounded-[1rem] p-4 space-y-3">
                     <div className="flex items-center justify-between gap-3 flex-wrap">
-                        <h3 className="text-[14px] font-black text-black uppercase">Studio Booking Queue</h3>
-                        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by booking ID, customer, phone..." className="h-10 w-[360px] max-w-full border border-gray-200 rounded-lg px-3 text-[11px] font-bold outline-none" />
+                        <h3 className="text-[14px] font-black text-white uppercase">Studio Booking Queue</h3>
+                        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by booking ID, customer, phone..." className="h-10 w-[360px] max-w-full border border-white/10 rounded-lg px-3 text-[11px] font-bold outline-none" />
                     </div>
                     <div className="space-y-2">
                         {bookings.map((booking) => (
-                            <button key={booking._id} onClick={() => setSelectedBookingId(booking._id)} className={`w-full border rounded-xl px-4 py-3 text-left ${selectedBookingId === booking._id ? 'border-black bg-black/[0.02]' : 'border-gray-100'}`}>
+                            <button key={booking._id} onClick={() => setSelectedBookingId(booking._id)} className={`w-full border rounded-xl px-4 py-3 text-left ${selectedBookingId === booking._id ? 'border-black bg-black/[0.02]' : 'border-white/5'}`}>
                                 <div className="flex items-center justify-between gap-3">
                                     <div>
-                                        <p className="text-[12px] font-black text-black uppercase">{booking.bookingId || booking._id}</p>
+                                        <p className="text-[12px] font-black text-white uppercase">{booking.bookingId || booking._id}</p>
                                         <p className="text-[10px] font-bold text-black/55">{booking.consumer?.name || 'Consumer'} • {booking.serviceName || booking.service?.name}</p>
                                     </div>
                                     <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase ${badgeClass(booking.status)}`}>{booking.status}</span>
@@ -377,17 +377,17 @@ const AdminStudioWash = () => {
 
             {section === 'mapping' && (
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                    <div className="bg-white border border-gray-100 rounded-[1rem] p-4 space-y-3">
-                        <h3 className="text-[14px] font-black text-black uppercase">Staff Assignment</h3>
+                    <div className="bg-white/5 border border-white/5 rounded-[1rem] p-4 space-y-3">
+                        <h3 className="text-[14px] font-black text-white uppercase">Staff Assignment</h3>
                         <p className="text-[10px] font-bold text-black/45">Assign pickup and delivery staff for selected studio booking.</p>
-                        <div className="border border-gray-100 rounded-xl p-3">
+                        <div className="border border-white/5 rounded-xl p-3">
                             <p className="text-[9px] font-black text-black/35 uppercase tracking-widest">Booking</p>
-                            <p className="text-[13px] font-black text-black uppercase mt-1">{selectedBooking?.bookingId || '-'}</p>
+                            <p className="text-[13px] font-black text-white uppercase mt-1">{selectedBooking?.bookingId || '-'}</p>
                             <p className="text-[10px] font-bold text-black/45 mt-1">{selectedBooking?.consumer?.name || '-'} • {selectedBooking?.price || '-'}</p>
                         </div>
                         <div>
                             <label className="block text-[9px] font-black text-black/30 uppercase tracking-widest mb-1.5">Pickup Staff</label>
-                            <select value={pickupStaffId} onChange={(event) => setPickupStaffId(event.target.value)} className="w-full h-10 border border-gray-200 rounded-lg px-3 text-[11px] font-black">
+                            <select value={pickupStaffId} onChange={(event) => setPickupStaffId(event.target.value)} className="w-full h-10 border border-white/10 rounded-lg px-3 text-[11px] font-black">
                                 <option value="">Select pickup staff</option>
                                 {staffList.map((staff) => <option key={staff._id} value={staff._id}>{staff.name} • {staff.phone}</option>)}
                             </select>
@@ -397,7 +397,7 @@ const AdminStudioWash = () => {
                         </div>
                         <div>
                             <label className="block text-[9px] font-black text-black/30 uppercase tracking-widest mb-1.5">Delivery Staff</label>
-                            <select value={deliveryStaffId} onChange={(event) => setDeliveryStaffId(event.target.value)} className="w-full h-10 border border-gray-200 rounded-lg px-3 text-[11px] font-black">
+                            <select value={deliveryStaffId} onChange={(event) => setDeliveryStaffId(event.target.value)} className="w-full h-10 border border-white/10 rounded-lg px-3 text-[11px] font-black">
                                 <option value="">Select delivery staff</option>
                                 {staffList.map((staff) => <option key={staff._id} value={staff._id}>{staff.name} • {staff.phone}</option>)}
                             </select>
@@ -406,15 +406,15 @@ const AdminStudioWash = () => {
                             </button>
                         </div>
                     </div>
-                    <div className="bg-white border border-gray-100 rounded-[1rem] p-4 space-y-3">
-                        <h3 className="text-[14px] font-black text-black uppercase">Status Control</h3>
+                    <div className="bg-white/5 border border-white/5 rounded-[1rem] p-4 space-y-3">
+                        <h3 className="text-[14px] font-black text-white uppercase">Status Control</h3>
                         <p className="text-[10px] font-bold text-black/45">Advance selected booking through full wash lifecycle.</p>
-                        <div className="border border-gray-100 rounded-xl p-3">
+                        <div className="border border-white/5 rounded-xl p-3">
                             <p className="text-[9px] font-black text-black/35 uppercase tracking-widest">Current</p>
                             <span className={`inline-flex mt-2 px-2 py-1 rounded-md text-[9px] font-black uppercase ${badgeClass(selectedBooking?.status)}`}>{selectedBooking?.status || '-'}</span>
                             <p className="text-[10px] font-bold text-black/45 mt-2">Next: {nextStudioStatus(selectedBooking?.status)}</p>
                         </div>
-                        <button onClick={handleAdvanceStatus} disabled={!selectedBooking || updatingStatus} className="h-11 px-5 rounded-xl bg-brand text-black text-[10px] font-black uppercase flex items-center gap-2">
+                        <button onClick={handleAdvanceStatus} disabled={!selectedBooking || updatingStatus} className="h-11 px-5 rounded-xl bg-brand text-white text-[10px] font-black uppercase flex items-center gap-2">
                             {updatingStatus ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
                             Advance Status
                         </button>
@@ -423,20 +423,20 @@ const AdminStudioWash = () => {
             )}
 
             {section === 'services' && (
-                <div className="bg-white border border-gray-100 rounded-[1rem] p-4 space-y-3">
+                <div className="bg-white/5 border border-white/5 rounded-[1rem] p-4 space-y-3">
                     <div className="flex items-center justify-between gap-3 flex-wrap">
-                        <h3 className="text-[14px] font-black text-black uppercase">Studio Service Catalog</h3>
-                        <button onClick={() => navigate('/admin/services')} className="h-10 px-4 rounded-xl border border-gray-200 text-[10px] font-black uppercase text-black/60">
+                        <h3 className="text-[14px] font-black text-white uppercase">Studio Service Catalog</h3>
+                        <button onClick={() => navigate('/admin/services')} className="h-10 px-4 rounded-xl border border-white/10 text-[10px] font-black uppercase text-white/60">
                             Open Global Service Desk
                         </button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                         {(consoleData.studioServices || []).map((service) => (
-                            <div key={service._id} className="border border-gray-100 rounded-xl p-3">
-                                <p className="text-[12px] font-black text-black uppercase">{service.name}</p>
+                            <div key={service._id} className="border border-white/5 rounded-xl p-3">
+                                <p className="text-[12px] font-black text-white uppercase">{service.name}</p>
                                 <p className="text-[10px] font-bold text-black/45 mt-1">{service.category} • {service.time}</p>
-                                <p className="text-[18px] font-black text-black mt-2">₹{service.price || 0}</p>
-                                <span className="inline-flex mt-2 px-2 py-1 rounded-md bg-gray-100 text-[9px] font-black uppercase text-black/60">{service.status || 'Live'}</span>
+                                <p className="text-[18px] font-black text-white mt-2">₹{service.price || 0}</p>
+                                <span className="inline-flex mt-2 px-2 py-1 rounded-md bg-white/[0.05] text-[9px] font-black uppercase text-white/60">{service.status || 'Live'}</span>
                             </div>
                         ))}
                         {!(consoleData.studioServices || []).length && (

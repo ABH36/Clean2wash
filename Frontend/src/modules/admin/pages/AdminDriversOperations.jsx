@@ -20,184 +20,23 @@ const AdminDriversOperations = () => {
     const [showDriverModal, setShowDriverModal] = useState(false);
     const [operationsTab, setOperationsTab] = useState('drivers'); // drivers, verification
 
-    // Dummy data for demo
+    // Fetch real drivers from API
     useEffect(() => {
         loadDrivers();
     }, []);
 
-    const loadDrivers = () => {
+    const loadDrivers = async () => {
         setLoading(true);
-        setTimeout(() => {
-            setDrivers([
-                {
-                    id: 'DRV001',
-                    name: 'Rajesh Kumar',
-                    phone: '+91 98765 43210',
-                    isOnline: true,
-                    reliabilityScore: 4.8,
-                    dutyHours: 8.5,
-                    status: 'ACTIVE',
-                    city: 'Bangalore',
-                    completedTrips: 245,
-                    // Advanced features
-                    utilizationRate: 87.5,
-                    weeklyDutyHours: 45.2,
-                    fatigueLevel: 'LOW',
-                    lastBreak: '2 hours ago',
-                    verificationStatus: 'VERIFIED', // VERIFIED, PENDING, REJECTED
-                    documents: {
-                        aadhaarCard: { frontUrl: '/docs/aadhaar-front.jpg', backUrl: '/docs/aadhaar-back.jpg' },
-                        drivingLicense: { url: '/docs/license.jpg' },
-                        selfie: { url: '/docs/selfie.jpg' }
-                    },
-                    kitStatus: 'COMPLETED',
-                    policeVerification: 'VERIFIED',
-                    availabilitySchedule: {
-                        monday: { start: '09:00', end: '18:00', available: true },
-                        tuesday: { start: '09:00', end: '18:00', available: true },
-                        wednesday: { start: '09:00', end: '18:00', available: true },
-                        thursday: { start: '09:00', end: '18:00', available: true },
-                        friday: { start: '09:00', end: '18:00', available: true },
-                        saturday: { start: '10:00', end: '16:00', available: true },
-                        sunday: { available: false }
-                    },
-                    alerts: []
-                },
-                {
-                    id: 'DRV002',
-                    name: 'Amit Sharma',
-                    phone: '+91 98765 43211',
-                    isOnline: false,
-                    reliabilityScore: 4.6,
-                    dutyHours: 6.2,
-                    status: 'ACTIVE',
-                    city: 'Mumbai',
-                    completedTrips: 189,
-                    utilizationRate: 72.3,
-                    weeklyDutyHours: 38.5,
-                    fatigueLevel: 'MEDIUM',
-                    lastBreak: '4 hours ago',
-                    verificationStatus: 'VERIFIED',
-                    documents: {
-                        aadhaarCard: { frontUrl: '/docs/aadhaar-front.jpg', backUrl: '/docs/aadhaar-back.jpg' },
-                        drivingLicense: { url: '/docs/license.jpg' },
-                        selfie: { url: '/docs/selfie.jpg' }
-                    },
-                    kitStatus: 'COMPLETED',
-                    policeVerification: 'VERIFIED',
-                    availabilitySchedule: {
-                        monday: { start: '08:00', end: '17:00', available: true },
-                        tuesday: { start: '08:00', end: '17:00', available: true },
-                        wednesday: { start: '08:00', end: '17:00', available: true },
-                        thursday: { start: '08:00', end: '17:00', available: true },
-                        friday: { start: '08:00', end: '17:00', available: true },
-                        saturday: { available: false },
-                        sunday: { available: false }
-                    },
-                    alerts: ['BREAK_OVERDUE']
-                },
-                {
-                    id: 'DRV003',
-                    name: 'Vikram Singh',
-                    phone: '+91 98765 43212',
-                    isOnline: true,
-                    reliabilityScore: 4.9,
-                    dutyHours: 9.1,
-                    status: 'ACTIVE',
-                    city: 'Delhi',
-                    completedTrips: 312,
-                    utilizationRate: 94.2,
-                    weeklyDutyHours: 52.8,
-                    fatigueLevel: 'HIGH',
-                    lastBreak: '6 hours ago',
-                    verificationStatus: 'PENDING',
-                    documents: {
-                        aadhaarCard: { frontUrl: '/docs/aadhaar-front.jpg', backUrl: '/docs/aadhaar-back.jpg' },
-                        drivingLicense: { url: '/docs/license.jpg' },
-                        selfie: null
-                    },
-                    kitStatus: 'PENDING',
-                    policeVerification: 'PENDING',
-                    availabilitySchedule: {
-                        monday: { start: '07:00', end: '19:00', available: true },
-                        tuesday: { start: '07:00', end: '19:00', available: true },
-                        wednesday: { start: '07:00', end: '19:00', available: true },
-                        thursday: { start: '07:00', end: '19:00', available: true },
-                        friday: { start: '07:00', end: '19:00', available: true },
-                        saturday: { start: '09:00', end: '15:00', available: true },
-                        sunday: { start: '10:00', end: '14:00', available: true }
-                    },
-                    alerts: ['FATIGUE_WARNING', 'OVERTIME_ALERT']
-                },
-                {
-                    id: 'DRV004',
-                    name: 'Suresh Patel',
-                    phone: '+91 98765 43213',
-                    isOnline: false,
-                    reliabilityScore: 3.8,
-                    dutyHours: 4.5,
-                    status: 'BLOCKED',
-                    city: 'Pune',
-                    completedTrips: 98,
-                    utilizationRate: 45.6,
-                    weeklyDutyHours: 28.3,
-                    fatigueLevel: 'LOW',
-                    lastBreak: '1 hour ago',
-                    verificationStatus: 'REJECTED',
-                    documents: {
-                        aadhaarCard: null,
-                        drivingLicense: null,
-                        selfie: null
-                    },
-                    kitStatus: 'NOT_STARTED',
-                    policeVerification: 'NOT_STARTED',
-                    availabilitySchedule: {
-                        monday: { available: false },
-                        tuesday: { available: false },
-                        wednesday: { available: false },
-                        thursday: { available: false },
-                        friday: { available: false },
-                        saturday: { available: false },
-                        sunday: { available: false }
-                    },
-                    alerts: ['ACCOUNT_BLOCKED']
-                },
-                {
-                    id: 'DRV005',
-                    name: 'Arjun Reddy',
-                    phone: '+91 98765 43214',
-                    isOnline: true,
-                    reliabilityScore: 4.7,
-                    dutyHours: 7.8,
-                    status: 'ACTIVE',
-                    city: 'Hyderabad',
-                    completedTrips: 267,
-                    utilizationRate: 81.4,
-                    weeklyDutyHours: 42.1,
-                    fatigueLevel: 'LOW',
-                    lastBreak: '1.5 hours ago',
-                    verificationStatus: 'VERIFIED',
-                    documents: {
-                        aadhaarCard: { frontUrl: '/docs/aadhaar-front.jpg', backUrl: '/docs/aadhaar-back.jpg' },
-                        drivingLicense: { url: '/docs/license.jpg' },
-                        selfie: { url: '/docs/selfie.jpg' }
-                    },
-                    kitStatus: 'COMPLETED',
-                    policeVerification: 'VERIFIED',
-                    availabilitySchedule: {
-                        monday: { start: '09:30', end: '18:30', available: true },
-                        tuesday: { start: '09:30', end: '18:30', available: true },
-                        wednesday: { start: '09:30', end: '18:30', available: true },
-                        thursday: { start: '09:30', end: '18:30', available: true },
-                        friday: { start: '09:30', end: '18:30', available: true },
-                        saturday: { start: '10:00', end: '16:00', available: true },
-                        sunday: { available: false }
-                    },
-                    alerts: []
-                }
-            ]);
+        try {
+            const res = await import('../services/driverService').then(m => m.driverService.getAllDrivers());
+            if (res.status === 'success') {
+                setDrivers(res.data.drivers);
+            }
+        } catch (error) {
+            toast.error('Failed to load drivers: ' + error.message);
+        } finally {
             setLoading(false);
-        }, 800);
+        }
     };
 
     const toggleOnlineStatus = (driverId) => {
@@ -214,21 +53,26 @@ const AdminDriversOperations = () => {
         toast.success('Driver access modified');
     };
 
-    const getFatigueColor = (level) => {
+     const getFatigueColor = (level) => {
         switch (level) {
-            case 'LOW': return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-            case 'MEDIUM': return 'text-amber-600 bg-amber-50 border-amber-200';
-            case 'HIGH': return 'text-red-600 bg-red-50 border-red-200';
-            default: return 'text-gray-600 bg-gray-50 border-gray-200';
+            case 'LOW': return 'text-[var(--success-text)] bg-[var(--success-light)] border-[var(--success)]';
+            case 'MEDIUM': return 'text-[var(--warning-text)] bg-[var(--warning-light)] border-[var(--warning)]';
+            case 'HIGH': return 'text-[var(--error-text)] bg-[var(--error-light)] border-[var(--error)]';
+            default: return 'text-[var(--text-muted)] bg-[var(--bg-secondary)] border-[var(--border)]';
         }
     };
 
-    const getVerificationColor = (status) => {
+    const getVerificationColor = (driverInfo) => {
+        const { status } = driverInfo || {};
         switch (status) {
-            case 'VERIFIED': return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-            case 'PENDING': return 'text-amber-600 bg-amber-50 border-amber-200';
-            case 'REJECTED': return 'text-red-600 bg-red-50 border-red-200';
-            default: return 'text-gray-600 bg-gray-50 border-gray-200';
+            case 'active':
+            case 'ACTIVE':
+            case 'verified_pending_kit': return 'text-[var(--success-text)] bg-[var(--success-light)] border-[var(--success)]';
+            case 'pending':
+            case 'PENDING': return 'text-[var(--warning-text)] bg-[var(--warning-light)] border-[var(--warning)]';
+            case 'rejected':
+            case 'REJECTED': return 'text-[var(--error-text)] bg-[var(--error-light)] border-[var(--error)]';
+            default: return 'text-[var(--text-muted)] bg-[var(--bg-secondary)] border-[var(--border)]';
         }
     };
 
@@ -258,12 +102,12 @@ const AdminDriversOperations = () => {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
-                            <div className="flex-1 lg:w-64 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-lg px-4 py-2 flex items-center gap-3 group focus-within:border-[var(--primary)] transition-all">
-                                <Search size={14} className="text-[var(--text-muted)] group-focus-within:text-[var(--primary)]" />
+                            <div className="flex-1 lg:w-72 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl px-4 py-2.5 flex items-center gap-3 group focus-within:border-[var(--primary)] transition-all">
+                                <Search size={18} className="text-[var(--text-muted)] group-focus-within:text-[var(--primary)]" />
                                 <input
                                     type="text"
                                     placeholder="Search drivers..."
-                                    className="bg-transparent outline-none text-sm font-medium text-[var(--text-primary)] w-full placeholder:text-[var(--text-muted)]"
+                                    className="bg-transparent outline-none text-sm font-semibold text-[var(--text-primary)] w-full placeholder:text-[var(--text-muted)]"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
@@ -271,17 +115,21 @@ const AdminDriversOperations = () => {
 
                             <button 
                                 onClick={loadDrivers} 
-                                className="btn-secondary w-10 h-10 p-0 flex items-center justify-center"
+                                className="btn-secondary w-12 h-12 p-0 flex items-center justify-center rounded-xl"
                             >
-                                <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+                                <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
                             </button>
 
                             <button 
                                 onClick={() => setShowAdvancedView(!showAdvancedView)}
-                                className={`btn-secondary ${showAdvancedView ? 'btn-primary' : ''} flex items-center gap-2`}
+                                className={`h-12 px-5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 border ${
+                                    showAdvancedView 
+                                        ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-lg shadow-[var(--primary)]/20' 
+                                        : 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border-[var(--border)] hover:bg-[var(--card-hover)]'
+                                }`}
                             >
-                                <Settings size={14} />
-                                {showAdvancedView ? 'Basic View' : 'Advanced View'}
+                                <Settings size={18} />
+                                {showAdvancedView ? 'Standard Mode' : 'Advanced View'}
                             </button>
                         </div>
                     </div>
@@ -309,9 +157,9 @@ const AdminDriversOperations = () => {
                         >
                             <UserCheck size={16} />
                             Verification Queue
-                            {drivers.filter(d => d.verificationStatus === 'PENDING').length > 0 && (
+                            {drivers.filter(d => ['pending', 'PENDING'].includes(d.status)).length > 0 && (
                                 <span className="bg-[var(--warning)] text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                                    {drivers.filter(d => d.verificationStatus === 'PENDING').length}
+                                    {drivers.filter(d => ['pending', 'PENDING'].includes(d.status)).length}
                                 </span>
                             )}
                         </button>
@@ -325,12 +173,12 @@ const AdminDriversOperations = () => {
                     {/* Enhanced Stats Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                 {[
-                    { label: 'Total Drivers', value: drivers.length, icon: <Users size={18} />, color: 'text-[var(--primary)]' },
-                    { label: 'Online Now', value: drivers.filter(d => d.isOnline).length, icon: <Activity size={18} />, color: 'text-emerald-500' },
+                     { label: 'Total Drivers', value: drivers.length, icon: <Users size={18} />, color: 'text-[var(--primary)]' },
+                    { label: 'Online Now', value: drivers.filter(d => d.isOnline).length, icon: <Activity size={18} />, color: 'text-[var(--success)]' },
                     { label: 'Active Status', value: drivers.filter(d => d.status === 'ACTIVE').length, icon: <CheckCircle size={18} />, color: 'text-[var(--primary)]' },
                     { label: 'Avg Utilization', value: `${(drivers.reduce((acc, d) => acc + (d.utilizationRate || 0), 0) / drivers.length || 0).toFixed(1)}%`, icon: <Gauge size={18} />, color: 'text-[var(--primary)]' },
                     { label: 'Fatigue Alerts', value: drivers.filter(d => d.alerts?.includes('FATIGUE_WARNING')).length, icon: <AlertTriangle size={18} />, color: 'text-[var(--warning)]' },
-                    { label: 'Blocked', value: drivers.filter(d => d.status === 'BLOCKED').length, icon: <Ban size={18} />, color: 'red-500' }
+                    { label: 'Blocked', value: drivers.filter(d => d.status === 'BLOCKED').length, icon: <Ban size={18} />, color: 'text-[var(--error)]' }
                 ].map((stat, idx) => (
                     <motion.div
                         key={idx}
@@ -341,10 +189,10 @@ const AdminDriversOperations = () => {
                     >
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{stat.label}</p>
-                                <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
+                                <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">{stat.label}</p>
+                                <p className="text-2xl font-bold text-[var(--text-primary)] mt-1">{stat.value}</p>
                             </div>
-                            <div className={`w-12 h-12 rounded-xl bg-${stat.color.replace('-', '-')}/10 flex items-center justify-center text-${stat.color}`}>
+                            <div className={`w-12 h-12 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center ${stat.color}`}>
                                 {stat.icon}
                             </div>
                         </div>
@@ -385,7 +233,7 @@ const AdminDriversOperations = () => {
                                 <tr>
                                     <td colSpan="6" className="px-5 py-24 text-center">
                                         <Shield className="mx-auto opacity-20 mb-3" size={32} />
-                                        <p className="text-sm font-semibold text-gray-500">No drivers found</p>
+                                        <p className="text-sm font-semibold text-[var(--text-muted)]">No drivers found</p>
                                     </td>
                                 </tr>
                             ) : (
@@ -394,7 +242,7 @@ const AdminDriversOperations = () => {
                                         key={driver.id} 
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
-                                        className="group hover:bg-gray-50 transition-all duration-300"
+                                        className="group hover:bg-white/[0.02] transition-all duration-300"
                                     >
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-4">
@@ -402,8 +250,8 @@ const AdminDriversOperations = () => {
                                                     {driver.name[0]}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className="text-sm font-semibold text-gray-900 capitalize leading-none mb-1 truncate">{driver.name}</p>
-                                                    <p className="text-xs font-medium text-gray-500 font-mono tracking-wide truncate">{driver.id}</p>
+                                                    <p className="text-sm font-semibold text-[var(--text-primary)] capitalize leading-none mb-1 truncate">{driver.name}</p>
+                                                    <p className="text-xs font-medium text-[var(--text-muted)] font-mono tracking-wide truncate">{driver.id}</p>
                                                 </div>
                                             </div>
                                         </td>
@@ -411,52 +259,52 @@ const AdminDriversOperations = () => {
                                             <div className="flex flex-col gap-2">
                                                 <div className="flex items-center gap-2">
                                                     <Phone size={12} className="text-[var(--primary)]" />
-                                                    <span className="text-sm font-medium text-gray-900">{driver.phone}</span>
+                                                    <span className="text-sm font-medium text-[var(--text-primary)]">{driver.phone}</span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    <MapPin size={12} className="text-gray-500" />
-                                                    <span className="text-sm font-medium text-gray-500">{driver.city}</span>
+                                                    <MapPin size={12} className="text-[var(--text-muted)]" />
+                                                    <span className="text-sm font-medium text-[var(--text-muted)]">{driver.city}</span>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                             <div className="flex flex-col items-center gap-2">
-                                                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wide border ${
+                                                 <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${
                                                     driver.isOnline 
-                                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                                                        : 'bg-gray-50 text-gray-500 border-gray-200'
+                                                        ? 'bg-[var(--success-light)] text-[var(--success-text)] border-[var(--success)]' 
+                                                        : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] border-[var(--border)]'
                                                 }`}>
-                                                    <div className={`w-2 h-2 rounded-full ${driver.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+                                                    <div className={`w-1.5 h-1.5 rounded-full ${driver.isOnline ? 'bg-[var(--success)] animate-pulse' : 'bg-[var(--text-muted)]'}`} />
                                                     {driver.isOnline ? 'Online' : 'Offline'}
                                                 </div>
-                                                <div className={`px-3 py-1 rounded-lg text-xs font-semibold uppercase tracking-wide ${
+                                                <div className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
                                                     driver.status === 'ACTIVE' 
                                                         ? 'bg-[var(--primary-light)] text-[var(--primary)]' 
-                                                        : 'bg-red-50 text-red-700'
+                                                        : 'bg-[var(--error-light)] text-[var(--error-text)] border border-[var(--error)]'
                                                 }`}>
                                                     {driver.status}
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wide border ${getVerificationColor(driver.verificationStatus)}`}>
+                                            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wide border ${getVerificationColor(driver)}`}>
                                                 <div className={`w-2 h-2 rounded-full ${
-                                                    driver.verificationStatus === 'VERIFIED' ? 'bg-emerald-500' :
-                                                    driver.verificationStatus === 'PENDING' ? 'bg-amber-500' :
+                                                    ['active', 'ACTIVE', 'verified_pending_kit'].includes(driver.status) ? 'bg-emerald-500' :
+                                                    ['pending', 'PENDING'].includes(driver.status) ? 'bg-amber-500' :
                                                     'bg-red-500'
                                                 }`} />
-                                                {driver.verificationStatus}
+                                                {driver.status}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col items-center gap-2">
                                                 <div className="flex items-center gap-2">
                                                     <TrendingUp size={12} className="text-[var(--primary)]" />
-                                                    <span className="text-sm font-medium text-gray-900">Score: {driver.reliabilityScore}/5.0</span>
+                                                    <span className="text-sm font-medium text-[var(--text-primary)]">Score: {driver.reliabilityScore}/5.0</span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    <Clock size={12} className="text-gray-500" />
-                                                    <span className="text-sm font-medium text-gray-500">{driver.dutyHours}h duty</span>
+                                                    <Clock size={12} className="text-[var(--text-muted)]" />
+                                                    <span className="text-sm font-medium text-[var(--text-muted)]">{driver.dutyHours}h duty</span>
                                                 </div>
                                                 <span className="text-xs font-medium text-gray-400">{driver.completedTrips} trips</span>
                                             </div>
@@ -482,7 +330,7 @@ const AdminDriversOperations = () => {
                                                         <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${getFatigueColor(driver.fatigueLevel)}`}>
                                                             {driver.fatigueLevel}
                                                         </span>
-                                                        <span className="text-xs text-gray-500">
+                                                        <span className="text-xs text-white/40">
                                                             Break: {driver.lastBreak}
                                                         </span>
                                                     </div>
@@ -493,7 +341,7 @@ const AdminDriversOperations = () => {
                                                             <Timer size={12} className="text-amber-600" />
                                                             <span className="text-sm font-semibold text-gray-900">{driver.weeklyDutyHours}h</span>
                                                         </div>
-                                                        <span className="text-xs text-gray-500">This week</span>
+                                                        <span className="text-xs text-white/40">This week</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
@@ -516,36 +364,36 @@ const AdminDriversOperations = () => {
                                                 </td>
                                             </>
                                         )}
-                                        <td className="px-6 py-4 pr-10">
+                                         <td className="px-6 py-4 pr-10">
                                             <div className="flex items-center justify-end gap-2">
                                                 <button 
                                                     onClick={() => openDriverDetails(driver)}
-                                                    className="px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wide bg-[var(--primary-light)] text-[var(--primary)] border border-[var(--primary)] hover:bg-[var(--primary)] hover:text-white transition-all flex items-center gap-1.5"
+                                                    className="w-11 h-11 rounded-xl bg-[var(--primary-light)] text-[var(--primary)] border border-[var(--primary)] hover:bg-[var(--primary)] hover:text-white transition-all flex items-center justify-center shadow-lg shadow-[var(--primary)]/10"
+                                                    title="View Profile"
                                                 >
-                                                    <Eye size={12} />
-                                                    Details
+                                                    <Eye size={18} />
                                                 </button>
                                                 <button 
                                                     onClick={() => toggleOnlineStatus(driver.id)}
-                                                    className={`px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wide transition-all flex items-center gap-1.5 ${
+                                                    className={`w-11 h-11 rounded-xl transition-all flex items-center justify-center border shadow-lg ${
                                                         driver.isOnline
-                                                            ? 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-600 hover:text-white'
-                                                            : 'bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-600 hover:text-white'
+                                                            ? 'bg-[var(--bg-secondary)] text-[var(--text-muted)] border-[var(--border)] hover:bg-[var(--card-hover)]'
+                                                            : 'bg-[var(--success-light)] text-[var(--success-text)] border-[var(--success)] hover:bg-[var(--success)] hover:text-white shadow-[var(--success)]/10'
                                                     }`}
+                                                    title={driver.isOnline ? "Set Offline" : "Set Online"}
                                                 >
-                                                    <Power size={12} />
-                                                    {driver.isOnline ? 'Offline' : 'Online'}
+                                                    <Power size={18} />
                                                 </button>
                                                 <button 
                                                     onClick={() => toggleBlockStatus(driver.id)}
-                                                    className={`px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wide transition-all flex items-center gap-1.5 ${
+                                                    className={`w-11 h-11 rounded-xl transition-all flex items-center justify-center border shadow-lg ${
                                                         driver.status === 'BLOCKED'
-                                                            ? 'bg-[var(--primary-light)] text-[var(--primary)] border border-[var(--primary)] hover:bg-[var(--primary)] hover:text-white'
-                                                            : 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white'
+                                                            ? 'bg-[var(--primary-light)] text-[var(--primary)] border border-[var(--primary)] hover:bg-[var(--primary)] hover:text-white shadow-[var(--primary)]/10'
+                                                            : 'bg-[var(--error-light)] text-[var(--error-text)] border border-[var(--error)] hover:bg-[var(--error)] hover:text-white shadow-red-500/10'
                                                     }`}
+                                                    title={driver.status === 'BLOCKED' ? "Unblock Driver" : "Block Driver"}
                                                 >
-                                                    <Ban size={12} />
-                                                    {driver.status === 'BLOCKED' ? 'Unblock' : 'Block'}
+                                                    {driver.status === 'BLOCKED' ? <CheckCircle size={18} /> : <Ban size={18} />}
                                                 </button>
                                             </div>
                                         </td>
@@ -560,41 +408,28 @@ const AdminDriversOperations = () => {
             ) : (
                 // Verification Queue Tab Content
                 <VerificationQueue 
-                    drivers={drivers.filter(d => d.verificationStatus === 'PENDING')}
-                    onApprove={(driverId) => {
-                        // SINGLE ACTION APPROVAL LOGIC
-                        setDrivers(prev => prev.map(d => 
-                            d.id === driverId ? { 
-                                ...d, 
-                                verificationStatus: 'VERIFIED',
-                                isVerified: true,
-                                documentsVerified: true,
-                                policeVerification: 'VERIFIED',
-                                kitStatus: 'APPROVED',
-                                backgroundCheck: 'CLEAR',
-                                approvedAt: new Date().toISOString(),
-                                approvedBy: 'Admin'
-                            } : d
-                        ));
-                        toast.success('✅ Driver FULLY VERIFIED - All requirements approved in single action!');
+                    drivers={drivers.filter(d => ['pending', 'PENDING'].includes(d.status))}
+                    onApprove={async (driverId) => {
+                        const loadingToast = toast.loading('Approving driver...');
+                        try {
+                            const { driverService } = await import('../services/driverService');
+                            await driverService.approveDriver(driverId);
+                            setDrivers(prev => prev.map(d => d.id === driverId || d._id === driverId ? { ...d, status: 'verified_pending_kit' } : d));
+                            toast.success('✅ Driver FULLY VERIFIED - Moved to kit payment phase!', { id: loadingToast });
+                        } catch(err) {
+                            toast.error('Approval failed: ' + err.message, { id: loadingToast });
+                        }
                     }}
-                    onReject={(driverId, reason) => {
-                        // SINGLE ACTION REJECTION LOGIC
-                        setDrivers(prev => prev.map(d => 
-                            d.id === driverId ? { 
-                                ...d, 
-                                verificationStatus: 'REJECTED',
-                                isVerified: false,
-                                documentsVerified: false,
-                                policeVerification: 'REJECTED',
-                                kitStatus: 'REJECTED',
-                                backgroundCheck: 'REJECTED',
-                                rejectionReason: reason,
-                                rejectedAt: new Date().toISOString(),
-                                rejectedBy: 'Admin'
-                            } : d
-                        ));
-                        toast.error('❌ Driver REJECTED - All verification requirements denied');
+                    onReject={async (driverId, reason) => {
+                        const loadingToast = toast.loading('Rejecting driver...');
+                        try {
+                            const { driverService } = await import('../services/driverService');
+                            await driverService.rejectDriver(driverId, reason);
+                            setDrivers(prev => prev.map(d => d.id === driverId || d._id === driverId ? { ...d, status: 'rejected', adminNote: reason } : d));
+                            toast.success('❌ Driver REJECTED - Need to re-upload documents', { id: loadingToast });
+                        } catch(err) {
+                            toast.error('Rejection failed: ' + err.message, { id: loadingToast });
+                        }
                     }}
                 />
             )}
@@ -614,17 +449,17 @@ const AdminDriversOperations = () => {
                             initial={{ opacity: 0, scale: 0.95, y: 20 }} 
                             animate={{ opacity: 1, scale: 1, y: 0 }} 
                             exit={{ opacity: 0, scale: 0.95, y: 20 }} 
-                            className="bg-white w-full max-w-4xl rounded-xl shadow-2xl relative z-10 overflow-hidden max-h-[90vh] overflow-y-auto"
+                            className="bg-[var(--bg-primary)] w-full max-w-4xl rounded-xl shadow-2xl relative z-10 overflow-hidden max-h-[90vh] overflow-y-auto border border-[var(--border)]"
                         >
                             {/* Modal Header */}
-                            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+                            <div className="px-6 py-4 border-b border-[var(--border)] flex items-center justify-between bg-[var(--bg-secondary)]">
                                 <div>
-                                    <h2 className="text-xl font-bold text-gray-900">Driver Details</h2>
-                                    <p className="text-sm text-gray-600 mt-1">{selectedDriver.name} • {selectedDriver.id}</p>
+                                    <h2 className="text-xl font-bold text-[var(--text-primary)]">Driver Details</h2>
+                                    <p className="text-sm text-[var(--text-secondary)] mt-1">{selectedDriver.name} • {selectedDriver.id}</p>
                                 </div>
                                 <button 
                                     onClick={() => setShowDriverModal(false)} 
-                                    className="w-10 h-10 bg-white hover:bg-gray-100 rounded-lg border border-gray-200 text-gray-500 transition-all flex items-center justify-center"
+                                    className="w-10 h-10 bg-[var(--bg-secondary)] hover:bg-[var(--card-hover)] rounded-lg border border-[var(--border)] text-[var(--text-muted)] transition-all flex items-center justify-center"
                                 >
                                     <X size={20} />
                                 </button>
@@ -633,7 +468,7 @@ const AdminDriversOperations = () => {
                             {/* Modal Content */}
                             <div className="p-6">
                                 {/* Tab Navigation */}
-                                <div className="flex border-b border-gray-200 mb-6">
+                                <div className="flex border-b border-[var(--border)] mb-6">
                                     {[
                                         { id: 'overview', label: 'Overview', icon: <User size={16} /> },
                                         { id: 'schedule', label: 'Schedule', icon: <Calendar size={16} /> },
@@ -646,7 +481,7 @@ const AdminDriversOperations = () => {
                                             className={`flex items-center gap-2 px-4 py-2 border-b-2 font-medium text-sm transition-colors ${
                                                 activeTab === tab.id
                                                     ? 'border-[var(--primary)] text-[var(--primary)]'
-                                                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                                                    : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                                             }`}
                                         >
                                             {tab.icon}
@@ -660,18 +495,18 @@ const AdminDriversOperations = () => {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         {/* Basic Info */}
                                         <div className="space-y-4">
-                                            <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
+                                            <h3 className="text-lg font-semibold text-[var(--text-primary)]">Basic Information</h3>
                                             <div className="space-y-3">
                                                 <div className="flex justify-between">
-                                                    <span className="text-gray-600">Phone:</span>
-                                                    <span className="font-medium">{selectedDriver.phone}</span>
+                                                    <span className="text-[var(--text-muted)]">Phone:</span>
+                                                    <span className="font-medium text-[var(--text-primary)]">{selectedDriver.phone}</span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span className="text-gray-600">City:</span>
-                                                    <span className="font-medium">{selectedDriver.city}</span>
+                                                    <span className="text-[var(--text-muted)]">City:</span>
+                                                    <span className="font-medium text-[var(--text-primary)]">{selectedDriver.city}</span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span className="text-gray-600">Status:</span>
+                                                    <span className="text-[var(--text-muted)]">Status:</span>
                                                     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                                                         selectedDriver.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                                                     }`}>
@@ -679,9 +514,9 @@ const AdminDriversOperations = () => {
                                                     </span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span className="text-gray-600">Online:</span>
+                                                    <span className="text-[var(--text-muted)]">Online:</span>
                                                     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                                        selectedDriver.isOnline ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                                        selectedDriver.isOnline ? 'bg-green-100 text-green-800' : 'bg-[var(--bg-secondary)] text-[var(--text-primary)]'
                                                     }`}>
                                                         {selectedDriver.isOnline ? 'Online' : 'Offline'}
                                                     </span>
@@ -691,22 +526,22 @@ const AdminDriversOperations = () => {
 
                                         {/* Performance Metrics */}
                                         <div className="space-y-4">
-                                            <h3 className="text-lg font-semibold text-gray-900">Performance</h3>
+                                            <h3 className="text-lg font-semibold text-[var(--text-primary)]">Performance</h3>
                                             <div className="space-y-3">
                                                 <div className="flex justify-between">
-                                                    <span className="text-gray-600">Reliability Score:</span>
-                                                    <span className="font-medium">{selectedDriver.reliabilityScore}/5.0</span>
+                                                    <span className="text-[var(--text-muted)]">Reliability Score:</span>
+                                                    <span className="font-medium text-[var(--text-primary)]">{selectedDriver.reliabilityScore}/5.0</span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span className="text-gray-600">Utilization Rate:</span>
-                                                    <span className="font-medium">{selectedDriver.utilizationRate}%</span>
+                                                    <span className="text-[var(--text-muted)]">Utilization Rate:</span>
+                                                    <span className="font-medium text-[var(--text-primary)]">{selectedDriver.utilizationRate}%</span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span className="text-gray-600">Completed Trips:</span>
-                                                    <span className="font-medium">{selectedDriver.completedTrips}</span>
+                                                    <span className="text-[var(--text-muted)]">Completed Trips:</span>
+                                                    <span className="font-medium text-[var(--text-primary)]">{selectedDriver.completedTrips}</span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span className="text-gray-600">Fatigue Level:</span>
+                                                    <span className="text-[var(--text-muted)]">Fatigue Level:</span>
                                                     <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${getFatigueColor(selectedDriver.fatigueLevel)}`}>
                                                         {selectedDriver.fatigueLevel}
                                                     </span>
@@ -716,26 +551,26 @@ const AdminDriversOperations = () => {
 
                                         {/* Duty Hours */}
                                         <div className="space-y-4">
-                                            <h3 className="text-lg font-semibold text-gray-900">Duty Hours</h3>
+                                            <h3 className="text-lg font-semibold text-[var(--text-primary)]">Duty Hours</h3>
                                             <div className="space-y-3">
                                                 <div className="flex justify-between">
-                                                    <span className="text-gray-600">Today:</span>
-                                                    <span className="font-medium">{selectedDriver.dutyHours}h</span>
+                                                    <span className="text-[var(--text-muted)]">Today:</span>
+                                                    <span className="font-medium text-[var(--text-primary)]">{selectedDriver.dutyHours}h</span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span className="text-gray-600">This Week:</span>
-                                                    <span className="font-medium">{selectedDriver.weeklyDutyHours}h</span>
+                                                    <span className="text-[var(--text-muted)]">This Week:</span>
+                                                    <span className="font-medium text-[var(--text-primary)]">{selectedDriver.weeklyDutyHours}h</span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span className="text-gray-600">Last Break:</span>
-                                                    <span className="font-medium">{selectedDriver.lastBreak}</span>
+                                                    <span className="text-[var(--text-muted)]">Last Break:</span>
+                                                    <span className="font-medium text-[var(--text-primary)]">{selectedDriver.lastBreak}</span>
                                                 </div>
                                             </div>
                                         </div>
 
                                         {/* Alerts */}
                                         <div className="space-y-4">
-                                            <h3 className="text-lg font-semibold text-gray-900">Active Alerts</h3>
+                                            <h3 className="text-lg font-semibold text-[var(--text-primary)]">Active Alerts</h3>
                                             {selectedDriver.alerts && selectedDriver.alerts.length > 0 ? (
                                                 <div className="space-y-2">
                                                     {selectedDriver.alerts.map((alert, index) => (
@@ -757,12 +592,12 @@ const AdminDriversOperations = () => {
 
                                 {activeTab === 'schedule' && (
                                     <div className="space-y-6">
-                                        <h3 className="text-lg font-semibold text-gray-900">Weekly Availability Schedule</h3>
+                                        <h3 className="text-lg font-semibold text-[var(--text-primary)]">Weekly Availability Schedule</h3>
                                         <div className="grid grid-cols-1 gap-4">
                                             {Object.entries(selectedDriver.availabilitySchedule || {}).map(([day, schedule]) => (
-                                                <div key={day} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                                <div key={day} className="flex items-center justify-between p-4 bg-[var(--bg-secondary)] rounded-lg">
                                                     <div className="flex items-center gap-3">
-                                                        <span className="font-medium text-gray-900 capitalize w-20">{day}</span>
+                                                        <span className="font-medium text-[var(--text-primary)] capitalize w-20">{day}</span>
                                                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                                                             schedule.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                                                         }`}>
@@ -770,7 +605,7 @@ const AdminDriversOperations = () => {
                                                         </span>
                                                     </div>
                                                     {schedule.available && schedule.start && schedule.end && (
-                                                        <span className="text-sm text-gray-600">
+                                                        <span className="text-sm text-[var(--text-muted)]">
                                                             {schedule.start} - {schedule.end}
                                                         </span>
                                                     )}
@@ -782,7 +617,7 @@ const AdminDriversOperations = () => {
 
                                 {activeTab === 'alerts' && (
                                     <div className="space-y-6">
-                                        <h3 className="text-lg font-semibold text-gray-900">Alert Management</h3>
+                                        <h3 className="text-lg font-semibold text-[var(--text-primary)]">Alert Management</h3>
                                         {selectedDriver.alerts && selectedDriver.alerts.length > 0 ? (
                                             <div className="space-y-4">
                                                 {selectedDriver.alerts.map((alert, index) => (
@@ -808,8 +643,8 @@ const AdminDriversOperations = () => {
                                         ) : (
                                             <div className="text-center py-8">
                                                 <CheckCircle size={48} className="text-green-500 mx-auto mb-4" />
-                                                <h4 className="text-lg font-medium text-gray-900 mb-2">No Active Alerts</h4>
-                                                <p className="text-gray-600">This driver has no active alerts or warnings.</p>
+                                                <h4 className="text-lg font-medium text-[var(--text-primary)] mb-2">No Active Alerts</h4>
+                                                <p className="text-[var(--text-muted)]">This driver has no active alerts or warnings.</p>
                                             </div>
                                         )}
                                     </div>
@@ -817,16 +652,16 @@ const AdminDriversOperations = () => {
 
                                 {activeTab === 'analytics' && (
                                     <div className="space-y-6">
-                                        <h3 className="text-lg font-semibold text-gray-900">Performance Analytics</h3>
+                                        <h3 className="text-lg font-semibold text-[var(--text-primary)]">Performance Analytics</h3>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div className="p-4 bg-gray-50 rounded-lg">
-                                                <h4 className="font-medium text-gray-900 mb-2">Utilization Trend</h4>
+                                            <div className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+                                                <h4 className="font-medium text-[var(--text-primary)] mb-2">Utilization Trend</h4>
                                                 <div className="space-y-2">
                                                     <div className="flex justify-between text-sm">
-                                                        <span>Current Rate:</span>
-                                                        <span className="font-medium">{selectedDriver.utilizationRate}%</span>
+                                                        <span className="text-[var(--text-muted)]">Current Rate:</span>
+                                                        <span className="font-medium text-[var(--text-primary)]">{selectedDriver.utilizationRate}%</span>
                                                     </div>
-                                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                                    <div className="w-full bg-[var(--border)] rounded-full h-2">
                                                         <div 
                                                             className="bg-purple-600 h-2 rounded-full transition-all duration-300"
                                                             style={{ width: `${selectedDriver.utilizationRate}%` }}
@@ -834,14 +669,14 @@ const AdminDriversOperations = () => {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="p-4 bg-gray-50 rounded-lg">
-                                                <h4 className="font-medium text-gray-900 mb-2">Weekly Performance</h4>
+                                            <div className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+                                                <h4 className="font-medium text-[var(--text-primary)] mb-2">Weekly Performance</h4>
                                                 <div className="space-y-2">
                                                     <div className="flex justify-between text-sm">
-                                                        <span>Duty Hours:</span>
-                                                        <span className="font-medium">{selectedDriver.weeklyDutyHours}h / 60h</span>
+                                                        <span className="text-[var(--text-muted)]">Duty Hours:</span>
+                                                        <span className="font-medium text-[var(--text-primary)]">{selectedDriver.weeklyDutyHours}h / 60h</span>
                                                     </div>
-                                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                                    <div className="w-full bg-[var(--border)] rounded-full h-2">
                                                         <div 
                                                             className="bg-amber-600 h-2 rounded-full transition-all duration-300"
                                                             style={{ width: `${(selectedDriver.weeklyDutyHours / 60) * 100}%` }}
@@ -906,10 +741,10 @@ const VerificationQueue = ({ drivers, onApprove, onReject }) => {
                     >
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{stat.label}</p>
-                                <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
+                                <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">{stat.label}</p>
+                                <p className="text-2xl font-bold text-[var(--text-primary)] mt-1">{stat.value}</p>
                             </div>
-                            <div className={`w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center ${stat.color}`}>
+                            <div className={`w-12 h-12 rounded-xl bg-[var(--bg-secondary)] flex items-center justify-center ${stat.color}`}>
                                 {stat.icon}
                             </div>
                         </div>
@@ -922,7 +757,7 @@ const VerificationQueue = ({ drivers, onApprove, onReject }) => {
                 <div className="admin-card text-center py-16">
                     <CheckCircle size={48} className="text-emerald-500 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">Verification Queue Empty</h3>
-                    <p className="text-gray-600">All drivers have been processed. Great work!</p>
+                    <p className="text-white/60">All drivers have been processed. Great work!</p>
                 </div>
             ) : (
                 <div className="space-y-4">
@@ -937,7 +772,7 @@ const VerificationQueue = ({ drivers, onApprove, onReject }) => {
                                 key={driver.id}
                                 initial={{ opacity: 0, y: 15 }} 
                                 animate={{ opacity: 1, y: 0 }}
-                                className={`admin-card border-2 transition-all duration-300 ${
+                                className={`admin-card border-white/5 transition-all duration-300 ${
                                     readyForApproval 
                                         ? 'border-emerald-200 bg-emerald-50' 
                                         : 'border-amber-200 bg-amber-50'
@@ -949,18 +784,18 @@ const VerificationQueue = ({ drivers, onApprove, onReject }) => {
                                     {/* LEFT: Driver Info */}
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-16 h-16 rounded-xl bg-[var(--primary-light)] border-2 border-[var(--primary)] flex items-center justify-center text-[var(--primary)] font-bold text-xl uppercase flex-shrink-0">
+                                            <div className="w-16 h-16 rounded-xl bg-[var(--primary-light)] border-white/5 border-[var(--primary)] flex items-center justify-center text-[var(--primary)] font-bold text-xl uppercase flex-shrink-0">
                                                 {driver.name[0]}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <h3 className="text-lg font-semibold text-gray-900 capitalize truncate">{driver.name}</h3>
-                                                <p className="text-sm text-gray-600 font-mono">{driver.phone}</p>
-                                                <p className="text-xs text-gray-500 font-mono uppercase tracking-wide">ID: {driver.id}</p>
+                                                <p className="text-sm text-white/60 font-mono">{driver.phone}</p>
+                                                <p className="text-xs text-white/40 font-mono uppercase tracking-wide">ID: {driver.id}</p>
                                             </div>
                                         </div>
 
-                                        <div className="p-3 bg-white rounded-lg border border-gray-200">
-                                            <h4 className="text-sm font-semibold text-gray-700 mb-2">Current Status</h4>
+                                        <div className="p-3 bg-white/5 rounded-lg border border-white/10">
+                                            <h4 className="text-sm font-semibold text-white/80 mb-2">Current Status</h4>
                                             <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wide border ${
                                                 readyForApproval 
                                                     ? 'bg-emerald-100 text-emerald-700 border-emerald-200' 
@@ -976,78 +811,78 @@ const VerificationQueue = ({ drivers, onApprove, onReject }) => {
 
                                     {/* CENTER: Documents */}
                                     <div className="space-y-4">
-                                        <h4 className="text-sm font-semibold text-gray-700 border-b border-gray-200 pb-2">Document Verification</h4>
+                                        <h4 className="text-sm font-semibold text-white/80 border-b border-white/10 pb-2">Document Verification</h4>
                                         
                                         <div className="grid grid-cols-2 gap-3">
                                             {/* Aadhaar Front */}
-                                            <div className="text-center p-3 bg-white rounded-lg border border-gray-200">
+                                            <a href={driver.documents?.aadhaarCard?.frontUrl || '#'} target="_blank" rel="noreferrer" className="block text-center p-3 bg-white/5 rounded-lg border border-white/10 hover:border-yellow-500 hover:shadow-2xl shadow-black/40 transition-all cursor-pointer">
                                                 <div className="w-8 h-8 mx-auto mb-2 bg-blue-100 rounded-lg flex items-center justify-center">
                                                     <User size={16} className="text-blue-600" />
                                                 </div>
-                                                <p className="text-xs font-semibold text-gray-600 mb-1">Aadhaar Front</p>
+                                                <p className="text-xs font-semibold text-white/60 mb-1">Aadhaar Front</p>
                                                 <p className={`text-xs font-bold ${
                                                     getDocumentStatus(driver.documents?.aadhaarCard?.frontUrl) === 'READY' 
                                                         ? 'text-emerald-600' : 'text-red-600'
                                                 }`}>
                                                     {getDocumentStatus(driver.documents?.aadhaarCard?.frontUrl)}
                                                 </p>
-                                            </div>
+                                            </a>
 
                                             {/* Aadhaar Back */}
-                                            <div className="text-center p-3 bg-white rounded-lg border border-gray-200">
+                                            <a href={driver.documents?.aadhaarCard?.backUrl || '#'} target="_blank" rel="noreferrer" className="block text-center p-3 bg-white/5 rounded-lg border border-white/10 hover:border-yellow-500 hover:shadow-2xl shadow-black/40 transition-all cursor-pointer">
                                                 <div className="w-8 h-8 mx-auto mb-2 bg-blue-100 rounded-lg flex items-center justify-center">
                                                     <User size={16} className="text-blue-600" />
                                                 </div>
-                                                <p className="text-xs font-semibold text-gray-600 mb-1">Aadhaar Back</p>
+                                                <p className="text-xs font-semibold text-white/60 mb-1">Aadhaar Back</p>
                                                 <p className={`text-xs font-bold ${
                                                     getDocumentStatus(driver.documents?.aadhaarCard?.backUrl) === 'READY' 
                                                         ? 'text-emerald-600' : 'text-red-600'
                                                 }`}>
                                                     {getDocumentStatus(driver.documents?.aadhaarCard?.backUrl)}
                                                 </p>
-                                            </div>
+                                            </a>
 
                                             {/* Driving License */}
-                                            <div className="text-center p-3 bg-white rounded-lg border border-gray-200">
+                                            <a href={driver.documents?.drivingLicense?.url || '#'} target="_blank" rel="noreferrer" className="block text-center p-3 bg-white/5 rounded-lg border border-white/10 hover:border-yellow-500 hover:shadow-2xl shadow-black/40 transition-all cursor-pointer">
                                                 <div className="w-8 h-8 mx-auto mb-2 bg-purple-100 rounded-lg flex items-center justify-center">
                                                     <Car size={16} className="text-purple-600" />
                                                 </div>
-                                                <p className="text-xs font-semibold text-gray-600 mb-1">License</p>
+                                                <p className="text-xs font-semibold text-white/60 mb-1">License</p>
                                                 <p className={`text-xs font-bold ${
                                                     getDocumentStatus(driver.documents?.drivingLicense?.url) === 'READY' 
                                                         ? 'text-emerald-600' : 'text-red-600'
                                                 }`}>
                                                     {getDocumentStatus(driver.documents?.drivingLicense?.url)}
                                                 </p>
-                                            </div>
+                                            </a>
 
                                             {/* Selfie */}
-                                            <div className="text-center p-3 bg-white rounded-lg border border-gray-200">
+                                            <a href={driver.documents?.selfie?.url || '#'} target="_blank" rel="noreferrer" className="block text-center p-3 bg-white/5 rounded-lg border border-white/10 hover:border-yellow-500 hover:shadow-2xl shadow-black/40 transition-all cursor-pointer">
                                                 <div className="w-8 h-8 mx-auto mb-2 bg-emerald-100 rounded-lg flex items-center justify-center">
                                                     <Camera size={16} className="text-emerald-600" />
                                                 </div>
-                                                <p className="text-xs font-semibold text-gray-600 mb-1">Selfie</p>
+                                                <p className="text-xs font-semibold text-white/60 mb-1">Selfie</p>
                                                 <p className={`text-xs font-bold ${
                                                     getDocumentStatus(driver.documents?.selfie?.url) === 'READY' 
                                                         ? 'text-emerald-600' : 'text-red-600'
                                                 }`}>
                                                     {getDocumentStatus(driver.documents?.selfie?.url)}
                                                 </p>
-                                            </div>
+                                            </a>
                                         </div>
                                     </div>
 
                                     {/* RIGHT: Compliance */}
                                     <div className="space-y-4">
-                                        <h4 className="text-sm font-semibold text-gray-700 border-b border-gray-200 pb-2">Compliance Status</h4>
+                                        <h4 className="text-sm font-semibold text-white/80 border-b border-white/10 pb-2">Compliance Status</h4>
                                         
                                         <div className="space-y-3">
                                             {/* Police Verification */}
-                                            <div className="p-3 bg-white rounded-lg border border-gray-200">
+                                            <div className="p-3 bg-white/5 rounded-lg border border-white/10">
                                                 <div className="flex items-center justify-between mb-2">
                                                     <div className="flex items-center gap-2">
                                                         <Shield size={14} className="text-blue-600" />
-                                                        <span className="text-sm font-semibold text-gray-700">Police Verification</span>
+                                                        <span className="text-sm font-semibold text-white/80">Police Verification</span>
                                                     </div>
                                                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${
                                                         policeStatus === 'VERIFIED' 
@@ -1060,11 +895,11 @@ const VerificationQueue = ({ drivers, onApprove, onReject }) => {
                                             </div>
 
                                             {/* Kit Status */}
-                                            <div className="p-3 bg-white rounded-lg border border-gray-200">
+                                            <div className="p-3 bg-white/5 rounded-lg border border-white/10">
                                                 <div className="flex items-center justify-between mb-2">
                                                     <div className="flex items-center gap-2">
                                                         <Package size={14} className="text-[var(--primary)]" />
-                                                        <span className="text-sm font-semibold text-gray-700">Kit Status</span>
+                                                        <span className="text-sm font-semibold text-white/80">Kit Status</span>
                                                     </div>
                                                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${
                                                         kitStatus === 'COMPLETED' 
@@ -1077,11 +912,11 @@ const VerificationQueue = ({ drivers, onApprove, onReject }) => {
                                             </div>
 
                                             {/* Background Check */}
-                                            <div className="p-3 bg-white rounded-lg border border-gray-200">
+                                            <div className="p-3 bg-white/5 rounded-lg border border-white/10">
                                                 <div className="flex items-center justify-between mb-2">
                                                     <div className="flex items-center gap-2">
                                                         <CheckCircle size={14} className="text-emerald-600" />
-                                                        <span className="text-sm font-semibold text-gray-700">Background Check</span>
+                                                        <span className="text-sm font-semibold text-white/80">Background Check</span>
                                                     </div>
                                                     <span className="px-2 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
                                                         CLEAR
@@ -1093,7 +928,7 @@ const VerificationQueue = ({ drivers, onApprove, onReject }) => {
                                 </div>
 
                                 {/* Action Buttons - SINGLE ACTION SYSTEM */}
-                                <div className="mt-6 pt-6 border-t border-gray-200">
+                                <div className="mt-6 pt-6 border-t border-white/10">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             {readyForApproval ? (
@@ -1123,7 +958,7 @@ const VerificationQueue = ({ drivers, onApprove, onReject }) => {
                                                 className={`flex items-center gap-2 text-sm px-6 py-2 rounded-lg font-semibold transition-all ${
                                                     readyForApproval
                                                         ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg'
-                                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                        : 'bg-gray-300 text-white/40 cursor-not-allowed'
                                                 }`}
                                             >
                                                 <CheckCircle size={14} />
@@ -1161,12 +996,12 @@ const VerificationQueue = ({ drivers, onApprove, onReject }) => {
                                 </div>
                                 <div>
                                     <h3 className="text-xl font-semibold text-gray-900">Reject Driver</h3>
-                                    <p className="text-sm text-gray-600">This action will reject all verification</p>
+                                    <p className="text-sm text-white/60">This action will reject all verification</p>
                                 </div>
                             </div>
                             
                             <div className="mb-6">
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                <label className="block text-sm font-semibold text-white/80 mb-2">
                                     Rejection Reason <span className="text-red-500">*</span>
                                 </label>
                                 <textarea 

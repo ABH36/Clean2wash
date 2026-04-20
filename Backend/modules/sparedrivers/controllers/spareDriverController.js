@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const SpareDriver = require('../../../models/SpareDriver');
 const Booking = require('../../../models/Booking');
 const User = require('../../../models/User');
@@ -1387,9 +1388,20 @@ exports.getTripHistory = async (req, res) => {
             .populate('vehicle', 'brand model plate')
             .sort({ updatedAt: -1 });
 
+        // ✅ Format response to include customer reviews
+        const formattedBookings = bookings.map(booking => ({
+            ...booking.toObject(),
+            customerReview: booking.feedback ? {
+                rating: booking.feedback.rating,
+                review: booking.feedback.review,
+                photos: booking.feedback.photos,
+                submittedAt: booking.feedback.submittedAt
+            } : null
+        }));
+
         res.status(200).json({
             status: 'success',
-            data: { bookings }
+            data: { bookings: formattedBookings }
         });
     } catch (err) {
         res.status(500).json({ status: 'fail', message: err.message });
@@ -1397,15 +1409,23 @@ exports.getTripHistory = async (req, res) => {
 };
 
 // ── Accept a booking ──
+// 🛡️ RACE CONDITION FIX: Atomic booking assignment with optimistic locking
 exports.acceptBooking = async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
         const driverId = getDriverIdFromRequest(req);
-        const driver = await SpareDriver.findById(driverId).select('status isOnline');
+        const driver = await SpareDriver.findById(driverId).select('status isOnline').session(session);
         if (!driver) {
+            await session.abortTransaction();
+            session.endSession();
             return res.status(404).json({ status: 'fail', message: 'Driver not found' });
         }
 
         if (!isDriverOperational(driver)) {
+            await session.abortTransaction();
+            session.endSession();
             return res.status(403).json({
                 status: 'fail',
                 message: 'Complete verification before accepting trips'
@@ -1413,21 +1433,25 @@ exports.acceptBooking = async (req, res) => {
         }
 
         if (!driver.isOnline) {
+            await session.abortTransaction();
+            session.endSession();
             return res.status(400).json({
                 status: 'fail',
                 message: 'Go online before accepting a booking'
             });
         }
 
+        // 🛡️ ATOMIC UPDATE: Use findOneAndUpdate with strict conditions to prevent race conditions
+        // This ensures only ONE driver can successfully update the booking from 'pending' to 'en_route'
         const booking = await Booking.findOneAndUpdate(
             {
                 _id: req.params.id,
                 isActive: true,
                 'service.type': 'sparedriver',
-                status: 'pending',
+                status: 'pending', // 🔒 Critical: Only accept if still pending
                 $or: [
                     { 'provider.id': null },
-                    { 'provider.id': driverId, 'provider.type': 'sparedriver' }
+                    { 'provider.id': { $exists: false } }
                 ]
             },
             {
@@ -1435,17 +1459,37 @@ exports.acceptBooking = async (req, res) => {
                     status: 'en_route',
                     'provider.id': driverId,
                     'provider.type': 'sparedriver',
+                    'provider.model': 'SpareDriver',
+                    'provider.name': driver.name || '',
+                    'provider.phone': driver.phone || '',
                     'tracking.assignedAt': new Date()
-                }
+                },
+                $inc: { __v: 1 } // 🔒 Optimistic locking: increment version
             },
-            { new: true }
+            { 
+                new: true,
+                session, // 🔒 Use transaction session
+                runValidators: true
+            }
         );
-        if (!booking) return res.status(404).json({ status: 'fail', message: 'Booking not found or already accepted' });
+
+        if (!booking) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(409).json({ 
+                status: 'fail', 
+                message: 'Booking not available - another driver has already accepted this trip' 
+            });
+        }
 
         appendBookingActivityLog(booking, 'sparedriver_accepted', 'Booking accepted by spare driver.', {
             driverId: driverId.toString()
         });
-        await booking.save({ validateBeforeSave: false });
+        await booking.save({ validateBeforeSave: false, session });
+
+        // Commit transaction before socket/notification operations
+        await session.commitTransaction();
+        session.endSession();
 
         // 🛡️ Elite Handover Protocol: Reveal OTP to Consumer via Socket
         try {
@@ -1483,6 +1527,9 @@ exports.acceptBooking = async (req, res) => {
 
         res.status(200).json({ status: 'success', data: { booking } });
     } catch (err) {
+        await session.abortTransaction();
+        session.endSession();
+        console.error('Accept booking error:', err);
         res.status(400).json({ status: 'fail', message: err.message });
     }
 };
@@ -2724,3 +2771,28 @@ exports.updateProfile = async (req, res) => {
         res.status(500).json({ status: 'fail', message: err.message });
     }
 };
+
+// 💬 Chat & Message Counter Dummies (To prevent 404 spam)
+exports.getUnreadMessageCount = async (req, res) => {
+    try {
+        res.status(200).json({
+            status: 'success',
+            count: 0,
+            data: { unreadCount: 0 }
+        });
+    } catch (err) {
+        res.status(500).json({ status: 'fail', message: err.message });
+    }
+};
+
+exports.getActiveChats = async (req, res) => {
+    try {
+        res.status(200).json({
+            status: 'success',
+            data: { chats: [] }
+        });
+    } catch (err) {
+        res.status(500).json({ status: 'fail', message: err.message });
+    }
+};
+

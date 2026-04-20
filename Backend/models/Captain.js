@@ -1,3 +1,8 @@
+/**
+ * APARTMENT WASH / STUDIO MODEL
+ * This model is part of the Apartment Dry-Wash and Studio flow.
+ * (Not associated with the Chauffeur/Spare Driver flow)
+ */
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 

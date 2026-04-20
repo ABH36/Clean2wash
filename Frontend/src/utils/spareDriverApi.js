@@ -207,6 +207,13 @@ class SpareDriverApiClient {
         });
     }
 
+    async reportEmergency(data) {
+        return this.request('/emergency', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+    }
+
     async toggleOnline(isOnline) {
         return this.request('/toggle-online', {
             method: 'PATCH',
@@ -299,6 +306,139 @@ class SpareDriverApiClient {
         return this.request('/fcm-token', {
             method: 'POST',
             body: JSON.stringify({ token, platform }),
+        });
+    }
+
+    // Chat and Communication Methods
+    async getBooking(bookingId) {
+        return this.request(`/bookings/${bookingId}`);
+    }
+
+    async getChatMessages(bookingId) {
+        return this.request(`/bookings/${bookingId}/messages`);
+    }
+
+    async sendChatMessage(bookingId, messageData) {
+        return this.request(`/bookings/${bookingId}/messages`, {
+            method: 'POST',
+            body: JSON.stringify(messageData)
+        });
+    }
+
+    async sendLocation(bookingId, location) {
+        return this.request(`/bookings/${bookingId}/location`, {
+            method: 'POST',
+            body: JSON.stringify({ location })
+        });
+    }
+
+    async markChatAsRead(bookingId) {
+        return this.request(`/bookings/${bookingId}/messages/read`, {
+            method: 'PATCH'
+        });
+    }
+
+    async getUnreadMessageCount() {
+        return this.request('/messages/unread-count');
+    }
+
+    async getActiveChats() {
+        return this.request('/messages/active-chats');
+    }
+
+    async uploadChatFile(formData) {
+        return this.request('/chat/upload', {
+            method: 'POST',
+            body: formData
+        });
+    }
+
+    async addMessageReaction(bookingId, messageId, reaction) {
+        return this.request(`/bookings/${bookingId}/messages/${messageId}/reaction`, {
+            method: 'POST',
+            body: JSON.stringify({ reaction })
+        });
+    }
+
+    async removeMessageReaction(bookingId, messageId, reaction) {
+        return this.request(`/bookings/${bookingId}/messages/${messageId}/reaction`, {
+            method: 'DELETE',
+            body: JSON.stringify({ reaction })
+        });
+    }
+
+    async startVoiceCall(bookingId) {
+        return this.request(`/bookings/${bookingId}/call/start`, {
+            method: 'POST'
+        });
+    }
+
+    async endVoiceCall(bookingId, callId) {
+        return this.request(`/bookings/${bookingId}/call/${callId}/end`, {
+            method: 'PATCH'
+        });
+    }
+
+    // Earnings and Payout Methods
+    async getEarningsSummary() {
+        return this.request('/earnings/summary');
+    }
+
+    async getTodayEarnings() {
+        return this.request('/earnings/today');
+    }
+
+    async getWeeklyEarnings() {
+        return this.request('/earnings/weekly');
+    }
+
+    async getMonthlyEarnings() {
+        return this.request('/earnings/monthly');
+    }
+
+    async getPayoutHistory(params = {}) {
+        const query = new URLSearchParams(params).toString();
+        return this.request(`/payouts${query ? `?${query}` : ''}`);
+    }
+
+    async requestWithdrawal(withdrawalData) {
+        return this.request('/payouts/withdrawal', {
+            method: 'POST',
+            body: JSON.stringify(withdrawalData)
+        });
+    }
+
+    // Advanced Tracking Methods
+    async getETAToCustomer(bookingId) {
+        return this.request(`/bookings/${bookingId}/eta`);
+    }
+
+    async getOptimizedRoute(bookingId) {
+        return this.request(`/bookings/${bookingId}/route`);
+    }
+
+    async shareLocationWithCustomer(bookingId, location) {
+        return this.request(`/bookings/${bookingId}/share-location`, {
+            method: 'POST',
+            body: JSON.stringify(location)
+        });
+    }
+
+    // Fraud Detection Methods
+    async reportSuspiciousActivity(reportData) {
+        return this.request('/fraud/report', {
+            method: 'POST',
+            body: JSON.stringify(reportData)
+        });
+    }
+
+    async getFraudAlerts() {
+        return this.request('/fraud/alerts');
+    }
+
+    async acknowledgeFraudAlert(alertId) {
+        return this.request(`/fraud/alerts/${alertId}/acknowledge`, {
+            method: 'PATCH'
         });
     }
 }

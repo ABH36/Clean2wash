@@ -13,7 +13,17 @@ import {
 import { useTheme } from '../../../context/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const DriverLayout = ({ children, title, hideNav = false, hideHeader = false }) => {
+import spareDriverLogo from '../../../assets/spareDriverLogo.png';
+
+const DriverLayout = ({ 
+    children, 
+    title, 
+    hideNav = false, 
+    hideHeader = false,
+    isOnline = false,
+    onToggle = () => {},
+    showToggle = false 
+}) => {
     const location = useLocation();
     const { isDarkMode, toggleTheme } = useTheme();
     const [unreadCount, setUnreadCount] = useState(0);
@@ -27,20 +37,41 @@ const DriverLayout = ({ children, title, hideNav = false, hideHeader = false }) 
     const navLinks = [
         { to: '/spare-driver/dashboard', icon: LayoutDashboard, label: 'HUB' },
         { to: '/spare-driver/bookings', icon: Calendar, label: 'OPS' },
-        { to: '/spare-driver/earnings', icon: Wallet, label: 'BAL' },
+        { to: '/spare-driver/wallet', icon: Wallet, label: 'WALLET' },
         { to: '/spare-driver/profile', icon: User, label: 'DOC' }
     ];
 
     return (
-        <div className="min-h-screen bg-background text-content font-sans selection:bg-brand selection:text-black transition-colors duration-500 driver-theme">
+        <div className="min-h-screen bg-background text-content font-sans selection:bg-brand selection:text-white transition-colors duration-500 driver-theme">
             {/* ── Fixed Header ── */}
             {!hideHeader && (
-                <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-[50] px-6 py-5 bg-surface/80 backdrop-blur-xl border-b border-content/[0.03] flex items-center justify-between transition-colors duration-500">
-                    <div>
-                        <p className="text-[9px] font-black text-brand uppercase tracking-[0.3em] mb-0.5">Fleet Protocol</p>
-                        <h1 className="text-xl font-black text-content tracking-tighter uppercase">{title || 'Command'}</h1>
+                <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-[50] px-4 py-4 bg-surface/80 backdrop-blur-xl border-b border-content/[0.03] flex items-center justify-between transition-all duration-500">
+                    <div className="flex items-center gap-3">
+                        <img 
+                            src={spareDriverLogo} 
+                            alt="Spare Driver" 
+                            className="h-12 sm:h-14 w-auto object-contain"
+                        />
                     </div>
                     <div className="flex items-center gap-2">
+                        {/* ── Online/Offline Toggle ── */}
+                        {showToggle && (
+                            <button 
+                                onClick={onToggle} 
+                                className={`w-14 h-7 rounded-full transition-all relative flex items-center px-1 ${isOnline ? 'bg-brand/20 border border-brand/30' : 'bg-content/[0.05] border border-content/[0.1]'}`}
+                            >
+                                <motion.div 
+                                    animate={{ 
+                                        x: isOnline ? 24 : 0,
+                                        backgroundColor: isOnline ? '#FACD15' : '#888'
+                                    }}
+                                    className="w-5 h-5 rounded-full shadow-lg"
+                                />
+                                <span className={`absolute ${isOnline ? 'left-2' : 'right-2'} text-[8px] font-black uppercase ${isOnline ? 'text-brand' : 'text-content/30'}`}>
+                                    {isOnline ? 'ON' : 'OFF'}
+                                </span>
+                            </button>
+                        )}
                         {/* ── Theme Toggle ── */}
                         <button 
                             onClick={toggleTheme}
@@ -54,7 +85,7 @@ const DriverLayout = ({ children, title, hideNav = false, hideHeader = false }) 
                             {unreadCount > 0 && (
                                 <motion.span 
                                     initial={{ scale: 0 }} animate={{ scale: 1 }}
-                                    className="absolute top-2.5 right-2.5 w-2 h-2 bg-brand rounded-full border-2 border-surface shadow-sm" 
+                                    className="absolute top-2.5 right-2.5 w-2 h-2 bg-brand rounded-full border-white/5 border-surface " 
                                 />
                             )}
                         </NavLink>
@@ -70,16 +101,16 @@ const DriverLayout = ({ children, title, hideNav = false, hideHeader = false }) 
                 {children}
             </main>
 
-            {/* ── Navigation Dock ── */}
+            {/* ── Navigation Dock (Full Width Mobile Style) ── */}
             {!hideNav && (
-                <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-48px)] max-w-[380px] z-[50] h-18 bg-black/[0.90] dark:bg-black/[0.80] backdrop-blur-2xl rounded-[2.2rem] border border-white/10 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] px-4 flex items-center justify-between transition-all duration-500">
+                <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-[50] h-20 bg-surface/90 backdrop-blur-3xl border-t border-content/[0.05] shadow-[0_-10px_40px_rgba(0,0,0,0.04)] px-6 flex items-center justify-between transition-all duration-500 pb-safe">
                     {navLinks.map((link) => (
                         <NavLink
                             key={link.to}
                             to={link.to}
                             className={({ isActive }) => `
                                 relative flex flex-col items-center justify-center w-14 h-14 rounded-2xl transition-all duration-300
-                                ${isActive ? 'text-brand scale-110' : 'text-white/30 hover:text-white/60'}
+                                ${isActive ? 'text-brand scale-110' : 'text-content/30 hover:text-content/60'}
                             `}
                         >
                             {({ isActive }) => (

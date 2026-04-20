@@ -136,11 +136,11 @@ const BookingConfirmation = () => {
                 </p>
             </div>
 
-            <div className="space-y-6 relative before:absolute before:left-[17px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gray-100">
+            <div className="space-y-6 relative before:absolute before:left-[17px] before:top-2 before:bottom-2 before:w-[2px] before:bg-white/[0.05]">
                 {trackingSteps.map((step, idx) => (
                     <div key={idx} className="flex gap-4 relative">
                         <div className={`w-9 h-9 rounded-full flex items-center justify-center z-10 transition-all duration-500 ${
-                            step.status === 'completed' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 'bg-gray-100 text-gray-400'
+                            step.status === 'completed' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 'bg-white/[0.05] text-gray-400'
                         }`}>
                             <step.icon size={16} />
                         </div>
@@ -148,7 +148,7 @@ const BookingConfirmation = () => {
                             <p className={`text-[12px] font-black uppercase tracking-tight ${step.status === 'completed' ? 'text-gray-900' : 'text-gray-400'}`}>
                                 {step.label}
                             </p>
-                            <p className="text-[10px] font-bold text-gray-500 mt-0.5">{step.time}</p>
+                            <p className="text-[10px] font-bold text-white/40 mt-0.5">{step.time}</p>
                         </div>
                     </div>
                 ))}
@@ -393,17 +393,17 @@ const BookingConfirmation = () => {
 
     const getStatusColor = (status) => {
         switch (status) {
-            case 'CREATED': return 'text-gray-600 bg-gray-50 border-gray-200';
-            case 'ASSIGNED': return 'text-orange-600 bg-orange-50 border-orange-200';
-            case 'CAPTAIN_EN_ROUTE': return 'text-blue-600 bg-blue-50 border-blue-200';
-            case 'ARRIVED': return 'text-indigo-600 bg-indigo-50 border-indigo-200';
-            case 'BEFORE_PHOTO_DONE': return 'text-purple-600 bg-purple-50 border-purple-200';
-            case 'IN_PROGRESS': return 'text-purple-600 bg-purple-50 border-purple-200';
-            case 'AFTER_PHOTO_DONE': return 'text-pink-600 bg-pink-50 border-pink-200';
-            case 'COMPLETED': return 'text-green-600 bg-green-50 border-green-200';
-            case 'CANCELLED': return 'text-red-600 bg-red-50 border-red-200';
-            case 'FAILED': return 'text-red-600 bg-red-50 border-red-200';
-            default: return 'text-gray-600 bg-gray-50 border-gray-200';
+            case 'CREATED': return 'text-white/40 bg-white/[0.03] border-white/5';
+            case 'ASSIGNED': return 'text-[#F59E0B] bg-[#F59E0B]/10 border-[#F59E0B]/20';
+            case 'CAPTAIN_EN_ROUTE': return 'text-blue-500 bg-blue-500/10 border-blue-500/20';
+            case 'ARRIVED': return 'text-indigo-400 bg-indigo-400/10 border-indigo-400/20';
+            case 'BEFORE_PHOTO_DONE': return 'text-purple-400 bg-purple-400/10 border-purple-400/20';
+            case 'IN_PROGRESS': return 'text-[#F59E0B] bg-[#F59E0B]/10 border-[#F59E0B]/20';
+            case 'AFTER_PHOTO_DONE': return 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20';
+            case 'COMPLETED': return 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20';
+            case 'CANCELLED': return 'text-rose-500 bg-rose-500/10 border-rose-500/20';
+            case 'FAILED': return 'text-rose-500 bg-rose-500/10 border-rose-500/20';
+            default: return 'text-white/40 bg-white/[0.03] border-white/5';
         }
     };
 
@@ -412,74 +412,81 @@ const BookingConfirmation = () => {
     };
 
     return (
-        <MobileLayout>
-            {/* Header */}
-            <header className="px-4 pt-10 pb-4 bg-white sticky top-0 z-50 border-b border-gray-100">
-                <div className="flex items-center gap-3 mb-4">
-                    <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate(-1)}
-                        className="w-8 h-8 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center">
-                        <ChevronLeft size={16} strokeWidth={2.5} className="text-content" />
-                    </motion.button>
-                    <div className="flex-1">
-                        <h1 className="text-base font-black tracking-tight text-content leading-none">
-                            {bookingData.status === 'COMPLETED' ? 'Booking Completed' : 'Booking Confirmed'}
-                        </h1>
-                        <div className="flex items-center gap-1 mt-0.5">
-                            <span className={`w-1 h-1 rounded-full animate-pulse ${bookingData.status === 'COMPLETED' ? 'bg-green-500' : 'bg-orange-500'}`} />
-                            <p className={`text-[8px] font-black uppercase tracking-widest ${bookingData.status === 'COMPLETED' ? 'text-green-600' : 'text-orange-600'}`}>
-                                {bookingData.status}
-                            </p>
+        <MobileLayout hideNav>
+            <div className="bg-[#0A0F0D] min-h-screen">
+                {/* Header */}
+                <header className="px-4 pt-10 pb-4 bg-[#0A0F0D]/90 sticky top-0 z-50 border-b border-white/5 backdrop-blur-xl">
+                    <div className="flex items-center gap-3 mb-4">
+                        <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate(-1)}
+                            className="w-8 h-8 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center">
+                            <ChevronLeft size={16} strokeWidth={2.5} className="text-white" />
+                        </motion.button>
+                        <div className="flex-1">
+                            <h1 className="text-lg font-[1000] tracking-tighter text-white leading-none">
+                                {bookingData.status === 'COMPLETED' ? 'Protocol executed' : 'Protocol confirmed'}
+                            </h1>
+                            <div className="flex items-center gap-1.5 mt-2">
+                                <span className={`w-1.5 h-1.5 rounded-full animate-pulse shadow-[0_0_8px_currentColor] ${bookingData.status === 'COMPLETED' ? 'text-emerald-500 bg-emerald-500' : 'text-[#F59E0B] bg-[#F59E0B]'}`} />
+                                <p className={`text-[9px] font-black uppercase tracking-widest ${bookingData.status === 'COMPLETED' ? 'text-emerald-500' : 'text-[#F59E0B]'}`}>
+                                    {bookingData.status}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-10 h-10 bg-[#F59E0B]/10 rounded-2xl flex items-center justify-center border border-[#F59E0B]/20">
+                                <Sparkles size={16} className="text-[#F59E0B]" fill="currentColor" />
+                            </div>
+                            <motion.button
+                                whileTap={{ scale: 0.9 }}
+                                onClick={handleSOS}
+                                className="w-10 h-10 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center justify-center shadow-2xl shadow-rose-500/10"
+                            >
+                                <Phone size={18} strokeWidth={2.5} className="text-rose-500" />
+                            </motion.button>
                         </div>
                     </div>
-                    {/* SOS Button */}
-                    <motion.button
-                        whileTap={{ scale: 0.9 }}
-                        onClick={handleSOS}
-                        className="w-8 h-8 bg-red-500 border border-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-500/20"
-                    >
-                        <Phone size={16} strokeWidth={2.5} className="text-white" />
-                    </motion.button>
-                </div>
 
 
-                {/* Status Badge */}
-                <div className={`px-3 py-2 rounded-xl border-2 flex items-center justify-center gap-2 ${getStatusColor(bookingData.status)}`}>
-                    <CheckCircle2 size={16} strokeWidth={3} />
-                    <span className="text-[10px] font-black uppercase tracking-wider">
-                        {bookingData.status === 'SCHEDULED' ? 'Service Scheduled' :
-                            bookingData.status === 'ASSIGNED' ? 'Captain Assigned' :
-                                bookingData.status === 'IN_PROGRESS' ? 'Service in Progress' : 'Service Completed'}
-                    </span>
-                </div>
-            </header>
+                    {/* Status Badge */}
+                    <div className={`px-4 py-2.5 rounded-2xl border flex items-center justify-center gap-3 ${getStatusColor(bookingData.status)}`}>
+                        <CheckCircle2 size={16} strokeWidth={3} />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">
+                            {bookingData.status === 'SCHEDULED' ? 'Service pipeline active' :
+                                bookingData.status === 'ASSIGNED' ? 'Specialist deployed' :
+                                    bookingData.status === 'IN_PROGRESS' ? 'Operational efficiency' : 'Protocol complete'}
+                        </span>
+                    </div>
+                </header>
 
             <div className="px-4 pb-32 space-y-4 pt-3">
 
                 {/* Success Animation */}
                 <motion.div
-                    initial={{ scale: 0, opacity: 0 }}
+                    initial={{ scale: 0.95, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.5, type: "spring" }}
-                    className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-6 border border-orange-100 text-center"
+                    className="bg-[#0F1412] rounded-[2.5rem] p-8 border border-white/10 text-center relative overflow-hidden shadow-2xl"
                 >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-[#F59E0B]/5 blur-3xl -mr-16 -mt-16" />
+                    
                     <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ delay: 0.2, duration: 0.3 }}
-                        className="w-16 h-16 bg-brand rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-brand/20"
+                        className="w-20 h-20 bg-[#F59E0B] rounded-[1.75rem] flex items-center justify-center mx-auto mb-6 shadow-[0_0_40px_rgba(245,158,11,0.3)] border-4 border-black"
                     >
-                        <CheckCircle2 size={32} className="text-white" strokeWidth={3} />
+                        <CheckCircle2 size={40} className="text-black" strokeWidth={3} />
                     </motion.div>
-                    <h2 className="text-lg font-black text-brand uppercase tracking-tight mb-2">Booking Successful!</h2>
-                    <p className="text-[10px] font-bold text-content-subtle uppercase tracking-wider mb-4">
-                        Booking ID: {bookingData.id}
+                    <h2 className="text-2xl font-black text-white tracking-tighter mb-2">Service secured</h2>
+                    <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.35em] mb-6">
+                        Reference: {bookingData.id}
                     </p>
 
                     {/* Countdown Timer */}
                     {bookingData.status === 'SCHEDULED' && (
-                        <div className="bg-white rounded-xl p-3 border border-orange-200">
-                            <p className="text-[8px] font-black text-content-subtle uppercase tracking-wider mb-1">Service Starts In</p>
-                            <p className="text-xl font-black text-brand tracking-tighter">{formatTimeLeft()}</p>
+                        <div className="bg-white/[0.03] rounded-2xl p-4 border border-white/5">
+                            <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em] mb-2">Operation T-minus</p>
+                            <p className="text-3xl font-black text-[#F59E0B] tracking-tighter tabular-nums">{formatTimeLeft()}</p>
                         </div>
                     )}
                 </motion.div>
@@ -490,23 +497,23 @@ const BookingConfirmation = () => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3 }}
-                        className="bg-white rounded-xl border border-gray-100 p-4"
+                        className="bg-white/[0.03] rounded-[2rem] border border-white/5 p-5"
                     >
-                        <div className="flex items-center justify-between mb-3">
-                            <p className="text-[8.5px] font-black text-content-subtle uppercase tracking-widest">Smart Alerts</p>
-                            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                        <div className="flex items-center justify-between mb-4">
+                            <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] italic">System Intelligence</p>
+                            <div className="w-2 h-2 bg-[#F59E0B] rounded-full animate-pulse shadow-[0_0_10px_#F59E0B]" />
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-2.5">
                             {alerts.map((alert, i) => (
-                                <div key={i} className={`flex items-start gap-2 p-2 rounded-lg border ${alert.priority === 'high' ? 'bg-red-50 border-red-200' :
-                                    alert.priority === 'medium' ? 'bg-orange-50 border-orange-200' :
-                                        'bg-blue-50 border-blue-200'
+                                <div key={i} className={`flex items-start gap-4 p-3 rounded-2xl border backdrop-blur-xl ${alert.priority === 'high' ? 'bg-rose-500/5 border-rose-500/10' :
+                                    alert.priority === 'medium' ? 'bg-[#F59E0B]/5 border-[#F59E0B]/10' :
+                                        'bg-blue-500/5 border-blue-500/10'
                                     }`}>
-                                    <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${alert.priority === 'high' ? 'bg-red-500' :
-                                        alert.priority === 'medium' ? 'bg-orange-500' :
-                                            'bg-blue-500'
+                                    <div className={`w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0 shadow-[0_0_8px_currentColor] ${alert.priority === 'high' ? 'text-rose-500 bg-rose-500' :
+                                        alert.priority === 'medium' ? 'text-[#F59E0B] bg-[#F59E0B]' :
+                                            'text-blue-500 bg-blue-500'
                                         }`} />
-                                    <p className="text-[8px] font-semibold text-content leading-tight flex-1">{alert.message}</p>
+                                    <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-relaxed flex-1 italic">{alert.message}</p>
                                 </div>
                             ))}
                         </div>
@@ -514,37 +521,21 @@ const BookingConfirmation = () => {
                 )}
 
                 {/* Tab Navigation */}
-                <div className="bg-white rounded-xl border border-gray-100 p-1">
-                    <div className="grid grid-cols-2 gap-1 mb-1">
+                <div className="bg-white/[0.03] rounded-[2rem] border border-white/5 p-1.5 shadow-2xl">
+                    <div className="grid grid-cols-2 gap-1.5 mb-1.5 font-outfit">
                         {[
-                            { id: 'details', label: 'Details', icon: Package },
-                            { id: 'captain', label: 'Captain', icon: User },
-                            { id: 'tracking', label: 'Tracking', icon: Navigation },
-                            { id: 'pricing', label: 'Pricing', icon: Star }
+                            { id: 'details', label: 'Dossier', icon: Package },
+                            { id: 'captain', label: 'Specialist', icon: User },
+                            { id: 'tracking', label: 'Telemetry', icon: Navigation },
+                            { id: 'pricing', label: 'Settle', icon: Star }
                         ].map(tab => (
                             <button key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-[8.5px] font-black uppercase tracking-wide transition-all ${activeTab === tab.id
-                                    ? 'bg-brand text-white shadow-sm'
-                                    : 'text-content-subtle hover:bg-gray-50'
+                                className={`flex items-center justify-center gap-2 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all italic ${activeTab === tab.id
+                                    ? 'bg-white text-black shadow-2xl'
+                                    : 'text-white/20'
                                     }`}>
-                                <tab.icon size={12} strokeWidth={2.5} />
-                                {tab.label}
-                            </button>
-                        ))}
-                    </div>
-                    <div className="grid grid-cols-2 gap-1">
-                        {[
-                            { id: 'apartment', label: 'Apartment', icon: Home },
-                            { id: 'ecommerce', label: 'E-Commerce', icon: Camera }
-                        ].map(tab => (
-                            <button key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center justify-center gap-1 py-2 rounded-lg text-[8px] font-black uppercase tracking-wide transition-all ${activeTab === tab.id
-                                    ? 'bg-brand text-white shadow-sm'
-                                    : 'text-content-subtle hover:bg-gray-50'
-                                    }`}>
-                                <tab.icon size={10} strokeWidth={2.5} />
+                                <tab.icon size={13} strokeWidth={3} />
                                 {tab.label}
                             </button>
                         ))}
@@ -562,56 +553,48 @@ const BookingConfirmation = () => {
                             className="space-y-4"
                         >
                             {/* Service Details */}
-                            <div className="bg-white rounded-xl border border-gray-100 p-4">
-                                <div className="flex items-center justify-between mb-3">
-                                    <p className="text-[8.5px] font-black text-content-subtle uppercase tracking-widest">Service Details</p>
-                                    <Package size={12} className="text-brand" strokeWidth={3} />
-                                </div>
+                             <div className="bg-white/[0.03] rounded-[2rem] border border-white/5 p-6 backdrop-blur-xl">
+                                 <div className="flex items-center justify-between mb-6">
+                                     <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] italic">Operational Dossier</p>
+                                     <Package size={16} className="text-[#F59E0B]" strokeWidth={3} />
+                                 </div>
 
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between py-2 border-b border-gray-50">
-                                        <span className="text-[9px] font-semibold text-content-subtle">Service</span>
-                                        <span className="text-[9px] font-black text-content">{bookingData.serviceName}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between py-2 border-b border-gray-50">
-                                        <span className="text-[9px] font-semibold text-content-subtle">Vehicle</span>
-                                        <span className="text-[9px] font-black text-content">{bookingData.vehicle}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between py-2 border-b border-gray-50">
-                                        <span className="text-[9px] font-semibold text-content-subtle">Date</span>
-                                        <span className="text-[9px] font-black text-content">{bookingData.scheduledDate}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between py-2 border-b border-gray-50">
-                                        <span className="text-[9px] font-semibold text-content-subtle">Time</span>
-                                        <span className="text-[9px] font-black text-content">{bookingData.scheduledTime}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between py-2 border-b border-gray-50">
-                                        <span className="text-[9px] font-semibold text-content-subtle">Duration</span>
-                                        <span className="text-[9px] font-black text-content">{bookingData.estimatedDuration}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between py-2">
-                                        <span className="text-[9px] font-semibold text-content-subtle">Total Price</span>
-                                        <span className="text-[12px] font-black text-brand">{bookingData.price}</span>
-                                    </div>
-                                </div>
-                            </div>
+                                 <div className="space-y-4">
+                                     {[
+                                         { label: 'Treatment', value: bookingData.serviceName },
+                                         { label: 'Vehicle', value: bookingData.vehicle },
+                                         { label: 'Protocol Date', value: bookingData.scheduledDate },
+                                         { label: 'Slot', value: bookingData.scheduledTime },
+                                         { label: 'ETA Duration', value: bookingData.estimatedDuration }
+                                     ].map((item, i) => (
+                                         <div key={i} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
+                                             <span className="text-[10px] font-black text-white/20 uppercase tracking-widest italic">{item.label}</span>
+                                             <span className="text-[11px] font-black text-white uppercase italic italic-black">{item.value}</span>
+                                         </div>
+                                     ))}
+                                     <div className="flex items-center justify-between pt-4 mt-2">
+                                         <span className="text-[12px] font-black text-white uppercase italic tracking-tighter">Settlement</span>
+                                         <span className="text-[18px] font-black text-[#F59E0B] italic tabular-nums tracking-tighter">{bookingData.price}</span>
+                                     </div>
+                                 </div>
+                             </div>
 
                             {/* Location */}
-                            <div className="bg-white rounded-xl border border-gray-100 p-4">
-                                <div className="flex items-center justify-between mb-3">
-                                    <p className="text-[8.5px] font-black text-content-subtle uppercase tracking-widest">Pickup Location</p>
-                                    <MapPin size={12} className="text-brand" strokeWidth={3} />
-                                </div>
-                                <div className="flex items-start gap-3">
-                                    <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                                        <Home size={14} className="text-brand" strokeWidth={2.5} />
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-[9px] font-black text-content uppercase tracking-tight leading-none mb-1">Home</p>
-                                        <p className="text-[8px] font-bold text-content-subtle leading-tight">{bookingData.location}</p>
-                                    </div>
-                                </div>
-                            </div>
+                             <div className="bg-white/[0.03] rounded-[2rem] border border-white/5 p-6 backdrop-blur-xl">
+                                 <div className="flex items-center justify-between mb-6">
+                                     <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] italic">Target Coordinates</p>
+                                     <MapPin size={16} className="text-[#F59E0B]" strokeWidth={3} />
+                                 </div>
+                                 <div className="flex items-start gap-4">
+                                     <div className="w-12 h-12 bg-[#F59E0B]/10 rounded-2xl flex items-center justify-center flex-shrink-0 border border-[#F59E0B]/20">
+                                         <Home size={20} className="text-[#F59E0B]" strokeWidth={2.5} />
+                                     </div>
+                                     <div className="flex-1">
+                                         <p className="text-[11px] font-black text-white uppercase tracking-widest italic mb-1.5">Primary Residence</p>
+                                         <p className="text-[10px] font-black text-white/40 uppercase leading-relaxed tracking-wider">{bookingData.location}</p>
+                                     </div>
+                                 </div>
+                             </div>
                         </motion.div>
                     )}
 
@@ -624,61 +607,61 @@ const BookingConfirmation = () => {
                             className="space-y-4"
                         >
                             {/* Captain Info */}
-                            <div className="bg-white rounded-xl border border-gray-100 p-4">
-                                <div className="flex items-center justify-between mb-3">
-                                    <p className="text-[8.5px] font-black text-content-subtle uppercase tracking-widest">Service Captain</p>
-                                    <User size={12} className="text-brand" strokeWidth={3} />
-                                </div>
+                             <div className="bg-white/[0.03] rounded-[2rem] border border-white/5 p-6 backdrop-blur-xl">
+                                 <div className="flex items-center justify-between mb-6">
+                                     <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] italic">Elite Specialist</p>
+                                     <User size={16} className="text-[#F59E0B]" strokeWidth={3} />
+                                 </div>
 
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-brand">
-                                        <img src={bookingData.captain.photo} alt={bookingData.captain.name} className="w-full h-full object-cover" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-black text-content uppercase tracking-tight">{bookingData.captain.name}</p>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <Star size={10} fill="#FBBF24" className="text-amber-400" />
-                                            <span className="text-[9px] font-black text-content">{bookingData.captain.rating}</span>
-                                            {bookingData.captain.isVerified && <VerifiedBadge type="specialist" className="ml-1" />}
-                                        </div>
-
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <button 
-                                        onClick={() => {
-                                            if (bookingData.captain.phone) {
-                                                window.location.href = `tel:${bookingData.captain.phone}`;
-                                            } else {
-                                                toast.error('Contact details not assigned yet');
-                                            }
-                                        }}
-                                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-brand text-white rounded-xl font-black text-[9px] uppercase tracking-wider shadow-sm shadow-brand/20"
-                                    >
-                                        <Phone size={12} strokeWidth={2.5} />
-                                        Call Captain
-                                    </button>
-                                    <button className="w-full flex items-center justify-center gap-2 py-2.5 bg-gray-100 text-content rounded-xl font-black text-[9px] uppercase tracking-wider border border-gray-200">
-                                        <MessageSquare size={12} strokeWidth={2.5} />
-                                        Send Message
-                                    </button>
-                                </div>
-                                      {/* Captain Stats (Dynamic) */}
-                             <div className="grid grid-cols-3 gap-2">
-                                 {[
-                                     { label: 'Services', value: bookingData.captain.stats?.services || '450+', icon: Package },
-                                     { label: 'Rating', value: `${bookingData.captain.rating || '4.9'} ⭐`, icon: Star },
-                                     { label: 'Level', value: bookingData.captain.stats?.experience || 'Elite Supervisor', icon: Timer }
-                                 ].map((stat, i) => (
-                                     <div key={i} className="bg-white rounded-xl border border-gray-100 p-3 text-center transition-all hover:bg-orange-50/30">
-                                         <stat.icon size={16} className="text-brand mx-auto mb-1" strokeWidth={2.5} />
-                                         <p className="text-[14px] font-[1000] text-content tracking-tighter leading-none">{stat.value}</p>
-                                         <p className="text-[7px] font-black text-content-subtle uppercase tracking-wider mt-1">{stat.label}</p>
+                                 <div className="flex items-center gap-5 mb-8">
+                                     <div className="w-16 h-16 rounded-[1.5rem] overflow-hidden border-2 border-[#F59E0B] shadow-[0_0_20px_rgba(245,158,11,0.2)]">
+                                         <img src={bookingData.captain.photo} alt={bookingData.captain.name} className="w-full h-full object-cover" />
                                      </div>
-                                 ))}
-                             </div>
-                       </div>
+                                     <div className="flex-1">
+                                         <p className="text-lg font-black text-white tracking-tighter leading-none">{bookingData.captain.name}</p>
+                                         <div className="flex items-center gap-2 mt-3">
+                                             <div className="flex items-center gap-1.5 bg-[#FBBF24]/10 px-2 py-1 rounded-lg border border-[#FBBF24]/20">
+                                                 <Star size={10} fill="#FBBF24" className="text-amber-400" />
+                                                 <span className="text-[10px] font-black text-amber-400">{bookingData.captain.rating}</span>
+                                             </div>
+                                             {bookingData.captain.isVerified && <VerifiedBadge type="specialist" />}
+                                         </div>
+                                     </div>
+                                 </div>
+
+                                 <div className="space-y-3">
+                                     <motion.button 
+                                         whileTap={{ scale: 0.97 }}
+                                         onClick={() => {
+                                             if (bookingData.captain.phone) window.location.href = `tel:${bookingData.captain.phone}`;
+                                             else toast.error('Encrypted channel not available');
+                                         }}
+                                         className="w-full h-14 bg-white text-black rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl flex items-center justify-center gap-3 transition-all"
+                                     >
+                                         <Phone size={14} strokeWidth={3} /> Secure Call
+                                     </motion.button>
+                                     <motion.button 
+                                         whileTap={{ scale: 0.97 }}
+                                         onClick={() => navigate(`/chat/${bookingId}`)}
+                                         className="w-full h-14 bg-white/[0.03] border border-white/10 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all"
+                                     >
+                                         <MessageSquare size={14} strokeWidth={3} /> Transmit Message
+                                     </motion.button>
+                                 </div>
+                              <div className="grid grid-cols-3 gap-3 mt-6">
+                                  {[
+                                      { label: 'Ops', value: bookingData.captain.stats?.services || '450+', icon: Package },
+                                      { label: 'Trust', value: `${bookingData.captain.rating || '4.9'}`, icon: Star },
+                                      { label: 'Class', value: 'Elite', icon: Timer }
+                                  ].map((stat, i) => (
+                                      <div key={i} className="bg-white/5 rounded-2xl border border-white/5 p-4 text-center group transition-all">
+                                          <stat.icon size={16} className="text-[#F59E0B] mx-auto mb-2" strokeWidth={3} />
+                                          <p className="text-[13px] font-black text-white tracking-tighter leading-none italic">{stat.value}</p>
+                                          <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] mt-2 italic">{stat.label}</p>
+                                      </div>
+                                  ))}
+                              </div>
+                        </div>
                         </motion.div>
                     )}
 
@@ -704,52 +687,17 @@ const BookingConfirmation = () => {
                             className="space-y-4"
                         >
                             {/* Pricing Breakdown */}
-                            <div className="bg-white rounded-xl border border-gray-100 p-4">
-                                <div className="flex items-center justify-between mb-3">
-                                    <p className="text-[8.5px] font-black text-content-subtle uppercase tracking-widest">Final Bill Breakdown</p>
-                                    <Star size={12} className="text-brand" strokeWidth={3} />
-                                </div>
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between py-2 border-b border-gray-50">
-                                        <span className="text-[9px] font-semibold text-content-subtle">Service Base Price</span>
-                                        <span className="text-[9px] font-black text-content">₹{bookingData.pricing?.baseAmount || 0}</span>
-                                    </div>
-                                    {(bookingData.pricing?.addonAmount > 0) && (
-                                        <div className="flex items-center justify-between py-2 border-b border-gray-50">
-                                            <span className="text-[9px] font-semibold text-content-subtle">Add-on Services</span>
-                                            <span className="text-[9px] font-black text-content">₹{bookingData.pricing.addonAmount}</span>
-                                        </div>
-                                    )}
-                                    {(bookingData.pricing?.discountAmount > 0) && (
-                                        <div className="flex items-center justify-between py-2 border-b border-gray-50">
-                                            <div className="flex flex-col">
-                                                <span className="text-[9px] font-semibold text-content-subtle">Applied Savings</span>
-                                                <span className="text-[7px] font-black text-green-600 uppercase tracking-tight">Coupons & Membership</span>
-                                            </div>
-                                            <span className="text-[9px] font-black text-green-600">-₹{bookingData.pricing.discountAmount}</span>
-                                        </div>
-                                    )}
-                                    <div className="flex items-center justify-between py-2 bg-brand/5 -mx-4 px-4 mt-2">
-                                        <span className="text-[10px] font-black text-content uppercase tracking-tight">Total Paid</span>
-                                        <span className="text-[14px] font-[1000] text-brand">₹{(bookingData.pricing?.totalAmount || 0).toLocaleString()}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-
-                            {/* Pricing Policy */}
-                            <div className="bg-white rounded-xl border border-gray-100 p-4">
                                 <p className="text-[8.5px] font-black text-content-subtle uppercase tracking-widest mb-3">Pricing Policy</p>
                                 <div className="space-y-2">
-                                    <div className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                                    <div className="flex items-center justify-between py-2 border-b border-gray-50 last:border-white/5">
                                         <span className="text-[9px] font-semibold text-content-subtle">Base Fare</span>
                                         <span className="text-[9px] font-black text-content">Included in Plan</span>
                                     </div>
-                                    <div className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                                    <div className="flex items-center justify-between py-2 border-b border-gray-50 last:border-white/5">
                                         <span className="text-[9px] font-semibold text-content-subtle">Convenience Fee</span>
                                         <span className="text-[9px] font-black text-content">₹0 (Member Benefit)</span>
                                     </div>
-                                    <div className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                                    <div className="flex items-center justify-between py-2 border-b border-gray-50 last:border-white/5">
                                         <span className="text-[9px] font-semibold text-content-subtle">Tax (GST)</span>
                                         <span className="text-[9px] font-black text-content">Inclusive</span>
                                     </div>
@@ -767,13 +715,13 @@ const BookingConfirmation = () => {
                             className="space-y-4"
                         >
                             {/* Apartment Module */}
-                            <div className="bg-white rounded-xl border border-gray-100 p-4">
+                            <div className="bg-white/5 rounded-xl border border-white/5 p-4">
                                 <div className="flex items-center justify-between mb-3">
                                     <p className="text-[8.5px] font-black text-content-subtle uppercase tracking-widest">Society Management</p>
                                     <Home size={12} className="text-brand" strokeWidth={3} />
                                 </div>
                                 <div className="space-y-3">
-                                    <div className="text-center pb-3 border-b border-gray-100">
+                                    <div className="text-center pb-3 border-b border-white/5">
                                         <p className="text-sm font-black text-content uppercase tracking-tight">{hubData?.name || society || 'Green Valley Apartments'}</p>
                                         <p className="text-[8px] font-bold text-content-subtle mt-1">Society ID: HUB-{hubData?._id?.toString()?.slice(-6).toUpperCase() || 'GS01'}</p>
                                     </div>
@@ -813,14 +761,14 @@ const BookingConfirmation = () => {
                             className="space-y-4"
                         >
                             {/* E-Commerce Cart */}
-                            <div className="bg-white rounded-xl border border-gray-100 p-4">
+                            <div className="bg-white/5 rounded-xl border border-white/5 p-4">
                                 <div className="flex items-center justify-between mb-3">
                                     <p className="text-[8.5px] font-black text-content-subtle uppercase tracking-widest">Shopping Cart</p>
                                     <Camera size={12} className="text-brand" strokeWidth={3} />
                                 </div>
                                 <div className="space-y-2">
                                     {eCommerceData.cart.map((item, i) => (
-                                        <div key={i} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                                        <div key={i} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-white/5">
                                             <div className="flex-1">
                                                 <p className="text-[9px] font-black text-content uppercase tracking-tight">{item.name}</p>
                                                 <p className="text-[7px] font-bold text-content-subtle">Qty: {item.quantity} • {item.delivery}</p>
@@ -832,7 +780,7 @@ const BookingConfirmation = () => {
                             </div>
 
                             {/* Delivery Info */}
-                            <div className="bg-white rounded-xl border border-gray-100 p-4">
+                            <div className="bg-white/5 rounded-xl border border-white/5 p-4">
                                 <div className="flex items-center justify-between mb-3">
                                     <p className="text-[8.5px] font-black text-content-subtle uppercase tracking-widest">Delivery Captain</p>
                                     <Navigation size={12} className="text-brand" strokeWidth={3} />
@@ -877,7 +825,7 @@ const BookingConfirmation = () => {
                         { icon: <Zap size={13} className="text-brand" fill="#FF6B00" />, text: 'Instant' },
                         { icon: <Camera size={13} className="text-purple-500" />, text: 'Photo Proof' }
                     ].map(badge => (
-                        <div key={badge.text} className="flex-1 flex items-center justify-center gap-1.5 bg-white border border-gray-100 rounded-xl py-2.5 shadow-sm">
+                        <div key={badge.text} className="flex-1 flex items-center justify-center gap-1.5 bg-white/5 border border-white/5 rounded-xl py-2.5 ">
                             {badge.icon}
                             <span className="text-[7.5px] font-black uppercase tracking-widest text-content-subtle">{badge.text}</span>
                         </div>
@@ -886,12 +834,12 @@ const BookingConfirmation = () => {
             </div>
 
             {/* Fixed Bottom Actions */}
-            <div className="fixed bottom-0 left-0 w-full p-4 bg-white border-t border-gray-100 z-[150] shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+            <div className="fixed bottom-0 left-0 w-full p-4 bg-white/5 border-t border-white/5 z-[150] shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
                 <div className="flex gap-3">
                     <motion.button
                         whileTap={{ scale: 0.98 }}
                         onClick={() => navigate('/')}
-                        className="flex-1 h-12 bg-gray-100 text-content rounded-xl font-black text-[10px] uppercase tracking-widest border border-gray-200 flex items-center justify-center gap-2"
+                        className="flex-1 h-12 bg-white/[0.05] text-content rounded-xl font-black text-[10px] uppercase tracking-widest border border-white/10 flex items-center justify-center gap-2"
                     >
                         <Home size={14} strokeWidth={2.5} />
                         Back to Home
@@ -906,6 +854,7 @@ const BookingConfirmation = () => {
                     </motion.button>
                 </div>
             </div>
+          </div>
         </MobileLayout>
     );
 };

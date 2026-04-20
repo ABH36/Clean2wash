@@ -43,7 +43,7 @@ const Field = ({ label, error, children }) => (
 );
 
 const inputCls = (err) =>
-    `w-full h-10 bg-background border rounded-xl px-3 text-[12px] font-bold text-content outline-none transition-all focus:border-brand/50 ${err ? 'border-red-300' : 'border-gray-100/10'}`;
+    `w-full h-10 bg-background border rounded-xl px-3 text-[12px] font-bold text-content outline-none transition-all focus:border-brand/50 ${err ? 'border-red-300' : 'border-white/5/10'}`;
 
 // ─── Product Drawer (Add / Edit) ──────────────────────────────────────────────
 const ProductDrawer = ({ open, onClose, initial, onSave }) => {
@@ -113,10 +113,10 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
                     <motion.div
                         initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
                         transition={{ type: 'spring', stiffness: 340, damping: 32 }}
-                        className="fixed right-0 top-0 h-full z-[210] bg-surface shadow-2xl flex flex-col border-l border-gray-100/10 w-full md:w-[420px]"
+                        className="fixed right-0 top-0 h-full z-[210] bg-surface shadow-2xl flex flex-col border-l border-white/5/10 w-full md:w-[420px]"
                     >
                         {/* Header */}
-                        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100/10">
+                        <div className="flex items-center justify-between px-6 py-5 border-b border-white/5/10">
                             <div>
                                 <h2 className="text-base font-black text-content tracking-tight">
                                     {isEdit ? 'Edit Product' : 'Add New Product'}
@@ -125,7 +125,7 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
                                     {isEdit ? (initial?.status === 'Approved' ? 'Note: Saving edits will trigger re-verification' : 'Updating listing details') : 'Fill in the product details below'}
                                 </p>
                             </div>
-                            <button onClick={onClose} className="w-9 h-9 rounded-xl bg-background border border-gray-100/10 flex items-center justify-center text-content-muted hover:text-brand transition-all">
+                            <button onClick={onClose} className="w-9 h-9 rounded-xl bg-background border border-white/5/10 flex items-center justify-center text-content-muted hover:text-brand transition-all">
                                 <X size={18} />
                             </button>
                         </div>
@@ -137,7 +137,7 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
                                 {/* Image Preview & Upload */}
                                 <div
                                     onClick={() => document.getElementById('product-image-upload').click()}
-                                    className="flex-1 relative h-44 bg-background border border-dashed border-gray-100/20 rounded-2xl overflow-hidden flex flex-col items-center justify-center cursor-pointer hover:border-brand/50 transition-all group"
+                                    className="flex-1 relative h-44 bg-background border border-dashed border-white/5/20 rounded-2xl overflow-hidden flex flex-col items-center justify-center cursor-pointer hover:border-brand/50 transition-all group"
                                 >
                                     <input
                                         id="product-image-upload"
@@ -171,7 +171,7 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
                                 {/* Video Preview & Upload */}
                                 <div
                                     onClick={() => document.getElementById('product-video-upload').click()}
-                                    className="flex-1 relative h-44 bg-background border border-dashed border-gray-100/20 rounded-2xl overflow-hidden flex flex-col items-center justify-center cursor-pointer hover:border-brand/50 transition-all group"
+                                    className="flex-1 relative h-44 bg-background border border-dashed border-white/5/20 rounded-2xl overflow-hidden flex flex-col items-center justify-center cursor-pointer hover:border-brand/50 transition-all group"
                                 >
                                     <input
                                         id="product-video-upload"
@@ -225,7 +225,7 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
                                     value={form.description}
                                     onChange={e => set('description', e.target.value)}
                                     rows={4}
-                                    className="w-full bg-background border border-gray-100/10 rounded-xl px-3 py-2.5 text-[12px] font-bold text-content outline-none transition-all focus:border-brand/50 resize-none"
+                                    className="w-full bg-background border border-white/5/10 rounded-xl px-3 py-2.5 text-[12px] font-bold text-content outline-none transition-all focus:border-brand/50 resize-none"
                                 />
                             </Field>
 
@@ -253,7 +253,7 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
                                                     newSpecs[i].key = e.target.value;
                                                     set('specifications', newSpecs);
                                                 }}
-                                                className="flex-1 h-9 bg-background border border-gray-100/10 rounded-lg px-2 text-[10px] font-bold text-content outline-none focus:border-brand/40"
+                                                className="flex-1 h-9 bg-background border border-white/5/10 rounded-lg px-2 text-[10px] font-bold text-content outline-none focus:border-brand/40"
                                             />
                                             <input
                                                 placeholder="Value (e.g. Matte Black)"
@@ -263,7 +263,7 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
                                                     newSpecs[i].value = e.target.value;
                                                     set('specifications', newSpecs);
                                                 }}
-                                                className="flex-1 h-9 bg-background border border-gray-100/10 rounded-lg px-2 text-[10px] font-bold text-content outline-none focus:border-brand/40"
+                                                className="flex-1 h-9 bg-background border border-white/5/10 rounded-lg px-2 text-[10px] font-bold text-content outline-none focus:border-brand/40"
                                             />
                                             <button
                                                 onClick={() => {
@@ -370,7 +370,7 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
                             </div>
 
                             {/* Priority & Own Brand */}
-                            <div className="grid grid-cols-2 gap-3 p-4 bg-background border border-gray-100/10 rounded-2xl">
+                            <div className="grid grid-cols-2 gap-3 p-4 bg-background border border-white/5/10 rounded-2xl">
                                 <label className="flex items-center gap-3 cursor-pointer">
                                     <input
                                         type="checkbox"
@@ -399,10 +399,10 @@ const ProductDrawer = ({ open, onClose, initial, onSave }) => {
                         </div>
 
                         {/* Footer */}
-                        <div className="px-6 py-4 border-t border-gray-100/10 flex gap-3">
+                        <div className="px-6 py-4 border-t border-white/5/10 flex gap-3">
                             <button
                                 onClick={onClose}
-                                className="flex-1 h-11 border border-gray-100/10 rounded-xl text-[11px] font-black text-content-muted tracking-widest uppercase hover:bg-background transition-all"
+                                className="flex-1 h-11 border border-white/5/10 rounded-xl text-[11px] font-black text-content-muted tracking-widest uppercase hover:bg-background transition-all"
                             >
                                 Cancel
                             </button>
@@ -436,7 +436,7 @@ const DeleteConfirm = ({ onConfirm, onCancel }) => (
         <p className="text-sm font-black text-content text-center">Delete product?</p>
         <p className="text-[10px] font-bold text-content-subtle text-center">This action cannot be undone.</p>
         <div className="flex gap-2 w-full mt-1">
-            <button onClick={onCancel} className="flex-1 py-2 border border-gray-100/10 rounded-xl text-[10px] font-black text-content-muted uppercase tracking-widest hover:bg-background transition-all">Keep</button>
+            <button onClick={onCancel} className="flex-1 py-2 border border-white/5/10 rounded-xl text-[10px] font-black text-content-muted uppercase tracking-widest hover:bg-background transition-all">Keep</button>
             <button onClick={onConfirm} className="flex-1 py-2 bg-red-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Delete</button>
         </div>
     </motion.div>
@@ -448,7 +448,7 @@ const ProductCard = ({ p, onEdit, onDelete }) => {
     return (
         <motion.div
             layout
-            className="bg-surface group rounded-[2.5rem] border border-gray-100/10 shadow-soft overflow-hidden flex flex-col hover:border-brand/20 transition-all relative"
+            className="bg-surface group rounded-[2.5rem] border border-white/5/10 shadow-soft overflow-hidden flex flex-col hover:border-brand/20 transition-all relative"
         >
             <AnimatePresence>
                 {confirmDelete && (
@@ -464,13 +464,13 @@ const ProductCard = ({ p, onEdit, onDelete }) => {
                 <div className="absolute top-3 right-3 flex flex-col gap-2">
                     <button
                         onClick={() => onEdit(p)}
-                        className="p-2 bg-surface/90 backdrop-blur-md border border-gray-100/10 rounded-xl text-content-muted hover:text-brand shadow-sm transition-colors"
+                        className="p-2 bg-surface/90 backdrop-blur-md border border-white/5/10 rounded-xl text-content-muted hover:text-brand  transition-colors"
                     >
                         <Edit2 size={13} />
                     </button>
                     <button
                         onClick={() => setConfirmDelete(true)}
-                        className="p-2 bg-surface/90 backdrop-blur-md border border-gray-100/10 rounded-xl text-content-muted hover:text-red-500 shadow-sm transition-colors"
+                        className="p-2 bg-surface/90 backdrop-blur-md border border-white/5/10 rounded-xl text-content-muted hover:text-red-500  transition-colors"
                     >
                         <Trash2 size={13} />
                     </button>
@@ -495,7 +495,7 @@ const ProductCard = ({ p, onEdit, onDelete }) => {
                 )}
                 {p.badge && !p.status && (
                     <div className="absolute top-3 left-3">
-                        <span className="bg-surface/90 backdrop-blur-sm text-[8px] font-black uppercase tracking-wider text-content px-2 py-1 rounded-lg border border-gray-100/10">
+                        <span className="bg-surface/90 backdrop-blur-sm text-[8px] font-black uppercase tracking-wider text-content px-2 py-1 rounded-lg border border-white/5/10">
                             {p.badge}
                         </span>
                     </div>
@@ -528,7 +528,7 @@ const ProductCard = ({ p, onEdit, onDelete }) => {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3 mt-auto pt-4 border-t border-gray-100/10 font-black">
+                <div className="flex items-center gap-3 mt-auto pt-4 border-t border-white/5/10 font-black">
                     <div className="flex-1">
                         <p className="text-[9px] text-content-subtle uppercase tracking-widest leading-none mb-1">Stock</p>
                         <p className={`text-lg transition-colors ${p.stock < 10 ? 'text-amber-500' : 'text-content'}`}>
@@ -552,8 +552,8 @@ const ProductCard = ({ p, onEdit, onDelete }) => {
 const ProductRow = ({ p, onEdit, onDelete }) => {
     const [confirmDelete, setConfirmDelete] = useState(false);
     return (
-        <motion.div layout className="bg-surface p-4 rounded-[1.8rem] border border-gray-100/10 shadow-soft flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 group hover:border-brand/30 transition-all relative overflow-hidden">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden bg-background border border-gray-100/10 flex-shrink-0 shadow-inner">
+        <motion.div layout className="bg-surface p-4 rounded-[1.8rem] border border-white/5/10 shadow-soft flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 group hover:border-brand/30 transition-all relative overflow-hidden">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden bg-background border border-white/5/10 flex-shrink-0 shadow-inner">
                 <img src={p.image} alt="" className="w-full h-full object-cover" />
             </div>
             <div className="flex-1 min-w-0">
@@ -574,11 +574,11 @@ const ProductRow = ({ p, onEdit, onDelete }) => {
                     {p.stock > 10 ? 'Elite' : p.stock > 0 ? `Tactical (${p.stock})` : 'Depleted'}
                 </span>
             </div>
-            <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-none border-gray-100/10">
-                <button onClick={() => onEdit(p)} className="flex-1 sm:flex-none h-10 sm:w-10 bg-background border border-gray-100/10 rounded-xl flex items-center justify-center text-content-muted hover:text-brand transition-all font-bold shadow-sm">
+            <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-none border-white/5/10">
+                <button onClick={() => onEdit(p)} className="flex-1 sm:flex-none h-10 sm:w-10 bg-background border border-white/5/10 rounded-xl flex items-center justify-center text-content-muted hover:text-brand transition-all font-bold ">
                     <Edit2 size={15} />
                 </button>
-                <button onClick={() => setConfirmDelete(true)} className="flex-1 sm:flex-none h-10 sm:w-10 bg-background border border-gray-100/10 rounded-xl flex items-center justify-center text-content-muted hover:text-red-500 transition-all font-bold shadow-sm">
+                <button onClick={() => setConfirmDelete(true)} className="flex-1 sm:flex-none h-10 sm:w-10 bg-background border border-white/5/10 rounded-xl flex items-center justify-center text-content-muted hover:text-red-500 transition-all font-bold ">
                     <Trash2 size={15} />
                 </button>
             </div>
@@ -701,12 +701,12 @@ const VendorProducts = () => {
                         { label: 'Out of Registry', val: String(outOfStock).padStart(2, '0') || '00', icon: Trash2, color: 'text-red-500' },
                         { label: 'Total Value', val: `₹${(totalRevenue / 1000).toFixed(1)}k`, icon: DollarSign, color: 'text-green-500' },
                     ].map(s => (
-                        <div key={s.label} className="bg-surface p-5 rounded-3xl border border-gray-100/10 shadow-soft flex items-center justify-between transition-all hover:scale-105">
+                        <div key={s.label} className="bg-surface p-5 rounded-3xl border border-white/5/10 shadow-soft flex items-center justify-between transition-all hover:scale-105">
                             <div>
                                 <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-none mb-2 font-bold">{s.label}</p>
                                 <h3 className={`text-xl font-black ${s.color}`}>{s.val}</h3>
                             </div>
-                            <div className="w-10 h-10 bg-background border border-gray-100/10 rounded-xl flex items-center justify-center text-content-muted">
+                            <div className="w-10 h-10 bg-background border border-white/5/10 rounded-xl flex items-center justify-center text-content-muted">
                                 <s.icon size={18} strokeWidth={2.5} />
                             </div>
                         </div>
@@ -714,11 +714,11 @@ const VendorProducts = () => {
                 </div>
 
                 {/* Controls */}
-                <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-surface p-4 rounded-3xl border border-gray-100/10 shadow-soft">
-                    <div className="flex gap-2 bg-background p-1 rounded-2xl border border-gray-100/10 overflow-x-auto max-w-full scrollbar-hide">
+                <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-surface p-4 rounded-3xl border border-white/5/10 shadow-soft">
+                    <div className="flex gap-2 bg-background p-1 rounded-2xl border border-white/5/10 overflow-x-auto max-w-full scrollbar-hide">
                         {['All', ...CATEGORIES].map(t => (
                             <button key={t} onClick={() => setActiveTab(t)}
-                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === t ? 'bg-surface text-brand shadow-sm' : 'text-content-subtle hover:text-content'}`}>
+                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === t ? 'bg-surface text-brand ' : 'text-content-subtle hover:text-content'}`}>
                                 {t}
                             </button>
                         ))}
@@ -730,14 +730,14 @@ const VendorProducts = () => {
                             <input
                                 type="text" placeholder="Search products..."
                                 value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                                className="w-full h-10 bg-background border border-gray-100/10 rounded-xl pl-10 pr-4 text-[11px] font-black text-content outline-none focus:ring-2 ring-brand/20 transition-all font-bold"
+                                className="w-full h-10 bg-background border border-white/5/10 rounded-xl pl-10 pr-4 text-[11px] font-black text-content outline-none focus:ring-2 ring-brand/20 transition-all font-bold"
                             />
                         </div>
-                        <div className="flex bg-background border border-gray-100/10 p-1 rounded-xl">
-                            <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-surface text-brand shadow-sm' : 'text-content-muted'}`}>
+                        <div className="flex bg-background border border-white/5/10 p-1 rounded-xl">
+                            <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-surface text-brand ' : 'text-content-muted'}`}>
                                 <Grid size={16} />
                             </button>
-                            <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-surface text-brand shadow-sm' : 'text-content-muted'}`}>
+                            <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-surface text-brand ' : 'text-content-muted'}`}>
                                 <ListIcon size={16} />
                             </button>
                         </div>
@@ -760,8 +760,8 @@ const VendorProducts = () => {
                     <>
                         {/* Empty state */}
                         {filtered.length === 0 && (
-                            <div className="bg-surface rounded-3xl border border-dashed border-gray-100/20 p-20 flex flex-col items-center gap-4 text-center">
-                                <div className="w-16 h-16 bg-background rounded-2xl flex items-center justify-center border border-gray-100/10">
+                            <div className="bg-surface rounded-3xl border border-dashed border-white/5/20 p-20 flex flex-col items-center gap-4 text-center">
+                                <div className="w-16 h-16 bg-background rounded-2xl flex items-center justify-center border border-white/5/10">
                                     <Package size={32} className="text-content-subtle/20" />
                                 </div>
                                 <h3 className="text-base font-black text-content uppercase tracking-tighter">No items found</h3>

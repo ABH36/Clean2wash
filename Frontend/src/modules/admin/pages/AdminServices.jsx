@@ -220,12 +220,12 @@ const AdminServices = () => {
             <div className="space-y-6">
                 {/* Control Matrix Header */}
                 <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
-                    <div className="flex bg-gray-100 p-1 rounded-2xl w-full lg:w-auto overflow-x-auto scrollbar-hide">
+                    <div className="flex bg-white/[0.05] p-1 rounded-2xl w-full lg:w-auto overflow-x-auto scrollbar-hide">
                         {CATEGORIES.map(cat => (
                             <button
                                 key={cat}
                                 onClick={() => setFilter(cat)}
-                                className={`flex-1 lg:px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${filter === cat ? 'bg-white text-brand shadow-sm' : 'text-content-subtle hover:text-content'}`}
+                                className={`flex-1 lg:px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${filter === cat ? 'bg-white/5 text-brand ' : 'text-content-subtle hover:text-content'}`}
                             >
                                 {cat === 'Express' ? 'Instant Wash' : cat}
                             </button>
@@ -233,7 +233,7 @@ const AdminServices = () => {
                     </div>
 
                     <div className="flex items-center gap-3 w-full lg:w-auto">
-                        <div className="flex-1 lg:w-72 bg-white border border-gray-100 rounded-2xl px-4 py-2.5 flex items-center gap-3 shadow-soft group focus-within:border-brand transition-all">
+                        <div className="flex-1 lg:w-72 bg-white/5 border border-white/5 rounded-2xl px-4 py-2.5 flex items-center gap-3 shadow-soft group focus-within:border-brand transition-all">
                             <Search size={16} className="text-content-subtle group-focus-within:text-brand" />
                             <input
                                 type="text"
@@ -243,9 +243,9 @@ const AdminServices = () => {
                                 onChange={(e) => setSearch(e.target.value)}
                             />
                         </div>
-                        <div className="flex bg-gray-100 p-1 rounded-2xl">
-                            <button onClick={() => setView('grid')} className={`p-2 rounded-xl transition-all ${view === 'grid' ? 'bg-white text-brand shadow-sm' : 'text-content-subtle'}`}><LayoutGrid size={18} /></button>
-                            <button onClick={() => setView('list')} className={`p-2 rounded-xl transition-all ${view === 'list' ? 'bg-white text-brand shadow-sm' : 'text-content-subtle'}`}><List size={18} /></button>
+                        <div className="flex bg-white/[0.05] p-1 rounded-2xl">
+                            <button onClick={() => setView('grid')} className={`p-2 rounded-xl transition-all ${view === 'grid' ? 'bg-white/5 text-brand ' : 'text-content-subtle'}`}><LayoutGrid size={18} /></button>
+                            <button onClick={() => setView('list')} className={`p-2 rounded-xl transition-all ${view === 'list' ? 'bg-white/5 text-brand ' : 'text-content-subtle'}`}><List size={18} /></button>
                         </div>
                         <button
                             onClick={handleOpenAdd}
@@ -265,9 +265,9 @@ const AdminServices = () => {
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ delay: i * 0.05 }}
-                                className="bg-white rounded-[2rem] border border-gray-100 shadow-soft overflow-hidden group hover:border-brand transition-all flex flex-col"
+                                className="bg-white/5 rounded-[2rem] border border-white/5 shadow-soft overflow-hidden group hover:border-brand transition-all flex flex-col"
                             >
-                                <div className="h-40 bg-gray-100 flex items-center justify-center relative overflow-hidden">
+                                <div className="h-40 bg-white/[0.05] flex items-center justify-center relative overflow-hidden">
                                     <div className={`absolute inset-0 ${service.color || 'bg-brand'} opacity-10`} />
                                     <ImageIcon size={40} className="text-gray-300 relative z-10" />
                                     <div className="absolute top-4 left-4">
@@ -276,8 +276,8 @@ const AdminServices = () => {
                                         </span>
                                     </div>
                                     <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                        <button onClick={() => handleOpenEdit(service)} className="w-8 h-8 bg-white/90 backdrop-blur rounded-lg flex items-center justify-center text-content hover:bg-brand hover:text-white shadow-sm transition-all"><Edit2 size={12} /></button>
-                                        <button onClick={() => setDeleteConfirm({ isOpen: true, id: service._id })} className="w-8 h-8 bg-white/90 backdrop-blur rounded-lg flex items-center justify-center text-content hover:bg-red-500 hover:text-white shadow-sm transition-all"><Trash2 size={12} /></button>
+                                        <button onClick={() => handleOpenEdit(service)} className="w-8 h-8 bg-white/90 backdrop-blur rounded-lg flex items-center justify-center text-content hover:bg-brand hover:text-white  transition-all"><Edit2 size={12} /></button>
+                                        <button onClick={() => setDeleteConfirm({ isOpen: true, id: service._id })} className="w-8 h-8 bg-white/90 backdrop-blur rounded-lg flex items-center justify-center text-content hover:bg-red-500 hover:text-white  transition-all"><Trash2 size={12} /></button>
                                     </div>
                                 </div>
                                 <div className="p-6 flex-1 flex flex-col">
@@ -288,7 +288,7 @@ const AdminServices = () => {
                                     <h3 className="text-sm font-black text-content leading-tight mb-4 group-hover:text-brand transition-colors">{service.name}</h3>
                                     <div className="mt-auto flex items-center justify-between pt-4 border-t border-gray-50">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center text-content-subtle"><Clock size={14} /></div>
+                                            <div className="w-8 h-8 bg-white/[0.02] rounded-lg flex items-center justify-center text-content-subtle"><Clock size={14} /></div>
                                             <p className="text-[10px] font-black text-content">{service.time}</p>
                                         </div>
                                         <p className="text-lg font-black text-content leading-none truncate ml-2">₹{service.price}</p>
@@ -300,7 +300,7 @@ const AdminServices = () => {
                 ) : (
                     <div className="admin-table-container">
                         <table className="w-full text-left">
-                            <thead className="bg-gray-50/50">
+                            <thead className="bg-white/[0.02]/50">
                                 <tr>
                                     <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest">Protocol Desc</th>
                                     <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest">Metadata</th>
@@ -311,10 +311,10 @@ const AdminServices = () => {
                             </thead>
                             <tbody className="divide-y divide-gray-50">
                                 {filteredServices.map(service => (
-                                    <tr key={service._id} className="group hover:bg-gray-50/30 transition-all">
+                                    <tr key={service._id} className="group hover:bg-white/[0.02]/30 transition-all">
                                         <td className="px-8 py-6">
                                             <div className="flex items-center gap-4">
-                                                <div className={`w-10 h-10 rounded-2xl ${service.color || 'bg-brand'} bg-opacity-10 flex items-center justify-center text-content border border-gray-100 group-hover:bg-brand group-hover:text-white transition-all`}>
+                                                <div className={`w-10 h-10 rounded-2xl ${service.color || 'bg-brand'} bg-opacity-10 flex items-center justify-center text-content border border-white/5 group-hover:bg-brand group-hover:text-white transition-all`}>
                                                     <Settings size={18} />
                                                 </div>
                                                 <div>
@@ -345,10 +345,10 @@ const AdminServices = () => {
                                         </td>
                                         <td className="px-8 py-6">
                                             <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                                <button onClick={() => handleOpenEdit(service)} className="p-2.5 bg-gray-50 hover:bg-brand hover:text-white rounded-xl text-content-subtle transition-all shadow-sm">
+                                                <button onClick={() => handleOpenEdit(service)} className="p-2.5 bg-white/[0.02] hover:bg-brand hover:text-white rounded-xl text-content-subtle transition-all ">
                                                     <Edit2 size={13} />
                                                 </button>
-                                                <button onClick={() => setDeleteConfirm({ isOpen: true, id: service._id })} className="p-2.5 bg-gray-50 hover:bg-red-500 hover:text-white rounded-xl text-content-subtle transition-all shadow-sm">
+                                                <button onClick={() => setDeleteConfirm({ isOpen: true, id: service._id })} className="p-2.5 bg-white/[0.02] hover:bg-red-500 hover:text-white rounded-xl text-content-subtle transition-all ">
                                                     <Trash2 size={13} />
                                                 </button>
                                             </div>
@@ -376,20 +376,20 @@ const AdminServices = () => {
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-gray-100 max-h-[90vh] overflow-y-auto"
+                            className="bg-white/5 w-full max-w-2xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-white/5 max-h-[90vh] overflow-y-auto"
                         >
-                            <div className="px-10 py-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                            <div className="px-10 py-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]/50">
                                 <div>
                                     <h2 className="text-xl font-black text-content leading-none uppercase">{editingService ? 'Update Protocol' : 'New Service Node'}</h2>
                                     <p className="text-[10px] font-black text-brand uppercase tracking-widest mt-2 px-1">Control Configuration Terminal</p>
                                 </div>
-                                <button onClick={() => setIsModalOpen(false)} className="p-3 bg-white hover:bg-gray-50 rounded-2xl border border-gray-100 text-content-subtle transition-all">
+                                <button onClick={() => setIsModalOpen(false)} className="p-3 bg-white/5 hover:bg-white/[0.02] rounded-2xl border border-white/5 text-content-subtle transition-all">
                                     <X size={20} />
                                 </button>
                             </div>
 
                             {/* Tabs UI */}
-                            <div className="px-10 py-4 bg-white border-b border-gray-100 flex items-center gap-6 overflow-x-auto scrollbar-hide">
+                            <div className="px-10 py-4 bg-white/5 border-b border-white/5 flex items-center gap-6 overflow-x-auto scrollbar-hide">
                                 {[
                                     { id: 'basic', label: 'Core Sync' },
                                     { id: 'advanced', label: 'Advanced Protocol' },
@@ -416,7 +416,7 @@ const AdminServices = () => {
                                                 <input
                                                     required
                                                     placeholder="e.g. Ultra Steam Detail"
-                                                    className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
+                                                    className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white/5 transition-all "
                                                     value={formData.name}
                                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                                                 />
@@ -424,7 +424,7 @@ const AdminServices = () => {
                                             <div className="space-y-1.5 font-sans">
                                                 <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Operational Category</label>
                                                 <select
-                                                    className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm appearance-none"
+                                                    className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white/5 transition-all  appearance-none"
                                                     value={formData.category}
                                                     onChange={e => setFormData({ ...formData, category: e.target.value })}
                                                 >
@@ -437,7 +437,7 @@ const AdminServices = () => {
                                             <div className="space-y-1.5 font-sans">
                                                 <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Network Node Type</label>
                                                 <select
-                                                    className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm appearance-none"
+                                                    className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white/5 transition-all  appearance-none"
                                                     value={formData.type}
                                                     onChange={e => setFormData({ ...formData, type: e.target.value })}
                                                 >
@@ -454,7 +454,7 @@ const AdminServices = () => {
                                                     required
                                                     type="number"
                                                     placeholder="e.g. 599"
-                                                    className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
+                                                    className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white/5 transition-all "
                                                     value={formData.price}
                                                     onChange={e => setFormData({ ...formData, price: e.target.value })}
                                                 />
@@ -464,7 +464,7 @@ const AdminServices = () => {
                                                 <input
                                                     required
                                                     placeholder="e.g. 45m"
-                                                    className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
+                                                    className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white/5 transition-all "
                                                     value={formData.time}
                                                     onChange={e => setFormData({ ...formData, time: e.target.value })}
                                                 />
@@ -476,7 +476,7 @@ const AdminServices = () => {
                                         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-5 duration-300">
                                             {/* Multiplier & Starting Price */}
                                             <div className="flex flex-col md:flex-row gap-4">
-                                                <div className="flex-1 p-5 bg-gray-50 rounded-2xl border border-gray-100">
+                                                <div className="flex-1 p-5 bg-white/[0.02] rounded-2xl border border-white/5">
                                                     <div className="flex items-center justify-between mb-2">
                                                         <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Multiplier Status</label>
                                                         <button
@@ -484,16 +484,16 @@ const AdminServices = () => {
                                                             onClick={() => setFormData(prev => ({ ...prev, multiplierEnabled: !prev.multiplierEnabled }))}
                                                             className={`w-10 h-5 rounded-full relative transition-all ${formData.multiplierEnabled ? 'bg-brand' : 'bg-gray-300'}`}
                                                         >
-                                                            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${formData.multiplierEnabled ? 'left-5.5' : 'left-0.5'}`} />
+                                                            <div className={`absolute top-0.5 w-4 h-4 bg-white/5 rounded-full  transition-all ${formData.multiplierEnabled ? 'left-5.5' : 'left-0.5'}`} />
                                                         </button>
                                                     </div>
                                                     <p className="text-[9px] font-bold text-content-subtle uppercase">Dynamic demand-based pricing</p>
                                                 </div>
-                                                <div className="flex-1 p-5 bg-gray-50 rounded-2xl border border-gray-100">
+                                                <div className="flex-1 p-5 bg-white/[0.02] rounded-2xl border border-white/5">
                                                     <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest block mb-2">Starting Price (₹)</label>
                                                     <input
                                                         type="number"
-                                                        className="w-full bg-white border border-gray-100 px-4 py-2 rounded-xl text-xs font-bold focus:border-brand outline-none"
+                                                        className="w-full bg-white/5 border border-white/5 px-4 py-2 rounded-xl text-xs font-bold focus:border-brand outline-none"
                                                         value={formData.startingPrice}
                                                         onChange={e => setFormData({ ...formData, startingPrice: parseInt(e.target.value) })}
                                                     />
@@ -511,14 +511,14 @@ const AdminServices = () => {
                                                     {formData.detailedCoverage.map((point, idx) => (
                                                         <div key={idx} className="flex gap-2">
                                                             <input
-                                                                className="flex-1 bg-gray-50 border border-gray-100 px-4 py-3 rounded-xl text-xs font-bold outline-none focus:border-brand focus:bg-white"
+                                                                className="flex-1 bg-white/[0.02] border border-white/5 px-4 py-3 rounded-xl text-xs font-bold outline-none focus:border-brand focus:bg-white/5"
                                                                 value={point}
                                                                 onChange={e => handleUpdateArrayItem('detailedCoverage', idx, e.target.value)}
                                                             />
                                                             <button type="button" onClick={() => handleRemoveArrayItem('detailedCoverage', idx)} className="p-3 text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={14} /></button>
                                                         </div>
                                                     ))}
-                                                    <button type="button" onClick={() => handleAddArrayItem('detailedCoverage')} className="w-full py-3 border border-dashed border-gray-200 rounded-xl text-[9px] font-black uppercase tracking-widest text-content-subtle hover:border-brand hover:text-brand transition-all">+ Add Scope Item</button>
+                                                    <button type="button" onClick={() => handleAddArrayItem('detailedCoverage')} className="w-full py-3 border border-dashed border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-content-subtle hover:border-brand hover:text-brand transition-all">+ Add Scope Item</button>
                                                 </div>
                                             </div>
 
@@ -531,11 +531,11 @@ const AdminServices = () => {
                                                 </div>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     {formData.inclusions.map((inc, idx) => (
-                                                        <div key={idx} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-3 relative group">
+                                                        <div key={idx} className="p-4 bg-white/[0.02] rounded-2xl border border-white/5 space-y-3 relative group">
                                                             <button type="button" onClick={() => handleRemoveInclusion(idx)} className="absolute top-2 right-2 p-1.5 text-red-500 opacity-0 group-hover:opacity-100 transition-all"><X size={12} /></button>
                                                             <input
                                                                 placeholder="Item Name"
-                                                                className="w-full bg-white border border-gray-100 px-3 py-2 rounded-lg text-xs font-bold outline-none focus:border-brand"
+                                                                className="w-full bg-white/5 border border-white/5 px-3 py-2 rounded-lg text-xs font-bold outline-none focus:border-brand"
                                                                 value={inc.name}
                                                                 onChange={e => handleUpdateInclusion(idx, 'name', e.target.value)}
                                                             />
@@ -543,21 +543,21 @@ const AdminServices = () => {
                                                                 <input
                                                                     type="number"
                                                                     placeholder="Price"
-                                                                    className="w-20 bg-white border border-gray-100 px-3 py-2 rounded-lg text-xs font-bold outline-none focus:border-brand"
+                                                                    className="w-20 bg-white/5 border border-white/5 px-3 py-2 rounded-lg text-xs font-bold outline-none focus:border-brand"
                                                                     value={inc.price}
                                                                     onChange={e => handleUpdateInclusion(idx, 'price', parseInt(e.target.value))}
                                                                 />
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => handleUpdateInclusion(idx, 'isRecommended', !inc.isRecommended)}
-                                                                    className={`px-3 py-2 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${inc.isRecommended ? 'bg-brand text-white' : 'bg-white text-content-subtle border border-gray-100'}`}
+                                                                    className={`px-3 py-2 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${inc.isRecommended ? 'bg-brand text-white' : 'bg-white/5 text-content-subtle border border-white/5'}`}
                                                                 >
                                                                     Rec
                                                                 </button>
                                                             </div>
                                                         </div>
                                                     ))}
-                                                    <button type="button" onClick={handleAddInclusion} className="md:col-span-2 py-4 border border-dashed border-gray-200 rounded-2xl text-[9px] font-black uppercase tracking-widest text-content-subtle hover:border-brand hover:text-brand transition-all">+ Add Add-on Item</button>
+                                                    <button type="button" onClick={handleAddInclusion} className="md:col-span-2 py-4 border border-dashed border-white/10 rounded-2xl text-[9px] font-black uppercase tracking-widest text-content-subtle hover:border-brand hover:text-brand transition-all">+ Add Add-on Item</button>
                                                 </div>
                                             </div>
 
@@ -570,14 +570,14 @@ const AdminServices = () => {
                                                     {formData.exclusions.map((point, idx) => (
                                                         <div key={idx} className="flex gap-2">
                                                             <input
-                                                                className="flex-1 bg-gray-50 border border-gray-100 px-4 py-3 rounded-xl text-xs font-bold outline-none focus:border-red-500"
+                                                                className="flex-1 bg-white/[0.02] border border-white/5 px-4 py-3 rounded-xl text-xs font-bold outline-none focus:border-red-500"
                                                                 value={point}
                                                                 onChange={e => handleUpdateArrayItem('exclusions', idx, e.target.value)}
                                                             />
                                                             <button type="button" onClick={() => handleRemoveArrayItem('exclusions', idx)} className="p-3 text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={14} /></button>
                                                         </div>
                                                     ))}
-                                                    <button type="button" onClick={() => handleAddArrayItem('exclusions')} className="w-full py-3 border border-dashed border-gray-200 rounded-xl text-[9px] font-black uppercase tracking-widest text-content-subtle hover:border-red-500 hover:text-red-500 transition-all">+ Add Exclusion</button>
+                                                    <button type="button" onClick={() => handleAddArrayItem('exclusions')} className="w-full py-3 border border-dashed border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-content-subtle hover:border-red-500 hover:text-red-500 transition-all">+ Add Exclusion</button>
                                                 </div>
                                             </div>
 
@@ -590,7 +590,7 @@ const AdminServices = () => {
                                                     <div className="space-y-1.5">
                                                         <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest">Main Image URL</label>
                                                         <input
-                                                            className="w-full bg-gray-50 border border-gray-100 px-4 py-3 rounded-xl text-xs font-bold outline-none focus:border-brand"
+                                                            className="w-full bg-white/[0.02] border border-white/5 px-4 py-3 rounded-xl text-xs font-bold outline-none focus:border-brand"
                                                             placeholder="https://..."
                                                             value={formData.image}
                                                             onChange={e => setFormData({ ...formData, image: e.target.value })}
@@ -599,7 +599,7 @@ const AdminServices = () => {
                                                     <div className="space-y-1.5">
                                                         <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest">Promo Video URL</label>
                                                         <input
-                                                            className="w-full bg-gray-50 border border-gray-100 px-4 py-3 rounded-xl text-xs font-bold outline-none focus:border-brand"
+                                                            className="w-full bg-white/[0.02] border border-white/5 px-4 py-3 rounded-xl text-xs font-bold outline-none focus:border-brand"
                                                             placeholder="Video Link"
                                                             value={formData.videoUrl}
                                                             onChange={e => setFormData({ ...formData, videoUrl: e.target.value })}
@@ -608,7 +608,7 @@ const AdminServices = () => {
                                                     <div className="space-y-1.5">
                                                         <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest">Category Banner URL</label>
                                                         <input
-                                                            className="w-full bg-gray-50 border border-gray-100 px-4 py-3 rounded-xl text-xs font-bold outline-none focus:border-brand"
+                                                            className="w-full bg-white/[0.02] border border-white/5 px-4 py-3 rounded-xl text-xs font-bold outline-none focus:border-brand"
                                                             placeholder="Banner Image"
                                                             value={formData.bannerImage}
                                                             onChange={e => setFormData({ ...formData, bannerImage: e.target.value })}
@@ -619,7 +619,7 @@ const AdminServices = () => {
                                                             <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest">Fixed Rating</label>
                                                             <input
                                                                 type="number" step="0.1"
-                                                                className="w-full bg-gray-50 border border-gray-100 px-4 py-3 rounded-xl text-xs font-bold outline-none focus:border-brand"
+                                                                className="w-full bg-white/[0.02] border border-white/5 px-4 py-3 rounded-xl text-xs font-bold outline-none focus:border-brand"
                                                                 value={formData.rating}
                                                                 onChange={e => setFormData({ ...formData, rating: parseFloat(e.target.value) })}
                                                             />
@@ -627,7 +627,7 @@ const AdminServices = () => {
                                                         <div className="space-y-1.5">
                                                             <label className="text-[9px] font-black text-content-subtle uppercase tracking-widest">Badge/Tag</label>
                                                             <input
-                                                                className="w-full bg-gray-50 border border-gray-100 px-4 py-3 rounded-xl text-xs font-bold outline-none focus:border-brand"
+                                                                className="w-full bg-white/[0.02] border border-white/5 px-4 py-3 rounded-xl text-xs font-bold outline-none focus:border-brand"
                                                                 placeholder="BEST SELLER"
                                                                 value={formData.tag}
                                                                 onChange={e => setFormData({ ...formData, tag: e.target.value })}
@@ -638,7 +638,7 @@ const AdminServices = () => {
                                             </div>
 
                                             {/* Advanced Info management (Features, Steps, FAQs) */}
-                                            <div className="pt-6 border-t border-gray-100 space-y-8">
+                                            <div className="pt-6 border-t border-white/5 space-y-8">
                                                 {/* Features Section */}
                                                 <div className="space-y-4">
                                                     <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest flex items-center justify-between">
@@ -649,7 +649,7 @@ const AdminServices = () => {
                                                         {formData.features.map((f, idx) => (
                                                             <div key={idx} className="flex gap-2">
                                                                 <input
-                                                                    className="flex-1 bg-gray-50 border border-gray-100 px-4 py-2 rounded-xl text-[11px] font-bold outline-none"
+                                                                    className="flex-1 bg-white/[0.02] border border-white/5 px-4 py-2 rounded-xl text-[11px] font-bold outline-none"
                                                                     placeholder="e.g. Eco-Friendly"
                                                                     value={f.text}
                                                                     onChange={e => {
@@ -673,9 +673,9 @@ const AdminServices = () => {
                                                     <div className="space-y-2">
                                                         {formData.protocolSteps.map((step, idx) => (
                                                             <div key={idx} className="flex gap-2">
-                                                                <span className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-black">{idx + 1}</span>
+                                                                <span className="w-6 h-6 rounded-full bg-white/[0.05] flex items-center justify-center text-[10px] font-black">{idx + 1}</span>
                                                                 <input
-                                                                    className="flex-1 bg-gray-50 border border-gray-100 px-4 py-2 rounded-xl text-[11px] font-bold outline-none"
+                                                                    className="flex-1 bg-white/[0.02] border border-white/5 px-4 py-2 rounded-xl text-[11px] font-bold outline-none"
                                                                     placeholder="e.g. Foam Pre-wash"
                                                                     value={step}
                                                                     onChange={e => {
@@ -698,10 +698,10 @@ const AdminServices = () => {
                                                     </label>
                                                     <div className="space-y-4">
                                                         {formData.faqs.map((faq, idx) => (
-                                                            <div key={idx} className="bg-gray-50 rounded-2xl p-4 space-y-2 relative group">
+                                                            <div key={idx} className="bg-white/[0.02] rounded-2xl p-4 space-y-2 relative group">
                                                                 <button type="button" onClick={() => setFormData({ ...formData, faqs: formData.faqs.filter((_, i) => i !== idx) })} className="absolute top-2 right-2 p-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={12} /></button>
                                                                 <input
-                                                                    className="w-full bg-white border border-gray-200 px-4 py-2 rounded-xl text-[11px] font-bold outline-none"
+                                                                    className="w-full bg-white/5 border border-white/10 px-4 py-2 rounded-xl text-[11px] font-bold outline-none"
                                                                     placeholder="Question"
                                                                     value={faq.question}
                                                                     onChange={e => {
@@ -711,7 +711,7 @@ const AdminServices = () => {
                                                                     }}
                                                                 />
                                                                 <textarea
-                                                                    className="w-full bg-white border border-gray-200 px-4 py-2 rounded-xl text-[10px] font-medium outline-none resize-none"
+                                                                    className="w-full bg-white/5 border border-white/10 px-4 py-2 rounded-xl text-[10px] font-medium outline-none resize-none"
                                                                     placeholder="Answer"
                                                                     rows={2}
                                                                     value={faq.answer}
@@ -731,7 +731,7 @@ const AdminServices = () => {
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Marketing Note / Admin Instructions</label>
                                                 <textarea
-                                                    className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm resize-none"
+                                                    className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white/5 transition-all  resize-none"
                                                     rows={3}
                                                     value={formData.adminNote}
                                                     onChange={e => setFormData({ ...formData, adminNote: e.target.value })}
@@ -759,7 +759,7 @@ const AdminServices = () => {
                                                         onClick={() => setFormData(prev => ({ ...prev, subscriptionOffer: { ...prev.subscriptionOffer, enabled: !prev.subscriptionOffer?.enabled } }))}
                                                         className={`w-11 h-6 rounded-full transition-all relative ${formData.subscriptionOffer?.enabled ? 'bg-amber-500' : 'bg-gray-200'}`}
                                                     >
-                                                        <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all ${formData.subscriptionOffer?.enabled ? 'left-5' : 'left-0.5'}`} />
+                                                        <div className={`absolute top-0.5 w-5 h-5 bg-white/5 rounded-full  transition-all ${formData.subscriptionOffer?.enabled ? 'left-5' : 'left-0.5'}`} />
                                                     </button>
                                                 </div>
 
@@ -770,7 +770,7 @@ const AdminServices = () => {
                                                             <input
                                                                 type="number" min="1"
                                                                 placeholder="10"
-                                                                className="w-full bg-white border border-amber-200 px-4 py-3 rounded-xl text-xs font-bold text-content outline-none focus:border-amber-500 transition-all"
+                                                                className="w-full bg-white/5 border border-amber-200 px-4 py-3 rounded-xl text-xs font-bold text-content outline-none focus:border-amber-500 transition-all"
                                                                 value={formData.subscriptionOffer?.washCount || 10}
                                                                 onChange={e => setFormData(prev => ({ ...prev, subscriptionOffer: { ...prev.subscriptionOffer, washCount: parseInt(e.target.value) } }))}
                                                             />
@@ -780,7 +780,7 @@ const AdminServices = () => {
                                                             <input
                                                                 type="number" min="1"
                                                                 placeholder="1"
-                                                                className="w-full bg-white border border-amber-200 px-4 py-3 rounded-xl text-xs font-bold text-content outline-none focus:border-amber-500 transition-all"
+                                                                className="w-full bg-white/5 border border-amber-200 px-4 py-3 rounded-xl text-xs font-bold text-content outline-none focus:border-amber-500 transition-all"
                                                                 value={formData.subscriptionOffer?.freeWashes || 1}
                                                                 onChange={e => setFormData(prev => ({ ...prev, subscriptionOffer: { ...prev.subscriptionOffer, freeWashes: parseInt(e.target.value) } }))}
                                                             />
@@ -790,7 +790,7 @@ const AdminServices = () => {
                                                             <input
                                                                 type="text"
                                                                 placeholder={`Buy ${formData.subscriptionOffer?.washCount || 10} Get ${formData.subscriptionOffer?.freeWashes || 1} FREE`}
-                                                                className="w-full bg-white border border-amber-200 px-4 py-3 rounded-xl text-xs font-bold text-content outline-none focus:border-amber-500 transition-all"
+                                                                className="w-full bg-white/5 border border-amber-200 px-4 py-3 rounded-xl text-xs font-bold text-content outline-none focus:border-amber-500 transition-all"
                                                                 value={formData.subscriptionOffer?.label || ''}
                                                                 onChange={e => setFormData(prev => ({ ...prev, subscriptionOffer: { ...prev.subscriptionOffer, label: e.target.value } }))}
                                                             />
@@ -816,13 +816,13 @@ const AdminServices = () => {
 
                                                 <div className="space-y-3">
                                                     {formData.offers.map((offer, idx) => (
-                                                        <div key={idx} className="bg-white rounded-xl p-4 border border-emerald-100 space-y-3 relative group">
+                                                        <div key={idx} className="bg-white/5 rounded-xl p-4 border border-emerald-100 space-y-3 relative group">
                                                             <button type="button" onClick={() => setFormData({ ...formData, offers: formData.offers.filter((_, i) => i !== idx) })} className="absolute top-2 right-2 p-1.5 text-red-500 opacity-0 group-hover:opacity-100 transition-all"><X size={12} /></button>
                                                             <div className="grid grid-cols-2 gap-3">
                                                                 <div className="col-span-2 space-y-1">
                                                                     <label className="text-[8px] font-black text-content-subtle uppercase">Offer Message</label>
                                                                     <input
-                                                                        className="w-full bg-gray-50 border border-gray-100 px-3 py-2 rounded-lg text-[10px] font-bold outline-none"
+                                                                        className="w-full bg-white/[0.02] border border-white/5 px-3 py-2 rounded-lg text-[10px] font-bold outline-none"
                                                                         placeholder="e.g. 20% OFF on your first wash"
                                                                         value={offer.text}
                                                                         onChange={e => {
@@ -835,7 +835,7 @@ const AdminServices = () => {
                                                                 <div className="space-y-1">
                                                                     <label className="text-[8px] font-black text-content-subtle uppercase">Promo Code</label>
                                                                     <input
-                                                                        className="w-full bg-gray-50 border border-gray-100 px-3 py-2 rounded-lg text-[10px] font-bold outline-none"
+                                                                        className="w-full bg-white/[0.02] border border-white/5 px-3 py-2 rounded-lg text-[10px] font-bold outline-none"
                                                                         placeholder="CLEAN20"
                                                                         value={offer.code}
                                                                         onChange={e => {
@@ -848,7 +848,7 @@ const AdminServices = () => {
                                                                 <div className="space-y-1">
                                                                     <label className="text-[8px] font-black text-content-subtle uppercase">Theme</label>
                                                                     <select
-                                                                        className="w-full bg-gray-50 border border-gray-100 px-3 py-2 rounded-lg text-[10px] font-bold outline-none"
+                                                                        className="w-full bg-white/[0.02] border border-white/5 px-3 py-2 rounded-lg text-[10px] font-bold outline-none"
                                                                         value={offer.color}
                                                                         onChange={e => {
                                                                             const newO = [...formData.offers];
@@ -883,7 +883,7 @@ const AdminServices = () => {
                                                     <textarea
                                                         rows={3}
                                                         placeholder="4 Times/Month | 249 | 996&#10;8 Times/Month | 139 | 1112"
-                                                        className="w-full bg-white border border-indigo-100 px-4 py-3 rounded-xl text-xs font-bold text-indigo-900 outline-none focus:border-indigo-400 transition-all resize-none shadow-sm"
+                                                        className="w-full bg-white/5 border border-indigo-100 px-4 py-3 rounded-xl text-xs font-bold text-indigo-900 outline-none focus:border-indigo-400 transition-all resize-none "
                                                         value={formData.plansText || ''}
                                                         onChange={e => setFormData(prev => ({ ...prev, plansText: e.target.value }))}
                                                     />
@@ -893,7 +893,7 @@ const AdminServices = () => {
                                         </div>
                                     )}
 
-                                    <div className="pt-4 pb-2 sticky bottom-0 bg-white">
+                                    <div className="pt-4 pb-2 sticky bottom-0 bg-white/5">
                                         <button
                                             disabled={loading}
                                             className="w-full bg-content text-white py-5 rounded-[2rem] font-black text-[10px] uppercase tracking-[0.25em] shadow-2xl shadow-content/20 flex items-center justify-center gap-3 hover:bg-brand transition-all disabled:opacity-50"
@@ -927,7 +927,7 @@ const AdminServices = () => {
                                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                                className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 relative z-10 border border-gray-100 shadow-2xl text-center"
+                                className="bg-white/5 w-full max-w-sm rounded-[2.5rem] p-8 relative z-10 border border-white/5 shadow-2xl text-center"
                             >
                                 <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
                                     <Trash2 size={32} />
@@ -938,7 +938,7 @@ const AdminServices = () => {
                                 <div className="flex gap-3">
                                     <button
                                         onClick={() => setDeleteConfirm({ isOpen: false, id: null })}
-                                        className="flex-1 bg-gray-100 text-content-subtle py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all"
+                                        className="flex-1 bg-white/[0.05] text-content-subtle py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all"
                                     >
                                         Cancel
                                     </button>

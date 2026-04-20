@@ -78,8 +78,32 @@ module.exports = {
             // Join a booking-specific room for real-time tracking
             socket.on('join_booking_room', (bookingId) => {
                 socket.join(bookingId);
+                socket.join(`booking_${bookingId}`);
                 console.log(`Socket ${socket.id} joined booking room: ${bookingId}`);
             });
+
+            // 💬 Chat Events
+            socket.on('join_booking', ({ bookingId }) => {
+                socket.join(`booking_${bookingId}`);
+                console.log(`Socket ${socket.id} joined chat for booking: ${bookingId}`);
+            });
+
+            socket.on('typing', ({ bookingId, userId }) => {
+                socket.to(`booking_${bookingId}`).emit('user_typing', { bookingId, userId });
+            });
+
+            socket.on('stop_typing', ({ bookingId, userId }) => {
+                socket.to(`booking_${bookingId}`).emit('user_stopped_typing', { bookingId, userId });
+            });
+
+            // 📞 Join user-specific room for calls
+            if (userId && userRole) {
+                const userRoomName = userRole === 'driver' || userRole === 'sparedriver' 
+                    ? `sparedriver_${userId}` 
+                    : `user_${userId}`;
+                socket.join(userRoomName);
+                console.log(`Socket ${socket.id} joined personal room: ${userRoomName}`);
+            }
 
             // Join the general admin room for broadcast alerts like SOS
             socket.on('join_admin_room', () => {

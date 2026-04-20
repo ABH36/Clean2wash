@@ -62,7 +62,7 @@ exports.sendOTP = catchAsync(async (req, res, next) => {
 
     // Find consumer by phone or email
     let consumer = await User.findByEmailOrPhone(identifier);
-    const isNewUser = !consumer;
+    let isNewUser = !consumer;
 
     // Signup: new user with userData — create consumer only then
     if (isNewUser && req.body.userData) {
@@ -70,15 +70,24 @@ exports.sendOTP = catchAsync(async (req, res, next) => {
         consumer = new User({
             name: name || `User_${identifier.slice(-4)}`,
             phone: sanitizePhone(phone || (type === 'phone' ? identifier : '')),
-            email: email || (type === 'email' ? identifier : `user_${identifier}@temp.com`),
-            password: 'defaultPassword123', // Will be updated after OTP verification
+            email: email || (type === 'email' ? identifier.toLowerCase() : undefined),
+            password: crypto.randomBytes(8).toString('hex'),
             role: 'consumer'
         });
     }
 
-    // Login: user not found and no signup data — do NOT create, ask to sign up
+    // New User handling: If still no consumer, create a minimal "pending" one
     if (!consumer) {
-        return next(new AppError('No account found with this phone/email. Please sign up first.', 404));
+        consumer = new User({
+            name: 'New User',
+            phone: type === 'phone' ? sanitizePhone(identifier) : `9999999999`,
+            email: type === 'email' ? identifier.toLowerCase() : undefined,
+            password: crypto.randomBytes(8).toString('hex'),
+            role: 'consumer',
+            isVerified: false
+        });
+        await consumer.save({ validateBeforeSave: false });
+        isNewUser = true;
     }
 
     // Generate and save OTP
@@ -165,7 +174,19 @@ exports.verifyOTP = catchAsync(async (req, res, next) => {
     consumer.otp = undefined;
 
     // Send token
-    createSendToken(consumer, 200, res, 'Login successful');
+    const needsSignup = consumer.name === 'New User';
+    const token = signToken(consumer._id);
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Login successful',
+        token,
+        needsSignup,
+        data: {
+            consumer,
+            token
+        }
+    });
 });
 
 // Login with phone/email and password (alternative method)

@@ -1,25 +1,49 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, ShieldCheck, Timer, RefreshCw, CheckCircle2, ArrowRight, Zap, Lock } from 'lucide-react';
+import { ChevronLeft, Timer, CheckCircle2, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { toast } from 'react-hot-toast';
+
+import logo from '../../../assets/spareDriverLogo.png';
 
 const OTPVerification = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { verifyOTP, sendOTP } = useAuth();
 
-    // Get from navigation state (login = no userData, signup = userData)
     const { type, identifier, userData, devOtp } = location.state || { type: 'phone', identifier: '' };
 
-    const [otp, setOtp] = useState(devOtp ? devOtp.split('') : ['', '', '', '']);
+    const [otp, setOtp] = useState(['', '', '', '', '', '']); // 6-digit OTP
     const [timeLeft, setTimeLeft] = useState(45);
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState('entering');
     const [error, setError] = useState('');
     const [resending, setResending] = useState(false);
     const otpRefs = useRef([]);
+
+    // Show OTP in toast for development - Single source for verification toast
+    useEffect(() => {
+        if (devOtp) {
+            // Dismiss all existing toasts to prevent stacking
+            toast.dismiss();
+            
+            toast(`Your verification code is: ${devOtp}`, {
+                icon: '🔢',
+                duration: 8000,
+                position: 'top-center',
+                style: {
+                    borderRadius: '20px',
+                    background: '#F59E0B',
+                    color: '#fff',
+                    fontWeight: 'bold',
+                    fontSize: '14px',
+                    padding: '16px 24px',
+                    boxShadow: '0 10px 30px rgba(245, 158, 11, 0.3)'
+                }
+            });
+        }
+    }, [devOtp]);
 
     useEffect(() => {
         if (!identifier) {
@@ -38,18 +62,31 @@ const OTPVerification = () => {
         const newOtp = [...otp];
         newOtp[i] = val.slice(-1);
         setOtp(newOtp);
-        if (val && i < 3) otpRefs.current[i + 1]?.focus();
+        if (val && i < 5) otpRefs.current[i + 1]?.focus();
+        
+        // Auto-verify if last box filled
+        if (i === 5 && val) {
+            setTimeout(() => {
+                const fullOtp = [...newOtp];
+                fullOtp[5] = val.slice(-1);
+                if (fullOtp.join('').length === 6) {
+                    handleVerify(fullOtp.join(''));
+                }
+            }, 100);
+        }
         setError('');
     };
 
-    const handleVerify = async () => {
-        if (otp.join('').length < 4) return;
+    const handleVerify = async (otpOverride) => {
+        const finalOtp = otpOverride || otp.join('');
+        if (finalOtp.length < 6) return;
+        
         setError('');
         setLoading(true);
         setStatus('verifying');
 
         const isSignup = !!userData;
-        const res = await verifyOTP(identifier, otp.join(''), type, {
+        const res = await verifyOTP(identifier, finalOtp, type, {
             isSignup,
             userData: isSignup ? userData : null
         });
@@ -57,23 +94,29 @@ const OTPVerification = () => {
         setLoading(false);
         if (res.success) {
             setStatus('success');
-            toast.success('Access Granted', { 
-                icon: '🔓',
+            const needsSignup = res.data?.needsSignup;
+
+            toast.success(needsSignup ? 'Mobile Verified' : 'Access Granted', { 
+                icon: '🔑',
                 style: { 
-                    background: '#0F172A', 
+                    background: '#000', 
                     color: '#fff', 
-                    borderRadius: '16px',
-                    fontSize: '11px',
-                    fontWeight: '900',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em'
+                    borderRadius: '20px',
+                    fontSize: '12px',
+                    fontWeight: 'bold'
                 } 
             });
-            setTimeout(() => navigate('/'), 800);
+
+            setTimeout(() => {
+                if (needsSignup) {
+                    navigate('/signup', { state: { identifier } });
+                } else {
+                    navigate('/');
+                }
+            }, 800);
         } else {
             setStatus('entering');
-            setError(res.error || 'Invalid Sequence. Try Again.');
-            toast.error(res.error || 'Identity Mismatch');
+            setError(res.error || 'Invalid code. Try again.');
         }
     };
 
@@ -84,185 +127,142 @@ const OTPVerification = () => {
         const response = await sendOTP(identifier, type, userData || null);
         if (response.success) {
             setTimeLeft(45);
-            setOtp(['', '', '', '']);
-            toast.success(`Protocol Refreshed`, { 
-                icon: '📨', 
-                style: { 
-                    background: '#0F172A', 
-                    color: '#fff', 
-                    borderRadius: '16px',
-                    fontSize: '10px',
-                    fontWeight: '800',
-                    textTransform: 'uppercase'
-                } 
-            });
+            setOtp(['', '', '', '', '', '']);
+            if (response.data?.otp) {
+                toast.dismiss();
+                toast(`New Code: ${response.data.otp}`, { icon: '🔢', position: 'top-center' });
+            }
         } else {
-            setError(response.error || 'Failed To Initialize Resend');
+            setError(response.error || 'Failed to resend');
         }
         setResending(false);
     };
 
     return (
-        <div className="min-h-screen bg-[#FBF8EF] flex flex-col font-sans relative overflow-hidden text-black">
-            {/* ── Cinematic Background ── */}
-            <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-white rounded-full blur-[120px] opacity-60" />
-                <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#FF9900]/10 rounded-full blur-[120px] opacity-40" />
+        <div className="h-screen bg-black flex flex-col font-sans relative overflow-hidden text-white">
+            {/* Top Section: Visual Branding */}
+            <div className="relative flex-[1.2] flex flex-col items-center justify-center px-8 overflow-hidden">
+                <div className="absolute inset-0 z-0">
+                    <img 
+                        src="https://images.unsplash.com/photo-1549399542-7e3f8b79c34b?auto=format&fit=crop&q=80&w=1200" 
+                        alt="Security Background" 
+                        className="w-full h-full object-cover opacity-80"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/80 to-black z-10" />
+                </div>
+
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="relative z-20 flex flex-col items-center"
+                >
+                    <img src={logo} alt="Logo" className="h-32 w-auto mb-3 drop-shadow-2xl" />
+                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.3em]">Spare Driver Verification</p>
+                </motion.div>
             </div>
 
-            {/* ── Custom Header ── */}
-            <header className="px-6 pt-16 pb-4 relative z-10 flex items-center justify-between">
-                <motion.button 
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => navigate(-1)}
-                    className="w-12 h-12 bg-white border border-black/05 shadow-md shadow-black/5 rounded-[16px] flex items-center justify-center active:scale-95 transition-all text-[#FF9900]"
-                >
-                    <ChevronLeft size={22} strokeWidth={3} />
-                </motion.button>
-                <div className="bg-black text-white px-5 py-2.5 rounded-full border border-white/10 shadow-xl flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-[#FF9900] animate-pulse" />
-                    <span className="text-[9px] font-[1000] uppercase tracking-[0.2em] leading-none">Safe Link Active</span>
-                </div>
-            </header>
+            {/* Bottom Section: Action Area */}
+            <motion.div 
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                className="bg-white/5 rounded-t-[2.5rem] flex-[1] z-30 shadow-[0_-20px_50px_rgba(0,0,0,0.1)] px-6 pt-10 pb-8 flex flex-col text-white"
+            >
+                <header className="flex items-center justify-between mb-6">
+                    <button 
+                        onClick={() => navigate(-1)}
+                        className="w-9 h-9 bg-black/05 rounded-xl flex items-center justify-center"
+                    >
+                        <ChevronLeft size={18} strokeWidth={3} className="text-[#0F172A]" />
+                    </button>
+                    <div className="text-right">
+                        <p className="text-[9px] font-bold text-black/30 mb-0.5 uppercase tracking-wider">Verifying</p>
+                        <p className="text-xs font-bold text-[#0F172A]">+91 {identifier}</p>
+                    </div>
+                </header>
 
-            <div className="flex-1 px-8 flex flex-col relative z-10 pt-6">
-                <motion.div 
-                    initial={{ opacity: 0, y: 15 }} 
-                    animate={{ opacity: 1, y: 0 }} 
-                    className="flex flex-col items-center mb-12 text-center"
-                >
-                    {/* Elite Monogram */}
-                    <div className="w-20 h-20 mb-7 relative group">
-                        <div className="absolute inset-0 bg-[#FF9900] rounded-full blur-[20px] opacity-20 animate-pulse" />
-                        <div className="relative w-18 h-18 bg-black rounded-full flex items-center justify-center shadow-2xl border-2 border-white/20">
-                            <span className="text-white text-2xl font-[1000] tracking-tighter">SD</span>
-                        </div>
+                <div className="flex-1">
+                    <h2 className="text-2xl font-bold text-[#0F172A] mb-1">
+                        Confirm <span className="text-[#F59E0B]">identity</span>
+                    </h2>
+                    <p className="text-xs text-white/40 font-medium mb-8">
+                        Enter the 6-digit code sent to you
+                    </p>
+
+                    {/* OTP Inputs: 6 Square Boxes */}
+                    <div className="flex justify-between gap-2 mb-10">
+                        {[0, 1, 2, 3, 4, 5].map((i) => (
+                            <input
+                                key={i}
+                                ref={(el) => (otpRefs.current[i] = el)}
+                                type="tel"
+                                maxLength={1}
+                                autoFocus={i === 0}
+                                value={otp[i]}
+                                onChange={(e) => handleOtpChange(e.target.value, i)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Backspace' && !otp[i] && i > 0) {
+                                        otpRefs.current[i - 1]?.focus();
+                                    }
+                                }}
+                                className={`w-11 h-14 text-center text-xl font-bold rounded-xl border-white/5 transition-all duration-300 outline-none ${
+                                    otp[i] 
+                                        ? 'border-[#F59E0B] bg-white/5 text-[#0F172A] shadow-lg shadow-[#F59E0B]/10' 
+                                        : 'border-black/05 bg-black/05 text-white'
+                                }`}
+                            />
+                        ))}
                     </div>
 
-                    <h1 className="text-3xl font-[1000] tracking-tighter leading-tight mb-3 uppercase text-[#0F172A]">
-                        Final <span className="text-[#FF9900]">Validation</span>
-                    </h1>
-                    <p className="text-black/30 text-[9px] font-black leading-relaxed uppercase tracking-[0.2em] max-w-[240px]">
-                        Verify the sequence sent to <span className="text-red-500 font-black">{identifier}</span>
-                    </p>
-                </motion.div>
+                    {error && (
+                        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-[11px] font-semibold text-center mb-6">
+                            {error}
+                        </motion.p>
+                    )}
 
-                {/* Dev Mode Notification */}
-                {devOtp && (
-                    <motion.div 
-                        initial={{ opacity: 0, scale: 0.95 }} 
-                        animate={{ opacity: 1, scale: 1 }} 
-                        className="bg-black/80 backdrop-blur-md rounded-[18px] p-4 mb-10 text-center shadow-xl border border-white/10"
-                    >
-                        <p className="text-[10px] font-black text-[#FF9900] uppercase tracking-[0.2em] flex items-center justify-center gap-2">
-                            <Zap size={14} fill="#FF9900" /> Dev Instance: Sequence Pre-Loaded
-                        </p>
-                    </motion.div>
-                )}
-
-                <div className="flex justify-center gap-4 mb-12">
-                    {[0, 1, 2, 3].map((i) => (
-                        <input
-                            key={i}
-                            ref={(el) => (otpRefs.current[i] = el)}
-                            type="tel"
-                            maxLength={1}
-                            autoFocus={i === 0}
-                            value={otp[i]}
-                            onChange={(e) => handleOtpChange(e.target.value, i)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Backspace' && !otp[i] && i > 0) {
-                                    otpRefs.current[i - 1]?.focus();
-                                }
-                            }}
-                            className={`w-15 h-18 text-center text-3xl font-[1000] rounded-[22px] border-2 transition-all duration-300 outline-none shadow-sm ${
-                                otp[i] 
-                                    ? 'border-[#FF9900] bg-white text-black shadow-[#FF9900]/10' 
-                                    : 'border-black/05 bg-white text-black/10 focus:border-[#FF9900]/30'
-                            }`}
-                        />
-                    ))}
-                </div>
-
-                {error && (
-                    <motion.div 
-                        initial={{ opacity: 0, scale: 0.9 }} 
-                        animate={{ opacity: 1, scale: 1 }} 
-                        className="flex items-center justify-center gap-2 text-red-500 mb-8"
-                    >
-                        <Zap size={12} fill="currentColor" />
-                        <p className="text-[10px] font-black uppercase tracking-widest leading-none">{error}</p>
-                    </motion.div>
-                )}
-
-                <div className="space-y-8 max-w-sm mx-auto w-full">
                     <motion.button
-                        disabled={otp.join('').length < 4 || loading}
-                        whileTap={{ scale: 0.96 }}
-                        onClick={handleVerify}
-                        className={`w-full h-16 rounded-[24px] font-[1000] text-[11px] uppercase tracking-[0.4em] flex items-center justify-center transition-all shadow-2xl relative overflow-hidden group ${
-                            otp.join('').length === 4 
-                                ? 'bg-[#FF9900] text-black shadow-[#FF9900]/20' 
-                                : 'bg-black/[0.03] text-black/10 border border-black/05'
-                            }`}
+                        disabled={otp.join('').length < 6 || loading}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleVerify()}
+                        className={`w-full h-15 rounded-2xl font-bold text-sm flex items-center justify-center transition-all group overflow-hidden relative ${
+                            otp.join('').length === 6 
+                            ? 'bg-black text-white shadow-2xl shadow-black/50' 
+                            : 'bg-black/05 text-white/20'
+                        }`}
                     >
                         {status === 'verifying' ? (
                             <motion.div 
                                 animate={{ rotate: 360 }}
                                 transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                                className="w-5 h-5 border-2 border-black/10 border-t-black rounded-full" 
+                                className="w-5 h-5 border-white/5 border-white/10 border-t-white rounded-full" 
                             />
                         ) : status === 'success' ? (
-                            <CheckCircle2 size={24} className="animate-bounce" />
+                            <CheckCircle2 size={24} className="text-[#F59E0B]" />
                         ) : (
-                            <div className="flex items-center gap-3">
-                                <span>Recall Account</span>
-                                <ArrowRight size={18} strokeWidth={4} className="group-hover:translate-x-1 transition-transform" />
+                            <div className="flex items-center gap-2">
+                                <span>Verify and proceed</span>
+                                <ArrowRight size={18} strokeWidth={3} />
                             </div>
                         )}
-                        
-                        {/* Shine Effect */}
-                        <motion.div 
-                            animate={{ x: ['-100%', '200%'] }}
-                            transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
-                            className="absolute inset-y-0 w-32 bg-white/10 skew-x-12"
-                        />
                     </motion.button>
 
-                    <div className="flex flex-col items-center justify-center gap-4">
-                        <div className="text-black/20 font-black text-[9px] uppercase tracking-[0.3em]">
-                            {timeLeft > 0 ? (
-                                <div className="flex items-center gap-3 bg-white px-5 py-2.5 rounded-full border border-black/05">
-                                    <Timer size={14} className="text-[#FF9900]" />
-                                    <span>Signal Recalibration in <span className="text-black font-black">0:{timeLeft < 10 ? `0${timeLeft}` : timeLeft}</span></span>
-                                </div>
-                            ) : (
-                                <button 
-                                    className="text-[#FF9900] font-[1000] px-6 py-2 border-b-2 border-[#FF9900]/20 hover:border-[#FF9900] transition-all" 
-                                    onClick={handleResend} 
-                                    disabled={resending}
-                                >
-                                    {resending ? 'SIGNALING...' : 'RE-INITIALIZE SEQUENCE'}
-                                </button>
-                            )}
-                        </div>
+                    <div className="text-center mt-8">
+                        {timeLeft > 0 ? (
+                            <div className="flex items-center justify-center gap-2 text-[11px] font-medium text-white/40">
+                                <div className="w-1 h-1 rounded-full bg-[#F59E0B] animate-pulse" />
+                                <span>Resend code in 0:{timeLeft < 10 ? `0${timeLeft}` : timeLeft}</span>
+                            </div>
+                        ) : (
+                            <button 
+                                onClick={handleResend}
+                                className="text-[#F59E0B] font-bold text-xs underline underline-offset-4 decoration-[#F59E0B]/30"
+                            >
+                                Resend OTP
+                            </button>
+                        )}
                     </div>
                 </div>
-
-                {/* Secure Trust Mark */}
-                <div className="mt-auto pb-14 flex flex-col items-center">
-                    <div className="flex items-center gap-4 bg-black/[0.02] border border-black/05 px-6 py-2.5 rounded-full mb-6">
-                        <div className="flex items-center gap-2">
-                            <Lock size={12} className="text-[#FF9900]" />
-                            <span className="text-[8px] font-black uppercase tracking-[0.3em] text-black/40">Secure Perimeter</span>
-                        </div>
-                    </div>
-                    
-                    <p className="text-[7.5px] text-black/15 uppercase tracking-[0.2em] font-black max-w-[280px] leading-loose text-center">
-                        SESSION ACCESS PROTOCOLS ARE FULLY ENCRYPTED AND COMPLIANT WITH ELITE SERVICE STANDARDS.
-                    </p>
-                </div>
-            </div>
+            </motion.div>
         </div>
     );
 };

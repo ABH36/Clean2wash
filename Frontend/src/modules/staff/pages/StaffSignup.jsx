@@ -9,14 +9,14 @@ const StaffSignup = () => {
     const { isDarkMode } = useTheme();
 
     return (
-        <div className={`min-h-screen px-8 pt-16 pb-12 flex flex-col relative overflow-hidden transition-colors duration-500 ${isDarkMode ? 'bg-[#0F172A]' : 'bg-white'}`}>
+        <div className={`min-h-screen px-8 pt-16 pb-12 flex flex-col relative overflow-hidden transition-colors duration-500 ${isDarkMode ? 'bg-[#0F172A]' : 'bg-white/5'}`}>
             {/* Background elements */}
             <div className={`absolute -top-24 -left-24 w-64 h-64 rounded-full blur-3xl transition-colors duration-500 ${isDarkMode ? 'bg-brand/10' : 'bg-brand/5'}`} />
             <div className={`absolute top-1/2 -right-24 w-64 h-64 rounded-full blur-3xl transition-colors duration-500 opacity-50 ${isDarkMode ? 'bg-brand/20' : 'bg-brand/10'}`} />
 
             <button
                 onClick={() => navigate(-1)}
-                className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-8 border shadow-sm active:scale-95 transition-all relative z-10 ${isDarkMode ? 'bg-white/5 border-white/5 text-white' : 'bg-white border-gray-100 text-content'}`}
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-8 border  active:scale-95 transition-all relative z-10 ${isDarkMode ? 'bg-white/5 border-white/5 text-white' : 'bg-white/5 border-white/5 text-content'}`}
             >
                 <ChevronLeft size={22} />
             </button>
@@ -34,7 +34,7 @@ const StaffSignup = () => {
                     <p className={`text-[10px] font-black uppercase tracking-[0.4em] mb-3 ${isDarkMode ? 'text-brand-light' : 'text-brand'}`}>Inventory & Personnel</p>
                     <h1 className={`text-4xl font-black leading-tight uppercase tracking-tighter mb-6 ${isDarkMode ? 'text-white' : 'text-content'}`}>Managed <br /> Onboarding</h1>
 
-                    <div className={`p-8 rounded-[2.5rem] border backdrop-blur-sm ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-100'}`}>
+                    <div className={`p-8 rounded-[2.5rem] border backdrop-blur-sm ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/[0.02] border-white/5'}`}>
                         <p className={`text-xs font-bold leading-relaxed mb-6 ${isDarkMode ? 'text-white/60' : 'text-content-subtle'}`}>
                             Staff and Field Agent accounts are strictly managed by <span className="text-brand font-black uppercase">Hub Managers</span> & <span className="text-brand font-black uppercase">Vendors</span>.
                         </p>
@@ -44,11 +44,11 @@ const StaffSignup = () => {
                     </div>
 
                     <div className="mt-10 space-y-4 w-full">
-                        <Link to="/staff/login" className={`w-full h-16 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-xl flex items-center justify-center gap-3 transition-all ${isDarkMode ? 'bg-white text-[#0F172A] hover:bg-brand hover:text-white' : 'bg-content text-white hover:bg-brand'}`}>
+                        <Link to="/staff/login" className={`w-full h-16 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-black/50 flex items-center justify-center gap-3 transition-all ${isDarkMode ? 'bg-white/5 text-[#0F172A] hover:bg-brand hover:text-white' : 'bg-content text-white hover:bg-brand'}`}>
                             Go to Terminal Login <ArrowRight size={18} />
                         </Link>
 
-                        <Link to="/vendor/signup" className={`w-full h-16 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] border flex items-center justify-center gap-3 transition-all ${isDarkMode ? 'border-white/10 text-white/40 hover:text-brand hover:border-brand' : 'border-gray-200 text-content-subtle hover:text-brand hover:border-brand'}`}>
+                        <Link to="/vendor/signup" className={`w-full h-16 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] border flex items-center justify-center gap-3 transition-all ${isDarkMode ? 'border-white/10 text-white/40 hover:text-brand hover:border-brand' : 'border-white/10 text-content-subtle hover:text-brand hover:border-brand'}`}>
                             Become a Partner <Briefcase size={18} />
                         </Link>
                     </div>

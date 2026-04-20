@@ -121,26 +121,26 @@ const VendorOrders = () => {
             <div className="space-y-6 max-w-7xl mx-auto">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     {/* Mode Toggle */}
-                    <div className="flex bg-background p-1 rounded-xl border border-gray-100/10 h-11 w-full md:w-fit">
+                    <div className="flex bg-background p-1 rounded-xl border border-white/5/10 h-11 w-full md:w-fit">
                         <button
                             onClick={() => setViewMode('services')}
-                            className={`flex-1 md:flex-none px-6 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'services' ? 'bg-surface text-brand shadow-sm' : 'text-content-subtle hover:text-content'}`}
+                            className={`flex-1 md:flex-none px-6 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'services' ? 'bg-surface text-brand ' : 'text-content-subtle hover:text-content'}`}
                         >
                             Services
                         </button>
                         <button
                             onClick={() => setViewMode('products')}
-                            className={`flex-1 md:flex-none px-6 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'products' ? 'bg-surface text-brand shadow-sm' : 'text-content-subtle hover:text-content'}`}
+                            className={`flex-1 md:flex-none px-6 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'products' ? 'bg-surface text-brand ' : 'text-content-subtle hover:text-content'}`}
                         >
                             Products
                         </button>
                     </div>
 
                     {/* Status Tabs */}
-                    <div className="flex gap-2 bg-background p-1 rounded-xl w-fit border border-gray-100/10 h-11">
+                    <div className="flex gap-2 bg-background p-1 rounded-xl w-fit border border-white/5/10 h-11">
                         {['Market', 'Active', 'Completed', 'Cancelled'].map(t => (
                             <button key={t} onClick={() => setActiveTab(t)}
-                                className={`px-6 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === t ? 'bg-surface text-brand shadow-sm' : 'text-content-subtle hover:text-content'
+                                className={`px-6 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === t ? 'bg-surface text-brand ' : 'text-content-subtle hover:text-content'
                                     }`}>
                                 {t}
                             </button>
@@ -149,10 +149,10 @@ const VendorOrders = () => {
                 </div>
 
                 {/* Desktop Table View */}
-                <div className="hidden md:block bg-surface rounded-[2.5rem] border border-gray-100/10 shadow-soft overflow-hidden transition-colors">
+                <div className="hidden md:block bg-surface rounded-[2.5rem] border border-white/5/10 shadow-soft overflow-hidden transition-colors">
                     <div className="admin-table-container">
                         <table className="w-full text-left">
-                            <thead className="bg-gray-50/5 border-b border-gray-100/10">
+                            <thead className="bg-white/[0.02]/5 border-b border-white/5/10">
                                 <tr>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-content-subtle">Registry ID</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-content-subtle">Customer Profile</th>
@@ -185,7 +185,7 @@ const VendorOrders = () => {
                                     <tr
                                         key={order.id}
                                         onClick={() => navigate(viewMode === 'services' ? `/vendor/order/${order.id}` : `/vendor/product-order/${order.id}`)}
-                                        className="hover:bg-gray-50/5 transition-all cursor-pointer group active:scale-[0.995]"
+                                        className="hover:bg-white/[0.02]/5 transition-all cursor-pointer group active:scale-[0.995]"
                                     >
                                         <td className="px-6 py-5">
                                             <span className="text-[11px] font-black text-brand tracking-[0.15em] uppercase">#{order.id.substring(0, 8)}</span>
@@ -221,14 +221,14 @@ const VendorOrders = () => {
                                             <span className="text-sm font-black text-content tracking-tight">{order.amount}</span>
                                         </td>
                                         <td className="px-6 py-5">
-                                            <div className={`w-fit px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-[0.2em] shadow-sm ${order.status === 'COMPLETED' || order.status === 'DELIVERED' ? 'bg-green-500/10 text-green-500' :
+                                            <div className={`w-fit px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-[0.2em]  ${order.status === 'COMPLETED' || order.status === 'DELIVERED' ? 'bg-green-500/10 text-green-500' :
                                                 order.status === 'CANCELLED' ? 'bg-red-500/10 text-red-500' : 'bg-blue-500/10 text-blue-500'
                                                 }`}>
                                                 {order.status}
                                             </div>
                                         </td>
                                         <td className="px-6 py-5 text-right">
-                                            <div className="w-9 h-9 ml-auto rounded-2xl bg-gray-50/5 flex items-center justify-center text-content-subtle group-hover:bg-brand group-hover:text-white transition-all shadow-sm">
+                                            <div className="w-9 h-9 ml-auto rounded-2xl bg-white/[0.02]/5 flex items-center justify-center text-content-subtle group-hover:bg-brand group-hover:text-white transition-all ">
                                                 <ArrowRight size={14} />
                                             </div>
                                         </td>
@@ -242,18 +242,18 @@ const VendorOrders = () => {
                 {/* Mobile Card View */}
                 <div className="md:hidden space-y-3 pb-20">
                     {loading ? (
-                        <div className="bg-surface p-10 rounded-2xl border border-gray-100/10 mb-4 flex justify-center">
+                        <div className="bg-surface p-10 rounded-2xl border border-white/5/10 mb-4 flex justify-center">
                             <div className="w-8 h-8 border-4 border-brand/30 border-t-brand rounded-full animate-spin" />
                         </div>
                     ) : (
                         <>
                             {filteredOrders.length === 0 && (
-                                <div className="bg-surface p-10 rounded-2xl border border-gray-100/10 flex justify-center text-center">
+                                <div className="bg-surface p-10 rounded-2xl border border-white/5/10 flex justify-center text-center">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-content-subtle">No Orders in {activeTab} Tab</p>
                                 </div>
                             )}
                             {filteredOrders.map(order => (
-                                <div key={order.id} className="bg-surface p-5 rounded-2xl border border-gray-100/10 shadow-sm space-y-4">
+                                <div key={order.id} className="bg-surface p-5 rounded-2xl border border-white/5/10  space-y-4">
                                     <div className="flex justify-between items-start">
                                         <div>
                                             <p className="text-[10px] font-black text-brand uppercase tracking-widest mb-1">{order.id.substring(0, 8)}</p>
@@ -264,7 +264,7 @@ const VendorOrders = () => {
                                             {order.status}
                                         </div>
                                     </div>
-                                    <div className="space-y-2 py-3 border-y border-gray-100/5 text-[11px]">
+                                    <div className="space-y-2 py-3 border-y border-white/5/5 text-[11px]">
                                         <div className="flex justify-between">
                                             <span className="text-content-subtle font-bold">{viewMode === 'services' ? 'Service' : 'Products'}</span>
                                             <span className="text-content font-black truncate max-w-[150px]">{order.type}</span>

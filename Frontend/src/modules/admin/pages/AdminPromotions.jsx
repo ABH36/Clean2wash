@@ -152,9 +152,9 @@ const AdminPromotions = () => {
                         </div>
                         <button
                             onClick={handleOpenCreate}
-                            className="h-11 px-6 bg-[var(--primary)] text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-[var(--primary)]/20 flex items-center gap-2"
+                            className="h-11 px-6 bg-[var(--primary)] text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-[var(--primary)]/20 flex items-center gap-2 group/new"
                         >
-                            <Plus size={18} /> New
+                            <Plus size={20} className="group-hover/new:scale-110 transition-transform" /> New
                         </button>
                     </div>
                 </div>
@@ -193,11 +193,11 @@ const AdminPromotions = () => {
                                 <p className="text-[11px] font-bold text-[var(--primary)] uppercase tracking-wider">{promo.status || 'Inactive'}</p>
                             </div>
                             <div className="px-5 py-4 bg-[var(--bg-secondary)] border-t border-[var(--border)] flex items-center justify-end gap-2">
-                                <button onClick={() => handleOpenEdit(promo)} className="p-2 bg-[var(--card)] rounded-lg text-[var(--text-muted)] border border-[var(--border)]">
-                                    <Edit2 size={12} />
+                                <button onClick={() => handleOpenEdit(promo)} className="w-10 h-10 bg-[var(--card)] rounded-xl text-[var(--text-muted)] border border-[var(--border)] flex items-center justify-center hover:text-brand hover:border-brand/40 transition-all group/edit">
+                                    <Edit2 size={18} className="group-hover/edit:scale-110 transition-transform" />
                                 </button>
-                                <button onClick={() => handleDelete(promo)} className="p-2 bg-[var(--card)] rounded-lg text-[var(--text-muted)] border border-[var(--border)]">
-                                    <Trash2 size={12} />
+                                <button onClick={() => handleDelete(promo)} className="w-10 h-10 bg-[var(--card)] rounded-xl text-[var(--text-muted)] border border-[var(--border)] flex items-center justify-center hover:text-red-500 hover:border-red-200 transition-all group/trash">
+                                    <Trash2 size={18} className="group-hover/trash:scale-110 transition-transform" />
                                 </button>
                             </div>
                         </div>

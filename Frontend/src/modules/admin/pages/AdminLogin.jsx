@@ -9,7 +9,8 @@ import {
     ShieldAlert,
     Cpu,
     ArrowLeft,
-    Terminal
+    ShieldCheck,
+    LockIcon
 } from 'lucide-react';
 
 const AdminLogin = () => {
@@ -30,99 +31,101 @@ const AdminLogin = () => {
         if (result.success) {
             navigate('/admin');
         } else {
-            setError(result.error || 'Invalid System ID or Passcode. Try: admin@SpareDriver.in / admin123');
+            setError(result.error || 'Invalid System ID or Passcode');
             setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-[#0F172A] flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
-            {/* Grid Pattern Background */}
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none" />
-
-            {/* Glow Orbs */}
-            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-brand/20 rounded-full blur-[140px] -translate-y-1/2 translate-x-1/2" />
-            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-white/5 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/2" />
+        <div className="min-h-screen bg-[#0A0F0D] flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
+            {/* Elite Background Accents */}
+            <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-[#F59E0B]/10 rounded-full blur-[120px]" />
+            <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-white/5 rounded-full blur-[100px]" />
 
             <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="w-full max-w-md relative z-10"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="w-full max-w-[400px] relative z-10"
             >
-                {/* Tech Header */}
-                <div className="flex flex-col items-center text-center mb-12">
-                    <div className="w-20 h-20 bg-brand text-white rounded-3xl flex items-center justify-center shadow-[0_0_50px_rgba(var(--brand-rgb),0.3)] mb-8 animate-pulse">
-                        <Cpu size={40} />
+                {/* Premium Branding */}
+                <div className="flex flex-col items-center mb-10">
+                    <div className="w-16 h-16 bg-[#F59E0B] rounded-[1.5rem] flex items-center justify-center shadow-[0_20px_50px_rgba(245,158,11,0.2)] mb-6">
+                        <ShieldCheck size={32} className="text-[#0A0F0D]" />
                     </div>
-                    <h1 className="text-4xl font-black text-white tracking-tighter uppercase leading-none">Spare Driver <br /><span className="text-brand">Infrastructure</span></h1>
-                    <div className="flex items-center gap-2 mt-4 bg-white/5 px-4 py-1.5 rounded-full border border-white/10">
-                        <Terminal size={12} className="text-brand" />
-                        <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Authorized Access Only</p>
+                    <h1 className="text-[28px] font-black text-white tracking-tight uppercase leading-none text-center">
+                        Spare Driver<br />
+                        <span className="text-[#F59E0B] text-[22px]">Infrastructure</span>
+                    </h1>
+                    <div className="mt-4 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-[#F59E0B] rounded-full animate-pulse" />
+                        <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em]">Authorized Access Only</p>
                     </div>
                 </div>
 
-                {/* Secure Auth Card */}
-                <div className="bg-white/5 backdrop-blur-3xl rounded-[3rem] p-8 lg:p-12 shadow-2xl border border-white/10">
-                    <form onSubmit={handleLogin} className="space-y-8">
-                        <div className="space-y-5">
+                {/* Auth Card */}
+                <div className="bg-white/[0.03] backdrop-blur-3xl rounded-[2.5rem] p-8 border border-white/10 shadow-2xl">
+                    <form onSubmit={handleLogin} className="space-y-6">
+                        <div className="space-y-4">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-white/40 uppercase tracking-widest flex items-center gap-2 px-1">
-                                    System ID
-                                </label>
-                                <div className="relative">
-                                    <Fingerprint className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20" size={18} />
+                                <label className="text-[10px] font-black text-white/20 uppercase tracking-[0.15em] ml-1">System ID</label>
+                                <div className="relative group">
+                                    <Fingerprint className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-[#F59E0B] transition-colors" size={18} />
                                     <input
                                         type="email"
                                         placeholder="admin@SpareDriver.in"
                                         required
                                         value={email}
                                         onChange={e => setEmail(e.target.value)}
-                                        className="w-full h-16 bg-white/5 border border-white/10 rounded-2xl pl-14 pr-6 text-sm font-bold text-white outline-none focus:border-brand transition-all font-mono"
+                                        className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 text-sm font-bold text-white outline-none focus:border-[#F59E0B]/40 transition-all placeholder:text-white/10"
                                     />
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-white/40 uppercase tracking-widest flex items-center gap-2 px-1">
-                                    Cipher Key
-                                </label>
-                                <div className="relative">
-                                    <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20" size={18} />
+                                <label className="text-[10px] font-black text-white/20 uppercase tracking-[0.15em] ml-1">Cipher Key</label>
+                                <div className="relative group">
+                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-[#F59E0B] transition-colors" size={18} />
                                     <input
                                         type="password"
                                         placeholder="••••••••"
                                         required
                                         value={password}
                                         onChange={e => setPassword(e.target.value)}
-                                        className="w-full h-16 bg-white/5 border border-white/10 rounded-2xl pl-14 pr-6 text-sm font-bold text-white outline-none focus:border-brand transition-all"
+                                        className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 text-sm font-bold text-white outline-none focus:border-[#F59E0B]/40 transition-all placeholder:text-white/10"
                                     />
                                 </div>
                             </div>
                         </div>
+
                         {error && (
-                            <p className="text-red-400 text-[10px] font-black uppercase tracking-widest text-center bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2">{error}</p>
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} 
+                                className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-center">
+                                <p className="text-red-500 text-[10px] font-black uppercase tracking-tight leading-tight">{error}</p>
+                            </motion.div>
                         )}
 
                         <button
                             disabled={loading}
-                            className="w-full h-16 bg-brand text-white rounded-2xl font-black uppercase text-xs tracking-[0.3em] shadow-[0_10px_30px_rgba(var(--brand-rgb),0.3)] flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all relative overflow-hidden group"
+                            className="w-full h-14 bg-[#F59E0B] text-[#0A0F0D] rounded-2xl font-black uppercase text-[11px] tracking-[0.15em] shadow-xl shadow-[#F59E0B]/10 active:scale-95 transition-all flex items-center justify-center gap-2"
                         >
                             {loading ? (
-                                <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+                                <div className="w-5 h-5 border-2 border-[#0A0F0D]/30 border-t-[#0A0F0D] rounded-full animate-spin" />
                             ) : (
                                 <>
                                     Verify & Unlock
-                                    <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                    <ChevronRight size={16} />
                                 </>
                             )}
                         </button>
                     </form>
                 </div>
 
-                {/* Warnings */}
-                <div className="mt-12 flex flex-col items-center gap-6">
-                    <div className="flex items-center gap-3 bg-red-500/10 px-6 py-4 rounded-3xl border border-red-500/10">
-                        <ShieldAlert size={20} className="text-red-500" />
-                        <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight text-center">Unauthorised entry attempts are <br />logged and prosecuted.</p>
+                {/* Footer Warning */}
+                <div className="mt-8 flex justify-center">
+                    <div className="flex items-center gap-3 bg-red-500/5 px-5 py-3 rounded-2xl border border-red-500/10">
+                        <ShieldAlert size={16} className="text-red-500/60" />
+                        <p className="text-[9px] font-bold text-red-500/40 uppercase tracking-tight text-center leading-tight">
+                            Attempts are logged & prosecuted.<br />Unauthorized access is a felony.
+                        </p>
                     </div>
                 </div>
             </motion.div>
@@ -131,3 +134,4 @@ const AdminLogin = () => {
 };
 
 export default AdminLogin;
+

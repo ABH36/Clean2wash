@@ -115,31 +115,31 @@ const AdminPricingEngine = () => {
                 <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">Pricing Engine</h1>
-                        <p className="text-sm text-gray-600 mt-1">
+                        <p className="text-sm text-white/60 mt-1">
                             Configure GST, commission, surge, night charges, and more
                         </p>
                     </div>
                     <div className="flex gap-3">
                         <button
                             onClick={loadConfig}
-                            className="btn-secondary flex items-center gap-2"
+                            className="btn-secondary h-11 flex items-center gap-2 group/refresh"
                         >
-                            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                            <RefreshCw size={20} className={`${loading ? 'animate-spin' : 'group-hover/refresh:rotate-180 transition-transform duration-500'}`} />
                             Refresh
                         </button>
                         <button
                             onClick={saveConfig}
                             disabled={saving}
-                            className="btn-primary flex items-center gap-2"
+                            className="btn-primary h-11 flex items-center gap-2 group/save"
                         >
                             {saving ? (
                                 <>
-                                    <RefreshCw size={16} className="animate-spin" />
+                                    <RefreshCw size={18} className="animate-spin" />
                                     Saving...
                                 </>
                             ) : (
                                 <>
-                                    <Save size={16} />
+                                    <Save size={18} className="group-hover/save:scale-110 transition-transform" />
                                     Save Configuration
                                 </>
                             )}
@@ -160,7 +160,7 @@ const AdminPricingEngine = () => {
                                 </div>
                                 <div>
                                     <h3 className="text-lg font-semibold text-gray-900">GST Configuration</h3>
-                                    <p className="text-sm text-gray-600">Goods and Services Tax</p>
+                                    <p className="text-sm text-white/60">Goods and Services Tax</p>
                                 </div>
                             </div>
                             <button
@@ -168,14 +168,14 @@ const AdminPricingEngine = () => {
                                 className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                                     config.isGstEnabled
                                         ? 'bg-emerald-50 text-emerald-600'
-                                        : 'bg-gray-100 text-gray-600'
+                                        : 'bg-white/[0.05] text-white/60'
                                 }`}
                             >
                                 {config.isGstEnabled ? 'Enabled' : 'Disabled'}
                             </button>
                         </div>
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            <label className="block text-sm font-semibold text-white/80 mb-2">
                                 GST Percentage (%)
                             </label>
                             <input
@@ -196,11 +196,11 @@ const AdminPricingEngine = () => {
                             </div>
                             <div>
                                 <h3 className="text-lg font-semibold text-gray-900">Platform Commission</h3>
-                                <p className="text-sm text-gray-600">Revenue share percentage</p>
+                                <p className="text-sm text-white/60">Revenue share percentage</p>
                             </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            <label className="block text-sm font-semibold text-white/80 mb-2">
                                 Commission Percentage (%)
                             </label>
                             <input
@@ -221,7 +221,7 @@ const AdminPricingEngine = () => {
                                 </div>
                                 <div>
                                     <h3 className="text-lg font-semibold text-gray-900">Surge Pricing</h3>
-                                    <p className="text-sm text-gray-600">Peak hours multiplier</p>
+                                    <p className="text-sm text-white/60">Peak hours multiplier</p>
                                 </div>
                             </div>
                             <button
@@ -229,14 +229,14 @@ const AdminPricingEngine = () => {
                                 className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                                     config.isSurgeEnabled
                                         ? 'bg-emerald-50 text-emerald-600'
-                                        : 'bg-gray-100 text-gray-600'
+                                        : 'bg-white/[0.05] text-white/60'
                                 }`}
                             >
                                 {config.isSurgeEnabled ? 'Enabled' : 'Disabled'}
                             </button>
                         </div>
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            <label className="block text-sm font-semibold text-white/80 mb-2">
                                 Surge Multiplier (e.g., 1.5x)
                             </label>
                             <input
@@ -259,7 +259,7 @@ const AdminPricingEngine = () => {
                                 </div>
                                 <div>
                                     <h3 className="text-lg font-semibold text-gray-900">Night Charges</h3>
-                                    <p className="text-sm text-gray-600">11 PM - 5 AM surcharge</p>
+                                    <p className="text-sm text-white/60">11 PM - 5 AM surcharge</p>
                                 </div>
                             </div>
                             <button
@@ -267,14 +267,14 @@ const AdminPricingEngine = () => {
                                 className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                                     config.isNightEnabled
                                         ? 'bg-emerald-50 text-emerald-600'
-                                        : 'bg-gray-100 text-gray-600'
+                                        : 'bg-white/[0.05] text-white/60'
                                 }`}
                             >
                                 {config.isNightEnabled ? 'Enabled' : 'Disabled'}
                             </button>
                         </div>
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            <label className="block text-sm font-semibold text-white/80 mb-2">
                                 Night Charge Amount (₹)
                             </label>
                             <input
@@ -296,7 +296,7 @@ const AdminPricingEngine = () => {
                                 </div>
                                 <div>
                                     <h3 className="text-lg font-semibold text-gray-900">Scheduled Premium</h3>
-                                    <p className="text-sm text-gray-600">Advance booking charge</p>
+                                    <p className="text-sm text-white/60">Advance booking charge</p>
                                 </div>
                             </div>
                             <button
@@ -304,14 +304,14 @@ const AdminPricingEngine = () => {
                                 className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                                     config.isScheduledPremiumEnabled
                                         ? 'bg-emerald-50 text-emerald-600'
-                                        : 'bg-gray-100 text-gray-600'
+                                        : 'bg-white/[0.05] text-white/60'
                                 }`}
                             >
                                 {config.isScheduledPremiumEnabled ? 'Enabled' : 'Disabled'}
                             </button>
                         </div>
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            <label className="block text-sm font-semibold text-white/80 mb-2">
                                 Premium Amount (₹)
                             </label>
                             <input
@@ -332,11 +332,11 @@ const AdminPricingEngine = () => {
                             </div>
                             <div>
                                 <h3 className="text-lg font-semibold text-gray-900">Outstation Allowance</h3>
-                                <p className="text-sm text-gray-600">Driver stay & food per day</p>
+                                <p className="text-sm text-white/60">Driver stay & food per day</p>
                             </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            <label className="block text-sm font-semibold text-white/80 mb-2">
                                 Allowance Amount (₹/day)
                             </label>
                             <input
@@ -356,11 +356,11 @@ const AdminPricingEngine = () => {
                             </div>
                             <div>
                                 <h3 className="text-lg font-semibold text-gray-900">Wallet Hold</h3>
-                                <p className="text-sm text-gray-600">Reserve amount for overtime</p>
+                                <p className="text-sm text-white/60">Reserve amount for overtime</p>
                             </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            <label className="block text-sm font-semibold text-white/80 mb-2">
                                 Hold Amount (₹)
                             </label>
                             <input
@@ -382,14 +382,14 @@ const AdminPricingEngine = () => {
                             </div>
                             <div>
                                 <h3 className="text-xl font-bold text-gray-900">Pricing Calculator</h3>
-                                <p className="text-sm text-gray-600">Preview pricing with current configuration</p>
+                                <p className="text-sm text-white/60">Preview pricing with current configuration</p>
                             </div>
                         </div>
 
                         {/* Calculator Inputs */}
                         <div className="space-y-4 mb-6">
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                <label className="block text-sm font-semibold text-white/80 mb-2">
                                     Service Type
                                 </label>
                                 <select
@@ -405,7 +405,7 @@ const AdminPricingEngine = () => {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                <label className="block text-sm font-semibold text-white/80 mb-2">
                                     Duration (hours)
                                 </label>
                                 <input
@@ -417,7 +417,7 @@ const AdminPricingEngine = () => {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                <label className="block text-sm font-semibold text-white/80 mb-2">
                                     Vehicle Type
                                 </label>
                                 <select
@@ -440,7 +440,7 @@ const AdminPricingEngine = () => {
                                         onChange={(e) => setCalculator({ ...calculator, isSubscriber: e.target.checked })}
                                         className="w-4 h-4 text-[var(--primary)] rounded"
                                     />
-                                    <span className="text-sm font-medium text-gray-700">Subscriber</span>
+                                    <span className="text-sm font-medium text-white/80">Subscriber</span>
                                 </label>
 
                                 <label className="flex items-center gap-2 cursor-pointer">
@@ -450,7 +450,7 @@ const AdminPricingEngine = () => {
                                         onChange={(e) => setCalculator({ ...calculator, isScheduled: e.target.checked })}
                                         className="w-4 h-4 text-[var(--primary)] rounded"
                                     />
-                                    <span className="text-sm font-medium text-gray-700">Scheduled</span>
+                                    <span className="text-sm font-medium text-white/80">Scheduled</span>
                                 </label>
                             </div>
                         </div>
@@ -458,16 +458,16 @@ const AdminPricingEngine = () => {
                         <button
                             onClick={calculatePrice}
                             disabled={calculating}
-                            className="btn-primary w-full flex items-center justify-center gap-2 mb-6"
+                            className="btn-primary w-full flex items-center justify-center gap-2 mb-6 group/calc"
                         >
                             {calculating ? (
                                 <>
-                                    <RefreshCw size={16} className="animate-spin" />
+                                    <RefreshCw size={18} className="animate-spin" />
                                     Calculating...
                                 </>
                             ) : (
                                 <>
-                                    <Calculator size={16} />
+                                    <Calculator size={18} className="group-hover/calc:scale-110 transition-transform" />
                                     Calculate Price
                                 </>
                             )}
@@ -480,31 +480,31 @@ const AdminPricingEngine = () => {
                                 animate={{ opacity: 1, y: 0 }}
                                 className="space-y-4"
                             >
-                                <div className="border-t border-gray-200 pt-4">
+                                <div className="border-t border-white/10 pt-4">
                                     <h4 className="text-sm font-bold text-gray-900 mb-3">Pricing Breakdown</h4>
                                     
                                     <div className="space-y-2 text-sm">
                                         <div className="flex justify-between">
-                                            <span className="text-gray-600">Base Amount:</span>
+                                            <span className="text-white/60">Base Amount:</span>
                                             <span className="font-semibold">₹{pricingResult.baseAmount.toFixed(2)}</span>
                                         </div>
                                         
                                         {pricingResult.overtimeAmount > 0 && (
                                             <div className="flex justify-between">
-                                                <span className="text-gray-600">Overtime:</span>
+                                                <span className="text-white/60">Overtime:</span>
                                                 <span className="font-semibold">₹{pricingResult.overtimeAmount.toFixed(2)}</span>
                                             </div>
                                         )}
                                         
                                         {pricingResult.addons.total > 0 && (
                                             <div className="flex justify-between">
-                                                <span className="text-gray-600">Add-ons:</span>
+                                                <span className="text-white/60">Add-ons:</span>
                                                 <span className="font-semibold">₹{pricingResult.addons.total.toFixed(2)}</span>
                                             </div>
                                         )}
                                         
                                         <div className="flex justify-between pt-2 border-t">
-                                            <span className="text-gray-600">Subtotal:</span>
+                                            <span className="text-white/60">Subtotal:</span>
                                             <span className="font-semibold">₹{pricingResult.subtotal.toFixed(2)}</span>
                                         </div>
                                         
@@ -517,7 +517,7 @@ const AdminPricingEngine = () => {
                                         
                                         {pricingResult.gst.isApplied && (
                                             <div className="flex justify-between">
-                                                <span className="text-gray-600">GST ({pricingResult.gst.percent}%):</span>
+                                                <span className="text-white/60">GST ({pricingResult.gst.percent}%):</span>
                                                 <span className="font-semibold">₹{pricingResult.gst.amount.toFixed(2)}</span>
                                             </div>
                                         )}
@@ -529,11 +529,11 @@ const AdminPricingEngine = () => {
                                         
                                         <div className="pt-3 border-t mt-3">
                                             <div className="flex justify-between text-sm">
-                                                <span className="text-gray-600">Platform Commission ({pricingResult.commission.percent}%):</span>
+                                                <span className="text-white/60">Platform Commission ({pricingResult.commission.percent}%):</span>
                                                 <span className="font-semibold text-red-600">-₹{pricingResult.commission.amount.toFixed(2)}</span>
                                             </div>
                                             <div className="flex justify-between text-sm mt-2">
-                                                <span className="text-gray-600">Driver Earning:</span>
+                                                <span className="text-white/60">Driver Earning:</span>
                                                 <span className="font-semibold text-emerald-600">₹{pricingResult.driverEarning.toFixed(2)}</span>
                                             </div>
                                         </div>

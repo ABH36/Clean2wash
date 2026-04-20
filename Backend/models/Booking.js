@@ -425,6 +425,49 @@ const bookingSchema = new mongoose.Schema({
     loyaltyProcessed: {
         type: Boolean,
         default: false
+    },
+    tracking: {
+        currentLocation: {
+            lat: Number,
+            lng: Number
+        },
+        pickupETA: {
+            duration: Number,
+            durationText: String,
+            distance: Number,
+            distanceText: String,
+            eta: Date,
+            trafficCondition: {
+                type: String,
+                enum: ['light', 'moderate', 'heavy', 'severe', 'unknown']
+            }
+        },
+        dropETA: {
+            duration: Number,
+            durationText: String,
+            distance: Number,
+            distanceText: String,
+            eta: Date,
+            trafficCondition: {
+                type: String,
+                enum: ['light', 'moderate', 'heavy', 'severe', 'unknown']
+            }
+        },
+        lastUpdated: Date
+    },
+    liveTracking: {
+        isActive: {
+            type: Boolean,
+            default: false
+        },
+        startedAt: Date,
+        endedAt: Date,
+        driverId: mongoose.Schema.Types.ObjectId
+    },
+    notifications: {
+        nearPickup: Boolean,
+        arrivingPickup: Boolean,
+        nearDrop: Boolean
     }
 }, {
     timestamps: true,

@@ -1,3 +1,4 @@
+const adminSupportController = require('../controllers/adminSupportController');
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
@@ -20,6 +21,22 @@ const adminVehicleManagementController = require('../controllers/adminVehicleMan
 const authMiddleware = require('../../../middleware/authMiddleware');
 const featureGuard = require('../../../middleware/featureGuard');
 
+// ── SECURITY MIDDLEWARE ────────────────────────────────────────
+const { authLimiter, apiLimiter, readLimiter } = require('../../../middleware/rateLimiter');
+const { 
+    validateLogin, 
+    validateUserCreation, 
+    validateUserUpdate,
+    validateBookingStatusUpdate,
+    validateService,
+    validatePromotion,
+    validateSettingUpdate,
+    validateTransactionStatusUpdate,
+    validatePagination,
+    validateObjectId,
+    sanitizeInput
+} = require('../../../middleware/validation');
+
 // ── SPARE DRIVER SERVICES (NEW PRICING ENGINE) ─────────────────
 const serviceRoutes = require('./serviceRoutes');
 const pricingRoutes = require('./pricingRoutes');
@@ -27,13 +44,17 @@ const surgePricingRoutes = require('./surgePricingRoutes');
 const payoutRoutes = require('./payoutRoutes');
 const penaltyRoutes = require('./penaltyRoutes');
 const walletRoutes = require('./walletRoutes');
+const dispatchRoutes = require('./dispatchRoutes');
+const reportRoutes = require('./reportRoutes');
 
-// Public Admin Route
-router.post('/login', adminAuthController.login);
+// ── PUBLIC ROUTES (with rate limiting) ────────────────────────
+router.post('/login', authLimiter, validateLogin, adminAuthController.login);
 
-// Protect all routes after this middleware
+// ── PROTECTED ROUTES (authentication + rate limiting + sanitization) ──
 router.use(authMiddleware.protect);
 router.use(authMiddleware.restrictTo('admin'));
+router.use(apiLimiter); // Apply rate limiting to all admin routes
+router.use(sanitizeInput); // Sanitize all inputs to prevent XSS
 
 // Platform Configuration & Permissions
 router.get('/platform-config', adminConfigController.getPlatformConfig);
@@ -42,24 +63,28 @@ router.get('/permissions', adminConfigController.getAdminPermissions);
 // Admin Profile
 router.get('/profile', adminAuthController.getProfile);
 
-// Admin Dashboard & Metrics
-router.get('/dashboard', adminDashboardController.getDashboard);
-router.get('/analytics', adminAnalyticsController.getDetailedAnalytics);
-router.get('/users', adminController.getUsers);
-router.post('/users', adminController.createUser);
-router.patch('/users/:id', adminController.updateUser);
-router.patch('/users/:id/kyc', adminController.updateUserKyc);
-router.delete('/users/:id', adminController.deleteUser);
-router.get('/bookings', adminController.getAllBookings);
+// Admin Dashboard & Metrics (with read limiter for high-frequency endpoints)
+router.get('/dashboard', readLimiter, adminDashboardController.getDashboard);
+router.get('/analytics', readLimiter, adminAnalyticsController.getDetailedAnalytics);
+router.get('/users', validatePagination, adminController.getUsers);
+router.post('/users', validateUserCreation, adminController.createUser);
+router.patch('/users/:id', validateUserUpdate, adminController.updateUser);
+router.patch('/users/:id/kyc', validateObjectId('id'), adminController.updateUserKyc);
+router.delete('/users/:id', validateObjectId('id'), adminController.deleteUser);
+router.get('/bookings', validatePagination, adminController.getAllBookings);
 
-// Admin Booking Management
-router.get('/bookings/pending', adminController.getPendingBookings);
-router.patch('/bookings/:id/status', adminController.updateBookingStatus);
-router.post('/bookings/:id/assign-staff', adminController.assignStaff);
-router.get('/captains', adminController.getActiveCaptains);
-router.post('/bookings/:bookingId/assign', adminController.assignCaptain);
-router.get('/spare-drivers', adminController.getSpareDrivers);
-router.get('/bookings/chauffeur', adminController.getSpareDriverBookings);
+// Admin Booking Management (with validation)
+router.get('/bookings/pending', readLimiter, adminController.getPendingBookings);
+router.patch('/bookings/:id/status', validateBookingStatusUpdate, adminController.updateBookingStatus);
+router.post('/bookings/:id/assign-staff', validateObjectId('id'), adminController.assignStaff);
+router.get('/captains', readLimiter, adminController.getActiveCaptains);
+router.post('/bookings/:bookingId/assign', validateObjectId('bookingId'), adminController.assignCaptain);
+router.get('/spare-drivers', readLimiter, adminController.getSpareDrivers);
+router.get('/bookings/chauffeur', validatePagination, adminController.getSpareDriverBookings);
+
+// SOS & Emergency
+router.get('/sos/active', adminController.getActiveSOS);
+router.patch('/sos/:id/resolve', adminController.resolveSOS);
 
 // ── Drivers Management (Spare Driver Lifecycle) ────────────────
 router.get('/drivers', adminDriverController.getAllDrivers);
@@ -128,10 +153,14 @@ router.use('/spare-driver/services', serviceRoutes);
 router.use('/spare-driver/pricing', pricingRoutes);
 router.use('/spare-driver/surge-pricing', surgePricingRoutes);
 router.use('/spare-driver/payouts', payoutRoutes);
+router.use('/dispatch', dispatchRoutes);
 
 // ── FINANCE MANAGEMENT ─────────────────────────────────────────
 router.use('/finance/penalties', penaltyRoutes);
 router.use('/finance/wallets', walletRoutes);
+
+// ── REPORTS & ANALYTICS ────────────────────────────────────────
+router.use('/reports', reportRoutes);
 
 // ── Vehicle Catalog CRUD ──────────────────────────────────────
 router.get('/vehicle-types', adminVehicleController.getVehicleTypes);
@@ -186,15 +215,15 @@ router.post('/verify-product', featureGuard.guard('PRODUCT_ECOSYSTEM'), adminCon
 router.get('/product-orders', featureGuard.guard('PRODUCT_ECOSYSTEM'), adminController.getAllProductOrders);
 router.patch('/product-orders/:id/status', featureGuard.guard('PRODUCT_ECOSYSTEM'), adminController.updateGlobalProductOrderStatus);
 
-// --- Settings Routes ---
-router.get('/settings', adminController.getSettings);
-router.patch('/settings', adminController.updateSetting);
+// --- Settings Routes (with validation) ---
+router.get('/settings', readLimiter, adminController.getSettings);
+router.patch('/settings', validateSettingUpdate, adminController.updateSetting);
 
-// --- Transaction Hub ---
-router.get('/transactions', adminTransactionController.getAllTransactions);
-router.get('/transactions/stats', adminTransactionController.getSettlementStats);
-router.get('/transactions/analytics', adminTransactionController.getFinancialAnalytics);
-router.patch('/transactions/:id/status', adminTransactionController.updateTransactionStatus);
+// --- Transaction Hub (with validation) ---
+router.get('/transactions', validatePagination, adminTransactionController.getAllTransactions);
+router.get('/transactions/stats', readLimiter, adminTransactionController.getSettlementStats);
+router.get('/transactions/analytics', readLimiter, adminTransactionController.getFinancialAnalytics);
+router.patch('/transactions/:id/status', validateTransactionStatusUpdate, adminTransactionController.updateTransactionStatus);
 
 // Audit Logs (P25)
 router.get('/audit/logs', adminAuditController.getAuditLogs);
@@ -204,5 +233,27 @@ router.get('/audit/stats', adminAuditController.getAuditStats);
 router.get('/notifications', adminController.getNotifications);
 router.patch('/notifications/:id/read', adminController.markNotificationRead);
 router.post('/notifications/read-all', adminController.clearAllNotifications);
+
+
+// --- Support Management (Phase 45) ---
+router.get('/support/tickets', adminSupportController.getAllTickets);
+router.get('/support/tickets/stats', adminSupportController.getTicketStats);
+router.get('/support/tickets/:id', adminSupportController.getTicket);
+router.patch('/support/tickets/:id', adminSupportController.updateTicket);
+
+// --- Fraud Detection & Prevention ---
+const adminFraudController = require('../controllers/adminFraudController');
+router.get('/fraud/alerts', adminFraudController.getAllAlerts);
+router.get('/fraud/alerts/:id', adminFraudController.getAlert);
+router.patch('/fraud/alerts/:id', adminFraudController.updateAlert);
+router.get('/fraud/dashboard', adminFraudController.getDashboardStats);
+router.get('/fraud/blacklist', adminFraudController.getAllBlacklist);
+router.post('/fraud/blacklist', adminFraudController.addToBlacklist);
+router.delete('/fraud/blacklist/:id', adminFraudController.removeFromBlacklist);
+router.get('/fraud/blacklist/check', adminFraudController.checkBlacklist);
+router.get('/fraud/users/:userId/risk', adminFraudController.getUserRiskProfile);
+router.get('/fraud/drivers/:driverId/risk', adminFraudController.getDriverRiskProfile);
+router.post('/fraud/users/:userId/check', adminFraudController.runUserFraudCheck);
+router.post('/fraud/drivers/:driverId/check', adminFraudController.runDriverFraudCheck);
 
 module.exports = router;

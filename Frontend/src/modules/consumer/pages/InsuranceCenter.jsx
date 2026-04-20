@@ -50,10 +50,10 @@ const InsuranceCenter = () => {
         <MobileLayout>
             <div className="flex flex-col bg-[#F8F9FB] min-h-screen pb-32">
                 {/* ── Header ── */}
-                <header className="px-5 pt-8 pb-5 bg-white sticky top-0 z-50 border-b border-gray-100 backdrop-blur-md bg-white/90">
+                <header className="px-5 pt-8 pb-5 bg-white/5 sticky top-0 z-50 border-b border-white/5 backdrop-blur-md bg-white/90">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <button onClick={() => navigate(-1)} className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-content hover:bg-brand hover:text-white transition-all">
+                            <button onClick={() => navigate(-1)} className="w-8 h-8 rounded-lg bg-white/[0.02] flex items-center justify-center text-content hover:bg-brand hover:text-white transition-all">
                                 <ArrowLeft size={16} strokeWidth={3} />
                             </button>
                             <div>
@@ -73,7 +73,7 @@ const InsuranceCenter = () => {
                 <div className="px-5 py-6 space-y-6">
                     {/* ── Protection Grade Card (Interactive Scan) ── */}
                     <motion.div
-                        className="bg-content rounded-xl p-6 text-white relative overflow-hidden shadow-xl shadow-content/20 border border-white/5"
+                        className="bg-content rounded-xl p-6 text-white relative overflow-hidden shadow-2xl shadow-black/50 shadow-content/20 border border-white/5"
                     >
                         <div className="relative z-10 flex flex-col h-full">
                             <div className="flex justify-between items-start mb-6">
@@ -128,7 +128,7 @@ const InsuranceCenter = () => {
                         <div className="flex items-center gap-3 px-1">
                             <div className="h-0.5 flex-1 bg-gradient-to-r from-brand/40 to-transparent rounded-full" />
                             <h4 className="text-[9px] font-black text-content uppercase tracking-[0.3em] italic">Coverage Matrix</h4>
-                            <div className="h-0.5 w-8 bg-gray-100 rounded-full" />
+                            <div className="h-0.5 w-8 bg-white/[0.05] rounded-full" />
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
@@ -141,7 +141,7 @@ const InsuranceCenter = () => {
                                 <motion.div
                                     key={i}
                                      whileTap={{ scale: 0.97 }}
-                                     className="bg-white rounded-lg p-3.5 border border-gray-100 shadow-sm flex flex-col gap-3 group hover:border-brand/30 transition-all cursor-pointer"
+                                     className="bg-white/5 rounded-lg p-3.5 border border-white/5  flex flex-col gap-3 group hover:border-brand/30 transition-all cursor-pointer"
                                      onClick={() => toast.success(`${item.title} protocol is active and verified for your current session.`)}
                                  >
                                     <div className={`w-8 h-8 ${item.bg} ${item.color} rounded-md flex items-center justify-center group-hover:bg-brand group-hover:text-white transition-all`}>
@@ -157,8 +157,8 @@ const InsuranceCenter = () => {
                     </div>
 
                     {/* ── Interactive Claims Hub ── */}
-                    <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm flex items-center gap-5 group hover:border-brand/20 transition-all relative overflow-hidden">
-                        <div className="w-12 h-12 bg-gray-50 rounded-lg flex items-center justify-center text-content-subtle shrink-0 group-hover:bg-brand group-hover:text-white transition-all relative z-10 border border-gray-100">
+                    <div className="bg-white/5 rounded-xl p-5 border border-white/5  flex items-center gap-5 group hover:border-brand/20 transition-all relative overflow-hidden">
+                        <div className="w-12 h-12 bg-white/[0.02] rounded-lg flex items-center justify-center text-content-subtle shrink-0 group-hover:bg-brand group-hover:text-white transition-all relative z-10 border border-white/5">
                             <FileText size={20} />
                         </div>
                         <div className="flex-1 relative z-10">
@@ -180,7 +180,7 @@ const InsuranceCenter = () => {
                             <h4 className="text-[9px] font-black text-content uppercase tracking-[0.2em]">Operational FAQ</h4>
                         </div>
                         {faqs.map((faq, idx) => (
-                            <div key={idx} className="bg-white rounded-lg border border-gray-100 overflow-hidden transition-all">
+                            <div key={idx} className="bg-white/5 rounded-lg border border-white/5 overflow-hidden transition-all">
                                 <button
                                     onClick={() => setExpandedFaq(expandedFaq === idx ? null : idx)}
                                     className="w-full px-4 py-3.5 flex items-center justify-between text-left"
@@ -245,16 +245,16 @@ const InsuranceCenter = () => {
                             initial={{ y: '100%' }}
                             animate={{ y: 0 }}
                             exit={{ y: '100%' }}
-                            className="w-full max-w-md bg-white rounded-xl overflow-hidden shadow-2xl relative"
+                            className="w-full max-w-md bg-white/5 rounded-xl overflow-hidden shadow-2xl relative"
                         >
-                            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+                            <div className="p-5 border-b border-white/5 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 bg-brand/10 text-brand rounded-lg flex items-center justify-center">
                                         <ShieldAlert size={18} />
                                     </div>
                                     <h3 className="text-sm font-[1000] text-content uppercase tracking-tight">Claim Wizard</h3>
                                 </div>
-                                <button onClick={() => setIsClaimModalOpen(false)} className="w-8 h-8 rounded-lg hover:bg-gray-50 flex items-center justify-center text-content-subtle">
+                                <button onClick={() => setIsClaimModalOpen(false)} className="w-8 h-8 rounded-lg hover:bg-white/[0.02] flex items-center justify-center text-content-subtle">
                                     <X size={18} />
                                 </button>
                             </div>
@@ -263,7 +263,7 @@ const InsuranceCenter = () => {
                                 {/* Steps Indicator */}
                                 <div className="flex gap-2">
                                     {[0, 1, 2].map(s => (
-                                        <div key={s} className={`h-1 flex-1 rounded-full transition-all ${s <= activeClaimStep ? 'bg-brand' : 'bg-gray-100'}`} />
+                                        <div key={s} className={`h-1 flex-1 rounded-full transition-all ${s <= activeClaimStep ? 'bg-brand' : 'bg-white/[0.05]'}`} />
                                     ))}
                                 </div>
 
@@ -272,7 +272,7 @@ const InsuranceCenter = () => {
                                         <h4 className="text-[13px] font-black text-content italic uppercase tracking-tight">Select Incident Type</h4>
                                         <div className="grid grid-cols-2 gap-3">
                                             {['Paint Damage', 'Process Error', 'Operational', 'Technician'].map(t => (
-                                                <button key={t} onClick={() => setActiveClaimStep(1)} className="p-4 border border-gray-100 rounded-lg text-left hover:border-brand transition-all group">
+                                                <button key={t} onClick={() => setActiveClaimStep(1)} className="p-4 border border-white/5 rounded-lg text-left hover:border-brand transition-all group">
                                                     <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-none mb-1 group-hover:text-brand">{t}</p>
                                                     <div className="flex items-center justify-between mt-2">
                                                         <span className="text-[8px] font-bold text-content-subtle opacity-50">Node v4</span>
@@ -287,13 +287,13 @@ const InsuranceCenter = () => {
                                 {activeClaimStep === 1 && (
                                     <div className="space-y-4">
                                         <h4 className="text-[13px] font-black text-content italic uppercase tracking-tight">Capture Evidence</h4>
-                                        <div className="aspect-video bg-gray-50 rounded-lg border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-content-subtle gap-3 group hover:bg-white hover:border-brand transition-all cursor-pointer">
-                                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:text-brand">
+                                        <div className="aspect-video bg-white/[0.02] rounded-lg border-white/5 border-dashed border-white/10 flex flex-col items-center justify-center text-content-subtle gap-3 group hover:bg-white/5 hover:border-brand transition-all cursor-pointer">
+                                            <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center  group-hover:text-brand">
                                                 <Camera size={24} />
                                             </div>
                                             <p className="text-[10px] font-black uppercase tracking-widest">Tap to Scan Damage</p>
                                         </div>
-                                        <button onClick={() => setActiveClaimStep(2)} className="w-full h-12 bg-content text-white rounded-lg font-black text-[10px] uppercase tracking-widest shadow-xl shadow-content/20">Analyze Visuals</button>
+                                        <button onClick={() => setActiveClaimStep(2)} className="w-full h-12 bg-content text-white rounded-lg font-black text-[10px] uppercase tracking-widest shadow-2xl shadow-black/50 shadow-content/20">Analyze Visuals</button>
                                     </div>
                                 )}
 
@@ -305,7 +305,7 @@ const InsuranceCenter = () => {
                                         <h4 className="text-base font-[1000] text-content italic uppercase tracking-tight">Claim Initialized</h4>
                                         <p className="text-[11px] font-bold text-content-subtle leading-relaxed uppercase tracking-tighter">Incident reported under ID: <span className="text-brand">#INS-9921</span>. Our neural engine is auditing the visuals.</p>
                                         <div className="h-4" />
-                                        <button onClick={() => setIsClaimModalOpen(false)} className="w-full h-12 bg-brand text-white rounded-lg font-black text-[10px] uppercase tracking-widest shadow-xl shadow-brand/20">Return to Node</button>
+                                        <button onClick={() => setIsClaimModalOpen(false)} className="w-full h-12 bg-brand text-white rounded-lg font-black text-[10px] uppercase tracking-widest shadow-2xl shadow-black/50 shadow-brand/20">Return to Node</button>
                                     </div>
                                 )}
                             </div>

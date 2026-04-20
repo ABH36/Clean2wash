@@ -108,7 +108,7 @@ const AdminAnalytics = () => {
 
     if (loading && !stats) return (
         <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
-            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="w-10 h-10 border-2 border-brand/20 border-t-brand rounded-full" />
+            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="w-10 h-10 border-white/5 border-brand/20 border-t-brand rounded-full" />
             <span className="text-[10px] font-black capitalize tracking-[0.4em] text-content-subtle opacity-30">Calibrating analytics hub</span>
         </div>
     );
@@ -122,7 +122,7 @@ const AdminAnalytics = () => {
                         <button
                             key={tab}
                             onClick={() => setActiveMode(tab)}
-                            className={`flex-1 lg:px-10 py-3 rounded-lg text-[10.5px] font-black capitalize tracking-widest transition-all ${activeMode === tab ? 'bg-surface text-brand shadow-sm border border-slate-100 dark:border-white/5 translate-y-[-1px]' : 'text-content-muted hover:text-content'}`}
+                            className={`flex-1 lg:px-10 py-3 rounded-lg text-[10.5px] font-black capitalize tracking-widest transition-all ${activeMode === tab ? 'bg-surface text-brand  border border-slate-100 dark:border-white/5 translate-y-[-1px]' : 'text-content-muted hover:text-content'}`}
                         >
                             {tab}
                         </button>
@@ -167,7 +167,7 @@ const AdminAnalytics = () => {
                 <div className="lg:col-span-8 bg-surface rounded-[1.5rem] p-6 lg:p-7 border border-slate-200/60 dark:border-white/5 shadow-soft relative overflow-hidden group transition-colors duration-500">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
                         <div className="flex items-center gap-5">
-                            <div className="p-4 bg-brand/10 text-brand rounded-[1.25rem] shadow-sm"><TrendingUp size={28} /></div>
+                            <div className="p-4 bg-brand/10 text-brand rounded-[1.25rem] "><TrendingUp size={28} /></div>
                             <div>
                                 <h3 className="text-[26px] font-black text-content tracking-tighter leading-none mb-2.5">Revenue Velocity</h3>
                                 <div className="flex items-center gap-3">
@@ -184,7 +184,7 @@ const AdminAnalytics = () => {
                                     <button 
                                         key={m} 
                                         onClick={() => setActiveMetric(m)}
-                                        className={`px-6 py-2 rounded-lg text-[9.5px] font-black capitalize tracking-widest transition-all ${activeMetric === m ? 'bg-surface text-brand shadow-sm border border-slate-100 dark:border-white/5' : 'text-content-muted hover:text-content'}`}
+                                        className={`px-6 py-2 rounded-lg text-[9.5px] font-black capitalize tracking-widest transition-all ${activeMetric === m ? 'bg-surface text-brand  border border-slate-100 dark:border-white/5' : 'text-content-muted hover:text-content'}`}
                                     >
                                         {m}
                                     </button>
@@ -254,7 +254,7 @@ const AdminAnalytics = () => {
                             <h3 className="text-xl font-black text-content capitalize tracking-tighter leading-none mb-1.5">Ops Mix</h3>
                             <p className="text-[9px] font-black text-content-subtle capitalize tracking-[0.3em] opacity-40">Market Partitioning</p>
                         </div>
-                        <div className="p-3 bg-brand/10 rounded-xl text-brand group-hover:rotate-12 transition-transform shadow-sm"><PieChart size={22} /></div>
+                        <div className="p-3 bg-brand/10 rounded-xl text-brand group-hover:rotate-12 transition-transform "><PieChart size={22} /></div>
                     </div>
 
                     <div className="h-56 w-full relative z-10 mb-8">
@@ -297,7 +297,7 @@ const AdminAnalytics = () => {
                         {opsMixData.map((seg, i) => (
                             <div key={seg.name} className="flex justify-between items-center group/item p-3 hover:bg-background rounded-2xl transition-all border border-transparent hover:border-slate-100 dark:hover:border-white/5">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                                    <div className="w-2.5 h-2.5 rounded-full " style={{ backgroundColor: COLORS[i % COLORS.length] }} />
                                     <div>
                                         <p className="text-[12.5px] font-black text-content capitalize">{seg.name}</p>
                                         <p className="text-[9px] font-bold text-content-subtle capitalize tracking-widest opacity-40">{seg.value} Data Points</p>
@@ -332,7 +332,7 @@ const AdminAnalytics = () => {
                         className="bg-surface p-6 rounded-[1.5rem] border border-slate-200/60 dark:border-white/5 shadow-soft group transition-all relative overflow-hidden"
                     >
                         <div className="flex items-center justify-between mb-8">
-                            <div className={`w-12 h-12 ${metric.bg} ${metric.color} rounded-xl flex items-center justify-center transition-all shadow-sm border border-transparent group-hover:bg-brand group-hover:text-white group-hover:shadow-lg`}>
+                            <div className={`w-12 h-12 ${metric.bg} ${metric.color} rounded-xl flex items-center justify-center transition-all  border border-transparent group-hover:bg-brand group-hover:text-white group-hover:shadow-lg`}>
                                 {metric.icon}
                             </div>
                             <div className="px-4 py-2 bg-background border border-slate-100 dark:border-white/5 rounded-xl text-[10px] font-black capitalize tracking-[0.2em] text-content-subtle/50">
@@ -353,14 +353,14 @@ const AdminAnalytics = () => {
                 <div className="lg:col-span-8 bg-surface p-7 rounded-[1.5rem] border border-slate-200/60 dark:border-white/5 shadow-soft relative overflow-hidden transition-colors duration-500">
                     <div className="flex items-center justify-between mb-8 relative z-10">
                         <div className="flex items-center gap-4">
-                            <div className="p-3 bg-[var(--primary-light)] text-[var(--primary)] rounded-xl border border-[var(--primary-light)] shadow-sm"><BarChart3 size={24} /></div>
+                            <div className="p-3 bg-[var(--primary-light)] text-[var(--primary)] rounded-xl border border-[var(--primary-light)] "><BarChart3 size={24} /></div>
                             <div>
                                 <h3 className="text-xl font-black text-content capitalize tracking-tighter leading-none mb-1.5">Growth Momentum</h3>
                                 <p className="text-[9px] font-black text-content-subtle capitalize tracking-[0.3em] opacity-40">Volume Throughput Analytics</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
-                             <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-brand shadow-sm" /><span className="text-[10px] font-black text-content-subtle capitalize">Peak Activity</span></div>
+                             <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-brand " /><span className="text-[10px] font-black text-content-subtle capitalize">Peak Activity</span></div>
                              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-background border border-slate-200 dark:border-white/10" /><span className="text-[10px] font-black text-content-subtle capitalize">Neutral</span></div>
                         </div>
                     </div>
@@ -402,7 +402,7 @@ const AdminAnalytics = () => {
                     <p className="text-[11px] font-black text-content-subtle/60 leading-relaxed max-w-[260px] mb-8 font-mono tracking-tight">
                         Neural aggregation active. Operational data models and predictive stability patterns synchronized in realtime across the elite grid.
                     </p>
-                    <button className="w-full py-4 bg-brand text-white text-[11px] font-black uppercase tracking-[0.3em] rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-brand/20">
+                    <button className="w-full py-4 bg-brand text-white text-[11px] font-black uppercase tracking-[0.3em] rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-2xl shadow-black/50 shadow-brand/20">
                         Request Audit
                     </button>
                     <div className="absolute bottom-0 left-0 right-0 h-1 bg-brand/10 group-hover:bg-brand transition-colors" />

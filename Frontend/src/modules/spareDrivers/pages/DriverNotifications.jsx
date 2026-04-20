@@ -46,7 +46,7 @@ const DriverNotifications = () => {
 
                 <div className="space-y-3">
                     {notifications.length > 0 ? notifications.map((n, i) => (
-                        <motion.div initial={{ x: -10, opacity: 0 }} animate={{ x: 0, opacity: 1 }} key={i} className="bg-surface border border-content/[0.04] rounded-[1.8rem] p-5 shadow-sm relative overflow-hidden flex gap-4 transition-colors duration-500">
+                        <motion.div initial={{ x: -10, opacity: 0 }} animate={{ x: 0, opacity: 1 }} key={i} className="bg-surface border border-content/[0.04] rounded-[1.8rem] p-5  relative overflow-hidden flex gap-4 transition-colors duration-500">
                             <div className="w-10 h-10 rounded-xl bg-content/[0.04] flex items-center justify-center shrink-0">
                                 <Zap size={18} className="text-brand" />
                             </div>

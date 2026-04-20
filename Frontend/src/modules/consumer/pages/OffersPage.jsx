@@ -61,10 +61,10 @@ const OffersPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <header className="px-4 pt-10 pb-4 bg-white sticky top-0 z-50 border-b border-gray-100">
+        <div className="min-h-screen bg-white/[0.02]">
+            <header className="px-4 pt-10 pb-4 bg-white/5 sticky top-0 z-50 border-b border-white/5">
                 <div className="flex items-center gap-3">
-                    <button onClick={() => navigate(-1)} className="w-9 h-9 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center">
+                    <button onClick={() => navigate(-1)} className="w-9 h-9 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-center">
                         <ChevronLeft size={18} strokeWidth={2.5} className="text-content" />
                     </button>
                     <div>
@@ -90,7 +90,7 @@ const OffersPage = () => {
                 {OFFERS.map((offer, i) => (
                     <motion.div key={offer.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.05 }}
-                        className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden">
+                        className="bg-white/5 rounded-2xl border border-white/5 shadow-soft overflow-hidden">
                         {/* Gradient header */}
                         <div className={`bg-gradient-to-r ${offer.bg} px-5 py-4`}>
                             <div className="flex items-start justify-between mb-3">
@@ -111,7 +111,7 @@ const OffersPage = () => {
                                 <div className="flex items-center gap-2">
                                     <code className="font-black text-base text-content tracking-widest">{offer.code}</code>
                                     <motion.button whileTap={{ scale: 0.88 }} onClick={() => handleCopy(offer.code)}
-                                        className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${copied === offer.code ? 'bg-green-500' : 'bg-gray-100'}`}>
+                                        className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${copied === offer.code ? 'bg-green-500' : 'bg-white/[0.05]'}`}>
                                         {copied === offer.code
                                             ? <Check size={13} className="text-white" strokeWidth={3} />
                                             : <Copy size={12} className="text-content-muted" strokeWidth={2.5} />
@@ -121,7 +121,7 @@ const OffersPage = () => {
                                 <p className="text-[8px] font-bold text-content-subtle mt-0.5">{offer.minOrder}</p>
                             </div>
                             <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate('/services')}
-                                className="flex items-center gap-1.5 bg-brand text-white px-4 py-2.5 rounded-xl font-black text-xs shadow-md shadow-brand/20 flex-shrink-0">
+                                className="flex items-center gap-1.5 bg-brand text-white px-4 py-2.5 rounded-xl font-black text-xs shadow-2xl shadow-black/40 shadow-brand/20 flex-shrink-0">
                                 Apply <ChevronRight size={12} strokeWidth={3} />
                             </motion.button>
                         </div>

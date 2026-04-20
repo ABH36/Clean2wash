@@ -215,7 +215,7 @@ const VendorOrderDetail = () => {
                         {/* Header Actions */}
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                             <button onClick={() => navigate(-1)} className="flex items-center gap-3 text-content-subtle hover:text-brand font-black text-[10px] uppercase tracking-[0.3em] transition-all group w-fit">
-                                <div className="w-8 h-8 rounded-full bg-surface border border-gray-100/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <div className="w-8 h-8 rounded-full bg-surface border border-white/5/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                                     <ArrowLeft size={16} />
                                 </div>
                                 Back to Command
@@ -224,16 +224,16 @@ const VendorOrderDetail = () => {
                                 {liveBooking.status === 'pending' && (
                                     !liveBooking.vendor || liveBooking.vendor !== vendor?.id
                                 ) && (
-                                        <button onClick={handleAcceptRequest} className="h-12 px-8 bg-brand text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-brand/20 hover:scale-105 active:scale-95 transition-all">
+                                        <button onClick={handleAcceptRequest} className="h-12 px-8 bg-brand text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl shadow-black/50 shadow-brand/20 hover:scale-105 active:scale-95 transition-all">
                                             Accept Mission
                                         </button>
                                     )}
                                 {['accepted', 'assigned', 'pickup-assigned'].includes(liveBooking.status) && (
-                                    <button onClick={() => setShowPinModal(true)} className="h-12 px-8 bg-amber-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-3">
+                                    <button onClick={() => setShowPinModal(true)} className="h-12 px-8 bg-amber-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl shadow-black/50 shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-3">
                                         <ShieldCheck size={18} strokeWidth={2.5} /> Verify Clearance
                                     </button>
                                 )}
-                                <button className="h-12 px-6 border border-gray-100/10 bg-surface rounded-2xl text-content-subtle font-black text-[10px] uppercase tracking-[0.2em] hover:text-brand transition-all active:scale-95">
+                                <button className="h-12 px-6 border border-white/5/10 bg-surface rounded-2xl text-content-subtle font-black text-[10px] uppercase tracking-[0.2em] hover:text-brand transition-all active:scale-95">
                                     Archive Ledger
                                 </button>
                                 <button className="h-12 px-6 bg-red-500/10 text-red-500 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-red-500 hover:text-white transition-all active:scale-95">
@@ -246,7 +246,7 @@ const VendorOrderDetail = () => {
                             {/* Left Column: Job Info */}
                             <div className="lg:col-span-2 space-y-8">
                                 {/* Status Card */}
-                                <div className="bg-surface rounded-[3rem] p-8 md:p-12 text-content relative overflow-hidden shadow-2xl border border-gray-100/10 group">
+                                <div className="bg-surface rounded-[3rem] p-8 md:p-12 text-content relative overflow-hidden shadow-2xl border border-white/5/10 group">
                                     <div className="absolute top-0 right-0 w-96 h-96 bg-brand/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
 
                                     <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-10">
@@ -265,7 +265,7 @@ const VendorOrderDetail = () => {
                                             </div>
                                             <h2 className="text-5xl font-black tracking-tighter uppercase leading-none text-content transform group-hover:-skew-x-6 transition-transform duration-700">{liveBooking.status.replace(/-/g, ' ')}</h2>
                                             <div className="space-y-2">
-                                                <div className="h-2 w-full max-w-sm bg-background/50 rounded-full overflow-hidden border border-gray-100/5">
+                                                <div className="h-2 w-full max-w-sm bg-background/50 rounded-full overflow-hidden border border-white/5/5">
                                                     <motion.div
                                                         initial={{ width: 0 }}
                                                         animate={{ width: getProgressWidth() }}
@@ -279,7 +279,7 @@ const VendorOrderDetail = () => {
                                          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                                              <div className="relative group/select">
                                                  <select
-                                                     className="h-14 sm:h-16 w-full sm:w-auto bg-background/60 backdrop-blur-sm border border-gray-100/10 rounded-2xl sm:rounded-[1.5rem] px-6 sm:px-8 text-[10px] sm:text-xs font-black uppercase tracking-widest outline-none focus:border-brand/50 transition-all cursor-pointer text-content shadow-inner appearance-none min-w-[180px]"
+                                                     className="h-14 sm:h-16 w-full sm:w-auto bg-background/60 backdrop-blur-sm border border-white/5/10 rounded-2xl sm:rounded-[1.5rem] px-6 sm:px-8 text-[10px] sm:text-xs font-black uppercase tracking-widest outline-none focus:border-brand/50 transition-all cursor-pointer text-content shadow-inner appearance-none min-w-[180px]"
                                                      value={status}
                                                      onChange={(e) => setStatus(e.target.value)}
                                                  >
@@ -304,16 +304,16 @@ const VendorOrderDetail = () => {
 
                                 {/* Customer & Vehicle Info */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="bg-surface/60 backdrop-blur-sm p-8 rounded-[3rem] border border-gray-100/10 shadow-soft space-y-6 group hover:border-brand/30 transition-all">
+                                    <div className="bg-surface/60 backdrop-blur-sm p-8 rounded-[3rem] border border-white/5/10 shadow-soft space-y-6 group hover:border-brand/30 transition-all">
                                         <div className="flex items-center justify-between">
                                             <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em] px-2">Customer Profile</h3>
                                             <div className="flex gap-2">
-                                                <button className="w-10 h-10 bg-background/50 border border-gray-100/10 rounded-xl text-brand hover:bg-brand hover:text-white transition-all flex items-center justify-center shadow-sm"><Phone size={16} /></button>
-                                                <button className="w-10 h-10 bg-background/50 border border-gray-100/10 rounded-xl text-brand hover:bg-brand hover:text-white transition-all flex items-center justify-center shadow-sm"><MessageSquare size={16} /></button>
+                                                <button className="w-10 h-10 bg-background/50 border border-white/5/10 rounded-xl text-brand hover:bg-brand hover:text-white transition-all flex items-center justify-center "><Phone size={16} /></button>
+                                                <button className="w-10 h-10 bg-background/50 border border-white/5/10 rounded-xl text-brand hover:bg-brand hover:text-white transition-all flex items-center justify-center "><MessageSquare size={16} /></button>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-4 sm:gap-6">
-                                            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-background rounded-2xl sm:rounded-3xl flex items-center justify-center border border-gray-100/10 text-brand font-black text-2xl sm:text-3xl shadow-inner group-hover:scale-105 transition-transform duration-500 overflow-hidden">
+                                            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-background rounded-2xl sm:rounded-3xl flex items-center justify-center border border-white/5/10 text-brand font-black text-2xl sm:text-3xl shadow-inner group-hover:scale-105 transition-transform duration-500 overflow-hidden">
                                                 {liveBooking.consumer?.profile?.photo ? (
                                                     <img src={liveBooking.consumer.profile.photo} className="w-full h-full object-cover" alt="Customer" />
                                                 ) : (
@@ -333,10 +333,10 @@ const VendorOrderDetail = () => {
                                         </div>
                                     </div>
 
-                                    <div className="bg-surface/60 backdrop-blur-sm p-8 rounded-[3rem] border border-gray-100/10 shadow-soft space-y-6 group hover:border-brand/30 transition-all">
+                                    <div className="bg-surface/60 backdrop-blur-sm p-8 rounded-[3rem] border border-white/5/10 shadow-soft space-y-6 group hover:border-brand/30 transition-all">
                                         <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em] px-2">Vehicle Asset</h3>
                                         <div className="flex items-center gap-6">
-                                            <div className="w-20 h-20 bg-background rounded-3xl flex items-center justify-center border border-gray-100/10 text-content-muted font-black shadow-inner group-hover:scale-105 transition-transform duration-500">
+                                            <div className="w-20 h-20 bg-background rounded-3xl flex items-center justify-center border border-white/5/10 text-content-muted font-black shadow-inner group-hover:scale-105 transition-transform duration-500">
                                                 <Car size={32} strokeWidth={1.5} />
                                             </div>
                                             <div className="space-y-1">
@@ -348,11 +348,11 @@ const VendorOrderDetail = () => {
                                 </div>
 
                                 {/* Service Breakdown */}
-                                <div className="bg-surface p-10 rounded-[3rem] border border-gray-100/10 shadow-soft relative overflow-hidden group">
+                                <div className="bg-surface p-10 rounded-[3rem] border border-white/5/10 shadow-soft relative overflow-hidden group">
                                     <div className="absolute top-0 right-0 w-64 h-64 bg-brand/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
                                     <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em] mb-8 relative z-10">Operation Parameters</h3>
                                     <div className="space-y-6 relative z-10">
-                                        <div className="flex items-center justify-between py-6 border-b border-gray-100/5 group/row">
+                                        <div className="flex items-center justify-between py-6 border-b border-white/5/5 group/row">
                                             <div className="flex items-center gap-6">
                                                 <div className="w-14 h-14 bg-brand/10 rounded-2xl flex items-center justify-center text-brand transition-transform group-hover/row:rotate-6 duration-500 shadow-lg shadow-brand/5">
                                                     <Package size={24} strokeWidth={1.5} />
@@ -369,7 +369,7 @@ const VendorOrderDetail = () => {
                                         </div>
                                         <div className="flex flex-wrap gap-3 pt-4">
                                             {(liveBooking.addons && liveBooking.addons.length > 0 ? liveBooking.addons : ['Premium Hydro-Seal', 'Interior Sterilization', 'Tactical Polish']).map(addon => (
-                                                <span key={addon} className="px-5 py-2.5 bg-background/50 backdrop-blur-sm border border-gray-100/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-content-muted shadow-sm hover:border-brand/40 transition-colors">
+                                                <span key={addon} className="px-5 py-2.5 bg-background/50 backdrop-blur-sm border border-white/5/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-content-muted  hover:border-brand/40 transition-colors">
                                                     + {addon}
                                                 </span>
                                             ))}
@@ -378,7 +378,7 @@ const VendorOrderDetail = () => {
                                 </div>
 
                                 {/* Inspection Photos */}
-                                <div className="bg-surface p-10 rounded-[3rem] border border-gray-100/10 shadow-soft">
+                                <div className="bg-surface p-10 rounded-[3rem] border border-white/5/10 shadow-soft">
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                                         <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em]">Tactical Evidence Ledger</h3>
                                         <div className="inline-flex items-center gap-3 px-4 py-2 bg-brand/5 rounded-2xl border border-brand/10">
@@ -391,23 +391,23 @@ const VendorOrderDetail = () => {
                                             'https://images.unsplash.com/photo-1507136390302-cd99245fe028?w=400&q=80',
                                             'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=400&q=80'
                                         ]).map((img, i) => (
-                                            <div key={i} className="aspect-square rounded-[2rem] overflow-hidden border border-gray-100/10 bg-background group relative shadow-xl">
+                                            <div key={i} className="aspect-square rounded-[2rem] overflow-hidden border border-white/5/10 bg-background group relative shadow-2xl shadow-black/50">
                                                 <img src={img} alt="Inspection" className="w-full h-full object-cover group-hover:scale-110 active:scale-125 transition-transform duration-700" />
                                                 <div className="absolute inset-0 bg-content/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                    <button onClick={() => window.open(img, '_blank')} className="w-10 h-10 bg-white/90 backdrop-blur rounded-full flex items-center justify-center text-black shadow-2xl active:scale-90 transition-transform"><Star size={16} fill="black" /></button>
+                                                    <button onClick={() => window.open(img, '_blank')} className="w-10 h-10 bg-white/90 backdrop-blur rounded-full flex items-center justify-center text-white shadow-2xl active:scale-90 transition-transform"><Star size={16} fill="black" /></button>
                                                 </div>
                                             </div>
                                         ))}
 
                                         {/* Dynamic Evidence Photos */}
                                         {(liveBooking.serviceImages?.before || []).map((img, i) => (
-                                            <div key={`before-${i}`} className="aspect-square rounded-[2rem] overflow-hidden border-2 border-brand/20 bg-background group relative shadow-2xl shadow-brand/10">
+                                            <div key={`before-${i}`} className="aspect-square rounded-[2rem] overflow-hidden border-white/5 border-brand/20 bg-background group relative shadow-2xl shadow-brand/10">
                                                 <img src={img} alt="Before Wash" className="w-full h-full object-cover" />
                                                 <div className="absolute top-4 left-4 bg-brand text-white text-[8px] px-3 py-1 rounded-full font-black uppercase tracking-widest shadow-lg">Before Data</div>
                                             </div>
                                         ))}
                                         {(liveBooking.serviceImages?.after || []).map((img, i) => (
-                                            <div key={`after-${i}`} className="aspect-square rounded-[2rem] overflow-hidden border-2 border-green-500/20 bg-background group relative shadow-2xl shadow-green-500/10">
+                                            <div key={`after-${i}`} className="aspect-square rounded-[2rem] overflow-hidden border-white/5 border-green-500/20 bg-background group relative shadow-2xl shadow-green-500/10">
                                                 <img src={img} alt="After Wash" className="w-full h-full object-cover" />
                                                 <div className="absolute top-4 left-4 bg-green-500 text-white text-[8px] px-3 py-1 rounded-full font-black uppercase tracking-widest shadow-lg">Post-Operation</div>
                                             </div>
@@ -416,10 +416,10 @@ const VendorOrderDetail = () => {
                                         <button
                                             onClick={() => document.getElementById('photo-upload').click()}
                                             disabled={uploading}
-                                            className="aspect-square rounded-[2rem] border-2 border-dashed border-gray-100/20 bg-background/50 flex flex-col items-center justify-center gap-3 text-content-subtle hover:border-brand/50 hover:text-brand hover:bg-brand/5 transition-all group active:scale-95"
+                                            className="aspect-square rounded-[2rem] border-white/5 border-dashed border-white/5/20 bg-background/50 flex flex-col items-center justify-center gap-3 text-content-subtle hover:border-brand/50 hover:text-brand hover:bg-brand/5 transition-all group active:scale-95"
                                         >
-                                            <div className="w-12 h-12 rounded-2xl bg-surface border border-gray-100/5 flex items-center justify-center group-hover:bg-brand group-hover:text-white transition-all shadow-inner">
-                                                {uploading ? <div className="w-5 h-5 border-2 border-brand/30 border-t-brand rounded-full animate-spin" /> : <Camera size={24} strokeWidth={1.5} />}
+                                            <div className="w-12 h-12 rounded-2xl bg-surface border border-white/5/5 flex items-center justify-center group-hover:bg-brand group-hover:text-white transition-all shadow-inner">
+                                                {uploading ? <div className="w-5 h-5 border-white/5 border-brand/30 border-t-brand rounded-full animate-spin" /> : <Camera size={24} strokeWidth={1.5} />}
                                             </div>
                                             <span className="text-[9px] font-black uppercase tracking-[0.3em]">{uploading ? 'UPLOADING...' : 'LOG ASSET'}</span>
                                         </button>
@@ -431,7 +431,7 @@ const VendorOrderDetail = () => {
                             {/* Right Column: Sidebar Tasks */}
                             <div className="space-y-8">
                                 {/* Driver Control */}
-                                <div className="bg-surface p-8 rounded-[3rem] border border-gray-100/10 shadow-soft space-y-8 group">
+                                <div className="bg-surface p-8 rounded-[3rem] border border-white/5/10 shadow-soft space-y-8 group">
                                     <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em] px-2 flex justify-between items-center">
                                         Personnel Dispatch
                                         <div className="w-2 h-2 rounded-full bg-brand animate-ping" />
@@ -443,8 +443,8 @@ const VendorOrderDetail = () => {
                                             <p className="text-[9px] font-black text-content-subtle uppercase tracking-[0.4em] opacity-60">Field Unit: Intake</p>
                                             {assignedStaff.pickup && <span className="text-[7px] font-black bg-green-500/20 text-green-500 px-2 py-0.5 rounded-full uppercase tracking-widest">Active</span>}
                                         </div>
-                                        <div className={`flex items-center gap-5 p-5 rounded-[2rem] border transition-all duration-500 ${assignedStaff.pickup ? 'bg-brand/5 border-brand/20 shadow-lg shadow-brand/5' : 'bg-background/40 border-gray-100/5 shadow-inner'}`}>
-                                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${assignedStaff.pickup ? 'bg-brand text-white shadow-xl shadow-brand/20' : 'bg-brand/10 text-brand border border-brand/20'}`}>
+                                        <div className={`flex items-center gap-5 p-5 rounded-[2rem] border transition-all duration-500 ${assignedStaff.pickup ? 'bg-brand/5 border-brand/20 shadow-lg shadow-brand/5' : 'bg-background/40 border-white/5/5 shadow-inner'}`}>
+                                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${assignedStaff.pickup ? 'bg-brand text-white shadow-2xl shadow-black/50 shadow-brand/20' : 'bg-brand/10 text-brand border border-brand/20'}`}>
                                                 {assignedStaff.pickup?.profile?.photo ? (
                                                     <img src={assignedStaff.pickup.profile.photo} className="w-full h-full object-cover rounded-2xl" alt="Staff" />
                                                 ) : (
@@ -458,20 +458,20 @@ const VendorOrderDetail = () => {
                                                     <p className="text-[9px] font-black text-brand uppercase tracking-widest">{assignedStaff.pickup ? 'Deployment Active' : 'Hold Standby'}</p>
                                                 </div>
                                             </div>
-                                            <button onClick={() => openDriverPicker('pickup')} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-sm active:scale-90 ${assignedStaff.pickup ? 'bg-brand text-white' : 'bg-surface border border-gray-100/10 text-brand hover:bg-brand hover:text-white'}`}>
+                                            <button onClick={() => openDriverPicker('pickup')} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all  active:scale-90 ${assignedStaff.pickup ? 'bg-brand text-white' : 'bg-surface border border-white/5/10 text-brand hover:bg-brand hover:text-white'}`}>
                                                 <ChevronRight size={18} />
                                             </button>
                                         </div>
                                     </div>
 
                                     {/* Delivery Driver */}
-                                    <div className="space-y-4 pt-4 border-t border-gray-100/5">
+                                    <div className="space-y-4 pt-4 border-t border-white/5/5">
                                         <div className="flex items-center justify-between px-1">
                                             <p className="text-[9px] font-black text-content-subtle uppercase tracking-[0.4em] opacity-60">Field Unit: Deployment</p>
                                             {assignedStaff.delivery && <span className="text-[7px] font-black bg-blue-500/20 text-blue-500 px-2 py-0.5 rounded-full uppercase tracking-widest">Reserved</span>}
                                         </div>
-                                        <div className={`flex items-center gap-5 p-5 rounded-[2rem] border transition-all duration-500 ${assignedStaff.delivery ? 'bg-brand/5 border-brand/20 shadow-lg shadow-brand/5' : 'bg-background/40 border-gray-100/5 shadow-inner'}`}>
-                                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${assignedStaff.delivery ? 'bg-brand text-white shadow-xl shadow-brand/20' : 'bg-brand/10 text-brand border border-brand/20'}`}>
+                                        <div className={`flex items-center gap-5 p-5 rounded-[2rem] border transition-all duration-500 ${assignedStaff.delivery ? 'bg-brand/5 border-brand/20 shadow-lg shadow-brand/5' : 'bg-background/40 border-white/5/5 shadow-inner'}`}>
+                                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${assignedStaff.delivery ? 'bg-brand text-white shadow-2xl shadow-black/50 shadow-brand/20' : 'bg-brand/10 text-brand border border-brand/20'}`}>
                                                 {assignedStaff.delivery?.profile?.photo ? (
                                                     <img src={assignedStaff.delivery.profile.photo} className="w-full h-full object-cover rounded-2xl" alt="Staff" />
                                                 ) : (
@@ -485,7 +485,7 @@ const VendorOrderDetail = () => {
                                                     <p className="text-[9px] font-black text-brand uppercase tracking-widest">{assignedStaff.delivery ? 'Ready for Mission' : 'Hold Standby'}</p>
                                                 </div>
                                             </div>
-                                            <button onClick={() => openDriverPicker('delivery')} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-sm active:scale-90 ${assignedStaff.delivery ? 'bg-brand text-white' : 'bg-surface border border-gray-100/10 text-brand hover:bg-brand hover:text-white'}`}>
+                                            <button onClick={() => openDriverPicker('delivery')} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all  active:scale-90 ${assignedStaff.delivery ? 'bg-brand text-white' : 'bg-surface border border-white/5/10 text-brand hover:bg-brand hover:text-white'}`}>
                                                 <ChevronRight size={18} />
                                             </button>
                                         </div>
@@ -493,10 +493,10 @@ const VendorOrderDetail = () => {
                                 </div>
 
                                 {/* Location Audit */}
-                                <div className="bg-surface/60 backdrop-blur-sm p-8 rounded-[3rem] border border-gray-100/10 shadow-soft space-y-6 group overflow-hidden relative">
+                                <div className="bg-surface/60 backdrop-blur-sm p-8 rounded-[3rem] border border-white/5/10 shadow-soft space-y-6 group overflow-hidden relative">
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full blur-3xl" />
                                     <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em] mb-2 relative z-10 px-2">Sector Intelligence</h3>
-                                    <div className="h-44 bg-background rounded-[2rem] border border-gray-100/10 relative overflow-hidden group/map shadow-inner">
+                                    <div className="h-44 bg-background rounded-[2rem] border border-white/5/10 relative overflow-hidden group/map shadow-inner">
                                         <div className="absolute inset-0 flex items-center justify-center">
                                             <div className="relative">
                                                 <div className="absolute inset-0 bg-brand/20 rounded-full blur-xl animate-pulse" />
@@ -513,7 +513,7 @@ const VendorOrderDetail = () => {
                                 </div>
 
                                 {/* Timeline */}
-                                <div className="bg-surface p-8 rounded-[3rem] border border-gray-100/10 shadow-soft space-y-8 relative overflow-hidden">
+                                <div className="bg-surface p-8 rounded-[3rem] border border-white/5/10 shadow-soft space-y-8 relative overflow-hidden">
                                     <div className="absolute top-0 left-0 w-1 h-full bg-brand/5" />
                                     <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em] px-2">Operational Timeline</h3>
                                     <div className="space-y-10 relative">
@@ -521,8 +521,8 @@ const VendorOrderDetail = () => {
                                         {timeline.map((step, i) => (
                                             <div key={i} className="flex gap-6 relative z-10 group/item">
                                                 <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-500 overflow-hidden ${step.status === 'completed' ? 'bg-brand text-white shadow-[0_0_15px_rgba(var(--brand-rgb),0.4)]' :
-                                                    step.status === 'active' ? 'bg-surface border-2 border-brand text-brand shadow-lg shadow-brand/20 animate-bounce' :
-                                                        'bg-surface border-2 border-gray-100/10 text-content-subtle/20'
+                                                    step.status === 'active' ? 'bg-surface border-white/5 border-brand text-brand shadow-lg shadow-brand/20 animate-bounce' :
+                                                        'bg-surface border-white/5 border-white/5/10 text-content-subtle/20'
                                                     }`}>
                                                     {step.status === 'completed' ? <CheckCircle2 size={12} strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-current" />}
                                                 </div>
@@ -552,7 +552,7 @@ const VendorOrderDetail = () => {
                         <motion.div
                             initial={{ scale: 0.9, y: 30 }}
                             animate={{ scale: 1, y: 0 }}
-                            className="bg-surface w-full max-w-sm rounded-[4rem] border border-gray-100/10 p-12 space-y-10 text-center relative overflow-hidden"
+                            className="bg-surface w-full max-w-sm rounded-[4rem] border border-white/5/10 p-12 space-y-10 text-center relative overflow-hidden"
                         >
                             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-amber-500/5 rounded-full blur-[80px]" />
 
@@ -571,7 +571,7 @@ const VendorOrderDetail = () => {
                                     value={enteredPin}
                                     onChange={(e) => setEnteredPin(e.target.value.replace(/\D/g, ''))}
                                     placeholder="----"
-                                    className="w-full h-24 bg-background border border-gray-100/10 rounded-[2rem] text-center text-5xl font-black tracking-[0.5em] outline-none focus:border-amber-500 transition-all text-content shadow-inner"
+                                    className="w-full h-24 bg-background border border-white/5/10 rounded-[2rem] text-center text-5xl font-black tracking-[0.5em] outline-none focus:border-amber-500 transition-all text-content shadow-inner"
                                 />
                             </div>
 
@@ -607,7 +607,7 @@ const VendorOrderDetail = () => {
                         <motion.div
                             initial={{ scale: 0.9, y: 30 }}
                             animate={{ scale: 1, y: 0 }}
-                            className="bg-surface w-full max-w-md rounded-[4rem] border border-gray-100/10 p-10 space-y-8 relative overflow-hidden"
+                            className="bg-surface w-full max-w-md rounded-[4rem] border border-white/5/10 p-10 space-y-8 relative overflow-hidden"
                         >
                             <div className="absolute top-0 right-0 w-48 h-48 bg-brand/5 rounded-full blur-[80px]" />
 
@@ -616,7 +616,7 @@ const VendorOrderDetail = () => {
                                     <h2 className="text-3xl font-black text-content tracking-tighter uppercase leading-none">Dispatch <span className="text-brand">Hub</span></h2>
                                     <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em] opacity-60">Deploy Personnel for: {pickerRole}</p>
                                 </div>
-                                <button onClick={() => setShowDriverPicker(false)} className="w-12 h-12 bg-background border border-gray-100/10 rounded-[1.5rem] flex items-center justify-center text-content-subtle hover:text-red-500 transition-all shadow-sm">
+                                <button onClick={() => setShowDriverPicker(false)} className="w-12 h-12 bg-background border border-white/5/10 rounded-[1.5rem] flex items-center justify-center text-content-subtle hover:text-red-500 transition-all ">
                                     <X size={20} />
                                 </button>
                             </div>
@@ -626,10 +626,10 @@ const VendorOrderDetail = () => {
                                          <button
                                              key={driver._id}
                                              onClick={() => handleAssignStaff(driver._id)}
-                                             className="w-full flex items-center justify-between p-4 sm:p-6 rounded-[2rem] sm:rounded-[2.5rem] border border-gray-100/10 bg-background/50 backdrop-blur-sm hover:border-brand hover:bg-brand/5 transition-all text-left group shadow-inner mb-3"
+                                             className="w-full flex items-center justify-between p-4 sm:p-6 rounded-[2rem] sm:rounded-[2.5rem] border border-white/5/10 bg-background/50 backdrop-blur-sm hover:border-brand hover:bg-brand/5 transition-all text-left group shadow-inner mb-3"
                                          >
                                              <div className="flex items-center gap-4 sm:gap-6 min-w-0">
-                                                 <div className="w-12 h-12 sm:w-14 sm:h-14 bg-surface border border-gray-100/10 rounded-xl sm:rounded-2xl flex-shrink-0 flex items-center justify-center text-content-subtle group-hover:bg-brand group-hover:text-white group-hover:rotate-6 transition-all shadow-sm">
+                                                 <div className="w-12 h-12 sm:w-14 sm:h-14 bg-surface border border-white/5/10 rounded-xl sm:rounded-2xl flex-shrink-0 flex items-center justify-center text-content-subtle group-hover:bg-brand group-hover:text-white group-hover:rotate-6 transition-all ">
                                                      {driver.profile?.photo ? (
                                                          <img src={driver.profile.photo} className="w-full h-full object-cover rounded-xl sm:rounded-2xl" alt="" />
                                                      ) : (
@@ -650,8 +650,8 @@ const VendorOrderDetail = () => {
                                          </button>
                                      ))
                                 ) : (
-                                    <div className="p-12 text-center bg-background/50 backdrop-blur-sm rounded-[3rem] border border-dashed border-gray-100/10 space-y-6">
-                                        <div className="w-16 h-16 bg-gray-100/5 rounded-full flex items-center justify-center mx-auto">
+                                    <div className="p-12 text-center bg-background/50 backdrop-blur-sm rounded-[3rem] border border-dashed border-white/5/10 space-y-6">
+                                        <div className="w-16 h-16 bg-white/[0.05]/5 rounded-full flex items-center justify-center mx-auto">
                                             <User size={32} className="text-content-subtle opacity-20" />
                                         </div>
                                         <div className="space-y-2">

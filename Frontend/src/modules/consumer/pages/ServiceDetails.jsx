@@ -111,7 +111,7 @@ const ServiceDetails = () => {
     }, [service, checkedAddons]);
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-32">
+        <div className="min-h-screen bg-white/[0.02] pb-32">
             {/* ── Header ── */}
             <div className="relative h-72">
                 <img src={service.image} alt={service.title} className="w-full h-full object-cover" />
@@ -135,13 +135,13 @@ const ServiceDetails = () => {
 
             <div className="px-5 -mt-4 relative z-10 space-y-6">
                 {/* ── Quick Stats ── */}
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between">
+                <div className="bg-white/5 rounded-2xl p-4  border border-white/5 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className="flex flex-col">
                             <span className="text-[10px] font-black text-content-subtle uppercase tracking-wider opacity-50 leading-none mb-1">Price</span>
                             <span className="text-lg font-[1000] text-content leading-none italic">₹{service.price}</span>
                         </div>
-                        <div className="w-[1px] h-8 bg-gray-100" />
+                        <div className="w-[1px] h-8 bg-white/[0.05]" />
                         <div className="flex flex-col">
                             <span className="text-[10px] font-black text-content-subtle uppercase tracking-wider opacity-50 leading-none mb-1">Time</span>
                             <span className="text-sm font-black text-content leading-none">{service.duration}</span>
@@ -165,14 +165,14 @@ const ServiceDetails = () => {
                 </div>
 
                 {/* ── Features List ── */}
-                <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm space-y-4">
+                <div className="bg-white/5 rounded-3xl p-6 border border-white/5  space-y-4">
                     <div className="flex items-center gap-2">
                         <ShieldCheck size={18} className="text-brand" />
                         <h3 className="text-[11px] font-[1000] text-content uppercase tracking-widest">Service Guarantees</h3>
                     </div>
                     <div className="grid grid-cols-1 gap-3">
                         {service.features.map((f, i) => (
-                            <div key={i} className="flex items-center gap-3 bg-gray-50/50 p-2.5 rounded-xl border border-gray-50">
+                            <div key={i} className="flex items-center gap-3 bg-white/[0.02]/50 p-2.5 rounded-xl border border-gray-50">
                                 <CheckCircle2 size={16} className="text-green-500 shrink-0" strokeWidth={2.5} />
                                 <span className="text-[12px] font-bold text-content">{f}</span>
                             </div>
@@ -192,7 +192,7 @@ const ServiceDetails = () => {
                         </span>
                     </div>
 
-                    <div className="bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm">
+                    <div className="bg-white/5 rounded-3xl overflow-hidden border border-white/5 ">
                         <div className="divide-y divide-gray-50">
                             {service.addons.map(addon => {
                                 const isChecked = checkedAddons.includes(addon.id) || addon.included;
@@ -202,7 +202,7 @@ const ServiceDetails = () => {
                                             <button
                                                 onClick={() => !addon.included && toggleAddon(addon.id)}
                                                 disabled={addon.included}
-                                                className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${isChecked ? 'bg-brand border-brand shadow-md shadow-brand/20' : 'border-gray-200'
+                                                className={`w-6 h-6 rounded-lg border-white/5 flex items-center justify-center transition-all ${isChecked ? 'bg-brand border-brand shadow-2xl shadow-black/40 shadow-brand/20' : 'border-white/10'
                                                     }`}
                                             >
                                                 {isChecked && <CheckCircle2 size={14} className="text-white" strokeWidth={3} />}
@@ -215,7 +215,7 @@ const ServiceDetails = () => {
                                         {!addon.included && (
                                             <button
                                                 onClick={() => toggleAddon(addon.id)}
-                                                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isChecked ? 'bg-orange-50 text-brand rotate-180' : 'bg-gray-50 text-content-subtle rotate-0'
+                                                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isChecked ? 'bg-orange-50 text-brand rotate-180' : 'bg-white/[0.02] text-content-subtle rotate-0'
                                                     }`}
                                             >
                                                 {isChecked ? <Minus size={14} strokeWidth={3} /> : <Plus size={14} strokeWidth={3} />}
@@ -230,7 +230,7 @@ const ServiceDetails = () => {
 
                 {/* ── Loyalty Offer ── */}
                 {service.subscriptionOffer?.enabled && (
-                    <div className="bg-[#FFFBEB] border-2 border-amber-100 rounded-3xl p-5 shadow-sm space-y-4 relative overflow-hidden group">
+                    <div className="bg-[#FFFBEB] border-white/5 border-amber-100 rounded-3xl p-5  space-y-4 relative overflow-hidden group">
                         <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity">
                             <Gift size={120} />
                         </div>
@@ -240,7 +240,7 @@ const ServiceDetails = () => {
                                 <p className="text-[10px] font-black text-[#B45309] uppercase tracking-[0.2em] leading-none mb-1">Exlusive Benefit</p>
                                 <h3 className="text-lg font-[1000] text-content leading-none tracking-tight">LOYALTY REWARDS</h3>
                             </div>
-                            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-amber-50">
+                            <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center  border border-amber-50">
                                 <Gift size={22} className="text-amber-600" strokeWidth={2.5} />
                             </div>
                         </div>
@@ -265,7 +265,7 @@ const ServiceDetails = () => {
             </div>
 
             {/* ── Bottom Booking Bar ── */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-2xl border-t border-gray-100 px-6 py-5 flex items-center justify-between pb-[calc(20px+constant(safe-area-inset-bottom))] pb-[calc(20px+env(safe-area-inset-bottom))]">
+            <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-2xl border-t border-white/5 px-6 py-5 flex items-center justify-between pb-[calc(20px+constant(safe-area-inset-bottom))] pb-[calc(20px+env(safe-area-inset-bottom))]">
                 <div className="space-y-1">
                     <p className="text-[9px] font-black text-content-subtle uppercase tracking-widest leading-none">Total Payable</p>
                     <div className="flex items-baseline gap-1.5 leading-none">
@@ -276,7 +276,7 @@ const ServiceDetails = () => {
                 <motion.button
                     whileTap={{ scale: 0.95 }}
                     onClick={() => navigate('/map')}
-                    className="h-14 px-10 bg-brand text-white rounded-2xl font-[1000] text-[12px] uppercase tracking-[0.1em] shadow-xl shadow-brand/30 flex items-center gap-2 relative overflow-hidden"
+                    className="h-14 px-10 bg-brand text-white rounded-2xl font-[1000] text-[12px] uppercase tracking-[0.1em] shadow-2xl shadow-black/50 shadow-brand/30 flex items-center gap-2 relative overflow-hidden"
                 >
                     <span>Proceed <span className="opacity-50">to Slot</span></span>
                     <ChevronRight size={16} strokeWidth={4} />

@@ -1,10 +1,10 @@
 const Penalty = require('../models/Penalty');
 const SpareDriver = require('../models/SpareDriver');
-const Consumer = require('../models/Consumer');
+const User = require('../models/User');
 const Booking = require('../models/Booking');
 const WalletTransaction = require('../models/WalletTransaction');
 const catchAsync = require('../utils/catchAsync');
-const AppError = require('../utils/appError');
+const AppError = require('../utils/AppError');
 
 // Get all penalties with filters
 exports.getAllPenalties = catchAsync(async (req, res) => {
@@ -121,7 +121,7 @@ exports.createPenalty = catchAsync(async (req, res) => {
     if (userType === 'driver') {
         user = await SpareDriver.findById(userId);
     } else if (userType === 'customer') {
-        user = await Consumer.findById(userId);
+        user = await User.findOne({ _id: userId, role: 'consumer' });
     }
     
     if (!user) {

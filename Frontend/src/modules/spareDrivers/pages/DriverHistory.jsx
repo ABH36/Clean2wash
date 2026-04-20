@@ -27,7 +27,7 @@ const DriverHistory = () => {
 
                 <div className="space-y-4">
                     {trips.length > 0 ? trips.map((t, i) => (
-                        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} key={i} className="bg-surface border border-content/[0.04] rounded-[2.2rem] p-6 shadow-sm relative overflow-hidden group transition-colors duration-500">
+                        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} key={i} className="bg-surface border border-content/[0.04] rounded-[2.2rem] p-6  relative overflow-hidden group transition-colors duration-500">
                            <div className="flex justify-between items-start mb-6">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 bg-content/[0.02] border border-content/[0.03] rounded-xl flex items-center justify-center text-content/20"><Navigation size={18} /></div>

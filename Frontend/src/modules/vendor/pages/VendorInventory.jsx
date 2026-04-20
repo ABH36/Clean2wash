@@ -70,17 +70,17 @@ const SupplyDrawer = ({ open, onClose, initial, onSave }) => {
                     />
                     <motion.div
                         initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-                        className="fixed right-0 top-0 h-full bg-surface z-[210] shadow-2xl flex flex-col border-l border-gray-100/10"
+                        className="fixed right-0 top-0 h-full bg-surface z-[210] shadow-2xl flex flex-col border-l border-white/5/10"
                         style={{ width: 400 }}
                     >
-                        <div className="px-6 py-5 border-b border-gray-100/10 flex items-center justify-between">
+                        <div className="px-6 py-5 border-b border-white/5/10 flex items-center justify-between">
                             <div>
                                 <h2 className="text-base font-black text-content tracking-tight uppercase">
                                     {initial ? 'Edit Supply' : 'Add New Supply'}
                                 </h2>
                                 <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-1">Resource Logging</p>
                             </div>
-                            <button onClick={onClose} className="p-2 hover:bg-background rounded-xl transition-all border border-gray-100/10">
+                            <button onClick={onClose} className="p-2 hover:bg-background rounded-xl transition-all border border-white/5/10">
                                 <X size={18} className="text-content-muted" />
                             </button>
                         </div>
@@ -93,7 +93,7 @@ const SupplyDrawer = ({ open, onClose, initial, onSave }) => {
                                     placeholder="e.g. Premium Wax"
                                     value={form.name}
                                     onChange={e => setForm({ ...form, name: e.target.value })}
-                                    className={`w-full h-12 bg-background border rounded-xl px-4 text-sm font-bold text-content outline-none focus:border-brand transition-all ${errors.name ? 'border-red-500/50' : 'border-gray-100/10'}`}
+                                    className={`w-full h-12 bg-background border rounded-xl px-4 text-sm font-bold text-content outline-none focus:border-brand transition-all ${errors.name ? 'border-red-500/50' : 'border-white/5/10'}`}
                                 />
                             </div>
 
@@ -103,7 +103,7 @@ const SupplyDrawer = ({ open, onClose, initial, onSave }) => {
                                     <select
                                         value={form.category}
                                         onChange={e => setForm({ ...form, category: e.target.value })}
-                                        className="w-full h-12 bg-background border border-gray-100/10 rounded-xl px-4 text-xs font-bold text-content outline-none focus:border-brand cursor-pointer"
+                                        className="w-full h-12 bg-background border border-white/5/10 rounded-xl px-4 text-xs font-bold text-content outline-none focus:border-brand cursor-pointer"
                                     >
                                         {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                                     </select>
@@ -113,7 +113,7 @@ const SupplyDrawer = ({ open, onClose, initial, onSave }) => {
                                     <select
                                         value={form.unit}
                                         onChange={e => setForm({ ...form, unit: e.target.value })}
-                                        className="w-full h-12 bg-background border border-gray-100/10 rounded-xl px-4 text-xs font-bold text-content outline-none focus:border-brand cursor-pointer"
+                                        className="w-full h-12 bg-background border border-white/5/10 rounded-xl px-4 text-xs font-bold text-content outline-none focus:border-brand cursor-pointer"
                                     >
                                         {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                                     </select>
@@ -128,7 +128,7 @@ const SupplyDrawer = ({ open, onClose, initial, onSave }) => {
                                         placeholder="0"
                                         value={form.stock}
                                         onChange={e => setForm({ ...form, stock: e.target.value })}
-                                        className={`w-full h-12 bg-background border rounded-xl px-4 text-sm font-bold text-content outline-none focus:border-brand transition-all ${errors.stock ? 'border-red-500/50' : 'border-gray-100/10'}`}
+                                        className={`w-full h-12 bg-background border rounded-xl px-4 text-sm font-bold text-content outline-none focus:border-brand transition-all ${errors.stock ? 'border-red-500/50' : 'border-white/5/10'}`}
                                     />
                                 </div>
                                 <div className="space-y-1.5">
@@ -138,7 +138,7 @@ const SupplyDrawer = ({ open, onClose, initial, onSave }) => {
                                         placeholder="5"
                                         value={form.threshold}
                                         onChange={e => setForm({ ...form, threshold: e.target.value })}
-                                        className={`w-full h-12 bg-background border rounded-xl px-4 text-sm font-bold text-content outline-none focus:border-brand transition-all ${errors.threshold ? 'border-red-500/50' : 'border-gray-100/10'}`}
+                                        className={`w-full h-12 bg-background border rounded-xl px-4 text-sm font-bold text-content outline-none focus:border-brand transition-all ${errors.threshold ? 'border-red-500/50' : 'border-white/5/10'}`}
                                     />
                                 </div>
                             </div>
@@ -154,8 +154,8 @@ const SupplyDrawer = ({ open, onClose, initial, onSave }) => {
                             </div>
                         </form>
 
-                        <div className="p-6 border-t border-gray-100/10 flex gap-3">
-                            <button onClick={onClose} className="flex-1 h-12 border border-gray-100/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-content-subtle hover:bg-background transition-all">Cancel</button>
+                        <div className="p-6 border-t border-white/5/10 flex gap-3">
+                            <button onClick={onClose} className="flex-1 h-12 border border-white/5/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-content-subtle hover:bg-background transition-all">Cancel</button>
                             <button onClick={handleSubmit} className="flex-[2] h-12 bg-brand text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-brand/20">Commit Changes</button>
                         </div>
                     </motion.div>
@@ -289,12 +289,12 @@ const VendorInventory = () => {
                         { label: 'Low Stock', val: stats.lowStock, icon: AlertTriangle, color: 'text-amber-500' },
                         { label: 'Exhausted', val: stats.outOfStock, icon: Droplets, color: 'text-red-500' },
                     ].map(s => (
-                        <div key={s.label} className="bg-surface p-6 rounded-[2rem] border border-gray-100/10 shadow-soft flex items-center justify-between transition-all hover:scale-105">
+                        <div key={s.label} className="bg-surface p-6 rounded-[2rem] border border-white/5/10 shadow-soft flex items-center justify-between transition-all hover:scale-105">
                             <div>
                                 <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest leading-none mb-2">{s.label}</p>
                                 <h3 className={`text-2xl font-black ${s.color}`}>{String(s.val).padStart(2, '0')}</h3>
                             </div>
-                            <div className="w-12 h-12 bg-background border border-gray-100/10 rounded-2xl flex items-center justify-center text-content-muted">
+                            <div className="w-12 h-12 bg-background border border-white/5/10 rounded-2xl flex items-center justify-center text-content-muted">
                                 <s.icon size={20} strokeWidth={2.5} />
                             </div>
                         </div>
@@ -302,13 +302,13 @@ const VendorInventory = () => {
                 </div>
 
                 {/* Controls */}
-                <div className="flex flex-col md:flex-row gap-4 justify-between bg-surface p-4 rounded-3xl border border-gray-100/10 shadow-soft">
-                    <div className="flex gap-2 bg-background p-1.5 rounded-2xl border border-gray-100/10 overflow-x-auto scrollbar-hide">
+                <div className="flex flex-col md:flex-row gap-4 justify-between bg-surface p-4 rounded-3xl border border-white/5/10 shadow-soft">
+                    <div className="flex gap-2 bg-background p-1.5 rounded-2xl border border-white/5/10 overflow-x-auto scrollbar-hide">
                         {['All', ...CATEGORIES].map(c => (
                             <button
                                 key={c}
                                 onClick={() => setActiveCategory(c)}
-                                className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeCategory === c ? 'bg-surface text-brand shadow-sm border border-gray-100/10' : 'text-content-subtle hover:text-content'}`}
+                                className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeCategory === c ? 'bg-surface text-brand  border border-white/5/10' : 'text-content-subtle hover:text-content'}`}
                             >
                                 {c}
                             </button>
@@ -323,12 +323,12 @@ const VendorInventory = () => {
                                 placeholder="Locate supply..."
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
-                                className="w-64 h-12 bg-background border border-gray-100/10 rounded-2xl pl-12 pr-6 text-[11px] font-black text-content outline-none focus:border-brand transition-all"
+                                className="w-64 h-12 bg-background border border-white/5/10 rounded-2xl pl-12 pr-6 text-[11px] font-black text-content outline-none focus:border-brand transition-all"
                             />
                         </div>
                         <button
                             onClick={() => setDrawerOpen(true)}
-                            className="px-8 h-12 bg-brand text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-brand/20 flex items-center gap-2 hover:scale-105 transition-all"
+                            className="px-8 h-12 bg-brand text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-black/50 shadow-brand/20 flex items-center gap-2 hover:scale-105 transition-all"
                         >
                             <Plus size={18} strokeWidth={3} /> Log New Supply
                         </button>
@@ -336,8 +336,8 @@ const VendorInventory = () => {
                 </div>
 
                 {/* Inventory List */}
-                <div className="bg-surface rounded-[2.5rem] border border-gray-100/10 overflow-hidden shadow-soft">
-                    <div className="p-6 md:p-8 border-b border-gray-100/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="bg-surface rounded-[2.5rem] border border-white/5/10 overflow-hidden shadow-soft">
+                    <div className="p-6 md:p-8 border-b border-white/5/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
                             <h3 className="text-lg md:text-xl font-black text-content uppercase tracking-tighter leading-none">Tactical <span className="text-brand">Stock Registry</span></h3>
                             <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mt-1.5 opacity-60">Real-time resource allocation</p>
@@ -352,13 +352,13 @@ const VendorInventory = () => {
                     </div>
 
                     {loading ? (
-                        <div className="py-24 flex flex-col items-center gap-4 justify-center bg-gray-50/5">
+                        <div className="py-24 flex flex-col items-center gap-4 justify-center bg-white/[0.02]/5">
                             <div className="w-12 h-12 border-4 border-brand/20 border-t-brand rounded-full animate-spin shadow-lg shadow-brand/20" />
                             <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em]">Synchronizing Tactical Assets...</p>
                         </div>
                     ) : filtered.length === 0 ? (
-                        <div className="py-24 flex flex-col items-center gap-6 text-center bg-gray-50/5">
-                            <div className="w-16 h-16 bg-background rounded-[1.5rem] flex items-center justify-center text-content-subtle/10 border border-gray-100/10 shadow-inner">
+                        <div className="py-24 flex flex-col items-center gap-6 text-center bg-white/[0.02]/5">
+                            <div className="w-16 h-16 bg-background rounded-[1.5rem] flex items-center justify-center text-content-subtle/10 border border-white/5/10 shadow-inner">
                                 <Droplets size={32} />
                             </div>
                             <div>
@@ -370,7 +370,7 @@ const VendorInventory = () => {
                         <div className="admin-table-container">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="border-b border-gray-100/5 bg-gray-50/5">
+                                    <tr className="border-b border-white/5/5 bg-white/[0.02]/5">
                                         <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-[0.2em]">Item Identity</th>
                                         <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] text-center">Tactical Unit Count</th>
                                         <th className="px-8 py-5 text-[10px] font-black text-content-subtle uppercase tracking-[0.2em]">Logistics Health</th>
@@ -382,11 +382,11 @@ const VendorInventory = () => {
                                         <motion.tr
                                             layout
                                             key={i.id}
-                                            className="border-b border-gray-100/5 group hover:bg-gray-50/5 transition-all font-black relative active:scale-[0.995]"
+                                            className="border-b border-white/5/5 group hover:bg-white/[0.02]/5 transition-all font-black relative active:scale-[0.995]"
                                         >
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-11 h-11 bg-background border border-gray-100/10 rounded-2xl flex items-center justify-center text-brand shadow-inner">
+                                                    <div className="w-11 h-11 bg-background border border-white/5/10 rounded-2xl flex items-center justify-center text-brand shadow-inner">
                                                         <Droplets size={20} />
                                                     </div>
                                                     <div>
@@ -399,7 +399,7 @@ const VendorInventory = () => {
                                                 <p className="text-base font-black tracking-tighter text-content leading-none mb-2.5">
                                                     {i.stock} <span className="text-[10px] uppercase font-black opacity-40">{i.unit}</span>
                                                 </p>
-                                                <div className="w-24 mx-auto h-1.5 bg-background border border-gray-100/10 rounded-full overflow-hidden shadow-inner">
+                                                <div className="w-24 mx-auto h-1.5 bg-background border border-white/5/10 rounded-full overflow-hidden shadow-inner">
                                                     <motion.div
                                                         initial={{ width: 0 }}
                                                         animate={{ width: `${Math.min((i.stock / (i.threshold * 2)) * 100, 100)}%` }}
@@ -408,7 +408,7 @@ const VendorInventory = () => {
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6">
-                                                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-[0.15em] shadow-sm
+                                                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-[0.15em] 
                                                     ${i.status === 'Healthy' ? 'bg-green-500/10 border-green-500/20 text-green-500 shadow-green-500/5' :
                                                         i.status === 'Low Stock' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500 shadow-amber-500/5' :
                                                             'bg-red-500/10 border-red-500/20 text-red-500 shadow-red-500/5'}`}>
@@ -420,20 +420,20 @@ const VendorInventory = () => {
                                                 <div className="flex items-center justify-end gap-3 translate-x-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all">
                                                     <button
                                                         onClick={() => handleRefill(i.id)}
-                                                        className="w-10 h-10 bg-background border border-gray-100/10 rounded-xl text-content-muted hover:text-brand hover:border-brand/40 transition-all font-bold shadow-sm flex items-center justify-center"
+                                                        className="w-10 h-10 bg-background border border-white/5/10 rounded-xl text-content-muted hover:text-brand hover:border-brand/40 transition-all font-bold  flex items-center justify-center"
                                                         title="Quick Refill (+10)"
                                                     >
                                                         <RefreshCw size={15} />
                                                     </button>
                                                     <button
                                                         onClick={() => { setEditingItem(i); setDrawerOpen(true); }}
-                                                        className="w-10 h-10 bg-background border border-gray-100/10 rounded-xl text-content-muted hover:text-blue-500 hover:border-blue-500/40 transition-all font-bold shadow-sm flex items-center justify-center"
+                                                        className="w-10 h-10 bg-background border border-white/5/10 rounded-xl text-content-muted hover:text-blue-500 hover:border-blue-500/40 transition-all font-bold  flex items-center justify-center"
                                                     >
                                                         <Edit2 size={15} />
                                                     </button>
                                                     <button
                                                         onClick={() => handleDelete(i.id)}
-                                                        className="w-10 h-10 bg-background border border-gray-100/10 rounded-xl text-content-muted hover:text-red-500 hover:border-red-500/40 transition-all font-bold shadow-sm flex items-center justify-center"
+                                                        className="w-10 h-10 bg-background border border-white/5/10 rounded-xl text-content-muted hover:text-red-500 hover:border-red-500/40 transition-all font-bold  flex items-center justify-center"
                                                     >
                                                         <Trash2 size={15} />
                                                     </button>

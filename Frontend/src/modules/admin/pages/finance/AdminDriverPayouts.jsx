@@ -158,15 +158,15 @@ const AdminDriverPayouts = () => {
             {/* Filters */}
             <div className="admin-card">
                 <div className="flex flex-wrap items-center gap-4">
-                    <div className="flex-1 min-w-[300px] relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={16} />
+                    <div className="flex-1 min-w-[300px] bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl px-4 py-2 flex items-center gap-3 group focus-within:border-brand transition-all">
+                        <Search className="text-[var(--text-muted)] group-focus-within:text-brand" size={16} />
                         <input
                             type="text"
                             placeholder="Search by driver name or phone..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && fetchPayouts()}
-                            className="admin-input pl-12"
+                            className="bg-transparent outline-none text-sm text-[var(--text-primary)] w-full placeholder:text-[var(--text-muted)]"
                         />
                     </div>
 
@@ -184,9 +184,9 @@ const AdminDriverPayouts = () => {
 
                         <button 
                             onClick={fetchPayouts} 
-                            className="btn-secondary w-10 h-10 p-0 flex items-center justify-center"
+                            className="btn-secondary w-10 h-10 p-0 flex items-center justify-center hover:rotate-180 transition-all duration-500"
                         >
-                            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
                         </button>
                     </div>
                 </div>
@@ -302,9 +302,9 @@ const AdminDriverPayouts = () => {
                                                 )}
                                                 <button
                                                     onClick={() => setSelectedPayout(payout)}
-                                                    className="btn-secondary w-8 h-8 p-0 flex items-center justify-center"
+                                                    className="btn-secondary w-9 h-9 p-0 flex items-center justify-center group/eye hover:border-brand transition-all"
                                                 >
-                                                    <Eye size={14} />
+                                                    <Eye size={18} className="group-hover/eye:text-brand transition-colors" />
                                                 </button>
                                             </div>
                                         </td>

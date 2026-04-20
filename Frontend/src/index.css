@@ -22,6 +22,9 @@
   --brand-light: #FFEB3B;
   --brand-dark: #FBC02D;
   --brand-rgb: 250, 205, 21;
+  --color-brand: #FACD15;
+  --color-brand-light: #FFEB3B;
+  --color-brand-dark: #FBC02D;
 }
 
 /* Hardened Theme Synchronization */
@@ -107,5 +110,40 @@
 
   .touch-active {
     @apply active:scale-95 active:opacity-80 transition-all duration-200;
+  }
+
+  /* Premium Shimmer Animations */
+  @keyframes shimmer {
+    0% { transform: translateX(-150%); }
+    100% { transform: translateX(150%); }
+  }
+
+  .shimmer-effect {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shimmer-effect::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.05),
+      transparent
+    );
+    animation: shimmer 2s infinite;
+  }
+
+  .skeleton {
+    @apply bg-gray-100 rounded-lg overflow-hidden relative;
+  }
+
+  .dark .skeleton {
+    @apply bg-white/5;
   }
 }

@@ -4,7 +4,10 @@ import {
     ShieldCheck, LogOut, ChevronRight,
     CreditCard, Camera,
     Loader2, Trophy, ShieldAlert,
-    CheckCircle2
+    CheckCircle2, Edit2, Save, X,
+    TrendingUp, Clock, Star, Target,
+    Zap, Activity, DollarSign, Lock,
+    Unlock, Calendar, BarChart3, Award, Wallet
 } from 'lucide-react';
 import DriverLayout from '../components/DriverLayout';
 import { spareDriverAPI } from '../../../utils/spareDriverApi';
@@ -22,7 +25,8 @@ const DriverProfile = () => {
     const fetchProfile = async () => {
         try {
             const res = await spareDriverAPI.getProfile();
-            setDriver(res?.data?.driver || null);
+            const driverData = res?.data?.driver || null;
+            setDriver(driverData);
         } catch (error) {
             console.error(error);
         } finally {
@@ -60,9 +64,9 @@ const DriverProfile = () => {
 
     if (loading) {
         return (
-            <DriverLayout title="Dossier">
-                <div className="flex h-[60vh] items-center justify-center font-black text-content/20 uppercase tracking-[0.4em] animate-pulse">
-                    Scanning Dossier...
+            <DriverLayout title="Profile">
+                <div className="flex h-[60vh] items-center justify-center font-black text-white/30 uppercase tracking-[0.4em] animate-pulse">
+                    Scanning profile...
                 </div>
             </DriverLayout>
         );
@@ -75,173 +79,133 @@ const DriverProfile = () => {
         : 'Operational base not set';
 
     return (
-        <DriverLayout title="Operator Dossier">
-            <div className="px-6 py-6 space-y-6 pb-24">
-                <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-black rounded-[2.8rem] p-8 shadow-2xl relative overflow-hidden transition-colors duration-500">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand/10 blur-[60px]" />
-                    <div className="flex items-center gap-6 relative z-10">
+        <DriverLayout title="Profile">
+            <div className="px-4 py-4 space-y-4 pb-28 min-h-screen">
+                {/* ── Compact Profile Header ── */}
+                <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-surface border border-content/[0.04] rounded-[2rem] p-5 shadow-sm relative overflow-hidden transition-all duration-300">
+                    <div className="flex items-center gap-4 relative z-10">
                         <div
                             onClick={() => !uploading && fileInputRef.current?.click()}
-                            className="w-20 h-20 rounded-[2rem] bg-brand/10 border-2 border-brand/20 flex items-center justify-center text-brand relative overflow-hidden cursor-pointer group"
+                            className="w-16 h-16 rounded-[1.2rem] bg-brand/10 border border-brand/20 flex items-center justify-center text-brand relative overflow-hidden cursor-pointer"
                         >
-                            <AnimatePresence>
-                                {uploading ? (
-                                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 bg-black/60 flex items-center justify-center z-10">
-                                        <Loader2 className="animate-spin text-brand" size={24} />
-                                    </motion.div>
-                                ) : (
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity z-10">
-                                        <Camera size={20} className="text-brand" />
-                                    </div>
-                                )}
-                            </AnimatePresence>
-
+                            {uploading && (
+                                <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-10">
+                                    <Loader2 className="animate-spin text-brand" size={20} />
+                                </div>
+                            )}
                             {driver?.documents?.selfie?.url ? (
-                                <img src={driver.documents.selfie.url} alt="Profile" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" />
+                                <img src={driver.documents.selfie.url} alt="Profile" className="w-full h-full object-cover grayscale" />
                             ) : (
-                                <User size={36} />
+                                <User size={28} />
                             )}
                             <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
                         </div>
-                        <div>
-                            <div className="flex items-center gap-2 mb-2">
-                                <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-none">{driver?.name}</h2>
-                                {isPremium && <Trophy size={18} className="text-brand fill-brand" />}
-                            </div>
+                        <div className="flex-1">
                             <div className="flex items-center gap-2">
-                                <span className={`w-2 h-2 rounded-full ${isPremium ? 'bg-green-500' : 'bg-brand'} animate-pulse`} />
-                                <p className="text-[10px] font-black text-brand uppercase tracking-[0.3em] font-mono">
-                                    ID: {driver?.driverId || `CW-SD-${driver?._id?.slice(-6)}`}
-                                </p>
+                                <h2 className="text-xl font-black text-content tracking-tight">{driver?.name}</h2>
+                                {isPremium && <ShieldCheck size={16} className="text-brand" />}
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-1">
+                                <span className={`w-1.5 h-1.5 rounded-full ${isPremium ? 'bg-green-500' : 'bg-brand animate-pulse'}`} />
+                                <p className="text-[10px] font-black text-content/40 uppercase tracking-widest font-mono">{driver?.driverId || `ID: CW-SD-${driver?._id?.slice(-6)}`}</p>
                             </div>
                         </div>
+                        <button onClick={() => navigate('/spare-driver/profile/edit')} className="w-10 h-10 rounded-full bg-content/[0.03] flex items-center justify-center text-content/60 hover:text-brand transition-colors border border-content/[0.02]">
+                            <Edit2 size={16} />
+                        </button>
                     </div>
                 </motion.div>
 
-                <motion.div
-                    initial={{ scale: 0.95, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className={`rounded-[2.5rem] p-6 border transition-all duration-500 relative overflow-hidden ${isPremium ? 'bg-gradient-to-br from-brand/20 to-brand/5 border-brand/30 shadow-brand/10 shadow-2xl' : 'bg-surface border-content/[0.04]'}`}
-                >
-                    <div className="relative z-10 flex justify-between items-center">
-                        <div className="flex items-center gap-4">
-                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isPremium ? 'bg-black text-brand' : 'bg-content/[0.04] text-content/20'}`}>
-                                <ShieldCheck size={24} className={isPremium ? 'animate-pulse' : ''} />
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-black text-brand uppercase tracking-widest">{isPremium ? 'Elite Operator' : 'Elite Status'}</p>
-                                <h3 className="text-sm font-black text-content uppercase tracking-tight">{isPremium ? 'Premium Verified' : 'Standard Access'}</h3>
-                            </div>
-                        </div>
-
-                        {!isPremium && !isPvrPending && (
-                            <button
-                                onClick={() => navigate('/spare-driver/premium')}
-                                className="px-5 h-10 bg-brand text-black rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-brand/20"
-                            >
-                                Upgrade
-                            </button>
-                        )}
-                        {isPvrPending && (
-                            <div className="px-4 py-2 bg-content/[0.05] rounded-xl flex items-center gap-2 border border-content/[0.03]">
-                                <Loader2 size={12} className="animate-spin text-content/40" />
-                                <span className="text-[9px] font-black text-content/40 uppercase">Reviewing</span>
-                            </div>
-                        )}
-                        {isPremium && (
-                            <CheckCircle2 size={24} className="text-green-500" />
-                        )}
-                    </div>
-                </motion.div>
-
-                <div className="bg-surface border border-content/[0.04] rounded-[2.2rem] p-6 space-y-5 transition-colors duration-500 shadow-sm relative overflow-hidden">
-                    <button
-                        onClick={() => navigate('/spare-driver/address')}
-                        className="absolute top-4 right-4 text-brand text-[8px] font-black uppercase tracking-widest border border-brand/20 px-3 py-1.5 rounded-lg active:scale-95 transition-all"
-                    >
-                        Update Base
-                    </button>
+                {/* ── Compact Metrics ── */}
+                <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="grid grid-cols-4 gap-2">
                     {[
-                        { l: 'Communications', v: driver?.email || 'Not set', i: Mail },
-                        { l: 'Tactical Link', v: driver?.phone || 'Not set', i: Phone },
-                        { l: 'Operational Base', v: fullAddress, i: MapPin }
-                    ].map((item, index) => (
-                        <div key={index} className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-content/[0.04] flex items-center justify-center text-content/20"><item.i size={18} /></div>
-                            <div className="min-w-0 flex-1">
-                                <p className="text-[8px] font-black text-content/20 uppercase tracking-widest">{item.l}</p>
-                                <p className="text-sm font-black text-content uppercase truncate">{item.v}</p>
-                            </div>
+                        { label: 'Rating', value: driver?.reliabilityScore?.metrics?.avgRating?.toFixed(1) || '5.0', icon: Star, color: 'text-brand' },
+                        { label: 'Rely %', value: driver?.reliabilityScore?.score || 100, icon: Trophy, color: 'text-blue-500' },
+                        { label: 'Accept', value: `${driver?.reliabilityScore?.metrics?.acceptanceRate || 100}%`, icon: Target, color: 'text-green-500' },
+                        { label: 'Trips', value: driver?.reliabilityScore?.metrics?.totalTrips || 0, icon: Activity, color: 'text-purple-500' }
+                    ].map((m, i) => (
+                        <div key={i} className="bg-surface border border-content/[0.04] p-3 rounded-2xl flex flex-col items-center justify-center text-center shadow-sm">
+                            <m.icon size={14} className={`${m.color} mb-1.5`} />
+                            <p className="text-[12px] font-black text-content leading-none mb-1">{m.value}</p>
+                            <p className="text-[7px] font-black text-content/30 uppercase tracking-[0.1em]">{m.label}</p>
                         </div>
                     ))}
-                </div>
+                </motion.div>
 
-                <div className="space-y-3">
-                    <p className="text-[10px] font-black text-content/30 uppercase tracking-[0.3em] px-2">Compliance Vault</p>
-                    <div className="bg-surface border border-content/[0.04] rounded-[2.2rem] overflow-hidden transition-colors duration-500 shadow-sm divide-y divide-content/[0.04]">
-                        {[
-                            { l: 'Auth Protocols', s: 'Verified', i: ShieldCheck },
-                            { l: 'Elite Tier', s: isPremium ? 'Premium' : 'Standard', i: Trophy },
-                            { l: 'PVR Badge', s: driver?.verification?.policeStatus || 'Incomplete', i: ShieldAlert },
-                            { l: 'Billing Signal', s: driver?.wallet?.balance ? 'Active' : 'Standby', i: CreditCard }
-                        ].map((item, index) => (
-                            <button key={index} className="w-full p-5 flex items-center justify-between active:bg-content/[0.02] transition-colors">
-                                <div className="flex items-center gap-4">
-                                    <div className="text-brand"><item.i size={20} /></div>
-                                    <span className="text-[11px] font-black text-content uppercase">{item.l}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className={`text-[9px] font-black uppercase ${item.s === 'Premium' ? 'text-green-500' : 'text-content/30'}`}>{item.s}</span>
-                                    <ChevronRight size={16} className="text-content/10" />
-                                </div>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                {['verified_pending_kit', 'kit_payment_pending', 'active'].includes(driver?.status) && (
-                    <button
-                        onClick={() => navigate('/spare-driver/kit-purchase')}
-                        className="w-full bg-surface border border-content/[0.04] rounded-[2rem] px-5 py-4 flex items-center justify-between active:scale-[0.99] transition-all shadow-sm"
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
-                                <CreditCard size={18} />
-                            </div>
-                            <div className="text-left">
-                                <p className="text-[9px] font-black text-brand uppercase tracking-widest">Kit Purchasing</p>
-                                <p className="text-[10px] font-black text-content/45 uppercase tracking-wider mt-1">
-                                    {driver?.status === 'active' ? 'View kit status and recovery plan' : 'Complete payment to unlock operations'}
-                                </p>
-                            </div>
-                        </div>
-                        <ChevronRight size={16} className="text-content/20" />
-                    </button>
-                )}
-
-                {['verified_pending_kit', 'kit_payment_pending', 'active'].includes(driver?.status) && (
-                    <button
+                {/* ── Status Banner ── */}
+                {!isPremium && !isPvrPending && (
+                    <motion.button 
+                        initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.2 }}
                         onClick={() => navigate('/spare-driver/premium')}
-                        className="w-full bg-surface border border-content/[0.04] rounded-[2rem] px-5 py-4 flex items-center justify-between active:scale-[0.99] transition-all shadow-sm"
+                        className="w-full bg-brand/10 border border-brand/20 rounded-[1.5rem] p-4 flex items-center justify-between active:scale-[0.98] transition-all"
                     >
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
-                                <ShieldCheck size={18} />
-                            </div>
+                            <div className="w-8 h-8 rounded-full bg-brand/20 flex items-center justify-center text-brand"><ShieldCheck size={14} /></div>
                             <div className="text-left">
-                                <p className="text-[9px] font-black text-brand uppercase tracking-widest">Premium Driver</p>
-                                <p className="text-[10px] font-black text-content/45 uppercase tracking-wider mt-1">
-                                    View premium benefits and police verification
-                                </p>
+                                <p className="text-[10px] font-black text-brand uppercase tracking-widest border-b border-brand/20 pb-0.5 inline-block">Standard Account</p>
+                                <p className="text-[11px] font-bold text-content/60 mt-0.5">Upgrade to Elite to unlock priority missions</p>
                             </div>
                         </div>
-                        <ChevronRight size={16} className="text-content/20" />
-                    </button>
+                        <ChevronRight size={16} className="text-brand opacity-60" />
+                    </motion.button>
                 )}
 
-                <button onClick={handleLogout} className="w-full h-15 bg-red-500/10 text-red-500 rounded-2xl flex items-center justify-center gap-3 font-black uppercase text-[11px] tracking-widest active:scale-95 transition-all mb-8 border border-red-500/10 shadow-sm">
-                    <LogOut size={18} /> Terminate Session
-                </button>
+                {/* ── Operational Menu ── */}
+                <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="bg-surface border border-content/[0.04] rounded-[2rem] overflow-hidden shadow-sm">
+                    {[
+                        { title: 'Wallet & Earnings', subtitle: `₹${(driver?.wallet?.balance || 0).toLocaleString()} Yield`, icon: Wallet, action: () => navigate('/spare-driver/wallet') },
+                        { title: 'Trip History', subtitle: `${driver?.reliabilityScore?.metrics?.completedTrips || 0} completed trips`, icon: Clock, action: () => navigate('/spare-driver/trip-history') },
+                        { title: 'Duty Dashboard', subtitle: `${((driver?.dutyHours?.today?.totalMinutes || 0)/60).toFixed(1)}h logged today`, icon: Clock, action: () => {} },
+                        { title: 'Service Portfolio', subtitle: `${driver?.allowedServices?.filter(s => s.isActive).length || 0} active protocols`, icon: Zap, action: () => {} },
+                        { title: 'Base Sector', subtitle: fullAddress.substring(0, 30) + '...', icon: MapPin, action: () => navigate('/spare-driver/address') }
+                    ].map((item, index) => (
+                        <button key={index} onClick={item.action} className="w-full p-4 flex items-center justify-between border-b border-content/[0.02] last:border-0 hover:bg-content/[0.01] active:bg-content/[0.02] transition-colors">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-xl bg-content/[0.02] border border-content/[0.02] flex items-center justify-center text-content/40">
+                                    <item.icon size={18} />
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-[12px] font-black text-content uppercase tracking-tight">{item.title}</p>
+                                    <p className="text-[9px] font-black text-content/40 uppercase tracking-widest mt-0.5">{item.subtitle}</p>
+                                </div>
+                            </div>
+                            <ChevronRight size={16} className="text-content/20" />
+                        </button>
+                    ))}
+                </motion.div>
+
+                {/* ── Security & Compliance Menu ── */}
+                <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.4 }} className="space-y-2 pt-2">
+                    <p className="text-[9px] font-black text-content/30 uppercase tracking-[0.2em] px-3">Compliance & Access</p>
+                    <div className="bg-surface border border-content/[0.04] rounded-[1.5rem] overflow-hidden shadow-sm">
+                        {['verified_pending_kit', 'kit_payment_pending', 'active'].includes(driver?.status) && (
+                            <button onClick={() => navigate('/spare-driver/kit-purchase')} className="w-full p-4 flex items-center justify-between border-b border-content/[0.02] hover:bg-content/[0.01] transition-colors">
+                                <div className="flex items-center gap-3">
+                                    <CreditCard size={16} className="text-content/40" />
+                                    <span className="text-[11px] font-bold text-content uppercase tracking-widest">Protocol Kit</span>
+                                </div>
+                                <span className={`text-[8px] font-black uppercase px-2 py-1 rounded border ${driver?.kitStatus === 'PURCHASED' ? 'text-green-500 border-green-500/20 bg-green-500/10' : 'text-brand border-brand/20 bg-brand/10'}`}>
+                                    {driver?.kitStatus === 'PURCHASED' ? 'Deployed' : 'Pending'}
+                                </span>
+                            </button>
+                        )}
+                        <button onClick={() => navigate('/spare-driver/premium')} className="w-full p-4 flex items-center justify-between border-b border-content/[0.02] hover:bg-content/[0.01] transition-colors">
+                            <div className="flex items-center gap-3">
+                                <ShieldAlert size={16} className="text-content/40" />
+                                <span className="text-[11px] font-bold text-content uppercase tracking-widest">Police Check</span>
+                            </div>
+                            <span className={`text-[8px] font-black text-content/40 uppercase bg-content/[0.03] border border-content/[0.05] px-2 py-1 rounded`}>
+                                {driver?.verification?.policeStatus || 'Incomplete'}
+                            </span>
+                        </button>
+                        <button onClick={handleLogout} className="w-full p-4 flex items-center justify-between hover:bg-red-500/5 transition-colors group">
+                            <div className="flex items-center gap-3">
+                                <LogOut size={16} className="text-red-500" />
+                                <span className="text-[11px] font-black text-red-500 uppercase tracking-widest">Terminate Session</span>
+                            </div>
+                        </button>
+                    </div>
+                </motion.div>
             </div>
         </DriverLayout>
     );

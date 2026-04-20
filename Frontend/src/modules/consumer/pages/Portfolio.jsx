@@ -64,10 +64,10 @@ const Portfolio = () => {
         <MobileLayout hideNav={false}>
             <div className="min-h-screen bg-slate-50 pb-24 font-sans overflow-x-hidden">
                 {/* ── Compact Header ── */}
-                <header className="px-5 pt-8 pb-4 bg-white sticky top-0 z-[60] border-b border-gray-100">
+                <header className="px-5 pt-8 pb-4 bg-white/5 sticky top-0 z-[60] border-b border-white/5">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <button onClick={() => navigate(-1)} className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 active:scale-95 transition-all">
+                            <button onClick={() => navigate(-1)} className="w-10 h-10 bg-white/[0.02] rounded-xl flex items-center justify-center border border-white/5 active:scale-95 transition-all">
                                 <ChevronLeft size={22} className="text-slate-900" />
                             </button>
                             <div>
@@ -91,7 +91,7 @@ const Portfolio = () => {
                                 onClick={() => setActiveCategory(category)}
                                 className={`flex-shrink-0 px-6 py-2 rounded-xl text-[12px] font-bold transition-all ${activeCategory === category
                                     ? 'bg-slate-900 text-white shadow-lg'
-                                    : 'bg-white text-slate-400 border border-gray-100 hover:bg-gray-50'
+                                    : 'bg-white/5 text-slate-400 border border-white/5 hover:bg-white/[0.02]'
                                     }`}
                             >
                                 {category}
@@ -106,14 +106,14 @@ const Portfolio = () => {
                                 <motion.div 
                                     animate={{ rotate: 360 }}
                                     transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
-                                    className="p-3 rounded-full bg-white border border-gray-100 shadow-sm mb-4"
+                                    className="p-3 rounded-full bg-white/5 border border-white/5  mb-4"
                                 >
                                     <RefreshCw size={24} className="text-brand" />
                                 </motion.div>
                                 <p className="text-[11px] font-bold text-slate-300 uppercase tracking-widest">Loading visuals</p>
                             </div>
                         ) : filteredItems.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[2rem] border border-dashed border-gray-200">
+                            <div className="flex flex-col items-center justify-center py-20 bg-white/5 rounded-[2rem] border border-dashed border-white/10">
                                 <Layers size={40} className="text-slate-100 mb-4" />
                                 <p className="text-[12px] font-bold text-slate-400">No masterpieces recorded</p>
                             </div>
@@ -125,12 +125,12 @@ const Portfolio = () => {
                                         initial={{ opacity: 0, y: 15 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: idx * 0.05 }}
-                                        className="bg-white rounded-[1.8rem] overflow-hidden border border-gray-100 shadow-sm group"
+                                        className="bg-white/5 rounded-[1.8rem] overflow-hidden border border-white/5  group"
                                     >
                                         {/* Card Top - Compact */}
                                         <div className="p-4 flex justify-between items-center">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center border border-gray-100">
+                                                <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center border border-white/5">
                                                     <Zap size={18} className="text-brand" fill="currentColor" />
                                                 </div>
                                                 <div>
@@ -178,7 +178,7 @@ const Portfolio = () => {
                                             </div>
                                             <button 
                                                 onClick={() => setSelectedItem(item)}
-                                                className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-slate-400 active:scale-90 transition-all"
+                                                className="w-8 h-8 rounded-lg bg-white/[0.02] flex items-center justify-center text-slate-400 active:scale-90 transition-all"
                                             >
                                                 <Maximize2 size={14} />
                                             </button>

@@ -164,7 +164,7 @@ const AdminVehicleManagement = () => {
             case 'REJECTED': return 'text-red-600 bg-red-50 border-red-200';
             case 'EXPIRED': return 'text-red-600 bg-red-50 border-red-200';
             case 'EXPIRING_SOON': return 'text-orange-600 bg-orange-50 border-orange-200';
-            default: return 'text-gray-600 bg-gray-50 border-gray-200';
+            default: return 'text-white/60 bg-white/[0.02] border-white/10';
         }
     };
 
@@ -173,7 +173,7 @@ const AdminVehicleManagement = () => {
             case 'SEDAN': return 'text-blue-600 bg-blue-50 border-blue-200';
             case 'HATCHBACK': return 'text-green-600 bg-green-50 border-green-200';
             case 'SUV': return 'text-purple-600 bg-purple-50 border-purple-200';
-            default: return 'text-gray-600 bg-gray-50 border-gray-200';
+            default: return 'text-white/60 bg-white/[0.02] border-white/10';
         }
     };
 
@@ -191,12 +191,12 @@ const AdminVehicleManagement = () => {
     });
 
     return (
-        <div className="space-y-6 pb-32 max-w-full mx-auto px-4 bg-gray-50 min-h-screen">
+        <div className="space-y-6 pb-32 max-w-full mx-auto px-4 bg-white/[0.02] min-h-screen">
             {/* Header Control Panel */}
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <div className="bg-white/5 p-6 rounded-xl border border-white/10 ">
                 <div className="flex flex-col lg:flex-row items-center gap-4 justify-between">
                     <div className="flex flex-col gap-1">
-                        <h1 className="text-2xl font-bold text-gray-900">Vehicle Management</h1>
+                        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Vehicle Management</h1>
                         <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
                             <p className="text-sm font-semibold text-blue-600 uppercase tracking-wide">Fleet Verification Hub</p>
@@ -204,12 +204,12 @@ const AdminVehicleManagement = () => {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
-                        <div className="flex-1 lg:w-64 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 flex items-center gap-3 group focus-within:border-blue-500 transition-all">
-                            <Search size={14} className="text-gray-500 group-focus-within:text-blue-600" />
+                        <div className="flex-1 lg:w-64 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl px-4 py-2 flex items-center gap-3 group focus-within:border-blue-500 transition-all">
+                            <Search size={14} className="text-[var(--text-muted)] group-focus-within:text-blue-600" />
                             <input
                                 type="text"
                                 placeholder="Search vehicles..."
-                                className="bg-transparent outline-none text-sm font-medium text-gray-900 w-full placeholder:text-gray-500"
+                                className="bg-transparent outline-none text-sm font-medium text-[var(--text-primary)] w-full placeholder:text-[var(--text-muted)]"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
@@ -218,7 +218,7 @@ const AdminVehicleManagement = () => {
                         <select
                             value={filterStatus}
                             onChange={(e) => setFilterStatus(e.target.value)}
-                            className="h-11 px-4 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-900 outline-none cursor-pointer"
+                            className="h-11 px-4 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl text-sm font-medium text-[var(--text-primary)] outline-none cursor-pointer"
                         >
                             <option value="ALL">All Status</option>
                             <option value="PENDING">Pending</option>
@@ -228,9 +228,9 @@ const AdminVehicleManagement = () => {
 
                         <button 
                             onClick={loadVehicles} 
-                            className="w-11 h-11 bg-white border border-gray-200 rounded-xl flex items-center justify-center text-gray-500 hover:text-blue-600 transition-all shadow-sm"
+                            className="w-11 h-11 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-blue-600 hover:border-blue-400 transition-all group/refresh"
                         >
-                            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+                            <RefreshCw size={18} className={`${loading ? 'animate-spin' : 'group-hover/refresh:rotate-180 transition-transform duration-500'}`} />
                         </button>
 
                         <button 
@@ -238,7 +238,7 @@ const AdminVehicleManagement = () => {
                             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
                                 showAdvancedView 
                                     ? 'bg-blue-600 text-white' 
-                                    : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                                    : 'bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--card-hover)]'
                             }`}
                         >
                             <Settings size={14} />
@@ -262,12 +262,12 @@ const AdminVehicleManagement = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.1 }}
-                        className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm"
+                        className="bg-[var(--card)] p-5 rounded-xl border border-[var(--border)] "
                     >
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{stat.label}</p>
-                                <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
+                                <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">{stat.label}</p>
+                                <p className="text-2xl font-bold text-[var(--text-primary)] mt-1">{stat.value}</p>
                             </div>
                             <div className={`w-12 h-12 rounded-xl bg-${stat.color.replace('-', '-')}/10 flex items-center justify-center text-${stat.color}`}>
                                 {stat.icon}
@@ -278,23 +278,23 @@ const AdminVehicleManagement = () => {
             </div>
 
             {/* Vehicles Table */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="bg-white/5 rounded-xl border border-white/10  overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-left table-fixed border-separate border-spacing-0">
                         <thead>
-                            <tr className="bg-gray-50 border-b border-gray-200">
-                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Vehicle Details</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Driver</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wide text-center">Status</th>
+                             <tr className="bg-[var(--bg-secondary)] border-b border-[var(--border)]">
+                                <th className="px-6 py-4 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">Vehicle Details</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">Driver</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide text-center">Status</th>
                                 {showAdvancedView && (
                                     <>
-                                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wide text-center">Classification</th>
-                                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wide text-center">Documents</th>
-                                        <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wide text-center">Issues</th>
+                                        <th className="px-6 py-4 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide text-center">Classification</th>
+                                        <th className="px-6 py-4 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide text-center">Documents</th>
+                                        <th className="px-6 py-4 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide text-center">Issues</th>
                                     </>
                                 )}
-                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Notes</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right pr-10">Actions</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">Notes</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide text-right pr-10">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -308,7 +308,7 @@ const AdminVehicleManagement = () => {
                                 <tr>
                                     <td colSpan="5" className="px-5 py-24 text-center">
                                         <Shield className="mx-auto opacity-20 mb-3" size={32} />
-                                        <p className="text-sm font-semibold text-gray-500">No vehicles found</p>
+                                        <p className="text-sm font-semibold text-[var(--text-muted)]">No vehicles found</p>
                                     </td>
                                 </tr>
                             ) : (
@@ -317,22 +317,22 @@ const AdminVehicleManagement = () => {
                                         key={vehicle.id} 
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
-                                        className="group hover:bg-gray-50 transition-all duration-300"
+                                        className="group hover:bg-[var(--bg-secondary)] transition-all duration-300"
                                     >
-                                        <td className="px-6 py-4">
+                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 flex-shrink-0 rounded-lg bg-gray-100 text-gray-700 font-bold text-sm border border-gray-200 group-hover:bg-blue-600 group-hover:text-white transition-all flex items-center justify-center">
+                                                <div className="w-10 h-10 flex-shrink-0 rounded-lg bg-[var(--bg-secondary)] text-[var(--text-primary)] font-bold text-sm border border-[var(--border)] group-hover:bg-blue-600 group-hover:text-white transition-all flex items-center justify-center">
                                                     <Car size={18} />
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className="text-sm font-semibold text-gray-900 uppercase leading-none mb-1 truncate tracking-wide">{vehicle.vehicleNumber}</p>
-                                                    <p className="text-sm font-medium text-gray-500 capitalize truncate">{vehicle.model}</p>
+                                                    <p className="text-sm font-semibold text-[var(--text-primary)] uppercase leading-none mb-1 truncate tracking-wide">{vehicle.vehicleNumber}</p>
+                                                    <p className="text-sm font-medium text-[var(--text-muted)] capitalize truncate">{vehicle.model}</p>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <p className="text-sm font-semibold text-gray-900 capitalize">{vehicle.driverName}</p>
-                                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mt-1">
+                                            <p className="text-sm font-semibold text-[var(--text-primary)] capitalize">{vehicle.driverName}</p>
+                                            <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide mt-1">
                                                 {vehicle.submittedDate}
                                             </p>
                                         </td>
@@ -357,7 +357,7 @@ const AdminVehicleManagement = () => {
                                                         <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getClassificationColor(vehicle.classification)}`}>
                                                             {vehicle.classification}
                                                         </span>
-                                                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                                                        <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
                                                             <span>{vehicle.year}</span>
                                                             <span>•</span>
                                                             <span>{vehicle.color}</span>
@@ -370,22 +370,22 @@ const AdminVehicleManagement = () => {
                                                             {Object.entries(vehicle.documents || {}).map(([docType, doc]) => (
                                                                 <div 
                                                                     key={docType} 
-                                                                    className={`w-3 h-3 rounded-full border-2 ${
+                                                                    className={`w-3 h-3 rounded-full border-[var(--border)] ${
                                                                         doc.status === 'VERIFIED' ? 'bg-emerald-500 border-emerald-200' :
                                                                         doc.status === 'PENDING' ? 'bg-amber-500 border-amber-200' :
                                                                         doc.status === 'EXPIRED' || doc.status === 'EXPIRING_SOON' ? 'bg-red-500 border-red-200' :
-                                                                        'bg-gray-400 border-gray-200'
+                                                                        'bg-gray-400 border-[var(--border)]'
                                                                     }`} 
                                                                     title={`${docType.toUpperCase()}: ${doc.status}`} 
                                                                 />
                                                             ))}
                                                         </div>
                                                         <div className="text-center">
-                                                            <span className="text-xs font-semibold text-gray-700">
+                                                            <span className="text-xs font-semibold text-[var(--text-primary)]">
                                                                 {Object.values(vehicle.documents || {}).filter(d => d.status === 'VERIFIED').length}/
                                                                 {Object.keys(vehicle.documents || {}).length}
                                                             </span>
-                                                            <p className="text-xs text-gray-500">verified</p>
+                                                            <p className="text-xs text-[var(--text-muted)]">verified</p>
                                                         </div>
                                                         {Object.values(vehicle.documents || {}).some(d => d.status === 'EXPIRING_SOON') && (
                                                             <div className="flex items-center gap-1">
@@ -422,39 +422,39 @@ const AdminVehicleManagement = () => {
                                         )}
                                         <td className="px-6 py-4">
                                             <div className="flex items-start gap-2">
-                                                <FileText size={12} className="text-gray-500 mt-0.5 flex-shrink-0" />
-                                                <p className="text-sm font-medium text-gray-600 line-clamp-2">{vehicle.notes}</p>
+                                                <FileText size={12} className="text-[var(--text-muted)] mt-0.5 flex-shrink-0" />
+                                                <p className="text-sm font-medium text-[var(--text-secondary)] line-clamp-2">{vehicle.notes}</p>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 pr-10">
                                             <div className="flex items-center justify-end gap-2">
                                                 <button 
                                                     onClick={() => openVehicleDetails(vehicle)}
-                                                    className="px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wide bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-600 hover:text-white transition-all flex items-center gap-1.5"
+                                                    className="h-10 px-4 rounded-xl text-xs font-semibold uppercase tracking-wide bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-600 hover:text-white transition-all flex items-center gap-1.5 group/details"
                                                 >
-                                                    <Eye size={12} />
+                                                    <Eye size={18} className="group-hover/details:scale-110 transition-transform" />
                                                     Details
                                                 </button>
                                                 {vehicle.status === 'PENDING' && (
                                                     <>
                                                         <button 
                                                             onClick={() => handleApprove(vehicle.id)}
-                                                            className="px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wide bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-600 hover:text-white transition-all flex items-center gap-1.5"
+                                                            className="h-10 px-4 rounded-xl text-xs font-semibold uppercase tracking-wide bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-600 hover:text-white transition-all flex items-center gap-1.5 group/approve"
                                                         >
-                                                            <CheckCircle size={12} />
+                                                            <CheckCircle size={18} className="group-hover/approve:scale-110 transition-transform" />
                                                             Approve
                                                         </button>
                                                         <button 
                                                             onClick={() => handleReject(vehicle.id)}
-                                                            className="px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wide bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition-all flex items-center gap-1.5"
+                                                            className="h-10 px-4 rounded-xl text-xs font-semibold uppercase tracking-wide bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition-all flex items-center gap-1.5 group/reject"
                                                         >
-                                                            <XCircle size={12} />
+                                                            <XCircle size={18} className="group-hover/reject:scale-110 transition-transform" />
                                                             Reject
                                                         </button>
                                                     </>
                                                 )}
                                                 {vehicle.status !== 'PENDING' && (
-                                                    <div className="px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wide bg-gray-50 border border-gray-200 text-gray-500">
+                                                    <div className="px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wide bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-muted)]">
                                                         Processed
                                                     </div>
                                                 )}
@@ -483,29 +483,29 @@ const AdminVehicleManagement = () => {
                             initial={{ opacity: 0, scale: 0.95, y: 30 }} 
                             animate={{ opacity: 1, scale: 1, y: 0 }} 
                             exit={{ opacity: 0, scale: 0.95, y: 30 }} 
-                            className="bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl relative z-10 border border-gray-200 flex flex-col"
+                            className="bg-[var(--card)] w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl relative z-10 border border-[var(--border)] flex flex-col"
                         >
                             {/* Modal Header */}
-                            <div className="px-6 py-5 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+                            <div className="px-6 py-5 border-b border-[var(--border)] flex items-center justify-between bg-[var(--bg-secondary)]">
                                 <div className="flex items-center gap-4">
                                     <div className="w-12 h-12 rounded-xl bg-blue-600 text-white font-bold text-lg flex items-center justify-center">
                                         <Car size={24} />
                                     </div>
                                     <div>
-                                        <h2 className="text-xl font-bold text-gray-900 uppercase tracking-wide">{selectedVehicle.vehicleNumber}</h2>
-                                        <p className="text-sm text-gray-600 font-semibold">{selectedVehicle.model} • {selectedVehicle.year}</p>
+                                        <h2 className="text-xl font-bold text-[var(--text-primary)] uppercase tracking-wide">{selectedVehicle.vehicleNumber}</h2>
+                                        <p className="text-sm text-[var(--text-secondary)] font-semibold">{selectedVehicle.model} • {selectedVehicle.year}</p>
                                     </div>
                                 </div>
                                 <button 
                                     onClick={() => setShowVehicleModal(false)} 
-                                    className="w-10 h-10 bg-white hover:bg-gray-100 rounded-xl border border-gray-200 text-gray-500 transition-all flex items-center justify-center"
+                                    className="w-10 h-10 bg-[var(--bg-primary)] hover:bg-[var(--bg-secondary)] rounded-xl border border-[var(--border)] text-[var(--text-muted)] transition-all flex items-center justify-center"
                                 >
                                     <X size={20} />
                                 </button>
                             </div>
 
                             {/* Modal Tabs */}
-                            <div className="border-b border-gray-200 bg-white">
+                            <div className="border-b border-[var(--border)] bg-[var(--card)]">
                                 <div className="flex">
                                     {[
                                         { id: 'overview', label: 'Overview', icon: <Info size={16} /> },
@@ -519,7 +519,7 @@ const AdminVehicleManagement = () => {
                                             className={`flex items-center gap-2 px-6 py-4 text-sm font-semibold transition-all border-b-2 ${
                                                 activeTab === tab.id
                                                     ? 'text-blue-600 border-blue-600 bg-blue-50'
-                                                    : 'text-gray-500 border-transparent hover:text-gray-700 hover:bg-gray-50'
+                                                    : 'text-[var(--text-muted)] border-transparent hover:text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]'
                                             }`}
                                         >
                                             {tab.icon}
@@ -536,26 +536,26 @@ const AdminVehicleManagement = () => {
                                         {/* Basic Information */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div className="space-y-4">
-                                                <h3 className="text-lg font-bold text-gray-900 border-b border-gray-200 pb-2">Vehicle Information</h3>
+                                                <h3 className="text-lg font-bold text-[var(--text-primary)] border-b border-[var(--border)] pb-2">Vehicle Information</h3>
                                                 <div className="space-y-3">
                                                     <div className="flex justify-between">
-                                                        <span className="text-sm font-semibold text-gray-500">Registration Number:</span>
-                                                        <span className="text-sm font-bold text-gray-900 uppercase">{selectedVehicle.vehicleNumber}</span>
+                                                        <span className="text-sm font-semibold text-[var(--text-muted)]">Registration Number:</span>
+                                                        <span className="text-sm font-bold text-[var(--text-primary)] uppercase">{selectedVehicle.vehicleNumber}</span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span className="text-sm font-semibold text-gray-500">Model:</span>
-                                                        <span className="text-sm font-bold text-gray-900">{selectedVehicle.model}</span>
+                                                        <span className="text-sm font-semibold text-[var(--text-muted)]">Model:</span>
+                                                        <span className="text-sm font-bold text-[var(--text-primary)]">{selectedVehicle.model}</span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span className="text-sm font-semibold text-gray-500">Year:</span>
-                                                        <span className="text-sm font-bold text-gray-900">{selectedVehicle.year}</span>
+                                                        <span className="text-sm font-semibold text-[var(--text-muted)]">Year:</span>
+                                                        <span className="text-sm font-bold text-[var(--text-primary)]">{selectedVehicle.year}</span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span className="text-sm font-semibold text-gray-500">Color:</span>
-                                                        <span className="text-sm font-bold text-gray-900">{selectedVehicle.color}</span>
+                                                        <span className="text-sm font-semibold text-[var(--text-muted)]">Color:</span>
+                                                        <span className="text-sm font-bold text-[var(--text-primary)]">{selectedVehicle.color}</span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span className="text-sm font-semibold text-gray-500">Classification:</span>
+                                                        <span className="text-sm font-semibold text-[var(--text-muted)]">Classification:</span>
                                                         <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${getClassificationColor(selectedVehicle.classification)}`}>
                                                             {selectedVehicle.classification}
                                                         </span>
@@ -563,22 +563,22 @@ const AdminVehicleManagement = () => {
                                                 </div>
                                             </div>
                                             <div className="space-y-4">
-                                                <h3 className="text-lg font-bold text-gray-900 border-b border-gray-200 pb-2">Owner Information</h3>
+                                                <h3 className="text-lg font-bold text-[var(--text-primary)] border-b border-[var(--border)] pb-2">Owner Information</h3>
                                                 <div className="space-y-3">
                                                     <div className="flex justify-between">
-                                                        <span className="text-sm font-semibold text-gray-500">Driver Name:</span>
-                                                        <span className="text-sm font-bold text-gray-900">{selectedVehicle.driverName}</span>
+                                                        <span className="text-sm font-semibold text-[var(--text-muted)]">Driver Name:</span>
+                                                        <span className="text-sm font-bold text-[var(--text-primary)]">{selectedVehicle.driverName}</span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span className="text-sm font-semibold text-gray-500">Phone:</span>
-                                                        <span className="text-sm font-bold text-gray-900">{selectedVehicle.driverPhone}</span>
+                                                        <span className="text-sm font-semibold text-[var(--text-muted)]">Phone:</span>
+                                                        <span className="text-sm font-bold text-[var(--text-primary)]">{selectedVehicle.driverPhone}</span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span className="text-sm font-semibold text-gray-500">Submitted:</span>
-                                                        <span className="text-sm font-bold text-gray-900">{selectedVehicle.submittedDate}</span>
+                                                        <span className="text-sm font-semibold text-[var(--text-muted)]">Submitted:</span>
+                                                        <span className="text-sm font-bold text-[var(--text-primary)]">{selectedVehicle.submittedDate}</span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span className="text-sm font-semibold text-gray-500">Status:</span>
+                                                        <span className="text-sm font-semibold text-[var(--text-muted)]">Status:</span>
                                                         <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-semibold uppercase tracking-wide border ${
                                                             selectedVehicle.status === 'APPROVED' 
                                                                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
@@ -599,7 +599,7 @@ const AdminVehicleManagement = () => {
                                         {/* Special Instructions */}
                                         {selectedVehicle.specialInstructions && (
                                             <div className="space-y-3">
-                                                <h3 className="text-lg font-bold text-gray-900 border-b border-gray-200 pb-2">Special Instructions</h3>
+                                                <h3 className="text-lg font-bold text-[var(--text-primary)] border-b border-[var(--border)] pb-2">Special Instructions</h3>
                                                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                                                     <p className="text-sm text-blue-800 font-medium">{selectedVehicle.specialInstructions}</p>
                                                 </div>
@@ -609,9 +609,9 @@ const AdminVehicleManagement = () => {
                                         {/* Admin Notes */}
                                         {selectedVehicle.adminNotes && (
                                             <div className="space-y-3">
-                                                <h3 className="text-lg font-bold text-gray-900 border-b border-gray-200 pb-2">Admin Notes</h3>
-                                                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                                                    <p className="text-sm text-gray-700 font-medium">{selectedVehicle.adminNotes}</p>
+                                                <h3 className="text-lg font-bold text-[var(--text-primary)] border-b border-[var(--border)] pb-2">Admin Notes</h3>
+                                                <div className="bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl p-4">
+                                                    <p className="text-sm text-[var(--text-secondary)] font-medium">{selectedVehicle.adminNotes}</p>
                                                 </div>
                                             </div>
                                         )}
@@ -620,10 +620,10 @@ const AdminVehicleManagement = () => {
 
                                 {activeTab === 'documents' && (
                                     <div className="space-y-6">
-                                        <h3 className="text-lg font-bold text-gray-900 border-b border-gray-200 pb-2">Document Status</h3>
+                                        <h3 className="text-lg font-bold text-gray-900 border-b border-white/10 pb-2">Document Status</h3>
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             {Object.entries(selectedVehicle.documents || {}).map(([docType, doc]) => (
-                                                <div key={docType} className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+                                                <div key={docType} className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
                                                     <div className="flex items-center justify-between">
                                                         <h4 className="text-sm font-bold text-gray-900 uppercase">{docType.replace(/([A-Z])/g, ' $1').trim()}</h4>
                                                         <div className={`px-2 py-1 rounded-full text-xs font-semibold border ${getDocumentStatusColor(doc.status)}`}>
@@ -632,7 +632,7 @@ const AdminVehicleManagement = () => {
                                                     </div>
                                                     <div className="space-y-2">
                                                         <div className="flex justify-between text-xs">
-                                                            <span className="text-gray-500 font-semibold">Expiry Date:</span>
+                                                            <span className="text-white/40 font-semibold">Expiry Date:</span>
                                                             <span className="text-gray-900 font-bold">{doc.expiryDate}</span>
                                                         </div>
                                                         {doc.status === 'EXPIRING_SOON' && (
@@ -670,7 +670,7 @@ const AdminVehicleManagement = () => {
                                         {selectedVehicle.issues && selectedVehicle.issues.length > 0 ? (
                                             <div className="space-y-4">
                                                 {selectedVehicle.issues.map((issue) => (
-                                                    <div key={issue.id} className="bg-white border border-gray-200 rounded-xl p-4">
+                                                    <div key={issue.id} className="bg-white/5 border border-white/10 rounded-xl p-4">
                                                         <div className="flex items-start justify-between mb-3">
                                                             <div className="flex items-center gap-3">
                                                                 <div className={`w-3 h-3 rounded-full ${
@@ -678,7 +678,7 @@ const AdminVehicleManagement = () => {
                                                                 }`} />
                                                                 <div>
                                                                     <h4 className="text-sm font-bold text-gray-900">{issue.type} Issue</h4>
-                                                                    <p className="text-xs text-gray-500 font-semibold">{issue.reportedAt}</p>
+                                                                    <p className="text-xs text-white/40 font-semibold">{issue.reportedAt}</p>
                                                                 </div>
                                                             </div>
                                                             <div className={`px-2 py-1 rounded-full text-xs font-semibold ${
@@ -689,7 +689,7 @@ const AdminVehicleManagement = () => {
                                                                 {issue.status}
                                                             </div>
                                                         </div>
-                                                        <p className="text-sm text-gray-700 font-medium mb-3">{issue.description}</p>
+                                                        <p className="text-sm text-white/80 font-medium mb-3">{issue.description}</p>
                                                         {issue.status === 'OPEN' && (
                                                             <button className="px-3 py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg text-xs font-semibold hover:bg-emerald-100 transition-all">
                                                                 Mark as Resolved
@@ -701,7 +701,7 @@ const AdminVehicleManagement = () => {
                                         ) : (
                                             <div className="text-center py-12">
                                                 <CheckCircle className="mx-auto text-emerald-500 mb-3" size={48} />
-                                                <p className="text-sm font-semibold text-gray-500">No issues reported</p>
+                                                <p className="text-sm font-semibold text-white/40">No issues reported</p>
                                             </div>
                                         )}
                                     </div>
@@ -709,34 +709,34 @@ const AdminVehicleManagement = () => {
 
                                 {activeTab === 'history' && (
                                     <div className="space-y-6">
-                                        <h3 className="text-lg font-bold text-gray-900 border-b border-gray-200 pb-2">Action History</h3>
+                                        <h3 className="text-lg font-bold text-gray-900 border-b border-white/10 pb-2">Action History</h3>
                                         <div className="space-y-4">
-                                            <div className="bg-white border border-gray-200 rounded-xl p-4">
+                                            <div className="bg-white/5 border border-white/10 rounded-xl p-4">
                                                 <div className="flex items-center gap-3 mb-2">
                                                     <div className="w-2 h-2 rounded-full bg-blue-500" />
                                                     <span className="text-sm font-bold text-gray-900">Vehicle Submitted</span>
-                                                    <span className="text-xs text-gray-500 font-semibold">{selectedVehicle.submittedDate}</span>
+                                                    <span className="text-xs text-white/40 font-semibold">{selectedVehicle.submittedDate}</span>
                                                 </div>
-                                                <p className="text-sm text-gray-600 ml-5">Vehicle registration submitted for approval</p>
+                                                <p className="text-sm text-white/60 ml-5">Vehicle registration submitted for approval</p>
                                             </div>
                                             {selectedVehicle.status === 'APPROVED' && (
-                                                <div className="bg-white border border-gray-200 rounded-xl p-4">
+                                                <div className="bg-white/5 border border-white/10 rounded-xl p-4">
                                                     <div className="flex items-center gap-3 mb-2">
                                                         <div className="w-2 h-2 rounded-full bg-emerald-500" />
                                                         <span className="text-sm font-bold text-gray-900">Vehicle Approved</span>
-                                                        <span className="text-xs text-gray-500 font-semibold">{selectedVehicle.submittedDate}</span>
+                                                        <span className="text-xs text-white/40 font-semibold">{selectedVehicle.submittedDate}</span>
                                                     </div>
-                                                    <p className="text-sm text-gray-600 ml-5">All documents verified and vehicle approved for service</p>
+                                                    <p className="text-sm text-white/60 ml-5">All documents verified and vehicle approved for service</p>
                                                 </div>
                                             )}
                                             {selectedVehicle.status === 'REJECTED' && (
-                                                <div className="bg-white border border-gray-200 rounded-xl p-4">
+                                                <div className="bg-white/5 border border-white/10 rounded-xl p-4">
                                                     <div className="flex items-center gap-3 mb-2">
                                                         <div className="w-2 h-2 rounded-full bg-red-500" />
                                                         <span className="text-sm font-bold text-gray-900">Vehicle Rejected</span>
-                                                        <span className="text-xs text-gray-500 font-semibold">{selectedVehicle.submittedDate}</span>
+                                                        <span className="text-xs text-white/40 font-semibold">{selectedVehicle.submittedDate}</span>
                                                     </div>
-                                                    <p className="text-sm text-gray-600 ml-5">Vehicle registration rejected due to document issues</p>
+                                                    <p className="text-sm text-white/60 ml-5">Vehicle registration rejected due to document issues</p>
                                                 </div>
                                             )}
                                         </div>
@@ -745,7 +745,7 @@ const AdminVehicleManagement = () => {
                             </div>
 
                             {/* Modal Footer */}
-                            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between flex-shrink-0">
+                            <div className="px-6 py-4 border-t border-white/10 bg-white/[0.02] flex items-center justify-between flex-shrink-0">
                                 <div className="flex items-center gap-3">
                                     {selectedVehicle.status === 'PENDING' && (
                                         <>
@@ -774,7 +774,7 @@ const AdminVehicleManagement = () => {
                                 </div>
                                 <button 
                                     onClick={() => setShowVehicleModal(false)}
-                                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-300 transition-all"
+                                    className="px-4 py-2 bg-gray-200 text-white/80 rounded-xl text-sm font-semibold hover:bg-gray-300 transition-all"
                                 >
                                     Close
                                 </button>

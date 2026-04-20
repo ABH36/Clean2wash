@@ -3,23 +3,25 @@ import {
     Calendar, MapPin, Clock, Search, Filter, 
     ChevronRight, ArrowUpRight, Zap, Bell, 
     MoreHorizontal, FilterX, Loader2, Navigation,
-    ArrowLeft, X, ShieldCheck, User, Phone
+    ArrowLeft, X, ShieldCheck, User, Phone, MessageSquareText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import DriverLayout from '../components/DriverLayout';
 import { spareDriverAPI } from '../../../utils/spareDriverApi';
 import { toast } from 'react-hot-toast';
 import GoogleMapBox from '../../../components/common/GoogleMapBox';
 
 const STATUS_TONE = {
-    pending: 'bg-brand text-black',
-    en_route: 'bg-brand text-black shadow-lg shadow-brand/10',
-    arrived: 'bg-brand text-black shadow-lg shadow-brand/10',
+    pending: 'bg-brand text-white',
+    en_route: 'bg-brand text-white shadow-lg shadow-brand/10',
+    arrived: 'bg-brand text-white shadow-lg shadow-brand/10',
     active: 'bg-green-600 text-white',
     completed: 'bg-content/[0.05] text-content/30',
 };
 
 const DriverBookings = () => {
+    const navigate = useNavigate();
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
@@ -46,7 +48,7 @@ const DriverBookings = () => {
                         <button 
                             key={tab} 
                             onClick={() => setFilter(tab)}
-                            className={`px-6 h-10 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${filter === tab ? 'bg-black dark:bg-brand text-brand dark:text-black shadow-lg' : 'bg-surface border border-content/[0.04] text-content/30'}`}
+                            className={`px-6 h-10 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${filter === tab ? 'bg-black dark:bg-brand text-brand dark:text-white shadow-lg' : 'bg-surface border border-content/[0.04] text-content/30'}`}
                         >
                             {tab}
                         </button>
@@ -61,7 +63,7 @@ const DriverBookings = () => {
                             initial={{ y: 20, opacity: 0 }} 
                             animate={{ y: 0, opacity: 1 }}
                             onClick={() => setSelectedJob(b)}
-                            className="bg-surface border border-content/[0.04] rounded-[2rem] p-5 shadow-sm relative overflow-hidden active:scale-[0.98] transition-all duration-500"
+                            className="bg-surface border border-content/[0.04] rounded-[2rem] p-5  relative overflow-hidden active:scale-[0.98] transition-all duration-500"
                         >
                             <div className="flex justify-between items-start mb-4">
                                 <span className={`px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${STATUS_TONE[b.status] || STATUS_TONE.completed}`}>{b.status}</span>
@@ -113,7 +115,14 @@ const DriverBookings = () => {
                                 </div>
 
                                 <div className="flex gap-3">
-                                    <a href={`tel:${selectedJob.consumer?.phone}`} className="flex-1 h-15 bg-black dark:bg-brand text-white dark:text-black rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg"><Phone size={18} /><span className="text-[11px] font-black uppercase tracking-widest">Contact</span></a>
+                                    <a href={`tel:${selectedJob.consumer?.phone}`} className="flex-1 h-15 bg-black dark:bg-brand text-white dark:text-white rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg"><Phone size={18} /><span className="text-[11px] font-black uppercase tracking-widest">Contact</span></a>
+                                    <button 
+                                        onClick={() => navigate(`/spare-driver/chat/${selectedJob._id}`)}
+                                        className="flex-1 h-15 bg-blue-600 text-white rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg"
+                                    >
+                                        <MessageSquareText size={18} />
+                                        <span className="text-[11px] font-black uppercase tracking-widest">Chat</span>
+                                    </button>
                                     <div className="px-6 h-15 bg-content/[0.04] border border-content/[0.03] rounded-2xl flex flex-col justify-center text-right"><p className="text-[8px] font-black text-content/20 uppercase">Yield</p><p className="text-lg font-black text-content tracking-tight">₹{selectedJob.pricing?.totalAmount}</p></div>
                                 </div>
                             </div>

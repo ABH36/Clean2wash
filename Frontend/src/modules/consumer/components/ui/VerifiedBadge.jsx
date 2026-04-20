@@ -4,7 +4,7 @@ import { ShieldCheck, CheckCircle2 } from 'lucide-react';
 const VerifiedBadge = ({ type = 'specialist', className = '' }) => {
     if (type === 'specialist') {
         return (
-            <div className={`flex items-center gap-1 bg-black text-amber-400 px-2 py-0.5 rounded-lg border border-amber-400/30 shadow-sm ${className}`}>
+            <div className={`flex items-center gap-1 bg-black text-amber-400 px-2 py-0.5 rounded-lg border border-amber-400/30  ${className}`}>
                 <ShieldCheck size={10} strokeWidth={3} className="fill-amber-400/10" />
                 <span className="text-[8px] font-black uppercase tracking-widest">Verified Specialist</span>
             </div>

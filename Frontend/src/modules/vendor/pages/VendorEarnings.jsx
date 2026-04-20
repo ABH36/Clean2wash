@@ -112,7 +112,7 @@ const VendorEarnings = () => {
                             <button
                                 onClick={() => setPayoutModalOpen(true)}
                                 disabled={loading || stats.walletBalance <= 0}
-                                className="h-14 px-10 bg-brand text-white rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-xl shadow-brand/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="h-14 px-10 bg-brand text-white rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-2xl shadow-black/50 shadow-brand/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {loading ? 'Processing...' : 'Transfer to Bank'}
                             </button>
@@ -141,9 +141,9 @@ const VendorEarnings = () => {
                         <button className="text-[10px] font-black text-brand uppercase tracking-widest border-b border-brand/20 hover:border-brand transition-all">Full Tactical Ledger</button>
                     </div>
 
-                    <div className="bg-surface rounded-[2.5rem] border border-gray-100/10 shadow-soft overflow-hidden transition-colors">
+                    <div className="bg-surface rounded-[2.5rem] border border-white/5/10 shadow-soft overflow-hidden transition-colors">
                         {loading ? (
-                            <div className="py-24 flex flex-col items-center gap-4 bg-gray-50/5">
+                            <div className="py-24 flex flex-col items-center gap-4 bg-white/[0.02]/5">
                                 <div className="w-10 h-10 border-4 border-brand/20 border-t-brand rounded-full animate-spin shadow-lg shadow-brand/20" />
                                 <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em]">Accessing Financial Vault...</p>
                             </div>
@@ -151,7 +151,7 @@ const VendorEarnings = () => {
                             <div className="admin-table-container">
                                 <div className="divide-y divide-gray-100/5">
                                     {stats.transactions.map((txn, i) => (
-                                        <div key={txn.id} className="p-6 md:p-7 flex items-center justify-between hover:bg-gray-50/5 transition-all group active:scale-[0.995]">
+                                        <div key={txn.id} className="p-6 md:p-7 flex items-center justify-between hover:bg-white/[0.02]/5 transition-all group active:scale-[0.995]">
                                             <div className="flex items-center gap-5">
                                                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner ${txn.amount.toString().startsWith('+') ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
                                                     {txn.amount.toString().startsWith('+') ? <ArrowDownLeft size={20} strokeWidth={3} /> : <ArrowUpRight size={20} strokeWidth={3} />}
@@ -176,8 +176,8 @@ const VendorEarnings = () => {
                                 </div>
                             </div>
                         ) : (
-                            <div className="py-24 text-center space-y-4 bg-gray-50/5">
-                                <div className="w-16 h-16 bg-background rounded-[1.5rem] flex items-center justify-center mx-auto text-content-subtle/10 border border-gray-100/10 shadow-inner">
+                            <div className="py-24 text-center space-y-4 bg-white/[0.02]/5">
+                                <div className="w-16 h-16 bg-background rounded-[1.5rem] flex items-center justify-center mx-auto text-content-subtle/10 border border-white/5/10 shadow-inner">
                                     <Wallet size={32} />
                                 </div>
                                 <div>
@@ -205,7 +205,7 @@ const VendorEarnings = () => {
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 relative z-10 border border-gray-100 shadow-2xl"
+                            className="bg-white/5 w-full max-w-sm rounded-[2.5rem] p-8 relative z-10 border border-white/5 shadow-2xl"
                         >
                             <h3 className="text-xl font-black text-content leading-none uppercase tracking-tighter mb-2">Request Payout</h3>
                             <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mb-6">Enter transfer amount to bank</p>
@@ -216,7 +216,7 @@ const VendorEarnings = () => {
                                     <input
                                         type="number"
                                         placeholder="e.g. 5000"
-                                        className="w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white transition-all shadow-sm"
+                                        className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white/5 transition-all "
                                         value={payoutAmount}
                                         onChange={e => setPayoutAmount(e.target.value)}
                                     />
@@ -224,7 +224,7 @@ const VendorEarnings = () => {
 
                                 <button
                                     onClick={handlePayout}
-                                    className="w-full bg-content text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl hover:bg-brand transition-all flex items-center justify-center gap-2"
+                                    className="w-full bg-content text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl shadow-black/50 hover:bg-brand transition-all flex items-center justify-center gap-2"
                                 >
                                     Confirm Payout
                                 </button>
@@ -244,7 +244,7 @@ const VendorEarnings = () => {
 };
 
 const StatCard = ({ label, val, color }) => (
-    <div className="bg-surface p-5 rounded-2xl border border-gray-100/10 shadow-sm transition-colors">
+    <div className="bg-surface p-5 rounded-2xl border border-white/5/10  transition-colors">
         <p className="text-[9px] font-black text-content-subtle uppercase tracking-widest mb-1 opacity-60">{label}</p>
         <span className={`text-xl font-black ${color} tracking-tight`}>{val}</span>
     </div>

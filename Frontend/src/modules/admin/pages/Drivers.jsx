@@ -127,23 +127,23 @@ const Drivers = () => {
                     {selectedIds.size > 0 && (
                         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2 mr-4 bg-background border border-slate-200 dark:border-white/10 rounded-xl p-1 shadow-inner">
                             <span className="text-[10px] font-black tracking-widest text-brand px-3 uppercase">{selectedIds.size} Target(s)</span>
-                            <button onClick={executeBulkActivate} className="px-3 py-2 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors shadow-sm">
+                            <button onClick={executeBulkActivate} className="px-3 py-2 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors ">
                                 Activate
                             </button>
-                            <button onClick={executeBulkBlock} className="px-3 py-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors shadow-sm">
+                            <button onClick={executeBulkBlock} className="px-3 py-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors ">
                                 Block
                             </button>
                         </motion.div>
                     )}
 
-                    <div className="relative group flex-1 md:w-64">
-                        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-content-subtle group-focus-within:text-brand transition-colors" />
+                    <div className="flex-1 md:w-64 bg-background border border-slate-100 dark:border-white/5 rounded-xl px-4 py-3.5 flex items-center gap-3 group focus-within:border-brand/30 transition-all shadow-inner">
+                        <Search size={16} className="text-content-subtle group-focus-within:text-brand transition-colors" />
                         <input 
                             type="text" 
                             placeholder="Search Grid..." 
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full bg-background border border-slate-100 dark:border-white/5 rounded-xl pl-11 pr-4 py-3.5 text-xs font-black text-content placeholder:text-content-subtle/40 outline-none focus:border-brand/30 focus:shadow-inner transition-all shadow-inner"
+                            className="w-full bg-transparent text-xs font-black text-content placeholder:text-content-subtle/40 outline-none transition-all"
                         />
                     </div>
                     
@@ -188,7 +188,7 @@ const Drivers = () => {
                                 <tr>
                                     <td colSpan="6" className="p-12 text-center">
                                         <div className="flex flex-col items-center justify-center gap-3">
-                                            <div className="w-8 h-8 border-2 border-brand/20 border-t-brand rounded-full animate-spin" />
+                                            <div className="w-8 h-8 border-white/5 border-brand/20 border-t-brand rounded-full animate-spin" />
                                             <span className="text-[10px] font-black uppercase tracking-widest text-content-subtle opacity-50">Syncing Grid</span>
                                         </div>
                                     </td>
@@ -213,7 +213,7 @@ const Drivers = () => {
                                                 type="checkbox" 
                                                 checked={selectedIds.has(driver._id)}
                                                 onChange={() => handleSelectRow(driver._id)}
-                                                className="w-4 h-4 rounded border-slate-300 dark:border-white/20 text-brand bg-surface focus:ring-brand accent-brand cursor-pointer shadow-sm"
+                                                className="w-4 h-4 rounded border-slate-300 dark:border-white/20 text-brand bg-surface focus:ring-brand accent-brand cursor-pointer "
                                             />
                                         </td>
                                         <td className="p-5">
@@ -249,7 +249,7 @@ const Drivers = () => {
                                         </td>
                                         <td className="p-5">
                                             <div className="flex items-center gap-2">
-                                                <div className={`w-2 h-2 rounded-full shadow-sm ${driver.status === 'ACTIVE' ? 'bg-emerald-500 shadow-emerald-500/40' : driver.status === 'BLOCKED' ? 'bg-red-500 shadow-red-500/40' : 'bg-amber-500'}`} />
+                                                <div className={`w-2 h-2 rounded-full  ${driver.status === 'ACTIVE' ? 'bg-emerald-500 shadow-emerald-500/40' : driver.status === 'BLOCKED' ? 'bg-red-500 shadow-red-500/40' : 'bg-amber-500'}`} />
                                                 <span className="text-[10px] font-black text-content uppercase tracking-widest">{driver.status}</span>
                                             </div>
                                         </td>

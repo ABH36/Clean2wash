@@ -12,8 +12,79 @@ const socketService = require('../../../socketService');
 const { sendCaptainNotification, sendVendorNotification } = require('../../../utils/notificationService');
 const WalletTransaction = require('../../../models/WalletTransaction');
 const SpareDriver = require('../../../models/SpareDriver');
+const SOSAlert = require('../../../models/SOSAlert');
 const commissionHelper = require('../../../utils/commissionHelper');
 const walletHelper = require('../../../utils/walletHelper');
+
+// ── SOS & EMERGENCY MANAGEMENT ─────────────────────────────────────
+
+/**
+ * Get all active SOS alerts with full context
+ */
+exports.getActiveSOS = async (req, res) => {
+    try {
+        const activeAlerts = await SOSAlert.find({ status: 'active' })
+            .populate('consumer', 'name phone profile.avatar profile.trustedContacts')
+            .populate({
+                path: 'booking',
+                populate: { path: 'captain', select: 'name phone profile.avatar currentLocation vehicleType plate' }
+            })
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            status: 'success',
+            results: activeAlerts.length,
+            data: { alerts: activeAlerts }
+        });
+    } catch (error) {
+        console.error('Error fetching active SOS alerts:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to synchronize emergency queue' });
+    }
+};
+
+/**
+ * Resolve an SOS alert
+ */
+exports.resolveSOS = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const alert = await SOSAlert.findById(id);
+
+        if (!alert) {
+            return res.status(404).json({ status: 'fail', message: 'SOS Alert not found' });
+        }
+
+        alert.status = 'resolved';
+        alert.resolvedAt = new Date();
+        alert.resolvedBy = req.user.id;
+        
+        // Also update any linked booking issue
+        if (alert.booking) {
+            await Booking.updateOne(
+                { _id: alert.booking, 'issues.type': 'SOS', 'issues.status': 'open' },
+                { $set: { 'issues.$.status': 'resolved', 'issues.$.resolvedAt': new Date() } }
+            );
+        }
+
+        await alert.save();
+
+        // Broadcast resolution to all responders
+        const io = socketService.getIO();
+        if (io) {
+            io.emit('sos_resolved', { sosId: alert._id, resolvedBy: req.user.name });
+            io.to('admin_room').emit('sos_alert_cleared', { sosId: alert._id });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            message: 'SOS Situation marked as RESOLVED and archived.',
+            data: { alert }
+        });
+    } catch (error) {
+        console.error('Error resolving SOS alert:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to record resolution protocol' });
+    }
+};
 
 const getChauffeurCommissionOverride = (booking = {}) => {
     const rate = Number(booking?.service?.metadata?.commercialRules?.commissionPercent);
@@ -275,12 +346,22 @@ exports.assignCaptain = async (req, res) => {
         const { captainId } = req.body;
 
         if (!bookingId || !captainId) {
-            return res.status(400).json({ status: 'fail', message: 'Booking ID and Captain ID are required' });
+            return res.status(400).json({ status: 'fail', message: 'Booking ID and Captain/Driver ID are required' });
         }
 
-        const captain = await User.findOne({ _id: captainId, role: 'captain' });
-        if (!captain) {
-            return res.status(404).json({ status: 'fail', message: 'Captain not found' });
+        // Try to find as captain first
+        let provider = await User.findOne({ _id: captainId, role: 'captain' });
+        let providerType = 'captain';
+        
+        // If not found, try spare driver
+        if (!provider) {
+            const SpareDriver = require('../../../models/SpareDriver');
+            provider = await SpareDriver.findById(captainId);
+            providerType = 'sparedriver';
+        }
+        
+        if (!provider) {
+            return res.status(404).json({ status: 'fail', message: 'Captain or Driver not found' });
         }
 
         const booking = await Booking.findById(bookingId);
@@ -289,12 +370,12 @@ exports.assignCaptain = async (req, res) => {
         }
 
         booking.provider = {
-            type: 'captain',
-            id: captain._id,
-            name: captain.name,
-            phone: captain.phone,
-            rating: captain.rating || 5.0,
-            photo: captain.profile?.avatar || ''
+            type: providerType,
+            id: provider._id,
+            name: provider.name,
+            phone: provider.phone,
+            rating: provider.rating || provider.reliabilityScore?.score || 5.0,
+            photo: provider.profile?.avatar || provider.profile?.photo || ''
         };
 
         booking.status = 'assigned';
@@ -304,19 +385,26 @@ exports.assignCaptain = async (req, res) => {
         await booking.save();
 
         const io = socketService.getIO();
-        io.to(captain._id.toString()).emit('booking_assigned', {
+        io.to(provider._id.toString()).emit('booking_assigned', {
             bookingId: booking._id,
             message: `You have been assigned to booking ${booking.bookingId || booking._id}`
+        });
+        
+        // Broadcast to admin room
+        io.to('admin_room').emit('driver_assigned', {
+            bookingId: booking._id,
+            driverId: provider._id,
+            driverName: provider.name
         });
 
         res.status(200).json({
             status: 'success',
-            message: `Booking assigned to captain ${captain.name}`,
+            message: `Booking assigned to ${providerType === 'captain' ? 'captain' : 'driver'} ${provider.name}`,
             data: { booking }
         });
     } catch (error) {
-        console.error('Error assigning captain:', error);
-        res.status(500).json({ status: 'error', message: 'Failed to assign captain' });
+        console.error('Error assigning captain/driver:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to assign captain/driver' });
     }
 };
 
@@ -673,29 +761,95 @@ exports.getSpareDrivers = async (req, res) => {
 // Get Sparse Driver Specific Bookings
 exports.getSpareDriverBookings = async (req, res) => {
     try {
-        const bookings = await Booking.find({
+        console.log('[Admin] getSpareDriverBookings called with query:', req.query);
+        
+        const { status, search, limit = 100, page = 1 } = req.query;
+        
+        // Build query
+        const query = {
             'service.category': 'Chauffeur',
             isActive: true
-        })
+        };
+        
+        // Filter by status if provided (support multiple statuses)
+        if (status && status !== 'ALL') {
+            const statuses = status.split(',').map(s => s.trim().toLowerCase());
+            query.status = { $in: statuses };
+        }
+        
+        // Search by booking ID, customer name, or phone
+        if (search) {
+            query.$or = [
+                { bookingId: { $regex: search, $options: 'i' } },
+                { 'consumer.name': { $regex: search, $options: 'i' } }
+            ];
+        }
+        
+        console.log('[Admin] Query built:', JSON.stringify(query, null, 2));
+        
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        
+        const bookings = await Booking.find(query)
             .populate('consumer', 'name phone email profile')
             .populate('vehicle', 'brand model type plate')
-            .populate('provider.id')
-            .sort({ createdAt: -1 });
+            .populate({
+                path: 'provider.id',
+                select: 'name phone driverId reliabilityScore onlineStatus location currentDutyStatus'
+            })
+            .sort({ createdAt: -1 })
+            .limit(parseInt(limit))
+            .skip(skip);
 
-        const mappedBookings = bookings.map(b => ({
-            ...b.toObject(),
-            price: `₹${b.pricing?.totalAmount || 0}`,
-            serviceName: b.service?.name || 'Chauffeur Service'
-        }));
+        console.log('[Admin] Found bookings:', bookings.length);
+
+        const total = await Booking.countDocuments(query);
+
+        const mappedBookings = bookings.map(b => {
+            const booking = b.toObject();
+            
+            // Add driver location if available
+            if (booking.provider?.id?.location) {
+                booking.provider.id.location = {
+                    coordinates: booking.provider.id.location.coordinates || {},
+                    address: booking.provider.id.location.address || 'Location updating...',
+                    lastUpdated: booking.provider.id.location.lastUpdated || null,
+                    speed: booking.provider.id.location.speed || 0
+                };
+            }
+            
+            return {
+                ...booking,
+                price: `₹${booking.pricing?.totalAmount || 0}`,
+                serviceName: booking.service?.name || 'Chauffeur Service',
+                // ✅ Include customer review for admin visibility
+                customerReview: booking.feedback ? {
+                    rating: booking.feedback.rating,
+                    review: booking.feedback.review,
+                    photos: booking.feedback.photos,
+                    submittedAt: booking.feedback.submittedAt
+                } : null
+            };
+        });
 
         res.status(200).json({
             status: 'success',
             results: bookings.length,
-            data: { bookings: mappedBookings }
+            data: { 
+                bookings: mappedBookings,
+                pagination: {
+                    total,
+                    page: parseInt(page),
+                    pages: Math.ceil(total / parseInt(limit))
+                }
+            }
         });
     } catch (error) {
         console.error('Error fetching chauffeur bookings:', error);
-        res.status(500).json({ status: 'error', message: 'Failed to fetch chauffeur bookings' });
+        res.status(500).json({ 
+            status: 'error', 
+            message: 'Failed to fetch chauffeur bookings',
+            error: error.message 
+        });
     }
 };
 
@@ -779,10 +933,12 @@ exports.updateUserKyc = async (req, res) => {
             return res.status(404).json({ status: 'fail', message: 'User not found' });
         }
 
+        // Initialize KYC object if it doesn't exist
         user.kyc = user.kyc || {};
         user.kyc.status = status;
-        user.kyc.note = note || '';
+        user.kyc.rejectionReason = note || '';
         user.kyc.reviewedAt = new Date();
+        user.kyc.reviewedBy = req.user.id;
 
         if (status === 'verified') {
             user.isVerified = true;
@@ -792,21 +948,37 @@ exports.updateUserKyc = async (req, res) => {
 
         await user.save({ validateBeforeSave: false });
 
-        // Notify user via Socket
-        const io = socketService.getIO();
-        io.to(user._id.toString()).emit('kyc_status_updated', {
-            status,
-            message: status === 'verified' ? 'Identity verified successfully' : 'Identity verification rejected'
+        // Push Notification & Socket
+        const notificationTitle = status === 'verified' ? 'Identity Verified! 🛡️' : 'KYC Rejected ⚠️';
+        const notificationMessage = status === 'verified' 
+            ? 'Your documents have been verified. You now have "Elite" trust status.' 
+            : `Your verification proof was not accepted. Reason: ${note || 'Documents were not clear.'}`;
+
+        // Send formal notification
+        await Notification.create({
+            user: user._id,
+            title: notificationTitle,
+            message: notificationMessage,
+            type: 'verification',
+            priority: status === 'verified' ? 'medium' : 'high'
         });
+
+        const io = socketService.getIO();
+        if (io) {
+            io.to(user._id.toString()).emit('kyc_status_updated', {
+                status,
+                message: notificationMessage
+            });
+        }
 
         res.status(200).json({
             status: 'success',
-            message: `KYC status updated to ${status}`,
-            data: { user }
+            message: `KYC ${status} successfully`,
+            data: { kyc: user.kyc }
         });
     } catch (error) {
-        console.error('Update KYC Error:', error);
-        res.status(500).json({ status: 'error', message: 'Failed to update KYC status' });
+        console.error('Error updating user KYC:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to update identity status' });
     }
 };
 

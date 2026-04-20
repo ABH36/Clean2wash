@@ -70,7 +70,7 @@ const StaffSupport = () => {
                         <motion.button
                             key={i}
                             whileTap={{ scale: 0.98 }}
-                            className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} w-full p-4 rounded-[1.8rem] border flex items-center gap-5 text-left group hover:border-brand/20 transition-all duration-500`}
+                            className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white/5 border-white/5 shadow-soft'} w-full p-4 rounded-[1.8rem] border flex items-center gap-5 text-left group hover:border-brand/20 transition-all duration-500`}
                         >
                             <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:bg-brand group-hover:text-white ${channel.bg} ${channel.color}`}>
                                 {React.cloneElement(channel.icon, { size: 18 })}
@@ -87,7 +87,7 @@ const StaffSupport = () => {
                     ))}
                 </div>
 
-                <div className={`p-6 rounded-[1.8rem] border border-dashed text-center opacity-30 group hover:opacity-100 transition-all ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50/50 border-gray-100'}`}>
+                <div className={`p-6 rounded-[1.8rem] border border-dashed text-center opacity-30 group hover:opacity-100 transition-all ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/[0.02]/50 border-white/5'}`}>
                     <ShieldCheck size={20} className={`mx-auto mb-2 ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`} />
                     <p className={`text-[8px] font-black uppercase tracking-[0.3em] leading-relaxed ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>
                         Ver: 2.4.0-STF · Encrypted Node-092 <br />

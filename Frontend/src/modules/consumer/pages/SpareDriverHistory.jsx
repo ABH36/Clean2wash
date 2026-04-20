@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 import MobileLayout from '../components/layout/MobileLayout';
 import api, { bookingAPI } from '../../../utils/api';
 import { useAuth } from '../../../context/AuthContext';
+import { useTheme } from '../../../context/ThemeContext';
 import Header from '../../../components/common/Header';
 
 const formatMoney = (amount) => `Rs ${Number(amount || 0).toLocaleString('en-IN')}`;
@@ -31,6 +32,7 @@ const SpareDriverHistory = () => {
     const [historicalTrips, setHistoricalTrips] = useState([]);
     const [loading, setLoading] = useState(true);
     const [settlingTripId, setSettlingTripId] = useState(null);
+    const { isDarkMode } = useTheme();
     const selectedBookingId = searchParams.get('bookingId');
 
     useEffect(() => {
@@ -57,6 +59,7 @@ const SpareDriverHistory = () => {
     });
 
     const handleSettlement = async (trip, paymentMethod = 'wallet') => {
+        // ... (Same payment logic remains unchanged)
         const pendingAmount = Number(trip?.payment?.pendingAmount || 0);
         if (!trip?._id || pendingAmount <= 0) return;
 
@@ -121,14 +124,18 @@ const SpareDriverHistory = () => {
 
     return (
         <MobileLayout>
-            <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-                <header className="px-4 py-3 flex items-center justify-between bg-white sticky top-0 z-[60] border-b border-gray-100 backdrop-blur-xl">
+            <div className={`min-h-screen flex flex-col font-sans transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#FAF6EB]'}`}>
+                <header className={`px-4 py-3 flex items-center justify-between sticky top-0 z-[60] border-b backdrop-blur-xl transition-all ${
+                    isDarkMode ? 'bg-[#0A0F0D]/80 border-white/05' : 'bg-white/80 border-black/05'
+                }`}>
                     <div className="flex items-center gap-3">
-                        <button onClick={() => navigate(-1)} className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center active:scale-95 transition-all">
-                            <ChevronLeft size={18} className="text-slate-900" />
+                        <button onClick={() => navigate(-1)} className={`w-8 h-8 rounded-lg flex items-center justify-center active:scale-95 transition-all ${
+                            isDarkMode ? 'bg-white/[0.05]' : 'bg-black/[0.05]'
+                        }`}>
+                            <ChevronLeft size={18} className={isDarkMode ? 'text-white' : 'text-slate-900'} />
                         </button>
                         <div>
-                            <h1 className="text-[17px] font-[1000] text-slate-900 tracking-tighter uppercase leading-none">Trip Logs</h1>
+                            <h1 className={`text-[17px] font-[1000] tracking-tighter uppercase leading-none ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Trip Logs</h1>
                         </div>
                     </div>
                 </header>
@@ -136,8 +143,8 @@ const SpareDriverHistory = () => {
                 <div className="p-5 space-y-4">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-24">
-                            <div className="w-10 h-10 border-[3px] border-gray-50 border-t-[#FF9900] rounded-full animate-spin shadow-lg" />
-                            <p className="mt-4 text-[9px] font-black text-slate-300 uppercase tracking-widest">Sinking Archives</p>
+                            <div className="w-10 h-10 border-[3px] border-orange-500/10 border-t-[#FF9900] rounded-full animate-spin shadow-lg" />
+                            <p className={`mt-4 text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-black/20'}`}>Sinking Archives</p>
                         </div>
                     ) : orderedTrips.length > 0 ? (
                         orderedTrips.map((trip) => {
@@ -148,10 +155,14 @@ const SpareDriverHistory = () => {
 
                             return (
                                 <motion.div key={trip._id} whileTap={{ scale: 0.98 }}
-                                    className={`bg-white border rounded-[28px] p-4 shadow-sm space-y-4 relative overflow-hidden group transition-all ${isSelected ? 'border-[#FF9900]/40 ring-1 ring-[#FF9900]/10 shadow-xl' : 'border-gray-50'}`}>
-                                    <div className="absolute top-4 right-4 text-right">
-                                        <p className="text-[13px] font-[1000] text-slate-900 leading-none">{formatMoney(trip.pricing?.totalAmount)}</p>
-                                        <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mt-1">Settled Assets</p>
+                                    className={`border rounded-[28px] p-5 space-y-4 relative overflow-hidden group transition-all duration-300 ${
+                                        isDarkMode 
+                                            ? `bg-white/[0.03] ${isSelected ? 'border-[#FF9900]/40 shadow-2xl shadow-black/80' : 'border-white/05'}` 
+                                            : `bg-white ${isSelected ? 'border-[#FF9900]/40 shadow-xl' : 'border-black/05 shadow-sm'}`
+                                    }`}>
+                                    <div className="absolute top-5 right-5 text-right">
+                                        <p className={`text-[15px] font-[1000] leading-none ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{formatMoney(trip.pricing?.totalAmount)}</p>
+                                        <p className={`text-[7px] font-black uppercase tracking-widest mt-1 ${isDarkMode ? 'text-white/20' : 'text-slate-400'}`}>Settled Assets</p>
                                     </div>
 
                                     <div className="flex items-center gap-4">
@@ -159,26 +170,32 @@ const SpareDriverHistory = () => {
                                             <History size={18} strokeWidth={3} />
                                         </div>
                                         <div>
-                                            <h3 className="text-[11px] font-[1000] text-slate-900 uppercase tracking-tight leading-none mb-1.5">
+                                            <h3 className={`text-[11px] font-[1000] uppercase tracking-tight leading-none mb-1.5 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                                                 {trip.service?.name || 'Professional Chauffeur'}
                                             </h3>
                                             <div className="flex items-center gap-2">
                                                 <div className={`w-1.5 h-1.5 rounded-full ${trip.status === 'completed' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]'}`} />
-                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                                <p className={`text-[8px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/40' : 'text-slate-400'}`}>
                                                     Trip {trip.status} • {new Date(trip.createdAt).toLocaleDateString('en-IN')}
                                                 </p>
                                             </div>
                                             <div className="flex items-center gap-1.5 flex-wrap mt-2.5">
-                                                <span className="px-2 py-1 rounded-md bg-slate-50 text-slate-400 text-[7px] font-black tracking-widest uppercase border border-gray-100">
+                                                <span className={`px-2 py-1 rounded-md text-[7px] font-black tracking-widest uppercase border ${
+                                                    isDarkMode ? 'bg-white/05 border-white/05 text-white/40' : 'bg-black/05 border-black/05 text-black/40'
+                                                }`}>
                                                     #{trip.bookingId || trip._id?.slice(-6)}
                                                 </span>
                                                 {trip.payment?.status && (
-                                                    <span className={`px-2 py-1 rounded-md text-[7px] font-black tracking-widest uppercase border ${trip.payment.status === 'paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-400 border-gray-100'}`}>
+                                                    <span className={`px-2 py-1 rounded-md text-[7px] font-black tracking-widest uppercase border ${
+                                                        trip.payment.status === 'paid' 
+                                                            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
+                                                            : isDarkMode ? 'bg-white/05 text-white/40 border-white/05' : 'bg-black/05 text-black/40 border-black/05'
+                                                    }`}>
                                                         {trip.payment.status}
                                                     </span>
                                                 )}
                                                 {trip.payment?.status === 'settlement_pending' && Number(trip.payment?.pendingAmount || 0) > 0 && (
-                                                    <span className="px-2 py-1 rounded-md bg-amber-50 text-amber-600 border border-amber-100 text-[7px] font-black tracking-widest uppercase">
+                                                    <span className="px-2 py-1 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[7px] font-black tracking-widest uppercase">
                                                         Debt {formatMoney(trip.payment.pendingAmount)}
                                                     </span>
                                                 )}
@@ -188,7 +205,7 @@ const SpareDriverHistory = () => {
                                                     </span>
                                                 )}
                                                 {issueCount > 0 && (
-                                                    <span className="px-2 py-1 rounded-md bg-rose-50 text-rose-600 border border-rose-100 text-[7px] font-black tracking-widest uppercase">
+                                                    <span className="px-2 py-1 rounded-md bg-rose-500/10 text-rose-500 border border-rose-500/20 text-[7px] font-black tracking-widest uppercase">
                                                         {issueCount} Alert{issueCount > 1 ? 's' : ''}
                                                     </span>
                                                 )}
@@ -196,38 +213,38 @@ const SpareDriverHistory = () => {
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-50">
+                                    <div className={`grid grid-cols-2 gap-4 pt-4 border-t ${isDarkMode ? 'border-white/05' : 'border-black/05'}`}>
                                         <div className="flex items-center gap-2">
-                                            <div className="w-6 h-6 bg-slate-50 rounded-lg flex items-center justify-center border border-gray-50 shadow-inner">
-                                                <Clock size={12} className="text-slate-400" />
+                                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center border shadow-inner ${isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'}`}>
+                                                <Clock size={12} className={isDarkMode ? 'text-white/40' : 'text-slate-400'} />
                                             </div>
-                                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-tight leading-none">
+                                            <span className={`text-[9px] font-black uppercase tracking-tight leading-none ${isDarkMode ? 'text-white/60' : 'text-slate-600'}`}>
                                                 {new Date(trip.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-2 justify-end">
-                                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-tight leading-none">
+                                            <span className={`text-[9px] font-black uppercase tracking-tight leading-none ${isDarkMode ? 'text-white/60' : 'text-slate-600'}`}>
                                                 Pilot: {trip.provider?.id?.name || 'Assigned'}
                                             </span>
                                             <Star size={10} fill="#FF9900" className="text-[#FF9900]" />
                                         </div>
                                     </div>
 
-                                    <div className="space-y-2.5 border-t border-slate-50 pt-3">
+                                    <div className={`space-y-3 border-t pt-4 ${isDarkMode ? 'border-white/05' : 'border-black/05'}`}>
                                         <div className="flex items-start gap-3">
                                             <div className="w-3 h-3 rounded-full bg-[#FF9900]/10 border border-[#FF9900]/20 flex items-center justify-center mt-0.5 shrink-0">
                                                 <div className="w-1 h-1 rounded-full bg-[#FF9900]" />
                                             </div>
-                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-tight leading-tight">
+                                            <span className={`text-[10px] font-black uppercase tracking-tight leading-tight ${isDarkMode ? 'text-white/50' : 'text-slate-500'}`}>
                                                 {getTripAddress(trip)}
                                             </span>
                                         </div>
                                         {destination && (
                                             <div className="flex items-start gap-3">
-                                                <div className="w-3 h-3 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center mt-0.5 shrink-0">
+                                                <div className="w-3 h-3 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mt-0.5 shrink-0">
                                                     <div className="w-1 h-1 rounded-full bg-rose-500" />
                                                 </div>
-                                                <span className="text-[9px] font-black text-slate-300 uppercase tracking-tight leading-tight">
+                                                <span className={`text-[10px] font-black uppercase tracking-tight leading-tight ${isDarkMode ? 'text-white/30' : 'text-slate-400'}`}>
                                                     {destination}
                                                 </span>
                                             </div>
@@ -242,18 +259,18 @@ const SpareDriverHistory = () => {
                                                     {settlingTripId === trip._id ? 'Processing' : 'Vault Payout'}
                                                 </button>
                                                 <button onClick={() => handleSettlement(trip, 'online')} disabled={settlingTripId === trip._id}
-                                                    className="h-11 rounded-[16px] bg-slate-900 text-[#FF9900] text-[10px] font-black uppercase tracking-[0.15em] active:scale-95 transition-all shadow-lg disabled:opacity-50">
+                                                    className={`h-11 rounded-[16px] text-[#FF9900] text-[10px] font-black uppercase tracking-[0.15em] active:scale-95 transition-all shadow-lg disabled:opacity-50 ${isDarkMode ? 'bg-white/10' : 'bg-slate-900'}`}>
                                                     {settlingTripId === trip._id ? 'Opening' : 'Gateway Settle'}
                                                 </button>
                                             </>
                                         ) : (
                                             <>
                                                 <button onClick={() => navigate(`/rate?id=${trip._id}`)} disabled={trip.status !== 'completed'}
-                                                    className={`h-11 rounded-[16px] text-[10px] font-black uppercase tracking-[0.15em] active:scale-95 transition-all shadow-lg ${trip.feedback?.rating ? 'bg-slate-100 text-slate-400 border border-gray-100 shadow-none' : 'bg-slate-900 text-[#FF9900]'}`}>
+                                                    className={`h-11 rounded-[16px] text-[10px] font-black uppercase tracking-[0.15em] active:scale-95 transition-all shadow-lg ${trip.feedback?.rating ? (isDarkMode ? 'bg-white/05 text-white/20 shadow-none' : 'bg-slate-100 text-slate-400 shadow-none') : (isDarkMode ? 'bg-white/10 text-[#FF9900]' : 'bg-slate-900 text-[#FF9900]')}`}>
                                                     {trip.feedback?.rating ? 'Audit Submitted' : 'Submit Audit'}
                                                 </button>
                                                 <button onClick={() => navigate(`/spare-driver/support?bookingId=${trip._id}`)}
-                                                    className="h-11 rounded-[16px] border border-gray-100 text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] shadow-sm active:scale-95 transition-all">
+                                                    className={`h-11 rounded-[16px] border text-[10px] font-black uppercase tracking-[0.15em] active:scale-95 transition-all ${isDarkMode ? 'border-white/10 text-white/40' : 'border-black/05 text-slate-400'}`}>
                                                     Incident Help
                                                 </button>
                                             </>
@@ -263,14 +280,14 @@ const SpareDriverHistory = () => {
                             );
                         })
                     ) : (
-                        <div className="flex flex-col items-center py-20 gap-3 opacity-20">
-                            <History size={48} />
-                            <p className="text-sm font-black uppercase tracking-widest">No trips found</p>
+                        <div className={`flex flex-col items-center py-20 gap-3 transition-opacity ${isDarkMode ? 'opacity-10' : 'opacity-20'}`}>
+                            <History size={48} className={isDarkMode ? 'text-white' : 'text-black'} />
+                            <p className={`text-sm font-black uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-black'}`}>No trips found</p>
                         </div>
                     )}
 
                     <div className="pt-8 flex flex-col items-center">
-                        <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.2em]">End of history</p>
+                        <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${isDarkMode ? 'text-white/10' : 'text-black/10'}`}>End of history</p>
                     </div>
                 </div>
             </div>
@@ -279,3 +296,4 @@ const SpareDriverHistory = () => {
 };
 
 export default SpareDriverHistory;
+

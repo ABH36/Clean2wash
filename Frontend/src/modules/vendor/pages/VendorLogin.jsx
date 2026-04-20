@@ -47,7 +47,7 @@ const VendorLogin = () => {
             >
                 {/* Logo Section */}
                 <div className="flex flex-col items-center text-center mb-10">
-                    <div className="w-16 h-16 bg-surface border border-gray-100/10 text-brand rounded-[2rem] flex items-center justify-center shadow-2xl mb-6">
+                    <div className="w-16 h-16 bg-surface border border-white/5/10 text-brand rounded-[2rem] flex items-center justify-center shadow-2xl mb-6">
                         <Building2 size={32} />
                     </div>
                     <h1 className="text-3xl font-black text-content tracking-tighter uppercase leading-none">Vendor <br /><span className="text-brand">Workspace</span></h1>
@@ -55,7 +55,7 @@ const VendorLogin = () => {
                 </div>
 
                 {/* Login Card */}
-                <div className="bg-surface rounded-[3rem] p-8 lg:p-10 shadow-soft border border-gray-100/10">
+                <div className="bg-surface rounded-[3rem] p-8 lg:p-10 shadow-soft border border-white/5/10">
                     <form onSubmit={handleLogin} className="space-y-6">
                         <div className="space-y-4">
                             <div className="space-y-1.5 px-1">
@@ -68,7 +68,7 @@ const VendorLogin = () => {
                                     required
                                     value={email}
                                     onChange={e => setEmail(e.target.value)}
-                                    className="w-full h-14 bg-background border border-gray-100/10 rounded-2xl px-6 text-xs font-bold text-content outline-none focus:border-brand transition-all"
+                                    className="w-full h-14 bg-background border border-white/5/10 rounded-2xl px-6 text-xs font-bold text-content outline-none focus:border-brand transition-all"
                                 />
                             </div>
                             <div className="space-y-1.5 px-1">
@@ -81,7 +81,7 @@ const VendorLogin = () => {
                                     required
                                     value={password}
                                     onChange={e => setPassword(e.target.value)}
-                                    className="w-full h-14 bg-background border border-gray-100/10 rounded-2xl px-6 text-xs font-bold text-content outline-none focus:border-brand transition-all"
+                                    className="w-full h-14 bg-background border border-white/5/10 rounded-2xl px-6 text-xs font-bold text-content outline-none focus:border-brand transition-all"
                                 />
                             </div>
                         </div>
@@ -91,7 +91,7 @@ const VendorLogin = () => {
 
                         <div className="flex items-center justify-between px-1">
                             <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" className="w-4 h-4 rounded border-gray-200 text-brand focus:ring-brand" />
+                                <input type="checkbox" className="w-4 h-4 rounded border-white/10 text-brand focus:ring-brand" />
                                 <span className="text-[10px] font-bold text-content-subtle uppercase tracking-widest">Remember</span>
                             </label>
                             <button type="button" className="text-[10px] font-black text-brand uppercase tracking-widest">Forgot Entry?</button>
@@ -127,7 +127,7 @@ const VendorLogin = () => {
                         <ArrowLeft size={14} /> Back to Consumer Port
                     </button>
 
-                    <div className="flex items-center gap-3 bg-blue-500/5 px-6 py-4 rounded-3xl border border-blue-500/10 shadow-sm shadow-blue-500/5">
+                    <div className="flex items-center gap-3 bg-blue-500/5 px-6 py-4 rounded-3xl border border-blue-500/10  shadow-blue-500/5">
                         <ShieldCheck size={20} className="text-blue-500" />
                         <p className="text-[10px] font-bold text-blue-500/70 uppercase tracking-tight">Enterprise SSL Encryption Active</p>
                     </div>

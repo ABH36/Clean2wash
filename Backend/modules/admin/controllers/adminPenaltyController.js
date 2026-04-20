@@ -1,10 +1,10 @@
 const Penalty = require('../../../models/Penalty');
 const SpareDriver = require('../../../models/SpareDriver');
-const Consumer = require('../../../models/Consumer');
+const User = require('../../../models/User');
 const Booking = require('../../../models/Booking');
 const WalletTransaction = require('../../../models/WalletTransaction');
 const catchAsync = require('../../../utils/catchAsync');
-const AppError = require('../../../utils/appError');
+const AppError = require('../../../utils/AppError');
 
 // Get all penalties with filters
 exports.getPenalties = catchAsync(async (req, res) => {
@@ -194,8 +194,8 @@ exports.addPenalty = catchAsync(async (req, res) => {
                await SpareDriver.findOne({ phone: userId }) ||
                await SpareDriver.findOne({ driverId: userId });
     } else if (userType === 'customer') {
-        user = await Consumer.findById(userId) || 
-               await Consumer.findOne({ phone: userId });
+        user = await User.findOne({ _id: userId, role: 'consumer' }) || 
+               await User.findOne({ phone: userId, role: 'consumer' });
     }
     
     if (!user) {

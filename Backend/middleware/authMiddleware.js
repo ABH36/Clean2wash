@@ -3,6 +3,7 @@ const { promisify } = require('util');
 const User = require('../models/User');
 const Captain = require('../models/Captain');
 const SpareDriver = require('../models/SpareDriver');
+const Admin = require('../models/Admin');
 const AppError = require('../utils/AppError');
 const catchAsync = require('../utils/catchAsync');
 
@@ -30,6 +31,12 @@ const ensureSpareDriverActive = (driver) => {
     }
 };
 
+const ensureAdminActive = (admin) => {
+    if (admin.status !== 'ACTIVE') {
+        throw new AppError('Your admin account is not active. Please contact super admin.', 401);
+    }
+};
+
 const applyPrincipalToRequest = (req, principal) => {
     req.auth = {
         id: principal.id,
@@ -45,10 +52,21 @@ const applyPrincipalToRequest = (req, principal) => {
     if (principal.role === 'sparedriver') {
         req.spareDriver = principal.user;
     }
+
+    if (principal.role === 'admin') {
+        req.admin = principal.user;
+    }
 };
 
 const resolvePrincipalFromRole = async (decoded) => {
     const tokenRole = decoded.role;
+
+    if (tokenRole === 'admin') {
+        const admin = await Admin.findById(decoded.id).populate('role');
+        if (!admin) return null;
+        ensureAdminActive(admin);
+        return { id: admin._id, role: 'admin', user: admin };
+    }
 
     if (tokenRole === 'captain') {
         const captain = await Captain.findById(decoded.id);
@@ -76,6 +94,12 @@ const resolvePrincipalFromRole = async (decoded) => {
 };
 
 const resolveLegacyPrincipal = async (decoded) => {
+    const admin = await Admin.findById(decoded.id).populate('role');
+    if (admin) {
+        ensureAdminActive(admin);
+        return { id: admin._id, role: 'admin', user: admin };
+    }
+
     const user = await User.findById(decoded.id);
     if (user) {
         ensureUserActive(user);

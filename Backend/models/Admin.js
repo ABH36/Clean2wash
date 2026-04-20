@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const adminSchema = new mongoose.Schema({
     name: {
@@ -104,9 +105,9 @@ adminSchema.virtual('isLocked').get(function() {
 });
 
 // Hash password before saving
-adminSchema.pre('save', async function(next) {
+adminSchema.pre('save', async function() {
     // Only hash if password is modified
-    if (!this.isModified('password')) return next();
+    if (!this.isModified('password')) return;
     
     // Hash password
     this.password = await bcrypt.hash(this.password, 10);
@@ -115,13 +116,27 @@ adminSchema.pre('save', async function(next) {
     if (!this.isNew) {
         this.passwordChangedAt = Date.now() - 1000; // Subtract 1s to ensure token is created after password change
     }
-    
-    next();
 });
 
 // Compare password method
 adminSchema.methods.correctPassword = async function(candidatePassword, userPassword) {
     return await bcrypt.compare(candidatePassword, userPassword);
+};
+
+// Generate JWT token
+adminSchema.methods.generateAuthToken = function() {
+    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+    const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+    
+    return jwt.sign(
+        { 
+            id: this._id,
+            role: 'admin',
+            email: this.email
+        },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+    );
 };
 
 // Check if password was changed after JWT was issued

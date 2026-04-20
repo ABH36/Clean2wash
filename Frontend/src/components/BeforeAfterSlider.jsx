@@ -37,7 +37,7 @@ const BeforeAfterSlider = ({
         <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
                 <span className="text-[10px] font-black text-content-subtle uppercase tracking-widest italic">{title}</span>
-                <div className="flex items-center gap-1.5 bg-black/5 px-2 py-0.5 rounded-md">
+                <div className="flex items-center gap-1.5 bg-white/5 px-2 py-0.5 rounded-md">
                     <ShieldCheck size={10} className="text-content-subtle" />
                     <span className="text-[7px] font-black text-content-subtle uppercase tracking-widest">Visual Chain Secured</span>
                 </div>
@@ -45,7 +45,7 @@ const BeforeAfterSlider = ({
 
             <div 
                 ref={containerRef}
-                className="relative w-full aspect-[4/3] overflow-hidden group/slider cursor-col-resize select-none bg-gray-900 rounded-2xl shadow-xl border border-gray-100/10"
+                className="relative w-full aspect-[4/3] overflow-hidden group/slider cursor-col-resize select-none bg-gray-900 rounded-2xl shadow-2xl shadow-black/50 border border-white/5/10"
                 onMouseMove={handleMove}
                 onTouchMove={handleMove}
             >
@@ -84,11 +84,11 @@ const BeforeAfterSlider = ({
 
                 {/* Slider Handle */}
                 <div 
-                    className="absolute inset-y-0 z-40 w-0.5 bg-white shadow-[0_0_20px_rgba(0,0,0,0.8)]"
+                    className="absolute inset-y-0 z-40 w-0.5 bg-white/5 shadow-[0_0_20px_rgba(0,0,0,0.8)]"
                     style={{ left: `${sliderPos}%` }}
                 >
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-full shadow-2xl flex items-center justify-center border-4 border-black/5 group-hover/slider:scale-110 transition-all duration-300">
-                        <ArrowLeftRight size={16} className="text-black/40" strokeWidth={3} />
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-white/5 rounded-full shadow-2xl flex items-center justify-center border-4 border-black/5 group-hover/slider:scale-110 transition-all duration-300">
+                        <ArrowLeftRight size={16} className="text-white/40" strokeWidth={3} />
                     </div>
                 </div>
 

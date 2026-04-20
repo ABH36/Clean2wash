@@ -42,10 +42,10 @@ const StaffSecurity = () => {
                 </div>
 
                 <form onSubmit={handleUpdate} className="space-y-5">
-                    <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} p-6 rounded-[2.5rem] border focus-within:border-brand/40 transition-all group`}>
+                    <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white/5 border-white/5 shadow-soft'} p-6 rounded-[2.5rem] border focus-within:border-brand/40 transition-all group`}>
                         <p className={`text-[8px] font-black uppercase tracking-widest mb-3 group-focus-within:text-brand transition-colors ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Current 4-Digit Pin</p>
                         <div className="flex items-center gap-4">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 text-white/40 group-focus-within:bg-brand group-focus-within:text-white' : 'bg-gray-50 text-content-subtle group-focus-within:bg-brand group-focus-within:text-white'}`}>
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 text-white/40 group-focus-within:bg-brand group-focus-within:text-white' : 'bg-white/[0.02] text-content-subtle group-focus-within:bg-brand group-focus-within:text-white'}`}>
                                 <Lock size={18} />
                             </div>
                             <input
@@ -59,10 +59,10 @@ const StaffSecurity = () => {
                         </div>
                     </div>
 
-                    <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} p-6 rounded-[2.5rem] border focus-within:border-brand/40 transition-all group`}>
+                    <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white/5 border-white/5 shadow-soft'} p-6 rounded-[2.5rem] border focus-within:border-brand/40 transition-all group`}>
                         <p className={`text-[8px] font-black uppercase tracking-widest mb-3 group-focus-within:text-brand transition-colors ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>New 4-Digit Pin</p>
                         <div className="flex items-center gap-4">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 text-white/40 group-focus-within:bg-brand group-focus-within:text-white' : 'bg-gray-50 text-content-subtle group-focus-within:bg-brand group-focus-within:text-white'}`}>
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 text-white/40 group-focus-within:bg-brand group-focus-within:text-white' : 'bg-white/[0.02] text-content-subtle group-focus-within:bg-brand group-focus-within:text-white'}`}>
                                 <KeyRound size={18} />
                             </div>
                             <input
@@ -76,10 +76,10 @@ const StaffSecurity = () => {
                         </div>
                     </div>
 
-                    <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} p-6 rounded-[2.5rem] border focus-within:border-brand/40 transition-all group`}>
+                    <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white/5 border-white/5 shadow-soft'} p-6 rounded-[2.5rem] border focus-within:border-brand/40 transition-all group`}>
                         <p className={`text-[8px] font-black uppercase tracking-widest mb-3 group-focus-within:text-brand transition-colors ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Verify Protocol</p>
                         <div className="flex items-center gap-4">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 text-white/40 group-focus-within:bg-brand group-focus-within:text-white' : 'bg-gray-50 text-content-subtle group-focus-within:bg-brand group-focus-within:text-white'}`}>
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 text-white/40 group-focus-within:bg-brand group-focus-within:text-white' : 'bg-white/[0.02] text-content-subtle group-focus-within:bg-brand group-focus-within:text-white'}`}>
                                 <KeyRound size={18} />
                             </div>
                             <input
@@ -103,7 +103,7 @@ const StaffSecurity = () => {
                     <motion.button
                         whileTap={{ scale: 0.98 }}
                         type="submit"
-                        className={`w-full h-16 rounded-[2rem] font-black text-[10px] uppercase tracking-[0.25em] shadow-xl flex items-center justify-center gap-3 mt-10 hover:bg-brand transition-all ${isDarkMode ? 'bg-white text-[#0F172A] shadow-white/5' : 'bg-content text-white shadow-content/30'}`}
+                        className={`w-full h-16 rounded-[2rem] font-black text-[10px] uppercase tracking-[0.25em] shadow-2xl shadow-black/50 flex items-center justify-center gap-3 mt-10 hover:bg-brand transition-all ${isDarkMode ? 'bg-white/5 text-[#0F172A] shadow-white/5' : 'bg-content text-white shadow-content/30'}`}
                     >
                         Sign Update <ArrowRight size={20} />
                     </motion.button>

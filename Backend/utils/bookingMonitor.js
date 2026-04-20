@@ -1,7 +1,7 @@
 const Booking = require('../models/Booking');
 const Captain = require('../models/Captain');
 const { sendNotification, sendCaptainNotification, sendAdminNotification } = require('./notificationService');
-const socketService = require('../socketService');
+const socketService = require('../services/enhancedSocketService');
 const { broadcastBookingToDrivers } = require('./spareDriverDispatch');
 
 /**

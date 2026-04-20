@@ -50,7 +50,7 @@ const RatingModal = ({ isOpen, onClose, onSubmit, productName, productId, orderI
                         animate={{ y: 0 }}
                         exit={{ y: "100%" }}
                         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                        className="relative bg-white w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 shadow-2xl overflow-hidden"
+                        className="relative bg-white/5 w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 shadow-2xl overflow-hidden"
                     >
                         {success ? (
                             <div className="py-12 text-center space-y-4">
@@ -120,7 +120,7 @@ const RatingModal = ({ isOpen, onClose, onSubmit, productName, productId, orderI
                                             className="flex-[2] h-14 bg-onyx-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-onyx-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-onyx-200 disabled:opacity-50"
                                         >
                                             {submitting ? (
-                                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                <div className="w-5 h-5 border-white/5 border-white/30 border-t-white rounded-full animate-spin" />
                                             ) : (
                                                 <>
                                                     <Send size={18} />

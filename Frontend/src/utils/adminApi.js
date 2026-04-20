@@ -1,9 +1,19 @@
 const API_BASE_URL = import.meta.env.VITE_ADMIN_API_URL || '/api/admin';
 
+// Retry configuration
+const RETRY_CONFIG = {
+    maxRetries: 3,
+    retryDelay: 1000, // 1 second
+    retryableStatuses: [408, 429, 500, 502, 503, 504],
+    timeout: 30000 // 30 seconds
+};
+
 class ApiClient {
     constructor(baseURL = API_BASE_URL) {
         this.baseURL = baseURL;
         this.token = localStorage.getItem('auth_admin_token') || null;
+        this.refreshing = false;
+        this.failedQueue = [];
     }
 
     setToken(token) {
@@ -15,7 +25,58 @@ class ApiClient {
         }
     }
 
-    async request(endpoint, options = {}) {
+    // Process queued requests after token refresh
+    processQueue(error, token = null) {
+        this.failedQueue.forEach(prom => {
+            if (error) {
+                prom.reject(error);
+            } else {
+                prom.resolve(token);
+            }
+        });
+        this.failedQueue = [];
+    }
+
+    // Sleep utility for retry delays
+    sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // Check if error is retryable
+    isRetryableError(error) {
+        if (!error.status) return false;
+        return RETRY_CONFIG.retryableStatuses.includes(error.status);
+    }
+
+    // Calculate exponential backoff delay
+    getRetryDelay(attempt) {
+        return RETRY_CONFIG.retryDelay * Math.pow(2, attempt);
+    }
+
+    // Fetch with timeout
+    async fetchWithTimeout(url, config, timeout = RETRY_CONFIG.timeout) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+        try {
+            const response = await fetch(url, {
+                ...config,
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            return response;
+        } catch (error) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                const timeoutError = new Error('Request timeout');
+                timeoutError.status = 408;
+                throw timeoutError;
+            }
+            throw error;
+        }
+    }
+
+    async request(endpoint, options = {}, retryCount = 0) {
         const url = `${this.baseURL}${endpoint}`;
         const config = {
             headers: {
@@ -27,51 +88,117 @@ class ApiClient {
         };
 
         try {
-            const response = await fetch(url, config);
+            const response = await this.fetchWithTimeout(url, config);
 
+            // Handle 401 Unauthorized
             if (response.status === 401) {
                 console.warn('Admin API returned 401 Unauthorized.');
+                
+                // If already refreshing, queue this request
+                if (this.refreshing) {
+                    return new Promise((resolve, reject) => {
+                        this.failedQueue.push({ resolve, reject });
+                    }).then(token => {
+                        config.headers.Authorization = `Bearer ${token}`;
+                        return this.request(endpoint, options, retryCount);
+                    });
+                }
+
+                // Clear token and notify
                 this.setToken(null);
                 window.dispatchEvent(new CustomEvent('auth:admin_unauthorized'));
+                
+                const authError = new Error('Unauthorized - Please login again');
+                authError.status = 401;
+                throw authError;
             }
 
+            // Handle 204 No Content
             if (response.status === 204 || response.headers.get('content-length') === '0') {
                 return null;
             }
 
+            // Parse response
             const contentType = response.headers.get('content-type');
             let data;
 
             if (contentType && contentType.includes('application/json')) {
                 try {
-                    data = await response.json();
+                    const text = await response.text();
+                    data = text ? JSON.parse(text) : {};
                 } catch (parseError) {
-                    data = { message: 'Failed to parse server response' };
+                    console.error('JSON parse error:', parseError);
+                    data = { 
+                        status: 'error',
+                        message: 'Failed to parse server response',
+                        details: parseError.message 
+                    };
                 }
             } else {
                 const text = await response.text();
-                data = { message: text || `HTTP error! status: ${response.status}` };
+                data = { 
+                    status: 'error',
+                    message: text || `HTTP error! status: ${response.status}` 
+                };
             }
 
+            // Handle non-OK responses
             if (!response.ok) {
-                const error = new Error(data.message || `HTTP error! status: ${response.status}`);
+                const error = new Error(
+                    data.message || 
+                    data.error || 
+                    `HTTP error! status: ${response.status}`
+                );
                 error.status = response.status;
                 error.data = data;
+                error.response = response;
                 throw error;
             }
 
             return data;
         } catch (error) {
+            // Check if we should retry
+            if (this.isRetryableError(error) && retryCount < RETRY_CONFIG.maxRetries) {
+                const delay = this.getRetryDelay(retryCount);
+                console.warn(`Request failed, retrying in ${delay}ms... (Attempt ${retryCount + 1}/${RETRY_CONFIG.maxRetries})`);
+                await this.sleep(delay);
+                return this.request(endpoint, options, retryCount + 1);
+            }
+
+            // Enhance error with additional context
+            if (!error.status) {
+                error.status = 0;
+                error.message = error.message || 'Network error - Please check your connection';
+            }
+
+            console.error('API Request failed:', {
+                endpoint,
+                status: error.status,
+                message: error.message,
+                retryCount
+            });
+
             throw error;
         }
     }
 
     // Auth methods
     async login(email, password) {
-        return this.request('/login', {
+        // Use RBAC admin login endpoint (superadmin/auth/login)
+        const response = await fetch('/api/superadmin/auth/login', {
             method: 'POST',
-            body: JSON.stringify({ email, password }),
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email, password })
         });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Login failed');
+        }
+        
+        return response.json();
     }
 
     async getProfile() {
@@ -454,6 +581,18 @@ const apiClient = new ApiClient();
 export default apiClient;
 
 export const adminAPI = {
+    // --- Support & Issue Management ---
+    getSupportTickets: (params = {}) => {
+        const query = new URLSearchParams(params).toString();
+        return apiClient.request(`/support/tickets${query ? `?${query}` : ''}`);
+    },
+    getSupportStats: () => apiClient.request('/support/tickets/stats'),
+    getSupportTicket: (id) => apiClient.request(`/support/tickets/${id}`),
+    updateSupportTicket: (id, data) => apiClient.request(`/support/tickets/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+    }),
+
     login: (email, password) => apiClient.login(email, password),
     getProfile: () => apiClient.getProfile(),
     getDashboard: () => apiClient.getDashboard(),
@@ -517,11 +656,19 @@ export const adminAPI = {
     getAuditStats: () => apiClient.getAuditStats(),
     // Vehicle Models
     getVehicleModels: (params) => apiClient.getVehicleModels(params),
+    getVehicleSuggestions: () => apiClient.request('/vehicle-models/suggestions'),
+    reviewVehicleSuggestion: (id, data) => apiClient.request(`/vehicle-models/${id}/review`, {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+    }),
     createVehicleModel: (data) => apiClient.createVehicleModel(data),
     updateVehicleModel: (id, data) => apiClient.updateVehicleModel(id, data),
     deleteVehicleModel: (id) => apiClient.deleteVehicleModel(id),
     getSpareDrivers: () => apiClient.getSpareDrivers(),
-    getSpareDriverBookings: () => apiClient.getSpareDriverBookings(),
+    getSpareDriverBookings: (params = {}) => {
+        const query = new URLSearchParams(params).toString();
+        return apiClient.request(`/bookings/chauffeur${query ? `?${query}` : ''}`);
+    },
     getStudioWashConsole: () => apiClient.getStudioWashConsole(),
     getApartmentWashConsole: () => apiClient.getApartmentWashConsole(),
     reviewApartmentSubscription: (id, action, reason, captainId) => apiClient.reviewApartmentSubscription(id, action, reason, captainId),
@@ -668,5 +815,369 @@ export const adminAPI = {
     post: (endpoint, body, options) => apiClient.post(endpoint, body, options),
     put: (endpoint, body, options) => apiClient.put(endpoint, body, options),
     patch: (endpoint, body, options) => apiClient.patch(endpoint, body, options),
-    delete: (endpoint, options) => apiClient.delete(endpoint, options)
+    delete: (endpoint, options) => apiClient.delete(endpoint, options),
+
+    // ── DISPATCH ENGINE ──────────────────────────────────────────
+    // Dispatch Statistics
+    getDispatchStats: () => apiClient.request('/dispatch/stats'),
+    
+    // Auto-Assignment
+    triggerAutoAssign: (bookingId) => apiClient.request(`/dispatch/assign/${bookingId}`, {
+        method: 'POST'
+    }),
+    getAvailableDriversForBooking: (bookingId, radius = 15) => apiClient.request(`/dispatch/available-drivers/${bookingId}?radius=${radius}`),
+    
+    // Queue Management
+    processDispatchQueue: () => apiClient.request('/dispatch/process-queue', {
+        method: 'POST'
+    }),
+    startDispatchEngine: () => apiClient.request('/dispatch/start', {
+        method: 'POST'
+    }),
+    stopDispatchEngine: () => apiClient.request('/dispatch/stop', {
+        method: 'POST'
+    }),
+    
+    // SOS & Emergency
+    resolveSOS: (sosId) => apiClient.request(`/sos/resolve/${sosId}`, {
+        method: 'PATCH'
+    }),
+
+    // Pending & Stuck Bookings
+    getPendingBookings: () => apiClient.request('/dispatch/pending-bookings'),
+    getStuckBookings: () => apiClient.request('/dispatch/stuck-bookings'),
+
+    // ── REPORTS & ANALYTICS ──────────────────────────────────────
+    // Revenue Reports
+    getRevenueReport: (params) => {
+        const query = new URLSearchParams(params).toString();
+        return apiClient.request(`/reports/revenue${query ? `?${query}` : ''}`);
+    },
+    
+    // Driver Earnings Reports
+    getDriverEarningsReport: (params) => {
+        const query = new URLSearchParams(params).toString();
+        return apiClient.request(`/reports/driver-earnings${query ? `?${query}` : ''}`);
+    },
+    
+    // Booking Analytics
+    getBookingAnalytics: (params) => {
+        const query = new URLSearchParams(params).toString();
+        return apiClient.request(`/reports/bookings${query ? `?${query}` : ''}`);
+    },
+    
+    // Driver Performance
+    getDriverPerformance: (params) => {
+        const query = new URLSearchParams(params).toString();
+        return apiClient.request(`/reports/driver-performance${query ? `?${query}` : ''}`);
+    },
+    
+    // Financial Summary
+    getFinancialSummary: (params) => {
+        const query = new URLSearchParams(params).toString();
+        return apiClient.request(`/reports/financial-summary${query ? `?${query}` : ''}`);
+    },
+    
+    // Export Reports
+    exportReport: async (format, params) => {
+        const response = await fetch(`${API_BASE_URL}/reports/export/${format}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${apiClient.token}`
+            },
+            body: JSON.stringify(params)
+        });
+        
+        if (!response.ok) {
+            throw new Error('Export failed');
+        }
+        
+        return response.blob();
+    },
+
+    // ── SERVICE ZONE MANAGEMENT ──────────────────────────────────
+    // Zone CRUD
+    getZones: (params) => apiClient.request('/zones' + (params ? `?${new URLSearchParams(params).toString()}` : '')),
+    getZone: (id) => apiClient.request(`/zones/${id}`),
+    createZone: (zoneData) => apiClient.request('/zones', {
+        method: 'POST',
+        body: JSON.stringify(zoneData)
+    }),
+    updateZone: (id, zoneData) => apiClient.request(`/zones/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(zoneData)
+    }),
+    deleteZone: (id) => apiClient.request(`/zones/${id}`, {
+        method: 'DELETE'
+    }),
+    
+    // Zone Operations
+    updateZoneStatus: (id, status) => apiClient.request(`/zones/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status })
+    }),
+    updateZoneServices: (id, services) => apiClient.request(`/zones/${id}/services`, {
+        method: 'PATCH',
+        body: JSON.stringify({ services })
+    }),
+    getZoneStats: (id) => apiClient.request(`/zones/${id}/stats`),
+    bulkUpdateZones: (zoneIds, updates) => apiClient.request('/zones/bulk-update', {
+        method: 'PATCH',
+        body: JSON.stringify({ zoneIds, updates })
+    }),
+    
+    // Zone Queries
+    checkLocation: (lat, lng, service) => apiClient.request(
+        `/zones/check-location?latitude=${lat}&longitude=${lng}${service ? `&service=${service}` : ''}`
+    ),
+    getNearbyZones: (lat, lng, maxDistance) => apiClient.request(
+        `/zones/nearby?latitude=${lat}&longitude=${lng}${maxDistance ? `&maxDistance=${maxDistance}` : ''}`
+    ),
+    getZonesGeoJSON: () => apiClient.request('/zones/geojson'),
+    getZoneByCode: (code) => apiClient.request(`/zones/code/${code}`),
+
+    // ── FRAUD DETECTION & PREVENTION ──────────────────────────────
+    // Fraud Dashboard
+    getFraudDashboard: (params) => {
+        const query = new URLSearchParams(params).toString();
+        return apiClient.request(`/fraud/dashboard${query ? `?${query}` : ''}`);
+    },
+    
+    // Fraud Alerts
+    getFraudAlerts: (params) => {
+        const query = new URLSearchParams(params).toString();
+        return apiClient.request(`/fraud/alerts${query ? `?${query}` : ''}`);
+    },
+    getFraudAlert: (id) => apiClient.request(`/fraud/alerts/${id}`),
+    updateFraudAlert: (id, data) => apiClient.request(`/fraud/alerts/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+    }),
+    
+    // Blacklist Management
+    getFraudBlacklist: (params) => {
+        const query = new URLSearchParams(params).toString();
+        return apiClient.request(`/fraud/blacklist${query ? `?${query}` : ''}`);
+    },
+    addToBlacklist: (data) => apiClient.request('/fraud/blacklist', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }),
+    removeFromBlacklist: (id) => apiClient.request(`/fraud/blacklist/${id}`, {
+        method: 'DELETE'
+    }),
+    checkBlacklist: (entityType, entityId) => {
+        const query = new URLSearchParams({ entityType, entityId }).toString();
+        return apiClient.request(`/fraud/blacklist/check?${query}`);
+    },
+    
+    // Risk Profiles
+    getUserRiskProfile: (userId) => apiClient.request(`/fraud/users/${userId}/risk`),
+    getDriverRiskProfile: (driverId) => apiClient.request(`/fraud/drivers/${driverId}/risk`),
+    
+    // Manual Fraud Checks
+    runUserFraudCheck: (userId) => apiClient.request(`/fraud/users/${userId}/check`, {
+        method: 'POST'
+    }),
+    runDriverFraudCheck: (driverId) => apiClient.request(`/fraud/drivers/${driverId}/check`, {
+        method: 'POST'
+    }),
+
+    // ── USER KYC MANAGEMENT ──────────────────────────────────────
+    updateUserKyc: (userId, kycData) => apiClient.request(`/users/${userId}/kyc`, {
+        method: 'PATCH',
+        body: JSON.stringify(kycData)
+    }),
+
+    // ── SUPERADMIN - ADMIN MANAGEMENT ────────────────────────────
+    // Admin Management
+    getAllAdmins: (params) => {
+        const query = new URLSearchParams(params).toString();
+        return fetch(`/api/superadmin/admins${query ? `?${query}` : ''}`, {
+            headers: {
+                'Authorization': `Bearer ${apiClient.token}`,
+                'Content-Type': 'application/json'
+            }
+        }).then(res => res.json());
+    },
+    getAdmin: (id) => fetch(`/api/superadmin/admins/${id}`, {
+        headers: {
+            'Authorization': `Bearer ${apiClient.token}`,
+            'Content-Type': 'application/json'
+        }
+    }).then(res => res.json()),
+    createAdmin: (data) => fetch('/api/superadmin/admins', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiClient.token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    }).then(res => res.json()),
+    updateAdmin: (id, data) => fetch(`/api/superadmin/admins/${id}`, {
+        method: 'PATCH',
+        headers: {
+            'Authorization': `Bearer ${apiClient.token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    }).then(res => res.json()),
+    deleteAdmin: (id) => fetch(`/api/superadmin/admins/${id}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${apiClient.token}`,
+            'Content-Type': 'application/json'
+        }
+    }).then(res => res.json()),
+    toggleAdminStatus: (id, status) => fetch(`/api/superadmin/admins/${id}/status`, {
+        method: 'PATCH',
+        headers: {
+            'Authorization': `Bearer ${apiClient.token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status })
+    }).then(res => res.json()),
+    assignRole: (id, roleId) => fetch(`/api/superadmin/admins/${id}/role`, {
+        method: 'PATCH',
+        headers: {
+            'Authorization': `Bearer ${apiClient.token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ roleId })
+    }).then(res => res.json()),
+    resetAdminPassword: (id) => fetch(`/api/superadmin/admins/${id}/reset-password`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiClient.token}`,
+            'Content-Type': 'application/json'
+        }
+    }).then(res => res.json()),
+    getAdminStats: () => fetch('/api/superadmin/admins/stats', {
+        headers: {
+            'Authorization': `Bearer ${apiClient.token}`,
+            'Content-Type': 'application/json'
+        }
+    }).then(res => res.json()),
+    getAdminActivity: (id, params) => {
+        const query = new URLSearchParams(params).toString();
+        return fetch(`/api/superadmin/admins/${id}/activity${query ? `?${query}` : ''}`, {
+            headers: {
+                'Authorization': `Bearer ${apiClient.token}`,
+                'Content-Type': 'application/json'
+            }
+        }).then(res => res.json());
+    },
+
+    // ── SUPERADMIN - ROLE MANAGEMENT ──────────────────────────────
+    // Role Management
+    getAllRoles: (params) => {
+        const query = new URLSearchParams(params).toString();
+        return fetch(`/api/superadmin/roles${query ? `?${query}` : ''}`, {
+            headers: {
+                'Authorization': `Bearer ${apiClient.token}`,
+                'Content-Type': 'application/json'
+            }
+        }).then(res => res.json());
+    },
+    getRole: (id) => fetch(`/api/superadmin/roles/${id}`, {
+        headers: {
+            'Authorization': `Bearer ${apiClient.token}`,
+            'Content-Type': 'application/json'
+        }
+    }).then(res => res.json()),
+    createRole: (data) => fetch('/api/superadmin/roles', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiClient.token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    }).then(res => res.json()),
+    updateRole: (id, data) => fetch(`/api/superadmin/roles/${id}`, {
+        method: 'PATCH',
+        headers: {
+            'Authorization': `Bearer ${apiClient.token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    }).then(res => res.json()),
+    deleteRole: (id) => fetch(`/api/superadmin/roles/${id}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${apiClient.token}`,
+            'Content-Type': 'application/json'
+        }
+    }).then(res => res.json()),
+    updateRolePermissions: (id, permissions) => fetch(`/api/superadmin/roles/${id}/permissions`, {
+        method: 'PATCH',
+        headers: {
+            'Authorization': `Bearer ${apiClient.token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ permissions })
+    }).then(res => res.json()),
+    toggleRoleStatus: (id) => fetch(`/api/superadmin/roles/${id}/toggle`, {
+        method: 'PATCH',
+        headers: {
+            'Authorization': `Bearer ${apiClient.token}`,
+            'Content-Type': 'application/json'
+        }
+    }).then(res => res.json()),
+    getRoleStats: () => fetch('/api/superadmin/roles/stats', {
+        headers: {
+            'Authorization': `Bearer ${apiClient.token}`,
+            'Content-Type': 'application/json'
+        }
+    }).then(res => res.json()),
+    duplicateRole: (id, name) => fetch(`/api/superadmin/roles/${id}/duplicate`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiClient.token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name })
+    }).then(res => res.json()),
+
+    // ── SUPERADMIN - PERMISSION MANAGEMENT ────────────────────────
+    // Permission Management
+    getAllPermissions: (params) => {
+        const query = new URLSearchParams(params).toString();
+        return fetch(`/api/superadmin/permissions${query ? `?${query}` : ''}`, {
+            headers: {
+                'Authorization': `Bearer ${apiClient.token}`,
+                'Content-Type': 'application/json'
+            }
+        }).then(res => res.json());
+    },
+    getGroupedPermissions: () => fetch('/api/superadmin/permissions/grouped', {
+        headers: {
+            'Authorization': `Bearer ${apiClient.token}`,
+            'Content-Type': 'application/json'
+        }
+    }).then(res => res.json()),
+
+    // ── SUPERADMIN - ACTIVITY LOGS ────────────────────────────────
+    // Activity Logs
+    getActivityLogs: (params) => {
+        const query = new URLSearchParams(params).toString();
+        return fetch(`/api/superadmin/activity-logs${query ? `?${query}` : ''}`, {
+            headers: {
+                'Authorization': `Bearer ${apiClient.token}`,
+                'Content-Type': 'application/json'
+            }
+        }).then(res => res.json());
+    },
+    getActivityStats: () => fetch('/api/superadmin/activity-logs/stats', {
+        headers: {
+            'Authorization': `Bearer ${apiClient.token}`,
+            'Content-Type': 'application/json'
+        }
+    }).then(res => res.json()),
+    getRecentActivities: (limit = 10) => fetch(`/api/superadmin/activity-logs/recent?limit=${limit}`, {
+        headers: {
+            'Authorization': `Bearer ${apiClient.token}`,
+            'Content-Type': 'application/json'
+        }
+    }).then(res => res.json())
 };

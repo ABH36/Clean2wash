@@ -36,10 +36,10 @@ const LocationIndicator = ({ variant = 'light', className = '' }) => {
             onClick={handleClick}
             className={`flex items-center gap-3 p-1.5 pr-4 rounded-2xl transition-all ${isDark
                 ? 'bg-white/5 border border-white/10 hover:bg-white/10 text-white'
-                : 'bg-gray-50 border border-gray-100 hover:bg-gray-100 text-black'
+                : 'bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] text-white'
                 } ${className}`}
         >
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shadow-sm ${isDark ? 'bg-brand/20 text-brand' : 'bg-white text-brand border border-gray-50'
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center  ${isDark ? 'bg-brand/20 text-brand' : 'bg-white/5 text-brand border border-gray-50'
                 }`}>
                 <MapPin size={16} strokeWidth={2.5} />
             </div>

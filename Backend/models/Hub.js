@@ -1,3 +1,8 @@
+/**
+ * APARTMENT WASH / HUB MODEL
+ * Manages Apartment Hubs for subscription-based cleaning.
+ * (Not associated with the Chauffeur/Spare Driver flow)
+ */
 const mongoose = require('mongoose');
 
 const hubSchema = new mongoose.Schema({

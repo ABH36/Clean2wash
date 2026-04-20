@@ -6,9 +6,16 @@ const ActivityLog = require('../../../models/ActivityLog');
  * Generate JWT token
  */
 const generateToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, {
-        expiresIn: process.env.JWT_EXPIRES_IN || '24h'
-    });
+    return jwt.sign(
+        { 
+            id,
+            role: 'admin'
+        },
+        process.env.JWT_SECRET,
+        {
+            expiresIn: process.env.JWT_EXPIRES_IN || '24h'
+        }
+    );
 };
 
 /**

@@ -58,7 +58,7 @@ const NotificationBell = () => {
                             </div>
                         </div>
                     </div>
-                    <div className="flex border-l border-gray-100/10 ml-4 pl-4">
+                    <div className="flex border-l border-white/5/10 ml-4 pl-4">
                         <button
                             onClick={() => toast.dismiss(t.id)}
                             className="w-full border border-transparent rounded-none rounded-r-lg p-2 flex items-center justify-center text-xs font-black text-content-subtle hover:text-brand transition-colors uppercase tracking-widest"
@@ -121,7 +121,7 @@ const NotificationBell = () => {
             {/* Bell Icon */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="relative w-9 h-9 bg-background rounded-xl flex items-center justify-center border border-gray-100/10 hover:bg-surface transition-all group"
+                className="relative w-9 h-9 bg-background rounded-xl flex items-center justify-center border border-white/5/10 hover:bg-surface transition-all group"
             >
                 <Bell size={16} className={`transition-colors ${unreadCount > 0 ? 'text-brand animate-swing' : 'text-content-muted group-hover:text-brand'}`} />
                 {unreadCount > 0 && (
@@ -150,10 +150,10 @@ const NotificationBell = () => {
                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                            className="absolute right-0 mt-3 w-80 sm:w-96 bg-surface border border-gray-100/10 shadow-2xl rounded-[2.5rem] z-[110] overflow-hidden"
+                            className="absolute right-0 mt-3 w-80 sm:w-96 bg-surface border border-white/5/10 shadow-2xl rounded-[2.5rem] z-[110] overflow-hidden"
                         >
                             {/* Header */}
-                            <div className="px-6 py-5 border-b border-gray-100/10 flex items-center justify-between bg-background/50">
+                            <div className="px-6 py-5 border-b border-white/5/10 flex items-center justify-between bg-background/50">
                                 <div>
                                     <h3 className="text-sm font-black text-content uppercase tracking-widest leading-none">Intelligence Feed</h3>
                                     <p className="text-[9px] text-content-subtle font-bold uppercase tracking-widest mt-1">
@@ -189,7 +189,7 @@ const NotificationBell = () => {
                                             onClick={() => !notif.isRead && handleMarkAsRead(notif.id || notif._id)}
                                         >
                                             <div className="flex items-start gap-4">
-                                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 ${notif.isRead ? 'bg-gray-100/5 opacity-40' : 'bg-brand/10'}`}>
+                                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 ${notif.isRead ? 'bg-white/[0.05]/5 opacity-40' : 'bg-brand/10'}`}>
                                                     {getIcon(notif.type)}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
@@ -213,7 +213,7 @@ const NotificationBell = () => {
                                     ))
                                 ) : (
                                     <div className="py-12 flex flex-col items-center justify-center text-center opacity-30">
-                                        <div className="w-16 h-16 bg-gray-100/10 rounded-full flex items-center justify-center mb-4">
+                                        <div className="w-16 h-16 bg-white/[0.05]/10 rounded-full flex items-center justify-center mb-4">
                                             <Clock size={24} />
                                         </div>
                                         <p className="text-[10px] font-black uppercase tracking-[0.2em]">Void Detected</p>
@@ -223,8 +223,8 @@ const NotificationBell = () => {
                             </div>
 
                             {/* Footer */}
-                            <div className="p-4 bg-background/30 border-t border-gray-100/10">
-                                <button className="w-full py-3 bg-background hover:bg-surface border border-gray-100/10 rounded-2xl text-[9px] font-black text-content-subtle uppercase tracking-widest transition-all">
+                            <div className="p-4 bg-background/30 border-t border-white/5/10">
+                                <button className="w-full py-3 bg-background hover:bg-surface border border-white/5/10 rounded-2xl text-[9px] font-black text-content-subtle uppercase tracking-widest transition-all">
                                     Archive Protocol Beta
                                 </button>
                             </div>

@@ -189,21 +189,21 @@ const ModelDetail = () => {
                 <style dangerouslySetInnerHTML={{ __html: `@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap'); .font-outfit { font-family: 'Outfit', sans-serif; }` }} />
 
                 {/* Header */}
-                <header className="px-6 pt-6 pb-2 flex items-center justify-between bg-white sticky top-0 z-50">
+                <header className="px-6 pt-6 pb-2 flex items-center justify-between bg-white/5 sticky top-0 z-50">
                     <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 bg-black rounded-xl flex items-center justify-center shadow-lg shadow-gray-100`}>
                             <data.icon size={20} style={{ color: data.accent }} />
                         </div>
                         <div className="text-left">
                             <div className="flex items-center gap-1">
-                                <span className="text-[13px] font-black text-black uppercase tracking-tight">{data.title}</span>
+                                <span className="text-[13px] font-black text-white uppercase tracking-tight">{data.title}</span>
                                 <ChevronDown size={14} style={{ color: data.accent }} />
                             </div>
                             <p className="text-[10px] font-bold text-black/30 uppercase tracking-widest leading-none mt-1">{data.tag}</p>
                         </div>
                     </div>
-                    <button onClick={() => navigate(-1)} className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100">
-                        <ArrowRight size={18} className="text-black rotate-180" />
+                    <button onClick={() => navigate(-1)} className="w-10 h-10 bg-white/[0.02] rounded-xl flex items-center justify-center border border-white/5">
+                        <ArrowRight size={18} className="text-white rotate-180" />
                     </button>
                 </header>
 
@@ -212,17 +212,17 @@ const ModelDetail = () => {
                     <>
                         {/* Hero */}
                         <section className="px-5 py-6">
-                            <div className={`${data.bg} rounded-2xl overflow-hidden relative h-[300px] shadow-xl border border-gray-100 group`}>
+                            <div className={`${data.bg} rounded-2xl overflow-hidden relative h-[300px] shadow-2xl shadow-black/50 border border-white/5 group`}>
                                 <div className="absolute top-0 right-0 w-40 h-40 opacity-20 rounded-full blur-3xl -mr-10 -mt-10" style={{ backgroundColor: data.accent }} />
 
                                 <div className="absolute top-10 left-8 z-20">
                                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                                         <h2 className="text-[14px] font-black uppercase tracking-widest mb-2 italic" style={{ color: data.accent }}>Exclusive Model</h2>
-                                        <h1 className="text-[32px] font-black text-black leading-[0.8] uppercase italic tracking-tighter">
+                                        <h1 className="text-[32px] font-black text-white leading-[0.8] uppercase italic tracking-tighter">
                                             {data.heroTitle}<br />
                                             <span style={{ color: data.accent }}>{data.heroAccent}</span>
                                         </h1>
-                                        <p className="text-black/40 text-[10px] font-bold uppercase mt-4 tracking-widest leading-relaxed max-w-[170px]">
+                                        <p className="text-white/40 text-[10px] font-bold uppercase mt-4 tracking-widest leading-relaxed max-w-[170px]">
                                             {data.desc}
                                         </p>
                                     </motion.div>
@@ -230,7 +230,7 @@ const ModelDetail = () => {
                                     <motion.button
                                         whileTap={{ scale: 0.96 }}
                                         onClick={() => setShowInquiry(true)}
-                                        className="mt-8 text-white px-6 py-3 rounded-xl flex items-center gap-3 font-black text-[11px] uppercase tracking-widest shadow-xl"
+                                        className="mt-8 text-white px-6 py-3 rounded-xl flex items-center gap-3 font-black text-[11px] uppercase tracking-widest shadow-2xl shadow-black/50"
                                         style={{ backgroundColor: data.accent, boxShadow: `0 10px 20px ${data.accent}33` }}
                                     >
                                         Initiate Now
@@ -246,15 +246,15 @@ const ModelDetail = () => {
 
                         {/* Features Grid */}
                         <section className="px-5 mb-8">
-                            <h3 className="text-[12px] font-black text-black uppercase tracking-widest italic mb-5">Enterprise Advantages</h3>
+                            <h3 className="text-[12px] font-black text-white uppercase tracking-widest italic mb-5">Enterprise Advantages</h3>
                             <div className="grid grid-cols-2 gap-4">
                                 {data.features.map((f, i) => (
-                                    <div key={i} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-3">
+                                    <div key={i} className="bg-white/5 p-4 rounded-2xl border border-white/5  flex flex-col gap-3">
                                         <div className={`w-10 h-10 ${f.bg} ${f.color} rounded-xl flex items-center justify-center`}>
                                             <f.icon size={20} />
                                         </div>
                                         <div>
-                                            <h4 className="text-[11px] font-black text-black uppercase leading-tight">{f.title}</h4>
+                                            <h4 className="text-[11px] font-black text-white uppercase leading-tight">{f.title}</h4>
                                             <p className="text-[9px] font-bold text-black/30 uppercase mt-1 leading-tight tracking-tight">{f.desc}</p>
                                         </div>
                                     </div>
@@ -264,19 +264,19 @@ const ModelDetail = () => {
 
                         {/* Explorer: Related Models */}
                         <section className="px-5 mb-10">
-                            <h3 className="text-[12px] font-black text-black uppercase tracking-widest italic mb-5">Explore Other Models</h3>
+                            <h3 className="text-[12px] font-black text-white uppercase tracking-widest italic mb-5">Explore Other Models</h3>
                             <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4">
                                 {related.map(m => (
                                     <motion.div
                                         key={m.id}
                                         whileTap={{ scale: 0.98 }}
                                         onClick={() => navigate(`/specialized-model/${m.id}`)}
-                                        className="min-w-[200px] bg-white p-5 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group"
+                                        className="min-w-[200px] bg-white/5 p-5 rounded-3xl border border-white/5  relative overflow-hidden group"
                                     >
                                         <div className={`w-10 h-10 rounded-xl mb-4 flex items-center justify-center`} style={{ backgroundColor: m.accent + '11', color: m.accent }}>
                                             <m.icon size={20} />
                                         </div>
-                                        <h4 className="text-[11px] font-black text-black uppercase">{m.title}</h4>
+                                        <h4 className="text-[11px] font-black text-white uppercase">{m.title}</h4>
                                         <p className="text-[9px] font-bold text-black/30 uppercase tracking-widest mt-1">{m.tag}</p>
                                         <div className="mt-4 flex items-center gap-2 text-brand font-black text-[9px] uppercase tracking-widest">
                                             View Details <ArrowRight size={10} />
@@ -300,7 +300,7 @@ const ModelDetail = () => {
                                     </p>
                                     <button
                                         onClick={() => setShowInquiry(true)}
-                                        className="mt-8 bg-white py-4 px-10 rounded-2xl text-black font-black text-[12px] uppercase tracking-widest shadow-xl shadow-white/5 active:scale-95 transition-all flex items-center gap-3"
+                                        className="mt-8 bg-white/5 py-4 px-10 rounded-2xl text-white font-black text-[12px] uppercase tracking-widest shadow-2xl shadow-black/50 shadow-white/5 active:scale-95 transition-all flex items-center gap-3"
                                     >
                                         {data.cta}
                                         <ArrowRight size={16} />
@@ -312,15 +312,15 @@ const ModelDetail = () => {
                 ) : activeFlow === 'onboarding' ? (
                     <div className="px-5 py-6">
                         {/* Onboarding Progress Header */}
-                        <div className="bg-white rounded-[2rem] p-6 border border-gray-100 shadow-sm mb-6">
+                        <div className="bg-white/5 rounded-[2rem] p-6 border border-white/5  mb-6">
                             <div className="flex justify-between items-center mb-4">
-                                <span className="text-[9px] font-black text-black/20 uppercase tracking-widest">Pipeline Phase {flowStep + 1}/{data.steps.length}</span>
+                                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">Pipeline Phase {flowStep + 1}/{data.steps.length}</span>
                                 <span className="px-3 py-1 bg-brand/10 text-brand text-[8px] font-black uppercase rounded-full">ACTIVE NODE</span>
                             </div>
-                            <h2 className="text-2xl font-black text-black italic uppercase tracking-tighter mb-2">{data.steps[flowStep].label}</h2>
+                            <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-2">{data.steps[flowStep].label}</h2>
                             <p className="text-[10px] font-bold text-black/30 uppercase tracking-[0.1em]">{data.steps[flowStep].desc}</p>
 
-                            <div className="mt-6 h-1 w-full bg-gray-50 rounded-full overflow-hidden">
+                            <div className="mt-6 h-1 w-full bg-white/[0.02] rounded-full overflow-hidden">
                                 <motion.div
                                     animate={{ width: `${((flowStep + 1) / data.steps.length) * 100}%` }}
                                     className="h-full bg-brand"
@@ -332,7 +332,7 @@ const ModelDetail = () => {
                         <motion.div
                             key={flowStep}
                             initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
-                            className="bg-white rounded-[2.5rem] border border-gray-100 shadow-xl overflow-hidden"
+                            className="bg-white/5 rounded-[2.5rem] border border-white/5 shadow-2xl shadow-black/50 overflow-hidden"
                         >
                             <div className="p-8">
                                 {data.id === 'apartment' ? (
@@ -345,7 +345,7 @@ const ModelDetail = () => {
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-3">
                                                     {['Tower A', 'Tower B', 'Tower C', 'Podium'].map(t => (
-                                                        <div key={t} className="p-4 bg-gray-50 border border-gray-100 rounded-2xl text-[9px] font-black text-black/40 uppercase text-center">{t}</div>
+                                                        <div key={t} className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl text-[9px] font-black text-white/40 uppercase text-center">{t}</div>
                                                     ))}
                                                 </div>
                                             </div>
@@ -355,7 +355,7 @@ const ModelDetail = () => {
                                                 <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 mx-auto mb-4 animate-pulse">
                                                     <Users size={32} />
                                                 </div>
-                                                <h4 className="text-[12px] font-black text-black uppercase italic">Resident Mapping active</h4>
+                                                <h4 className="text-[12px] font-black text-white uppercase italic">Resident Mapping active</h4>
                                                 <p className="text-[9px] font-bold text-black/30 uppercase tracking-widest">Scanning 420+ Unit Records...</p>
                                             </div>
                                         )}
@@ -377,16 +377,16 @@ const ModelDetail = () => {
                                             <div className="space-y-3">
                                                 <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100 flex items-center justify-between">
                                                     <div>
-                                                        <p className="text-[10px] font-black text-black uppercase italic">Primary Captain Node</p>
-                                                        <p className="text-[8px] font-bold text-black/40 uppercase tracking-widest mt-1">Assigned: Rajesh Kumar</p>
+                                                        <p className="text-[10px] font-black text-white uppercase italic">Primary Captain Node</p>
+                                                        <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mt-1">Assigned: Rajesh Kumar</p>
                                                     </div>
-                                                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-brand shadow-sm">
+                                                    <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-brand ">
                                                         <User size={18} />
                                                     </div>
                                                 </div>
                                                 {['Morning Slot (6AM-8AM)', 'Resident Slot (9AM-12PM)', 'Evening Slot (4PM-7PM)'].map(s => (
-                                                    <div key={s} className="p-4 border-2 border-dashed border-gray-100 rounded-2xl flex items-center justify-between group hover:border-brand/40 transition-all">
-                                                        <span className="text-[10px] font-black text-black/40 uppercase italic group-hover:text-black">{s}</span>
+                                                    <div key={s} className="p-4 border-white/5 border-dashed border-white/5 rounded-2xl flex items-center justify-between group hover:border-brand/40 transition-all">
+                                                        <span className="text-[10px] font-black text-white/40 uppercase italic group-hover:text-white">{s}</span>
                                                         <Clock size={14} className="text-gray-200" />
                                                     </div>
                                                 ))}
@@ -401,12 +401,12 @@ const ModelDetail = () => {
                                                     <div key={fi} className="space-y-4">
                                                         <div className="flex items-center gap-2">
                                                             <flow.icon size={16} className="text-brand" />
-                                                            <h4 className="text-[12px] font-black uppercase tracking-widest text-black">{flow.title}</h4>
+                                                            <h4 className="text-[12px] font-black uppercase tracking-widest text-white">{flow.title}</h4>
                                                         </div>
                                                         <div className="grid grid-cols-2 gap-3">
                                                             {flow.items.map((item, ii) => (
-                                                                <div key={ii} className="bg-gray-50 p-4 rounded-2xl border border-gray-100 flex flex-col gap-1 hover:border-brand/30 transition-all cursor-pointer">
-                                                                    <p className="text-[10px] font-black text-black uppercase leading-none italic">{item.label}</p>
+                                                                <div key={ii} className="bg-white/[0.02] p-4 rounded-2xl border border-white/5 flex flex-col gap-1 hover:border-brand/30 transition-all cursor-pointer">
+                                                                    <p className="text-[10px] font-black text-white uppercase leading-none italic">{item.label}</p>
                                                                     <p className="text-[7px] font-bold text-black/30 uppercase tracking-widest">{item.desc}</p>
                                                                 </div>
                                                             ))}
@@ -418,14 +418,14 @@ const ModelDetail = () => {
                                             <>
                                                 {flowStep === 0 && (
                                                     <div className="space-y-4">
-                                                        <div className="flex items-center gap-4 border-b border-gray-100 pb-4">
+                                                        <div className="flex items-center gap-4 border-b border-white/5 pb-4">
                                                             <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600"><Landmark size={24} /></div>
                                                             <div>
-                                                                <h4 className="text-[13px] font-black text-black uppercase italic">{form.org}</h4>
+                                                                <h4 className="text-[13px] font-black text-white uppercase italic">{form.org}</h4>
                                                                 <p className="text-[8px] font-bold text-black/30 uppercase tracking-widest leading-none mt-1">GST Verified: 23AABCC1234F1Z1</p>
                                                             </div>
                                                         </div>
-                                                        <div className="h-2 w-full bg-gray-50 rounded-full" />
+                                                        <div className="h-2 w-full bg-white/[0.02] rounded-full" />
                                                     </div>
                                                 )}
                                                 {flowStep === 1 && (
@@ -437,19 +437,19 @@ const ModelDetail = () => {
                                                                 <p className="text-[11px] font-black uppercase">CSV Upload: fleet_data.csv</p>
                                                             </div>
                                                         </div>
-                                                        <button className="w-full h-12 border-2 border-dashed border-gray-100 rounded-2xl text-[9px] font-black text-black/30 uppercase tracking-widest">+ Add Manual Asset</button>
+                                                        <button className="w-full h-12 border-white/5 border-dashed border-white/5 rounded-2xl text-[9px] font-black text-black/30 uppercase tracking-widest">+ Add Manual Asset</button>
                                                     </div>
                                                 )}
                                                 {flowStep === 2 && (
                                                     <div className="bg-[#FFF6E9] p-6 rounded-[2rem] border border-orange-100">
                                                         <div className="flex justify-between items-center mb-6">
-                                                            <h4 className="text-[11px] font-black text-black uppercase italic">Employee Benefit Mode</h4>
-                                                            <div className="w-12 h-6 bg-brand rounded-full relative"><div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full" /></div>
+                                                            <h4 className="text-[11px] font-black text-white uppercase italic">Employee Benefit Mode</h4>
+                                                            <div className="w-12 h-6 bg-brand rounded-full relative"><div className="absolute right-1 top-1 w-4 h-4 bg-white/5 rounded-full" /></div>
                                                         </div>
                                                         <div className="space-y-3">
                                                             <div className="p-4 bg-white/60 rounded-xl border border-orange-100">
                                                                 <span className="text-[8px] font-black text-orange-900/40 uppercase tracking-widest">Global Policy</span>
-                                                                <p className="text-[10px] font-black text-black uppercase mt-1">Flat 25% Off for all verified employees</p>
+                                                                <p className="text-[10px] font-black text-white uppercase mt-1">Flat 25% Off for all verified employees</p>
                                                             </div>
                                                             <div className="grid grid-cols-2 gap-2">
                                                                 <div className="p-3 bg-white/40 rounded-xl border border-orange-50 text-center">
@@ -468,10 +468,10 @@ const ModelDetail = () => {
                                                     <div className="bg-blue-50 p-6 rounded-[2rem] border border-blue-100">
                                                         <div className="flex items-center gap-3 mb-6">
                                                             <FileText size={24} className="text-blue-600" />
-                                                            <h4 className="text-[11px] font-black text-black uppercase italic">Monthly Invoicing</h4>
+                                                            <h4 className="text-[11px] font-black text-white uppercase italic">Monthly Invoicing</h4>
                                                         </div>
                                                         <div className="space-y-3">
-                                                            <div className="p-4 bg-white rounded-xl border border-blue-50">
+                                                            <div className="p-4 bg-white/5 rounded-xl border border-blue-50">
                                                                 <div className="flex justify-between items-center mb-2">
                                                                     <span className="text-[8px] font-black text-black/30 uppercase tracking-widest">Billing Cycle</span>
                                                                     <span className="text-[9px] font-black text-blue-600">Monthly</span>
@@ -482,11 +482,11 @@ const ModelDetail = () => {
                                                                 </div>
                                                             </div>
                                                             <div className="grid grid-cols-2 gap-2">
-                                                                <div className="p-3 bg-white rounded-xl border border-blue-50 text-center">
+                                                                <div className="p-3 bg-white/5 rounded-xl border border-blue-50 text-center">
                                                                     <p className="text-lg font-black text-blue-600">15th</p>
                                                                     <p className="text-[7px] font-black text-black/30 uppercase">Billing Day</p>
                                                                 </div>
-                                                                <div className="p-3 bg-white rounded-xl border border-blue-50 text-center">
+                                                                <div className="p-3 bg-white/5 rounded-xl border border-blue-50 text-center">
                                                                     <p className="text-lg font-black text-green-600">GSTR</p>
                                                                     <p className="text-[7px] font-black text-black/30 uppercase">Tax Mode</p>
                                                                 </div>
@@ -505,7 +505,7 @@ const ModelDetail = () => {
                                                             { l: 'Fleet Uptime', v: '97.2%', color: 'text-amber-500' },
                                                             { l: 'Satisfaction', v: '4.8⭐', color: 'text-purple-500' }
                                                         ].map(m => (
-                                                            <div key={m.l} className="p-5 bg-white border border-gray-50 rounded-2xl shadow-sm text-center">
+                                                            <div key={m.l} className="p-5 bg-white/5 border border-gray-50 rounded-2xl  text-center">
                                                                 <p className="text-[8px] font-black text-black/30 uppercase mb-2 leading-none">{m.l}</p>
                                                                 <span className={`text-xl font-black italic ${m.color}`}>{m.v}</span>
                                                             </div>
@@ -534,7 +534,7 @@ const ModelDetail = () => {
                         <div className="bg-content p-8 rounded-[2.5rem] shadow-2xl border border-gray-800 relative overflow-hidden mb-6">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-brand/10 rounded-full blur-3xl -mr-10 -mt-10" />
                             <div className="relative z-10 flex flex-col items-center text-center">
-                                <div className="w-16 h-16 bg-brand rounded-3xl flex items-center justify-center text-white mb-6 border-4 border-white/10 shadow-xl shadow-brand/20">
+                                <div className="w-16 h-16 bg-brand rounded-3xl flex items-center justify-center text-white mb-6 border-4 border-white/10 shadow-2xl shadow-black/50 shadow-brand/20">
                                     <CheckCircle2 size={32} />
                                 </div>
                                 <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter leading-none mb-4">{data.title}<br />Active Node</h2>
@@ -554,7 +554,7 @@ const ModelDetail = () => {
                                 <motion.button
                                     whileTap={{ scale: 0.96 }}
                                     onClick={() => navigate('/')}
-                                    className="w-full mt-8 h-14 bg-white text-black rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl active:scale-95 transition-all"
+                                    className="w-full mt-8 h-14 bg-white/5 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-2xl shadow-black/50 active:scale-95 transition-all"
                                 >
                                     Return to Command
                                 </motion.button>
@@ -575,20 +575,20 @@ const ModelDetail = () => {
                             <motion.div
                                 initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
                                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                                className="fixed bottom-0 left-0 right-0 bg-white rounded-t-[3rem] z-[101] p-8 pb-14 shadow-2xl overflow-hidden"
+                                className="fixed bottom-0 left-0 right-0 bg-white/5 rounded-t-[3rem] z-[101] p-8 pb-14 shadow-2xl overflow-hidden"
                             >
-                                <div className="absolute top-0 left-1/2 -translate-x-1/2 mt-4 w-12 h-1.5 bg-gray-100 rounded-full" />
+                                <div className="absolute top-0 left-1/2 -translate-x-1/2 mt-4 w-12 h-1.5 bg-white/[0.05] rounded-full" />
 
                                 <div className="absolute top-0 right-0 p-8">
-                                    <button onClick={() => setShowInquiry(false)} className="bg-gray-100/50 p-2.5 rounded-full text-gray-400 hover:text-black transition-all"><X size={20} /></button>
+                                    <button onClick={() => setShowInquiry(false)} className="bg-white/[0.05]/50 p-2.5 rounded-full text-gray-400 hover:text-white transition-all"><X size={20} /></button>
                                 </div>
 
                                 {isSuccess ? (
                                     <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="py-16 flex flex-col items-center text-center">
-                                        <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center text-green-500 mb-8 border-4 border-white shadow-xl">
+                                        <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center text-green-500 mb-8 border-4 border-white shadow-2xl shadow-black/50">
                                             <CheckCircle2 size={48} strokeWidth={2.5} />
                                         </div>
-                                        <h3 className="text-3xl font-black text-black uppercase italic tracking-tighter">Lead Captured</h3>
+                                        <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter">Lead Captured</h3>
                                         <p className="text-gray-400 font-bold text-[10px] uppercase tracking-[0.2em] mt-4 max-w-[220px] leading-relaxed">Our Growth Node will sync with you within 4 hours.</p>
                                     </motion.div>
                                 ) : (
@@ -596,9 +596,9 @@ const ModelDetail = () => {
                                         <div className="mb-10">
                                             <div className="flex items-center gap-2 mb-3">
                                                 <span className="px-2 py-0.5 bg-black text-white text-[8px] font-black uppercase tracking-widest rounded">B2B NODE</span>
-                                                <div className="h-px flex-1 bg-gray-100" />
+                                                <div className="h-px flex-1 bg-white/[0.05]" />
                                             </div>
-                                            <h3 className="text-3xl font-black text-black uppercase italic tracking-tighter leading-none mb-3">Inquire for {data.title}</h3>
+                                            <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter leading-none mb-3">Inquire for {data.title}</h3>
                                             <p className="text-gray-400 text-[9px] font-bold uppercase tracking-widest leading-relaxed">{data.desc}</p>
                                         </div>
 
@@ -606,19 +606,19 @@ const ModelDetail = () => {
                                             <div className="grid grid-cols-1 gap-4">
                                                 <div className="relative group">
                                                     <User className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand transition-colors" size={18} />
-                                                    <input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="YOUR FULL NAME" className="w-full h-16 bg-gray-50 border border-transparent rounded-[1.25rem] pl-14 pr-6 text-[11px] font-black uppercase tracking-widest focus:bg-white focus:border-brand/30 transition-all outline-none" />
+                                                    <input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="YOUR FULL NAME" className="w-full h-16 bg-white/[0.02] border border-transparent rounded-[1.25rem] pl-14 pr-6 text-[11px] font-black uppercase tracking-widest focus:bg-white/5 focus:border-brand/30 transition-all outline-none" />
                                                 </div>
                                                 <div className="relative group">
                                                     <Building className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand transition-colors" size={18} />
-                                                    <input required value={form.org} onChange={e => setForm({ ...form, org: e.target.value })} placeholder={data.placeholder} className="w-full h-16 bg-gray-50 border border-transparent rounded-[1.25rem] pl-14 pr-6 text-[11px] font-black uppercase tracking-widest focus:bg-white focus:border-brand/30 transition-all outline-none" />
+                                                    <input required value={form.org} onChange={e => setForm({ ...form, org: e.target.value })} placeholder={data.placeholder} className="w-full h-16 bg-white/[0.02] border border-transparent rounded-[1.25rem] pl-14 pr-6 text-[11px] font-black uppercase tracking-widest focus:bg-white/5 focus:border-brand/30 transition-all outline-none" />
                                                 </div>
                                                 <div className="relative group">
                                                     <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand transition-colors" size={18} />
-                                                    <input required value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="PRIMARY CONTACT" className="w-full h-16 bg-gray-50 border border-transparent rounded-[1.25rem] pl-14 pr-6 text-[11px] font-black uppercase tracking-widest focus:bg-white focus:border-brand/30 transition-all outline-none" />
+                                                    <input required value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="PRIMARY CONTACT" className="w-full h-16 bg-white/[0.02] border border-transparent rounded-[1.25rem] pl-14 pr-6 text-[11px] font-black uppercase tracking-widest focus:bg-white/5 focus:border-brand/30 transition-all outline-none" />
                                                 </div>
                                                 <div className="relative group">
                                                     <MessageSquare className="absolute left-5 top-6 text-gray-400 group-focus-within:text-brand transition-colors" size={18} />
-                                                    <textarea value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} placeholder="OPTIONAL MESSAGE / REQUIREMENTS" className="w-full h-28 bg-gray-50 border border-transparent rounded-[1.25rem] pl-14 pr-6 pt-6 text-[11px] font-black uppercase tracking-widest focus:bg-white focus:border-brand/30 transition-all outline-none resize-none" />
+                                                    <textarea value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} placeholder="OPTIONAL MESSAGE / REQUIREMENTS" className="w-full h-28 bg-white/[0.02] border border-transparent rounded-[1.25rem] pl-14 pr-6 pt-6 text-[11px] font-black uppercase tracking-widest focus:bg-white/5 focus:border-brand/30 transition-all outline-none resize-none" />
                                                 </div>
                                             </div>
 
@@ -639,9 +639,9 @@ const ModelDetail = () => {
                                                 )}
                                             </motion.button>
                                         </form>
-                                        <div className="mt-8 flex items-center justify-center gap-4 text-[8px] font-black text-black/20 uppercase tracking-[0.3em]">
+                                        <div className="mt-8 flex items-center justify-center gap-4 text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">
                                             <span className="flex items-center gap-1"><ShieldCheck size={10} /> ISO CERTIFIED</span>
-                                            <div className="w-1 h-1 rounded-full bg-black/10" />
+                                            <div className="w-1 h-1 rounded-full bg-white/10" />
                                             <span className="flex items-center gap-1"><Verified size={10} /> SLA BACKED</span>
                                         </div>
                                     </div>

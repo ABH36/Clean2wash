@@ -135,7 +135,7 @@ const VendorStaff = () => {
         <VendorLayout title="Team Forge" subtitle="Onboard & manage your tactical cleaning agents">
             <div className="space-y-8">
                 {/* Search / Add Section */}
-                <div className="bg-surface rounded-[2.5rem] p-10 border border-gray-100/10 shadow-soft relative overflow-hidden">
+                <div className="bg-surface rounded-[2.5rem] p-10 border border-white/5/10 shadow-soft relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-brand/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
                     <div className="relative z-10 max-w-2xl">
@@ -150,16 +150,16 @@ const VendorStaff = () => {
                                     placeholder="Enter Mobile Number (e.g. 9876543210)"
                                     value={searchPhone}
                                     onChange={(e) => setSearchPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                    className="w-full h-16 bg-background border border-gray-100/10 rounded-[1.5rem] pl-14 pr-6 text-sm font-bold text-content outline-none focus:border-brand transition-all font-mono"
+                                    className="w-full h-16 bg-background border border-white/5/10 rounded-[1.5rem] pl-14 pr-6 text-sm font-bold text-content outline-none focus:border-brand transition-all font-mono"
                                 />
                             </div>
                             <button
                                 type="submit"
                                 disabled={isSearching}
-                                className="px-8 h-16 bg-content text-white rounded-[1.5rem] font-black uppercase text-[11px] tracking-widest shadow-xl shadow-content/20 hover:bg-brand transition-all flex items-center gap-2 group"
+                                className="px-8 h-16 bg-content text-white rounded-[1.5rem] font-black uppercase text-[11px] tracking-widest shadow-2xl shadow-black/50 shadow-content/20 hover:bg-brand transition-all flex items-center gap-2 group"
                             >
                                 {isSearching ? (
-                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    <div className="w-5 h-5 border-white/5 border-white/30 border-t-white rounded-full animate-spin" />
                                 ) : (
                                     <>Search Registry <Search size={16} className="group-hover:translate-x-1 transition-transform" /></>
                                 )}
@@ -184,10 +184,10 @@ const VendorStaff = () => {
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
-                                className="mt-10 p-8 bg-background border border-gray-100/10 rounded-[2rem] flex items-center justify-between"
+                                className="mt-10 p-8 bg-background border border-white/5/10 rounded-[2rem] flex items-center justify-between"
                             >
                                 <div className="flex items-center gap-6">
-                                    <div className="w-16 h-16 bg-surface border border-gray-100/10 rounded-2xl flex items-center justify-center text-brand">
+                                    <div className="w-16 h-16 bg-surface border border-white/5/10 rounded-2xl flex items-center justify-center text-brand">
                                         <User size={28} />
                                     </div>
                                     <div>
@@ -240,14 +240,14 @@ const VendorStaff = () => {
                                                 placeholder="Full Name"
                                                 value={onboardForm.name}
                                                 onChange={e => setOnboardForm({ ...onboardForm, name: e.target.value })}
-                                                className="h-14 bg-surface border border-gray-100/10 rounded-xl px-4 text-[13px] font-bold text-content outline-none focus:border-brand transition-all"
+                                                className="h-14 bg-surface border border-white/5/10 rounded-xl px-4 text-[13px] font-bold text-content outline-none focus:border-brand transition-all"
                                             />
                                             <input
                                                 type="password"
                                                 placeholder="Assign PIN (Optional, default 1234)"
                                                 value={onboardForm.password}
                                                 onChange={e => setOnboardForm({ ...onboardForm, password: e.target.value })}
-                                                className="h-14 bg-surface border border-gray-100/10 rounded-xl px-4 text-[13px] font-bold text-content outline-none focus:border-brand transition-all"
+                                                className="h-14 bg-surface border border-white/5/10 rounded-xl px-4 text-[13px] font-bold text-content outline-none focus:border-brand transition-all"
                                             />
                                         </div>
                                         <div className="flex gap-4">
@@ -291,7 +291,7 @@ const VendorStaff = () => {
                             <p className="text-[10px] text-content-subtle font-bold uppercase tracking-widest mt-1.5 opacity-60">Active field operatives & tactical personnel</p>
                         </div>
                         <div className="flex gap-2">
-                            <button className="h-11 px-5 bg-surface border border-gray-100/10 rounded-2xl flex items-center justify-center gap-2 text-content-subtle hover:text-brand transition-all shadow-sm">
+                            <button className="h-11 px-5 bg-surface border border-white/5/10 rounded-2xl flex items-center justify-center gap-2 text-content-subtle hover:text-brand transition-all ">
                                 <Filter size={14} className="opacity-60" />
                                 <span className="text-[10px] font-black uppercase tracking-widest">Filter Agents</span>
                             </button>
@@ -300,7 +300,7 @@ const VendorStaff = () => {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         {loading ? (
-                            <div className="col-span-full flex flex-col items-center gap-4 justify-center py-20 bg-gray-50/5 rounded-[3rem] border border-gray-100/5">
+                            <div className="col-span-full flex flex-col items-center gap-4 justify-center py-20 bg-white/[0.02]/5 rounded-[3rem] border border-white/5/5">
                                 <div className="w-10 h-10 border-4 border-brand/20 border-t-brand rounded-full animate-spin shadow-lg shadow-brand/20" />
                                 <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.3em]">Accessing Personnel Registry...</p>
                             </div>
@@ -310,15 +310,15 @@ const VendorStaff = () => {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: idx * 0.05 }}
                                 key={staff._id}
-                                className="bg-surface rounded-[2.5rem] border border-gray-100/10 p-7 md:p-8 shadow-soft space-y-7 group hover:border-brand/30 transition-all relative overflow-hidden"
+                                className="bg-surface rounded-[2.5rem] border border-white/5/10 p-7 md:p-8 shadow-soft space-y-7 group hover:border-brand/30 transition-all relative overflow-hidden"
                             >
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-brand/10 transition-colors" />
 
                                 <div className="flex items-center justify-between relative z-10">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-14 h-14 rounded-2xl bg-background border border-gray-100/10 flex items-center justify-center text-content-muted relative shadow-inner">
+                                        <div className="w-14 h-14 rounded-2xl bg-background border border-white/5/10 flex items-center justify-center text-content-muted relative shadow-inner">
                                             <User size={24} className="group-hover:text-brand transition-colors" />
-                                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-surface shadow-sm animate-pulse" />
+                                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-white/5 border-surface  animate-pulse" />
                                         </div>
                                         <div>
                                             <h4 className="text-base font-black text-content tracking-tight uppercase leading-none mb-1.5">{staff.name || 'Agent'}</h4>
@@ -327,21 +327,21 @@ const VendorStaff = () => {
                                     </div>
                                     <button
                                         onClick={() => handleUnlinkStaff(staff._id)}
-                                        className="w-9 h-9 rounded-xl flex items-center justify-center text-content-subtle bg-gray-50/5 border border-gray-100/5 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all opacity-0 group-hover:opacity-100 shadow-sm"
+                                        className="w-9 h-9 rounded-xl flex items-center justify-center text-content-subtle bg-white/[0.02]/5 border border-white/5/5 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all opacity-0 group-hover:opacity-100 "
                                     >
                                         <Trash2 size={16} />
                                     </button>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3 relative z-10">
-                                    <div className="bg-background rounded-2xl p-4 border border-gray-100/5 shadow-inner">
+                                    <div className="bg-background rounded-2xl p-4 border border-white/5/5 shadow-inner">
                                         <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-1.5 opacity-50">Logistics</p>
                                         <div className="flex items-center gap-2">
-                                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full shadow-sm shadow-green-500/50" />
+                                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full  shadow-green-500/50" />
                                             <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">Active Duty</p>
                                         </div>
                                     </div>
-                                    <div className="bg-background rounded-2xl p-4 border border-gray-100/5 shadow-inner">
+                                    <div className="bg-background rounded-2xl p-4 border border-white/5/5 shadow-inner">
                                         <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-1.5 opacity-50">Tactical Grade</p>
                                         <div className="flex items-center gap-1.5">
                                             <Star size={10} className="text-yellow-500" fill="currentColor" />
@@ -350,13 +350,13 @@ const VendorStaff = () => {
                                     </div>
                                 </div>
 
-                                <div className="flex items-center justify-between pt-5 border-t border-gray-100/5 relative z-10">
+                                <div className="flex items-center justify-between pt-5 border-t border-white/5/5 relative z-10">
                                     <div className="flex flex-col">
                                         <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-0.5 opacity-50">Operation Count</p>
                                         <p className="text-sm font-black text-content leading-none">{staff.completedJobs || 0} <span className="text-[9px] text-content-subtle uppercase tracking-tighter opacity-40">Tactical Ops</span></p>
                                     </div>
                                     <button
-                                        className="h-11 px-5 bg-background border border-gray-100/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:border-brand hover:text-brand hover:shadow-lg hover:shadow-brand/5 transition-all flex items-center gap-2 group active:scale-[0.97]"
+                                        className="h-11 px-5 bg-background border border-white/5/10 rounded-xl text-[9px] font-black uppercase tracking-widest hover:border-brand hover:text-brand hover:shadow-lg hover:shadow-brand/5 transition-all flex items-center gap-2 group active:scale-[0.97]"
                                     >
                                         <Zap size={12} className="group-hover:fill-current" /> Assign Ops
                                     </button>
@@ -365,8 +365,8 @@ const VendorStaff = () => {
                         ))}
 
                         {!loading && staffList.length === 0 && (
-                            <div className="col-span-full py-24 flex flex-col items-center gap-6 text-center bg-gray-50/5 border border-dashed border-gray-100/20 rounded-[3.5rem] shadow-inner">
-                                <div className="w-20 h-20 bg-background rounded-[2rem] flex items-center justify-center text-content-subtle/10 border border-gray-100/10">
+                            <div className="col-span-full py-24 flex flex-col items-center gap-6 text-center bg-white/[0.02]/5 border border-dashed border-white/5/20 rounded-[3.5rem] shadow-inner">
+                                <div className="w-20 h-20 bg-background rounded-[2rem] flex items-center justify-center text-content-subtle/10 border border-white/5/10">
                                     <UserPlus size={36} />
                                 </div>
                                 <div>

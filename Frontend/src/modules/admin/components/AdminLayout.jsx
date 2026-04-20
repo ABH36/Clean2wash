@@ -21,6 +21,8 @@ import {
     Package
 } from 'lucide-react';
 
+import EmergencyResponse from '../components/EmergencyResponse';
+
 const AdminLayout = ({ title: propTitle }) => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -29,6 +31,7 @@ const AdminLayout = ({ title: propTitle }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 1024);
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [activeSOS, setActiveSOS] = useState(null);
     const [expandedGroups, setExpandedGroups] = useState([
         'Dashboard & Analytics', 
         'Operations', 
@@ -105,18 +108,68 @@ const AdminLayout = ({ title: propTitle }) => {
         }
     };
 
+    const handleResolveSOS = async () => {
+        if (!activeSOS?.sosId) return;
+        try {
+            const res = await adminAPI.resolveSOS(activeSOS.sosId);
+            if (res.status === 'success') {
+                setActiveSOS(null);
+            }
+        } catch (error) {
+            console.error('Failed to resolve SOS:', error);
+        }
+    };
+
     useEffect(() => {
         fetchUnreadCount();
         socketService.joinAdminRoom();
-        const handleNewNotification = () => fetchUnreadCount();
-        socketService.on('new_admin_notification', handleNewNotification);
-        socketService.on('sos_alert', handleNewNotification);
-        socketService.on('new_booking', handleNewNotification);
+        
+        const handleNewNotification = () => {
+            fetchUnreadCount();
+        };
+        
+        const handleSOSAlert = (data) => {
+            console.log('🚨 EMERGENCY SOS RECEIVED:', data);
+            setActiveSOS(data);
+            fetchUnreadCount();
+        };
 
+        const handleManualTactical = (e) => {
+            setActiveSOS(e.detail);
+        };
+
+        const handleGlobalStatusUpdate = (data) => {
+            console.log('📊 Global status update:', data);
+            fetchUnreadCount();
+        };
+
+        const handleDriverAssigned = (data) => {
+            console.log('🚗 Driver assigned:', data);
+        };
+
+        // Register all socket listeners
+        socketService.on('new_admin_notification', handleNewNotification);
+        socketService.on('sos_alert', handleSOSAlert);
+        socketService.on('new_booking', handleNewNotification);
+        socketService.on('global_status_update', handleGlobalStatusUpdate);
+        socketService.on('driver_assigned', handleDriverAssigned);
+        socketService.on('sos_resolved', handleNewNotification);
+        
+        // Register window event listener
+        window.addEventListener('open-sos-tactical', handleManualTactical);
+
+        // Cleanup function - CRITICAL: Remove all listeners
         return () => {
             socketService.off('new_admin_notification', handleNewNotification);
-            socketService.off('sos_alert', handleNewNotification);
+            socketService.off('sos_alert', handleSOSAlert);
             socketService.off('new_booking', handleNewNotification);
+            socketService.off('global_status_update', handleGlobalStatusUpdate);
+            socketService.off('driver_assigned', handleDriverAssigned);
+            socketService.off('sos_resolved', handleNewNotification);
+            window.removeEventListener('open-sos-tactical', handleManualTactical);
+            
+            // Leave admin room on unmount
+            socketService.leaveAdminRoom?.();
         };
     }, []);
 
@@ -179,7 +232,7 @@ const AdminLayout = ({ title: propTitle }) => {
                             initial={{ x: -280 }}
                             animate={{ x: 0 }}
                             exit={{ x: -280 }}
-                            className="fixed top-0 left-0 bottom-0 w-[280px] admin-sidebar flex flex-col z-[70] lg:hidden shadow-xl"
+                            className="fixed top-0 left-0 bottom-0 w-[280px] admin-sidebar flex flex-col z-[70] lg:hidden shadow-2xl shadow-black/50"
                         >
                             <div className="absolute top-6 right-6 text-[var(--text-muted)] hover:text-[var(--text-primary)] z-10 p-2 hover:bg-[var(--card-hover)] rounded-lg transition-colors cursor-pointer" onClick={() => setIsMobileNavOpen(false)}>
                                 <X size={20} />
@@ -201,7 +254,7 @@ const AdminLayout = ({ title: propTitle }) => {
             {/* Main Content Area */}
             <main className="flex-1 flex flex-col min-h-screen min-w-0 relative overflow-x-hidden pb-16 lg:pb-0">
                 {/* Clean Professional Topbar */}
-                <header className="bg-[var(--card)] px-6 py-4 border-b border-[var(--border)] flex items-center justify-between sticky top-0 z-40 transition-colors duration-200">
+                <header className="bg-[var(--card)] px-4 py-3 border-b border-[var(--border)] flex items-center justify-between sticky top-0 z-40 transition-colors duration-200 shrink-0">
                     <div className="flex items-center gap-4">
                         <button
                             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -223,12 +276,12 @@ const AdminLayout = ({ title: propTitle }) => {
 
                     <div className="flex items-center gap-3">
                         {/* Search Bar - Clean */}
-                        <div className="hidden lg:flex items-center gap-3 bg-[var(--bg-secondary)] px-4 py-2 rounded-lg border border-[var(--border)] focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary-light)] transition-all">
-                            <Search size={16} className="text-[var(--text-muted)]" />
+                        <div className="hidden lg:flex items-center gap-2.5 bg-[var(--bg-secondary)] px-3 py-1.5 rounded-xl border border-[var(--border)] focus-within:border-[var(--primary)] focus-within:shadow-sm transition-all">
+                            <Search size={15} className="text-[var(--text-muted)]" />
                             <input
                                 type="text"
-                                placeholder="Search..."
-                                className="bg-transparent outline-none text-sm text-[var(--text-primary)] w-56 placeholder:text-[var(--text-muted)]"
+                                placeholder="Search commands..."
+                                className="bg-transparent outline-none text-xs font-medium text-[var(--text-primary)] w-40 placeholder:text-[var(--text-muted)]"
                             />
                         </div>
                         
@@ -258,13 +311,13 @@ const AdminLayout = ({ title: propTitle }) => {
                             <div className="h-6 w-px bg-[var(--border)] mx-2" />
                             
                             {/* Profile - Clean */}
-                            <div className="flex items-center gap-3 bg-[var(--bg-secondary)] pr-3 pl-2 py-2 rounded-lg hover:bg-[var(--card-hover)] transition-colors cursor-pointer">
-                                <div className="w-8 h-8 rounded-lg bg-[var(--primary)] flex items-center justify-center text-white font-semibold text-sm shrink-0">
+                            <div className="flex items-center gap-2 bg-[var(--bg-secondary)] pr-3 pl-1.5 py-1.5 rounded-xl hover:bg-[var(--card-hover)] border border-transparent hover:border-[var(--border)] transition-all cursor-pointer">
+                                <div className="w-7 h-7 rounded-lg bg-[var(--primary)] flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-sm shadow-[var(--primary)]/20">
                                     AD
                                 </div>
                                 <div className="hidden sm:block text-left overflow-hidden">
-                                    <p className="text-sm font-semibold text-[var(--text-primary)] leading-none truncate w-20">Admin</p>
-                                    <p className="text-xs text-[var(--text-secondary)] mt-0.5">Superuser</p>
+                                    <p className="text-[11px] font-bold text-[var(--text-primary)] leading-none truncate w-16">Admin</p>
+                                    <p className="text-[9px] font-medium text-[var(--text-muted)] uppercase tracking-tight mt-0.5">Admin</p>
                                 </div>
                             </div>
                         </div>
@@ -272,7 +325,7 @@ const AdminLayout = ({ title: propTitle }) => {
                 </header>
 
                 {/* Main Content - Clean */}
-                <div className="p-6 flex-1 relative w-full max-w-full overflow-x-hidden">
+                <div className="p-3 lg:p-4 flex-1 relative w-full max-w-full overflow-x-hidden">
                     <AnimatePresence mode="wait">
                         {isLoadingConfig ? (
                             <motion.div 
@@ -315,6 +368,17 @@ const AdminLayout = ({ title: propTitle }) => {
                     setIsMobileNavOpen={setIsMobileNavOpen}
                 />
             </main>
+
+            {/* HIGH-PRIORITY EMERGENCY COMMAND CENTER */}
+            <AnimatePresence>
+                {activeSOS && (
+                    <EmergencyResponse 
+                        alert={activeSOS} 
+                        onResolve={handleResolveSOS}
+                        onClose={() => setActiveSOS(null)}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 };
@@ -322,19 +386,42 @@ const AdminLayout = ({ title: propTitle }) => {
 const SidebarContent = ({ isSidebarOpen, NAV_ITEMS, location, navigate, onLogout, expandedGroups, toggleGroup }) => (
     <div className="flex flex-col h-full">
         {/* Logo Section */}
-        <div className={`p-6 flex items-center gap-3 border-b border-[var(--border)] ${!isSidebarOpen && 'justify-center'}`}>
-            <div className="w-10 h-10 bg-[var(--primary)] rounded-lg flex items-center justify-center shrink-0">
-                <Car size={22} className="text-white" />
-            </div>
-            {isSidebarOpen && (
+        <div className={`px-3 py-4 flex items-center border-b border-[var(--border)] ${!isSidebarOpen ? 'justify-center' : 'justify-start'}`}>
+            {isSidebarOpen ? (
                 <motion.div
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.1 }}
-                    className="flex flex-col"
+                    className="w-full flex items-center justify-center"
+                    style={{
+                        background: 'linear-gradient(135deg, #1a1a1a 0%, #111 100%)',
+                        borderRadius: '12px',
+                        padding: '10px 12px',
+                    }}
                 >
-                    <span className="text-lg font-semibold text-[var(--text-primary)]">Spare Driver Admin</span>
-                    <span className="text-xs text-[var(--text-secondary)]">Management Panel</span>
+                    <img
+                        src="/spareDriverLogo.png"
+                        alt="Spare Driver"
+                        className="w-full object-contain"
+                        style={{ height: '52px', maxWidth: '220px' }}
+                    />
+                </motion.div>
+            ) : (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="w-11 h-11 rounded-xl overflow-hidden flex items-center justify-center shrink-0"
+                    style={{
+                        background: 'linear-gradient(135deg, #1a1a1a 0%, #111 100%)',
+                        padding: '4px',
+                    }}
+                >
+                    <img
+                        src="/spareDriverLogo.png"
+                        alt="SD"
+                        className="w-full h-full object-contain"
+                        style={{ objectPosition: 'left center' }}
+                    />
                 </motion.div>
             )}
         </div>

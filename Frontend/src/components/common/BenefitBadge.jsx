@@ -36,9 +36,9 @@ const BenefitBadge = ({ type, name, amount, description }) => {
         <motion.div
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
-            className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${style.bg} ${style.border || ''} shadow-sm group hover:scale-[1.02] transition-transform`}
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${style.bg} ${style.border || ''}  group hover:scale-[1.02] transition-transform`}
         >
-            <div className={`p-1.5 rounded-lg bg-white shadow-sm`}>
+            <div className={`p-1.5 rounded-lg bg-white/5 `}>
                 {style.icon}
             </div>
             <div className="flex-1 min-w-0">
@@ -50,7 +50,7 @@ const BenefitBadge = ({ type, name, amount, description }) => {
                         -₹{amount}
                     </span>
                 </div>
-                <p className="text-[10px] font-bold text-black/40 truncate uppercase tracking-tighter">
+                <p className="text-[10px] font-bold text-white/40 truncate uppercase tracking-tighter">
                     {name}: {description}
                 </p>
             </div>

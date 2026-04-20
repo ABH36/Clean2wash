@@ -152,7 +152,7 @@ const AdminProductVerification = () => {
                 ].map((s, i) => (
                     <div key={i} className="bg-surface p-5 rounded-2xl border border-slate-200/60 dark:border-white/5 shadow-soft group hover:translate-y-[-2px] transition-all">
                         <div className="flex items-center justify-between mb-4">
-                            <div className={`w-10 h-10 ${s.bg} ${s.color} rounded-xl flex items-center justify-center transition-all group-hover:scale-110 shadow-sm border border-transparent`}>
+                            <div className={`w-10 h-10 ${s.bg} ${s.color} rounded-xl flex items-center justify-center transition-all group-hover:scale-110  border border-transparent`}>
                                 <s.icon size={20} />
                             </div>
                             <span className="text-[9px] font-black text-content-subtle opacity-20 uppercase tracking-widest font-mono">NODE_{i}</span>
@@ -170,7 +170,7 @@ const AdminProductVerification = () => {
                         <button
                             key={t}
                             onClick={() => setFilterStatus(t)}
-                            className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-[9.5px] font-black capitalize tracking-widest transition-all ${filterStatus === t ? 'bg-surface text-brand shadow-sm border border-slate-100 dark:border-white/5' : 'text-content-muted hover:text-content'}`}
+                            className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-[9.5px] font-black capitalize tracking-widest transition-all ${filterStatus === t ? 'bg-surface text-brand  border border-slate-100 dark:border-white/5' : 'text-content-muted hover:text-content'}`}
                         >
                             {t}
                         </button>
@@ -193,7 +193,7 @@ const AdminProductVerification = () => {
             <AnimatePresence mode="popLayout">
                 {loading ? (
                     <div className="flex flex-col items-center justify-center h-64 gap-4">
-                        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="w-10 h-10 border-2 border-brand/20 border-t-brand rounded-full" />
+                        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="w-10 h-10 border-white/5 border-brand/20 border-t-brand rounded-full" />
                         <span className="text-[9px] font-black capitalize tracking-[0.4em] text-content-subtle opacity-20 font-mono">Synchronizing Catalogs...</span>
                     </div>
                 ) : filtered.length === 0 ? (
@@ -220,7 +220,7 @@ const AdminProductVerification = () => {
                                     <img src={item.image} alt="" className="w-full h-full object-cover opacity-90 group-hover:scale-110 transition-transform duration-1000" />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                                     <div className="absolute top-3 left-3 flex gap-2">
-                                        <span className={`px-2.5 py-1 rounded-lg text-[8.5px] font-black capitalize tracking-widest border border-white/10 shadow-xl backdrop-blur-md text-white
+                                        <span className={`px-2.5 py-1 rounded-lg text-[8.5px] font-black capitalize tracking-widest border border-white/10 shadow-2xl shadow-black/50 backdrop-blur-md text-white
                                             ${item.status === 'Approved' ? 'bg-emerald-500/80' :
                                                 item.status === 'Rejected' ? 'bg-red-500/80' :
                                                     'bg-amber-500/80'}`}>
@@ -249,7 +249,7 @@ const AdminProductVerification = () => {
 
                                     <div className="flex items-center justify-between p-3 bg-background border border-slate-100 dark:border-white/5 rounded-2xl mb-4 shadow-inner">
                                         <div className="flex items-center gap-3 min-w-0">
-                                            <div className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center text-brand font-black text-[10px] shadow-sm border border-slate-100 dark:border-white/5 shrink-0">
+                                            <div className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center text-brand font-black text-[10px]  border border-slate-100 dark:border-white/5 shrink-0">
                                                 {(item.vendor?.profile?.studioName || item.vendor?.name || 'V')[0]}
                                             </div>
                                             <div className="min-w-0">
@@ -282,7 +282,7 @@ const AdminProductVerification = () => {
                                                     className="flex-[2.5] h-10 bg-emerald-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                                                 >
                                                     {processingId === item._id ? (
-                                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                        <div className="w-4 h-4 border-white/5 border-white/30 border-t-white rounded-full animate-spin" />
                                                     ) : (
                                                         <Check size={14} strokeWidth={3} />
                                                     )}
@@ -362,8 +362,8 @@ const AdminProductVerification = () => {
                                     </div>
                                 </div>
 
-                                <button type="submit" disabled={loading} className="w-full h-12 bg-brand text-white rounded-xl text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-brand/20 mt-8 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3">
-                                    {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Package size={16} /> Deploy HQ Asset</>}
+                                <button type="submit" disabled={loading} className="w-full h-12 bg-brand text-white rounded-xl text-[11px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-black/50 shadow-brand/20 mt-8 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3">
+                                    {loading ? <div className="w-4 h-4 border-white/5 border-white/30 border-t-white rounded-full animate-spin" /> : <><Package size={16} /> Deploy HQ Asset</>}
                                 </button>
                             </form>
                         </motion.div>
@@ -466,7 +466,7 @@ const AdminProductVerification = () => {
                                     </div>
                                 </div>
                             </div>
-                            <button onClick={() => setSelectedProduct(null)} className="absolute top-6 right-6 w-10 h-10 bg-background/50 backdrop-blur-md rounded-full flex items-center justify-center text-content border border-slate-200/20 hover:bg-red-500 hover:text-white transition-all shadow-sm"><X size={20} /></button>
+                            <button onClick={() => setSelectedProduct(null)} className="absolute top-6 right-6 w-10 h-10 bg-background/50 backdrop-blur-md rounded-full flex items-center justify-center text-content border border-slate-200/20 hover:bg-red-500 hover:text-white transition-all "><X size={20} /></button>
                         </motion.div>
                     </div>
                 )}

@@ -13,7 +13,7 @@ const userSchema = new mongoose.Schema({
         lowercase: true,
         trim: true,
         sparse: true, // Some roles might only use phone (like Consumers initially)
-        match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please provide a valid email']
+        match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,10})+$/, 'Please provide a valid email']
     },
     phone: {
         type: String,
@@ -137,6 +137,29 @@ const userSchema = new mongoose.Schema({
             isDefault: { type: Boolean, default: false },
             addedAt: { type: Date, default: Date.now }
         }]
+    },
+    kyc: {
+        status: {
+            type: String,
+            enum: ['none', 'pending', 'verified', 'rejected'],
+            default: 'none'
+        },
+        idType: {
+            type: String,
+            enum: ['aadhaar', 'pan', 'dl', 'voter']
+        },
+        documentId: String, // Document number
+        documents: {
+            front: String, // URL/Path to front image
+            back: String   // URL/Path to back image
+        },
+        submittedAt: Date,
+        reviewedAt: Date,
+        reviewedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        rejectionReason: String
     },
     subscription: {
         type: mongoose.Schema.Types.ObjectId,

@@ -156,7 +156,7 @@ const AdminBookings = () => {
             case 'delivery-assigned': return 'bg-cyan-50 text-cyan-600 border-cyan-100';
             case 'completed': return 'bg-green-50 text-green-600 border-green-100';
             case 'cancelled': return 'bg-red-50 text-red-600 border-red-100';
-            default: return 'bg-gray-50 text-gray-600 border-gray-100';
+            default: return 'bg-white/[0.02] text-white/60 border-white/5';
         }
     };
 
@@ -213,7 +213,7 @@ const AdminBookings = () => {
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-white animate-ping" />
+                            <div className="w-2 h-2 rounded-full bg-white/5 animate-ping" />
                             <span className="text-[10px] font-black text-white uppercase tracking-widest">Live</span>
                         </div>
                     </motion.div>
@@ -226,7 +226,7 @@ const AdminBookings = () => {
                             <button
                                 key={f}
                                 onClick={() => setStatusFilter(f)}
-                                className={`flex-shrink-0 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${statusFilter === f ? 'bg-white dark:bg-brand text-brand dark:text-black shadow-sm' : 'text-content-subtle opacity-60 hover:opacity-100'}`}
+                                className={`flex-shrink-0 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${statusFilter === f ? 'bg-white/5 dark:bg-brand text-brand dark:text-white ' : 'text-content-subtle opacity-60 hover:opacity-100'}`}
                             >
                                 {f === 'en_route' ? 'En Route' : f}
                                 {f === 'all' && <span className={statusFilter === f ? "ml-1" : "ml-1 text-brand"}>{bookings.length}</span>}
@@ -235,7 +235,7 @@ const AdminBookings = () => {
                     </div>
 
                     <div className="flex items-center gap-3 w-full lg:w-auto">
-                        <div className="flex-1 lg:w-80 bg-surface border border-slate-200/60 dark:border-white/5 rounded-2xl px-4 py-2.5 flex items-center gap-3 shadow-sm transition-all focus-within:border-brand/50">
+                        <div className="flex-1 lg:w-80 bg-surface border border-slate-200/60 dark:border-white/5 rounded-2xl px-4 py-2.5 flex items-center gap-3  transition-all focus-within:border-brand/50">
                             <Search size={16} className="text-brand opacity-60" />
                             <input
                                 type="text"
@@ -247,11 +247,11 @@ const AdminBookings = () => {
                         </div>
                         <button
                             onClick={() => fetchBookings(true)}
-                            className={`h-11 w-11 bg-surface border border-slate-200/60 dark:border-white/5 rounded-2xl shadow-sm text-content-subtle hover:text-brand transition-all flex items-center justify-center ${refreshing ? 'animate-spin text-brand' : ''}`}
+                            className={`h-11 w-11 bg-surface border border-slate-200/60 dark:border-white/5 rounded-2xl  text-content-subtle hover:text-brand transition-all flex items-center justify-center hover:rotate-180 duration-500 ${refreshing ? 'animate-spin text-brand' : ''}`}
                         >
-                            <RefreshCw size={16} />
+                            <RefreshCw size={20} />
                         </button>
-                        <div className="flex bg-surface border border-slate-200/60 dark:border-white/5 p-1 rounded-2xl shadow-sm">
+                        <div className="flex bg-surface border border-slate-200/60 dark:border-white/5 p-1 rounded-2xl ">
                             <button onClick={() => setViewMode('list')} className={`p-2 rounded-xl transition-all ${viewMode === 'list' ? 'bg-black text-brand shadow-lg' : 'text-content-subtle hover:bg-slate-50 dark:hover:bg-white/5'}`}>
                                 <List size={16} />
                             </button>
@@ -263,12 +263,12 @@ const AdminBookings = () => {
                 </div>
 
                 {/* Category Terminal Tabs */}
-                <div className="flex gap-2 p-1 bg-surface border border-slate-200/60 dark:border-white/5 rounded-2xl w-fit shadow-sm">
+                <div className="flex gap-2 p-1 bg-surface border border-slate-200/60 dark:border-white/5 rounded-2xl w-fit ">
                     {['all', 'Doorstep', 'Studio', 'Chauffeur'].map(cat => (
                         <button
                             key={cat}
                             onClick={() => setCategoryFilter(cat)}
-                            className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${categoryFilter === cat ? 'bg-brand text-black shadow-[0_10px_20px_rgba(242,159,5,0.2)]' : 'text-content-subtle hover:bg-slate-50 dark:hover:bg-white/5'}`}
+                            className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${categoryFilter === cat ? 'bg-brand text-white shadow-[0_10px_20px_rgba(242,159,5,0.2)]' : 'text-content-subtle hover:bg-slate-50 dark:hover:bg-white/5'}`}
                         >
                             {cat}
                         </button>
@@ -324,7 +324,7 @@ const AdminBookings = () => {
                                                 </td>
                                                 <td className="px-8 py-6">
                                                     <div className="flex items-center gap-4">
-                                                        <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-100 dark:border-white/10 flex items-center justify-center font-black text-brand text-[11px] group-hover:bg-brand group-hover:text-black transition-all">
+                                                        <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-100 dark:border-white/10 flex items-center justify-center font-black text-brand text-[11px] group-hover:bg-brand group-hover:text-white transition-all">
                                                             {customerName[0]}
                                                         </div>
                                                         <div className="min-w-0">
@@ -354,9 +354,9 @@ const AdminBookings = () => {
                                                     <div className="flex items-center justify-end gap-3 opacity-30 group-hover:opacity-100 transition-all">
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); setSelectedBooking(booking); }}
-                                                            className="h-9 w-9 bg-slate-100 dark:bg-white/10 hover:bg-black dark:hover:bg-brand rounded-xl text-content-subtle hover:text-brand dark:hover:text-black transition-all flex items-center justify-center border border-slate-200/50 dark:border-white/5"
+                                                            className="h-10 w-10 bg-slate-100 dark:bg-white/10 hover:bg-black dark:hover:bg-brand rounded-xl text-content-subtle hover:text-brand dark:hover:text-white transition-all flex items-center justify-center border border-slate-200/50 dark:border-white/5 group/link"
                                                         >
-                                                            <ExternalLink size={14} />
+                                                            <ExternalLink size={18} className="group-hover/link:scale-110 transition-transform" />
                                                         </button>
                                                     </div>
                                                 </td>
@@ -407,7 +407,7 @@ const AdminBookings = () => {
                                 </div>
                                 <button
                                     onClick={() => setSelectedBooking(null)}
-                                    className="w-10 h-10 rounded-xl border border-slate-200 dark:border-white/10 flex items-center justify-center text-content-subtle hover:bg-black dark:hover:bg-brand hover:text-brand dark:hover:text-black transition-all"
+                                    className="w-10 h-10 rounded-xl border border-slate-200 dark:border-white/10 flex items-center justify-center text-content-subtle hover:bg-black dark:hover:bg-brand hover:text-brand dark:hover:text-white transition-all"
                                 >
                                     <XCircle size={20} />
                                 </button>
@@ -527,20 +527,20 @@ const AdminBookings = () => {
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                                                     <div className="flex flex-col">
-                                                        <span className="text-[7px] font-black uppercase text-black/20">Basement</span>
-                                                        <span className="text-[11px] font-[1000] text-black uppercase">{selectedBooking.location.parkingDetails.basement || '—'}</span>
+                                                        <span className="text-[7px] font-black uppercase text-white/20">Basement</span>
+                                                        <span className="text-[11px] font-[1000] text-white uppercase">{selectedBooking.location.parkingDetails.basement || '—'}</span>
                                                     </div>
                                                     <div className="flex flex-col">
-                                                        <span className="text-[7px] font-black uppercase text-black/20">Block</span>
-                                                        <span className="text-[11px] font-[1000] text-black uppercase">{selectedBooking.location.parkingDetails.block || '—'}</span>
+                                                        <span className="text-[7px] font-black uppercase text-white/20">Block</span>
+                                                        <span className="text-[11px] font-[1000] text-white uppercase">{selectedBooking.location.parkingDetails.block || '—'}</span>
                                                     </div>
                                                     <div className="flex flex-col">
-                                                        <span className="text-[7px] font-black uppercase text-black/20">Pillar</span>
-                                                        <span className="text-[11px] font-[1000] text-black uppercase">{selectedBooking.location.parkingDetails.pillar || '—'}</span>
+                                                        <span className="text-[7px] font-black uppercase text-white/20">Pillar</span>
+                                                        <span className="text-[11px] font-[1000] text-white uppercase">{selectedBooking.location.parkingDetails.pillar || '—'}</span>
                                                     </div>
                                                     <div className="flex flex-col">
-                                                        <span className="text-[7px] font-black uppercase text-black/20">Slot</span>
-                                                        <span className="text-[11px] font-[1000] text-black uppercase">{selectedBooking.location.parkingDetails.slotNumber || '—'}</span>
+                                                        <span className="text-[7px] font-black uppercase text-white/20">Slot</span>
+                                                        <span className="text-[11px] font-[1000] text-white uppercase">{selectedBooking.location.parkingDetails.slotNumber || '—'}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -558,9 +558,9 @@ const AdminBookings = () => {
 
                                         {/* ── Pricing Breakdown for Chauffeur ── */}
                                         {selectedBooking.pricing?.breakdown?.filter(b => b.amount > 0).map((item, idx) => (
-                                            <div key={idx} className="mx-1 p-3 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between">
+                                            <div key={idx} className="mx-1 p-3 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between">
                                                 <span className="text-[8px] font-black uppercase text-black/30 tracking-widest">{item.name}</span>
-                                                <span className="text-[10px] font-[1000] text-black tracking-tight">+₹{item.amount}</span>
+                                                <span className="text-[10px] font-[1000] text-white tracking-tight">+₹{item.amount}</span>
                                             </div>
                                         ))}
 
@@ -589,8 +589,8 @@ const AdminBookings = () => {
                                                 const isSOS = issue.type === 'SOS';
                                                 const isOpen = issue.status === 'open';
                                                 return (
-                                                    <div key={idx} className={`p-4 rounded-2xl border-2 relative overflow-hidden ${isSOS && isOpen ? 'bg-red-50 border-red-200' :
-                                                        isSOS ? 'bg-gray-50 border-gray-200' :
+                                                    <div key={idx} className={`p-4 rounded-2xl border-white/5 relative overflow-hidden ${isSOS && isOpen ? 'bg-red-50 border-red-200' :
+                                                        isSOS ? 'bg-white/[0.02] border-white/10' :
                                                             'bg-amber-50 border-amber-200'
                                                         }`}>
                                                         {isSOS && isOpen && (
@@ -605,7 +605,7 @@ const AdminBookings = () => {
                                                             <div className="flex items-center gap-2">
                                                                 <span className={`text-[7px] font-black uppercase px-2 py-0.5 rounded-full ${issue.status === 'open' ? 'bg-red-100 text-red-700' :
                                                                     issue.status === 'resolved' ? 'bg-green-100 text-green-700' :
-                                                                        'bg-gray-100 text-gray-600'
+                                                                        'bg-white/[0.05] text-white/60'
                                                                     }`}>{issue.status}</span>
                                                                 <span className="text-[8px] text-content-subtle">
                                                                     {new Date(issue.reportedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -615,7 +615,7 @@ const AdminBookings = () => {
                                                         <p className="text-xs font-bold text-content leading-relaxed">{issue.description}</p>
                                                         {issue.photo && (
                                                             <button onClick={() => window.open(issue.photo, '_blank')}
-                                                                className="mt-3 w-full rounded-xl overflow-hidden border border-gray-200 relative group">
+                                                                className="mt-3 w-full rounded-xl overflow-hidden border border-white/10 relative group">
                                                                 <img src={issue.photo} className="w-full h-32 object-cover" alt="Evidence" />
                                                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                                     <span className="text-[9px] font-black text-white uppercase tracking-widest">View Full</span>
@@ -627,7 +627,7 @@ const AdminBookings = () => {
                                                                 onClick={() => {
                                                                     toast.success('Issue marked resolved');
                                                                 }}
-                                                                className="mt-3 w-full py-2 bg-white border border-gray-200 rounded-xl text-[9px] font-black uppercase tracking-widest text-content-subtle hover:border-green-300 hover:text-green-600 transition-all"
+                                                                className="mt-3 w-full py-2 bg-white/5 border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-content-subtle hover:border-green-300 hover:text-green-600 transition-all"
                                                             >
                                                                 Mark as Resolved
                                                             </button>
@@ -655,7 +655,7 @@ const AdminBookings = () => {
                                                 key={val}
                                                 onClick={() => handleUpdateStatus(selectedBooking._id, val)}
                                                 className={`p-3 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all relative overflow-hidden group/btn ${selectedBooking.status === val
-                                                    ? `bg-black text-brand border-black shadow-xl`
+                                                    ? `bg-black text-brand border-black shadow-2xl shadow-black/50`
                                                     : 'bg-slate-50/50 dark:bg-white/[0.02] text-content-subtle border-slate-200/60 dark:border-white/5 hover:border-brand/50 hover:text-brand'
                                                     }`}
                                             >
@@ -671,7 +671,7 @@ const AdminBookings = () => {
                                     <h4 className="text-[9px] font-black text-content-subtle uppercase tracking-widest px-1">Assign Captain</h4>
                                     <button
                                         onClick={() => { setAssignmentType('pickup'); setIsAssignModalOpen(true); }}
-                                        className="w-full p-4 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50 flex items-center justify-between group hover:border-brand transition-all"
+                                        className="w-full p-4 rounded-2xl border-white/5 border-dashed border-white/10 bg-white/[0.02]/50 flex items-center justify-between group hover:border-brand transition-all"
                                     >
                                         <div className="flex items-center gap-3">
                                             <User size={18} className="text-content-subtle group-hover:text-brand transition-all" />
@@ -694,13 +694,13 @@ const AdminBookings = () => {
                             <div className="p-6 border-t border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex gap-3">
                                 <button
                                     onClick={() => fetchBookings(true)}
-                                    className="flex-1 h-12 bg-surface border border-slate-200/60 dark:border-white/10 text-content rounded-xl font-black text-[9px] uppercase tracking-widest hover:border-brand hover:text-brand transition-all flex items-center justify-center gap-2 shadow-sm"
+                                    className="flex-1 h-12 bg-surface border border-slate-200/60 dark:border-white/10 text-content rounded-xl font-black text-[9px] uppercase tracking-widest hover:border-brand hover:text-brand transition-all flex items-center justify-center gap-2 "
                                 >
                                     <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} /> Sync Data
                                 </button>
                                 <button
                                     onClick={() => setSelectedBooking(null)}
-                                    className="flex-1 h-12 bg-black text-brand rounded-xl font-black text-[9px] uppercase tracking-widest hover:brightness-125 transition-all flex items-center justify-center gap-2 shadow-xl active:scale-95"
+                                    className="flex-1 h-12 bg-black text-brand rounded-xl font-black text-[9px] uppercase tracking-widest hover:brightness-125 transition-all flex items-center justify-center gap-2 shadow-2xl shadow-black/50 active:scale-95"
                                 >
                                     <CheckCircle2 size={14} /> Close Terminal
                                 </button>
@@ -727,21 +727,21 @@ const AdminBookings = () => {
                                 onClick={() => handleAssign(captain)}
                                 className={`w-full p-4 rounded-2xl border flex items-center gap-4 hover:border-brand hover:bg-brand/5 transition-all group text-left ${selectedBooking?.provider?.id?._id === captain._id || selectedBooking?.provider?.id === captain._id
                                     ? 'border-brand bg-brand/5'
-                                    : 'border-gray-100 bg-gray-50/30'
+                                    : 'border-white/5 bg-white/[0.02]/30'
                                     }`}
                             >
                                 <div className="relative">
                                     <div className="w-11 h-11 rounded-xl bg-[#0F172A] flex items-center justify-center text-brand font-black text-base">
                                         {(captain.name || 'C')[0]}
                                     </div>
-                                    <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${captain.isOnline ? 'bg-green-500' : 'bg-gray-400'
+                                    <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-white/5 border-white ${captain.isOnline ? 'bg-green-500' : 'bg-gray-400'
                                         }`} />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-xs font-black text-content leading-none truncate">{captain.name}</p>
                                     <p className="text-[9px] font-bold text-content-subtle mt-0.5">{captain.phone || '—'}</p>
                                     <div className="flex items-center gap-2 mt-1">
-                                        <span className={`text-[7px] font-black uppercase px-1.5 py-0.5 rounded-full ${captain.isOnline ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                                        <span className={`text-[7px] font-black uppercase px-1.5 py-0.5 rounded-full ${captain.isOnline ? 'bg-green-100 text-green-700' : 'bg-white/[0.05] text-white/40'
                                             }`}>
                                             {captain.isOnline ? 'Online' : 'Offline'}
                                         </span>
@@ -760,7 +760,7 @@ const AdminBookings = () => {
                             </button>
                         ))}
                         {(!staffList || staffList.length === 0) && (
-                            <div className="py-10 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-100">
+                            <div className="py-10 text-center bg-white/[0.02] rounded-2xl border border-dashed border-white/5">
                                 <User size={30} className="mx-auto text-gray-200 mb-3" />
                                 <p className="text-xs font-black text-content-subtle uppercase">No captains in network</p>
                             </div>
@@ -802,7 +802,7 @@ const AdminModal = ({ isOpen, onClose, title, children }) => {
                         <h2 className="text-xl font-black text-content leading-none tracking-tight uppercase">{title}</h2>
                         <p className="text-[10px] font-black text-brand uppercase tracking-[0.2em] mt-2 opacity-80">Operational Authorization</p>
                     </div>
-                    <button onClick={onClose} className="p-3 hover:bg-black dark:hover:bg-brand rounded-2xl border border-slate-200 dark:border-white/10 text-content-subtle hover:text-brand dark:hover:text-black transition-all">
+                    <button onClick={onClose} className="p-3 hover:bg-black dark:hover:bg-brand rounded-2xl border border-slate-200 dark:border-white/10 text-content-subtle hover:text-brand dark:hover:text-white transition-all">
                         <XCircle size={20} />
                     </button>
                 </div>
@@ -943,7 +943,7 @@ const LiveMapView = ({ bookings, onSelectBooking }) => {
     }, [map, activeMappableBookings, onSelectBooking]);
 
     return (
-        <div className="bg-white rounded-[3rem] border border-gray-100 shadow-soft overflow-hidden h-[600px] relative">
+        <div className="bg-white/5 rounded-[3rem] border border-white/5 shadow-soft overflow-hidden h-[600px] relative">
             <div ref={mapRef} className="w-full h-full" />
 
             {/* Overlay Panel */}
@@ -972,7 +972,7 @@ const LiveMapView = ({ bookings, onSelectBooking }) => {
 
             {activeMappableBookings.length === 0 && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-sm pointer-events-none">
-                    <div className="text-center p-8 bg-white rounded-3xl shadow-xl border border-gray-100">
+                    <div className="text-center p-8 bg-white/5 rounded-3xl shadow-2xl shadow-black/50 border border-white/5">
                         <MapIcon size={40} className="mx-auto text-gray-200 mb-4" />
                         <h4 className="text-sm font-black text-content uppercase tracking-widest">No Active Trackable Nodes</h4>
                         <p className="text-xs text-content-subtle mt-2">Bookings must be active and have GPS coordinates.</p>

@@ -6,6 +6,10 @@ const sosAlertSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    booking: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Booking'
+    },
     location: {
         type: {
             type: String,

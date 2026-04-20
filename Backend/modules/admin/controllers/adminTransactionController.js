@@ -91,6 +91,7 @@ exports.getSettlementStats = catchAsync(async (req, res, next) => {
 exports.updateTransactionStatus = catchAsync(async (req, res, next) => {
     const { id } = req.params;
     const { status, adminNote, utr } = req.body; // status: 'completed', 'rejected', 'failed', utr: 'Unique Transaction Ref'
+    const { adjustWalletHold } = require('../../../utils/walletHelper');
 
     const transaction = await WalletTransaction.findById(id);
     if (!transaction) {
@@ -102,34 +103,41 @@ exports.updateTransactionStatus = catchAsync(async (req, res, next) => {
         return res.status(400).json({ status: 'fail', message: `Transaction is already ${transaction.status}` });
     }
 
-    // Handle Withdrawal Rejection (Refund Hold)
-    if (transaction.category === 'WITHDRAWAL' && status === 'rejected') {
-        // Use the right model for the refund
+    const oldStatus = transaction.status;
+
+    // --- WITHDRAWAL PROTOCOL (CRITICAL: Handle Held Balance) ---
+    if (transaction.category === 'WITHDRAWAL') {
+        const userId = transaction.user;
         let modelToUse = User;
-        let userInstance = await User.findById(transaction.user);
+        let userInstance = await User.findById(userId);
         if (!userInstance) {
-            userInstance = await Captain.findById(transaction.user);
+            userInstance = await Captain.findById(userId);
             modelToUse = Captain;
         }
+        if (!userInstance) {
+            userInstance = await SpareDriver.findById(userId);
+            modelToUse = SpareDriver;
+        }
 
-        if (userInstance) {
-            await executeWalletTransaction(
-                userInstance._id,
-                transaction.amount,
-                'credit',
-                {
-                    category: 'REFUND',
-                    description: `Refund for rejected withdrawal request #${transaction._id.toString().slice(-6).toUpperCase()}`,
-                    referenceId: transaction._id.toString(),
-                    referenceType: 'refund'
-                },
-                null, // No external session
-                modelToUse
-            );
+        if (status === 'completed') {
+            // Confirm Payout: Consume the held amount
+            await adjustWalletHold(userId, transaction.amount, 'consume', {
+                category: 'WITHDRAWAL',
+                description: `Withdrawal successfully settled to bank. UTR: ${utr || 'N/A'}`,
+                referenceId: transaction.referenceId,
+                referenceType: 'withdrawal_success'
+            }, null, modelToUse);
+        } else if (status === 'rejected' || status === 'failed') {
+            // Reject Payout: Release the held amount back to user's available balance
+            await adjustWalletHold(userId, transaction.amount, 'release', {
+                category: 'REFUND',
+                description: `Rejected withdrawal request. Funds released back to wallet. Note: ${adminNote || 'Policy violation'}`,
+                referenceId: transaction.referenceId,
+                referenceType: 'withdrawal_rejection'
+            }, null, modelToUse);
         }
     }
 
-    const oldStatus = transaction.status;
     transaction.status = status;
     if (adminNote) transaction.description += ` | Admin Note: ${adminNote}`;
     if (utr) {
@@ -138,6 +146,34 @@ exports.updateTransactionStatus = catchAsync(async (req, res, next) => {
         transaction.description += ` | UTR: ${utr}`;
     }
     await transaction.save();
+
+    // --- NOTIFICATION PROTOCOL ---
+    const { sendNotification } = require('../../../utils/notificationService');
+    if (transaction.category === 'WITHDRAWAL') {
+        const userId = transaction.user;
+        let title = '';
+        let message = '';
+        let type = 'payment';
+
+        if (status === 'completed') {
+            title = 'Payout Disbursed 💰';
+            message = `Your withdrawal of INR ${transaction.amount} has been successfully transferred to your bank. UTR: ${utr || 'Processed'}.`;
+        } else if (status === 'rejected') {
+            title = 'Withdrawal Rejected ⚠️';
+            message = `Request for INR ${transaction.amount} was not approved. Reason: ${adminNote || 'Policy violation'}. Funds returned to wallet.`;
+            type = 'alert';
+        }
+
+        if (title) {
+            await sendNotification(userId, {
+                title,
+                message,
+                type,
+                priority: 'high',
+                metaData: { transactionId: transaction._id, amount: transaction.amount, status }
+            }).catch(err => console.error('Notification error:', err));
+        }
+    }
 
     // Record in Audit Log
     await AuditLog.create({

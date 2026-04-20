@@ -124,14 +124,14 @@ const MapPicker = ({ onSelect, initialCenter: propCenter, onClose, autoDetect = 
     }, [autoDetect, useCurrentLocation]);
 
     return (
-        <div className="fixed inset-0 z-[100] bg-white flex flex-col font-outfit">
+        <div className="fixed inset-0 z-[100] bg-white/5 flex flex-col font-outfit">
             {/* Header */}
             <div className="p-4 flex items-center gap-3 border-b border-black/[0.05]">
-                <button onClick={onClose} className="p-2 -ml-2 rounded-full active:bg-gray-100 transition-colors">
-                    <X size={20} className="text-black/60" />
+                <button onClick={onClose} className="p-2 -ml-2 rounded-full active:bg-white/[0.05] transition-colors">
+                    <X size={20} className="text-white/60" />
                 </button>
                 <div className="flex-1 relative">
-                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-black/20 z-10" />
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20 z-10" />
                     <Autocomplete
                         onLoad={onLoadAutocomplete}
                         onPlaceChanged={onPlaceChanged}
@@ -143,7 +143,7 @@ const MapPicker = ({ onSelect, initialCenter: propCenter, onClose, autoDetect = 
                         <input
                             type="text"
                             placeholder="Search for your location"
-                            className="w-full bg-gray-50 border-none rounded-xl py-2.5 pl-10 pr-4 text-[13px] font-bold text-black focus:ring-0 placeholder:text-black/20"
+                            className="w-full bg-white/[0.02] border-none rounded-xl py-2.5 pl-10 pr-4 text-[13px] font-bold text-white focus:ring-0 placeholder:text-white/20"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -162,7 +162,7 @@ const MapPicker = ({ onSelect, initialCenter: propCenter, onClose, autoDetect = 
                 {/* Visual Center Marker (Static in center of map) */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none mb-8 z-20">
                     <div className="w-12 h-12 rounded-full bg-brand/20 flex items-center justify-center animate-pulse">
-                        <div className="w-4 h-4 rounded-full bg-brand shadow-xl border-2 border-white" />
+                        <div className="w-4 h-4 rounded-full bg-brand shadow-2xl shadow-black/50 border-white/5 border-white" />
                     </div>
                     {/* Marker Needle */}
                     <div className="w-0.5 h-4 bg-brand mx-auto -mt-1" />
@@ -170,21 +170,21 @@ const MapPicker = ({ onSelect, initialCenter: propCenter, onClose, autoDetect = 
 
                 <button
                     onClick={useCurrentLocation}
-                    className="absolute bottom-6 right-6 w-12 h-12 bg-white rounded-2xl shadow-2xl flex items-center justify-center active:scale-90 transition-transform border border-black/[0.05] z-20"
+                    className="absolute bottom-6 right-6 w-12 h-12 bg-white/5 rounded-2xl shadow-2xl flex items-center justify-center active:scale-90 transition-transform border border-black/[0.05] z-20"
                 >
                     <Navigation size={20} className="text-brand" />
                 </button>
             </div>
 
             {/* Footer Detail */}
-            <div className="p-5 bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.05)] rounded-t-[32px] border-t border-black/[0.02]">
+            <div className="p-5 bg-white/5 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] rounded-t-[32px] border-t border-black/[0.02]">
                 <div className="flex items-start gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-white/[0.02] flex items-center justify-center flex-shrink-0">
                         <MapPin size={20} className="text-brand" />
                     </div>
                     <div className="flex-1">
-                        <span className="text-[10px] font-black text-black/20 uppercase tracking-widest block mb-1">Confirm Wash Location</span>
-                        <h3 className={`text-[14px] font-black leading-tight line-clamp-2 ${geocodingError ? 'text-red-500' : 'text-black'}`}>
+                        <span className="text-[10px] font-black text-white/20 uppercase tracking-widest block mb-1">Confirm Wash Location</span>
+                        <h3 className={`text-[14px] font-black leading-tight line-clamp-2 ${geocodingError ? 'text-red-500' : 'text-white'}`}>
                             {loading ? 'Moving marker...' : address}
                         </h3>
                     </div>
@@ -193,7 +193,7 @@ const MapPicker = ({ onSelect, initialCenter: propCenter, onClose, autoDetect = 
                 <button
                     disabled={loading}
                     onClick={handleConfirm}
-                    className="w-full bg-black text-white py-4 rounded-2xl font-black text-[12px] uppercase tracking-[0.2em] shadow-xl active:scale-[0.98] transition-all disabled:opacity-50"
+                    className="w-full bg-black text-white py-4 rounded-2xl font-black text-[12px] uppercase tracking-[0.2em] shadow-2xl shadow-black/50 active:scale-[0.98] transition-all disabled:opacity-50"
                 >
                     {loading ? 'Locating...' : 'Confirm Location'}
                 </button>

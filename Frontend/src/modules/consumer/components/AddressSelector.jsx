@@ -43,7 +43,7 @@ const AddressSelector = ({ onSelect, currentPath = 'full-wash-booking' }) => {
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="bg-white/[0.02] rounded-[2.5rem] p-10 text-center border-2 border-dashed border-white/[0.05]"
+                            className="bg-white/[0.02] rounded-[2.5rem] p-10 text-center border-white/5 border-dashed border-white/[0.05]"
                         >
                             <div className="w-14 h-14 bg-white/5 rounded-[1.5rem] flex items-center justify-center mx-auto mb-4">
                                 <Locate size={24} className="text-white/10" />
@@ -66,35 +66,35 @@ const AddressSelector = ({ onSelect, currentPath = 'full-wash-booking' }) => {
                                     animate={{ opacity: 1, y: 0 }}
                                     whileTap={{ scale: 0.98 }}
                                     onClick={() => handleSelect(addr)}
-                                    className={`relative group flex items-center gap-4 p-4 pr-6 rounded-[2rem] border-2 transition-all cursor-pointer ${
+                                    className={`relative group flex items-center gap-4 p-4 pr-6 rounded-[2rem] border-white/5 transition-all cursor-pointer ${
                                         isSelected 
-                                        ? 'bg-white border-brand shadow-[0_12px_40px_rgba(255,191,0,0.15)] scale-[1.02]' 
+                                        ? 'bg-white/5 border-brand shadow-[0_12px_40px_rgba(255,191,0,0.15)] scale-[1.02]' 
                                         : 'bg-white/[0.03] border-white/[0.05] hover:border-brand/30'
                                     }`}
                                 >
                                     <div className={`w-12 h-12 rounded-[1.2rem] flex items-center justify-center flex-shrink-0 transition-all duration-500 ${
-                                        isSelected ? 'bg-brand text-black shadow-lg shadow-brand/20 rotate-[-10deg]' : 'bg-white/5 text-white/20'
+                                        isSelected ? 'bg-brand text-white shadow-lg shadow-brand/20 rotate-[-10deg]' : 'bg-white/5 text-white/20'
                                     }`}>
                                         <Icon size={20} strokeWidth={2.5} />
                                     </div>
 
                                     <div className="flex-1 min-w-0 pr-4">
                                         <div className="flex items-center gap-2 mb-0.5">
-                                            <h4 className={`font-black text-[13px] uppercase tracking-tighter italic leading-none ${isSelected ? 'text-black' : 'text-white/60'}`}>
+                                            <h4 className={`font-black text-[13px] uppercase tracking-tighter italic leading-none ${isSelected ? 'text-white' : 'text-white/60'}`}>
                                                 {addr.label}
                                             </h4>
                                             {addr.isPrimary && (
-                                                <span className={`text-[7px] px-1.5 py-0.5 rounded-full font-black uppercase tracking-widest ${isSelected ? 'bg-black text-white' : 'bg-brand text-black'}`}>HQ</span>
+                                                <span className={`text-[7px] px-1.5 py-0.5 rounded-full font-black uppercase tracking-widest ${isSelected ? 'bg-black text-white' : 'bg-brand text-white'}`}>HQ</span>
                                             )}
                                         </div>
-                                        <p className={`text-[10px] font-bold leading-none uppercase tracking-wide truncate ${isSelected ? 'text-gray-500' : 'text-white/20'}`}>
+                                        <p className={`text-[10px] font-bold leading-none uppercase tracking-wide truncate ${isSelected ? 'text-white/40' : 'text-white/20'}`}>
                                             {addr.street || addr.full || addr.address}
                                         </p>
                                     </div>
 
                                     <div className="flex items-center">
                                         {isSelected ? (
-                                            <div className="w-8 h-8 bg-brand text-black rounded-full flex items-center justify-center shadow-lg">
+                                            <div className="w-8 h-8 bg-brand text-white rounded-full flex items-center justify-center shadow-lg">
                                                 <Check size={16} strokeWidth={4} />
                                             </div>
                                         ) : (

@@ -137,7 +137,7 @@ const CartPage = () => {
         <MobileLayout>
             <div className="bg-[#FAFAFA] min-h-screen pb-40">
                 {/* ── HEADER ── */}
-                <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md px-5 py-6 border-b border-gray-100 flex items-center justify-between">
+                <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md px-5 py-6 border-b border-white/5 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <button onClick={() => navigate(-1)} className="p-1 -ml-1">
                             <ArrowLeft size={20} className="text-content" />
@@ -156,13 +156,13 @@ const CartPage = () => {
 
                 {cartItems.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-32 px-10 text-center">
-                        <div className="w-14 h-14 bg-gray-50 rounded-lg flex items-center justify-center mb-5 border border-gray-100">
+                        <div className="w-14 h-14 bg-white/[0.02] rounded-lg flex items-center justify-center mb-5 border border-white/5">
                             <ShoppingBag size={24} className="text-gray-300" />
                         </div>
                         <h2 className="text-base font-[1000] text-content uppercase tracking-tight italic">Empty Basket</h2>
                         <p className="text-content-subtle text-[9px] font-bold uppercase tracking-widest mt-2 mb-8">Ready to upgrade your car care?</p>
                         <button onClick={() => navigate('/e-shop')}
-                            className="px-8 py-3.5 bg-brand text-white rounded-lg font-black text-[9px] uppercase tracking-[0.2em] shadow-xl shadow-brand/20">
+                            className="px-8 py-3.5 bg-brand text-white rounded-lg font-black text-[9px] uppercase tracking-[0.2em] shadow-2xl shadow-black/50 shadow-brand/20">
                             Start Shopping
                         </button>
                     </div>
@@ -174,7 +174,7 @@ const CartPage = () => {
                             <div className="grid grid-cols-2 gap-3">
                                 <button
                                     onClick={() => setDeliverySpeed('standard')}
-                                    className={`p-4 rounded-2xl border-2 transition-all text-left flex flex-col gap-1 ${deliverySpeed === 'standard' ? 'border-brand bg-brand/5' : 'border-white bg-white border-gray-100'}`}
+                                    className={`p-4 rounded-2xl border-white/5 transition-all text-left flex flex-col gap-1 ${deliverySpeed === 'standard' ? 'border-brand bg-brand/5' : 'border-white bg-white/5 border-white/5'}`}
                                 >
                                     <Clock size={14} className={deliverySpeed === 'standard' ? 'text-brand' : 'text-content-subtle'} />
                                     <p className="text-[10px] font-black uppercase tracking-tight text-content mt-1">Standard</p>
@@ -182,7 +182,7 @@ const CartPage = () => {
                                 </button>
                                 <button
                                     onClick={() => setDeliverySpeed('express')}
-                                    className={`p-4 rounded-2xl border-2 transition-all text-left flex flex-col gap-1 relative overflow-hidden ${deliverySpeed === 'express' ? 'border-brand bg-brand/5' : 'border-white bg-white border-gray-100'}`}
+                                    className={`p-4 rounded-2xl border-white/5 transition-all text-left flex flex-col gap-1 relative overflow-hidden ${deliverySpeed === 'express' ? 'border-brand bg-brand/5' : 'border-white bg-white/5 border-white/5'}`}
                                 >
                                     <Zap size={14} className={deliverySpeed === 'express' ? 'text-brand' : 'text-content-subtle'} />
                                     <p className="text-[10px] font-black uppercase tracking-tight text-content mt-1">Express</p>
@@ -197,7 +197,7 @@ const CartPage = () => {
                             <motion.div
                                 initial={{ opacity: 0, y: -10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="bg-white border border-green-100 rounded-lg p-2.5 flex items-center justify-between shadow-sm"
+                                className="bg-white/5 border border-green-100 rounded-lg p-2.5 flex items-center justify-between "
                             >
                                 <div className="flex items-center gap-2">
                                     <div className="w-6 h-6 bg-green-50 rounded flex items-center justify-center">
@@ -219,9 +219,9 @@ const CartPage = () => {
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, scale: 0.95 }}
-                                        className="bg-white rounded-xl border border-gray-100 p-3 flex gap-4 shadow-sm relative group"
+                                        className="bg-white/5 rounded-xl border border-white/5 p-3 flex gap-4  relative group"
                                     >
-                                        <div className="w-16 h-16 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0 border border-gray-50">
+                                        <div className="w-16 h-16 bg-white/[0.02] rounded-lg overflow-hidden flex-shrink-0 border border-gray-50">
                                             <img src={item.image} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" />
                                         </div>
                                         <div className="flex-1 flex flex-col justify-between py-0.5">
@@ -240,9 +240,9 @@ const CartPage = () => {
                                                 <div className="flex flex-col">
                                                     <span className="text-[13px] font-[1000] text-content italic leading-none">₹{(item.salePrice * item.qty).toLocaleString()}</span>
                                                 </div>
-                                                <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-0.5 border border-gray-100">
+                                                <div className="flex items-center gap-2 bg-white/[0.02] rounded-lg p-0.5 border border-white/5">
                                                     <button onClick={() => updateQty(item.id, item.qty - 1)}
-                                                        className="w-5 h-5 rounded-md bg-white border border-gray-100 flex items-center justify-center text-content active:scale-90 transition-transform">
+                                                        className="w-5 h-5 rounded-md bg-white/5 border border-white/5 flex items-center justify-center text-content active:scale-90 transition-transform">
                                                         <Minus size={10} strokeWidth={3} />
                                                     </button>
                                                     <span className="w-3 text-center text-[10px] font-[1000] text-content">{item.qty}</span>
@@ -259,9 +259,9 @@ const CartPage = () => {
                         </div>
 
                         {/* ── PROMOTIONS ── */}
-                        <div className="bg-white rounded-xl border border-gray-100 p-2.5 shadow-sm">
+                        <div className="bg-white/5 rounded-xl border border-white/5 p-2.5 ">
                             {couponApplied ? (
-                                <div className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
+                                <div className="flex items-center justify-between bg-white/[0.02] border border-white/5 rounded-lg px-3 py-2">
                                     <div className="flex items-center gap-2">
                                         <Check size={12} className="text-green-600" strokeWidth={3} />
                                         <div>
@@ -281,7 +281,7 @@ const CartPage = () => {
                                             value={coupon}
                                             onChange={e => setCoupon(e.target.value.toUpperCase())}
                                             placeholder="Coupon Code"
-                                            className="w-full h-10 bg-gray-50 border border-gray-100 rounded-lg pl-8 pr-3 text-[9px] font-black text-content uppercase tracking-widest outline-none focus:border-brand/40 transition-colors"
+                                            className="w-full h-10 bg-white/[0.02] border border-white/5 rounded-lg pl-8 pr-3 text-[9px] font-black text-content uppercase tracking-widest outline-none focus:border-brand/40 transition-colors"
                                         />
                                     </div>
                                     <button onClick={handleApplyCoupon}
@@ -324,7 +324,7 @@ const CartPage = () => {
                         )}
 
                         {/* ── PRICE SUMMARY ── */}
-                        <div className="bg-white rounded-xl border border-gray-100 p-3.5 shadow-sm space-y-2.5">
+                        <div className="bg-white/5 rounded-xl border border-white/5 p-3.5  space-y-2.5">
                             <div className="flex justify-between items-center text-[9px] font-bold text-content-subtle uppercase tracking-widest">
                                 <span>Subtotal</span>
                                 <span className={`${isBlackPassMember ? 'line-through opacity-50' : 'text-content font-black'}`}>₹{cartTotal.toLocaleString()}</span>
@@ -355,7 +355,7 @@ const CartPage = () => {
                                     <span className="font-black">₹{expressFee}</span>
                                 </div>
                             )}
-                            <div className="h-px bg-gray-50 w-full" />
+                            <div className="h-px bg-white/[0.02] w-full" />
                             <div className="flex justify-between items-center pt-1">
                                 <span className="text-[11px] font-[1000] text-content uppercase tracking-tight italic">Order Total</span>
                                 <span className="text-[16px] font-[1000] text-content italic leading-none tracking-tight">₹{finalTotal.toLocaleString()}</span>
@@ -378,7 +378,7 @@ const CartPage = () => {
                         <motion.div
                             initial={{ y: 100 }}
                             animate={{ y: 0 }}
-                            className="fixed bottom-0 left-0 right-0 bg-white/98 backdrop-blur-xl border-t border-gray-100 px-5 pt-3 pb-24 z-50 shadow-[0_-8px_30px_rgba(0,0,0,0.02)]"
+                            className="fixed bottom-0 left-0 right-0 bg-white/98 backdrop-blur-xl border-t border-white/5 px-5 pt-3 pb-24 z-50 shadow-[0_-8px_30px_rgba(0,0,0,0.02)]"
                         >
                             <div className="mb-3 flex items-center justify-between">
                                 <div className="flex flex-col">
@@ -398,7 +398,7 @@ const CartPage = () => {
                             >
                                 {placing ? (
                                     <div className="flex items-center gap-2">
-                                        <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        <div className="w-3 h-3 border-white/5 border-white/30 border-t-white rounded-full animate-spin" />
                                         <span>Processing</span>
                                     </div>
                                 ) : (

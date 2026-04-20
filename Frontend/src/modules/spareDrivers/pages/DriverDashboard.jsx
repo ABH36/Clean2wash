@@ -13,6 +13,9 @@ import { socketService } from '../../../utils/socket';
 import GoogleMapBox from '../../../components/common/GoogleMapBox';
 import { useTheme } from '../../../context/ThemeContext';
 import DriverLocationPrompt from '../components/DriverLocationPrompt';
+import { useOfflineQueue } from '../../../hooks/useOfflineQueue';
+import OfflineIndicator from '../../../components/OfflineIndicator';
+import SOSButton from '../../../components/SOSButton';
 
 const svgToDataUrl = (svg) => `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 
@@ -121,6 +124,9 @@ const DriverDashboard = () => {
     const [localCoords, setLocalCoords] = useState(null);
     const [routePath, setRoutePath] = useState([]);
     const lastGpsSyncRef = useRef(0);
+    
+    // Offline Queue Hook
+    const offlineQueue = useOfflineQueue(spareDriverAPI);
 
     const hasAddressConfigured = (driverData) => {
         const street = String(driverData?.address?.street || '').trim();
@@ -162,12 +168,19 @@ const DriverDashboard = () => {
 
     const refresh = async () => {
         try {
-            const [p, b] = await Promise.all([spareDriverAPI.getProfile(), spareDriverAPI.getBookings()]);
-            setDriver(p.data.driver);
+            const [p, b, unreadCount] = await Promise.all([
+                spareDriverAPI.getProfile(), 
+                spareDriverAPI.getBookings(),
+                spareDriverAPI.getUnreadMessageCount()
+            ]);
+            
+            const driverData = p.data.driver;
+            driverData.unreadMessages = unreadCount.data?.unreadCount || 0;
+            
+            setDriver(driverData);
             setBookings(b.data.bookings || []);
-            setIsOnline(!!p.data.driver.isOnline);
+            setIsOnline(!!driverData.isOnline);
 
-            const driverData = p?.data?.driver;
             const needsKitPayment = shouldShowKitPopup(driverData);
             if (needsKitPayment) {
                 setKitPopupOpen(true);
@@ -279,10 +292,24 @@ const DriverDashboard = () => {
             refresh();
         });
 
+        socket.on('new_message', (data) => {
+            // Update unread count when new message received
+            setDriver(prev => prev ? {
+                ...prev,
+                unreadMessages: (prev.unreadMessages || 0) + 1
+            } : null);
+            
+            toast.success("New message received", {
+                style: { background: '#000', color: '#FACD15', fontWeight: '900' },
+                duration: 2000
+            });
+        });
+
         return () => {
             socket.off('consumer_location_updated');
             socket.off('new_booking_broadcast');
             socket.off('booking_status_updated');
+            socket.off('new_message');
         };
     }, [bookings]);
 
@@ -306,7 +333,18 @@ const DriverDashboard = () => {
                     const now = Date.now();
                     if (now - lastGpsSyncRef.current >= 12000) {
                         lastGpsSyncRef.current = now;
-                        spareDriverAPI.updateLocation(coords.lat, coords.lng).catch(() => {});
+                        
+                        // Try to update location, queue if offline
+                        if (offlineQueue.isOnline) {
+                            spareDriverAPI.updateLocation(coords.lat, coords.lng).catch((error) => {
+                                console.error('Location update failed:', error);
+                                // Queue for retry
+                                offlineQueue.enqueue('location', { lat: coords.lat, lng: coords.lng }, 'normal');
+                            });
+                        } else {
+                            // Offline - queue immediately
+                            offlineQueue.enqueue('location', { lat: coords.lat, lng: coords.lng }, 'normal');
+                        }
                     }
 
                     // Update Route if consumer location is known
@@ -375,11 +413,26 @@ const DriverDashboard = () => {
     const handleStatus = async (bid, st) => {
         let pin = st === 'active' ? prompt('ENTER 4-DIGIT SECURITY PIN:') : null;
         if (st === 'active' && !pin) return;
+        
         try {
-            await spareDriverAPI.updateBookingStatus(bid, st, pin);
-            refresh();
-            toast.success(`PROTOCOL: ${st.toUpperCase()}`);
-        } catch (e) { toast.error(e.message); }
+            if (offlineQueue.isOnline) {
+                await spareDriverAPI.updateBookingStatus(bid, st, pin);
+                refresh();
+                toast.success(`PROTOCOL: ${st.toUpperCase()}`);
+            } else {
+                // Offline - queue the status update
+                offlineQueue.enqueue('status_update', { bookingId: bid, status: st, pin }, 'high');
+                toast.success(`QUEUED: ${st.toUpperCase()} (Will sync when online)`);
+            }
+        } catch (e) {
+            // If online but failed, queue for retry
+            if (offlineQueue.isOnline) {
+                offlineQueue.enqueue('status_update', { bookingId: bid, status: st, pin }, 'high');
+                toast.error(`${e.message} - Queued for retry`);
+            } else {
+                toast.error(e.message);
+            }
+        }
     };
 
     const handleKitRazorpay = async () => {
@@ -475,6 +528,29 @@ const DriverDashboard = () => {
         setAddressPopupOpen(false);
     };
 
+    const handleEmergency = async (emergencyData) => {
+        try {
+            await spareDriverAPI.reportEmergency(emergencyData);
+            
+            // Emit socket event for real-time admin notification
+            socketService.emit('driver_emergency', {
+                driverId: driver?._id,
+                bookingId: emergencyData.bookingId,
+                reason: emergencyData.reason,
+                location: {
+                    lat: emergencyData.latitude,
+                    lng: emergencyData.longitude
+                },
+                timestamp: new Date()
+            });
+            
+            return { success: true };
+        } catch (error) {
+            console.error('Emergency report failed:', error);
+            throw error;
+        }
+    };
+
     const showNavigationHUD = activeJob && LIVE_JOB_STATUSES.includes(activeJob.status);
     const fallbackRoutePath = useMemo(() => {
         if (!smoothedDriver || !smoothedConsumer) return [];
@@ -505,7 +581,23 @@ const DriverDashboard = () => {
     if (loading) return <DriverLayout><div className="flex h-[60vh] items-center justify-center font-black text-brand uppercase tracking-[0.4em] animate-pulse">Syncing Telemetry...</div></DriverLayout>;
 
     return (
-        <DriverLayout title={showNavigationHUD ? "Navigation Mode" : "Command Center"} hideNav={showNavigationHUD} hideHeader={showNavigationHUD}>
+        <>
+            {/* Offline Indicator */}
+            <OfflineIndicator 
+                isOnline={offlineQueue.isOnline}
+                queueSize={offlineQueue.queueSize}
+                isSyncing={offlineQueue.isSyncing}
+                onSync={offlineQueue.syncQueue}
+            />
+            
+            <DriverLayout 
+                title={showNavigationHUD ? "Navigation Mode" : "Command Center"} 
+                hideNav={showNavigationHUD} 
+                hideHeader={showNavigationHUD}
+                isOnline={isOnline}
+                onToggle={handleToggle}
+                showToggle={!showNavigationHUD}
+            >
             {showNavigationHUD ? (
                 /* ── High-Fidelity Navigation HUD (Full Screen Mode) ── */
                 <div className="fixed inset-0 z-0 bg-slate-900 overflow-hidden">
@@ -582,6 +674,15 @@ const DriverDashboard = () => {
 
                             {/* Right: Operational Triggers */}
                             <div className="flex items-center gap-3 flex-shrink-0">
+                                {/* SOS Button */}
+                                <SOSButton
+                                    onEmergency={handleEmergency}
+                                    bookingId={activeJob._id}
+                                    currentLocation={smoothedDriver}
+                                    isActive={true}
+                                    className="flex-shrink-0"
+                                />
+                                
                                 <motion.button 
                                     whileTap={{ scale: 0.9 }}
                                     onClick={() => activeJob?.userPhone ? (window.location.href = `tel:${activeJob.userPhone}`) : toast.error('Uplink Busy: Contact Unavailable')}
@@ -589,11 +690,19 @@ const DriverDashboard = () => {
                                 >
                                     <Phone size={20} />
                                 </motion.button>
+
+                                <motion.button 
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => navigate(`/spare-driver/chat/${activeJob._id}`)}
+                                    className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-blue-400"
+                                >
+                                    <MessageSquareText size={20} />
+                                </motion.button>
                                 
                                 <motion.button 
                                     whileTap={{ scale: 0.95 }}
                                     onClick={() => handleStatus(activeJob._id, activeJob.status === 'en_route' ? 'arrived' : activeJob.status === 'arrived' ? 'active' : 'completed')} 
-                                    className="h-14 px-8 bg-brand text-black rounded-2xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-brand/20"
+                                    className="h-14 px-8 bg-brand text-white rounded-2xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-2xl shadow-black/50 shadow-brand/20"
                                 >
                                     {activeJob.status === 'en_route' ? 'Arrived' : activeJob.status === 'arrived' ? 'Initiate' : 'Done'}
                                     <ChevronRight size={16} strokeWidth={3} />
@@ -605,44 +714,86 @@ const DriverDashboard = () => {
             ) : (
                 /* ── Standard Dashboard Interface ── */
                 <div className="px-6 py-6 space-y-6 pb-24">
-                {/* ── Status Cluster ── */}
-                <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className={`rounded-[2.5rem] p-6 border transition-all duration-500 overflow-hidden relative ${isOnline ? 'bg-black border-brand/20 shadow-2xl' : 'bg-surface border-content/[0.04] shadow-sm'}`}>
-                    <AnimatePresence>
-                        {isOnline && (
-                           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 pointer-events-none">
-                               <div className="absolute top-[-20%] right-[-10%] w-[60%] aspect-square bg-brand/10 blur-[80px]" />
-                           </motion.div>
-                        )}
-                    </AnimatePresence>
-                    
-                    <div className="relative z-10 flex justify-between items-start">
-                        <div>
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-brand animate-pulse' : 'bg-content/20'}`} />
-                                <span className={`text-[10px] font-black uppercase tracking-[0.3em] ${isOnline ? 'text-brand' : 'text-content/30'}`}>System Link</span>
-                            </div>
-                            <h2 className={`text-2xl font-black uppercase tracking-tight leading-none ${isOnline ? 'text-white' : 'text-content'}`}>
-                                {isOnline ? 'Active' : 'Standby'}<br />
-                                <span className={isOnline ? 'text-brand' : 'text-content/40'}>{isOnline ? 'Signal Locked' : 'Offline'}</span>
-                            </h2>
-                        </div>
-                        <button onClick={handleToggle} className={`w-14 h-8 rounded-full transition-all relative ${isOnline ? 'bg-brand shadow-lg shadow-brand/20' : 'bg-content/[0.08]'}`}>
-                            <motion.div animate={{ x: isOnline ? 24 : 4 }} className="absolute top-1 left-0 w-6 h-6 bg-white dark:bg-slate-200 rounded-full shadow-md" />
-                        </button>
-                    </div>
-                </motion.div>
 
-                {/* ── Metrics Grid ── */}
-                <div className="grid grid-cols-3 gap-3">
+                {/* ── Security Alerts (Fraud Detection) ── */}
+                {driver && driver.fraudAlerts && driver.fraudAlerts.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="relative overflow-hidden rounded-2xl border border-red-500/30 bg-red-500/5 p-3 flex items-center gap-3 shadow-lg shadow-red-500/5"
+                    >
+                        <div className="w-10 h-10 rounded-xl bg-red-500 flex items-center justify-center shadow-lg shadow-red-500/20 flex-shrink-0">
+                            <AlertCircle size={18} className="text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-[8px] font-black text-red-500 uppercase tracking-widest leading-none mb-0.5">Security Alert</p>
+                            <p className="text-[11px] font-black text-white leading-tight">
+                                {driver.fraudAlerts[0].type.replace('_', ' ')} Detected
+                            </p>
+                        </div>
+                        <button 
+                            onClick={() => navigate('/spare-driver/inquiry')}
+                            className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-[9px] font-black uppercase"
+                        >
+                            Review
+                        </button>
+                    </motion.div>
+                )}
+
+                {/* ── Communication Notifications ── */}
+                {driver && driver.unreadMessages > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="relative overflow-hidden rounded-2xl border border-blue-500/30 bg-blue-500/5 p-3 flex items-center gap-3 shadow-lg shadow-blue-500/5 cursor-pointer active:scale-[0.98] transition-all"
+                        onClick={() => navigate('/spare-driver/bookings')}
+                    >
+                        <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/20 flex-shrink-0">
+                            <MessageSquareText size={18} className="text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-[8px] font-black text-blue-500 uppercase tracking-widest leading-none mb-0.5">New Messages</p>
+                            <p className="text-[11px] font-black text-white leading-tight">
+                                {driver.unreadMessages} New conversation{driver.unreadMessages > 1 ? 's' : ''}
+                            </p>
+                        </div>
+                        <div className="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-[9px] font-black">
+                            {driver.unreadMessages}
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* ── Kit Payment Banner (persistent nudge after approval) ── */}
+                {driver && ['active', 'ACTIVE', 'verified_pending_kit'].includes(driver.status) && driver.kitStatus === 'NOT_PURCHASED' && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="relative overflow-hidden rounded-2xl border border-brand/30 bg-brand/5 p-3 flex items-center gap-3 shadow-lg shadow-brand/5 cursor-pointer active:scale-[0.98] transition-all"
+                        onClick={() => navigate('/spare-driver/kit-purchase')}
+                    >
+                        <div className="w-10 h-10 rounded-xl bg-brand flex items-center justify-center shadow-lg shadow-brand/20 flex-shrink-0 relative z-10">
+                            <Package size={18} className="text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0 relative z-10">
+                            <p className="text-[8px] font-black text-brand uppercase tracking-widest leading-none mb-0.5">Action required</p>
+                            <p className="text-[11px] font-black text-white leading-tight">Complete driver kit activation</p>
+                        </div>
+                        <ChevronRight size={14} className="text-brand flex-shrink-0 relative z-10" strokeWidth={3} />
+                        <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-brand animate-ping opacity-60" />
+                    </motion.div>
+                )}
+
+                {/* ── Metrics Grid (Compact) ── */}
+                <div className="grid grid-cols-3 gap-2 px-1">
                     {[
                         { l: 'Yield', v: `₹${driver?.wallet?.balance || 0}`, i: Wallet, c: 'text-green-500' },
-                        { l: 'Rating', v: (driver?.rating || 5.0).toFixed(1), i: Star, c: 'text-brand' },
-                        { l: 'Auth', v: 'Elite', i: ShieldCheck, c: 'text-brand' }
+                        { l: 'Rating', v: (driver?.rating || 4.9).toFixed(1), i: Star, c: 'text-brand' },
+                        { l: 'Status', v: isOnline ? 'Online' : 'Standby', i: Radar, c: isOnline ? 'text-brand' : 'text-content/20' }
                     ].map((m, i) => (
-                        <div key={i} className="bg-surface border border-content/[0.04] p-4 rounded-[1.8rem] shadow-sm transition-colors duration-500">
-                            <p className="text-[8px] font-black text-content/20 uppercase tracking-widest mb-1">{m.l}</p>
-                            <p className="text-[14px] font-black text-content tracking-tight">{m.v}</p>
-                            <m.i size={10} className={`${m.c} mt-1`} />
+                        <div key={i} className="bg-surface border border-content/[0.04] p-3 rounded-2xl flex flex-col items-center justify-center text-center shadow-sm">
+                            <p className="text-[7px] font-black text-content/20 uppercase tracking-[0.2em] mb-1">{m.l}</p>
+                            <p className="text-[14px] font-black text-content tracking-tighter leading-none">{m.v}</p>
+                            <m.i size={12} className={`${m.c} mt-1.5`} />
                         </div>
                     ))}
                 </div>
@@ -650,10 +801,10 @@ const DriverDashboard = () => {
                 {/* ── Mission Node ── */}
                 <AnimatePresence mode="wait">
                     {activeJob ? (
-                        <motion.div key={activeJob._id} initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className={`rounded-[2.5rem] p-6 border transition-colors duration-500 ${activeJob.status === 'pending' ? 'bg-surface border-content/5 shadow-sm' : 'bg-surface border-brand/10 shadow-lg'}`}>
+                        <motion.div key={activeJob._id} initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className={`rounded-[2.5rem] p-6 border transition-colors duration-500 ${activeJob.status === 'pending' ? 'bg-surface border-content/5 ' : 'bg-surface border-brand/10 shadow-lg'}`}>
                             <div className="flex justify-between items-start mb-6">
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${activeJob.status === 'pending' ? 'bg-black text-brand' : 'bg-brand text-black'}`}>
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${activeJob.status === 'pending' ? 'bg-black text-brand' : 'bg-brand text-white'}`}>
                                         <Bell size={18} className={activeJob.status === 'pending' ? 'animate-bounce' : ''} />
                                     </div>
                                     <div>
@@ -680,26 +831,139 @@ const DriverDashboard = () => {
                             <div className="space-y-2">
                                 {activeJob.status === 'pending' ? (
                                     <div className="grid grid-cols-2 gap-3">
-                                        <button onClick={() => spareDriverAPI.rejectBooking(activeJob._id).then(refresh)} className="h-12 rounded-xl border-2 border-content/[0.04] text-[10px] font-black uppercase text-content/60">Deny</button>
-                                        <button onClick={() => spareDriverAPI.acceptBooking(activeJob._id).then(refresh)} className="h-12 bg-black dark:bg-brand dark:text-black rounded-xl text-[10px] font-black uppercase tracking-widest text-white">Authorize</button>
+                                        <button 
+                                            onClick={async () => {
+                                                try {
+                                                    if (offlineQueue.isOnline) {
+                                                        await spareDriverAPI.rejectBooking(activeJob._id);
+                                                        refresh();
+                                                        toast.success('Booking rejected');
+                                                    } else {
+                                                        offlineQueue.enqueue('booking_reject', { bookingId: activeJob._id, reason: 'Not available' }, 'high');
+                                                        toast.success('Rejection queued (Will sync when online)');
+                                                    }
+                                                } catch (e) {
+                                                    if (offlineQueue.isOnline) {
+                                                        offlineQueue.enqueue('booking_reject', { bookingId: activeJob._id, reason: 'Not available' }, 'high');
+                                                        toast.error(`${e.message} - Queued for retry`);
+                                                    } else {
+                                                        toast.error(e.message);
+                                                    }
+                                                }
+                                            }}
+                                            className="h-12 rounded-xl border-white/5 border-content/[0.04] text-[10px] font-black uppercase text-content/60"
+                                        >
+                                            Deny
+                                        </button>
+                                        <button 
+                                            onClick={async () => {
+                                                try {
+                                                    if (offlineQueue.isOnline) {
+                                                        await spareDriverAPI.acceptBooking(activeJob._id);
+                                                        refresh();
+                                                        toast.success('Booking accepted');
+                                                    } else {
+                                                        offlineQueue.enqueue('booking_accept', { bookingId: activeJob._id }, 'high');
+                                                        toast.success('Acceptance queued (Will sync when online)');
+                                                    }
+                                                } catch (e) {
+                                                    if (offlineQueue.isOnline) {
+                                                        offlineQueue.enqueue('booking_accept', { bookingId: activeJob._id }, 'high');
+                                                        toast.error(`${e.message} - Queued for retry`);
+                                                    } else {
+                                                        toast.error(e.message);
+                                                    }
+                                                }
+                                            }}
+                                            className="h-12 bg-black dark:bg-brand dark:text-white rounded-xl text-[10px] font-black uppercase tracking-widest text-white"
+                                        >
+                                            Authorize
+                                        </button>
                                     </div>
                                 ) : (
-                                    <button 
-                                        onClick={() => handleStatus(activeJob._id, activeJob.status === 'en_route' ? 'arrived' : activeJob.status === 'arrived' ? 'active' : 'completed')} 
-                                        className="w-full h-14 bg-black dark:bg-brand dark:text-black text-brand rounded-2xl font-black text-[12px] uppercase tracking-widest shadow-xl shadow-black/10 flex items-center justify-center gap-3 transition-all active:scale-95"
-                                    >
-                                        Update Protocol <ChevronRight size={18} />
-                                    </button>
+                                    <div className="space-y-3">
+                                        {/* Navigation and Communication Row */}
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <button 
+                                                onClick={() => {
+                                                    const destination = `${activeJob.location?.address?.coordinates?.lat || 0},${activeJob.location?.address?.coordinates?.lng || 0}`;
+                                                    const url = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`;
+                                                    window.open(url, '_blank');
+                                                }}
+                                                className="h-12 bg-blue-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
+                                            >
+                                                <Navigation size={14} />
+                                                Navigate
+                                            </button>
+                                            <a 
+                                                href={`tel:${activeJob.consumer?.phone}`}
+                                                className="h-12 bg-green-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
+                                            >
+                                                <Phone size={14} />
+                                                Call
+                                            </a>
+                                            <button 
+                                                onClick={() => navigate(`/spare-driver/chat/${activeJob._id}`)}
+                                                className="h-12 bg-purple-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
+                                            >
+                                                <MessageSquareText size={14} />
+                                                Chat
+                                            </button>
+                                        </div>
+                                        
+                                        {/* SOS Button Row */}
+                                        <div className="flex items-center justify-center py-2">
+                                            <SOSButton
+                                                onEmergency={handleEmergency}
+                                                bookingId={activeJob._id}
+                                                currentLocation={localCoords}
+                                                isActive={true}
+                                            />
+                                        </div>
+                                        
+                                        {/* Status Update Button */}
+                                        <button 
+                                            onClick={() => handleStatus(activeJob._id, activeJob.status === 'en_route' ? 'arrived' : activeJob.status === 'arrived' ? 'active' : 'completed')} 
+                                            className="w-full h-14 bg-black dark:bg-brand dark:text-white text-brand rounded-2xl font-black text-[12px] uppercase tracking-widest shadow-2xl shadow-black/50 shadow-black/10 flex items-center justify-center gap-3 transition-all active:scale-95"
+                                        >
+                                            {activeJob.status === 'en_route' ? 'Mark Arrived' : activeJob.status === 'arrived' ? 'Start Trip' : 'Complete Trip'}
+                                            <ChevronRight size={18} />
+                                        </button>
+                                    </div>
                                 )}
                             </div>
                         </motion.div>
                     ) : (
-                        <div className="bg-surface border border-content/[0.03] rounded-[2.5rem] p-12 text-center relative overflow-hidden group shadow-sm transition-colors duration-500">
-                             <div className="relative z-10">
-                                <Radar size={40} className="mx-auto mb-6 text-content/10 animate-pulse" />
-                                <p className="text-[10px] font-black text-content/30 uppercase tracking-[0.4em] mb-2 leading-none">Scanning Sector</p>
-                                <h3 className="text-[14px] font-black text-content/60 uppercase">Searching for Priority Missions</h3>
-                             </div>
+                        <div className="h-[50vh] bg-surface/50 border border-content/[0.03] rounded-[2.5rem] flex flex-col items-center justify-center text-center relative overflow-hidden transition-all duration-500 shadow-inner">
+                            {/* Scanning Radar Effect */}
+                            <div className="absolute inset-0 z-0 opacity-10">
+                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--brand)_0%,transparent_70%)] animate-pulse" />
+                            </div>
+                            
+                            <div className="relative z-10 p-8">
+                                <div className="relative w-24 h-24 mx-auto mb-8">
+                                    <div className="absolute inset-0 border-2 border-brand/20 rounded-full animate-[ping_3s_linear_infinite]" />
+                                    <div className="absolute inset-0 border border-brand/40 rounded-full animate-[ping_2s_linear_infinite]" />
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <Radar size={48} className={`${isOnline ? 'text-brand animate-spin' : 'text-content/10'}`} style={{ animationDuration: '4s' }} />
+                                    </div>
+                                </div>
+                                <p className="text-[10px] font-black text-content/30 uppercase tracking-[0.5em] mb-3 leading-none italic">Sector Scanning...</p>
+                                <h3 className="text-[16px] font-black text-content/80 uppercase tracking-tighter leading-tight">
+                                    {isOnline ? 'Searching for Priority Missions' : 'Uplink Offline: Standby'}
+                                </h3>
+                                {!isOnline && (
+                                    <button 
+                                        onClick={handleToggle}
+                                        className="mt-6 px-6 py-2.5 bg-brand text-white rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-brand/20"
+                                    >
+                                        Connect to Fleet
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Decorative Grid */}
+                            <div className="absolute inset-0 -z-10 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(var(--content) 1px, transparent 0)', backgroundSize: '24px 24px' }} />
                         </div>
                     )}
                 </AnimatePresence>
@@ -746,7 +1010,7 @@ const DriverDashboard = () => {
                                 <button 
                                     onClick={handleKitRazorpay}
                                     disabled={kitPaying}
-                                    className="w-full h-14 bg-brand text-black rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-brand/10 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                    className="w-full h-14 bg-brand text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-2xl shadow-black/50 shadow-brand/10 flex items-center justify-center gap-2 active:scale-95 transition-all"
                                 >
                                     {kitPaying ? <Loader2 size={16} className="animate-spin" /> : 'Authorize Purchase'}
                                 </button>
@@ -801,7 +1065,7 @@ const DriverDashboard = () => {
                                         setAddressPopupOpen(false);
                                         navigate('/spare-driver/address');
                                     }}
-                                    className="w-full h-14 bg-black dark:bg-brand dark:text-black text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                    className="w-full h-14 bg-black dark:bg-brand dark:text-white text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-2xl shadow-black/50 flex items-center justify-center gap-2 active:scale-95 transition-all"
                                 >
                                     Configure Sector <ChevronRight size={16} />
                                 </button>
@@ -848,7 +1112,7 @@ const DriverDashboard = () => {
                                     />
                                 </div>
 
-                                <label className="w-full h-24 rounded-2xl border-2 border-dashed border-content/[0.1] bg-content/[0.01] flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-content/[0.03] transition-all">
+                                <label className="w-full h-24 rounded-2xl border-white/5 border-dashed border-content/[0.1] bg-content/[0.01] flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-content/[0.03] transition-all">
                                     <Upload size={20} className="text-content/30" />
                                     <span className="text-[10px] font-black text-content/40 uppercase">{pvrFile ? pvrFile.name : 'Upload Doc'}</span>
                                     <input 
@@ -862,7 +1126,7 @@ const DriverDashboard = () => {
                                 <button 
                                     onClick={handlePoliceVerificationSubmit}
                                     disabled={pvrSubmitting}
-                                    className="w-full h-14 bg-black dark:bg-brand dark:text-black text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                    className="w-full h-14 bg-black dark:bg-brand dark:text-white text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-2xl shadow-black/50 flex items-center justify-center gap-2 active:scale-95 transition-all"
                                 >
                                     {pvrSubmitting ? <Loader2 size={16} className="animate-spin" /> : 'Submit Clearance'}
                                 </button>
@@ -888,7 +1152,8 @@ const DriverDashboard = () => {
                 && hasAddressConfigured(driver) && (
                     <DriverLocationPrompt onLocationSet={refresh} />
                 )}
-        </DriverLayout>
+            </DriverLayout>
+        </>
     );
 };
 

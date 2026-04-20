@@ -3,7 +3,7 @@ const DriverPayout = require('../../../models/DriverPayout');
 const Penalty = require('../../../models/Penalty');
 const SpareDriver = require('../../../models/SpareDriver');
 const catchAsync = require('../../../utils/catchAsync');
-const AppError = require('../../../utils/appError');
+const AppError = require('../../../utils/AppError');
 
 /**
  * DRIVER EARNINGS CONTROLLER

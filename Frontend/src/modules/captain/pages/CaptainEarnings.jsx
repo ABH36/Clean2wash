@@ -68,12 +68,12 @@ const CaptainEarnings = () => {
 
     return (
         <CaptainLayout>
-            <div className={`min-h-[100dvh] pb-32 transition-colors duration-500 ${isDarkMode ? 'bg-[#0F172A]' : 'bg-gray-50'}`}>
+            <div className={`min-h-[100dvh] pb-32 transition-colors duration-500 ${isDarkMode ? 'bg-[#0F172A]' : 'bg-white/[0.02]'}`}>
                 {/* ── Header ── */}
-                <header className={`${isDarkMode ? 'bg-[#1E293B]/70 border-white/5' : 'bg-white/70 border-gray-100'} backdrop-blur-xl px-4 pt-10 pb-4 border-b sticky top-0 z-40 relative overflow-hidden`}>
+                <header className={`${isDarkMode ? 'bg-[#1E293B]/70 border-white/5' : 'bg-white/70 border-white/5'} backdrop-blur-xl px-4 pt-10 pb-4 border-b sticky top-0 z-40 relative overflow-hidden`}>
                     <div className="relative z-10 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <button onClick={() => navigate(-1)} className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' : 'bg-gray-50 border-gray-100 text-content hover:bg-gray-100'}`}>
+                            <button onClick={() => navigate(-1)} className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' : 'bg-white/[0.02] border-white/5 text-content hover:bg-white/[0.05]'}`}>
                                 <ChevronLeft size={18} strokeWidth={2.5} />
                             </button>
                             <div>
@@ -81,7 +81,7 @@ const CaptainEarnings = () => {
                                 <p className={`text-[9px] font-black uppercase tracking-widest mt-1 ${isDarkMode ? 'text-brand' : 'text-brand'}`}>Revenue Center</p>
                             </div>
                         </div>
-                        <button className={`w-10 h-10 rounded-2xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/10 text-brand' : 'bg-gray-50 border-gray-100 text-brand'}`}>
+                        <button className={`w-10 h-10 rounded-2xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/10 text-brand' : 'bg-white/[0.02] border-white/5 text-brand'}`}>
                             <Download size={18} />
                         </button>
                     </div>
@@ -89,7 +89,7 @@ const CaptainEarnings = () => {
 
                 <div className="px-4 py-6 space-y-6">
                     {/* ── Hero Balance Card ── */}
-                    <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/40' : 'bg-white border-gray-100 shadow-xl shadow-gray-200/50'} border rounded-[2.5rem] p-8 transition-all overflow-hidden relative`}>
+                    <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/40' : 'bg-white/5 border-white/5 shadow-2xl shadow-black/50 shadow-gray-200/50'} border rounded-[2.5rem] p-8 transition-all overflow-hidden relative`}>
                         <div className="relative z-10">
                             <div className="flex items-center justify-between mb-2">
                                 <p className={`text-[10px] uppercase tracking-[0.2em] font-black ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Current Balance</p>
@@ -103,12 +103,12 @@ const CaptainEarnings = () => {
                                 <button
                                     onClick={() => setPayoutModalOpen(true)}
                                     disabled={captainEarningsLoading || balance <= 0}
-                                    className={`flex-1 h-14 bg-brand text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-brand/20 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale flex items-center justify-center gap-2`}
+                                    className={`flex-1 h-14 bg-brand text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-black/50 shadow-brand/20 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale flex items-center justify-center gap-2`}
                                 >
                                     {captainEarningsLoading ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
                                     Transfer to Bank
                                 </button>
-                                <button className={`w-14 h-14 rounded-2xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/10 text-white/40' : 'bg-gray-50 border-gray-100 text-gray-300 hover:text-brand'}`}>
+                                <button className={`w-14 h-14 rounded-2xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/10 text-white/40' : 'bg-white/[0.02] border-white/5 text-gray-300 hover:text-brand'}`}>
                                     <Filter size={18} />
                                 </button>
                             </div>
@@ -119,13 +119,13 @@ const CaptainEarnings = () => {
                     </div>
 
                     {/* ── Tab Switcher ── */}
-                    <div className={`${isDarkMode ? 'bg-white/5' : 'bg-gray-100'} p-1.5 rounded-2xl flex gap-1`}>
+                    <div className={`${isDarkMode ? 'bg-white/5' : 'bg-white/[0.05]'} p-1.5 rounded-2xl flex gap-1`}>
                         {TABS.map(t => (
                             <button
                                 key={t}
                                 onClick={() => setTab(t)}
                                 className={`flex-1 py-3.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${tab === t
-                                    ? (isDarkMode ? 'bg-[#1E293B] text-brand shadow-lg' : 'bg-white text-brand shadow-sm')
+                                    ? (isDarkMode ? 'bg-[#1E293B] text-brand shadow-lg' : 'bg-white/5 text-brand ')
                                     : (isDarkMode ? 'text-white/30' : 'text-content-subtle hover:text-content')}`}
                             >
                                 {t}
@@ -179,11 +179,11 @@ const CaptainEarnings = () => {
                             <button className="text-[10px] font-black text-brand uppercase tracking-widest border-b border-brand/20">Full Ledger</button>
                         </div>
 
-                        <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/40' : 'bg-white border-gray-100 shadow-soft'} border rounded-[2.5rem] overflow-hidden`}>
+                        <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/40' : 'bg-white/5 border-white/5 shadow-soft'} border rounded-[2.5rem] overflow-hidden`}>
                             {myJobs.length > 0 ? (
                                 <div className="divide-y divide-gray-100/5">
                                     {myJobs.slice(0, 5).map((tx, i) => (
-                                        <div key={tx.id} className={`flex items-center justify-between p-6 ${isDarkMode ? 'hover:bg-white/5' : 'hover:bg-gray-50'} transition-all`}>
+                                        <div key={tx.id} className={`flex items-center justify-between p-6 ${isDarkMode ? 'hover:bg-white/5' : 'hover:bg-white/[0.02]'} transition-all`}>
                                             <div className="flex items-center gap-4">
                                                 <div className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 ${isDarkMode ? 'bg-green-500/10 text-green-500' : 'bg-green-50 text-green-600 border border-green-100'}`}>
                                                     <ArrowDownLeft size={18} strokeWidth={2.5} />
@@ -202,7 +202,7 @@ const CaptainEarnings = () => {
                                 </div>
                             ) : (
                                 <div className="py-20 text-center flex flex-col items-center">
-                                    <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center mb-4 ${isDarkMode ? 'bg-white/5 text-white/5' : 'bg-gray-50 text-gray-200'}`}>
+                                    <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center mb-4 ${isDarkMode ? 'bg-white/5 text-white/5' : 'bg-white/[0.02] text-gray-200'}`}>
                                         <Wallet size={32} />
                                     </div>
                                     <p className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>No Settlement History</p>
@@ -227,7 +227,7 @@ const CaptainEarnings = () => {
                                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                                className={`${isDarkMode ? 'bg-[#1E293B] border-white/10 shadow-2xl shadow-black/80' : 'bg-white border-gray-100 shadow-2xl shadow-gray-200/50'} w-full max-w-sm rounded-[2.5rem] p-8 relative z-10 border transition-all`}
+                                className={`${isDarkMode ? 'bg-[#1E293B] border-white/10 shadow-2xl shadow-black/80' : 'bg-white/5 border-white/5 shadow-2xl shadow-gray-200/50'} w-full max-w-sm rounded-[2.5rem] p-8 relative z-10 border transition-all`}
                             >
                                 <div className="flex items-center gap-3 mb-6">
                                     <div className="w-10 h-10 bg-brand/10 text-brand rounded-xl flex items-center justify-center">
@@ -246,9 +246,9 @@ const CaptainEarnings = () => {
                                             <input
                                                 type="number"
                                                 placeholder="e.g. 2000"
-                                                className={`w-full px-6 py-4 rounded-2xl text-xs font-black outline-none transition-all shadow-sm ${isDarkMode
+                                                className={`w-full px-6 py-4 rounded-2xl text-xs font-black outline-none transition-all  ${isDarkMode
                                                     ? 'bg-black/20 border-white/5 text-white focus:border-brand focus:bg-black/40'
-                                                    : 'bg-gray-50 border-gray-100 text-content focus:border-brand focus:bg-white'}`}
+                                                    : 'bg-white/[0.02] border-white/5 text-content focus:border-brand focus:bg-white/5'}`}
                                                 value={payoutAmount}
                                                 onChange={e => setPayoutAmount(e.target.value)}
                                             />
@@ -261,7 +261,7 @@ const CaptainEarnings = () => {
                                     </div>
 
                                     {/* Payout Target Confirmation */}
-                                    <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-gray-50 border-gray-100'}`}>
+                                    <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white/[0.02] border-white/5'}`}>
                                         <p className={`text-[8px] font-black uppercase tracking-widest mb-2 ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Settlement Destination</p>
                                         {user.bankDetails?.upiId || user.bankDetails?.accountNumber ? (
                                             <div className="flex items-center justify-between">
@@ -286,7 +286,7 @@ const CaptainEarnings = () => {
                                     <button
                                         onClick={handleWithdrawRequest}
                                         disabled={!user.bankDetails?.upiId && !user.bankDetails?.accountNumber}
-                                        className="w-full bg-brand text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-brand/20 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                        className="w-full bg-brand text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl shadow-black/50 shadow-brand/20 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                                     >
                                         Initiate Transfer
                                     </button>
@@ -307,8 +307,8 @@ const CaptainEarnings = () => {
 };
 
 const StatCard = ({ label, val, sub, icon, color, isDarkMode }) => (
-    <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/40' : 'bg-white border-gray-100 shadow-xl shadow-gray-200/50'} border p-5 rounded-[2rem] transition-all`}>
-        <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-4 transition-colors ${isDarkMode ? 'bg-white/5' : 'bg-gray-50'} ${color}`}>
+    <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/40' : 'bg-white/5 border-white/5 shadow-2xl shadow-black/50 shadow-gray-200/50'} border p-5 rounded-[2rem] transition-all`}>
+        <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-4 transition-colors ${isDarkMode ? 'bg-white/5' : 'bg-white/[0.02]'} ${color}`}>
             {icon}
         </div>
         <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>{label}</p>

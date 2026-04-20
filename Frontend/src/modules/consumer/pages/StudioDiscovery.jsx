@@ -74,22 +74,22 @@ const StudioDiscovery = () => {
     return (
         <MobileLayout hideNav>
             {/* ── Header ── */}
-            <header className="px-4 pt-10 pb-4 bg-white sticky top-0 z-50 border-b border-gray-100">
+            <header className="px-4 pt-10 pb-4 bg-white/5 sticky top-0 z-50 border-b border-white/5">
                 <div className="flex items-center gap-4 mb-5">
                     <button
                         onClick={() => navigate(-1)}
-                        className="w-11 h-11 rounded-2xl bg-white border border-black/[0.04] shadow-lg flex items-center justify-center text-black active:scale-90 transition-all shrink-0"
+                        className="w-11 h-11 rounded-2xl bg-white/5 border border-black/[0.04] shadow-lg flex items-center justify-center text-white active:scale-90 transition-all shrink-0"
                     >
                         <ChevronLeft size={22} strokeWidth={3} />
                     </button>
                     <div>
-                        <h1 className="text-xl font-[1000] text-black leading-none uppercase tracking-tighter">Nearby studios</h1>
+                        <h1 className="text-xl font-[1000] text-white leading-none uppercase tracking-tighter">Nearby studios</h1>
                         <p className="text-[9px] text-brand font-black uppercase tracking-widest mt-1.5">Top-rated centers near you</p>
                     </div>
                 </div>
 
                 <div className="flex gap-2">
-                    <div className="flex-1 flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5">
+                    <div className="flex-1 flex items-center gap-3 bg-white/[0.02] border border-white/5 rounded-xl px-4 py-2.5">
                         <Search size={16} className="text-slate-400" strokeWidth={2.5} />
                         <input
                             type="text"
@@ -99,7 +99,7 @@ const StudioDiscovery = () => {
                             className="bg-transparent text-xs font-bold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400"
                         />
                     </div>
-                    <button className="w-11 h-11 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center text-slate-900">
+                    <button className="w-11 h-11 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-center text-slate-900">
                         <SlidersHorizontal size={18} strokeWidth={2.5} />
                     </button>
                 </div>
@@ -110,7 +110,7 @@ const StudioDiscovery = () => {
                         <button
                             key={f}
                             onClick={() => setActiveFilter(f)}
-                            className={`flex-shrink-0 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${activeFilter === f ? 'bg-brand text-white border-brand shadow-md' : 'bg-white border-gray-100 text-slate-500 hover:bg-gray-50'}`}
+                            className={`flex-shrink-0 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${activeFilter === f ? 'bg-brand text-white border-brand shadow-2xl shadow-black/40' : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/[0.02]'}`}
                         >
                             {f}
                         </button>
@@ -120,16 +120,16 @@ const StudioDiscovery = () => {
 
             <div className="px-4 py-4 space-y-6 pb-24">
                 {/* ── View Toggle ── */}
-                <div className="flex bg-gray-100 p-1 rounded-2xl">
+                <div className="flex bg-white/[0.05] p-1 rounded-2xl">
                     <button
                         onClick={() => setViewMode('list')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-white shadow-md text-brand' : 'text-slate-500'}`}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-white/5 shadow-2xl shadow-black/40 text-brand' : 'text-white/40'}`}
                     >
                         <List size={16} /> List view
                     </button>
                     <button
                         onClick={() => setViewMode('map')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'map' ? 'bg-white shadow-md text-brand' : 'text-slate-500'}`}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'map' ? 'bg-white/5 shadow-2xl shadow-black/40 text-brand' : 'text-white/40'}`}
                     >
                         <MapIcon size={16} /> Map view
                     </button>
@@ -139,8 +139,8 @@ const StudioDiscovery = () => {
                 <div className="-mx-4 pt-4 pb-2 overflow-hidden">
                     <div className="flex items-center justify-between mb-4 px-4">
                         <div className="flex flex-col">
-                            <h3 className="text-base font-[1000] text-black uppercase tracking-tight leading-none mb-1">Studio wash stories</h3>
-                            <p className="text-[8px] font-black text-black/20 uppercase tracking-widest leading-none">Elite detailing in motion</p>
+                            <h3 className="text-base font-[1000] text-white uppercase tracking-tight leading-none mb-1">Studio wash stories</h3>
+                            <p className="text-[8px] font-black text-white/20 uppercase tracking-widest leading-none">Elite detailing in motion</p>
                         </div>
                         <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-white shadow-lg active:scale-90 transition-transform">
                             <Play size={12} fill="currentColor" className="ml-0.5" />
@@ -159,7 +159,7 @@ const StudioDiscovery = () => {
                                     setActiveVideoUrl(''); // Mocking unavailable protocol for discovery
                                     setShowVideoModal(true);
                                 }}
-                                className="relative flex-shrink-0 w-[120px] aspect-[9/16] rounded-2xl overflow-hidden bg-black shadow-xl snap-start group border border-black/[0.05]"
+                                className="relative flex-shrink-0 w-[120px] aspect-[9/16] rounded-2xl overflow-hidden bg-black shadow-2xl shadow-black/50 snap-start group border border-black/[0.05]"
                             >
                                 <img src={sv.image} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt={sv.name} />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-2.5">
@@ -187,7 +187,7 @@ const StudioDiscovery = () => {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="h-[60vh] rounded-[2.5rem] overflow-hidden border-2 border-white shadow-2xl relative"
+                            className="h-[60vh] rounded-[2.5rem] overflow-hidden border-white/5 border-white shadow-2xl relative"
                         >
                             <GoogleMapBox 
                                 center={{
@@ -216,7 +216,7 @@ const StudioDiscovery = () => {
                                             anchor: new window.google.maps.Point(21, 42)
                                         },
                                         infoContent: (
-                                            <div className="p-0 min-w-[180px] bg-white rounded-2xl overflow-hidden font-outfit shadow-2xl border border-gray-100">
+                                            <div className="p-0 min-w-[180px] bg-white/5 rounded-2xl overflow-hidden font-outfit shadow-2xl border border-white/5">
                                                 <div className="relative h-24">
                                                     <img src={studio.image} className="w-full h-full object-cover" alt={studio.name} />
                                                     <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-md px-1.5 py-0.5 rounded-lg flex items-center gap-1">
@@ -225,7 +225,7 @@ const StudioDiscovery = () => {
                                                     </div>
                                                 </div>
                                                 <div className="p-3">
-                                                    <h4 className="font-black text-[11px] uppercase tracking-tight mb-1 text-black truncate">{studio.name}</h4>
+                                                    <h4 className="font-black text-[11px] uppercase tracking-tight mb-1 text-white truncate">{studio.name}</h4>
                                                     <div className="flex items-center justify-between mt-2">
                                                         <div>
                                                             <p className="text-[7px] font-black text-gray-400 uppercase tracking-widest leading-none">Starting from</p>
@@ -283,7 +283,7 @@ const StudioDiscovery = () => {
                             <div className="space-y-4">
                                 {loading ? (
                                     [1, 2, 3].map(i => (
-                                        <div key={i} className="h-64 bg-gray-50 rounded-2xl animate-pulse" />
+                                        <div key={i} className="h-64 bg-white/[0.02] rounded-2xl animate-pulse" />
                                     ))
                                 ) : filteredStudios.length === 0 ? (
                                     <div className="py-20 text-center">
@@ -299,7 +299,7 @@ const StudioDiscovery = () => {
                                             transition={{ delay: i * 0.1 }}
                                             whileTap={{ scale: 0.98 }}
                                             onClick={() => navigate(`/map?studio=${studio.id}&type=vendor&price=${studio.price}`)}
-                                            className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden group cursor-pointer"
+                                            className="bg-white/5 rounded-2xl border border-white/5 shadow-soft overflow-hidden group cursor-pointer"
                                         >
                                             {/* Image Header */}
                                             <div className="relative h-44 overflow-hidden">
@@ -322,7 +322,7 @@ const StudioDiscovery = () => {
                                                             <span className="text-white/60 text-[10px] font-bold">{studio.location}</span>
                                                         </div>
                                                     </div>
-                                                    <div className="bg-white p-2.5 rounded-xl shadow-lg">
+                                                    <div className="bg-white/5 p-2.5 rounded-xl shadow-lg">
                                                         <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none mb-0.5">Starts at</p>
                                                         <p className="text-brand font-black text-base leading-none italic">{studio.price}</p>
                                                     </div>
@@ -338,7 +338,7 @@ const StudioDiscovery = () => {
                                                         </div>
                                                     ))}
                                                 </div>
-                                                <button className="w-8 h-8 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-brand group-hover:bg-brand group-hover:text-white transition-all">
+                                                <button className="w-8 h-8 bg-white/[0.02] border border-white/5 rounded-lg flex items-center justify-center text-brand group-hover:bg-brand group-hover:text-white transition-all">
                                                     <ArrowRight size={14} strokeWidth={3} />
                                                 </button>
                                             </div>
@@ -348,8 +348,8 @@ const StudioDiscovery = () => {
                             </div>
 
                             {/* ── Promotion ── */}
-                            <div className="bg-gray-100 rounded-2xl p-5 border border-dashed border-gray-300 flex items-center gap-4">
-                                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                            <div className="bg-white/[0.05] rounded-2xl p-5 border border-dashed border-gray-300 flex items-center gap-4">
+                                <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center ">
                                     <Droplets size={24} className="text-blue-500" />
                                 </div>
                                 <div className="flex-1">

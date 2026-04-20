@@ -58,7 +58,7 @@ const SOSActive = () => {
     if (!activeSOS) {
         return (
             <MobileLayout>
-                <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center bg-white font-sans">
+                <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center bg-white/5 font-sans">
                     <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-[1.8rem] flex items-center justify-center mb-6 border border-slate-100 shadow-inner text-emerald-500">
                         <CheckCircle2 size={32} />
                     </div>
@@ -66,7 +66,7 @@ const SOSActive = () => {
                     <p className="text-[13px] font-medium text-slate-400 leading-relaxed mb-8">
                         The situation has been resolved or no alert was found. If you are in danger, use the emergency button.
                     </p>
-                    <button onClick={() => navigate('/')} className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-bold text-[13px] shadow-xl active:scale-95 transition-all">Back to dashboard</button>
+                    <button onClick={() => navigate('/')} className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-bold text-[13px] shadow-2xl shadow-black/50 active:scale-95 transition-all">Back to dashboard</button>
                 </div>
             </MobileLayout>
         );
@@ -79,7 +79,7 @@ const SOSActive = () => {
             <div className="bg-slate-50 min-h-screen font-sans relative">
                 {/* ── Floating Header ── */}
                 <div className="absolute top-0 left-0 right-0 z-[100] p-5">
-                    <header className="bg-white/95 backdrop-blur-md rounded-[2rem] border border-white shadow-xl p-4 flex items-center justify-between">
+                    <header className="bg-white/95 backdrop-blur-md rounded-[2rem] border border-white shadow-2xl shadow-black/50 p-4 flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <div className="w-11 h-11 bg-rose-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-rose-500/20 animate-pulse">
                                 <ShieldAlert size={22} />
@@ -114,7 +114,7 @@ const SOSActive = () => {
                 <div className="absolute bottom-0 left-0 right-0 z-[100] p-6 space-y-4 pb-12">
                     <AnimatePresence>
                         {responders.length > 0 ? (
-                            <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-white rounded-[2.5rem] shadow-2xl p-6 border border-white/50">
+                            <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-white/5 rounded-[2.5rem] shadow-2xl p-6 border border-white/50">
                                 <div className="flex items-center justify-between mb-5 px-1">
                                     <h3 className="text-[12px] font-bold text-slate-900 uppercase tracking-widest leading-none">Response squad</h3>
                                     <span className="bg-emerald-50 text-emerald-600 text-[9px] font-bold px-3 py-1 rounded-full border border-emerald-100 uppercase tracking-widest">{responders.length} active</span>
@@ -129,7 +129,7 @@ const SOSActive = () => {
                                                 <h4 className="text-[14px] font-bold text-slate-900 leading-none mb-1.5">{res.user?.name || 'Technician'}</h4>
                                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Dispatch personnel • En-route</p>
                                             </div>
-                                            <button onClick={() => window.location.href = `tel:${res.user?.phone || ''}`} className="w-10 h-10 bg-white border border-slate-100 text-slate-400 rounded-xl flex items-center justify-center active:scale-95 transition-all">
+                                            <button onClick={() => window.location.href = `tel:${res.user?.phone || ''}`} className="w-10 h-10 bg-white/5 border border-slate-100 text-slate-400 rounded-xl flex items-center justify-center active:scale-95 transition-all">
                                                 <Phone size={14} />
                                             </button>
                                         </div>
@@ -153,10 +153,10 @@ const SOSActive = () => {
                     </AnimatePresence>
 
                     <div className="grid grid-cols-2 gap-3">
-                        <button onClick={handleResolve} disabled={isResolving} className="bg-slate-900 h-16 rounded-[2rem] text-white flex items-center justify-center gap-3 font-bold text-[14px] shadow-xl shadow-slate-900/10 active:scale-95 transition-all disabled:opacity-30">
+                        <button onClick={handleResolve} disabled={isResolving} className="bg-slate-900 h-16 rounded-[2rem] text-white flex items-center justify-center gap-3 font-bold text-[14px] shadow-2xl shadow-black/50 shadow-slate-900/10 active:scale-95 transition-all disabled:opacity-30">
                             <ShieldCheck size={20} className="text-emerald-500" /> I am safe
                         </button>
-                        <button onClick={() => window.location.href = 'tel:100'} className="bg-rose-500 h-16 rounded-[2rem] text-white flex items-center justify-center gap-3 font-bold text-[14px] shadow-xl shadow-rose-500/10 active:scale-95 transition-all">
+                        <button onClick={() => window.location.href = 'tel:100'} className="bg-rose-500 h-16 rounded-[2rem] text-white flex items-center justify-center gap-3 font-bold text-[14px] shadow-2xl shadow-black/50 shadow-rose-500/10 active:scale-95 transition-all">
                             <PhoneCall size={20} /> Call 100
                         </button>
                     </div>

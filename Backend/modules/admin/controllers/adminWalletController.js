@@ -1,8 +1,8 @@
 const WalletTransaction = require('../../../models/WalletTransaction');
 const SpareDriver = require('../../../models/SpareDriver');
-const Consumer = require('../../../models/Consumer');
+const User = require('../../../models/User');
 const catchAsync = require('../../../utils/catchAsync');
-const AppError = require('../../../utils/appError');
+const AppError = require('../../../utils/AppError');
 
 // Get all wallets with balances
 exports.getWallets = catchAsync(async (req, res) => {
@@ -70,7 +70,10 @@ exports.getWallets = catchAsync(async (req, res) => {
             if (maxBalance !== undefined) customerQuery['wallet.balance'].$lte = parseFloat(maxBalance);
         }
         
-        const customers = await Consumer.find(customerQuery)
+        const customers = await User.find({
+            ...customerQuery,
+            role: 'consumer'
+        })
             .select('name phone wallet createdAt')
             .sort({ 'wallet.balance': -1 })
             .skip(userType === 'customer' ? skip : 0)
@@ -84,7 +87,10 @@ exports.getWallets = catchAsync(async (req, res) => {
         })));
         
         if (userType === 'customer') {
-            total = await Consumer.countDocuments(customerQuery);
+            total = await User.countDocuments({
+                ...customerQuery,
+                role: 'consumer'
+            });
         }
     }
     
@@ -123,7 +129,10 @@ exports.getWalletStats = catchAsync(async (req, res) => {
                 }
             }
         ]),
-        Consumer.aggregate([
+        User.aggregate([
+            {
+                $match: { role: 'consumer' }
+            },
             {
                 $group: {
                     _id: null,
@@ -209,7 +218,7 @@ exports.adjustWallet = catchAsync(async (req, res) => {
     if (userType === 'driver') {
         user = await SpareDriver.findById(userId);
     } else if (userType === 'customer') {
-        user = await Consumer.findById(userId);
+        user = await User.findOne({ _id: userId, role: 'consumer' });
     }
     
     if (!user) {
@@ -301,7 +310,7 @@ exports.holdAmount = catchAsync(async (req, res) => {
     if (userType === 'driver') {
         user = await SpareDriver.findById(userId);
     } else if (userType === 'customer') {
-        user = await Consumer.findById(userId);
+        user = await User.findOne({ _id: userId, role: 'consumer' });
     }
     
     if (!user) {
@@ -387,7 +396,7 @@ exports.releaseHold = catchAsync(async (req, res) => {
     if (userType === 'driver') {
         user = await SpareDriver.findById(userId);
     } else if (userType === 'customer') {
-        user = await Consumer.findById(userId);
+        user = await User.findOne({ _id: userId, role: 'consumer' });
     }
     
     if (!user) {

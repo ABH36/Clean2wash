@@ -20,7 +20,7 @@ const StaffLayout = ({ children, title, subtitle, showBack = false }) => {
     return (
         <div className={`min-h-screen ${isDarkMode ? 'bg-[#0F172A]' : 'bg-[#FDFDFF]'} font-sans pb-28 transition-colors duration-500`}>
             {/* Top Bar */}
-            <header className={`fixed top-0 left-0 right-0 ${isDarkMode ? 'bg-[#0F172A]/80 border-white/5' : 'bg-white/80 border-gray-100'} backdrop-blur-xl z-[60] px-6 pt-12 pb-6 border-b transition-all flex items-center justify-between`}>
+            <header className={`fixed top-0 left-0 right-0 ${isDarkMode ? 'bg-[#0F172A]/80 border-white/5' : 'bg-white/80 border-white/5'} backdrop-blur-xl z-[60] px-6 pt-12 pb-6 border-b transition-all flex items-center justify-between`}>
                 <div className="max-w-[180px]">
                     <p className={`text-[10px] font-black uppercase tracking-[0.3em] mb-1 truncate ${isDarkMode ? 'text-brand-light' : 'text-brand'}`}>{subtitle || 'Staff Workspace'}</p>
                     <h1 className={`text-2xl font-black leading-none tracking-tight uppercase truncate ${isDarkMode ? 'text-white' : 'text-content'}`}>{title || 'Dashboard'}</h1>
@@ -28,7 +28,7 @@ const StaffLayout = ({ children, title, subtitle, showBack = false }) => {
                 <div className="flex items-center gap-3">
                     <button
                         onClick={toggleTheme}
-                        className={`w-12 h-12 rounded-2xl border flex items-center justify-center transition-all shadow-sm ${isDarkMode ? 'bg-white/5 border-white/10 text-brand-light' : 'bg-gray-50 border-gray-100 text-content-subtle hover:text-brand'}`}
+                        className={`w-12 h-12 rounded-2xl border flex items-center justify-center transition-all  ${isDarkMode ? 'bg-white/5 border-white/10 text-brand-light' : 'bg-white/[0.02] border-white/5 text-content-subtle hover:text-brand'}`}
                     >
                         {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
                     </button>
@@ -43,7 +43,7 @@ const StaffLayout = ({ children, title, subtitle, showBack = false }) => {
 
             {/* Premium Bottom Nav */}
             <nav className="fixed bottom-0 left-0 right-0 z-50 px-6 pb-8 pt-4">
-                <div className={`max-w-md mx-auto ${isDarkMode ? 'bg-[#1E293B]/95 border-white/5' : 'bg-white/95 border-gray-100'} backdrop-blur-xl rounded-[2.5rem] p-2 flex items-center justify-between shadow-2xl border`}>
+                <div className={`max-w-md mx-auto ${isDarkMode ? 'bg-[#1E293B]/95 border-white/5' : 'bg-white/95 border-white/5'} backdrop-blur-xl rounded-[2.5rem] p-2 flex items-center justify-between shadow-2xl border`}>
                     {tabs.map((tab) => {
                         const isActive = location.pathname === tab.path;
                         return (

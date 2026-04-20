@@ -61,8 +61,8 @@ const StaffNotifications = () => {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.1 }}
                             className={`p-6 rounded-[2.5rem] border shadow-soft flex items-start gap-5 transition-all group ${notif.read
-                                ? (isDarkMode ? 'bg-[#1E293B] border-white/5 hover:border-brand/20 text-white' : 'bg-white border-gray-100 hover:border-brand/20 text-content')
-                                : (isDarkMode ? 'bg-brand/10 border-brand/20 text-white shadow-xl shadow-brand/5' : 'bg-brand/5 border-brand/10 text-content')
+                                ? (isDarkMode ? 'bg-[#1E293B] border-white/5 hover:border-brand/20 text-white' : 'bg-white/5 border-white/5 hover:border-brand/20 text-content')
+                                : (isDarkMode ? 'bg-brand/10 border-brand/20 text-white shadow-2xl shadow-black/50 shadow-brand/5' : 'bg-brand/5 border-brand/10 text-content')
                                 }`}
                         >
                             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 ${notif.color}`}>
@@ -85,7 +85,7 @@ const StaffNotifications = () => {
                 </div>
 
                 <div className="text-center py-12 px-10">
-                    <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-dashed transition-all ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
+                    <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-dashed transition-all ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/[0.02] border-white/10'}`}>
                         <Bell size={32} className={isDarkMode ? 'text-white/10' : 'text-gray-200'} />
                     </div>
                     <p className={`text-[10px] font-black uppercase tracking-[0.2em] leading-relaxed ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>

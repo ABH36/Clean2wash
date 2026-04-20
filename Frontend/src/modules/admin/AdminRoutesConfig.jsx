@@ -4,17 +4,20 @@ import {
     MapPin, Bell, BarChart3, Shield, Truck, Building, 
     CreditCard, Wallet, DollarSign, FileText, Activity,
     Calendar, Search, AlertTriangle, CheckCircle, Clock,
-    TrendingUp, Database, Zap, Target, Crown
+    TrendingUp, Database, Zap, Target, Crown, MessageCircle
 } from 'lucide-react';
 
 // ── Dashboard & Analytics ──
 const AdminDashboardUpgraded = React.lazy(() => import('./pages/AdminDashboardUpgraded'));
+const AdminReports = React.lazy(() => import('./pages/reports/AdminReports'));
+const AdminNotifications = React.lazy(() => import('./pages/AdminNotifications'));
 // ── Operations ──
 const AdminSpareDrivers = React.lazy(() => import('./pages/AdminSpareDrivers'));
 const AdminBookings = React.lazy(() => import('./pages/AdminBookings'));
 const AdminBookingsOperations = React.lazy(() => import('./pages/AdminBookingsOperations'));
 const AdminDispatchEngine = React.lazy(() => import('./pages/AdminDispatchEngine'));
 const AdminLiveTracking = React.lazy(() => import('./pages/AdminLiveTracking'));
+const ZoneManagement = React.lazy(() => import('./pages/operations/ZoneManagement'));
 
 // ── Driver Management ──
 const AdminDriversOperations = React.lazy(() => import('./pages/AdminDriversOperations'));
@@ -23,8 +26,6 @@ const AdminUsers = React.lazy(() => import('./pages/AdminUsers'));
 
 // ── Vehicle Management ──
 const AdminVehicleCatalog = React.lazy(() => import('./pages/AdminVehicleCatalog'));
-const AdminVehicleManagement = React.lazy(() => import('./pages/AdminVehicleManagement'));
-
 // ── Finance ──
 const AdminTransactions = React.lazy(() => import('./pages/finance/AdminTransactions'));
 const AdminDriverPayouts = React.lazy(() => import('./pages/finance/AdminDriverPayouts'));
@@ -33,6 +34,9 @@ const AdminPricingEngine = React.lazy(() => import('./pages/finance/AdminPricing
 const AdminSpareDriverServices = React.lazy(() => import('./pages/finance/AdminSpareDriverServices'));
 const AdminWalletSystem = React.lazy(() => import('./pages/finance/AdminWalletSystem'));
 
+// ── Fraud Detection ──
+const FraudDashboard = React.lazy(() => import('./pages/fraud/FraudDashboard'));
+
 // ── Growth & Marketing ──
 const AdminPromotions = React.lazy(() => import('./pages/AdminPromotions'));
 
@@ -40,10 +44,6 @@ const AdminPromotions = React.lazy(() => import('./pages/AdminPromotions'));
 const AdminManagement = React.lazy(() => import('./pages/superadmin/AdminManagement'));
 const RoleManagement = React.lazy(() => import('./pages/superadmin/RoleManagement'));
 const ActivityLogs = React.lazy(() => import('./pages/superadmin/ActivityLogs'));
-
-// ── System ──
-const AdminSettings = React.lazy(() => import('./pages/AdminSettings'));
-const TestPage = React.lazy(() => import('./pages/TestPage'));
 
 export const ADMIN_ROUTES_CONFIG = [
     {
@@ -56,6 +56,24 @@ export const ADMIN_ROUTES_CONFIG = [
                 component: <AdminDashboardUpgraded />,
                 icon: <LayoutDashboard size={14} />
             },
+            {
+                path: '/admin/reports',
+                label: 'Reports & Analytics',
+                component: <AdminReports />,
+                icon: <BarChart3 size={14} />
+            },
+            {
+                path: '/admin/spare-drivers/support',
+                label: 'Support Desk',
+                component: <AdminSpareDrivers />,
+                icon: <MessageCircle size={14} />
+            },
+            {
+                path: '/admin/notifications',
+                label: 'System Notifications',
+                component: <AdminNotifications />,
+                icon: <Bell size={14} />
+            }
         ]
     },
     {
@@ -86,7 +104,13 @@ export const ADMIN_ROUTES_CONFIG = [
                 label: 'Live Tracking',
                 component: <AdminLiveTracking />,
                 icon: <MapPin size={14} />
-            }
+            },
+            {
+                path: '/admin/zone-management',
+                label: 'Service Zones',
+                component: <ZoneManagement />,
+                icon: <MapPin size={14} />
+            },
         ]
     },
     {
@@ -105,12 +129,6 @@ export const ADMIN_ROUTES_CONFIG = [
                 component: <AdminDriverPayouts />,
                 icon: <Wallet size={14} />
             },
-            {
-                path: '/admin/vehicle-management',
-                label: 'Vehicle Management',
-                component: <AdminVehicleManagement />,
-                icon: <Truck size={14} />
-            }
         ]
     },
     {
@@ -180,6 +198,18 @@ export const ADMIN_ROUTES_CONFIG = [
             }
         ]
     },
+    {
+        category: 'Security & Fraud',
+        icon: <Shield size={18} />,
+        routes: [
+            {
+                path: '/admin/fraud',
+                label: 'Fraud Detection',
+                component: <FraudDashboard />,
+                icon: <Shield size={14} />
+            }
+        ]
+    },
   
     {
         category: 'Growth & Marketing',
@@ -213,24 +243,6 @@ export const ADMIN_ROUTES_CONFIG = [
                 path: '/admin/activity-logs',
                 label: 'Activity Logs',
                 component: <ActivityLogs />,
-                icon: <Activity size={14} />
-            }
-        ]
-    },
-    {
-        category: 'System',
-        icon: <Settings size={18} />,
-        routes: [
-            {
-                path: '/admin/settings',
-                label: 'Settings',
-                component: <AdminSettings />,
-                icon: <Settings size={14} />
-            },
-            {
-                path: '/admin/test',
-                label: 'Test Page',
-                component: <TestPage />,
                 icon: <Activity size={14} />
             }
         ]

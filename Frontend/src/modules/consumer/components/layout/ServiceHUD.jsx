@@ -65,12 +65,12 @@ const ServiceHUD = () => {
                             <span className="text-[9px] font-black uppercase tracking-[0.2em] text-black/30">
                                 {liveBooking?.service?.name || "Service Active"}
                             </span>
-                            <div className="w-1 h-1 rounded-full bg-black/10" />
+                            <div className="w-1 h-1 rounded-full bg-white/10" />
                             <span className="text-[9px] font-black uppercase tracking-widest text-brand animate-pulse">
                                 {statusLabel}
                             </span>
                         </div>
-                        <h4 className="text-[12px] font-[1000] text-black truncate uppercase tracking-tight">
+                        <h4 className="text-[12px] font-[1000] text-white truncate uppercase tracking-tight">
                             {liveBooking?.provider?.name ? `Specialist: ${liveBooking.provider.name}` : "Finding your specialist..."}
                         </h4>
                     </div>

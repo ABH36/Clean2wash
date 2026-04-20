@@ -6,10 +6,12 @@ import {
     ShieldCheck, Lock,
     X, Timer, Navigation, Phone, MessageSquare,
     AlertTriangle, Search, CreditCard, Play,
-    Loader2, Check, Map, Settings, Zap, ArrowRight
+    Loader2, Check, Map, Settings, Zap, ArrowRight,
+    ShieldAlert, Plus
 } from 'lucide-react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
+import { useTheme } from '../../../context/ThemeContext';
 import { useGeoLocation } from '../../../hooks/useGeoLocation';
 import GoogleMapBox from '../../../components/common/GoogleMapBox';
 import bookingAPI, { serviceAPI, spareDriverAPI, subscriptionAPI, vehicleAPI } from '../../../utils/api';
@@ -17,6 +19,7 @@ import { socketService } from '../../../utils/socket';
 import MobileLayout from '../components/layout/MobileLayout';
 import { toast } from 'react-hot-toast';
 import Header from '../../../components/common/Header';
+import FareEstimator from '../../../components/booking/FareEstimator';
 
 // 🏎️ Chauffeur Service Visuals
 import pointImg from '../../../assets/chauffeur/point.png';
@@ -417,6 +420,7 @@ const SpareDriverBooking = () => {
         vehicles, vehiclesLoading, refreshStats, getUser,
         getRazorpayKey, createPaymentOrder, verifyPayment 
     } = useAuth();
+    const { isDarkMode, toggleTheme } = useTheme();
 
     // 🛡️ Proactive Redirect: Force users with 0 vehicles to Garaj
     useEffect(() => {
@@ -552,6 +556,8 @@ const SpareDriverBooking = () => {
         }
     }, [vehicleIdFromUrl, vehicles]);
     const [activeBookingId, setActiveBookingId] = useState(() => {
+        const urlId = searchParams.get('bookingId');
+        if (urlId) return urlId;
         return sessionStorage.getItem('chauffeur_active_booking_id') || null;
     });
     const [driverLocation, setDriverLocation] = useState(null);
@@ -565,6 +571,19 @@ const SpareDriverBooking = () => {
     const [useSubscription, setUseSubscription] = useState(false);
     const [isSettlingPayment, setIsSettlingPayment] = useState(false);
     const [driverSweepTick, setDriverSweepTick] = useState(0);
+    
+    // 🎯 NEW: Real-time Fare Estimation
+    const [calculatedPricing, setCalculatedPricing] = useState(null);
+    const [pricingError, setPricingError] = useState(null);
+    
+    // 🚀 NEW: Real-time Tracking Enhancements (Rapido-style)
+    const [routePath, setRoutePath] = useState([]);
+    const [routeInfo, setRouteInfo] = useState({ distance: '', duration: '', durationValue: 0 });
+    const [driverDistance, setDriverDistance] = useState(0);
+    const [isSocketConnected, setIsSocketConnected] = useState(true);
+    const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
+    const locationQueueRef = useRef([]);
+    const routeCalculationTimerRef = useRef(null);
 
     useEffect(() => {
         if (destination) {
@@ -994,6 +1013,31 @@ const SpareDriverBooking = () => {
 
             const socket = socketService.getSocket();
             if (socket) {
+                // 🚀 NEW: Connection Status Monitoring
+                socket.on('connect', () => {
+                    console.log('[SpareDriver] Socket Connected');
+                    setIsSocketConnected(true);
+                    
+                    // Flush queued location updates
+                    if (locationQueueRef.current.length > 0) {
+                        console.log(`[SpareDriver] Flushing ${locationQueueRef.current.length} queued updates`);
+                        locationQueueRef.current.forEach(update => {
+                            socket.emit('update_consumer_location', update);
+                        });
+                        locationQueueRef.current = [];
+                    }
+                });
+
+                socket.on('disconnect', () => {
+                    console.log('[SpareDriver] Socket Disconnected');
+                    setIsSocketConnected(false);
+                });
+
+                socket.on('connect_error', (error) => {
+                    console.error('[SpareDriver] Connection Error:', error);
+                    setIsSocketConnected(false);
+                });
+
                 // Listen for driver pulses
                 const handleLocationPulse = (data = {}) => {
                     console.log('[SpareDriver] Telemetry Pulse:', data);
@@ -1078,6 +1122,9 @@ const SpareDriverBooking = () => {
             return () => {
                 const socket = socketService.getSocket();
                 if (socket) {
+                    socket.off('connect');
+                    socket.off('disconnect');
+                    socket.off('connect_error');
                     socket.off('location_updated');
                     socket.off('locationUpdate');
                     socket.off('booking_status_updated');
@@ -1104,13 +1151,22 @@ const SpareDriverBooking = () => {
 
         watchId = navigator.geolocation.watchPosition(
             (position) => {
-                socket.emit('update_consumer_location', {
+                const locationUpdate = {
                     bookingId: activeBookingId,
                     location: {
                         lat: position.coords.latitude,
                         lng: position.coords.longitude
                     }
-                });
+                };
+
+                // 🚀 NEW: Offline-aware location broadcasting
+                if (isSocketConnected && socket.connected) {
+                    socket.emit('update_consumer_location', locationUpdate);
+                } else {
+                    // Queue for later when connection restored
+                    locationQueueRef.current.push(locationUpdate);
+                    console.log('[SpareDriver] Location queued (offline)');
+                }
             },
             (error) => console.error('Consumer live location pulse failed:', error),
             { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
@@ -1121,7 +1177,94 @@ const SpareDriverBooking = () => {
                 navigator.geolocation.clearWatch(watchId);
             }
         };
-    }, [activeBookingId, phase]);
+    }, [activeBookingId, phase, isSocketConnected]);
+
+    // 🚀 NEW: Route Polyline & ETA Calculation (Rapido-style)
+    useEffect(() => {
+        // Only calculate route when driver location is available and we're in active phases
+        if (!driverLocation || !userCoords || ![PHASES.BOOKING_CONFIRMED, PHASES.TRIP_ACTIVE].includes(phase)) {
+            setRoutePath([]);
+            setRouteInfo({ distance: '', duration: '', durationValue: 0 });
+            return undefined;
+        }
+
+        // Debounce route calculation to avoid excessive API calls
+        if (routeCalculationTimerRef.current) {
+            clearTimeout(routeCalculationTimerRef.current);
+        }
+
+        routeCalculationTimerRef.current = setTimeout(() => {
+            if (!window.google?.maps?.DirectionsService) {
+                console.warn('[SpareDriver] Google Maps Directions API not loaded');
+                return;
+            }
+
+            setIsCalculatingRoute(true);
+            const directionsService = new window.google.maps.DirectionsService();
+
+            directionsService.route({
+                origin: driverLocation,
+                destination: userCoords,
+                travelMode: window.google.maps.TravelMode.DRIVING,
+                drivingOptions: {
+                    departureTime: new Date(),
+                    trafficModel: 'bestguess' // Consider traffic for accurate ETA
+                }
+            }, (result, status) => {
+                setIsCalculatingRoute(false);
+
+                if (status === 'OK' && result.routes[0]) {
+                    const route = result.routes[0];
+                    const leg = route.legs[0];
+
+                    // Extract polyline path
+                    const path = route.overview_path.map(point => ({
+                        lat: point.lat(),
+                        lng: point.lng()
+                    }));
+
+                    setRoutePath(path);
+
+                    // Get ETA with traffic consideration
+                    const duration = leg.duration_in_traffic || leg.duration;
+                    const durationMinutes = Math.ceil(duration.value / 60);
+
+                    setRouteInfo({
+                        distance: leg.distance.text,
+                        duration: duration.text,
+                        durationValue: durationMinutes
+                    });
+
+                    console.log('[SpareDriver] Route calculated:', {
+                        distance: leg.distance.text,
+                        duration: duration.text,
+                        pathPoints: path.length
+                    });
+                } else {
+                    console.error('[SpareDriver] Route calculation failed:', status);
+                    // Fallback: Draw straight line
+                    setRoutePath([driverLocation, userCoords]);
+                }
+            });
+        }, 2000); // Debounce 2 seconds
+
+        return () => {
+            if (routeCalculationTimerRef.current) {
+                clearTimeout(routeCalculationTimerRef.current);
+            }
+        };
+    }, [driverLocation, userCoords, phase]);
+
+    // 🚀 NEW: Distance Calculation (using existing function)
+    useEffect(() => {
+        if (!driverLocation || !userCoords) {
+            setDriverDistance(0);
+            return;
+        }
+
+        const distance = calculateDistanceKm(driverLocation, userCoords);
+        setDriverDistance(distance);
+    }, [driverLocation, userCoords]);
 
     // ── Session Restoration ──
     useEffect(() => {
@@ -1141,7 +1284,7 @@ const SpareDriverBooking = () => {
             }
         };
         restoreSession();
-    }, [activeBookingId, selectedServiceKind]);
+    }, [activeBookingId]);
 
     useEffect(() => {
         if (
@@ -1359,10 +1502,34 @@ const SpareDriverBooking = () => {
             alert("Please select your travel destination");
             return;
         }
+        
+        // Check if location is in serviceable zone
+        if (pickupLocation?.lat && pickupLocation?.lng) {
+            try {
+                const zoneCheck = await fetch(
+                    `/api/zones/check-location?latitude=${pickupLocation.lat}&longitude=${pickupLocation.lng}&service=spareDriver`
+                );
+                const zoneData = await zoneCheck.json();
+                
+                if (!zoneData.data?.available) {
+                    toast.error(zoneData.data?.reason || 'Service not available in this area');
+                    setIsProcessing(false);
+                    return;
+                }
+            } catch (error) {
+                console.error('Zone check failed:', error);
+                // Continue with booking if zone check fails (graceful degradation)
+            }
+        }
+        
         setIsProcessing(true);
         try {
             const multiplier = getVehicleMultiplier(selectedVehicle, vehicleTypes);
-            const amount = estimatedTotal;
+            
+            // Use calculated pricing from FareEstimator if available, otherwise fallback to estimated
+            const amount = calculatedPricing?.totalAmount || calculatedPricing?.total || estimatedTotal;
+            const baseFare = calculatedPricing?.baseFare || calculatedPricing?.baseAmount || selectedType.basePrice;
+            
             const selectedVehicleId = selectedVehicle?._id || selectedVehicle?.id;
             const liveScheduleSnapshot = bookingMode === 'instant'
                 ? getInstantScheduleSnapshot()
@@ -1375,15 +1542,22 @@ const SpareDriverBooking = () => {
                     name: selectedType.title,
                     category: 'Chauffeur',
                     type: 'sparedriver',
-                    basePrice: selectedType.basePrice,
+                    basePrice: baseFare,
                     duration: bookingDetails.duration
                 },
                 pricing: {
-                    baseAmount: selectedType.basePrice,
+                    baseAmount: baseFare,
                     vehicleMultiplier: multiplier,
                     totalAmount: amount,
                     initialPaidAmount: amount,
-                    currency: 'INR'
+                    currency: 'INR',
+                    // Include detailed pricing breakdown if available
+                    ...(calculatedPricing && {
+                        gst: calculatedPricing.gst,
+                        discount: calculatedPricing.discount || calculatedPricing.scheduledDiscount,
+                        surgeMultiplier: calculatedPricing.surgeMultiplier,
+                        breakdown: calculatedPricing
+                    })
                 },
                 schedule: {
                     type: bookingMode,
@@ -1546,11 +1720,6 @@ const SpareDriverBooking = () => {
                     navigate(-1);
                 } else {
                     setPhase(prev => {
-                        if (prev === PHASES.CONFIRM_VEHICLE) return PHASES.BOOKING_DETAILS;
-                        if (prev === PHASES.CHECKOUT) {
-                            // If we came from Home with a vehicle, go back to details, then Home
-                            return PHASES.BOOKING_DETAILS;
-                        }
                         return PHASES.BOOKING_DETAILS;
                     });
                 }
@@ -1558,323 +1727,386 @@ const SpareDriverBooking = () => {
         />
     );
 
-
-    const renderBookingDetails = () => (
-        <div className="flex-1 flex flex-col bg-[#FBF8EF] min-h-screen">
-            {/* 1. Elite Service Header - Integrated & Compact */}
-            <div className="px-4 py-3 bg-white border-b border-black/05 flex items-center gap-3">
-                <div className="w-12 h-12 bg-[#FBF8EF] rounded-2xl flex items-center justify-center border border-black/05 shadow-sm overflow-hidden p-1">
-                    <img 
-                        src={SERVICE_CARD_IMAGES[selectedServiceKind] || pointImg} 
-                        className="w-full h-full object-contain" 
-                        alt={selectedType?.title}
-                    />
-                </div>
-                <div className="flex-1">
-                    <h3 className="text-[18px] font-[1000] text-[#0F172A] tracking-tighter uppercase leading-none">
-                        {selectedType?.title || 'Point To Point'}
-                    </h3>
-                    <p className="text-[9px] font-bold text-[#FF9900] uppercase tracking-widest mt-1">Premium Chauffeur Service</p>
-                </div>
-                <div className="px-2.5 py-1 bg-black/05 rounded-full border border-black/05">
-                    <span className="text-[8px] font-black text-[#0F172A] uppercase tracking-widest">₹{selectedType?.basePrice} Start</span>
-                </div>
-            </div>
-
-            <div className="px-4 py-4 space-y-5">
-                {/* 2. Premium Booking Mode Toggle */}
-                <div className="p-1 bg-white border border-black/05 rounded-xl flex gap-1 shadow-sm">
-                    <button
-                        onClick={() => setBookingDetails((prev) => ({ ...prev, bookingMode: 'instant' }))}
-                        className={`flex-1 h-9 rounded-lg text-[9px] font-[1000] uppercase tracking-widest transition-all duration-300 ${bookingMode === 'instant' ? 'bg-[#0F172A] text-white shadow-md' : 'bg-transparent text-[#0F172A]/30'}`}
-                    >
-                        Book Now
-                    </button>
-                    <button
-                        onClick={() => setBookingDetails((prev) => ({ ...prev, bookingMode: 'scheduled' }))}
-                        className={`flex-1 h-9 rounded-lg text-[9px] font-[1000] uppercase tracking-widest transition-all duration-300 ${bookingMode === 'scheduled' ? 'bg-[#0F172A] text-white shadow-md' : 'bg-transparent text-[#0F172A]/30'}`}
-                    >
-                        Schedule
-                    </button>
-                </div>
-
-                {/* 3. Date/Time Picker for Scheduled */}
-                <AnimatePresence>
-                    {bookingMode === 'scheduled' && (
-                        <motion.div 
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="grid grid-cols-2 gap-3 overflow-hidden"
-                        >
-                            <div className="bg-white rounded-2xl p-4 border border-black/05 shadow-sm">
-                                <span className="text-[8px] font-black text-black/20 uppercase tracking-[0.2em] block mb-1">Pick Date</span>
-                                <input
-                                    type="date"
-                                    value={bookingDetails.date}
-                                    onChange={(e) => setBookingDetails({ ...bookingDetails, date: e.target.value })}
-                                    className="w-full text-[13px] font-black bg-transparent border-none p-0 outline-none text-[#0F172A] cursor-pointer"
-                                />
-                            </div>
-                            <div className="bg-white rounded-2xl p-4 border border-black/05 shadow-sm">
-                                <span className="text-[8px] font-black text-black/20 uppercase tracking-[0.2em] block mb-1">Pick Time</span>
-                                <input
-                                    type="time"
-                                    value={bookingDetails.time}
-                                    onChange={(e) => setBookingDetails({ ...bookingDetails, time: e.target.value })}
-                                    className="w-full text-[13px] font-black bg-transparent border-none p-0 outline-none text-[#0F172A] cursor-pointer"
-                                />
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {/* 4. Luxury Address Row */}
-                <div className="bg-white rounded-[20px] border border-black/05 shadow-sm overflow-hidden">
-                    <div 
-                        onClick={() => navigate('/map')}
-                        className="flex items-center gap-3 p-3.5 active:bg-black/02 transition-all cursor-pointer border-b border-black/05"
-                    >
-                        <div className="w-8 h-8 rounded-full bg-[#0F172A]/05 flex items-center justify-center text-[#0F172A]">
-                            <MapPin size={16} strokeWidth={2.5} />
-                        </div>
-                        <div className="flex-1 overflow-hidden">
-                            <p className="text-[7.5px] font-[1000] text-black/20 uppercase tracking-[0.2em] mb-0.5">Current Pickup</p>
-                            <p className="text-[12px] font-black text-[#0F172A] truncate">
-                                {selectedAddress?.street || addresses?.find(a => a.isPrimary)?.street || addresses?.[0]?.street || 'Current Location'}
-                            </p>
-                        </div>
-                        <ChevronRight size={14} className="text-black/10" />
-                    </div>
-
-                    {requiresDestination && (
-                        <div 
-                            onClick={() => navigate('/map?from=chauffeur&type=destination')}
-                            className="flex items-center gap-3 p-3.5 active:bg-black/02 transition-all cursor-pointer"
-                        >
-                            <div className="w-8 h-8 rounded-full bg-[#FF9900]/10 flex items-center justify-center text-[#FF9900]">
-                                <Navigation size={16} strokeWidth={2.5} />
-                            </div>
-                            <div className="flex-1 overflow-hidden">
-                                <p className="text-[7.5px] font-[1000] text-black/20 uppercase tracking-[0.2em] mb-0.5">Set Destination</p>
-                                <p className="text-[12px] font-black text-[#0F172A] truncate">
-                                    {destination?.street || 'Where To?'}
-                                </p>
-                            </div>
-                            <ChevronRight size={14} className="text-black/10" />
-                        </div>
-                    )}
-                </div>
-
-                {/* 5. Modern Duration Selector */}
-                {durationOptions.length > 0 && (
-                    <div className="space-y-3">
-                        <label className="text-[9px] font-black text-black/30 uppercase tracking-[0.3em] flex items-center gap-2 px-1">
-                            <Clock size={12} className="text-[#FF9900]" />
-                            Select Chauffeur Duration
-                        </label>
-                        <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-hide">
-                            {durationOptions.map((d) => (
-                                <button
-                                    key={d}
-                                    onClick={() => setBookingDetails({ ...bookingDetails, duration: d })}
-                                    className={`flex-shrink-0 px-6 h-12 rounded-2xl text-[11px] font-[1000] uppercase transition-all duration-300 border ${bookingDetails.duration === d 
-                                        ? 'bg-[#0F172A] text-white border-[#0F172A] shadow-lg scale-[1.05]' 
-                                        : 'bg-white text-black/30 border-black/05 hover:border-black/10'}`}
-                                >
-                                    {d}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* 6. Booking Beneficiary Selector */}
-                <div className="space-y-3">
-                    <label className="text-[9px] font-black text-black/30 uppercase tracking-[0.3em] flex items-center gap-2 px-1">
-                        <User size={12} className="text-[#FF9900]" />
-                        Who is this driver for?
-                    </label>
-                    <div className="flex gap-3 px-1">
-                        {['Own', 'Family / Others'].map((option) => (
-                            <button
-                                key={option}
-                                onClick={() => setBookingDetails(prev => ({ ...prev, bookingFor: option }))}
-                                className={`flex-1 h-12 rounded-2xl text-[11px] font-[1000] uppercase transition-all duration-300 border flex items-center justify-center gap-2 ${bookingDetails.bookingFor === option 
-                                    ? 'bg-[#0F172A] text-white border-[#0F172A] shadow-md scale-[1.02]' 
-                                    : 'bg-white text-black/30 border-black/05 hover:bg-black/02'}`}
-                            >
-                                <div className={`w-1.5 h-1.5 rounded-full ${bookingDetails.bookingFor === option ? 'bg-[#FF9900]' : 'bg-transparent border border-black/10'}`} />
-                                {option}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                {/* 6. Dynamic Service Insights & Price Engine Details */}
-                <div className="space-y-4 pt-2">
-                    <label className="text-[9px] font-black text-black/30 uppercase tracking-[0.3em] flex items-center gap-2 px-1">
-                        <Info size={12} className="text-[#FF9900]" />
-                        Service Policy & Insights
-                    </label>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                        {/* 💰 Wallet Requirement Card */}
-                        <div className="bg-white rounded-[24px] p-4 border border-black/05 shadow-sm space-y-2 relative overflow-hidden group">
-                             <div className="absolute top-0 right-0 w-12 h-12 bg-emerald-500/5 rounded-bl-[30px] -mr-3 -mt-3" />
-                             <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                                    <CreditCard size={12} />
-                                </div>
-                                <span className="text-[8px] font-black text-black/20 uppercase tracking-widest">Entry Limit</span>
-                             </div>
-                             <p className="text-[14px] font-[1000] text-[#0F172A] uppercase tracking-tight">
-                                Min {formatInr(commercialRules.minimumWalletBalance)}
-                             </p>
-                             <p className="text-[7.5px] font-bold text-black/30 uppercase leading-none">Min wallet balance required</p>
-                        </div>
-
-                        {/* ⏱️ Waiting Charge Card */}
-                        <div className="bg-white rounded-[24px] p-4 border border-black/05 shadow-sm space-y-2 relative overflow-hidden group">
-                             <div className="absolute top-0 right-0 w-12 h-12 bg-blue-500/5 rounded-bl-[30px] -mr-3 -mt-3" />
-                             <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                                    <Timer size={12} />
-                                </div>
-                                <span className="text-[8px] font-black text-black/20 uppercase tracking-widest">Post-Grace</span>
-                             </div>
-                             <p className="text-[14px] font-[1000] text-[#0F172A] uppercase tracking-tight">
-                                {formatInr(commercialRules.waitChargePerMinute)}/min
-                             </p>
-                             <p className="text-[7.5px] font-bold text-black/30 uppercase leading-none">After {commercialRules.waitingGraceMinutes}m grace</p>
-                        </div>
-
-                        {/* 🌙 Night Allowance Card */}
-                        <div className="bg-white rounded-[24px] p-4 border border-black/05 shadow-sm space-y-2 relative overflow-hidden group">
-                             <div className="absolute top-0 right-0 w-12 h-12 bg-indigo-500/5 rounded-bl-[30px] -mr-3 -mt-3" />
-                             <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                                    <Clock size={12} />
-                                </div>
-                                <span className="text-[8px] font-black text-black/30 uppercase tracking-widest leading-none">Night Fee</span>
-                             </div>
-                             <p className="text-[14px] font-[1000] text-[#0F172A] uppercase tracking-tight">
-                                {formatInr(commercialRules.nightAllowance)}
-                             </p>
-                             <p className="text-[7.5px] font-bold text-black/30 uppercase leading-none">10 PM - 06 AM SLOTS</p>
-                        </div>
-
-                        {/* 🛣️ Outstation Allowance Card */}
-                        {isOutstationService && (
-                            <div className="bg-white rounded-[24px] p-4 border border-black/05 shadow-sm space-y-2 relative overflow-hidden group">
-                             <div className="absolute top-0 right-0 w-12 h-12 bg-orange-500/5 rounded-bl-[30px] -mr-3 -mt-3" />
-                             <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center">
-                                    <MapPin size={12} />
-                                </div>
-                                <span className="text-[8px] font-black text-black/20 uppercase tracking-widest">Food & Stay</span>
-                             </div>
-                             <p className="text-[14px] font-[1000] text-[#0F172A] uppercase tracking-tight">
-                                {formatInr(commercialRules.outstationAllowancePerDay)}/day
-                             </p>
-                             <p className="text-[7.5px] font-bold text-black/30 uppercase leading-none">Pilot Daily Allowance</p>
-                        </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* 6. Elite Bottom Checkout Bar */}
-            {/* 7. Unified Slim Luxury Action Bar */}
-            <div className="fixed bottom-[90px] left-0 right-0 z-[100] px-5">
-                <div className="max-w-[430px] mx-auto">
-                    <div className="bg-[#0F172A] rounded-[26px] p-2 pr-2 pl-6 shadow-[0_24px_48px_rgba(0,0,0,0.3)] border border-white/10 flex items-center justify-between overflow-hidden relative group">
-                        {/* Interactive Sparkle Effect */}
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/05 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+    const renderServiceType = () => (
+        <div className={`flex-1 flex flex-col transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#FFFDF5]'}`}>
+            <div className="px-5 py-6 space-y-6 pb-32">
+                <div className="grid grid-cols-1 gap-4">
+                    {SERVICE_TYPES.map((service) => {
+                        const kind = service.kind || normalizeServiceKind(service);
+                        const isSelected = selectedType?.id === service.id;
                         
-                        <div className="flex flex-col">
-                            <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em] mb-0.5">Total Est.</span>
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-[#FF9900] text-[13px] font-[1000]">₹</span>
-                                <span className="text-[22px] font-[1000] text-white tracking-tighter tabular-nums leading-none">
-                                    {estimatedTotal}
-                                </span>
-                            </div>
+                        return (
+                            <motion.button
+                                key={service.id}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => {
+                                    setSelectedType(buildSelectedType(service));
+                                    setPhase(PHASES.BOOKING_DETAILS);
+                                }}
+                                className={`relative overflow-hidden rounded-[2rem] border p-5 text-left transition-all duration-500 ${
+                                    isSelected 
+                                        ? isDarkMode ? 'bg-[#FF9900]/10 border-[#FF9900]/50 shadow-2xl shadow-[#FF9900]/10' : 'bg-[#0F172A] border-[#0F172A] shadow-xl'
+                                        : isDarkMode ? 'bg-white/05 border-white/05 hover:bg-white/[0.08]' : 'bg-white border-black/05 hover:border-black/10 shadow-sm'
+                                }`}
+                            >
+                                <div className="flex items-center justify-between relative z-10">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
+                                            isSelected ? 'bg-[#FF9900] text-[#0F172A]' : isDarkMode ? 'bg-white/10 text-white/40' : 'bg-black/05 text-black/40'
+                                        }`}>
+                                            {kind === 'point' ? <Navigation size={24} /> :
+                                             kind === 'hourly' ? <Clock size={24} /> :
+                                             kind === 'full' ? <Star size={24} fill="currentColor" /> :
+                                             <MapPin size={24} />}
+                                        </div>
+                                        <div>
+                                            <h4 className={`text-[16px] font-[1000] uppercase tracking-tight leading-none mb-1.5 ${
+                                                isSelected ? 'text-white' : isDarkMode ? 'text-white' : 'text-[#0F172A]'
+                                            }`}>
+                                                {service.title}
+                                            </h4>
+                                            <p className={`text-[9px] font-bold uppercase tracking-widest leading-none ${
+                                                isSelected ? 'text-white/40' : isDarkMode ? 'text-white/20' : 'text-[#0F172A]/30'
+                                            }`}>
+                                                {service.subtitle}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className={`text-[8px] font-black uppercase tracking-widest block mb-1 ${
+                                            isSelected ? 'text-[#FF9900]' : isDarkMode ? 'text-white/20' : 'text-[#0F172A]/30'
+                                        }`}>Starts from</span>
+                                        <p className={`text-[20px] font-black leading-none ${
+                                            isSelected ? 'text-white' : isDarkMode ? 'text-white' : 'text-[#0F172A]'
+                                        }`}>
+                                            ₹{service.basePrice}
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                {isSelected && (
+                                    <div className="absolute top-0 right-0 p-2">
+                                        <div className="w-2 h-2 bg-[#FF9900] rounded-full" />
+                                    </div>
+                                )}
+                            </motion.button>
+                        );
+                    })}
+                </div>
+                
+                <div className={`rounded-[2rem] p-6 border relative overflow-hidden ${
+                    isDarkMode ? 'bg-orange-500/10 border-orange-500/20' : 'bg-orange-50 border-orange-100'
+                }`}>
+                    <div className="relative z-10 flex items-center justify-between">
+                        <div>
+                            <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-2 leading-none ${isDarkMode ? 'text-orange-400' : 'text-[#FF9900]'}`}>Luxury Protocol</p>
+                            <h3 className={`text-xl font-black tracking-tight leading-tight ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
+                                Verified Elite<br />Chauffeurs
+                            </h3>
                         </div>
-
-                        <motion.button
-                            whileTap={{ scale: 0.97 }}
-                            onClick={() => {
-                                if (selectedVehicle) {
-                                    setPhase(PHASES.CHECKOUT);
-                                } else {
-                                    setPhase(PHASES.CONFIRM_VEHICLE);
-                                }
-                            }}
-                            className="h-[52px] px-7 bg-[#FF9900] rounded-[20px] flex items-center gap-3 shadow-lg shadow-[#FF9900]/10 active:shadow-none transition-all"
-                        >
-                            <span className="text-[12px] font-[1000] text-[#0F172A] uppercase tracking-wider">Continue</span>
-                            <div className="w-7 h-7 bg-[#0F172A]/10 rounded-full flex items-center justify-center">
-                                <ArrowRight size={16} className="text-[#0F172A]" strokeWidth={3} />
-                            </div>
-                        </motion.button>
+                        <ShieldCheck size={48} className={`${isDarkMode ? 'text-orange-500' : 'text-[#FF9900]'} opacity-20`} />
                     </div>
                 </div>
             </div>
         </div>
     );
 
-    const renderConfirmVehicle = () => (
-        <div className="flex-1 flex flex-col bg-gradient-to-b from-[#FFFDF5] to-[#FEF3C7] min-h-screen">
-            <div className="px-5 pt-6 pb-3 border-b border-[#0F172A]/05">
+    const renderBookingDetails = () => (
+        <div className={`flex-1 flex flex-col transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#FFFDF5]'}`}>
+            <div className={`px-5 pt-6 pb-3 border-b sticky top-0 z-[100] backdrop-blur-md transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D]/80 border-white/05' : 'bg-white/80 border-black/05'}`}>
                 <div className="flex items-center justify-between">
-                    <div>
-                        <h3 className="text-[18px] font-black text-[#0F172A] tracking-tighter leading-none uppercase">Garage Select</h3>
-                        <p className="text-[8px] font-bold text-[#0F172A]/30 uppercase tracking-[0.2em] mt-1">STEP 2/3 • VEHICLE MATCH</p>
+                    <div className="flex items-center gap-3">
+                        <button 
+                            onClick={() => setPhase(PHASES.SERVICE_TYPE)} 
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-all ${
+                                isDarkMode ? 'bg-white/05 border-white/05 text-white' : 'bg-black/05 border-black/05 text-black'
+                            }`}
+                        >
+                            <ChevronLeft size={16} />
+                        </button>
+                        <div>
+                            <h3 className={`text-[18px] font-black tracking-tighter leading-none uppercase ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>Booking info</h3>
+                            <p className={`text-[8px] font-bold uppercase tracking-[0.2em] mt-1 ${isDarkMode ? 'text-white/20' : 'text-[#0F172A]/30'}`}>STEP 1/3 • PROTOCOL DETAILS</p>
+                        </div>
+                    </div>
+                    <motion.button 
+                        whileTap={{ scale: 0.9 }}
+                        className={`w-9 h-9 rounded-2xl flex items-center justify-center border shadow-sm transition-all ${
+                            isDarkMode ? 'bg-orange-500/10 border-orange-500/20 text-[#FF9900]' : 'bg-[#FF9900]/05 border-transparent text-[#FF9900]'
+                        }`}
+                    >
+                        <Zap size={16} fill="currentColor" />
+                    </motion.button>
+                </div>
+            </div>
+
+            <div className="px-5 py-6 space-y-6 pb-32 overflow-y-auto">
+                {/* 1. Mode Selector */}
+                <div className={`p-1.5 rounded-2xl flex items-center gap-1.5 border shadow-inner transition-colors duration-300 ${
+                    isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'
+                }`}>
+                    {['instant', 'scheduled'].map((mode) => (
+                        <button
+                            key={mode}
+                            onClick={() => setBookingDetails({ ...bookingDetails, bookingMode: mode })}
+                            className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${
+                                bookingMode === mode 
+                                    ? isDarkMode ? 'bg-white/10 text-white shadow-lg' : 'bg-[#0F172A] text-white shadow-lg'
+                                    : isDarkMode ? 'text-white/20 hover:text-white/40' : 'text-black/30 hover:text-black/50'
+                            }`}
+                        >
+                            {mode}
+                        </button>
+                    ))}
+                </div>
+
+                {/* 2. Date/Time (Scheduled) */}
+                <AnimatePresence>
+                    {bookingMode === 'scheduled' && (
+                        <motion.div 
+                            initial={{ height: 0, opacity: 0, scale: 0.95 }}
+                            animate={{ height: 'auto', opacity: 1, scale: 1 }}
+                            exit={{ height: 0, opacity: 0, scale: 0.95 }}
+                            className="grid grid-cols-2 gap-2 overflow-hidden"
+                        >
+                            <label className={`rounded-xl p-2 px-3 border flex flex-col gap-0.5 cursor-pointer transition-all ${
+                                isDarkMode ? 'bg-white/05 border-white/05 active:bg-white/[0.08]' : 'bg-black/05 border-black/05 active:bg-black/[0.08]'
+                            }`}>
+                                <span className={`text-[6px] font-black tracking-[0.2em] flex items-center gap-1 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>
+                                    <Calendar size={7} /> Select date
+                                </span>
+                                <input
+                                    type="date"
+                                    value={bookingDetails.date}
+                                    onChange={(e) => setBookingDetails({ ...bookingDetails, date: e.target.value })}
+                                    className={`bg-transparent border-none p-0 outline-none text-[10px] font-bold w-full mt-0.5 ${isDarkMode ? 'text-white' : 'text-black'}`}
+                                />
+                            </label>
+                            <label className={`rounded-xl p-2 px-3 border flex flex-col gap-0.5 cursor-pointer transition-all ${
+                                isDarkMode ? 'bg-white/05 border-white/05 active:bg-white/[0.08]' : 'bg-black/05 border-black/05 active:bg-black/[0.08]'
+                            }`}>
+                                <span className={`text-[6px] font-black tracking-[0.2em] flex items-center gap-1 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>
+                                    <Clock size={7} /> Select time
+                                </span>
+                                <input
+                                    type="time"
+                                    value={bookingDetails.time}
+                                    onChange={(e) => setBookingDetails({ ...bookingDetails, time: e.target.value })}
+                                    className={`bg-transparent border-none p-0 outline-none text-[10px] font-bold w-full mt-0.5 ${isDarkMode ? 'text-white' : 'text-black'}`}
+                                />
+                            </label>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* 3. Address Picker */}
+                <div className="relative">
+                    <div className={`absolute left-[23px] top-[30px] bottom-[30px] w-[1px] border-r border-dashed ${isDarkMode ? 'bg-white/05 border-white/10' : 'bg-black/05 border-black/10'}`} />
+                    <div className="space-y-2">
+                        <div 
+                            onClick={() => navigate('/addresses?from=spare-driver')}
+                            className={`rounded-2xl p-2.5 pl-4 flex items-center gap-3 border active:scale-[0.98] transition-all cursor-pointer ${
+                                isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'
+                            }`}
+                        >
+                            <div className="w-6 h-6 rounded-full bg-[#0F172A] flex items-center justify-center text-white ring-4 ring-[#0F172A]/05">
+                                <MapPin size={10} strokeWidth={3} />
+                            </div>
+                            <div className="flex-1 overflow-hidden">
+                                <span className={`text-[6px] font-black tracking-widest ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Pickup</span>
+                                <p className={`text-[11px] font-black truncate leading-none mt-0.5 ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                                    {selectedAddress?.street || addresses?.find(a => a.isPrimary)?.street || addresses?.[0]?.street || 'Current location'}
+                                </p>
+                            </div>
+                            <ChevronRight size={10} className={`${isDarkMode ? 'text-white/20' : 'text-black/10'} mr-1`} />
+                        </div>
+
+                        {requiresDestination && (
+                            <div 
+                                onClick={() => navigate('/addresses?from=spare-driver&type=destination')}
+                                className={`rounded-2xl p-2.5 pl-4 flex items-center gap-3 border active:scale-[0.98] transition-all cursor-pointer ${
+                                    isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'
+                                }`}
+                            >
+                                <div className="w-6 h-6 rounded-full bg-[#FF9900] flex items-center justify-center text-[#0F172A] ring-4 ring-[#FF9900]/05">
+                                    <Navigation size={10} strokeWidth={3} />
+                                </div>
+                                <div className="flex-1 overflow-hidden">
+                                    <span className={`text-[6px] font-black tracking-widest ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Destination</span>
+                                    <p className={`text-[11px] font-black truncate leading-none mt-0.5 ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                                        {destination?.street || 'Select destination'}
+                                    </p>
+                                </div>
+                                <ChevronRight size={10} className={`${isDarkMode ? 'text-white/20' : 'text-black/10'} mr-1`} />
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* 4. Duration Selector */}
+                {durationOptions.length > 0 && (
+                    <div className="space-y-1.5">
+                        <div className="flex items-center justify-between px-1">
+                            <span className={`text-[7px] font-black tracking-widest ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Select duration</span>
+                            <span className="text-[6px] font-bold text-[#FF9900] tracking-widest">Base charge only</span>
+                        </div>
+                        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                            {durationOptions.map((d) => (
+                                <motion.button
+                                    key={d}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => setBookingDetails({ ...bookingDetails, duration: d })}
+                                    className={`flex-shrink-0 px-5 h-10 rounded-xl text-[9px] font-black transition-all duration-300 border ${bookingDetails.duration === d 
+                                        ? isDarkMode ? 'bg-white/10 text-white border-white/20 shadow-xl' : 'bg-[#0F172A] text-white border-[#0F172A] shadow-lg'
+                                        : isDarkMode ? 'bg-white/05 text-white/40 border-white/05 hover:border-white/10' : 'bg-black/05 text-black/30 border-black/05 hover:border-black/10'}`}
+                                >
+                                    {d}
+                                </motion.button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* 5. Split Policy Cards */}
+                <div className="grid grid-cols-2 gap-3">
+                    <div className={`rounded-2xl p-3.5 border space-y-1 group transition-colors ${
+                        isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'
+                    }`}>
+                        <div className="flex items-center gap-2">
+                             <div className={`w-5 h-5 rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-600'}`}>
+                                <CreditCard size={10} />
+                             </div>
+                             <span className={`text-[6px] font-black tracking-widest ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Wallet limit</span>
+                        </div>
+                        <p className={`text-[14px] font-black ${isDarkMode ? 'text-white' : 'text-black'}`}>{formatInr(commercialRules.minimumWalletBalance)}</p>
+                        <p className={`text-[6px] font-bold ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Entry threshold</p>
+                    </div>
+
+                    <div className={`rounded-2xl p-3.5 border space-y-1 group transition-colors ${
+                        isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'
+                    }`}>
+                        <div className="flex items-center gap-2">
+                             <div className={`w-5 h-5 rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-orange-500/10 text-orange-400' : 'bg-orange-50 text-orange-600'}`}>
+                                <Timer size={10} />
+                             </div>
+                             <span className={`text-[6px] font-black tracking-widest ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Waiting</span>
+                        </div>
+                        <p className={`text-[14px] font-black ${isDarkMode ? 'text-white' : 'text-black'}`}>{formatInr(commercialRules.waitChargePerMinute)}/m</p>
+                        <p className={`text-[6px] font-bold ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Post {commercialRules.waitingGraceMinutes}m grace</p>
+                    </div>
+                </div>
+
+                {/* 6. Night Protocol Banner */}
+                <div className={`rounded-[1.2rem] p-3.5 shadow-2xl relative overflow-hidden transition-all duration-300 border ${
+                    isDarkMode ? 'bg-white/10 border-white/10 shadow-black/40' : 'bg-[#0F172A] text-white border-transparent'
+                }`}>
+                    <div className="relative z-10 flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-[#FF9900] ${isDarkMode ? 'bg-white/10 border border-white/05' : 'bg-white/10 border border-white/10'}`}>
+                            <Clock size={16} strokeWidth={2.5} />
+                        </div>
+                        <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                                <h4 className={`text-[12px] font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-white'}`}>Night allowance</h4>
+                                <div className={`h-[1px] flex-1 ${isDarkMode ? 'bg-white/10' : 'bg-white/05'}`} />
+                                <span className="text-[11px] font-black text-[#FF9900]">+{formatInr(commercialRules.nightAllowance)}</span>
+                            </div>
+                            <p className={`text-[6px] font-bold tracking-widest mt-0.5 ${isDarkMode ? 'text-white/40' : 'text-white/40'}`}>Active between 10:00 PM - 06:00 AM slots</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div className="px-5 py-3 space-y-3">
-                <div className="bg-white rounded-xl p-4 border border-[#0F172A]/05 shadow-sm space-y-2">
-                    <label className="text-[8px] font-bold text-[#0F172A]/30 uppercase tracking-widest flex items-center gap-2">
+            {/* 7. Bottom Bar */}
+            <div className={`fixed bottom-0 left-0 right-0 z-[100] px-5 py-4 backdrop-blur-lg border-t safe-area-bottom transition-all ${
+                isDarkMode ? 'bg-[#0A0F0D]/90 border-white/05' : 'bg-white/90 border-black/05'
+            }`}>
+                <div className="max-w-[430px] mx-auto flex items-center justify-between">
+                    <div className="flex flex-col">
+                        <span className={`text-[7px] font-black tracking-widest mb-0.5 ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>Est. total</span>
+                        <p className={`text-[20px] font-black tracking-tighter leading-none ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                            <span className="text-[#F59E0B] text-[12px] mr-1">₹</span>{estimatedTotal}
+                        </p>
+                    </div>
+
+                    <motion.button
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => {
+                            if (selectedVehicle) {
+                                setPhase(PHASES.CHECKOUT);
+                            } else {
+                                setPhase(PHASES.CONFIRM_VEHICLE);
+                            }
+                        }}
+                        className="h-12 px-8 bg-[#F59E0B] rounded-xl flex items-center gap-3 shadow-lg active:shadow-none transition-all group/btn"
+                    >
+                        <span className="text-[11px] font-black text-[#0F172A] tracking-wider uppercase">Continue</span>
+                        <ArrowRight size={14} className="text-[#0F172A]" strokeWidth={4} />
+                    </motion.button>
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderConfirmVehicle = () => (
+        <div className={`flex-1 flex flex-col min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#FFFDF5]'}`}>
+            <div className={`px-5 pt-6 pb-3 border-b transition-all ${isDarkMode ? 'bg-[#0A0F0D]/80 border-white/05' : 'bg-white/80 border-black/05'}`}>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h3 className={`text-[18px] font-black tracking-tighter leading-none uppercase ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>Garage Select</h3>
+                        <p className={`text-[8px] font-bold uppercase tracking-[0.2em] mt-1 ${isDarkMode ? 'text-white/20' : 'text-[#0F172A]/30'}`}>STEP 2/3 • VEHICLE MATCH</p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="px-5 py-6 space-y-4">
+                <div className={`rounded-xl p-4 border space-y-3 ${isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'}`}>
+                    <label className={`text-[8px] font-bold uppercase tracking-widest flex items-center gap-2 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>
                         <Car size={10} className="text-[#FF9900]" />
                         MY VEHICLES
                     </label>
-                    <div className="grid grid-cols-1 gap-2 max-h-[160px] overflow-y-auto pr-1">
-                        {vehicles?.map((v) => (
-                            <button
-                                key={v._id || v.id}
-                                onClick={() => setSelectedVehicle(v)}
-                                className={`p-3 rounded-xl border transition-all flex items-center gap-3 text-left ${(selectedVehicle?._id || selectedVehicle?.id) === (v._id || v.id) ? 'bg-[#0F172A] border-[#0F172A]' : 'bg-white border-[#0F172A]/05'}`}
-                            >
-                                <div className="w-10 h-10 bg-[#0F172A]/03 rounded-lg overflow-hidden border border-[#0F172A]/05">
-                                    <img src={v.img} className="w-full h-full object-cover" />
-                                </div>
-                                <div className="flex-1">
-                                    <h4 className={`text-[12px] font-bold leading-none uppercase ${(selectedVehicle?._id || selectedVehicle?.id) === (v._id || v.id) ? 'text-white' : 'text-[#0F172A]/40'}`}>{v.brand}</h4>
-                                    <p className={`text-[8px] font-bold uppercase tracking-widest mt-1 ${(selectedVehicle?._id || selectedVehicle?.id) === (v._id || v.id) ? 'text-[#FF9900]' : 'text-[#0F172A]/20'}`}>{v.plate}</p>
-                                </div>
-                                {(selectedVehicle?._id || selectedVehicle?.id) === (v._id || v.id) && (
-                                    <Check size={14} strokeWidth={4} className="text-[#FF9900]" />
-                                )}
-                            </button>
-                        ))}
+                    <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-1 scrollbar-hide">
+                        {vehicles?.map((v) => {
+                            const isSelected = (selectedVehicle?._id || selectedVehicle?.id) === (v._id || v.id);
+                            return (
+                                <button
+                                    key={v._id || v.id}
+                                    onClick={() => setSelectedVehicle(v)}
+                                    className={`p-3 rounded-xl border transition-all flex items-center gap-3 text-left ${
+                                        isSelected 
+                                            ? isDarkMode ? 'bg-white/10 border-[#FF9900]/50 shadow-lg' : 'bg-[#0F172A] border-[#0F172A]' 
+                                            : isDarkMode ? 'bg-white/05 border-white/05 hover:border-white/10' : 'bg-white border-black/05 hover:border-black/10'
+                                    }`}
+                                >
+                                    <div className={`w-10 h-10 rounded-lg overflow-hidden border ${isDarkMode ? 'bg-white/10 border-white/10' : 'bg-black/05 border-black/05'}`}>
+                                        <img src={v.image} className="w-full h-full object-cover" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h4 className={`text-[12px] font-bold leading-none uppercase ${isSelected ? 'text-white' : isDarkMode ? 'text-white/40' : 'text-black/40'}`}>{v.brand}</h4>
+                                        <p className={`text-[8px] font-bold uppercase tracking-widest mt-1 ${isSelected ? 'text-[#FF9900]' : isDarkMode ? 'text-white/20' : 'text-black/20'}`}>{v.plate}</p>
+                                    </div>
+                                    {isSelected && (
+                                        <Check size={14} strokeWidth={4} className="text-[#FF9900]" />
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
-                <div className="bg-[#0F172A] text-white rounded-xl p-5 shadow-lg relative overflow-hidden">
+                <div className={`rounded-xl p-5 shadow-lg relative overflow-hidden border ${
+                    isDarkMode ? 'bg-white/10 border-white/10 shadow-black/40 text-white' : 'bg-[#0F172A] text-white border-transparent'
+                }`}>
                     <div className="relative z-10 flex items-center justify-between">
                         <div>
-                            <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest mb-1 leading-none">Trip Fee</p>
-                            <p className="text-2xl font-black text-white tracking-tighter leading-none">
+                            <p className="text-[8px] font-bold uppercase tracking-widest mb-1 leading-none opacity-40">Trip Fee</p>
+                            <p className="text-2xl font-black tracking-tighter leading-none">
                                 <span className="text-[#FF9900] mr-1">₹</span>{estimatedTotal}
                             </p>
                         </div>
                         <div className="text-right">
                             <div className="flex items-center gap-1.5 justify-end">
                                 <ShieldCheck size={12} className="text-[#FF9900]" />
-                                <span className="text-[9px] font-bold uppercase tracking-tight text-white/60">Verified Profile</span>
+                                <span className="text-[9px] font-bold uppercase tracking-tight opacity-60">Verified Profile</span>
                             </div>
                         </div>
                     </div>
@@ -1882,8 +2114,10 @@ const SpareDriverBooking = () => {
             </div>
 
             {/* Compact Sticky Footer */}
-            <div className="fixed bottom-[80px] left-0 right-0 z-50 px-5 px-safe">
-                <div className="max-w-[430px] mx-auto flex items-center gap-3 bg-[#0F172A] p-4 rounded-xl shadow-xl">
+            <div className={`fixed bottom-0 left-0 right-0 z-50 px-5 py-4 backdrop-blur-lg border-t safe-area-bottom transition-all ${
+                isDarkMode ? 'bg-[#0A0F0D]/90 border-white/05' : 'bg-white/90 border-black/05'
+            }`}>
+                <div className="max-w-[430px] mx-auto flex items-center gap-4 bg-[#0F172A] p-4 rounded-xl shadow-2xl shadow-black/50">
                     <div className="flex-shrink-0">
                         <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest leading-none mb-1">Estimated Total</p>
                         <p className="text-[18px] font-bold text-[#FF9900] tracking-tight leading-none">₹{estimatedTotal}</p>
@@ -1891,7 +2125,7 @@ const SpareDriverBooking = () => {
                     <button
                         onClick={() => setPhase(PHASES.CHECKOUT)}
                         disabled={!selectedVehicle}
-                        className="flex-1 h-12 bg-white text-[#0F172A] rounded-lg font-bold text-[11px] uppercase tracking-widest active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-20"
+                        className="flex-1 h-12 bg-white/10 text-white rounded-lg font-bold text-[11px] uppercase tracking-widest active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-20"
                     >
                         Review
                         <ChevronRight size={14} strokeWidth={3} className="text-[#FF9900]" />
@@ -1903,7 +2137,7 @@ const SpareDriverBooking = () => {
 
     const renderFindingDriver = () => {
         const driverAssigned = ['en_route', 'arrived'].includes(bookingDetails?.status);
-        // 🏎️ Simulated nearby drivers for Rapido vibe
+        // 🏎️ Nearby simulated pulse markers
         const nearbyDrivers = [
             { id: 1, lat: userCoords.lat + 0.003, lng: userCoords.lng + 0.002, rot: 45 },
             { id: 2, lat: userCoords.lat - 0.002, lng: userCoords.lng + 0.004, rot: 120 },
@@ -1912,8 +2146,8 @@ const SpareDriverBooking = () => {
         ];
 
         return (
-            <div className="min-h-screen bg-gray-950 flex flex-col relative overflow-hidden">
-                {/* 🗺️ Live Metadata Integration: Service-specific Telemetry */}
+            <div className={`min-h-screen flex flex-col relative overflow-hidden transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#FFFDF5]'}`}>
+                {/* 🗺️ Live Metadata Integration */}
                 <div className="absolute inset-0 z-0">
                     <GoogleMapBox
                         center={userCoords}
@@ -1926,8 +2160,7 @@ const SpareDriverBooking = () => {
                                     url: SERVICE_ASSETS.user,
                                     scaledSize: { width: 32, height: 32 },
                                     anchor: { x: 16, y: 32 }
-                                },
-                                infoContent: <div className="p-1 font-[1000] text-[9px] uppercase text-[#FF9900] tracking-widest">Your Terminal</div>
+                                }
                             },
                             ...(driverAssigned && animatedDriverLocation ? [{
                                 position: animatedDriverLocation,
@@ -1935,14 +2168,12 @@ const SpareDriverBooking = () => {
                                     url: SERVICE_ASSETS[selectedServiceKind]?.icon || SERVICE_ASSETS.point.icon,
                                     scaledSize: { width: 34, height: 34 },
                                     anchor: { x: 17, y: 17 }
-                                },
-                                infoContent: <div className="p-1 font-black text-[9px] uppercase text-green-500 tracking-widest">Driver Live</div>
+                                }
                             }] : nearbyDrivers.map(d => ({
                                 position: { lat: d.lat, lng: d.lng },
                                 icon: {
                                     url: SERVICE_ASSETS[selectedServiceKind]?.icon || SERVICE_ASSETS.point.icon,
                                     scaledSize: { width: 28, height: 28 },
-                                    rotation: d.rot,
                                     anchor: { x: 14, y: 14 }
                                 }
                             })))
@@ -1952,71 +2183,61 @@ const SpareDriverBooking = () => {
                                 center: userCoords,
                                 radius: driverAssigned ? 90 : 160,
                                 options: {
-                                    strokeColor: '#F29F05',
+                                    strokeColor: '#FF9900',
                                     strokeOpacity: 0.3,
                                     strokeWeight: 1,
-                                    fillColor: '#F29F05',
+                                    fillColor: '#FF9900',
                                     fillOpacity: driverAssigned ? 0.08 : 0.12
                                 }
-                            },
-                            ...(driverAssigned && animatedDriverLocation ? [{
-                                center: animatedDriverLocation,
-                                radius: 110,
-                                options: {
-                                    strokeColor: SERVICE_ASSETS[selectedServiceKind]?.color || SERVICE_ASSETS.point.color,
-                                    strokeOpacity: 0.45,
-                                    strokeWeight: 1.25,
-                                    fillColor: SERVICE_ASSETS[selectedServiceKind]?.color || SERVICE_ASSETS.point.color,
-                                    fillOpacity: 0.12
-                                }
-                            }] : [])
+                            }
                         ]}
-                        darkMode={true}
+                        darkMode={isDarkMode}
                     />
-                </div>
-
-                <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute top-[40%] left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-brand/5 rounded-full animate-pulse blur-3xl opacity-30" />
                 </div>
 
                 <div className="relative z-10 flex-1 flex flex-col items-center justify-between p-6 pb-12">
                     <div className="w-full flex items-center justify-between pt-4">
-                        <button onClick={handleCancelRequest} className="w-8 h-8 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white pointer-events-auto active:scale-90">
-                            <X size={16} />
+                        <button onClick={handleCancelRequest} className={`w-10 h-10 backdrop-blur-xl rounded-full flex items-center justify-center pointer-events-auto active:scale-90 shadow-lg ${
+                            isDarkMode ? 'bg-black/40 text-white border border-white/10' : 'bg-white/80 text-black border border-black/05'
+                        }`}>
+                            <X size={20} />
                         </button>
-                        <div className="px-4 py-1.5 bg-black/40 backdrop-blur-md border border-white/5 rounded-full flex items-center gap-2">
-                            <div className={`w-1.5 h-1.5 rounded-full animate-ping`} style={{ backgroundColor: SERVICE_ASSETS[selectedServiceKind]?.color || SERVICE_ASSETS.point.color }} />
-                            <span className="text-[9px] font-black text-white uppercase tracking-widest">
-                                {driverAssigned ? `${driverInfo?.name || 'Driver'} assigned` : `Searching ${selectedType?.title} grid`}
+                        <div className={`px-4 py-2 backdrop-blur-xl border rounded-full flex items-center gap-2 shadow-lg ${
+                            isDarkMode ? 'bg-black/40 border-white/10' : 'bg-white/80 border-black/05'
+                        }`}>
+                            <div className="w-2 h-2 rounded-full animate-ping bg-orange-500" />
+                            <span className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                                {driverAssigned ? `${driverInfo?.name || 'Chauffeur'} matched` : `Scanning local network`}
                             </span>
                         </div>
-                        <div className="w-8" />
+                        <div className="w-10" />
                     </div>
 
-                    <div className="text-center space-y-4">
+                    <div className="text-center space-y-6">
                         <div className="relative inline-block">
-                            <div className="absolute -inset-16 bg-brand/5 rounded-full animate-ping opacity-10" />
-                            <div className="absolute -inset-8 bg-brand/10 rounded-full animate-ping opacity-20" />
-                            <div className="relative w-28 h-28 bg-black/40 backdrop-blur-2xl border border-white/10 rounded-full flex items-center justify-center">
+                            <div className="absolute -inset-12 bg-orange-500/10 rounded-full animate-ping opacity-20" />
+                            <div className={`relative w-32 h-32 backdrop-blur-2xl border rounded-full flex items-center justify-center shadow-2xl transition-all ${
+                                isDarkMode ? 'bg-black/40 border-white/10' : 'bg-white/80 border-black/10'
+                            }`}>
                                 {driverAssigned ? (
                                     <div className="flex flex-col items-center">
-                                        <Navigation className="w-8 h-8 text-brand mb-2 animate-pulse" />
-                                        <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">
-                                            {bookingDetails?.status === 'arrived' ? 'Driver arrived' : 'On the way'}
+                                        <Navigation className="w-10 h-10 text-orange-500 mb-2 animate-bounce" />
+                                        <span className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/40' : 'text-black/30'}`}>
+                                            {bookingDetails?.status === 'arrived' ? 'Matched' : 'Incoming'}
                                         </span>
                                     </div>
                                 ) : (
                                     <>
                                         <div className="flex flex-col items-center">
-                                            <span className="text-3xl font-[1000] text-brand tabular-nums leading-none">{lookingTime}</span>
-                                            <span className="text-[7px] font-black text-white/40 uppercase tracking-widest mt-1">SECONDS</span>
+                                            <span className={`text-4xl font-[1000] tabular-nums leading-none ${isDarkMode ? 'text-white' : 'text-black'}`}>{lookingTime}</span>
+                                            <span className={`text-[8px] font-black uppercase tracking-widest mt-1 ${isDarkMode ? 'text-white/30' : 'text-black/30'}`}>SECONDS</span>
                                         </div>
                                         <svg className="absolute inset-0 w-full h-full -rotate-90">
-                                            <circle cx="56" cy="56" r="52" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="4" />
+                                            <circle cx="64" cy="64" r="60" fill="none" className="stroke-black/5" strokeWidth="4" />
                                             <motion.circle
-                                                cx="56" cy="56" r="52" fill="none" stroke="#F29F05" strokeWidth="4"
-                                                strokeDasharray="327"
-                                                animate={{ strokeDashoffset: 327 - (327 * (180 - lookingTime)) / 180 }}
+                                                cx="64" cy="64" r="60" fill="none" stroke="#FF9900" strokeWidth="4"
+                                                strokeDasharray="377"
+                                                animate={{ strokeDashoffset: 377 - (377 * (180 - lookingTime)) / 180 }}
                                                 transition={{ duration: 1, ease: "linear" }}
                                             />
                                         </svg>
@@ -2025,21 +2246,23 @@ const SpareDriverBooking = () => {
                             </div>
                         </div>
                         <div>
-                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#FF9900]/10 border border-[#FF9900]/20 rounded-full mb-3">
-                                <Radar className={`w-3 h-3 text-[#FF9900] ${driverAssigned ? '' : 'animate-spin'}`} />
-                                <span className="text-[8px] font-black text-[#FF9900] uppercase tracking-[0.2em]">
+                            <div className={`inline-flex items-center gap-3 px-4 py-1.5 rounded-full mb-4 border transition-all ${
+                                isDarkMode ? 'bg-orange-500/10 border-orange-500/20 text-orange-400' : 'bg-orange-50 border-orange-100 text-orange-600'
+                            }`}>
+                                <Radar className={`w-4 h-4 ${driverAssigned ? '' : 'animate-spin'}`} />
+                                <span className="text-[9px] font-black uppercase tracking-[0.2em]">
                                     {driverAssigned
-                                        ? (bookingDetails?.status === 'arrived' ? 'Driver reached pickup' : 'Driver accepted request')
-                                        : (lookingTime > 120 ? 'Phase 1: Local grid (1.0 km)' : 'Phase 2: Expanded network scan')}
+                                        ? (bookingDetails?.status === 'arrived' ? 'Chauffeur at Pickup' : 'Establishing Secure Line')
+                                        : (lookingTime > 120 ? 'Level 1: Local Grid (2.0km)' : 'Level 2: Network Expansion')}
                                 </span>
                             </div>
-                            <h3 className="text-2xl font-[1000] text-white uppercase tracking-tighter leading-none mb-2">
-                                {driverAssigned ? <>Driver<br />assigned</> : <>Requesting<br />chauffeurs</>}
+                            <h3 className={`text-3xl font-[1000] uppercase tracking-tighter leading-tight ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                                {driverAssigned ? <>System<br />matched</> : <>Scanning for<br />chauffeurs</>}
                             </h3>
-                            <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] max-w-[200px] mx-auto leading-relaxed h-8">
+                            <p className={`text-[11px] font-bold uppercase tracking-widest leading-relaxed mt-4 ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>
                                 {driverAssigned
-                                    ? (bookingDetails?.status === 'arrived'
-                                        ? 'Your chauffeur is waiting at the pickup point.'
+                                    ? (bookingDetails?.status === 'arrived' 
+                                        ? 'Your elite chauffeur has arrived at the location.' 
                                         : 'Your chauffeur is on the way. Live telemetry is now active.')
                                     : (lookingTime > 150 ? 'Pinging nearby driver terminals...' :
                                         lookingTime > 120 ? 'Connecting to local telemetry...' :
@@ -2122,263 +2345,204 @@ const SpareDriverBooking = () => {
         );
     };
 
+    const handleIncreaseTip = async (amount) => {
+        if (!activeBookingId) return;
+        try {
+            setIsProcessing(true);
+            const res = await bookingAPI.patch(`/bookings/${activeBookingId}/pricing`, { tipAmount: (bookingDetails?.pricing?.tipAmount || 0) + amount });
+            if (res.status === 'success') {
+                syncBookingSnapshot(res.data.booking);
+                toast.success(`Fare increased by ${formatInr(amount)} to attract drivers!`, { icon: '💰' });
+            }
+        } catch (err) {
+            console.error('Failed to increase tip:', err);
+            toast.error(err.message || 'Could not update fare');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
     const renderFindingDriverLite = () => {
         const driverAssigned = ['en_route', 'arrived'].includes(bookingDetails?.status);
         const serviceAccent = SERVICE_ASSETS[selectedServiceKind]?.color || SERVICE_ASSETS.point.color;
         const searchProgress = driverAssigned ? 1 : Math.min(1, (LOOKUP_WINDOW_SECONDS - lookingTime) / LOOKUP_WINDOW_SECONDS);
-        const nearbyDrivers = Array.from({ length: 5 }, (_, index) => {
-            const baseAngle = (driverSweepTick * 0.35) + (index * 1.2);
-            const latOffset = Math.cos(baseAngle) * (0.0018 + (index * 0.00035));
-            const lngOffset = Math.sin(baseAngle) * (0.0023 + (index * 0.0003));
+        // nearby phantom drivers for visual scale
+        const nearbyDrivers = [
+            { id: 1, lat: userCoords.lat + 0.002, lng: userCoords.lng + 0.001 },
+            { id: 2, lat: userCoords.lat - 0.0015, lng: userCoords.lng + 0.0025 },
+        ];
 
-            return {
-                id: index + 1,
-                lat: userCoords.lat + latOffset,
-                lng: userCoords.lng + lngOffset
-            };
-        });
-
-        const searchPhaseLabel = driverAssigned
-            ? (bookingDetails?.status === 'arrived' ? 'Driver reached your pickup' : 'Driver matched and moving')
-            : (lookingTime > 120
-                ? 'Scanning nearby chauffeur ring'
-                : lookingTime > 60
-                    ? 'Expanding driver discovery'
-                    : 'Locking the fastest nearby captain');
-
-        const searchPhaseHint = driverAssigned
-            ? (bookingDetails?.status === 'arrived'
-                ? 'Your chauffeur has reached the pickup point. Share the OTP when ready.'
-                : 'Live location is active now. Your chauffeur is approaching your pickup.')
-            : (lookingTime > 120
-                ? 'Nearby premium drivers are being matched around your pickup zone.'
-                : lookingTime > 60
-                    ? 'The network is checking the wider area for the best available driver.'
-                    : 'Final availability sweep is running to secure your booking quickly.');
         const liveSearchPolyline = driverAssigned && animatedDriverLocation
             ? [{
                 path: [animatedDriverLocation, userCoords],
-                options: {
-                    strokeColor: serviceAccent,
-                    strokeOpacity: 0.95,
-                    strokeWeight: 4,
-                    geodesic: true,
-                    icons: [{
-                        icon: {
-                            path: 'M 0,-1 0,1',
-                            strokeOpacity: 0.7,
-                            scale: 3
-                        },
-                        offset: '0',
-                        repeat: '12px'
-                    }]
-                }
-            }]
-            : [];
+                options: { strokeColor: serviceAccent, strokeOpacity: 0.95, strokeWeight: 4, icons: [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 0.7, scale: 3 }, offset: '0', repeat: '12px' }] }
+            }] : [];
 
         return (
-            <div className="min-h-screen bg-[#f7f6f1] flex flex-col relative overflow-hidden">
-                <div className="relative h-[82svh] min-h-[34rem] overflow-hidden">
+            <div className={`min-h-screen flex flex-col relative overflow-hidden transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#FFFDF5]'}`}>
+                {/* 1. Full Screen Map with Glass Overlay */}
+                <div className="relative flex-1 min-h-[300px] overflow-hidden">
                     <GoogleMapBox
                         center={userCoords}
                         zoom={15}
+                        containerStyle={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
                         markers={[
                             {
                                 position: userCoords,
-                                icon: {
-                                    url: USER_AND_CAR_MARKER,
-                                    scaledSize: { width: 50, height: 58 },
-                                    anchor: { x: 25, y: 50 }
-                                },
-                                infoContent: <div className="p-1 font-black text-[9px] uppercase text-brand tracking-widest">You + Vehicle</div>
+                                icon: { url: USER_AND_CAR_MARKER, scaledSize: { width: 44, height: 50 }, anchor: { x: 22, y: 44 } }
                             },
                             ...(driverAssigned && animatedDriverLocation ? [{
                                 position: animatedDriverLocation,
-                                icon: {
-                                    url: createDriverMarkerIcon(serviceAccent),
-                                    scaledSize: { width: 46, height: 56 },
-                                    anchor: { x: 23, y: 46 }
-                                },
-                                infoContent: <div className="p-1 font-black text-[9px] uppercase text-green-500 tracking-widest">Driver Live</div>
+                                icon: { url: createDriverMarkerIcon(serviceAccent), scaledSize: { width: 40, height: 48 }, anchor: { x: 20, y: 40 } }
                             }] : nearbyDrivers.map((driver) => ({
                                 position: { lat: driver.lat, lng: driver.lng },
-                                icon: {
-                                    url: createDriverMarkerIcon(serviceAccent),
-                                    scaledSize: { width: 36, height: 44 },
-                                    anchor: { x: 18, y: 36 }
-                                }
+                                icon: { url: createDriverMarkerIcon(serviceAccent), scaledSize: { width: 32, height: 40 }, anchor: { x: 16, y: 32 } }
                             })))
                         ]}
                         circles={[
-                            {
-                                center: userCoords,
-                                radius: driverAssigned ? 90 : 160,
-                                options: {
-                                    strokeColor: serviceAccent,
-                                    strokeOpacity: 0.2,
-                                    strokeWeight: 1,
-                                    fillColor: serviceAccent,
-                                    fillOpacity: driverAssigned ? 0.06 : 0.08
-                                }
-                            },
-                            ...(driverAssigned && animatedDriverLocation ? [{
-                                center: animatedDriverLocation,
-                                radius: 110,
-                                options: {
-                                    strokeColor: serviceAccent,
-                                    strokeOpacity: 0.25,
-                                    strokeWeight: 1.25,
-                                    fillColor: serviceAccent,
-                                    fillOpacity: 0.08
-                                }
-                            }] : [])
+                            { center: userCoords, radius: 150, options: { strokeColor: serviceAccent, strokeOpacity: 0.1, strokeWeight: 1, fillColor: serviceAccent, fillOpacity: 0.05 } }
                         ]}
                         polylines={liveSearchPolyline}
-                        darkMode={false}
+                        darkMode={isDarkMode}
                     />
-
-                    <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-white/90 via-white/40 to-transparent pointer-events-none" />
-                    <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#f7f6f1] via-[#f7f6f1]/45 to-transparent pointer-events-none" />
-
-                    <div className="absolute inset-x-0 top-0 z-10 px-4 pt-4">
-                        <div className="flex items-start justify-between gap-3">
-                            <button
-                                onClick={driverAssigned ? () => navigate(`/spare-driver/support?bookingId=${activeBookingId}`) : handleCancelRequest}
-                                className="w-11 h-11 rounded-full bg-white/92 backdrop-blur-xl border border-black/[0.06] shadow-[0_14px_30px_rgba(15,23,42,0.12)] flex items-center justify-center text-black active:scale-95"
-                            >
-                                {driverAssigned ? <MessageSquare size={18} /> : <X size={18} />}
-                            </button>
-
-                            <div className="rounded-full bg-white/92 backdrop-blur-xl border border-black/[0.06] shadow-[0_18px_40px_rgba(15,23,42,0.12)] px-4 py-2.5 text-center">
-                                <p className="text-[8px] font-black text-black/30 uppercase tracking-[0.28em] leading-none">
-                                    {driverAssigned ? 'Chauffeur locked' : 'Searching nearby'}
-                                </p>
-                                <p className="text-[11px] font-[1000] text-black uppercase tracking-[0.12em] leading-none mt-2">
-                                    {driverAssigned ? `${driverInfo?.name || 'Driver'} assigned` : selectedType?.title || 'Spare driver'}
-                                </p>
-                            </div>
-
-                            <button
-                                onClick={handleSOSNavigation}
-                                className="w-11 h-11 rounded-full bg-[#111827] text-white shadow-[0_18px_36px_rgba(15,23,42,0.22)] flex items-center justify-center active:scale-95"
-                            >
-                                <AlertTriangle size={18} />
-                            </button>
-                        </div>
+                    
+                    {/* Map Header Overlay */}
+                    <div className="absolute top-10 inset-x-4 z-50 flex items-center justify-between">
+                         <button onClick={handleCancelRequest} className={`w-10 h-10 backdrop-blur-xl rounded-full shadow-lg flex items-center justify-center transition-all border ${
+                            isDarkMode ? 'bg-black/60 border-white/10 text-white' : 'bg-white/90 border-black/05 text-black'
+                         }`}>
+                             <X size={20} />
+                         </button>
+                         <div className={`backdrop-blur-xl px-5 py-2 rounded-full shadow-lg border flex items-center gap-2 ${
+                            isDarkMode ? 'bg-black/60 border-white/10' : 'bg-white/90 border-black/05'
+                         }`}>
+                             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                             <span className={`text-[10px] font-black tracking-widest ${isDarkMode ? 'text-white/80' : 'text-black/60'}`}>SCANNING FOR CHAUFFEUR</span>
+                         </div>
+                         <button onClick={handleSOSNavigation} className="w-10 h-10 bg-black rounded-full shadow-lg flex items-center justify-center text-white active:scale-95 border border-white/10">
+                             <ShieldAlert size={18} />
+                         </button>
                     </div>
                 </div>
 
-                <div className="relative z-10 -mt-3 flex-1 rounded-t-[2.1rem] bg-white border-t border-black/[0.04] shadow-[0_-20px_50px_rgba(15,23,42,0.12)] px-5 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.9rem)]">
-                    <div className="mx-auto mb-3 h-1.5 w-16 rounded-full bg-black/[0.08]" />
-
-                    <div className="flex items-center justify-between gap-3">
-                        <div>
-                            <p className="text-[8px] font-black text-black/25 uppercase tracking-[0.28em] leading-none">Booking status</p>
-                            <h3 className="text-[1.35rem] font-[1000] text-[#101828] tracking-tight leading-none mt-2">
-                                {driverAssigned ? 'Driver assigned' : 'Requesting chauffeurs'}
-                            </h3>
-                        </div>
-                        <div className="rounded-2xl bg-[#FFF7ED] border border-[#FED7AA] px-3 py-2 text-right min-w-[110px]">
-                            <p className="text-[8px] font-black text-[#F97316] uppercase tracking-[0.24em] leading-none">Trip state</p>
-                            <p className="text-[11px] font-[1000] text-[#111827] uppercase tracking-[0.16em] leading-none mt-2">
-                                {driverAssigned ? (bookingDetails?.status === 'arrived' ? 'Arrived' : 'En route') : 'Searching'}
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="mt-4">
-                        <div className="h-1.5 w-full rounded-full bg-black/[0.06] overflow-hidden">
-                            <motion.div
-                                className="h-full rounded-full bg-gradient-to-r from-[#F97316] via-[#F29F05] to-[#FACC15]"
-                                animate={{ width: `${Math.max(12, searchProgress * 100)}%` }}
-                                transition={{ duration: 0.9, ease: 'easeInOut' }}
-                            />
-                        </div>
-                        <div className="flex items-center justify-between mt-2">
-                            <div className="inline-flex items-center gap-2">
-                                <Radar className={`w-3.5 h-3.5 ${driverAssigned ? '' : 'animate-spin'}`} style={{ color: serviceAccent }} />
-                                <span className="text-[9px] font-black text-black/55 uppercase tracking-[0.22em]">
-                                    {searchPhaseLabel}
-                                </span>
+                {/* 2. Bottom Information Deck */}
+                <div className={`h-auto rounded-t-[2.5rem] shadow-2xl relative z-10 -mt-8 flex flex-col overflow-hidden border-t transition-colors duration-300 ${
+                    isDarkMode ? 'bg-[#0A0F0D] border-white/05 shadow-black/80' : 'bg-white border-black/05 shadow-black/10'
+                }`}>
+                    <div className={`w-12 h-1 rounded-full mx-auto mt-3 mb-4 ${isDarkMode ? 'bg-white/10' : 'bg-black/05'}`} />
+                    
+                    <div className="px-6 pb-2">
+                        {/* Status Header */}
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 className={`text-[22px] font-[1000] tracking-tight leading-none ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
+                                    {driverAssigned ? 'Captain Linked' : 'Searching Grid'}
+                                </h3>
+                                <div className="flex items-center gap-2 mt-2">
+                                    <div className={`w-2 h-2 rounded-full ${driverAssigned ? 'bg-emerald-500' : 'bg-[#FF9900] animate-pulse'}`} />
+                                    <span className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/30' : 'text-black/40'}`}>{searchPhaseLabel}</span>
+                                </div>
                             </div>
-                            {!driverAssigned && (
-                                <span className="text-[9px] font-black text-black/30 uppercase tracking-[0.22em]">
-                                    Live Search
-                                </span>
-                            )}
+                            <div className={`border rounded-2xl px-5 py-3 text-right ${isDarkMode ? 'bg-white/05 border-white/05' : 'bg-orange-50 border-orange-100'}`}>
+                                <span className="text-[7px] font-black text-[#FF9900] tracking-widest block mb-0.5 uppercase">Est. Amount</span>
+                                <span className={`text-xl font-[1000] leading-none ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>{formatInr(estimatedTotal + (bookingDetails?.pricing?.tipAmount || 0))}</span>
+                            </div>
                         </div>
-                        <p className="text-[10px] font-bold text-black/45 leading-relaxed mt-3">
-                            {searchPhaseHint}
-                        </p>
-                    </div>
 
-                    <div className="mt-3 grid grid-cols-2 gap-3">
-                        <div className="rounded-[1.35rem] border border-black/[0.05] bg-[#FCFCFD] px-3.5 py-3">
-                            <p className="text-[8px] font-black text-black/25 uppercase tracking-[0.22em] leading-none">Pickup base</p>
-                            <p className="text-[11px] font-[1000] text-[#101828] uppercase tracking-[0.08em] leading-snug mt-2">
-                                {selectedAddress?.label || bookingDetails?.pickupLocation?.address || 'Current pickup location'}
-                            </p>
-                        </div>
-                        <div className="rounded-[1.35rem] border border-black/[0.05] bg-[#FCFCFD] px-3.5 py-3">
-                            <p className="text-[8px] font-black text-black/25 uppercase tracking-[0.22em] leading-none">
-                                {driverAssigned ? 'Driver route' : 'Elite protocol'}
-                            </p>
-                            <p className="text-[11px] font-[1000] text-[#101828] uppercase tracking-[0.08em] leading-snug mt-2">
-                                {driverAssigned ? 'Live route linked to your pickup' : 'Only verified drivers are being pinged'}
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="mt-3 space-y-3">
-                        {driverAssigned ? (
-                            <div className="rounded-[1.6rem] bg-[#111827] text-white px-4 py-4 shadow-[0_18px_40px_rgba(15,23,42,0.18)]">
-                                <div className="flex items-start justify-between gap-4">
-                                    <div>
-                                        <p className="text-[8px] font-black text-white/45 uppercase tracking-[0.28em] leading-none">Share OTP at pickup</p>
-                                        <p className="text-[1.7rem] font-[1000] tracking-[0.42em] leading-none mt-3 pl-1">
-                                            {visibleSecurityPin}
-                                        </p>
+                        {/* Search Progress - Fast Pass */}
+                        {!driverAssigned && (
+                            <div className={`mb-6 p-5 rounded-[2rem] border relative overflow-hidden group ${
+                                isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/[0.03] border-black/05'
+                            }`}>
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF9900]/10 rounded-full -mr-16 -mt-16 blur-2xl opacity-50" />
+                                <div className="relative z-10">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <span className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>Priority Dispatch</span>
+                                        <div className="bg-[#FF9900]/10 px-3 py-1 rounded-full">
+                                            <span className="text-[9px] font-black text-[#FF9900]">EXPRESS MATCHING</span>
+                                        </div>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-[8px] font-black text-[#F29F05] uppercase tracking-[0.2em] leading-none">
-                                            {driverInfo?.name || 'Assigned driver'}
-                                        </p>
-                                        <p className="text-[9px] font-bold text-white/55 leading-relaxed mt-3 max-w-[110px]">
-                                            Your driver has accepted the request. Share the OTP only after pickup arrival.
-                                        </p>
+                                    <div className="flex gap-2">
+                                        {[20, 50, 100].map(tip => (
+                                            <button 
+                                                key={tip}
+                                                onClick={() => handleIncreaseTip(tip)}
+                                                className={`flex-1 h-12 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all border ${
+                                                    isDarkMode ? 'bg-white/05 border-white/05 text-white hover:border-[#FF9900]/40' : 'bg-white border-black/05 text-black hover:border-orange-200'
+                                                }`}
+                                            >
+                                                <span className="text-[14px] font-black">+{tip}</span>
+                                                <Plus size={14} className="text-[#FF9900]" />
+                                            </button>
+                                        ))}
                                     </div>
                                 </div>
                             </div>
-                        ) : (
-                            <button
-                                onClick={handleCancelRequest}
-                                className="w-full h-14 rounded-[1.35rem] bg-[#111827] text-white flex items-center justify-center gap-3 font-[1000] text-[12px] uppercase tracking-[0.24em] active:scale-[0.99] transition-transform"
-                            >
-                                <X size={18} />
-                                Cancel request
-                            </button>
                         )}
 
-                        <div className="grid grid-cols-[64px,1fr] gap-3">
-                            <button
+                        {/* Details Grid */}
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                             <div className={`rounded-2xl p-4 border flex items-center gap-4 ${isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'}`}>
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isDarkMode ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-500'}`}>
+                                    <MapPin size={18} />
+                                </div>
+                                <div className="flex-1 overflow-hidden">
+                                     <span className={`text-[7px] font-black uppercase tracking-widest block mb-0.5 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Pickup</span>
+                                     <p className={`text-[11px] font-black truncate leading-tight ${isDarkMode ? 'text-white' : 'text-black'}`}>{selectedAddress?.label || 'Pickup Terminal'}</p>
+                                </div>
+                             </div>
+                             <div className={`rounded-2xl p-4 border flex items-center gap-4 ${isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'}`}>
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isDarkMode ? 'bg-orange-500/10 text-orange-400' : 'bg-orange-50 text-[#FF9900]'}`}>
+                                    <Zap size={18} />
+                                </div>
+                                <div className="flex-1 overflow-hidden">
+                                     <span className={`text-[7px] font-black uppercase tracking-widest block mb-0.5 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Service</span>
+                                     <p className={`text-[11px] font-black truncate leading-tight ${isDarkMode ? 'text-white' : 'text-black'}`}>{selectedType?.title}</p>
+                                </div>
+                             </div>
+                        </div>
+
+                        {/* Security OTP */}
+                        {driverAssigned && (
+                            <div className="bg-black rounded-[2rem] p-6 mb-8 text-white relative overflow-hidden shadow-2xl border border-white/10">
+                                <div className="absolute right-0 top-0 h-full w-[40%] bg-gradient-to-l from-orange-500/10 to-transparent" />
+                                <div className="relative z-10 flex items-center justify-between">
+                                    <div>
+                                        <span className="text-[9px] font-black text-[#FF9900] uppercase tracking-widest">Security ID</span>
+                                        <h4 className="text-xl font-black tracking-tight mt-1">Pickup Pass</h4>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        {visibleSecurityPin.split('').map((char, i) => (
+                                            <div key={i} className="w-11 h-14 bg-white/10 rounded-2xl border border-white/10 flex items-center justify-center text-2xl font-black text-[#FF9900] shadow-inner shadow-black/40">
+                                                {char}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Bottom Action Area */}
+                    <div className={`p-5 pb-10 border-t transition-colors ${isDarkMode ? 'bg-[#0A0F0D] border-white/05' : 'bg-[#FFFDF5] border-black/05'}`}>
+                        <div className="flex gap-4">
+                            <button 
                                 onClick={handleSOSNavigation}
-                                className="h-14 rounded-[1.2rem] bg-[#EF4444] text-white flex items-center justify-center shadow-[0_18px_35px_rgba(239,68,68,0.22)] active:scale-95"
+                                className="w-16 h-16 bg-rose-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-rose-900/20 active:scale-95"
                             >
-                                <AlertTriangle size={22} />
+                                <AlertTriangle size={28} />
                             </button>
                             <button
-                                onClick={driverAssigned ? () => navigate(`/spare-driver/support?bookingId=${activeBookingId}`) : () => navigate(activeBookingId ? `/spare-driver/support?bookingId=${activeBookingId}` : '/spare-driver/support')}
-                                className="h-14 rounded-[1.2rem] border border-black/[0.06] bg-[#FCFCFD] flex items-center justify-between px-4 active:scale-[0.99] transition-transform"
+                                onClick={driverAssigned ? () => navigate(`/spare-driver/support?bookingId=${activeBookingId}`) : handleCancelRequest}
+                                className={`flex-1 h-16 rounded-2xl font-black text-[13px] uppercase tracking-[0.2em] shadow-xl transition-all flex items-center justify-center gap-3 active:scale-[0.98] ${
+                                    isDarkMode ? 'bg-white text-black shadow-black/80' : 'bg-[#0F172A] text-white shadow-black/30'
+                                }`}
                             >
-                                <div className="text-left">
-                                    <p className="text-[8px] font-black text-black/25 uppercase tracking-[0.22em] leading-none">
-                                        {driverAssigned ? 'Need help' : 'Support'}
-                                    </p>
-                                    <p className="text-[12px] font-[1000] text-[#101828] uppercase tracking-[0.08em] leading-none mt-2">
-                                        {driverAssigned ? 'Contact support' : 'Issue or emergency help'}
-                                    </p>
-                                </div>
-                                <ChevronRight size={18} className="text-black/35" />
+                                {driverAssigned ? (
+                                    <>Mission Support <ChevronRight size={18} className="text-[#FF9900]" /></>
+                                ) : (
+                                    <>Cancel Probe <X size={18} className="text-red-500" /></>
+                                )}
                             </button>
                         </div>
                     </div>
@@ -2401,86 +2565,93 @@ const SpareDriverBooking = () => {
         }
 
         return (
-        <div className="p-5 space-y-5">
-            <div className="flex flex-col items-center text-center py-4">
-                <motion.div
-                    initial={{ scale: 0 }} animate={{ scale: 1 }}
-                    className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500 mb-4 border border-emerald-100 shadow-lg shadow-emerald-500/5"
-                >
-                    <Calendar size={28} strokeWidth={2} />
-                </motion.div>
-                <h2 className="text-xl font-[1000] text-black uppercase tracking-tight leading-none mb-2">Booking scheduled</h2>
-                <div className="inline-flex items-center px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-md border border-emerald-100">
-                    <span className="text-[9px] font-black uppercase tracking-widest leading-none">{bookingDetails.date} @ {bookingDetails.time}</span>
-                </div>
-            </div>
-
-            <div className="bg-white rounded-[1.5rem] border border-black/[0.04] p-5 shadow-xl relative overflow-hidden">
-                <div className="flex items-center gap-4 relative z-10">
-                    <div className="w-14 h-14 bg-[#FF9900]/10 rounded-xl flex items-center justify-center text-[#FF9900] border border-[#FF9900]/20">
-                        <User size={24} />
-                    </div>
-                    <div>
-                        <h4 className="text-[15px] font-[1000] text-black uppercase tracking-tight leading-none mb-1">Elite chauffeur</h4>
-                        <p className="text-[9px] font-black text-black/20 uppercase tracking-widest flex items-center gap-1.5 leading-none">
-                            <span className="w-1 h-1 rounded-full bg-brand" /> Driver Details arriving soon
-                        </p>
-                        <p className="text-[9px] font-bold text-black/35 uppercase tracking-[0.15em] mt-2 leading-relaxed">
-                            Matching will begin about {CHAUFFEUR_DISPATCH_LEAD_MINUTES} minutes before departure.
-                        </p>
+            <div className={`flex-1 flex flex-col p-6 space-y-6 transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#FFFDF5]'}`}>
+                <div className="flex flex-col items-center text-center py-6">
+                    <motion.div
+                        initial={{ scale: 0 }} animate={{ scale: 1 }}
+                        className={`w-20 h-20 rounded-3xl flex items-center justify-center mb-6 shadow-xl transition-all ${
+                            isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-emerald-50 text-emerald-500 border border-emerald-100'
+                        }`}
+                    >
+                        <Calendar size={32} strokeWidth={2.5} />
+                    </motion.div>
+                    <h2 className={`text-2xl font-[1000] uppercase tracking-tight leading-none mb-3 ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>Booking scheduled</h2>
+                    <div className={`inline-flex items-center px-4 py-2 rounded-xl border transition-all ${
+                        isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                    }`}>
+                        <span className="text-[11px] font-black uppercase tracking-widest leading-none">{bookingDetails.date} @ {bookingDetails.time}</span>
                     </div>
                 </div>
 
-                <div className="mt-6 pt-5 border-t border-black/[0.03] grid grid-cols-2 gap-3">
-                    <div className="bg-gray-50/50 p-3 rounded-xl border border-black/[0.02] flex flex-col gap-1">
-                        <span className="text-[7px] font-black text-black/20 uppercase tracking-[0.2em] leading-none mb-0.5">Assigned car</span>
-                        <div className="flex items-center gap-1.5">
-                            <Car size={10} className="text-black/40" />
-                            <span className="text-[10px] font-black text-black uppercase leading-none truncate">{selectedVehicle?.brand} {selectedVehicle?.model}</span>
+                <div className={`rounded-[2rem] border p-6 shadow-2xl relative overflow-hidden transition-all ${
+                    isDarkMode ? 'bg-white/05 border-white/05 shadow-black/60' : 'bg-white border-black/05 shadow-black/10'
+                }`}>
+                    <div className="flex items-center gap-5 relative z-10">
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border transition-all ${
+                            isDarkMode ? 'bg-orange-500/10 text-orange-400 border-orange-500/10' : 'bg-[#FF9900]/10 text-[#FF9900] border-[#FF9900]/20'
+                        }`}>
+                            <User size={28} />
+                        </div>
+                        <div>
+                            <h4 className={`text-[16px] font-black uppercase tracking-tight leading-none mb-1.5 ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>Elite chauffeur</h4>
+                            <p className={`text-[9px] font-black uppercase tracking-widest flex items-center gap-2 leading-none ${isDarkMode ? 'text-white/40' : 'text-black/30'}`}>
+                                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" /> Final match incoming
+                            </p>
                         </div>
                     </div>
-                    <div className="bg-gray-50/50 p-3 rounded-xl border border-black/[0.02] flex flex-col gap-1">
-                        <span className="text-[7px] font-black text-black/20 uppercase tracking-[0.2em] leading-none mb-0.5">Estimated fare</span>
-                        <div className="flex items-center gap-1.5">
-                            <CreditCard size={10} className="text-black/40" />
-                            <span className="text-[10px] font-black text-black uppercase leading-none">{formatInr(bookingDetails?.pricing?.totalAmount || estimatedTotal)}</span>
+
+                    <div className={`mt-8 pt-6 border-t grid grid-cols-2 gap-4 ${isDarkMode ? 'border-white/05' : 'border-black/05'}`}>
+                        <div className={`p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'}`}>
+                            <span className={`text-[7px] font-black uppercase tracking-[0.2em] leading-none mb-2 block ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Car assigned</span>
+                            <div className="flex items-center gap-2">
+                                <Car size={12} className={isDarkMode ? 'text-white/40' : 'text-black/40'} />
+                                <span className={`text-[11px] font-black uppercase leading-none truncate ${isDarkMode ? 'text-white' : 'text-black'}`}>{selectedVehicle?.brand}</span>
+                            </div>
+                        </div>
+                        <div className={`p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'}`}>
+                            <span className={`text-[7px] font-black uppercase tracking-[0.2em] leading-none mb-2 block ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Est. fare</span>
+                            <div className="flex items-center gap-2">
+                                <CreditCard size={12} className={isDarkMode ? 'text-white/40' : 'text-black/40'} />
+                                <span className={`text-[11px] font-black uppercase leading-none ${isDarkMode ? 'text-white' : 'text-black'}`}>{formatInr(bookingDetails?.pricing?.totalAmount || estimatedTotal)}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div className="bg-blue-50 border border-blue-100 rounded-[1.5rem] p-4 space-y-2">
-                <p className="text-[8px] font-black text-blue-700 uppercase tracking-[0.25em]">Dispatch window</p>
-                <div className="flex items-center justify-between gap-4">
-                    <span className="text-[10px] font-bold text-blue-900/50 uppercase tracking-widest">Driver matching opens</span>
-                    <span className="text-[10px] font-black text-blue-900 uppercase tracking-tight">
-                        {matchingWindow.toLocaleString('en-IN', {
-                            day: '2-digit',
-                            month: 'short',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        })}
-                    </span>
+                <div className={`rounded-[2rem] p-5 space-y-3 transition-colors ${
+                    isDarkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-100'
+                }`}>
+                    <p className={`text-[8px] font-black uppercase tracking-[0.25em] ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>Dispatch window</p>
+                    <div className="flex items-center justify-between gap-4">
+                        <span className={`text-[10px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-white/40' : 'text-blue-900/50'}`}>matching begins at</span>
+                        <span className={`text-[10px] font-black uppercase tracking-tight ${isDarkMode ? 'text-blue-300' : 'text-blue-900'}`}>
+                            {matchingWindow.toLocaleString('en-IN', {
+                                day: '2-digit',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            })}
+                        </span>
+                    </div>
                 </div>
-                <p className="text-[8px] font-bold text-blue-900/40 uppercase tracking-[0.12em] leading-relaxed">
-                    We will hold your slot, notify admin, and start live driver assignment closer to the service time.
-                </p>
-            </div>
 
-            <button
-                onClick={() => navigate(activeBookingId ? `/spare-driver/history?bookingId=${activeBookingId}` : '/spare-driver/history')}
-                className="w-full bg-black text-white h-14 rounded-2xl font-black text-[13px] uppercase tracking-[0.2em] shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 mt-2"
-            >
-                View in history
-                <ChevronRight size={18} strokeWidth={3} />
-            </button>
-        </div>
-    );
+                <div className="pt-4 mt-auto">
+                    <button
+                        onClick={() => navigate(activeBookingId ? `/spare-driver/history?bookingId=${activeBookingId}` : '/spare-driver/history')}
+                        className={`w-full h-16 rounded-2xl font-black text-[13px] uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-3 active:scale-[0.98] ${
+                            isDarkMode ? 'bg-white text-black shadow-black/80' : 'bg-black text-white shadow-black/30'
+                        }`}
+                    >
+                        View in history
+                        <ChevronRight size={18} strokeWidth={3} />
+                    </button>
+                </div>
+            </div>
+        );
     };
 
-
     const renderTripActive = () => (
-        <div className="min-h-screen bg-gray-950 flex flex-col">
+        <div className={`min-h-screen flex flex-col transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#FFFDF5]'}`}>
             <div className="flex-1 relative">
                 {/* 🗺️ Live Mission Overlay */}
                 <div className="absolute inset-0 z-0">
@@ -2492,8 +2663,8 @@ const SpareDriverBooking = () => {
                                 position: userCoords,
                                 icon: {
                                     url: SERVICE_ASSETS.user,
-                                    scaledSize: { width: 20, height: 20 },
-                                    anchor: { x: 10, y: 10 }
+                                    scaledSize: { width: 24, height: 24 },
+                                    anchor: { x: 12, y: 12 }
                                 }
                             },
                             ...(animatedDriverLocation ? [{
@@ -2504,9 +2675,9 @@ const SpareDriverBooking = () => {
                                     anchor: { x: 21, y: 21 }
                                 },
                                 infoContent: (
-                                    <div className="p-1 font-outfit text-center">
-                                        <p className="text-[8px] font-black uppercase text-brand tracking-widest">Your Captain</p>
-                                        <p className="text-[10px] font-black text-black leading-none mt-1">{driverInfo?.name || 'En Route'}</p>
+                                    <div className={`p-1 text-center ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                                        <p className="text-[8px] font-black uppercase text-[#FF9900] tracking-widest">Your Captain</p>
+                                        <p className="text-[10px] font-black leading-none mt-1">{driverInfo?.name || 'En Route'}</p>
                                     </div>
                                 )
                             }] : [])
@@ -2516,94 +2687,128 @@ const SpareDriverBooking = () => {
                                 center: userCoords,
                                 radius: 85,
                                 options: {
-                                    strokeColor: '#F29F05',
+                                    strokeColor: '#FF9900',
                                     strokeOpacity: 0.35,
                                     strokeWeight: 1,
-                                    fillColor: '#F29F05',
+                                    fillColor: '#FF9900',
                                     fillOpacity: 0.08
                                 }
-                            },
-                            ...(animatedDriverLocation ? [{
-                                center: animatedDriverLocation,
-                                radius: 120,
-                                options: {
-                                    strokeColor: SERVICE_ASSETS[selectedServiceKind]?.color || SERVICE_ASSETS.point.color,
-                                    strokeOpacity: 0.4,
-                                    strokeWeight: 1.2,
-                                    fillColor: SERVICE_ASSETS[selectedServiceKind]?.color || SERVICE_ASSETS.point.color,
-                                    fillOpacity: 0.12
-                                }
-                            }] : [])
+                            }
                         ]}
-                        darkMode={true}
+                        polylines={routePath.length > 1 ? [{
+                            path: routePath,
+                            options: {
+                                strokeColor: '#FF9900',
+                                strokeOpacity: 0.9,
+                                strokeWeight: 5,
+                                geodesic: true
+                            }
+                        }] : []}
+                        darkMode={isDarkMode}
                     />
                 </div>
 
                 <div className="absolute top-10 left-4 right-4 z-20">
-                    <div className="bg-black/45 backdrop-blur-2xl border border-white/8 rounded-[1.6rem] p-3.5 flex items-center justify-between shadow-[0_24px_45px_rgba(0,0,0,0.24)]">
-                        <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 bg-brand/10 rounded-lg flex items-center justify-center">
-                                <Navigation size={18} className={`text-brand ${animatedDriverLocation ? 'animate-pulse' : ''}`} />
-                            </div>
-                            <div>
-                                <h4 className="text-[12px] font-black text-white uppercase tracking-tight leading-none mb-1">Live telemetry</h4>
-                                <p className="text-[8px] font-bold text-white/30 uppercase tracking-[0.2em] leading-none">
-                                    {driverLocation ? 'Driver is moving' : 'Waiting for GPS pulse...'}
-                                </p>
-                            </div>
+                    {/* Connection Status */}
+                    {!isSocketConnected && (
+                        <div className="mb-2 rounded-xl bg-red-500/95 backdrop-blur-xl border border-red-600/20 px-3 py-2 shadow-lg flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                            <span className="text-[9px] font-black text-white uppercase tracking-widest">Reconnecting...</span>
                         </div>
-                        <div className="px-2 py-1 bg-brand/20 text-brand border border-brand/20 rounded-md text-[8px] font-black uppercase tracking-widest leading-none">
-                            {bookingDetails?.status === 'arrived' ? 'Arrived' : 'En Route'}
+                    )}
+                    
+                    <div className={`backdrop-blur-2xl border rounded-[1.6rem] p-3.5 shadow-2xl transition-all duration-300 ${
+                        isDarkMode ? 'bg-black/60 border-white/10 shadow-black/40' : 'bg-white/80 border-black/05 shadow-black/10'
+                    }`}>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isDarkMode ? 'bg-orange-500/10 text-orange-400' : 'bg-[#FF9900]/10 text-[#FF9900]'}`}>
+                                    <Navigation size={20} className={animatedDriverLocation ? 'animate-pulse' : ''} />
+                                </div>
+                                <div>
+                                    <h4 className={`text-[12px] font-black uppercase tracking-tight leading-none mb-1.5 ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>Live telemetry</h4>
+                                    <p className={`text-[8px] font-bold uppercase tracking-[0.2em] leading-none ${isDarkMode ? 'text-white/30' : 'text-black/30'}`}>
+                                        {driverLocation ? 'Mission in progress' : 'Establishing GPS pulse...'}
+                                    </p>
+                                    
+                                    {driverLocation && driverDistance > 0 && (
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <span className="text-[10px] font-black text-blue-500">
+                                                {driverDistance < 1 
+                                                    ? `${Math.round(driverDistance * 1000)}m away` 
+                                                    : `${driverDistance.toFixed(1)}km away`}
+                                            </span>
+                                            {routeInfo.durationValue > 0 && (
+                                                <>
+                                                    <span className={`text-[9px] ${isDarkMode ? 'text-white/20' : 'text-black/20'}`}>•</span>
+                                                    <span className="text-[10px] font-black text-emerald-500">
+                                                        {routeInfo.durationValue} min arrival
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className={`px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest leading-none ${
+                                isDarkMode ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                            }`}>
+                                {bookingDetails?.status === 'arrived' ? 'Arrived' : 'En Route'}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div className="bg-white rounded-t-[2.75rem] p-6 space-y-5 shadow-[0_-24px_55px_rgba(15,23,42,0.1)] relative z-30 pb-8 border-t border-black/[0.04]">
-                <div className="w-10 h-1 bg-gray-100 rounded-full mx-auto mb-2" />
+            <div className={`rounded-t-[2.75rem] p-6 space-y-6 shadow-2xl relative z-30 pb-10 border-t transition-colors duration-300 ${
+                isDarkMode ? 'bg-[#0A0F0D] border-white/05 shadow-black/80' : 'bg-white border-black/05 shadow-black/10'
+            }`}>
+                <div className={`w-12 h-1 rounded-full mx-auto mb-2 ${isDarkMode ? 'bg-white/10' : 'bg-black/05'}`} />
 
                 <div className="flex items-center justify-between">
                     <div>
-                        <p className="text-[8px] font-black text-black/20 uppercase tracking-[0.25em] mb-1.5 leading-none">Session duration</p>
-                        <h4 className="text-3xl font-[1000] text-black tracking-tighter leading-none tabular-nums">{formatTime(elapsedTime)}</h4>
+                        <p className={`text-[8px] font-black uppercase tracking-[0.25em] mb-2 leading-none ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Session duration</p>
+                        <h4 className={`text-3xl font-[1000] tracking-tighter leading-none tabular-nums ${isDarkMode ? 'text-white' : 'text-black'}`}>{formatTime(elapsedTime)}</h4>
                     </div>
                     <div className="text-right">
-                        <div className="flex items-center justify-end gap-1.5 text-brand font-black text-[9px] uppercase tracking-widest">
-                            <span className="w-1.5 h-1.5 rounded-full bg-brand animate-ping" />
+                        <div className="flex items-center justify-end gap-1.5 text-orange-500 font-black text-[9px] uppercase tracking-widest">
+                            <span className="w-2 h-2 rounded-full bg-orange-500 animate-ping" />
                             Live session
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-[linear-gradient(180deg,#FFFFFF_0%,#F8FAFC_100%)] border border-black/[0.04] p-4 rounded-[1.75rem] flex items-center justify-between shadow-[0_14px_30px_rgba(15,23,42,0.05)]">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white rounded-lg overflow-hidden shadow-sm border border-black/[0.03]">
+                <div className={`p-4 rounded-[1.75rem] flex items-center justify-between border transition-all ${
+                    isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'
+                }`}>
+                    <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-xl overflow-hidden border ${isDarkMode ? 'border-white/10' : 'border-black/05'}`}>
                             <img src={driverInfo?.img} className="w-full h-full object-cover" />
                         </div>
                         <div>
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                                <p className="text-[11px] font-black text-black leading-none">{driverInfo?.name}</p>
+                            <div className="flex items-center gap-2 mb-1">
+                                <p className={`text-[13px] font-black leading-none ${isDarkMode ? 'text-white' : 'text-black'}`}>{driverInfo?.name}</p>
                                 {driverInfo?.isPremium && (
-                                    <div className="bg-brand/10 text-brand px-1.5 py-0.5 rounded-full flex items-center gap-0.5 border border-brand/20">
-                                        <ShieldCheck size={7} fill="currentColor" />
-                                        <span className="text-[6px] font-black uppercase tracking-tighter">Premium</span>
+                                    <div className="bg-[#FF9900]/10 text-[#FF9900] px-2 py-0.5 rounded-full flex items-center gap-1 border border-[#FF9900]/20">
+                                        <ShieldCheck size={8} fill="currentColor" />
+                                        <span className="text-[7px] font-black uppercase tracking-tighter">Elite</span>
                                     </div>
                                 )}
                             </div>
-                            <p className="text-[8px] font-bold text-black/20 uppercase tracking-widest">
-                                {driverInfo?.isPremium ? 'Elite Chauffeur' : 'Verified Chauffeur'}
+                            <p className={`text-[9px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>
+                                {driverInfo?.isPremium ? 'Hoora Master Chauffeur' : 'Verified Professional'}
                             </p>
                         </div>
                     </div>
                     {bookingDetails?.status === 'arrived' ? (
                         <div className="bg-brand/10 border border-brand/20 px-4 py-3 rounded-[1.5rem] text-center min-w-[118px] shadow-[0_12px_24px_rgba(242,159,5,0.12)]">
                             <p className="text-[7px] font-black text-brand uppercase tracking-widest mb-0.5">Start PIN</p>
-                            <p className="text-lg font-[1000] text-black tracking-[0.35em] pl-1">{visibleSecurityPin}</p>
+                            <p className="text-lg font-[1000] text-white tracking-[0.35em] pl-1">{visibleSecurityPin}</p>
                             <p className="text-[7px] font-bold text-black/35 uppercase tracking-[0.15em] mt-1">share after arrival</p>
                         </div>
                     ) : (
                         <div className="text-right">
-                            <p className="text-[10px] font-black text-black leading-none">{formatInr(bookingDetails?.pricing?.totalAmount)}</p>
+                            <p className="text-[10px] font-black text-white leading-none">{formatInr(bookingDetails?.pricing?.totalAmount)}</p>
                             <p className="text-[7px] font-bold text-black/25 uppercase tracking-widest mt-1">Total Fare</p>
                         </div>
                     )}
@@ -2615,14 +2820,14 @@ const SpareDriverBooking = () => {
                         <p className="text-[8px] font-black text-brand uppercase tracking-widest mb-1.5 opacity-60">Surcharges applied</p>
                         {bookingDetails.notes?.internal?.includes('[WAITING]') && (
                             <div className="flex items-center justify-between">
-                                <span className="text-[9px] font-bold text-black/40 uppercase">Waiting fee</span>
-                                <span className="text-[9px] font-black text-black">Applied</span>
+                                <span className="text-[9px] font-bold text-white/40 uppercase">Waiting fee</span>
+                                <span className="text-[9px] font-black text-white">Applied</span>
                             </div>
                         )}
                         {bookingDetails.notes?.internal?.includes('[ARREARS]') && (
                             <div className="flex items-center justify-between">
-                                <span className="text-[9px] font-bold text-black/40 uppercase">Trip extension</span>
-                                <span className="text-[9px] font-black text-black">Active</span>
+                                <span className="text-[9px] font-bold text-white/40 uppercase">Trip extension</span>
+                                <span className="text-[9px] font-black text-white">Active</span>
                             </div>
                         )}
                     </div>
@@ -2654,7 +2859,7 @@ const SpareDriverBooking = () => {
                 <div className="grid grid-cols-2 gap-3">
                     <button
                         onClick={() => navigate(`/spare-driver/support?bookingId=${bookingDetails?._id || activeBookingId}`)}
-                        className="w-full bg-gray-50 text-black h-12 rounded-[1rem] font-black text-[10px] uppercase tracking-[0.2em] border border-black/[0.03] shadow-[0_12px_24px_rgba(15,23,42,0.05)] flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                        className="w-full bg-white/[0.02] text-white h-12 rounded-[1rem] font-black text-[10px] uppercase tracking-[0.2em] border border-black/[0.03] shadow-[0_12px_24px_rgba(15,23,42,0.05)] flex items-center justify-center gap-2 active:scale-95 transition-transform"
                     >
                         <MessageSquare size={14} />
                         Help
@@ -2672,7 +2877,7 @@ const SpareDriverBooking = () => {
     );
 
     const renderTripActiveLite = () => (
-        <div className="min-h-screen bg-[#f7f6f1] flex flex-col relative overflow-hidden">
+        <div className={`min-h-screen flex flex-col relative overflow-hidden transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#FFFDF5]'}`}>
             <div className="relative h-[82svh] min-h-[34rem] overflow-hidden">
                 <GoogleMapBox
                     center={animatedDriverLocation || userCoords}
@@ -2686,7 +2891,7 @@ const SpareDriverBooking = () => {
                                 scaledSize: { width: 50, height: 58 },
                                 anchor: { x: 25, y: 50 }
                             },
-                            infoContent: <div className="p-1 font-black text-[9px] uppercase text-brand tracking-widest">You + Vehicle</div>
+                            infoContent: <div className={`p-1 font-black text-[9px] uppercase tracking-widest ${isDarkMode ? 'text-[#FF9900]' : 'text-[#F97316]'}`}>You + Vehicle</div>
                         },
                         ...(animatedDriverLocation ? [{
                             position: animatedDriverLocation,
@@ -2697,10 +2902,10 @@ const SpareDriverBooking = () => {
                             },
                             infoContent: (
                                 <div className="p-1 text-center">
-                                    <p className="text-[8px] font-black uppercase text-brand tracking-widest">Your {driverInfo?.isPremium ? 'Elite' : 'Verified'} Chauffeur</p>
+                                    <p className={`text-[8px] font-black uppercase tracking-widest ${isDarkMode ? 'text-[#FF9900]' : 'text-[#F97316]'}`}>Your {driverInfo?.isPremium ? 'Elite' : 'Verified'} Chauffeur</p>
                                     <div className="flex items-center justify-center gap-1.5 mt-1">
-                                        <p className="text-[10px] font-black text-black leading-none">{driverInfo?.name || 'En Route'}</p>
-                                        {driverInfo?.isPremium && <ShieldCheck size={10} className="text-brand" />}
+                                        <p className={`text-[10px] font-black leading-none ${isDarkMode ? 'text-white' : 'text-black'}`}>{driverInfo?.name || 'En Route'}</p>
+                                        {driverInfo?.isPremium && <ShieldCheck size={10} className="text-[#FF9900]" />}
                                     </div>
                                 </div>
                             )
@@ -2730,12 +2935,12 @@ const SpareDriverBooking = () => {
                             }
                         }] : [])
                     ]}
-                    polylines={animatedDriverLocation ? [{
-                        path: [animatedDriverLocation, userCoords],
+                    polylines={routePath.length > 1 ? [{
+                        path: routePath,
                         options: {
                             strokeColor: SERVICE_ASSETS[selectedServiceKind]?.color || SERVICE_ASSETS.point.color,
                             strokeOpacity: 0.95,
-                            strokeWeight: 4,
+                            strokeWeight: 5,
                             geodesic: true,
                             icons: [{
                                 icon: {
@@ -2744,53 +2949,101 @@ const SpareDriverBooking = () => {
                                     scale: 3
                                 },
                                 offset: '0',
-                                repeat: '12px'
+                                repeat: '15px'
                             }]
                         }
-                    }] : []}
-                    darkMode={false}
+                    }] : (animatedDriverLocation ? [{
+                        path: [animatedDriverLocation, userCoords],
+                        options: {
+                            strokeColor: SERVICE_ASSETS[selectedServiceKind]?.color || SERVICE_ASSETS.point.color,
+                            strokeOpacity: 0.7,
+                            strokeWeight: 4,
+                            geodesic: true
+                        }
+                    }] : [])}
+                    darkMode={isDarkMode}
                 />
 
-                <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-white/90 via-white/40 to-transparent pointer-events-none" />
-                <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#f7f6f1] via-[#f7f6f1]/45 to-transparent pointer-events-none" />
+                <div className={`absolute inset-x-0 top-0 h-28 pointer-events-none ${
+                    isDarkMode ? 'bg-gradient-to-b from-black/60 via-black/20 to-transparent' : 'bg-gradient-to-b from-white/90 via-white/40 to-transparent'
+                }`} />
+                <div className={`absolute inset-x-0 bottom-0 h-20 pointer-events-none ${
+                    isDarkMode ? 'bg-gradient-to-t from-[#0A0F0D] via-[#0A0F0D]/45 to-transparent' : 'bg-gradient-to-t from-[#f7f6f1] via-[#f7f6f1]/45 to-transparent'
+                }`} />
 
                 <div className="absolute top-4 left-4 right-4 z-20">
-                    <div className="rounded-[1.4rem] bg-white/92 backdrop-blur-xl border border-black/[0.05] px-4 py-3 shadow-[0_18px_40px_rgba(15,23,42,0.12)] flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-[#FFF7ED] border border-[#FED7AA] flex items-center justify-center">
-                                <Navigation size={18} className={`text-brand ${animatedDriverLocation ? 'animate-pulse' : ''}`} />
-                            </div>
-                            <div>
-                                <p className="text-[8px] font-black text-black/25 uppercase tracking-[0.24em] leading-none">Live Trip</p>
-                                <p className="text-[11px] font-[1000] text-black uppercase tracking-[0.08em] leading-none mt-2">
-                                    {driverLocation ? 'Driver is moving' : 'Waiting for GPS pulse'}
-                                </p>
-                            </div>
+                    {!isSocketConnected && (
+                        <div className="mb-2 rounded-xl bg-red-500/95 backdrop-blur-xl border border-red-600/20 px-3 py-2 shadow-lg flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                            <span className="text-[9px] font-black text-white uppercase tracking-widest">Reconnecting...</span>
                         </div>
-                        <div className="rounded-full bg-[#FFF7ED] border border-[#FED7AA] px-3 py-2">
-                            <span className="text-[8px] font-black text-[#F97316] uppercase tracking-[0.24em]">
-                                {bookingDetails?.status === 'arrived' ? 'Arrived' : 'En Route'}
-                            </span>
+                    )}
+                    
+                    <div className={`rounded-[1.4rem] backdrop-blur-xl border px-4 py-3 shadow-2xl transition-all ${
+                        isDarkMode ? 'bg-black/60 border-white/10 shadow-black/80' : 'bg-white/92 border-black/05 shadow-black/10'
+                    }`}>
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-full border flex items-center justify-center ${
+                                    isDarkMode ? 'bg-orange-500/10 border-orange-500/20' : 'bg-[#FFF7ED] border-[#FED7AA]'
+                                }`}>
+                                    <Navigation size={18} className={`text-[#FF9900] ${animatedDriverLocation ? 'animate-pulse' : ''}`} />
+                                </div>
+                                <div>
+                                    <p className={`text-[8px] font-black uppercase tracking-[0.24em] leading-none ${isDarkMode ? 'text-white/30' : 'text-black/25'}`}>Live Trip</p>
+                                    <p className={`text-[11px] font-[1000] uppercase tracking-[0.08em] leading-none mt-2 ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
+                                        {driverLocation ? 'Mission active' : 'Syncing GPS pulse'}
+                                    </p>
+                                    {driverLocation && driverDistance > 0 && (
+                                        <div className="flex items-center gap-2 mt-1.5">
+                                            <span className="text-[9px] font-bold text-blue-500">
+                                                {driverDistance < 1 
+                                                    ? `${Math.round(driverDistance * 1000)}m away` 
+                                                    : `${driverDistance.toFixed(1)}km away`}
+                                            </span>
+                                            {routeInfo.durationValue > 0 && (
+                                                <>
+                                                    <span className={`text-[9px] ${isDarkMode ? 'text-white/20' : 'text-black/10'}`}>•</span>
+                                                    <span className="text-[9px] font-bold text-emerald-500">
+                                                        {routeInfo.durationValue} min arrival
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className={`rounded-full border px-3 py-2 transition-all ${
+                                isDarkMode ? 'bg-orange-500/10 border-orange-500/20' : 'bg-orange-50 border-orange-100'
+                            }`}>
+                                <span className="text-[8px] font-black text-[#F97316] uppercase tracking-[0.24em]">
+                                    {bookingDetails?.status === 'arrived' ? 'Arrived' : 'En Route'}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div className="relative z-30 -mt-3 flex-1 rounded-t-[2.1rem] bg-white border-t border-black/[0.04] shadow-[0_-20px_50px_rgba(15,23,42,0.12)] px-5 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.9rem)]">
-                <div className="mx-auto mb-3 h-1.5 w-16 rounded-full bg-black/[0.08]" />
+            <div className={`relative z-30 -mt-3 flex-1 rounded-t-[2.1rem] border-t shadow-2xl px-5 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.9rem)] transition-colors duration-300 ${
+                isDarkMode ? 'bg-[#0A0F0D] border-white/05 shadow-black/80' : 'bg-white border-black/04 shadow-black/10'
+            }`}>
+                <div className={`mx-auto mb-3 h-1.5 w-16 rounded-full ${isDarkMode ? 'bg-white/10' : 'bg-black/08'}`} />
 
                 <div className="flex items-center justify-between gap-3">
                     <div>
-                        <p className="text-[8px] font-black text-black/25 uppercase tracking-[0.28em] leading-none">Session duration</p>
-                        <h4 className="text-[2rem] font-[1000] text-[#101828] tracking-tight leading-none tabular-nums">{formatTime(elapsedTime)}</h4>
+                        <p className={`text-[8px] font-black uppercase tracking-[0.28em] leading-none ${isDarkMode ? 'text-white/20' : 'text-black/25'}`}>Session duration</p>
+                        <h4 className={`text-[2rem] font-[1000] tracking-tight leading-none tabular-nums ${isDarkMode ? 'text-white' : 'text-[#101828]'}`}>{formatTime(elapsedTime)}</h4>
                     </div>
-                    <div className="rounded-2xl bg-[#FFF7ED] border border-[#FED7AA] px-3 py-2 text-right min-w-[110px]">
+                    <div className={`rounded-2xl border px-3 py-2 text-right min-w-[110px] ${
+                        isDarkMode ? 'bg-white/05 border-white/05' : 'bg-orange-50 border-orange-100'
+                    }`}>
                         <p className="text-[8px] font-black text-[#F97316] uppercase tracking-[0.24em] leading-none">Trip status</p>
-                        <p className="text-[11px] font-[1000] text-[#111827] uppercase tracking-[0.16em] leading-none mt-2">Live Session</p>
+                        <p className={`text-[11px] font-[1000] uppercase tracking-[0.16em] leading-none mt-2 ${isDarkMode ? 'text-white' : 'text-[#111827]'}`}>Live Session</p>
                     </div>
                 </div>
 
-                <div className="mt-3 h-1.5 w-full rounded-full bg-black/[0.06] overflow-hidden">
+                <div className={`mt-3 h-1.5 w-full rounded-full overflow-hidden ${isDarkMode ? 'bg-white/05' : 'bg-black/06'}`}>
                     <motion.div
                         className="h-full rounded-full bg-gradient-to-r from-[#F97316] via-[#F29F05] to-[#FACC15]"
                         animate={{ width: ['18%', '74%', '46%', '85%'] }}
@@ -2798,94 +3051,106 @@ const SpareDriverBooking = () => {
                     />
                 </div>
 
-                <div className="mt-3 rounded-[1.7rem] border border-black/[0.04] bg-[linear-gradient(180deg,#FFFFFF_0%,#F8FAFC_100%)] p-4 shadow-[0_14px_30px_rgba(15,23,42,0.05)]">
+                <div className={`mt-3 rounded-[1.7rem] border p-4 shadow-xl transition-all ${
+                    isDarkMode ? 'bg-white/05 border-white/05' : 'bg-white border-black/05'
+                }`}>
                     <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
-                            <div className="w-11 h-11 bg-white rounded-xl overflow-hidden shadow-sm border border-black/[0.03]">
+                            <div className={`w-11 h-11 rounded-xl overflow-hidden border ${isDarkMode ? 'bg-white/10 border-white/10' : 'bg-black/05 border-black/05'}`}>
                                 <img src={driverInfo?.img} className="w-full h-full object-cover" />
                             </div>
                             <div>
-                                <div className="flex items-center gap-1.5 mb-0.5">
-                                    <p className="text-[11px] font-black text-black leading-none">{driverInfo?.name}</p>
+                                <div className="flex items-center gap-1.5 mb-1">
+                                    <p className={`text-[11px] font-black leading-none ${isDarkMode ? 'text-white' : 'text-black'}`}>{driverInfo?.name}</p>
                                     {driverInfo?.isPremium && (
-                                        <div className="bg-brand/10 text-brand px-1.5 py-0.5 rounded-full flex items-center gap-0.5 border border-brand/20 shadow-[0_4px_10px_rgba(242,159,5,0.1)]">
-                                            <Star size={7} fill="currentColor" />
-                                            <span className="text-[6px] font-black uppercase tracking-tighter">Premium</span>
+                                        <div className="bg-[#FF9900]/10 text-[#FF9900] px-1.5 py-0.5 rounded-full flex items-center gap-0.5 border border-[#FF9900]/20">
+                                            <ShieldCheck size={8} fill="currentColor" />
+                                            <span className="text-[6px] font-black uppercase tracking-tighter">Elite</span>
                                         </div>
                                     )}
                                 </div>
-                                <p className="text-[8px] font-bold text-black/20 uppercase tracking-widest">
-                                    {driverInfo?.isPremium ? 'Elite Assigned Chauffeur' : 'Assigned Chauffeur'}
+                                <p className={`text-[8px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-white/30' : 'text-black/30'}`}>
+                                    {driverInfo?.isPremium ? 'Hoora Master Chauffeur' : 'Verified Professional'}
                                 </p>
                             </div>
                         </div>
                         {bookingDetails?.status === 'arrived' ? (
-                            <div className="rounded-[1.2rem] bg-[#111827] text-white px-4 py-3 text-center min-w-[122px]">
-                                <p className="text-[7px] font-black text-white/45 uppercase tracking-widest mb-1">Start Pin</p>
+                            <div className="rounded-[1.2rem] bg-[#111827] text-white px-4 py-3 text-center min-w-[122px] shadow-xl border border-white/10">
+                                <p className="text-[7px] font-black text-[#FF9900] uppercase tracking-widest mb-1">Start Pin</p>
                                 <p className="text-lg font-[1000] tracking-[0.35em] pl-1">{visibleSecurityPin}</p>
                             </div>
                         ) : (
                             <div className="text-right">
-                                <p className="text-[10px] font-black text-black leading-none">{formatInr(bookingDetails?.pricing?.totalAmount)}</p>
-                                <p className="text-[7px] font-bold text-black/25 uppercase tracking-widest mt-1">Total fare</p>
+                                <p className={`text-[11px] font-black leading-none ${isDarkMode ? 'text-white' : 'text-black'}`}>{formatInr(bookingDetails?.pricing?.totalAmount)}</p>
+                                <p className={`text-[7px] font-bold uppercase tracking-widest mt-1 ${isDarkMode ? 'text-white/20' : 'text-black/25'}`}>Total fare</p>
                             </div>
                         )}
                     </div>
                 </div>
 
+                {/* 🏷️ Phase 11: Real-time Surcharge Pulse 🏷️ */}
                 {(bookingDetails?.pricing?.totalAmount > (selectedType?.basePrice || 0)) && (
-                    <div className="mt-3 px-4 py-3 bg-brand/[0.03] border border-brand/10 rounded-[1.4rem] space-y-1.5">
-                        <p className="text-[8px] font-black text-brand uppercase tracking-widest mb-1.5 opacity-60">Surcharges applied</p>
+                    <div className={`mt-3 px-4 py-3 border rounded-[1.4rem] space-y-1.5 transition-all anim-pulse-subtle ${
+                        isDarkMode ? 'bg-orange-500/05 border-orange-500/10' : 'bg-[#FFF7ED] border-[#FED7AA]'
+                    }`}>
+                        <p className={`text-[8px] font-black uppercase tracking-widest mb-1.5 opacity-60 ${isDarkMode ? 'text-[#FF9900]' : 'text-[#F97316]'}`}>Surcharges applied</p>
                         {bookingDetails.notes?.internal?.includes('[WAITING]') && (
                             <div className="flex items-center justify-between">
-                                <span className="text-[9px] font-bold text-black/40 uppercase">Waiting Fee</span>
-                                <span className="text-[9px] font-black text-black">Applied</span>
+                                <span className={`text-[9px] font-bold uppercase ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>Waiting Fee</span>
+                                <span className={`text-[9px] font-black ${isDarkMode ? 'text-white' : 'text-black'}`}>Applied</span>
                             </div>
                         )}
                         {bookingDetails.notes?.internal?.includes('[ARREARS]') && (
                             <div className="flex items-center justify-between">
-                                <span className="text-[9px] font-bold text-black/40 uppercase">Trip Extension</span>
-                                <span className="text-[9px] font-black text-black">Active</span>
+                                <span className={`text-[9px] font-bold uppercase ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>Trip Extension</span>
+                                <span className={`text-[9px] font-black ${isDarkMode ? 'text-white' : 'text-black'}`}>Active</span>
                             </div>
                         )}
                     </div>
                 )}
 
+                {/* 🛡️ Outstation Safety & Allowance Context 🛡️ */}
                 {isOutstationService && (
-                    <div className="mt-3 p-4 bg-blue-50/50 border border-blue-100 rounded-[1.4rem] space-y-2">
+                    <div className={`mt-3 p-4 border rounded-[1.4rem] space-y-2 transition-all ${
+                        isDarkMode ? 'bg-blue-500/10 border-blue-500/20' : 'bg-blue-50 border-blue-100'
+                    }`}>
                         <div className="flex items-center gap-2">
                             <Shield size={12} className="text-blue-600" />
-                            <span className="text-[9px] font-black text-blue-700 uppercase tracking-widest">Outstation mission protocol</span>
+                            <span className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-blue-300' : 'text-blue-700'}`}>Outstation mission protocol</span>
                         </div>
                         <div className="space-y-1">
                             <div className="flex items-center justify-between">
-                                <span className="text-[8px] font-bold text-blue-900/40 uppercase">Stay & Food Allowance</span>
-                                <span className="text-[8px] font-black text-blue-900">₹500 / 24h</span>
+                                <span className={`text-[8px] font-bold uppercase ${isDarkMode ? 'text-white/20' : 'text-blue-900/40'}`}>Stay & Food Allowance</span>
+                                <span className={`text-[8px] font-black ${isDarkMode ? 'text-white' : 'text-blue-900'}`}>₹500 / 24h</span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-[8px] font-bold text-blue-900/40 uppercase">Daily Driving Limit</span>
-                                <span className="text-[8px] font-black text-blue-900">9 Hours Max</span>
+                                <span className={`text-[8px] font-bold uppercase ${isDarkMode ? 'text-white/20' : 'text-blue-900/40'}`}>Daily Driving Limit</span>
+                                <span className={`text-[8px] font-black ${isDarkMode ? 'text-white' : 'text-blue-900'}`}>9 Hours Max</span>
                             </div>
                         </div>
-                        <p className="text-[7px] font-bold text-blue-900/30 uppercase leading-tight">
+                        <p className={`text-[7px] font-bold uppercase leading-tight ${isDarkMode ? 'text-white/20' : 'text-blue-900/30'}`}>
                             Note: Tolls, State Taxes & Parking are to be paid by the customer directly.
                         </p>
                     </div>
                 )}
 
-                <div className="mt-3 grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 mt-4">
                     <button
                         onClick={() => navigate(`/spare-driver/support?bookingId=${bookingDetails?._id || activeBookingId}`)}
-                        className="w-full bg-gray-50 text-black h-12 rounded-[1rem] font-black text-[10px] uppercase tracking-[0.2em] border border-black/[0.03] shadow-[0_12px_24px_rgba(15,23,42,0.05)] flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                        className={`w-full h-12 rounded-[1rem] font-black text-[10px] uppercase tracking-[0.2em] border shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all ${
+                            isDarkMode ? 'bg-white/05 border-white/05 text-white' : 'bg-black/05 border-black/05 text-black'
+                        }`}
                     >
-                        <MessageSquare size={14} />
+                        <MessageSquare size={14} className="opacity-40" />
                         Help
                     </button>
                     <button
                         onClick={() => navigate(`/spare-driver/history?bookingId=${bookingDetails?._id || activeBookingId}`)}
-                        className="w-full bg-black text-white h-12 rounded-[1rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-[0_18px_35px_rgba(0,0,0,0.16)] flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                        className={`w-full h-12 rounded-[1rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all ${
+                            isDarkMode ? 'bg-white text-black' : 'bg-[#0F172A] text-white'
+                        }`}
                     >
-                        <Car size={14} />
+                        <Car size={14} className="opacity-40" />
                         Details
                     </button>
                 </div>
@@ -2894,115 +3159,131 @@ const SpareDriverBooking = () => {
     );
 
     const renderTripCompleted = () => (
-        <div className="min-h-screen bg-[linear-gradient(180deg,#FFF9ED_0%,#FFFFFF_42%,#FFFFFF_100%)] flex flex-col items-center justify-center p-6 text-center space-y-5">
+        <div className={`min-h-screen flex flex-col items-center justify-center p-6 text-center space-y-6 transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#FFFDF5]'}`}>
             <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="w-20 h-20 bg-emerald-50 rounded-[1.5rem] flex items-center justify-center text-emerald-500 border border-emerald-100 shadow-lg shadow-emerald-500/5"
+                className={`w-24 h-24 rounded-[2rem] flex items-center justify-center shadow-xl mb-4 transition-all ${
+                    isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                }`}
             >
-                <CheckCircle2 size={36} strokeWidth={2.5} />
+                <CheckCircle2 size={44} strokeWidth={2.5} />
             </motion.div>
 
-            <div className="space-y-2 max-w-[240px]">
-                <h2 className="text-2xl font-[1000] text-black uppercase tracking-tight leading-none">Session<br />Completed</h2>
-                <p className="text-[10px] font-bold text-black/30 uppercase tracking-[0.15em] leading-relaxed">Thank you for traveling with Spare Driver elite chauffeurs.</p>
+            <div className="space-y-3 max-w-[300px]">
+                <h2 className={`text-3xl font-[1000] uppercase tracking-tight leading-none ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>Session<br />Completed</h2>
+                <p className={`text-[11px] font-bold uppercase tracking-[0.15em] leading-relaxed ${isDarkMode ? 'text-white/30' : 'text-black/40'}`}>
+                    Thank you for traveling with Spare Driver elite chauffeurs.
+                </p>
             </div>
 
-            <div className="w-full bg-white border border-black/[0.03] p-5 rounded-[2rem] space-y-3 shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
-                <div className="flex items-center justify-between border-b border-black/5 pb-3">
-                    <div>
-                        <span className="text-[9px] font-black text-black/25 uppercase tracking-widest">Service</span>
-                        <p className="text-[12px] font-black text-black uppercase leading-none mt-1">{selectedType?.title || 'Chauffeur Service'}</p>
+            <div className={`w-full border p-6 rounded-[2.5rem] space-y-4 shadow-2xl transition-all ${
+                isDarkMode ? 'bg-white/05 border-white/05 shadow-black/80' : 'bg-white border-black/05 shadow-black/10'
+            }`}>
+                <div className={`flex items-center justify-between border-b pb-4 ${isDarkMode ? 'border-white/05' : 'border-black/05'}`}>
+                    <div className="text-left">
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Service</span>
+                        <p className={`text-[14px] font-black uppercase mt-1 ${isDarkMode ? 'text-white' : 'text-black'}`}>{selectedType?.title || 'Elite Mission'}</p>
                     </div>
                     <div className="text-right">
-                        <span className="text-[9px] font-black text-black/25 uppercase tracking-widest">Settlement</span>
-                        <p className="text-[12px] font-black text-black uppercase leading-none mt-1">
-                            {hasOutstandingSettlement ? 'balance due' : (useSubscription ? 'Pass Credit' : (bookingDetails?.payment?.status || 'paid'))}
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Settlement</span>
+                        <p className={`text-[13px] font-black uppercase mt-1 ${hasOutstandingSettlement ? 'text-orange-500' : 'text-emerald-500'}`}>
+                            {hasOutstandingSettlement ? 'Balance Due' : (useSubscription ? 'Subscription' : (bookingDetails?.payment?.status || 'Authenticated'))}
                         </p>
                     </div>
                 </div>
 
-                <div className="flex items-center justify-between border-b border-black/5 pb-3">
-                    <span className="text-[9px] font-black text-black/25 uppercase tracking-widest">Base Fare</span>
-                    <span className="text-[12px] font-black text-black leading-none">{formatInr(selectedType?.basePrice)}</span>
-                </div>
-                
-                {bookingDetails?.pricing?.breakdown?.map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between opacity-60">
-                        <span className="text-[9px] font-bold text-black/40 uppercase tracking-widest">{item.name}</span>
-                        <span className="text-[10px] font-black text-black leading-none">+{formatInr(item.amount)}</span>
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Base Fare</span>
+                        <span className={`text-[14px] font-black ${isDarkMode ? 'text-white' : 'text-black'}`}>{formatInr(selectedType?.basePrice)}</span>
                     </div>
-                ))}
+                    
+                    {bookingDetails?.pricing?.breakdown?.map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between">
+                            <span className={`text-[10px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>{item.name}</span>
+                            <span className={`text-[12px] font-black ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>+{formatInr(item.amount)}</span>
+                        </div>
+                    ))}
+                </div>
 
-                <div className="flex items-center justify-between pt-2">
-                    <span className="text-[9px] font-black text-[#FF9900] uppercase tracking-widest">Grand Total</span>
-                    <span className="text-xl font-[1000] text-black tracking-tight leading-none">{formatInr(bookingDetails?.pricing?.totalAmount)}</span>
+                <div className={`pt-4 border-t-2 ${isDarkMode ? 'border-white/10' : 'border-black/10'}`}>
+                    <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-black text-orange-500 uppercase tracking-widest">Grand Total</span>
+                        <span className={`text-2xl font-[1000] tracking-tight ${isDarkMode ? 'text-white' : 'text-black'}`}>{formatInr(bookingDetails?.pricing?.totalAmount)}</span>
+                    </div>
                 </div>
                 
-                <div className="flex items-center justify-between border-t border-black/5 pt-3">
-                    <span className="text-[9px] font-black text-black/25 uppercase tracking-widest">Time In Session</span>
-                    <span className="text-[12px] font-black text-black uppercase leading-none">{formatTime(elapsedTime)}</span>
-                </div>
-
-                <div className="flex items-center justify-between border-t border-black/5 pt-3">
-                    <span className="text-[9px] font-black text-black/25 uppercase tracking-widest">Service Flow</span>
-                    <span className="text-[11px] font-black text-black uppercase leading-none">{serviceFlowMeta.durationLabel}</span>
+                <div className={`pt-4 border-t grid grid-cols-2 gap-4 ${isDarkMode ? 'border-white/05' : 'border-black/05'}`}>
+                    <div className="text-left">
+                        <span className={`text-[9px] font-black uppercase tracking-widest block mb-1 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Session Time</span>
+                        <span className={`text-[13px] font-black tabular-nums ${isDarkMode ? 'text-white' : 'text-black'}`}>{formatTime(elapsedTime)}</span>
+                    </div>
+                    <div className="text-right">
+                        <span className={`text-[9px] font-black uppercase tracking-widest block mb-1 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Duration Class</span>
+                        <span className={`text-[12px] font-black uppercase ${isDarkMode ? 'text-white' : 'text-black'}`}>{serviceFlowMeta.durationLabel}</span>
+                    </div>
                 </div>
             </div>
 
-            <div className="w-full bg-blue-50/60 border border-blue-100 rounded-2xl px-4 py-4">
-                <p className="text-[9px] font-black text-blue-700 uppercase tracking-widest">Trip Summary Note</p>
-                <p className="text-[10px] font-bold text-blue-900/70 uppercase mt-2 leading-relaxed">
+            <div className={`w-full border rounded-2xl px-5 py-4 transition-colors ${
+                isDarkMode ? 'bg-blue-500/10 border-blue-500/20' : 'bg-blue-50 border-blue-100'
+            }`}>
+                <p className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>Mission Summary</p>
+                <p className={`text-[11px] font-bold uppercase mt-2 leading-relaxed ${isDarkMode ? 'text-blue-300/70' : 'text-blue-900/70'}`}>
                     {serviceFlowMeta.supportNote}
                 </p>
-                {['refund_pending', 'refund_failed'].includes(bookingDetails?.payment?.status) && (
-                    <p className="text-[9px] font-black text-red-600 uppercase tracking-widest mt-3">
-                        Refund review is still in progress. Support can help from trip history.
-                    </p>
-                )}
             </div>
 
             {hasOutstandingSettlement && (
-                <div className="w-full bg-amber-50 border border-amber-200 rounded-2xl px-4 py-4 text-left space-y-3">
-                    <div className="flex items-center justify-between gap-4">
+                <div className={`w-full border rounded-[2rem] p-6 text-left space-y-4 shadow-xl ${
+                    isDarkMode ? 'bg-orange-500/10 border-orange-500/20' : 'bg-amber-50 border-amber-200'
+                }`}>
+                    <div className="flex items-start justify-between gap-4">
                         <div>
-                            <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest">Additional Payable</p>
-                            <p className="text-[10px] font-bold text-amber-900/70 uppercase mt-1 leading-relaxed">
-                                Extra usage charges were added after trip completion.
+                            <p className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-orange-400' : 'text-amber-700'}`}>Settlement Required</p>
+                            <p className={`text-[11px] font-bold uppercase mt-2 leading-relaxed ${isDarkMode ? 'text-orange-300' : 'text-amber-900/70'}`}>
+                                Additional usage fees are pending settlement.
                             </p>
                         </div>
                         <div className="text-right">
-                            <p className="text-[8px] font-black text-amber-700 uppercase tracking-widest">Due Now</p>
-                            <p className="text-xl font-[1000] text-amber-950 leading-none mt-1">{formatInr(outstandingSettlementAmount)}</p>
+                            <p className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-orange-400' : 'text-amber-700'}`}>Due</p>
+                            <p className={`text-2xl font-black leading-none mt-1 ${isDarkMode ? 'text-white' : 'text-amber-950'}`}>{formatInr(outstandingSettlementAmount)}</p>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-4">
                         <button
                             onClick={() => handleSettlementPayment('wallet')}
                             disabled={isSettlingPayment}
-                            className="w-full bg-amber-400 text-black h-12 rounded-xl font-black text-[10px] uppercase tracking-[0.18em] active:scale-[0.98] transition-all disabled:opacity-60"
+                            className={`h-14 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-lg active:scale-[0.98] transition-all disabled:opacity-50 ${
+                                isDarkMode ? 'bg-orange-500 text-white' : 'bg-amber-500 text-white'
+                            }`}
                         >
-                            {isSettlingPayment ? 'Processing...' : 'Pay from Wallet'}
+                            {isSettlingPayment ? 'Processing...' : 'Wallet Pay'}
                         </button>
                         <button
                             onClick={() => handleSettlementPayment('online')}
                             disabled={isSettlingPayment}
-                            className="w-full bg-black text-white h-12 rounded-xl font-black text-[10px] uppercase tracking-[0.18em] active:scale-[0.98] transition-all disabled:opacity-60"
+                            className={`h-14 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-lg active:scale-[0.98] transition-all disabled:opacity-50 ${
+                                isDarkMode ? 'bg-white text-black' : 'bg-black text-white'
+                            }`}
                         >
-                            {isSettlingPayment ? 'Opening...' : 'Pay Online'}
+                            {isSettlingPayment ? 'Opening...' : 'Online Pay'}
                         </button>
                     </div>
                 </div>
             )}
 
-            <div className="w-full space-y-3 pt-2">
+            <div className="w-full space-y-4 pt-4">
                 {!hasOutstandingSettlement && (
                     <button
                         onClick={() => navigate(`/rate?id=${bookingDetails?._id || activeBookingId}`)}
-                        className="w-full bg-brand text-black h-14 rounded-2xl font-black text-[13px] uppercase tracking-[0.2em] shadow-xl active:scale-[0.98] transition-all"
+                        className={`w-full h-16 rounded-2xl font-black text-[13px] uppercase tracking-[0.15em] shadow-xl active:scale-[0.98] transition-all ${
+                            isDarkMode ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-[#FF9900] text-[#0F172A] hover:bg-orange-500'
+                        }`}
                     >
-                        Rate Driver
+                        Rate Chauffeur Experience
                     </button>
                 )}
                 <button
@@ -3011,172 +3292,130 @@ const SpareDriverBooking = () => {
                         navigate('/home');
                         refreshStats();
                     }}
-                    className="w-full bg-black text-white h-14 rounded-2xl font-black text-[13px] uppercase tracking-[0.2em] shadow-xl active:scale-[0.98] transition-all"
+                    className={`w-full h-16 rounded-2xl font-black text-[13px] uppercase tracking-[0.15em] shadow-lg active:scale-[0.98] transition-all ${
+                        isDarkMode ? 'bg-white/10 text-white border border-white/10' : 'bg-black text-white'
+                    }`}
                 >
-                    {hasOutstandingSettlement ? 'Return Home (Pay Later)' : 'Return Home'}
+                    {hasOutstandingSettlement ? 'Return Home (Pay Later)' : 'Dismiss Account'}
                 </button>
                 <button
                     onClick={() => navigate(`/spare-driver/history?bookingId=${bookingDetails?._id || activeBookingId}`)}
-                    className="w-full border border-gray-100 text-black/40 h-14 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] active:scale-[0.98] transition-all"
+                    className={`w-full h-14 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] active:scale-[0.98] transition-all border ${
+                        isDarkMode ? 'border-white/10 text-white/40 shadow-black/20' : 'border-black/05 text-black/40 shadow-black/05'
+                    }`}
                 >
-                    View Trip Details
+                    View Mission Record
                 </button>
             </div>
         </div>
     );
 
     const renderCheckout = () => (
-        <div className="flex-1 flex flex-col bg-gradient-to-b from-[#FFFDF5] to-[#FEF3C7] min-h-screen">
-            <div className="px-5 pt-4 pb-2 border-b border-[#0F172A]/05">
+        <div className={`flex-1 flex flex-col transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#FFFDF5]'}`}>
+            <div className={`px-5 pt-4 pb-2 border-b ${isDarkMode ? 'bg-[#0A0F0D]/80 border-white/05' : 'bg-white/80 border-black/05'}`}>
                 <div className="flex items-center justify-between">
                     <div>
-                        <h3 className="text-[18px] font-black text-[#0F172A] tracking-tighter leading-none uppercase">Summary</h3>
-                        <p className="text-[8px] font-extrabold text-[#FF9900] uppercase tracking-[0.2em] mt-0.5">HOORA ELITE • 2/2</p>
+                        <h3 className={`text-[18px] font-black tracking-tighter leading-none uppercase ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>Summary</h3>
+                        <p className={`text-[8px] font-extrabold uppercase tracking-[0.2em] mt-0.5 ${isDarkMode ? 'text-orange-400' : 'text-[#FF9900]'}`}>HOORA ELITE • 2/2</p>
                     </div>
                 </div>
             </div>
 
-            <div className="px-5 py-3 space-y-3">
-                <div className="bg-white rounded-xl p-4 border border-[#0F172A]/05 shadow-sm space-y-3">
-                    <div className="space-y-3">
+            <div className="px-5 py-6 space-y-4 pb-32 overflow-y-auto">
+                <div className={`rounded-xl p-4 border space-y-3 ${isDarkMode ? 'bg-white/05 border-white/05' : 'bg-white border-black/05 shadow-sm'}`}>
+                    <div className="space-y-4">
                         <div className="flex items-start gap-3">
-                            <div className="w-7 h-7 rounded-lg bg-[#0F172A]/03 flex items-center justify-center text-[#0F172A]">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-white/10 text-white' : 'bg-[#0F172A]/05 text-[#0F172A]'}`}>
                                 <MapPin size={14} />
                             </div>
                             <div className="overflow-hidden">
-                                <p className="text-[7px] font-bold text-[#0F172A]/30 uppercase tracking-widest leading-none mb-0.5">Base</p>
-                                <p className="text-[10px] font-black text-[#0F172A] uppercase truncate">{selectedAddress?.street || 'Pickup'}</p>
+                                <p className={`text-[7px] font-bold uppercase tracking-widest leading-none mb-1 ${isDarkMode ? 'text-white/30' : 'text-black/30'}`}>Base</p>
+                                <p className={`text-[11px] font-black uppercase truncate ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>{selectedAddress?.street || 'Pickup location'}</p>
                             </div>
                         </div>
                         <div className="flex items-start gap-3">
-                            <div className="w-7 h-7 rounded-lg bg-[#FF9900]/05 flex items-center justify-center text-[#FF9900]">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-orange-500/10 text-orange-400' : 'bg-[#FF9900]/10 text-[#FF9900]'}`}>
                                 <Navigation size={14} />
                             </div>
                             <div className="overflow-hidden">
-                                <p className="text-[7px] font-bold text-[#0F172A]/30 uppercase tracking-widest leading-none mb-0.5">Goal</p>
-                                <p className="text-[10px] font-black text-[#0F172A] uppercase truncate">
-                                    {requiresDestination ? (destination?.street || 'Destination') : (selectedType?.title || 'Trip')}
+                                <p className={`text-[7px] font-bold uppercase tracking-widest leading-none mb-1 ${isDarkMode ? 'text-white/30' : 'text-black/30'}`}>Goal</p>
+                                <p className={`text-[11px] font-black uppercase truncate ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
+                                    {requiresDestination ? (destination?.street || 'Select destination') : (selectedType?.title || 'Standard Trip')}
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="pt-2.5 border-t border-[#0F172A]/05 grid grid-cols-2 gap-3">
+                    <div className={`pt-3 border-t grid grid-cols-2 gap-3 ${isDarkMode ? 'border-white/05' : 'border-black/05'}`}>
                         <div>
-                            <p className="text-[7px] font-bold text-[#0F172A]/30 uppercase tracking-widest mb-0.5">Category</p>
-                            <p className="text-[9px] font-black text-[#0F172A] uppercase">{bookingMode === 'instant' ? 'Rapid' : 'Plan'}</p>
+                            <p className={`text-[7px] font-bold uppercase tracking-widest mb-0.5 ${isDarkMode ? 'text-white/30' : 'text-black/30'}`}>Category</p>
+                            <p className={`text-[10px] font-black uppercase ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>{bookingMode === 'instant' ? 'Rapid Dispatch' : 'Planned'}</p>
                         </div>
                         <div>
-                            <p className="text-[7px] font-bold text-[#0F172A]/30 uppercase tracking-widest mb-0.5">Vehicle</p>
-                            <p className="text-[9px] font-black text-[#FF9900] uppercase truncate">{selectedVehicle ? `${selectedVehicle.brand}` : '-'}</p>
+                            <p className={`text-[7px] font-bold uppercase tracking-widest mb-0.5 ${isDarkMode ? 'text-white/30' : 'text-black/30'}`}>Vehicle</p>
+                            <p className="text-[10px] font-black text-[#FF9900] uppercase truncate">{selectedVehicle ? `${selectedVehicle.brand} • ${selectedVehicle.plate}` : '-'}</p>
                         </div>
                     </div>
                 </div>
 
-                {/* 🎯 RAPIDO-STYLE DYNAMIC PRICING BREAKDOWN */}
-                <div className="bg-white rounded-xl p-4 border border-[#0F172A]/05 shadow-sm space-y-3">
-                    <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-[10px] font-black text-[#0F172A]/40 uppercase tracking-widest">Fare Breakdown</h4>
-                        {dynamicPricingBreakdown.hasExtraCharges && (
-                            <span className="px-2 py-0.5 bg-[#FF9900]/10 text-[#FF9900] text-[7px] font-black uppercase tracking-wider rounded-full">
-                                Extra Charges Applied
-                            </span>
-                        )}
-                    </div>
+                {/* 🎯 REAL-TIME FARE ESTIMATION */}
+                <FareEstimator
+                    serviceType={selectedServiceKind}
+                    vehicleType={selectedVehicle?.type?.toLowerCase() || 'hatchback'}
+                    duration={bookingDetails.duration}
+                    scheduledTime={bookingMode === 'scheduled' ? getScheduledServiceTime({ type: 'scheduled', date: bookingDetails.date, time: bookingDetails.time }) : null}
+                    isScheduled={bookingMode === 'scheduled'}
+                    onPriceCalculated={(pricing) => {
+                        setCalculatedPricing(pricing);
+                        setPricingError(null);
+                    }}
+                    className="mb-4"
+                />
 
-                    {/* Dynamic Breakdown Items */}
-                    <div className="space-y-2.5">
-                        {dynamicPricingBreakdown.breakdown.map((item, index) => (
-                            <motion.div
-                                key={index}
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                                className={`flex items-center justify-between py-2 ${
-                                    index < dynamicPricingBreakdown.breakdown.length - 1 ? 'border-b border-[#0F172A]/05' : ''
-                                }`}
-                            >
-                                <div className="flex items-center gap-2">
-                                    <span className="text-base">{item.icon}</span>
-                                    <div>
-                                        <p className="text-[10px] font-bold text-[#0F172A] uppercase leading-none">
-                                            {item.label}
-                                        </p>
-                                        {item.description && (
-                                            <p className="text-[7px] font-bold text-[#0F172A]/30 uppercase tracking-wider mt-0.5">
-                                                {item.description}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                                <p className={`text-[11px] font-black uppercase tracking-tight ${
-                                    item.type === 'surcharge' ? 'text-[#FF9900]' : 
-                                    item.type === 'tax' ? 'text-blue-600' : 
-                                    'text-[#0F172A]'
-                                }`}>
-                                    {item.type === 'tax' && commercialRules.gstInclusive ? '' : '+'}₹{item.amount}
-                                </p>
-                            </motion.div>
-                        ))}
-                    </div>
-
-                    {/* Total Section */}
-                    <div className="pt-3 border-t-2 border-[#0F172A]/10">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-[8px] font-bold text-[#0F172A]/30 uppercase tracking-widest mb-1">Total Payable</p>
-                                <p className="text-[20px] font-black text-[#0F172A] tracking-tighter leading-none">
-                                    ₹{dynamicPricingBreakdown.total}
-                                </p>
-                            </div>
-                            <div className="text-right">
-                                <div className="flex items-center gap-1 justify-end mb-1">
-                                    <ShieldCheck size={10} className="text-emerald-500" />
-                                    <span className="text-[7px] font-bold uppercase tracking-tight text-emerald-600">Transparent</span>
-                                </div>
-                                <p className="text-[7px] font-bold text-[#0F172A]/20 uppercase">No Hidden Fees</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Reserve Amount Info */}
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
-                    <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                            <Lock size={14} className="text-blue-600" />
+                {/* Reserve Info */}
+                <div className={`rounded-xl p-4 border transition-colors ${
+                    isDarkMode ? 'bg-blue-500/10 border-blue-500/20' : 'bg-blue-50 border-blue-100'
+                }`}>
+                    <div className="flex items-start gap-4">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isDarkMode ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-500/10 text-blue-600'}`}>
+                            <Lock size={14} />
                         </div>
                         <div className="flex-1">
-                            <p className="text-[9px] font-black text-blue-900 uppercase tracking-wide leading-none mb-1">
+                            <p className={`text-[10px] font-black uppercase tracking-wide leading-none mb-1 ${isDarkMode ? 'text-blue-300' : 'text-blue-900'}`}>
                                 Wallet Reserve: ₹{estimatedReserveAmount}
                             </p>
-                            <p className="text-[7px] font-bold text-blue-600/60 leading-tight">
-                                2-hour reserve held for potential overtime. Released if trip ends on time.
+                            <p className={`text-[8px] font-bold leading-tight ${isDarkMode ? 'text-blue-400/60' : 'text-blue-600/60'}`}>
+                                Mandatory security hold for potential overtime sessions. Auto-released upon on-time mission completion.
                             </p>
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-[#0F172A] text-white rounded-xl p-4 flex items-center gap-4 shadow-lg border border-[#0F172A]/05">
-                    <Shield size={18} className="text-[#FF9900]" />
+                <div className={`rounded-xl p-5 flex items-center gap-4 border transition-colors ${
+                    isDarkMode ? 'bg-white/05 border-white/05 text-white' : 'bg-[#0F172A] text-white border-transparent'
+                }`}>
+                    <Shield size={20} className="text-orange-500" />
                     <div>
-                        <p className="text-[11px] font-bold text-white uppercase tracking-wide leading-none mb-1">Premium Insurance</p>
-                        <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">₹5L Cover Active</p>
+                        <p className="text-[11px] font-black uppercase leading-none mb-1">Insured Mission</p>
+                        <p className="text-[8px] font-bold opacity-40 uppercase tracking-widest">Global Safety Standard v4.2</p>
                     </div>
                 </div>
             </div>
 
-            {/* Compact Final Footer */}
-            <div className="fixed bottom-[80px] left-0 right-0 z-50 px-5 px-safe">
-                <div className="max-w-[430px] mx-auto bg-[#0F172A] p-4 rounded-xl shadow-2xl">
-                    <button
+            {/* Sticky Action Footer */}
+            <div className={`fixed bottom-0 left-0 right-0 z-[100] px-5 py-4 backdrop-blur-lg border-t safe-area-bottom transition-all ${
+                isDarkMode ? 'bg-[#0A0F0D]/90 border-white/05' : 'bg-white/90 border-black/05'
+            }`}>
+                <div className="max-w-[430px] mx-auto flex items-center gap-4">
+                    <motion.button
+                        whileTap={{ scale: 0.98 }}
                         onClick={handleConfirmBooking}
-                        disabled={isProcessing}
-                        className="w-full h-12 bg-white text-[#0F172A] rounded-lg font-bold text-[12px] uppercase tracking-widest active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                        disabled={bookingInProgress}
+                        className="flex-1 h-14 bg-orange-500 hover:bg-orange-600 text-[#0F172A] rounded-2xl font-[1000] text-[13px] uppercase tracking-[0.1em] shadow-xl shadow-orange-500/20 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                     >
-                        {isProcessing ? 'Processing...' : 'Confirm & Pay'}
-                        <ChevronRight size={16} strokeWidth={3} className="text-[#FF9900]" />
-                    </button>
+                        {bookingInProgress ? 'Establishing...' : 'Confirm Booking'}
+                        <ArrowRight size={18} strokeWidth={4} />
+                    </motion.button>
                 </div>
             </div>
         </div>
@@ -3203,19 +3442,18 @@ const SpareDriverBooking = () => {
         PHASES.TRIP_COMPLETED
     ].includes(phase) && !(phase === PHASES.BOOKING_CONFIRMED && bookingDetails?.status !== 'pending');
 
-    // 🛡️ Safe Render Guard: Never show Asset Management if redirect is imminent
     if (!vehiclesLoading && vehicles && vehicles.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-white font-sans">
+            <div className={`flex flex-col items-center justify-center min-h-screen font-sans transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#FAF6EB]'}`}>
                 <Loader2 className="w-10 h-10 text-[#FF9900] animate-spin mb-4" strokeWidth={3} />
-                <p className="text-[10px] font-black text-black/20 uppercase tracking-[0.3em] animate-pulse">Initializing Direct Registry...</p>
+                <p className={`text-[10px] font-black uppercase tracking-[0.3em] animate-pulse ${isDarkMode ? 'text-white/20' : 'text-black/20'}`}>Initializing Direct Registry...</p>
             </div>
         );
     }
 
     return (
         <MobileLayout hideNav={phase === PHASES.TRIP_ACTIVE || phase === PHASES.FINDING_DRIVER || phase === PHASES.BOOKING_CONFIRMED || phase === PHASES.TRIP_COMPLETED}>
-            <div className="min-h-screen bg-[linear-gradient(180deg,#FFF9EF_0%,#FFFFFF_14%,#FFFFFF_100%)] font-sans flex flex-col">
+            <div className={`min-h-screen font-sans flex flex-col transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#FAF6EB]'}`}>
                 {showTopHeader &&
                     renderHeader(getPhaseTitle(), true)}
 
@@ -3229,6 +3467,7 @@ const SpareDriverBooking = () => {
                             transition={{ duration: 0.3, ease: 'easeOut' }}
                             className="h-full"
                         >
+                            {phase === PHASES.SERVICE_TYPE && renderServiceType()}
                             {phase === PHASES.BOOKING_DETAILS && renderBookingDetails()}
                             {phase === PHASES.CONFIRM_VEHICLE && renderConfirmVehicle()}
                             {phase === PHASES.CHECKOUT && renderCheckout()}

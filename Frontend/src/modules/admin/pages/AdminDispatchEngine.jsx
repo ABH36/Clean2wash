@@ -3,9 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Zap, Search, RefreshCw, MapPin, Clock, User, Car, Target, 
     TrendingUp, Activity, CheckCircle, AlertTriangle, Eye, Settings,
-    Navigation, Shield, Star, Timer, Route, Users
+    Navigation, Shield, Star, Timer, Route, Users, Database
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { adminAPI } from '../../../utils/adminApi';
+import { socketService } from '../../../utils/socket';
 
 const AdminDispatchEngine = () => {
     const [pendingBookings, setPendingBookings] = useState([]);
@@ -16,151 +18,113 @@ const AdminDispatchEngine = () => {
     const [showAdvancedView, setShowAdvancedView] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [dispatchHistory, setDispatchHistory] = useState([]);
+    const [dispatchStats, setDispatchStats] = useState(null);
 
-    // Dummy data for demo
+    // 🚀 Real API Integration
     useEffect(() => {
         loadDispatchData();
+        
+        // Socket Integration for Real-time Updates
+        const token = localStorage.getItem('admin_token');
+        socketService.connect(token);
+        socketService.joinAdminRoom();
+        
+        // Listen for dispatch events
+        socketService.on('booking_escalation', (data) => {
+            toast.error(`🚨 Booking Stuck: ${data.message}`, {
+                duration: 6000
+            });
+            loadDispatchData(); // Refresh data
+        });
+
+        socketService.on('driver_assigned', (data) => {
+            if (data.autoAssigned) {
+                toast.success(`🤖 Auto-assigned: ${data.driverName}`, {
+                    duration: 4000
+                });
+            }
+            loadDispatchData(); // Refresh data
+        });
+
+        socketService.on('new_booking_broadcast', (data) => {
+            if (data.booking?.service?.category === 'Chauffeur') {
+                loadDispatchData(); // Refresh data
+            }
+        });
+
+        return () => {
+            socketService.off('booking_escalation');
+            socketService.off('driver_assigned');
+            socketService.off('new_booking_broadcast');
+        };
     }, []);
 
-    const loadDispatchData = () => {
+    const loadDispatchData = async () => {
         setLoading(true);
-        setTimeout(() => {
-            setPendingBookings([
-                {
-                    id: 'BK006',
-                    customer: 'Anita Desai',
-                    service: 'Premium Car Wash',
-                    location: 'Koramangala, Bangalore',
-                    coordinates: { lat: 12.9352, lng: 77.6245 },
-                    priority: 'URGENT',
-                    scheduledTime: '2024-04-15 02:30 PM',
-                    amount: 599,
-                    estimatedDuration: 45,
-                    customerRating: 4.8,
-                    specialRequests: 'Premium service required'
-                },
-                {
-                    id: 'BK007',
-                    customer: 'Rohit Sharma',
-                    service: 'Interior Cleaning',
-                    location: 'Indiranagar, Bangalore',
-                    coordinates: { lat: 12.9716, lng: 77.6412 },
-                    priority: 'HIGH',
-                    scheduledTime: '2024-04-15 03:00 PM',
-                    amount: 899,
-                    estimatedDuration: 60,
-                    customerRating: 4.5,
-                    specialRequests: 'Pet hair removal needed'
-                },
-                {
-                    id: 'BK008',
-                    customer: 'Meera Patel',
-                    service: 'Express Wash',
-                    location: 'Whitefield, Bangalore',
-                    coordinates: { lat: 12.9698, lng: 77.7500 },
-                    priority: 'NORMAL',
-                    scheduledTime: '2024-04-15 04:00 PM',
-                    amount: 399,
-                    estimatedDuration: 30,
-                    customerRating: 4.2,
-                    specialRequests: null
-                }
+        try {
+            // Load pending bookings, available drivers, and dispatch stats
+            const [pendingRes, driversRes, statsRes] = await Promise.all([
+                adminAPI.getPendingBookings(),
+                adminAPI.getSpareDrivers(),
+                adminAPI.getDispatchStats()
             ]);
 
-            setAvailableDrivers([
-                {
-                    id: 'DRV006',
-                    name: 'Suresh Kumar',
-                    currentLocation: 'Koramangala 4th Block',
-                    coordinates: { lat: 12.9279, lng: 77.6271 },
-                    reliabilityScore: 95,
-                    completedJobs: 156,
-                    rating: 4.9,
-                    vehicleType: 'SEDAN',
-                    status: 'AVAILABLE',
-                    lastJobCompleted: '1 hour ago',
-                    specializations: ['Premium Service', 'Luxury Cars'],
-                    estimatedArrival: '8 min'
-                },
-                {
-                    id: 'DRV007',
-                    name: 'Prakash Singh',
-                    currentLocation: 'Indiranagar Metro',
-                    coordinates: { lat: 12.9784, lng: 77.6408 },
-                    reliabilityScore: 88,
-                    completedJobs: 203,
-                    rating: 4.7,
-                    vehicleType: 'HATCHBACK',
-                    status: 'AVAILABLE',
-                    lastJobCompleted: '30 min ago',
-                    specializations: ['Interior Cleaning', 'Pet Care'],
-                    estimatedArrival: '12 min'
-                },
-                {
-                    id: 'DRV008',
-                    name: 'Ramesh Reddy',
-                    currentLocation: 'HSR Layout Sector 1',
-                    coordinates: { lat: 12.9082, lng: 77.6476 },
-                    reliabilityScore: 92,
-                    completedJobs: 134,
-                    rating: 4.8,
-                    vehicleType: 'SUV',
-                    status: 'AVAILABLE',
-                    lastJobCompleted: '2 hours ago',
-                    specializations: ['Express Service', 'Large Vehicles'],
-                    estimatedArrival: '15 min'
-                }
-            ]);
+            if (pendingRes.status === 'success') {
+                setPendingBookings(pendingRes.data.bookings || []);
+            }
 
-            setDispatchHistory([
-                {
-                    id: 1,
-                    bookingId: 'BK005',
-                    driverId: 'DRV005',
-                    driverName: 'Arjun Reddy',
-                    assignedAt: '2024-04-15 01:45 PM',
-                    method: 'AUTO',
-                    distance: '2.3 km',
-                    estimatedTime: '6 min',
-                    actualTime: '8 min',
-                    status: 'COMPLETED'
-                },
-                {
-                    id: 2,
-                    bookingId: 'BK004',
-                    driverId: 'DRV002',
-                    driverName: 'Amit Sharma',
-                    assignedAt: '2024-04-15 01:30 PM',
-                    method: 'MANUAL',
-                    distance: '1.8 km',
-                    estimatedTime: '5 min',
-                    actualTime: '5 min',
-                    status: 'COMPLETED'
-                }
-            ]);
+            if (driversRes.status === 'success') {
+                // Filter only ACTIVE, APPROVED, ONLINE drivers
+                const activeDrivers = (driversRes.data.drivers || []).filter(d => 
+                    d.status === 'ACTIVE' && 
+                    d.verificationStatus === 'APPROVED' &&
+                    d.onlineStatus?.isOnline
+                );
+                setAvailableDrivers(activeDrivers);
+            }
 
+            if (statsRes.status === 'success') {
+                setDispatchStats(statsRes.data.stats);
+            }
+        } catch (error) {
+            console.error('Failed to load dispatch data:', error);
+            toast.error('Failed to load dispatch data');
+        } finally {
             setLoading(false);
-        }, 800);
+        }
     };
 
     const calculateDistance = (booking, driver) => {
-        // Simple distance calculation for demo
-        const lat1 = booking.coordinates.lat;
-        const lng1 = booking.coordinates.lng;
-        const lat2 = driver.coordinates.lat;
-        const lng2 = driver.coordinates.lng;
+        // Use booking and driver location coordinates if available
+        const bookingLat = booking.location?.address?.coordinates?.lat || booking.coordinates?.lat;
+        const bookingLng = booking.location?.address?.coordinates?.lng || booking.coordinates?.lng;
+        const driverLat = driver.currentLocation?.coordinates?.lat || driver.coordinates?.lat;
+        const driverLng = driver.currentLocation?.coordinates?.lng || driver.coordinates?.lng;
         
-        const distance = Math.sqrt(Math.pow(lat2 - lat1, 2) + Math.pow(lng2 - lng1, 2)) * 111; // Rough km conversion
+        if (!bookingLat || !bookingLng || !driverLat || !driverLng) {
+            return 5.0; // Default distance if coordinates not available
+        }
+        
+        // Haversine formula for distance calculation
+        const R = 6371; // Earth's radius in km
+        const dLat = (driverLat - bookingLat) * Math.PI / 180;
+        const dLng = (driverLng - bookingLng) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(bookingLat * Math.PI / 180) * Math.cos(driverLat * Math.PI / 180) *
+                  Math.sin(dLng/2) * Math.sin(dLng/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const distance = R * c;
+        
         return distance.toFixed(1);
     };
 
     const calculateDriverScore = (booking, driver) => {
         const distance = parseFloat(calculateDistance(booking, driver));
         const distanceScore = Math.max(0, 100 - (distance * 10)); // Closer = higher score
-        const reliabilityScore = driver.reliabilityScore;
-        const ratingScore = driver.rating * 20; // Convert 5-star to 100-point scale
+        const reliabilityScore = driver.reliabilityScore?.score || 50;
+        const ratingScore = (driver.reliabilityScore?.score || 50); // Use reliability score as rating
         
-        // Weighted average
+        // Weighted average: Distance (40%) + Reliability (40%) + Rating (20%)
         const totalScore = (distanceScore * 0.4) + (reliabilityScore * 0.4) + (ratingScore * 0.2);
         return Math.round(totalScore);
     };
@@ -175,76 +139,80 @@ const AdminDispatchEngine = () => {
             .sort((a, b) => b.score - a.score);
     };
 
-    const handleAutoAssign = (booking) => {
-        const rankedDrivers = getRankedDrivers(booking);
-        const bestDriver = rankedDrivers[0];
-        
-        if (bestDriver) {
-            handleAssignDriver(booking.id, bestDriver.id, bestDriver.name, 'AUTO');
+    // 🚀 Real Auto-Assignment Function
+    const handleAutoAssign = async (booking) => {
+        try {
+            const res = await adminAPI.triggerAutoAssign(booking._id);
+            
+            if (res.status === 'success') {
+                toast.success(`🤖 Auto-assigned: ${res.data.driver.name}`, {
+                    duration: 4000
+                });
+                
+                // Refresh data
+                loadDispatchData();
+            }
+        } catch (error) {
+            console.error('Auto-assignment failed:', error);
+            toast.error(error.response?.data?.message || 'Auto-assignment failed');
         }
     };
 
-    const handleAssignDriver = (bookingId, driverId, driverName, method = 'MANUAL') => {
-        // Remove booking from pending
-        setPendingBookings(prev => prev.filter(b => b.id !== bookingId));
-        
-        // Remove driver from available
-        setAvailableDrivers(prev => prev.filter(d => d.id !== driverId));
-        
-        // Add to dispatch history
-        const newDispatch = {
-            id: Date.now(),
-            bookingId,
-            driverId,
-            driverName,
-            assignedAt: new Date().toLocaleString(),
-            method,
-            distance: '2.1 km',
-            estimatedTime: '7 min',
-            actualTime: null,
-            status: 'ASSIGNED'
-        };
-        
-        setDispatchHistory(prev => [newDispatch, ...prev]);
-        
-        toast.success(`${method === 'AUTO' ? 'Auto-assigned' : 'Assigned'} ${driverName} to booking ${bookingId}`);
+    // Manual assignment function
+    const handleAssignDriver = async (bookingId, driverId, driverName, method = 'MANUAL') => {
+        try {
+            await adminAPI.assignCaptain(bookingId, driverId);
+            
+            toast.success(`${method === 'AUTO' ? 'Auto-assigned' : 'Assigned'} ${driverName} to booking ${bookingId}`);
+            
+            // Refresh data
+            loadDispatchData();
+        } catch (error) {
+            console.error('Driver assignment failed:', error);
+            toast.error(error.response?.data?.message || 'Failed to assign driver');
+        }
     };
 
     const getPriorityColor = (priority) => {
         switch (priority) {
             case 'URGENT': return 'text-red-600 bg-red-50 border-red-200';
             case 'HIGH': return 'text-orange-600 bg-orange-50 border-orange-200';
-            case 'NORMAL': return 'text-blue-600 bg-blue-50 border-blue-200';
-            default: return 'text-gray-600 bg-gray-50 border-gray-200';
+            case 'NORMAL': return 'text-[var(--primary)] bg-[var(--primary-light)] border-[var(--primary)]';
+            default: return 'text-[var(--text-muted)] bg-[var(--bg-secondary)] border-[var(--border)]';
         }
     };
 
-    const filteredBookings = pendingBookings.filter(b =>
-        b.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        b.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        b.service.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredBookings = pendingBookings.filter(b => {
+        // Map backend data structure to display structure
+        const bookingId = b.bookingId || b._id || '';
+        const customerName = b.consumer?.name || b.user?.name || b.customer || '';
+        const serviceName = b.service?.name || b.serviceName || '';
+        
+        return bookingId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+               customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+               serviceName.toLowerCase().includes(searchTerm.toLowerCase());
+    });
 
     return (
-        <div className="space-y-6 pb-10 max-w-full mx-auto px-4 bg-gray-50 min-h-screen">
+        <div className="space-y-6 pb-10 max-w-full mx-auto px-4 bg-[var(--bg)] min-h-screen">
             {/* Header Control Panel */}
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <div className="bg-[var(--card)] p-6 rounded-xl border border-[var(--border)] ">
                 <div className="flex flex-col lg:flex-row items-center gap-4 justify-between">
                     <div className="flex flex-col gap-1">
-                        <h1 className="text-2xl font-bold text-gray-900">Dispatch Engine</h1>
+                        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Dispatch Engine</h1>
                         <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
-                            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wide">Intelligent Driver Assignment</p>
+                            <div className="w-2 h-2 rounded-full bg-[var(--primary)] animate-pulse" />
+                            <p className="text-sm font-semibold text-[var(--primary)] uppercase tracking-wide">Intelligent Driver Assignment</p>
                         </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
-                        <div className="flex-1 lg:w-64 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 flex items-center gap-3 group focus-within:border-blue-500 transition-all">
-                            <Search size={14} className="text-gray-500 group-focus-within:text-blue-600" />
+                        <div className="flex-1 lg:w-64 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl px-4 py-2 flex items-center gap-3 group focus-within:border-[var(--primary)] transition-all">
+                            <Search size={14} className="text-[var(--text-muted)] group-focus-within:text-[var(--primary)]" />
                             <input
                                 type="text"
                                 placeholder="Search bookings..."
-                                className="bg-transparent outline-none text-sm font-medium text-gray-900 w-full placeholder:text-gray-500"
+                                className="bg-transparent outline-none text-sm font-medium text-[var(--text-primary)] w-full placeholder:text-[var(--text-muted)]"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
@@ -254,8 +222,8 @@ const AdminDispatchEngine = () => {
                             onClick={() => setAutoAssign(!autoAssign)}
                             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
                                 autoAssign 
-                                    ? 'bg-emerald-600 text-white' 
-                                    : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                                    ? 'bg-[var(--success)] text-white' 
+                                    : 'bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--card-hover)]'
                             }`}
                         >
                             <Zap size={14} className={autoAssign ? 'animate-pulse' : ''} />
@@ -264,7 +232,7 @@ const AdminDispatchEngine = () => {
 
                         <button 
                             onClick={loadDispatchData} 
-                            className="w-11 h-11 bg-white border border-gray-200 rounded-xl flex items-center justify-center text-gray-500 hover:text-blue-600 transition-all shadow-sm"
+                            className="w-11 h-11 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--primary)] transition-all "
                         >
                             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
                         </button>
@@ -273,8 +241,8 @@ const AdminDispatchEngine = () => {
                             onClick={() => setShowAdvancedView(!showAdvancedView)}
                             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
                                 showAdvancedView 
-                                    ? 'bg-blue-600 text-white' 
-                                    : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                                    ? 'bg-[var(--primary)] text-white' 
+                                    : 'bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--card-hover)]'
                             }`}
                         >
                             <Settings size={14} />
@@ -287,24 +255,24 @@ const AdminDispatchEngine = () => {
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {[
-                    { label: 'Pending Bookings', value: pendingBookings.length, icon: <Clock size={18} />, color: 'amber-500' },
-                    { label: 'Available Drivers', value: availableDrivers.length, icon: <Users size={18} />, color: 'emerald-500' },
-                    { label: 'Auto Assignments', value: dispatchHistory.filter(d => d.method === 'AUTO').length, icon: <Zap size={18} />, color: 'blue-600' },
-                    { label: 'Avg Response Time', value: '6.2 min', icon: <Timer size={18} />, color: 'purple-500' }
+                    { label: 'Pending Bookings', value: pendingBookings.length, icon: <Clock size={18} />, colorClass: 'text-[var(--warning)] bg-[var(--warning-light)]' },
+                    { label: 'Available Drivers', value: availableDrivers.length, icon: <Users size={18} />, colorClass: 'text-[var(--success)] bg-[var(--success-light)]' },
+                    { label: 'Auto Assignments', value: dispatchStats?.autoAssignedToday || 0, icon: <Zap size={18} />, colorClass: 'text-[var(--primary)] bg-[var(--primary-light)]' },
+                    { label: 'Online Drivers', value: dispatchStats?.onlineDrivers || availableDrivers.length, icon: <Timer size={18} />, colorClass: 'text-[var(--info)] bg-[var(--info-light)]' }
                 ].map((stat, idx) => (
                     <motion.div
                         key={idx}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.1 }}
-                        className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm"
+                        className="bg-[var(--card)] p-5 rounded-xl border border-[var(--border)] "
                     >
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{stat.label}</p>
-                                <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
+                                <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">{stat.label}</p>
+                                <p className="text-2xl font-bold text-[var(--text-primary)] mt-1">{stat.value}</p>
                             </div>
-                            <div className={`w-12 h-12 rounded-xl bg-${stat.color.replace('-', '-')}/10 flex items-center justify-center text-${stat.color}`}>
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${stat.colorClass}`}>
                                 {stat.icon}
                             </div>
                         </div>
@@ -317,50 +285,65 @@ const AdminDispatchEngine = () => {
                 {/* Pending Bookings */}
                 <div className="lg:col-span-2 space-y-4">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-lg font-bold text-gray-900">Pending Assignments</h2>
-                        <span className="px-3 py-1 bg-amber-100 text-amber-800 text-sm font-semibold rounded-full">
+                        <h2 className="text-lg font-bold text-[var(--text-primary)]">Pending Assignments</h2>
+                        <span className="px-3 py-1 bg-[var(--warning-light)] text-[var(--warning-text)] text-sm font-semibold rounded-full border border-[var(--warning)]">
                             {filteredBookings.length} pending
                         </span>
                     </div>
 
                     {loading ? (
                         <div className="flex items-center justify-center py-24">
-                            <div className="w-10 h-10 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin" />
+                            <div className="w-10 h-10 border-4 border-[var(--border)] border-t-[var(--primary)] rounded-full animate-spin" />
                         </div>
                     ) : filteredBookings.length === 0 ? (
-                        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                            <CheckCircle className="mx-auto text-emerald-500 mb-3" size={48} />
-                            <p className="text-lg font-bold text-gray-900 mb-2">All Caught Up!</p>
-                            <p className="text-sm text-gray-500">No pending bookings to assign</p>
+                        <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] p-12 text-center">
+                            <CheckCircle className="mx-auto text-[var(--success)] mb-3" size={48} />
+                            <p className="text-lg font-bold text-[var(--text-primary)] mb-2">All Caught Up!</p>
+                            <p className="text-sm text-[var(--text-muted)]">No pending bookings to assign</p>
                         </div>
                     ) : (
                         <div className="space-y-4">
-                            {filteredBookings.map((booking) => (
+                            {filteredBookings.map((booking) => {
+                                // Map backend data structure to display structure
+                                const bookingId = booking.bookingId || booking._id?.substring(0, 8).toUpperCase() || 'N/A';
+                                const customerName = booking.consumer?.name || booking.user?.name || booking.customer || 'Unknown Customer';
+                                const serviceName = booking.service?.name || booking.serviceName || 'Chauffeur Service';
+                                const location = booking.location?.address?.street || booking.location?.address || booking.location || 'Unknown Location';
+                                const amount = booking.pricing?.totalAmount || booking.amount || 0;
+                                const estimatedDuration = booking.schedule?.duration || booking.estimatedDuration || 60;
+                                const scheduledTime = booking.schedule?.startTime 
+                                    ? new Date(booking.schedule.startTime).toLocaleTimeString() 
+                                    : new Date(booking.createdAt).toLocaleTimeString();
+                                const priority = booking.priority || 'NORMAL';
+                                const customerRating = booking.consumer?.rating || booking.customerRating || 4.5;
+                                const specialRequests = booking.specialRequests || booking.notes || null;
+                                
+                                return (
                                 <motion.div
-                                    key={booking.id}
+                                    key={booking._id}
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden"
+                                    className="bg-[var(--card)] rounded-xl border border-[var(--border)]  overflow-hidden"
                                 >
                                     <div className="p-6">
                                         <div className="flex items-start justify-between mb-4">
                                             <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 font-bold text-lg flex items-center justify-center">
+                                                <div className="w-12 h-12 rounded-xl bg-[var(--primary-light)] text-[var(--primary)] font-bold text-lg flex items-center justify-center border border-[var(--primary)]">
                                                     <Target size={24} />
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-lg font-bold text-gray-900 font-mono">{booking.id}</h3>
-                                                    <p className="text-sm text-gray-600 font-semibold">{booking.service}</p>
+                                                    <h3 className="text-lg font-bold text-[var(--text-primary)] font-mono">{bookingId}</h3>
+                                                    <p className="text-sm text-[var(--text-secondary)] font-semibold">{serviceName}</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <div className={`px-3 py-1 rounded-full text-xs font-semibold border ${getPriorityColor(booking.priority)}`}>
-                                                    {booking.priority}
+                                                <div className={`px-3 py-1 rounded-full text-xs font-semibold border ${getPriorityColor(priority)}`}>
+                                                    {priority}
                                                 </div>
                                                 {autoAssign && (
                                                     <button
                                                         onClick={() => handleAutoAssign(booking)}
-                                                        className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-all flex items-center gap-2"
+                                                        className="px-4 py-2 bg-[var(--success)] text-white rounded-xl text-sm font-semibold hover:bg-[var(--success-dark)] transition-all flex items-center gap-2"
                                                     >
                                                         <Zap size={14} />
                                                         Auto Assign
@@ -371,73 +354,73 @@ const AdminDispatchEngine = () => {
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                             <div>
-                                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Customer</p>
-                                                <p className="text-sm font-bold text-gray-900">{booking.customer}</p>
+                                                <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1">Customer</p>
+                                                <p className="text-sm font-bold text-[var(--text-primary)]">{customerName}</p>
                                                 <div className="flex items-center gap-1 mt-1">
                                                     <Star size={12} className="text-yellow-500 fill-current" />
-                                                    <span className="text-xs font-semibold text-gray-600">{booking.customerRating}</span>
+                                                    <span className="text-xs font-semibold text-[var(--text-secondary)]">{customerRating}</span>
                                                 </div>
                                             </div>
                                             <div>
-                                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Location</p>
+                                                <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1">Location</p>
                                                 <div className="flex items-center gap-2">
-                                                    <MapPin size={12} className="text-gray-500" />
-                                                    <p className="text-sm font-bold text-gray-900">{booking.location}</p>
+                                                    <MapPin size={12} className="text-[var(--text-muted)]" />
+                                                    <p className="text-sm font-bold text-[var(--text-primary)]">{location}</p>
                                                 </div>
                                             </div>
                                         </div>
 
                                         <div className="grid grid-cols-3 gap-4 mb-4">
-                                            <div className="text-center p-3 bg-gray-50 rounded-lg">
-                                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Amount</p>
-                                                <p className="text-lg font-bold text-blue-600">₹{booking.amount}</p>
+                                            <div className="text-center p-3 bg-[var(--bg-secondary)] rounded-lg border border-[var(--border)]">
+                                                <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1">Amount</p>
+                                                <p className="text-lg font-bold text-[var(--primary)]">₹{amount}</p>
                                             </div>
-                                            <div className="text-center p-3 bg-gray-50 rounded-lg">
-                                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Duration</p>
-                                                <p className="text-lg font-bold text-gray-900">{booking.estimatedDuration}min</p>
+                                            <div className="text-center p-3 bg-[var(--bg-secondary)] rounded-lg border border-[var(--border)]">
+                                                <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1">Duration</p>
+                                                <p className="text-lg font-bold text-[var(--text-primary)]">{estimatedDuration}min</p>
                                             </div>
-                                            <div className="text-center p-3 bg-gray-50 rounded-lg">
-                                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Scheduled</p>
-                                                <p className="text-sm font-bold text-gray-900">{booking.scheduledTime.split(' ')[1]}</p>
+                                            <div className="text-center p-3 bg-[var(--bg-secondary)] rounded-lg border border-[var(--border)]">
+                                                <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1">Scheduled</p>
+                                                <p className="text-sm font-bold text-[var(--text-primary)]">{scheduledTime}</p>
                                             </div>
                                         </div>
 
-                                        {booking.specialRequests && (
+                                        {specialRequests && (
                                             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                                                 <p className="text-xs font-semibold text-blue-900 uppercase tracking-wide mb-1">Special Requests</p>
-                                                <p className="text-sm text-blue-800 font-medium">{booking.specialRequests}</p>
+                                                <p className="text-sm text-blue-800 font-medium">{specialRequests}</p>
                                             </div>
                                         )}
 
                                         {showAdvancedView && (
-                                            <div className="border-t border-gray-200 pt-4">
-                                                <h4 className="text-sm font-bold text-gray-900 mb-3">Recommended Drivers</h4>
+                                            <div className="border-t border-[var(--border)] pt-4">
+                                                <h4 className="text-sm font-bold text-[var(--text-primary)] mb-3">Recommended Drivers</h4>
                                                 <div className="space-y-2">
                                                     {getRankedDrivers(booking).slice(0, 3).map((driver, idx) => (
-                                                        <div key={driver.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                                        <div key={driver._id} className="flex items-center justify-between p-3 bg-[var(--bg-secondary)] rounded-lg">
                                                             <div className="flex items-center gap-3">
-                                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
-                                                                    idx === 0 ? 'bg-emerald-600 text-white' :
-                                                                    idx === 1 ? 'bg-blue-600 text-white' :
-                                                                    'bg-gray-600 text-white'
+                                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold border ${
+                                                                    idx === 0 ? 'bg-[var(--success)] text-white border-[var(--success)]' :
+                                                                    idx === 1 ? 'bg-[var(--primary)] text-white border-[var(--primary)]' :
+                                                                    'bg-[var(--text-muted)] text-white border-[var(--text-muted)]'
                                                                 }`}>
                                                                     {idx + 1}
                                                                 </div>
                                                                 <div>
-                                                                    <p className="text-sm font-bold text-gray-900">{driver.name}</p>
-                                                                    <p className="text-xs text-gray-500">{driver.distance}km • {driver.estimatedArrival}</p>
+                                                                    <p className="text-sm font-bold text-[var(--text-primary)]">{driver.name}</p>
+                                                                    <p className="text-xs text-[var(--text-muted)]">{driver.distance}km • ETA: {Math.ceil(driver.distance * 3)}min</p>
                                                                 </div>
                                                             </div>
                                                             <div className="flex items-center gap-3">
                                                                 <div className="text-right">
-                                                                    <p className="text-sm font-bold text-gray-900">Score: {driver.score}</p>
+                                                                    <p className="text-sm font-bold text-[var(--text-primary)]">Score: {driver.score}</p>
                                                                     <div className="flex items-center gap-1">
                                                                         <Star size={10} className="text-yellow-500 fill-current" />
-                                                                        <span className="text-xs text-gray-600">{driver.rating}</span>
+                                                                        <span className="text-xs text-[var(--text-secondary)]">{(driver.reliabilityScore?.score || 50) / 20}</span>
                                                                     </div>
                                                                 </div>
                                                                 <button
-                                                                    onClick={() => handleAssignDriver(booking.id, driver.id, driver.name)}
+                                                                    onClick={() => handleAssignDriver(booking._id, driver._id, driver.name)}
                                                                     className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-all"
                                                                 >
                                                                     Assign
@@ -450,7 +433,7 @@ const AdminDispatchEngine = () => {
                                         )}
                                     </div>
                                 </motion.div>
-                            ))}
+                            )})}
                         </div>
                     )}
                 </div>
@@ -458,61 +441,61 @@ const AdminDispatchEngine = () => {
                 {/* Available Drivers & Dispatch History */}
                 <div className="space-y-6">
                     {/* Available Drivers */}
-                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-200 bg-emerald-50">
+                    <div className="bg-[var(--card)] rounded-xl border border-[var(--border)]  overflow-hidden">
+                        <div className="px-6 py-4 border-b border-[var(--border)] bg-[var(--success-light)]">
                             <div className="flex items-center gap-3">
-                                <Users className="text-emerald-600" size={20} />
-                                <h3 className="text-lg font-bold text-emerald-900">Available Drivers</h3>
-                                <span className="px-2 py-1 bg-emerald-600 text-white text-xs font-bold rounded-full">{availableDrivers.length}</span>
+                                <Users className="text-[var(--success)]" size={20} />
+                                <h3 className="text-lg font-bold text-[var(--success-text)]">Available Drivers</h3>
+                                <span className="px-2 py-1 bg-[var(--success)] text-white text-xs font-bold rounded-full">{availableDrivers.length}</span>
                             </div>
                         </div>
                         <div className="p-4 space-y-3 max-h-96 overflow-y-auto">
                             {availableDrivers.map((driver) => (
-                                <div key={driver.id} className="p-4 bg-gray-50 rounded-xl">
+                                <div key={driver._id} className="p-4 bg-[var(--bg-secondary)] rounded-xl">
                                     <div className="flex items-center justify-between mb-3">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-lg bg-emerald-600 text-white font-bold text-sm flex items-center justify-center uppercase">
+                                            <div className="w-10 h-10 rounded-lg bg-[var(--success-light)] text-[var(--success-text)] font-bold text-sm flex items-center justify-center uppercase border border-[var(--success)]">
                                                 {driver.name[0]}
                                             </div>
                                             <div>
-                                                <p className="text-sm font-bold text-gray-900">{driver.name}</p>
-                                                <p className="text-xs text-gray-500 font-mono">{driver.id}</p>
+                                                <p className="text-sm font-bold text-[var(--text-primary)]">{driver.name}</p>
+                                                <p className="text-xs text-[var(--text-muted)] font-mono">{driver.driverId}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
                                             <div className="flex items-center gap-1">
                                                 <Star size={12} className="text-yellow-500 fill-current" />
-                                                <span className="text-sm font-bold text-gray-900">{driver.rating}</span>
+                                                <span className="text-sm font-bold text-[var(--text-primary)]">{((driver.reliabilityScore?.score || 50) / 20).toFixed(1)}</span>
                                             </div>
-                                            <p className="text-xs text-gray-500">{driver.completedJobs} jobs</p>
+                                            <p className="text-xs text-[var(--text-muted)]">{driver.reliabilityScore?.metrics?.totalTrips || 0} trips</p>
                                         </div>
                                     </div>
                                     
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-2">
-                                            <MapPin size={12} className="text-gray-500" />
-                                            <p className="text-xs text-gray-600 font-semibold">{driver.currentLocation}</p>
+                                            <MapPin size={12} className="text-[var(--text-muted)]" />
+                                            <p className="text-xs text-[var(--text-secondary)] font-semibold">{driver.currentLocation?.address || 'Location updating...'}</p>
                                         </div>
                                         
                                         <div className="flex items-center justify-between">
-                                            <span className="text-xs font-semibold text-gray-500">Reliability</span>
+                                            <span className="text-xs font-semibold text-[var(--text-muted)]">Reliability</span>
                                             <div className="flex items-center gap-2">
-                                                <div className="w-16 bg-gray-200 rounded-full h-2">
+                                                <div className="w-16 bg-[var(--border)] rounded-full h-2">
                                                     <div 
-                                                        className="bg-emerald-500 h-2 rounded-full" 
-                                                        style={{ width: `${driver.reliabilityScore}%` }}
+                                                        className="bg-[var(--success)] h-2 rounded-full" 
+                                                        style={{ width: `${driver.reliabilityScore?.score || 50}%` }}
                                                     />
                                                 </div>
-                                                <span className="text-xs font-bold text-emerald-600">{driver.reliabilityScore}%</span>
+                                                <span className="text-xs font-bold text-[var(--success-text)]">{driver.reliabilityScore?.score || 50}%</span>
                                             </div>
                                         </div>
                                         
-                                        <div className="flex flex-wrap gap-1 mt-2">
-                                            {driver.specializations.map((spec, idx) => (
-                                                <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
-                                                    {spec}
-                                                </span>
-                                            ))}
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-semibold text-[var(--text-muted)]">Status</span>
+                                            <div className="flex items-center gap-1">
+                                                <div className="w-2 h-2 rounded-full bg-[var(--success)] animate-pulse" />
+                                                <span className="text-xs font-bold text-[var(--success-text)]">Online</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -521,43 +504,50 @@ const AdminDispatchEngine = () => {
                     </div>
 
                     {/* Recent Dispatch History */}
-                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-200 bg-blue-50">
+                    <div className="bg-[var(--card)] rounded-xl border border-[var(--border)]  overflow-hidden">
+                        <div className="px-6 py-4 border-b border-[var(--border)] bg-[var(--primary-light)]">
                             <div className="flex items-center gap-3">
-                                <Activity className="text-blue-600" size={20} />
-                                <h3 className="text-lg font-bold text-blue-900">Recent Assignments</h3>
+                                <Activity className="text-[var(--primary)]" size={20} />
+                                <h3 className="text-lg font-bold text-[var(--primary-text)]">Dispatch Stats</h3>
                             </div>
                         </div>
-                        <div className="p-4 space-y-3 max-h-96 overflow-y-auto">
-                            {dispatchHistory.map((dispatch) => (
-                                <div key={dispatch.id} className="p-4 bg-gray-50 rounded-xl">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <p className="text-sm font-bold text-gray-900 font-mono">{dispatch.bookingId}</p>
-                                        <div className="flex items-center gap-2">
-                                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                                                dispatch.method === 'AUTO' 
-                                                    ? 'bg-emerald-100 text-emerald-800' 
-                                                    : 'bg-blue-100 text-blue-800'
-                                            }`}>
-                                                {dispatch.method}
-                                            </span>
-                                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                                                dispatch.status === 'COMPLETED' 
-                                                    ? 'bg-emerald-100 text-emerald-800' 
-                                                    : 'bg-amber-100 text-amber-800'
-                                            }`}>
-                                                {dispatch.status}
-                                            </span>
-                                        </div>
+                        <div className="p-4 space-y-3">
+                            {dispatchStats ? (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="text-center p-3 bg-[var(--success-light)] rounded-lg border border-[var(--success)]">
+                                        <p className="text-xs font-semibold text-[var(--success-text)] uppercase tracking-wide mb-1">Auto Today</p>
+                                        <p className="text-2xl font-bold text-[var(--success)]">{dispatchStats.autoAssignedToday}</p>
                                     </div>
-                                    <p className="text-sm font-semibold text-gray-700 mb-2">{dispatch.driverName}</p>
-                                    <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
-                                        <div>Distance: {dispatch.distance}</div>
-                                        <div>Time: {dispatch.actualTime || dispatch.estimatedTime}</div>
+                                    <div className="text-center p-3 bg-[var(--primary-light)] rounded-lg border border-[var(--primary)]">
+                                        <p className="text-xs font-semibold text-[var(--primary-text)] uppercase tracking-wide mb-1">Manual Today</p>
+                                        <p className="text-2xl font-bold text-[var(--primary)]">{dispatchStats.manualAssignedToday}</p>
                                     </div>
-                                    <p className="text-xs text-gray-400 mt-2">{dispatch.assignedAt}</p>
+                                    <div className="text-center p-3 bg-[var(--warning-light)] rounded-lg border border-[var(--warning)]">
+                                        <p className="text-xs font-semibold text-[var(--warning-text)] uppercase tracking-wide mb-1">Pending</p>
+                                        <p className="text-2xl font-bold text-[var(--warning)]">{dispatchStats.pending}</p>
+                                    </div>
+                                    <div className="text-center p-3 bg-[var(--info-light)] rounded-lg border border-[var(--info)]">
+                                        <p className="text-xs font-semibold text-[var(--info-text)] uppercase tracking-wide mb-1">Assigned</p>
+                                        <p className="text-2xl font-bold text-[var(--info)]">{dispatchStats.assigned}</p>
+                                    </div>
                                 </div>
-                            ))}
+                            ) : (
+                                <div className="text-center py-8">
+                                    <Activity className="mx-auto text-gray-400 mb-2" size={32} />
+                                    <p className="text-sm text-[var(--text-muted)]">Loading dispatch statistics...</p>
+                                </div>
+                            )}
+                            
+                            {dispatchStats?.stuckBookings > 0 && (
+                                <div className="mt-4 p-3 bg-[var(--error-light)] border border-[var(--error)] rounded-lg">
+                                    <div className="flex items-center gap-2">
+                                        <AlertTriangle size={16} className="text-[var(--error)]" />
+                                        <p className="text-sm font-bold text-[var(--error-text)]">
+                                            {dispatchStats.stuckBookings} booking(s) need attention
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

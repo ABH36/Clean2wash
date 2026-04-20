@@ -155,25 +155,25 @@ const PaymentCheckout = () => {
         <MobileLayout hideNav={true}>
             <div className="bg-[#FAFAFA] min-h-screen pb-40">
                 {/* ── Header ── */}
-                <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md px-5 py-6 border-b border-gray-100 flex items-center gap-4">
-                    <button onClick={() => navigate(-1)} className="p-1 -ml-1 text-black active:scale-90 transition-transform">
+                <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md px-5 py-6 border-b border-white/5 flex items-center gap-4">
+                    <button onClick={() => navigate(-1)} className="p-1 -ml-1 text-white active:scale-90 transition-transform">
                         <ChevronLeft size={24} strokeWidth={3} />
                     </button>
                     <div>
-                        <h1 className="text-base font-[1000] text-black uppercase tracking-tight italic">Secure Checkout</h1>
-                        <p className="text-[9px] font-black text-black/20 uppercase tracking-widest leading-none mt-0.5">Payment Authentication</p>
+                        <h1 className="text-base font-[1000] text-white uppercase tracking-tight italic">Secure Checkout</h1>
+                        <p className="text-[9px] font-black text-white/20 uppercase tracking-widest leading-none mt-0.5">Payment Authentication</p>
                     </div>
                 </header>
 
                 <div className="px-5 pt-4 space-y-4">
                     {/* ── Order Summary ── */}
-                    <div className="bg-white rounded-[1.5rem] border border-black/[0.04] p-5 shadow-sm relative overflow-hidden">
+                    <div className="bg-white/5 rounded-[1.5rem] border border-black/[0.04] p-5  relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-24 h-24 bg-brand/5 rounded-full blur-3xl -mr-12 -mt-12" />
 
                         <div className="relative z-10 space-y-3">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <h3 className="text-[12px] font-[1000] text-black uppercase tracking-tight mb-1">{serviceName}</h3>
+                                    <h3 className="text-[12px] font-[1000] text-white uppercase tracking-tight mb-1">{serviceName}</h3>
                                     <p className="text-[8px] font-black text-black/30 uppercase tracking-widest leading-none">{date} • {time}</p>
                                 </div>
                                 <div className="bg-brand/10 px-1.5 py-0.5 rounded text-[7px] font-black text-brand uppercase tracking-widest">In-Store</div>
@@ -183,8 +183,8 @@ const PaymentCheckout = () => {
 
                             <div className="flex justify-between items-end">
                                 <div>
-                                    <p className="text-[7px] font-black text-black/20 uppercase tracking-widest leading-none mb-1">Total Payable</p>
-                                    <h2 className="text-2xl font-[1000] text-black tracking-tighter leading-none italic">₹{amount}</h2>
+                                    <p className="text-[7px] font-black text-white/20 uppercase tracking-widest leading-none mb-1">Total Payable</p>
+                                    <h2 className="text-2xl font-[1000] text-white tracking-tighter leading-none italic">₹{amount}</h2>
                                 </div>
                                 <div className="flex items-center gap-1.5 text-emerald-500">
                                     <ShieldCheck size={12} />
@@ -202,15 +202,15 @@ const PaymentCheckout = () => {
                             {/* UPI */}
                             <button
                                 onClick={() => setSelectedMethod('upi')}
-                                className={`w-full flex items-center justify-between p-3.5 rounded-[1.25rem] border transition-all duration-300 ${selectedMethod === 'upi' ? 'bg-white border-brand shadow-lg ring-2 ring-brand/5' : 'bg-white/50 border-black/[0.02] grayscale opacity-60'}`}
+                                className={`w-full flex items-center justify-between p-3.5 rounded-[1.25rem] border transition-all duration-300 ${selectedMethod === 'upi' ? 'bg-white/5 border-brand shadow-lg ring-2 ring-brand/5' : 'bg-white/50 border-black/[0.02] grayscale opacity-60'}`}
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${selectedMethod === 'upi' ? 'bg-brand/10 text-brand' : 'bg-gray-100'}`}>
+                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${selectedMethod === 'upi' ? 'bg-brand/10 text-brand' : 'bg-white/[0.05]'}`}>
                                         <Smartphone size={18} strokeWidth={2.5} />
                                     </div>
                                     <div className="text-left">
-                                        <h5 className="text-[10px] font-[1000] text-black uppercase tracking-tight">UPI Transfer</h5>
-                                        <p className="text-[7px] font-black text-black/20 uppercase tracking-widest leading-none mt-0.5">GPay, PhonePe, Paytm</p>
+                                        <h5 className="text-[10px] font-[1000] text-white uppercase tracking-tight">UPI Transfer</h5>
+                                        <p className="text-[7px] font-black text-white/20 uppercase tracking-widest leading-none mt-0.5">GPay, PhonePe, Paytm</p>
                                     </div>
                                 </div>
                                 {selectedMethod === 'upi' && <div className="w-4 h-4 bg-brand rounded-full flex items-center justify-center text-white"><Check size={8} strokeWidth={4} /></div>}
@@ -219,15 +219,15 @@ const PaymentCheckout = () => {
                             {/* Card */}
                             <button
                                 onClick={() => setSelectedMethod('card')}
-                                className={`w-full flex items-center justify-between p-3.5 rounded-[1.25rem] border transition-all duration-300 ${selectedMethod === 'card' ? 'bg-white border-brand shadow-lg ring-2 ring-brand/5' : 'bg-white/50 border-black/[0.02] grayscale opacity-60'}`}
+                                className={`w-full flex items-center justify-between p-3.5 rounded-[1.25rem] border transition-all duration-300 ${selectedMethod === 'card' ? 'bg-white/5 border-brand shadow-lg ring-2 ring-brand/5' : 'bg-white/50 border-black/[0.02] grayscale opacity-60'}`}
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${selectedMethod === 'card' ? 'bg-brand/10 text-brand' : 'bg-gray-100'}`}>
+                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${selectedMethod === 'card' ? 'bg-brand/10 text-brand' : 'bg-white/[0.05]'}`}>
                                         <CreditCard size={18} strokeWidth={2.5} />
                                     </div>
                                     <div className="text-left">
-                                        <h5 className="text-[10px] font-[1000] text-black uppercase tracking-tight">Credit / Debit Card</h5>
-                                        <p className="text-[7px] font-black text-black/20 uppercase tracking-widest leading-none mt-0.5">Visa, Mastercard, RuPay</p>
+                                        <h5 className="text-[10px] font-[1000] text-white uppercase tracking-tight">Credit / Debit Card</h5>
+                                        <p className="text-[7px] font-black text-white/20 uppercase tracking-widest leading-none mt-0.5">Visa, Mastercard, RuPay</p>
                                     </div>
                                 </div>
                                 {selectedMethod === 'card' && <div className="w-4 h-4 bg-brand rounded-full flex items-center justify-center text-white"><Check size={8} strokeWidth={4} /></div>}
@@ -236,15 +236,15 @@ const PaymentCheckout = () => {
                             {/* Wallet */}
                             <button
                                 onClick={() => setSelectedMethod('wallet')}
-                                className={`w-full flex items-center justify-between p-3.5 rounded-[1.25rem] border transition-all duration-300 ${selectedMethod === 'wallet' ? 'bg-white border-brand shadow-lg ring-2 ring-brand/5' : 'bg-white/50 border-black/[0.02] grayscale opacity-60'}`}
+                                className={`w-full flex items-center justify-between p-3.5 rounded-[1.25rem] border transition-all duration-300 ${selectedMethod === 'wallet' ? 'bg-white/5 border-brand shadow-lg ring-2 ring-brand/5' : 'bg-white/50 border-black/[0.02] grayscale opacity-60'}`}
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${selectedMethod === 'wallet' ? 'bg-brand/10 text-brand' : 'bg-gray-100'}`}>
+                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${selectedMethod === 'wallet' ? 'bg-brand/10 text-brand' : 'bg-white/[0.05]'}`}>
                                         <Wallet size={18} strokeWidth={2.5} />
                                     </div>
                                     <div className="text-left">
-                                        <h5 className="text-[10px] font-[1000] text-black uppercase tracking-tight">C2W Wallet</h5>
-                                        <p className="text-[7px] font-black text-black/20 uppercase tracking-widest leading-none mt-0.5">Quick 1-tap checkout</p>
+                                        <h5 className="text-[10px] font-[1000] text-white uppercase tracking-tight">C2W Wallet</h5>
+                                        <p className="text-[7px] font-black text-white/20 uppercase tracking-widest leading-none mt-0.5">Quick 1-tap checkout</p>
                                     </div>
                                 </div>
                                 {selectedMethod === 'wallet' && <div className="w-4 h-4 bg-brand rounded-full flex items-center justify-center text-white"><Check size={8} strokeWidth={4} /></div>}
@@ -274,7 +274,7 @@ const PaymentCheckout = () => {
                     >
                         {isProcessing ? (
                             <div className="flex items-center gap-3 text-brand">
-                                <div className="w-4 h-4 border-2 border-brand/30 border-t-brand rounded-full animate-spin" />
+                                <div className="w-4 h-4 border-white/5 border-brand/30 border-t-brand rounded-full animate-spin" />
                                 <span className="text-[10px] font-black uppercase tracking-widest">Verifying</span>
                             </div>
                         ) : (
@@ -295,13 +295,13 @@ const PaymentCheckout = () => {
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            className="fixed inset-0 z-[200] bg-brand flex flex-col items-center justify-center p-10 text-black overflow-hidden"
+                            className="fixed inset-0 z-[200] bg-brand flex flex-col items-center justify-center p-10 text-white overflow-hidden"
                         >
                             <motion.div
                                 initial={{ scale: 0.5, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 transition={{ type: 'spring', damping: 20 }}
-                                className="w-32 h-32 bg-white rounded-full flex items-center justify-center mb-8 shadow-2xl"
+                                className="w-32 h-32 bg-white/5 rounded-full flex items-center justify-center mb-8 shadow-2xl"
                             >
                                 <Check size={60} strokeWidth={4} className="text-brand" />
                             </motion.div>
@@ -324,7 +324,7 @@ const PaymentCheckout = () => {
 
                             {/* Decorative Elements */}
                             <div className="absolute top-[-10%] left-[-10%] w-60 h-60 bg-white/20 rounded-full blur-[80px]" />
-                            <div className="absolute bottom-[-10%] right-[-10%] w-60 h-60 bg-black/5 rounded-full blur-[80px]" />
+                            <div className="absolute bottom-[-10%] right-[-10%] w-60 h-60 bg-white/5 rounded-full blur-[80px]" />
                         </motion.div>
                     )}
                 </AnimatePresence>

@@ -74,7 +74,7 @@ const StaffLogin = () => {
     };
 
     return (
-        <div className={`min-h-screen px-8 pt-20 pb-12 flex flex-col justify-between relative overflow-hidden transition-colors duration-500 ${isDarkMode ? 'bg-[#0F172A]' : 'bg-white'}`}>
+        <div className={`min-h-screen px-8 pt-20 pb-12 flex flex-col justify-between relative overflow-hidden transition-colors duration-500 ${isDarkMode ? 'bg-[#0F172A]' : 'bg-white/5'}`}>
             {/* Ambient Background */}
             <div className={`absolute -top-24 -right-24 w-64 h-64 rounded-full blur-3xl transition-colors duration-500 ${isDarkMode ? 'bg-brand/10' : 'bg-brand/5'}`} />
             <div className={`absolute -bottom-24 -left-24 w-64 h-64 rounded-full blur-3xl transition-colors duration-500 ${isDarkMode ? 'bg-brand/20' : 'bg-brand/10'}`} />
@@ -84,7 +84,7 @@ const StaffLogin = () => {
                 {step === 2 && (
                     <button
                         onClick={() => setStep(1)}
-                        className={`mb-6 p-3 rounded-2xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 text-white/40 hover:text-white' : 'bg-gray-100 text-content-subtle hover:text-content'}`}
+                        className={`mb-6 p-3 rounded-2xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 text-white/40 hover:text-white' : 'bg-white/[0.05] text-content-subtle hover:text-content'}`}
                     >
                         <ChevronLeft size={18} />
                     </button>
@@ -125,7 +125,7 @@ const StaffLogin = () => {
                                         placeholder="Enter Registered Mobile"
                                         value={phone}
                                         onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                        className={`w-full border px-16 py-5 rounded-[2rem] text-sm font-black outline-none transition-all ${isDarkMode ? 'bg-white/5 border-white/5 text-white focus:border-brand/40' : 'bg-gray-50 border-gray-100 text-content focus:border-brand/40'}`}
+                                        className={`w-full border px-16 py-5 rounded-[2rem] text-sm font-black outline-none transition-all ${isDarkMode ? 'bg-white/5 border-white/5 text-white focus:border-brand/40' : 'bg-white/[0.02] border-white/5 text-content focus:border-brand/40'}`}
                                     />
                                 </div>
                             </div>
@@ -133,7 +133,7 @@ const StaffLogin = () => {
                             <motion.button
                                 whileTap={{ scale: 0.98 }}
                                 disabled={loading || phone.length < 10}
-                                className={`w-full h-16 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl flex items-center justify-center gap-3 mt-4 transition-all ${loading || phone.length < 10 ? 'opacity-50 grayscale' : 'hover:scale-[1.02]'} ${isDarkMode ? 'bg-white text-[#0F172A]' : 'bg-content text-white'}`}
+                                className={`w-full h-16 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl flex items-center justify-center gap-3 mt-4 transition-all ${loading || phone.length < 10 ? 'opacity-50 grayscale' : 'hover:scale-[1.02]'} ${isDarkMode ? 'bg-white/5 text-[#0F172A]' : 'bg-content text-white'}`}
                             >
                                 {loading ? 'Initializing...' : 'Request Auth Code'}
                                 {!loading && <ArrowRight size={18} />}
@@ -163,7 +163,7 @@ const StaffLogin = () => {
                                         maxLength={6}
                                         value={otp}
                                         onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
-                                        className={`w-full border px-16 py-5 rounded-[2rem] text-sm font-black tracking-[1em] outline-none transition-all ${isDarkMode ? 'bg-white/5 border-white/5 text-white focus:border-brand/40 shadow-inner shadow-black/20' : 'bg-gray-50 border-gray-100 text-content focus:border-brand/40'}`}
+                                        className={`w-full border px-16 py-5 rounded-[2rem] text-sm font-black tracking-[1em] outline-none transition-all ${isDarkMode ? 'bg-white/5 border-white/5 text-white focus:border-brand/40 shadow-inner shadow-black/20' : 'bg-white/[0.02] border-white/5 text-content focus:border-brand/40'}`}
                                     />
                                 </div>
                                 <div className="flex justify-between px-6 pt-2">
@@ -179,7 +179,7 @@ const StaffLogin = () => {
                             <motion.button
                                 whileTap={{ scale: 0.98 }}
                                 disabled={loading || otp.length < 6}
-                                className={`w-full h-16 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl flex items-center justify-center gap-3 mt-4 transition-all ${loading || otp.length < 6 ? 'opacity-50 grayscale' : 'hover:scale-[1.02] active:bg-brand active:text-white'} ${isDarkMode ? 'bg-white text-[#0F172A]' : 'bg-content text-white'}`}
+                                className={`w-full h-16 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl flex items-center justify-center gap-3 mt-4 transition-all ${loading || otp.length < 6 ? 'opacity-50 grayscale' : 'hover:scale-[1.02] active:bg-brand active:text-white'} ${isDarkMode ? 'bg-white/5 text-[#0F172A]' : 'bg-content text-white'}`}
                             >
                                 {loading ? 'Syncing...' : 'Validate Terminal'}
                                 {!loading && <ShieldCheck size={18} />}

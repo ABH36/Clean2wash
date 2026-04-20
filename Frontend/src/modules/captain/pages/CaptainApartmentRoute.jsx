@@ -78,7 +78,7 @@ const CaptainApartmentRoute = () => {
                 <div className="flex items-center justify-between mb-6">
                     <button
                         onClick={() => navigate('/captain')}
-                        className={`w-10 h-10 rounded-2xl border flex items-center justify-center ${isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-100 text-content shadow-sm'}`}
+                        className={`w-10 h-10 rounded-2xl border flex items-center justify-center ${isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-white/5 border-white/5 text-content '}`}
                     >
                         <ChevronLeft size={18} strokeWidth={2.5} />
                     </button>
@@ -89,14 +89,14 @@ const CaptainApartmentRoute = () => {
                     <div className="w-10" />
                 </div>
 
-                <div className={`rounded-[2rem] border p-4 mb-4 ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/30' : 'bg-white border-gray-100 shadow-soft'}`}>
+                <div className={`rounded-[2rem] border p-4 mb-4 ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/30' : 'bg-white/5 border-white/5 shadow-soft'}`}>
                     <div className="grid grid-cols-3 gap-3 mb-4">
                         {[
                             { label: 'Total', value: stats.total, tone: isDarkMode ? 'text-white' : 'text-content' },
                             { label: 'Live', value: stats.active, tone: 'text-brand' },
                             { label: 'Done', value: stats.completed, tone: 'text-green-500' }
                         ].map((item) => (
-                            <div key={item.label} className={`${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-gray-50 border-gray-100'} border rounded-2xl p-3`}>
+                            <div key={item.label} className={`${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white/[0.02] border-white/5'} border rounded-2xl p-3`}>
                                 <p className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>{item.label}</p>
                                 <p className={`text-xl font-black mt-1 ${item.tone}`}>{item.value}</p>
                             </div>
@@ -109,11 +109,11 @@ const CaptainApartmentRoute = () => {
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Search apartment, route, slot or vehicle"
-                            className={`w-full rounded-2xl border py-3.5 pl-12 pr-4 text-sm font-bold outline-none transition-all ${isDarkMode ? 'bg-white/5 border-white/10 text-white placeholder:text-white/20' : 'bg-gray-50 border-gray-100 text-content placeholder:text-content-subtle'}`}
+                            className={`w-full rounded-2xl border py-3.5 pl-12 pr-4 text-sm font-bold outline-none transition-all ${isDarkMode ? 'bg-white/5 border-white/10 text-white placeholder:text-white/20' : 'bg-white/[0.02] border-white/5 text-content placeholder:text-content-subtle'}`}
                         />
                     </div>
 
-                    <div className={`flex rounded-2xl p-1 border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-100'}`}>
+                    <div className={`flex rounded-2xl p-1 border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/[0.02] border-white/5'}`}>
                         <button
                             onClick={() => setViewMode('list')}
                             className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-brand text-white shadow-lg shadow-brand/20' : isDarkMode ? 'text-white/40' : 'text-content-subtle'}`}
@@ -131,11 +131,11 @@ const CaptainApartmentRoute = () => {
 
                 {captainJobsLoading ? (
                     <div className="py-20 flex flex-col items-center gap-3">
-                        <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                        <div className="w-8 h-8 border-white/5 border-brand border-t-transparent rounded-full animate-spin" />
                         <p className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Loading route...</p>
                     </div>
                 ) : viewMode === 'map' ? (
-                    <div className={`rounded-[2rem] overflow-hidden border h-[58vh] ${isDarkMode ? 'border-white/5 shadow-2xl shadow-black/30' : 'border-gray-100 shadow-soft'}`}>
+                    <div className={`rounded-[2rem] overflow-hidden border h-[58vh] ${isDarkMode ? 'border-white/5 shadow-2xl shadow-black/30' : 'border-white/5 shadow-soft'}`}>
                         <GoogleMapBox
                             center={apartmentMarkers[0]?.position || { lat: 28.6139, lng: 77.2090 }}
                             zoom={14}
@@ -143,7 +143,7 @@ const CaptainApartmentRoute = () => {
                         />
                     </div>
                 ) : filteredJobs.length === 0 ? (
-                    <div className={`rounded-[2rem] border p-10 text-center ${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'}`}>
+                    <div className={`rounded-[2rem] border p-10 text-center ${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white/5 border-white/5 shadow-soft'}`}>
                         <Building2 size={42} className="mx-auto text-brand mb-4" />
                         <p className={`text-sm font-black uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-content'}`}>No apartment route jobs</p>
                         <p className={`text-[11px] font-bold mt-2 ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>As soon as apartment wash missions are assigned, they will appear here in parking order.</p>
@@ -154,7 +154,7 @@ const CaptainApartmentRoute = () => {
                             <button
                                 key={job.id}
                                 onClick={() => navigate(`/captain/job?id=${job.id}`)}
-                                className={`w-full text-left rounded-[2rem] border p-4 transition-all active:scale-[0.99] ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/20' : 'bg-white border-gray-100 shadow-soft'}`}
+                                className={`w-full text-left rounded-[2rem] border p-4 transition-all active:scale-[0.99] ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/20' : 'bg-white/5 border-white/5 shadow-soft'}`}
                             >
                                 <div className="flex items-start justify-between gap-3 mb-3">
                                     <div className="min-w-0">
@@ -172,11 +172,11 @@ const CaptainApartmentRoute = () => {
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3 mb-3">
-                                    <div className={`rounded-2xl p-3 ${isDarkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
+                                    <div className={`rounded-2xl p-3 ${isDarkMode ? 'bg-white/5' : 'bg-white/[0.02]'}`}>
                                         <p className={`text-[8px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Route</p>
                                         <p className={`text-[11px] font-black uppercase mt-1 ${isDarkMode ? 'text-white' : 'text-content'}`}>{job.apartmentRoute || 'Parking details pending'}</p>
                                     </div>
-                                    <div className={`rounded-2xl p-3 ${isDarkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
+                                    <div className={`rounded-2xl p-3 ${isDarkMode ? 'bg-white/5' : 'bg-white/[0.02]'}`}>
                                         <p className={`text-[8px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Slot</p>
                                         <p className={`text-[11px] font-black uppercase mt-1 ${isDarkMode ? 'text-white' : 'text-content'}`}>{job.parkingDetails?.slotNumber || job.parkingDetails?.pillar || 'Not tagged'}</p>
                                     </div>

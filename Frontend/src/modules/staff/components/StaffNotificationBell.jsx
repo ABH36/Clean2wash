@@ -114,7 +114,7 @@ const StaffNotificationBell = () => {
                 onClick={() => setIsOpen(!isOpen)}
                 className={`relative w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${isDarkMode
                         ? (isOpen ? 'bg-brand text-white shadow-lg shadow-brand/20' : 'bg-white/5 border border-white/5 text-white/40 hover:text-white')
-                        : (isOpen ? 'bg-brand text-white shadow-lg shadow-brand/20' : 'bg-white border border-gray-100 text-content shadow-soft')
+                        : (isOpen ? 'bg-brand text-white shadow-lg shadow-brand/20' : 'bg-white/5 border border-white/5 text-content shadow-soft')
                     }`}
             >
                 <Bell size={22} strokeWidth={2.5} />
@@ -147,7 +147,7 @@ const StaffNotificationBell = () => {
                         initial={{ opacity: 0, y: 15, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 15, scale: 0.95 }}
-                        className={`absolute right-0 mt-4 w-[340px] rounded-[2.5rem] shadow-2xl border backdrop-blur-3xl overflow-hidden z-[100] ${isDarkMode ? 'bg-[#1E293B]/95 border-white/10' : 'bg-white/95 border-gray-100'
+                        className={`absolute right-0 mt-4 w-[340px] rounded-[2.5rem] shadow-2xl border backdrop-blur-3xl overflow-hidden z-[100] ${isDarkMode ? 'bg-[#1E293B]/95 border-white/10' : 'bg-white/95 border-white/5'
                             }`}
                     >
                         {/* Header */}
@@ -159,7 +159,7 @@ const StaffNotificationBell = () => {
                             {notifications.length > 0 && (
                                 <button
                                     onClick={clearAll}
-                                    className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 text-white/20 hover:text-white' : 'bg-gray-50 text-content-subtle hover:text-content'
+                                    className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 text-white/20 hover:text-white' : 'bg-white/[0.02] text-content-subtle hover:text-content'
                                         }`}
                                 >
                                     <Trash2 size={14} />
@@ -171,7 +171,7 @@ const StaffNotificationBell = () => {
                         <div className="max-h-[420px] overflow-y-auto custom-scrollbar">
                             {loading && notifications.length === 0 ? (
                                 <div className="p-12 text-center">
-                                    <div className="w-8 h-8 border-2 border-brand/20 border-t-brand rounded-full animate-spin mx-auto mb-4" />
+                                    <div className="w-8 h-8 border-white/5 border-brand/20 border-t-brand rounded-full animate-spin mx-auto mb-4" />
                                     <p className="text-[9px] font-black uppercase tracking-[0.3em] text-brand">Fetching Protocol Logs...</p>
                                 </div>
                             ) : notifications.length > 0 ? (
@@ -182,12 +182,12 @@ const StaffNotificationBell = () => {
                                             initial={{ x: -10, opacity: 0 }}
                                             animate={{ x: 0, opacity: 1 }}
                                             className={`p-4 rounded-3xl flex gap-4 transition-all relative group ${!notification.isRead
-                                                    ? (isDarkMode ? 'bg-white/5' : 'bg-gray-50/50')
+                                                    ? (isDarkMode ? 'bg-white/5' : 'bg-white/[0.02]/50')
                                                     : 'opacity-60 grayscale-[0.5]'
                                                 }`}
                                             onClick={() => markAsRead(notification._id)}
                                         >
-                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white border-gray-100 shadow-sm'
+                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white/5 border-white/5 '
                                                 }`}>
                                                 {getIcon(notification.type)}
                                             </div>
@@ -213,7 +213,7 @@ const StaffNotificationBell = () => {
                                 </div>
                             ) : (
                                 <div className="p-20 text-center">
-                                    <div className={`w-20 h-20 rounded-[2rem] flex items-center justify-center mb-6 mx-auto border-2 border-dashed ${isDarkMode ? 'bg-white/5 border-white/10 text-white/10' : 'bg-gray-50 border-gray-100 text-gray-200'}`}>
+                                    <div className={`w-20 h-20 rounded-[2rem] flex items-center justify-center mb-6 mx-auto border-white/5 border-dashed ${isDarkMode ? 'bg-white/5 border-white/10 text-white/10' : 'bg-white/[0.02] border-white/5 text-gray-200'}`}>
                                         <Bell size={28} />
                                     </div>
                                     <p className={`text-[9px] font-black uppercase tracking-[0.4em] ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>All protocols synchronized.</p>
@@ -224,7 +224,7 @@ const StaffNotificationBell = () => {
                         {/* Footer */}
                         {notifications.length > 0 && (
                             <div className="p-5 border-t border-inherit">
-                                <button className={`w-full py-3.5 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] transition-all ${isDarkMode ? 'bg-white/5 text-white/40 hover:bg-brand hover:text-white' : 'bg-gray-50 text-content-subtle hover:bg-brand hover:text-white'
+                                <button className={`w-full py-3.5 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] transition-all ${isDarkMode ? 'bg-white/5 text-white/40 hover:bg-brand hover:text-white' : 'bg-white/[0.02] text-content-subtle hover:bg-brand hover:text-white'
                                     }`}>
                                     Operation Logs History
                                 </button>

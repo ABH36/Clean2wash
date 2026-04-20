@@ -27,7 +27,7 @@ const CaptainLayout = ({ children, hideNav = false }) => {
             {!hideNav && (
                 <nav className={`fixed bottom-0 w-full max-w-md backdrop-blur-3xl border-t px-6 pt-3 pb-7 flex justify-between items-center z-50 transition-all duration-500 ${isDarkMode
                     ? 'bg-[#1E293B]/90 border-white/5 shadow-[0_-15px_50px_rgba(0,0,0,0.5)]'
-                    : 'bg-white/90 border-gray-100 shadow-[0_-15px_40px_rgba(0,0,0,0.08)]'
+                    : 'bg-white/90 border-white/5 shadow-[0_-15px_40px_rgba(0,0,0,0.08)]'
                     }`}>
                     {NAV.map(({ to, icon: Icon, label }) => (
                         <NavLink key={to} to={to} end={to === '/captain'}
@@ -38,7 +38,7 @@ const CaptainLayout = ({ children, hideNav = false }) => {
                                 <>
                                     <div className={`relative p-2 rounded-2xl transition-all duration-300 ${isActive
                                         ? isDarkMode ? 'bg-brand/15 shadow-[0_0_25px_rgba(255,107,0,0.2)]' : 'bg-brand/10 shadow-[0_0_20px_rgba(255,107,0,0.1)]'
-                                        : isDarkMode ? 'hover:bg-white/5' : 'hover:bg-gray-100'
+                                        : isDarkMode ? 'hover:bg-white/5' : 'hover:bg-white/[0.05]'
                                         }`}>
                                         <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
                                         {isActive && (

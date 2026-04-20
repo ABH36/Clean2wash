@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 
 const PageLoader = () => {
   return (
-    <div className="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center p-10 overflow-hidden">
+    <div className="fixed inset-0 z-[9999] bg-white/5 flex flex-col items-center justify-center p-10 overflow-hidden">
       {/* Background Ambience */}
       <div className="absolute top-0 left-0 w-full h-full opacity-[0.03] pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-brand blur-[120px]" />
@@ -29,7 +29,7 @@ const PageLoader = () => {
               rotate: { duration: 4, repeat: Infinity, ease: "linear" },
               borderRadius: { duration: 2, repeat: Infinity, ease: "easeInOut" }
             }}
-            className="w-full h-full border-2 border-brand/20 border-t-brand rounded-[2.5rem] flex items-center justify-center"
+            className="w-full h-full border-white/5 border-brand/20 border-t-brand rounded-[2.5rem] flex items-center justify-center"
           >
             <span className="text-2xl">✨</span>
           </motion.div>
@@ -58,7 +58,7 @@ const PageLoader = () => {
         </div>
 
         {/* Progress Bar (Indeterminate) */}
-        <div className="mt-12 w-48 h-[2px] bg-gray-100 rounded-full overflow-hidden relative">
+        <div className="mt-12 w-48 h-[2px] bg-white/[0.05] rounded-full overflow-hidden relative">
           <motion.div
             animate={{ 
               left: ["-100%", "100%"]

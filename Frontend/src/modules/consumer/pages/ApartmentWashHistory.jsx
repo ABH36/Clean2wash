@@ -22,14 +22,14 @@ const getBadgeClass = (status = '') => ({
     completed: 'bg-emerald-50 text-emerald-700',
     cancelled: 'bg-red-50 text-red-600',
     vehicle_not_available: 'bg-orange-50 text-orange-700',
-    skipped: 'bg-gray-100 text-gray-600',
+    skipped: 'bg-white/[0.05] text-white/60',
     confirmed: 'bg-blue-50 text-blue-700',
     en_route: 'bg-blue-50 text-blue-700',
     arrived: 'bg-brand/10 text-brand',
     washing: 'bg-purple-50 text-purple-700',
     before_photo: 'bg-purple-50 text-purple-700',
     after_photo: 'bg-purple-50 text-purple-700'
-}[status] || 'bg-gray-100 text-gray-600');
+}[status] || 'bg-white/[0.05] text-white/60');
 
 const ApartmentWashHistory = () => {
     const navigate = useNavigate();
@@ -63,18 +63,18 @@ const ApartmentWashHistory = () => {
 
     return (
         <MobileLayout>
-            <div className="min-h-screen bg-white">
-                <header className="px-5 pt-12 pb-4 flex items-center gap-4 border-b border-gray-100">
-                    <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-black">
+            <div className="min-h-screen bg-[#0A0F0D]">
+                <header className="px-5 pt-12 pb-4 flex items-center gap-4 border-b border-white/5">
+                    <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-xl bg-white/[0.02] flex items-center justify-center text-white">
                         <ChevronLeft size={20} strokeWidth={2.5} />
                     </button>
-                    <h1 className="text-xl font-black text-black tracking-tight uppercase leading-none">Apartment history</h1>
+                    <h1 className="text-xl font-black text-white tracking-tight uppercase leading-none">Apartment history</h1>
                 </header>
 
                 <div className="p-5 space-y-4 pb-24">
                     {loading ? (
                         <div className="flex justify-center py-20">
-                            <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                            <div className="w-8 h-8 border-white/5 border-brand border-t-transparent rounded-full animate-spin" />
                         </div>
                     ) : orderedBookings.length > 0 ? (
                         orderedBookings.map((booking) => {
@@ -91,7 +91,7 @@ const ApartmentWashHistory = () => {
                                 <motion.div
                                     key={booking._id}
                                     whileTap={{ scale: 0.985 }}
-                                    className={`bg-white border rounded-[2rem] p-5 shadow-[0_8px_30px_rgba(0,0,0,0.03)] space-y-4 ${isSelected ? 'border-brand/40 ring-1 ring-brand/20' : 'border-gray-100'}`}
+                                    className={`bg-white/5 border rounded-[2rem] p-5 shadow-[0_8px_30px_rgba(0,0,0,0.03)] space-y-4 ${isSelected ? 'border-brand/40 ring-1 ring-brand/20' : 'border-white/5'}`}
                                 >
                                     <div className="flex items-start justify-between gap-4">
                                         <div className="flex items-center gap-4">
@@ -99,7 +99,7 @@ const ApartmentWashHistory = () => {
                                                 <History size={20} strokeWidth={2.5} />
                                             </div>
                                             <div>
-                                                <h3 className="text-[13px] font-black text-black uppercase tracking-tight leading-none mb-1">
+                                                <h3 className="text-[13px] font-black text-white uppercase tracking-tight leading-none mb-1">
                                                     {booking.service?.name || 'Apartment Wash'}
                                                 </h3>
                                                 <p className="text-[9px] font-bold text-black/35 uppercase tracking-widest">
@@ -113,13 +113,13 @@ const ApartmentWashHistory = () => {
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-3">
-                                        <div className="rounded-2xl bg-gray-50 p-3">
+                                        <div className="rounded-2xl bg-white/[0.02] p-3">
                                             <p className="text-[8px] font-black uppercase tracking-widest text-black/30">Slot</p>
-                                            <p className="mt-1 text-[11px] font-black uppercase text-black">{booking.schedule?.slot || booking.schedule?.timeSlot?.start || 'Pending'}</p>
+                                            <p className="mt-1 text-[11px] font-black uppercase text-white">{booking.schedule?.slot || booking.schedule?.timeSlot?.start || 'Pending'}</p>
                                         </div>
-                                        <div className="rounded-2xl bg-gray-50 p-3">
+                                        <div className="rounded-2xl bg-white/[0.02] p-3">
                                             <p className="text-[8px] font-black uppercase tracking-widest text-black/30">Route</p>
-                                            <p className="mt-1 text-[11px] font-black uppercase text-black">{route || 'Parking pending'}</p>
+                                            <p className="mt-1 text-[11px] font-black uppercase text-white">{route || 'Parking pending'}</p>
                                         </div>
                                     </div>
 
@@ -170,7 +170,7 @@ const ApartmentWashHistory = () => {
                                         </button>
                                         <button
                                             onClick={() => navigate(`/apartment-wash/support?bookingId=${booking._id}`)}
-                                            className="h-11 rounded-xl border border-gray-100 text-black/60 text-[10px] font-black uppercase tracking-widest"
+                                            className="h-11 rounded-xl border border-white/5 text-white/60 text-[10px] font-black uppercase tracking-widest"
                                         >
                                             Support
                                         </button>

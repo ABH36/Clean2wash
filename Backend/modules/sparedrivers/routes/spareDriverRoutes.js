@@ -6,6 +6,14 @@ const authMiddleware = require('../../../middleware/authMiddleware');
 // Import earnings routes
 const earningsRoutes = require('./earningsRoutes');
 
+// Import map controller (shared with consumer)
+const mapController = require('../../consumer/controllers/mapController');
+
+// ── MAP PROXY ROUTES (Public) ──────────────────────────────────
+// These routes allow spare driver app to search addresses and reverse geocode
+router.get('/maps/proxy/reverse', mapController.reverseGeocodeProxy);
+router.get('/maps/proxy/search', mapController.searchProxy);
+
 // Public driver auth
 router.post('/auth/send-otp', ctrl.sendSignupOTP);
 router.post('/auth/verify-otp', ctrl.verifySignupOTP);
@@ -74,6 +82,10 @@ router.patch('/notifications/:id/read', authMiddleware.protect, authMiddleware.r
 router.delete('/notifications/clear', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.clearNotifications);
 router.post('/fcm-token', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.updateFCMToken);
 router.post('/emergency', authMiddleware.protect, ctrl.reportEmergency);
+
+// 💬 Chat & Message Dummy Routes
+router.get('/messages/unread-count', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.getUnreadMessageCount);
+router.get('/messages/active-chats', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.getActiveChats);
 
 // Admin-only routes
 router.get('/admin/drivers', authMiddleware.protect, authMiddleware.restrictTo('admin'), ctrl.adminListDrivers);

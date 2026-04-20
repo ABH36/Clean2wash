@@ -16,7 +16,8 @@ import {
     ShieldAlert,
     Trash2,
     User,
-    XCircle
+    XCircle,
+    MessageCircle
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { spareDriverAPI } from '../../../utils/spareDriverApi';
@@ -27,6 +28,7 @@ import DriversSection from '../components/spareDrivers/DriversSection';
 import OperationsSection from '../components/spareDrivers/OperationsSection';
 import PricingSection from '../components/spareDrivers/PricingSection';
 import SubscriptionsSection from '../components/spareDrivers/SubscriptionsSection';
+import SupportTicketsSection from '../components/spareDrivers/SupportTicketsSection';
 
 const STATUS_CONFIG = {
     pending_docs: { label: 'Pending docs', color: 'bg-blue-50 text-blue-600', dot: 'bg-blue-400' },
@@ -35,7 +37,7 @@ const STATUS_CONFIG = {
     kit_payment_pending: { label: 'Kit review', color: 'bg-amber-50 text-amber-700', dot: 'bg-amber-400' },
     active: { label: 'Active', color: 'bg-green-50 text-green-700', dot: 'bg-green-400' },
     rejected: { label: 'Rejected', color: 'bg-red-50 text-red-600', dot: 'bg-red-400' },
-    suspended: { label: 'Suspended', color: 'bg-gray-50 text-gray-600', dot: 'bg-gray-400' },
+    suspended: { label: 'Suspended', color: 'bg-white/[0.02] text-white/60', dot: 'bg-gray-400' },
 };
 
 const BOOKING_STATUS_CONFIG = {
@@ -51,7 +53,7 @@ const ISSUE_STATUS_CONFIG = {
     open: 'bg-red-50 text-red-600',
     investigating: 'bg-yellow-50 text-yellow-700',
     resolved: 'bg-green-50 text-green-700',
-    dismissed: 'bg-gray-100 text-gray-600',
+    dismissed: 'bg-white/[0.05] text-white/60',
 };
 
 const TERMINAL_STATUSES = ['completed', 'cancelled', 'refunded'];
@@ -67,7 +69,7 @@ const DRIVER_LANES = [
     { id: 'rejected', label: 'Rejected' }
 ];
 
-const CHAUFFEUR_ADMIN_SECTIONS = ['verification', 'operations', 'drivers', 'pricing', 'kit', 'premium', 'subscriptions'];
+const CHAUFFEUR_ADMIN_SECTIONS = ['verification', 'operations', 'drivers', 'pricing', 'kit', 'premium', 'subscriptions', 'support'];
 const DEFAULT_KIT_MANAGEMENT = {
     title: 'Starter Driver Kit',
     subtitle: 'Complete payment to unlock your chauffeur dashboard.',
@@ -125,6 +127,11 @@ const ADMIN_SECTION_META = {
         title: 'Subscription desk',
         description: 'Control chauffeur plans, credits, and spare-driver-only subscriptions.',
         icon: Crown
+    },
+    support: {
+        title: 'Support Desk',
+        description: 'Manage specialized user issues, tickets, and resolution communication.',
+        icon: MessageCircle
     }
 };
 
@@ -981,41 +988,41 @@ const AdminSpareDrivers = () => {
     return (
         <div className="space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-3">
-                <div className="bg-white border border-gray-100 rounded-[1rem] p-3.5 shadow-[0_10px_20px_rgba(15,23,42,0.04)]">
+                <div className="bg-white/5 border border-white/5 rounded-[1rem] p-3.5 shadow-[0_10px_20px_rgba(15,23,42,0.04)]">
                     <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-2">Live Trips</p>
-                    <p className="text-2xl font-black text-black">{liveBookings.length}</p>
+                    <p className="text-2xl font-black text-white">{liveBookings.length}</p>
                 </div>
-                <div className="bg-white border border-gray-100 rounded-[1rem] p-3.5 shadow-[0_10px_20px_rgba(15,23,42,0.04)]">
+                <div className="bg-white/5 border border-white/5 rounded-[1rem] p-3.5 shadow-[0_10px_20px_rgba(15,23,42,0.04)]">
                     <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-2">Online Drivers</p>
                     <p className="text-2xl font-black text-green-700">{onlineDrivers}</p>
                 </div>
-                <div className="bg-white border border-gray-100 rounded-[1rem] p-3.5 shadow-[0_10px_20px_rgba(15,23,42,0.04)]">
+                <div className="bg-white/5 border border-white/5 rounded-[1rem] p-3.5 shadow-[0_10px_20px_rgba(15,23,42,0.04)]">
                     <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-2">Waiting Trips</p>
                     <p className="text-2xl font-black text-yellow-700">{unassignedTrips}</p>
                 </div>
-                <div className="bg-white border border-gray-100 rounded-[1rem] p-3.5 shadow-[0_10px_20px_rgba(15,23,42,0.04)]">
+                <div className="bg-white/5 border border-white/5 rounded-[1rem] p-3.5 shadow-[0_10px_20px_rgba(15,23,42,0.04)]">
                     <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-2">Open Issues</p>
                     <p className="text-2xl font-black text-red-600">{openIssues}</p>
                 </div>
-                <div className="bg-white border border-gray-100 rounded-[1rem] p-3.5 shadow-[0_10px_20px_rgba(15,23,42,0.04)]">
+                <div className="bg-white/5 border border-white/5 rounded-[1rem] p-3.5 shadow-[0_10px_20px_rgba(15,23,42,0.04)]">
                     <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-2">Refund Watch</p>
                     <p className="text-2xl font-black text-purple-700">{refundAttention}</p>
                 </div>
             </div>
 
             <div className="space-y-4">
-                <div className="bg-white border border-gray-100 rounded-[1rem] p-4 shadow-[0_14px_28px_rgba(15,23,42,0.05)]">
+                <div className="bg-white/5 border border-white/5 rounded-[1rem] p-4 shadow-[0_14px_28px_rgba(15,23,42,0.05)]">
                     <div className="flex items-start justify-between gap-4 flex-wrap">
                         <div>
                             <p className="text-[9px] font-black text-black/25 uppercase tracking-[0.24em] mb-2">Active Workspace</p>
-                            <h3 className="text-[18px] font-black text-black uppercase">{activeSectionMeta.title}</h3>
-                            <p className="text-[10px] font-bold text-black/40 mt-2 max-w-[38rem]">
+                            <h3 className="text-[18px] font-black text-white uppercase">{activeSectionMeta.title}</h3>
+                            <p className="text-[10px] font-bold text-white/40 mt-2 max-w-[38rem]">
                                 {activeSectionMeta.description}
                             </p>
                         </div>
-                        <div className="rounded-[1.2rem] border border-black/[0.04] bg-gray-50 px-4 py-3 text-right">
+                        <div className="rounded-[1.2rem] border border-black/[0.04] bg-white/[0.02] px-4 py-3 text-right">
                             <p className="text-[8px] font-black text-black/25 uppercase tracking-[0.22em]">Live Records</p>
-                            <p className="text-[18px] font-black text-black mt-2">{sectionStatMap[activeSection]}</p>
+                            <p className="text-[18px] font-black text-white mt-2">{sectionStatMap[activeSection]}</p>
                         </div>
                     </div>
                 </div>
@@ -1082,16 +1089,16 @@ const AdminSpareDrivers = () => {
                 )}
 
                 {activeSection === 'kit' && (
-                    <div className="bg-white border border-gray-100 rounded-[1rem] p-4 md:p-5 shadow-[0_14px_28px_rgba(15,23,42,0.05)] space-y-5">
+                    <div className="bg-white/5 border border-white/5 rounded-[1rem] p-4 md:p-5 shadow-[0_14px_28px_rgba(15,23,42,0.05)] space-y-5">
                         <div className="flex items-start justify-between gap-3 flex-wrap">
                             <div>
                                 <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-1">Kit Management Desk</p>
-                                <h3 className="text-[16px] font-black text-black uppercase">Onboarding Kit Config</h3>
+                                <h3 className="text-[16px] font-black text-white uppercase">Onboarding Kit Config</h3>
                                 <p className="text-[10px] font-bold text-black/45 mt-1.5">Driver app kit price, onboarding visuals, and wallet deductions are controlled here.</p>
                             </div>
                             <button
                                 onClick={fetchKitManagement}
-                                className="h-9 px-4 border border-gray-200 rounded-lg text-[10px] font-black text-black/50 uppercase hover:border-black hover:text-black transition-colors"
+                                className="h-9 px-4 border border-white/10 rounded-lg text-[10px] font-black text-black/50 uppercase hover:border-black hover:text-white transition-colors"
                             >
                                 Refresh Config
                             </button>
@@ -1099,7 +1106,7 @@ const AdminSpareDrivers = () => {
 
                         {kitConfigLoading ? (
                             <div className="py-14 flex items-center justify-center">
-                                <div className="w-5 h-5 border-2 border-brand/30 border-t-brand rounded-full animate-spin" />
+                                <div className="w-5 h-5 border-white/5 border-brand/30 border-t-brand rounded-full animate-spin" />
                             </div>
                         ) : (
                             <>
@@ -1109,7 +1116,7 @@ const AdminSpareDrivers = () => {
                                         <input
                                             value={kitConfigForm.title}
                                             onChange={(event) => setKitConfigForm((prev) => ({ ...prev, title: event.target.value }))}
-                                            className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                            className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                         />
                                     </div>
                                     <div>
@@ -1117,7 +1124,7 @@ const AdminSpareDrivers = () => {
                                         <input
                                             value={kitConfigForm.subtitle}
                                             onChange={(event) => setKitConfigForm((prev) => ({ ...prev, subtitle: event.target.value }))}
-                                            className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                            className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                         />
                                     </div>
                                 </div>
@@ -1130,7 +1137,7 @@ const AdminSpareDrivers = () => {
                                             min="1"
                                             value={kitConfigForm.kitPrice}
                                             onChange={(event) => setKitConfigForm((prev) => ({ ...prev, kitPrice: event.target.value }))}
-                                            className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                            className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                         />
                                     </div>
                                     <div>
@@ -1140,7 +1147,7 @@ const AdminSpareDrivers = () => {
                                             min="0"
                                             value={kitConfigForm.monthlyDeductionAmount}
                                             onChange={(event) => setKitConfigForm((prev) => ({ ...prev, monthlyDeductionAmount: event.target.value }))}
-                                            className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                            className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                         />
                                     </div>
                                     <div>
@@ -1151,7 +1158,7 @@ const AdminSpareDrivers = () => {
                                             max="12"
                                             value={kitConfigForm.monthlyDeductionMonths}
                                             onChange={(event) => setKitConfigForm((prev) => ({ ...prev, monthlyDeductionMonths: event.target.value }))}
-                                            className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                            className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                         />
                                     </div>
                                 </div>
@@ -1163,7 +1170,7 @@ const AdminSpareDrivers = () => {
                                         value={kitConfigForm.imageUrlsText}
                                         onChange={(event) => setKitConfigForm((prev) => ({ ...prev, imageUrlsText: event.target.value }))}
                                         placeholder={'One image URL per line\nhttps://...'}
-                                        className="w-full border border-gray-200 rounded-md px-3 py-2 text-[11px] font-bold text-black resize-y outline-none focus:border-black"
+                                        className="w-full border border-white/10 rounded-md px-3 py-2 text-[11px] font-bold text-white resize-y outline-none focus:border-black"
                                     />
                                     <p className="text-[9px] font-black text-black/25 uppercase tracking-widest mt-1.5">Driver app shows this as horizontal scrollable gallery.</p>
                                 </div>
@@ -1172,7 +1179,7 @@ const AdminSpareDrivers = () => {
                                     <button
                                         onClick={handleKitConfigSave}
                                         disabled={kitConfigSaving}
-                                        className="h-10 px-5 bg-black text-white text-[10px] font-black uppercase rounded-md hover:bg-brand hover:text-black transition-colors"
+                                        className="h-10 px-5 bg-black text-white text-[10px] font-black uppercase rounded-md hover:bg-brand hover:text-white transition-colors"
                                     >
                                         {kitConfigSaving ? 'Saving...' : 'Save Kit Config'}
                                     </button>
@@ -1183,16 +1190,16 @@ const AdminSpareDrivers = () => {
                 )}
 
                 {activeSection === 'premium' && (
-                    <div className="bg-white border border-gray-100 rounded-[1rem] p-4 md:p-5 shadow-[0_14px_28px_rgba(15,23,42,0.05)] space-y-5">
+                    <div className="bg-white/5 border border-white/5 rounded-[1rem] p-4 md:p-5 shadow-[0_14px_28px_rgba(15,23,42,0.05)] space-y-5">
                         <div className="flex items-start justify-between gap-3 flex-wrap">
                             <div>
                                 <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-1">Premium Program Desk</p>
-                                <h3 className="text-[16px] font-black text-black uppercase">Police Verification + Badge Benefits</h3>
+                                <h3 className="text-[16px] font-black text-white uppercase">Police Verification + Badge Benefits</h3>
                                 <p className="text-[10px] font-bold text-black/45 mt-1.5">Manage premium badge messaging, benefits, and verification guidance visible in driver popup and profile page.</p>
                             </div>
                             <button
                                 onClick={fetchPremiumManagement}
-                                className="h-9 px-4 border border-gray-200 rounded-lg text-[10px] font-black text-black/50 uppercase hover:border-black hover:text-black transition-colors"
+                                className="h-9 px-4 border border-white/10 rounded-lg text-[10px] font-black text-black/50 uppercase hover:border-black hover:text-white transition-colors"
                             >
                                 Refresh Config
                             </button>
@@ -1200,7 +1207,7 @@ const AdminSpareDrivers = () => {
 
                         {premiumConfigLoading ? (
                             <div className="py-14 flex items-center justify-center">
-                                <div className="w-5 h-5 border-2 border-brand/30 border-t-brand rounded-full animate-spin" />
+                                <div className="w-5 h-5 border-white/5 border-brand/30 border-t-brand rounded-full animate-spin" />
                             </div>
                         ) : (
                             <>
@@ -1210,7 +1217,7 @@ const AdminSpareDrivers = () => {
                                         <input
                                             value={premiumConfigForm.title}
                                             onChange={(event) => setPremiumConfigForm((prev) => ({ ...prev, title: event.target.value }))}
-                                            className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                            className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                         />
                                     </div>
                                     <div>
@@ -1218,7 +1225,7 @@ const AdminSpareDrivers = () => {
                                         <input
                                             value={premiumConfigForm.subtitle}
                                             onChange={(event) => setPremiumConfigForm((prev) => ({ ...prev, subtitle: event.target.value }))}
-                                            className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                            className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                         />
                                     </div>
                                 </div>
@@ -1230,7 +1237,7 @@ const AdminSpareDrivers = () => {
                                         value={premiumConfigForm.benefitsText}
                                         onChange={(event) => setPremiumConfigForm((prev) => ({ ...prev, benefitsText: event.target.value }))}
                                         placeholder={'Premium badge on profile\nPriority visibility for high-trust trips\nHigher confidence score during manual assignment'}
-                                        className="w-full border border-gray-200 rounded-md px-3 py-2 text-[11px] font-bold text-black resize-y outline-none focus:border-black"
+                                        className="w-full border border-white/10 rounded-md px-3 py-2 text-[11px] font-bold text-white resize-y outline-none focus:border-black"
                                     />
                                     <p className="text-[9px] font-black text-black/25 uppercase tracking-widest mt-1.5">These benefits appear in driver dashboard popup and premium profile page.</p>
                                 </div>
@@ -1239,7 +1246,7 @@ const AdminSpareDrivers = () => {
                                     <button
                                         onClick={handlePremiumConfigSave}
                                         disabled={premiumConfigSaving}
-                                        className="h-10 px-5 bg-black text-white text-[10px] font-black uppercase rounded-md hover:bg-brand hover:text-black transition-colors"
+                                        className="h-10 px-5 bg-black text-white text-[10px] font-black uppercase rounded-md hover:bg-brand hover:text-white transition-colors"
                                     >
                                         {premiumConfigSaving ? 'Saving...' : 'Save Premium Config'}
                                     </button>
@@ -1259,18 +1266,22 @@ const AdminSpareDrivers = () => {
                     />
                 )}
 
+                {activeSection === 'support' && (
+                    <SupportTicketsSection />
+                )}
+
                 {/* Legacy duplicated blocks removed for cleaner admin flow
-            <div className="bg-white border border-black/[0.04] rounded-[1.6rem] overflow-hidden shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
+            <div className="bg-white/5 border border-black/[0.04] rounded-[1.6rem] overflow-hidden shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
                 <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between gap-3 flex-wrap">
                     <div>
                         <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-1">Live Chauffeur Ops</p>
-                        <h3 className="text-[14px] font-black text-black uppercase">Trips, support desk, and manual interventions</h3>
+                        <h3 className="text-[14px] font-black text-white uppercase">Trips, support desk, and manual interventions</h3>
                     </div>
                     <div className="flex items-center gap-3 flex-wrap">
                         <select
                             value={opsFilter}
                             onChange={(event) => setOpsFilter(event.target.value)}
-                            className="h-9 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black uppercase outline-none"
+                            className="h-9 border border-white/10 rounded-md px-3 text-[11px] font-black text-white uppercase outline-none"
                         >
                             <option value="all">All Trips</option>
                             <option value="attention">Needs Attention</option>
@@ -1285,18 +1296,18 @@ const AdminSpareDrivers = () => {
                             value={opsSearch}
                             onChange={(event) => setOpsSearch(event.target.value)}
                             placeholder="Search booking, customer, driver"
-                            className="h-9 w-64 max-w-full border border-gray-200 rounded-md px-3 text-[11px] font-bold text-black outline-none focus:border-black"
+                            className="h-9 w-64 max-w-full border border-white/10 rounded-md px-3 text-[11px] font-bold text-white outline-none focus:border-black"
                         />
                     </div>
                 </div>
                 {bookingsLoading ? (
                     <div className="py-16 flex items-center justify-center">
-                        <div className="w-5 h-5 border-2 border-brand/30 border-t-brand rounded-full animate-spin" />
+                        <div className="w-5 h-5 border-white/5 border-brand/30 border-t-brand rounded-full animate-spin" />
                     </div>
                 ) : filteredLiveBookings.length === 0 ? (
                     <div className="py-16 text-center">
                         <CarFront size={32} className="mx-auto text-black/10 mb-3" />
-                        <p className="text-[10px] font-black text-black/20 uppercase tracking-widest">No chauffeur trips match this filter</p>
+                        <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">No chauffeur trips match this filter</p>
                     </div>
                 ) : (
                     <div className="divide-y divide-gray-50">
@@ -1315,7 +1326,7 @@ const AdminSpareDrivers = () => {
                                 <div key={booking._id} className="px-5 py-4 grid grid-cols-1 xl:grid-cols-[1.2fr_0.9fr_0.95fr_auto] gap-4 items-center">
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-2 flex-wrap">
-                                            <p className="text-[11px] font-black text-black uppercase">
+                                            <p className="text-[11px] font-black text-white uppercase">
                                                 {booking.serviceName || 'Chauffeur Service'} - {booking.bookingId || booking._id?.slice(-6)}
                                             </p>
                                             <span className={`px-2 py-1 rounded text-[8px] font-black uppercase ${bookingStatus.color}`}>
@@ -1364,7 +1375,7 @@ const AdminSpareDrivers = () => {
 
                                     <div className="space-y-2">
                                         <p className="text-[9px] font-black text-black/25 uppercase tracking-widest">Assigned Driver</p>
-                                        <p className="text-[11px] font-black text-black uppercase">
+                                        <p className="text-[11px] font-black text-white uppercase">
                                             {assignedDriver?.name || 'Waiting for driver'}
                                         </p>
                                         <p className="text-[10px] font-bold text-black/35">
@@ -1392,14 +1403,14 @@ const AdminSpareDrivers = () => {
                                         {assignedDriver && (
                                             <button
                                                 onClick={() => openDriverReview(assignedDriver)}
-                                                className="h-10 px-4 border border-gray-200 text-[10px] font-black uppercase rounded-md hover:border-black transition-colors"
+                                                className="h-10 px-4 border border-white/10 text-[10px] font-black uppercase rounded-md hover:border-black transition-colors"
                                             >
                                                 Review Driver
                                             </button>
                                         )}
                                         <button
                                             onClick={() => openBookingDesk(booking)}
-                                            className="h-10 px-4 bg-black text-white text-[10px] font-black uppercase rounded-md hover:bg-brand hover:text-black transition-colors"
+                                            className="h-10 px-4 bg-black text-white text-[10px] font-black uppercase rounded-md hover:bg-brand hover:text-white transition-colors"
                                         >
                                             Manage Trip
                                         </button>
@@ -1414,14 +1425,14 @@ const AdminSpareDrivers = () => {
 
                 {/*
             <div className="space-y-4">
-                <div className="bg-white border border-gray-100 rounded-lg px-5 py-4 flex items-center justify-between gap-3 flex-wrap">
+                <div className="bg-white/5 border border-white/5 rounded-lg px-5 py-4 flex items-center justify-between gap-3 flex-wrap">
                     <div>
                         <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-1">Chauffeur Pricing Desk</p>
-                        <h3 className="text-[14px] font-black text-black uppercase">Consumer spare driver services and live selling prices</h3>
+                        <h3 className="text-[14px] font-black text-white uppercase">Consumer spare driver services and live selling prices</h3>
                     </div>
                     <button
                         onClick={fetchChauffeurServices}
-                        className="flex items-center gap-2 h-9 px-4 border border-gray-200 rounded-md text-[10px] font-black text-black/50 uppercase hover:border-black hover:text-black transition-colors"
+                        className="flex items-center gap-2 h-9 px-4 border border-white/10 rounded-md text-[10px] font-black text-black/50 uppercase hover:border-black hover:text-white transition-colors"
                     >
                         <RefreshCw size={13} />
                         Refresh Pricing
@@ -1430,48 +1441,48 @@ const AdminSpareDrivers = () => {
 
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                     {pricingLoading ? (
-                        <div className="xl:col-span-2 bg-white border border-gray-100 rounded-lg py-16 flex items-center justify-center">
-                            <div className="w-5 h-5 border-2 border-brand/30 border-t-brand rounded-full animate-spin" />
+                        <div className="xl:col-span-2 bg-white/5 border border-white/5 rounded-lg py-16 flex items-center justify-center">
+                            <div className="w-5 h-5 border-white/5 border-brand/30 border-t-brand rounded-full animate-spin" />
                         </div>
                     ) : chauffeurServices.length === 0 ? (
-                        <div className="xl:col-span-2 bg-white border border-gray-100 rounded-lg py-16 text-center">
+                        <div className="xl:col-span-2 bg-white/5 border border-white/5 rounded-lg py-16 text-center">
                             <IndianRupee size={32} className="mx-auto text-black/10 mb-3" />
-                            <p className="text-[10px] font-black text-black/20 uppercase tracking-widest">No chauffeur services found in master data</p>
+                            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">No chauffeur services found in master data</p>
                         </div>
                     ) : chauffeurServices.map((service) => (
-                        <div key={service._id} className="bg-white border border-gray-100 rounded-lg p-5 space-y-4">
+                        <div key={service._id} className="bg-white/5 border border-white/5 rounded-lg p-5 space-y-4">
                             <div className="flex items-start justify-between gap-3">
                                 <div>
                                     <div className="flex items-center gap-2 flex-wrap">
-                                        <p className="text-[12px] font-black text-black uppercase">{service.title}</p>
-                                        <span className={`px-2 py-1 rounded text-[8px] font-black uppercase ${service.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                                        <p className="text-[12px] font-black text-white uppercase">{service.title}</p>
+                                        <span className={`px-2 py-1 rounded text-[8px] font-black uppercase ${service.isActive ? 'bg-green-50 text-green-700' : 'bg-white/[0.05] text-white/60'}`}>
                                             {service.isActive ? 'Live' : 'Hidden'}
                                         </span>
                                     </div>
-                                    <p className="text-[10px] font-bold text-black/40 mt-1">{service.description || 'No description set'}</p>
+                                    <p className="text-[10px] font-bold text-white/40 mt-1">{service.description || 'No description set'}</p>
                                 </div>
                                 <button
                                     onClick={() => openPricingEditor(service)}
-                                    className="h-10 px-4 bg-black text-white text-[10px] font-black uppercase rounded-md hover:bg-brand hover:text-black transition-colors"
+                                    className="h-10 px-4 bg-black text-white text-[10px] font-black uppercase rounded-md hover:bg-brand hover:text-white transition-colors"
                                 >
                                     Edit Config
                                 </button>
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                <div className="border border-gray-100 rounded-md p-3">
+                                <div className="border border-white/5 rounded-md p-3">
                                     <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Base Price</p>
-                                    <p className="text-[14px] font-black text-black">₹{service.price || 0}</p>
+                                    <p className="text-[14px] font-black text-white">₹{service.price || 0}</p>
                                 </div>
-                                <div className="border border-gray-100 rounded-md p-3">
+                                <div className="border border-white/5 rounded-md p-3">
                                     <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Duration</p>
-                                    <p className="text-[13px] font-black text-black">{service.estimatedTime || 0} min</p>
+                                    <p className="text-[13px] font-black text-white">{service.estimatedTime || 0} min</p>
                                 </div>
-                                <div className="border border-gray-100 rounded-md p-3">
+                                <div className="border border-white/5 rounded-md p-3">
                                     <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Service Key</p>
                                     <p className="text-[10px] font-black text-black/55 uppercase">{service.metadata?.id || service.key}</p>
                                 </div>
-                                <div className="border border-gray-100 rounded-md p-3">
+                                <div className="border border-white/5 rounded-md p-3">
                                     <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Badge</p>
                                     <p className="text-[10px] font-black text-black/55 uppercase">{service.metadata?.badge || 'None'}</p>
                                 </div>
@@ -1481,7 +1492,7 @@ const AdminSpareDrivers = () => {
                                 <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-2">Consumer Features</p>
                                 <div className="flex items-center gap-2 flex-wrap">
                                     {(service.metadata?.features || []).length ? (service.metadata.features || []).map((feature) => (
-                                        <span key={feature} className="px-2 py-1 bg-gray-50 text-[9px] font-black text-black/60 uppercase rounded-md border border-gray-100">
+                                        <span key={feature} className="px-2 py-1 bg-white/[0.02] text-[9px] font-black text-white/60 uppercase rounded-md border border-white/5">
                                             {feature}
                                         </span>
                                     )) : (
@@ -1497,22 +1508,22 @@ const AdminSpareDrivers = () => {
 
                 {/*
             <div className="space-y-4">
-                <div className="bg-white border border-gray-100 rounded-lg px-5 py-4 flex items-center justify-between gap-3 flex-wrap">
+                <div className="bg-white/5 border border-white/5 rounded-lg px-5 py-4 flex items-center justify-between gap-3 flex-wrap">
                     <div>
                         <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-1">Chauffeur Subscription Desk</p>
-                        <h3 className="text-[14px] font-black text-black uppercase">Spare-driver-only plans for consumer subscription flow</h3>
+                        <h3 className="text-[14px] font-black text-white uppercase">Spare-driver-only plans for consumer subscription flow</h3>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                         <button
                             onClick={fetchChauffeurPlans}
-                            className="flex items-center gap-2 h-9 px-4 border border-gray-200 rounded-md text-[10px] font-black text-black/50 uppercase hover:border-black hover:text-black transition-colors"
+                            className="flex items-center gap-2 h-9 px-4 border border-white/10 rounded-md text-[10px] font-black text-black/50 uppercase hover:border-black hover:text-white transition-colors"
                         >
                             <RefreshCw size={13} />
                             Refresh Plans
                         </button>
                         <button
                             onClick={() => openPlanEditor()}
-                            className="flex items-center gap-2 h-9 px-4 bg-black text-white rounded-md text-[10px] font-black uppercase hover:bg-brand hover:text-black transition-colors"
+                            className="flex items-center gap-2 h-9 px-4 bg-black text-white rounded-md text-[10px] font-black uppercase hover:bg-brand hover:text-white transition-colors"
                         >
                             <Plus size={13} />
                             New Plan
@@ -1522,32 +1533,32 @@ const AdminSpareDrivers = () => {
 
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                     {plansLoading ? (
-                        <div className="xl:col-span-2 bg-white border border-gray-100 rounded-lg py-16 flex items-center justify-center">
-                            <div className="w-5 h-5 border-2 border-brand/30 border-t-brand rounded-full animate-spin" />
+                        <div className="xl:col-span-2 bg-white/5 border border-white/5 rounded-lg py-16 flex items-center justify-center">
+                            <div className="w-5 h-5 border-white/5 border-brand/30 border-t-brand rounded-full animate-spin" />
                         </div>
                     ) : chauffeurPlans.length === 0 ? (
-                        <div className="xl:col-span-2 bg-white border border-gray-100 rounded-lg py-16 text-center">
+                        <div className="xl:col-span-2 bg-white/5 border border-white/5 rounded-lg py-16 text-center">
                             <Crown size={32} className="mx-auto text-black/10 mb-3" />
-                            <p className="text-[10px] font-black text-black/20 uppercase tracking-widest">No spare driver subscription plans configured yet</p>
+                            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">No spare driver subscription plans configured yet</p>
                         </div>
                     ) : chauffeurPlans.map((plan) => (
-                        <div key={plan._id} className="bg-white border border-gray-100 rounded-lg p-5 space-y-4">
+                        <div key={plan._id} className="bg-white/5 border border-white/5 rounded-lg p-5 space-y-4">
                             <div className="flex items-start justify-between gap-3">
                                 <div>
                                     <div className="flex items-center gap-2 flex-wrap">
-                                        <p className="text-[12px] font-black text-black uppercase">{plan.name}</p>
-                                        <span className={`px-2 py-1 rounded text-[8px] font-black uppercase ${plan.status === 'Live' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                                        <p className="text-[12px] font-black text-white uppercase">{plan.name}</p>
+                                        <span className={`px-2 py-1 rounded text-[8px] font-black uppercase ${plan.status === 'Live' ? 'bg-green-50 text-green-700' : 'bg-white/[0.05] text-white/60'}`}>
                                             {plan.status || 'Live'}
                                         </span>
                                     </div>
-                                    <p className="text-[10px] font-bold text-black/40 mt-1">
+                                    <p className="text-[10px] font-bold text-white/40 mt-1">
                                         Scope: spare driver only
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => openPlanEditor(plan)}
-                                        className="h-10 w-10 bg-black text-white rounded-md flex items-center justify-center hover:bg-brand hover:text-black transition-colors"
+                                        className="h-10 w-10 bg-black text-white rounded-md flex items-center justify-center hover:bg-brand hover:text-white transition-colors"
                                     >
                                         <Edit2 size={14} />
                                     </button>
@@ -1561,30 +1572,30 @@ const AdminSpareDrivers = () => {
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                <div className="border border-gray-100 rounded-md p-3">
+                                <div className="border border-white/5 rounded-md p-3">
                                     <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Plan Price</p>
-                                    <p className="text-[14px] font-black text-black">Rs {plan.price || 0}</p>
+                                    <p className="text-[14px] font-black text-white">Rs {plan.price || 0}</p>
                                 </div>
-                                <div className="border border-gray-100 rounded-md p-3">
+                                <div className="border border-white/5 rounded-md p-3">
                                     <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Credits</p>
-                                    <p className="text-[13px] font-black text-black">{plan.credits || 0}</p>
+                                    <p className="text-[13px] font-black text-white">{plan.credits || 0}</p>
                                 </div>
-                                <div className="border border-gray-100 rounded-md p-3">
+                                <div className="border border-white/5 rounded-md p-3">
                                     <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Interval</p>
-                                    <p className="text-[13px] font-black text-black">{plan.interval || 'Monthly'}</p>
+                                    <p className="text-[13px] font-black text-white">{plan.interval || 'Monthly'}</p>
                                 </div>
-                                <div className="border border-gray-100 rounded-md p-3">
+                                <div className="border border-white/5 rounded-md p-3">
                                     <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Max Vehicles</p>
-                                    <p className="text-[13px] font-black text-black">{plan.maxVehicles || 1}</p>
+                                    <p className="text-[13px] font-black text-white">{plan.maxVehicles || 1}</p>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
-                                <div className="border border-gray-100 rounded-md p-3">
+                                <div className="border border-white/5 rounded-md p-3">
                                     <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Rollover</p>
-                                    <p className="text-[12px] font-black text-black">{plan.rollover || 0}</p>
+                                    <p className="text-[12px] font-black text-white">{plan.rollover || 0}</p>
                                 </div>
-                                <div className="border border-gray-100 rounded-md p-3">
+                                <div className="border border-white/5 rounded-md p-3">
                                     <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Applicable Services</p>
                                     <p className="text-[10px] font-black text-black/55 uppercase">
                                         {(plan.applicableServices || []).length === 0
@@ -1609,7 +1620,7 @@ const AdminSpareDrivers = () => {
                                 <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-2">Plan Features</p>
                                 <div className="flex items-center gap-2 flex-wrap">
                                     {(plan.features || []).length ? plan.features.map((feature) => (
-                                        <span key={feature} className="px-2 py-1 bg-gray-50 text-[9px] font-black text-black/60 uppercase rounded-md border border-gray-100">
+                                        <span key={feature} className="px-2 py-1 bg-white/[0.02] text-[9px] font-black text-white/60 uppercase rounded-md border border-white/5">
                                             {feature}
                                         </span>
                                     )) : (
@@ -1627,11 +1638,11 @@ const AdminSpareDrivers = () => {
 
             {selectedDriver && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 px-4">
-                    <div className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
-                        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <div className="bg-white/5 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+                        <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
                             <div>
                                 <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-1">Driver Review</p>
-                                <h3 className="text-lg font-black text-black uppercase">{selectedDriver.name}</h3>
+                                <h3 className="text-lg font-black text-white uppercase">{selectedDriver.name}</h3>
                             </div>
                             <span className={`px-2.5 py-1 rounded text-[8px] font-black uppercase ${STATUS_CONFIG[selectedDriver.status]?.color || STATUS_CONFIG.pending_docs.color}`}>
                                 {STATUS_CONFIG[selectedDriver.status]?.label || STATUS_CONFIG.pending_docs.label}
@@ -1640,13 +1651,13 @@ const AdminSpareDrivers = () => {
 
                         <div className="px-6 py-4 space-y-4">
                             <div className="grid grid-cols-2 gap-3">
-                                <div className="border border-gray-100 rounded-md p-3">
+                                <div className="border border-white/5 rounded-md p-3">
                                     <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Phone</p>
-                                    <p className="text-[11px] font-black text-black">{selectedDriver.phone || 'Not available'}</p>
+                                    <p className="text-[11px] font-black text-white">{selectedDriver.phone || 'Not available'}</p>
                                 </div>
-                                <div className="border border-gray-100 rounded-md p-3">
+                                <div className="border border-white/5 rounded-md p-3">
                                     <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Email</p>
-                                    <p className="text-[10px] font-black text-black truncate">{selectedDriver.email || 'Not available'}</p>
+                                    <p className="text-[10px] font-black text-white truncate">{selectedDriver.email || 'Not available'}</p>
                                 </div>
                             </div>
 
@@ -1661,14 +1672,14 @@ const AdminSpareDrivers = () => {
                                         { label: 'Live Selfie', url: selectedDriver.documents?.selfie?.url },
                                         { label: 'Police Verification', url: selectedDriver.documents?.policeVerification?.url }
                                     ].map(({ label, url }) => (
-                                        <div key={label} className="flex items-center justify-between px-3 py-2.5 border border-gray-100 rounded-md">
-                                            <span className="text-[10px] font-black text-black uppercase">{label}</span>
+                                        <div key={label} className="flex items-center justify-between px-3 py-2.5 border border-white/5 rounded-md">
+                                            <span className="text-[10px] font-black text-white uppercase">{label}</span>
                                             {url ? (
                                                 <a href={url} target="_blank" rel="noreferrer" className="text-[9px] font-black text-brand uppercase underline">
                                                     View
                                                 </a>
                                             ) : (
-                                                <span className="text-[9px] font-black text-black/20 uppercase">Not uploaded</span>
+                                                <span className="text-[9px] font-black text-white/20 uppercase">Not uploaded</span>
                                             )}
                                         </div>
                                     ))}
@@ -1676,34 +1687,34 @@ const AdminSpareDrivers = () => {
                             </div>
 
                             <div className="grid grid-cols-1 gap-3">
-                                <div className="border border-gray-100 rounded-md p-3">
+                                <div className="border border-white/5 rounded-md p-3">
                                     <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Kit Status</p>
-                                    <p className="text-[11px] font-black text-black uppercase">{selectedDriver.kit?.paymentStatus || 'pending'}</p>
+                                    <p className="text-[11px] font-black text-white uppercase">{selectedDriver.kit?.paymentStatus || 'pending'}</p>
                                 </div>
-                                <div className="border border-gray-100 rounded-md p-3">
+                                <div className="border border-white/5 rounded-md p-3">
                                     <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Premium Police Status</p>
-                                    <p className="text-[11px] font-black text-black uppercase">{selectedDriver.verification?.policeStatus || 'pending'}</p>
+                                    <p className="text-[11px] font-black text-white uppercase">{selectedDriver.verification?.policeStatus || 'pending'}</p>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div className="border border-gray-100 rounded-md p-3">
+                                <div className="border border-white/5 rounded-md p-3">
                                     <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Kit Price</p>
-                                    <p className="text-[11px] font-black text-black">₹{selectedDriver.kit?.price || 1499}</p>
+                                    <p className="text-[11px] font-black text-white">₹{selectedDriver.kit?.price || 1499}</p>
                                 </div>
-                                <div className="border border-gray-100 rounded-md p-3">
+                                <div className="border border-white/5 rounded-md p-3">
                                     <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Payment Ref</p>
-                                    <p className="text-[11px] font-black text-black">{selectedDriver.kit?.paymentReference || 'Not submitted'}</p>
+                                    <p className="text-[11px] font-black text-white">{selectedDriver.kit?.paymentReference || 'Not submitted'}</p>
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div className="border border-gray-100 rounded-md p-3">
+                                <div className="border border-white/5 rounded-md p-3">
                                     <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Police Ref Number</p>
-                                    <p className="text-[11px] font-black text-black">{selectedDriver.documents?.policeVerification?.number || 'Not submitted'}</p>
+                                    <p className="text-[11px] font-black text-white">{selectedDriver.documents?.policeVerification?.number || 'Not submitted'}</p>
                                 </div>
-                                <div className="border border-gray-100 rounded-md p-3">
+                                <div className="border border-white/5 rounded-md p-3">
                                     <p className="text-[8px] font-black text-black/25 uppercase tracking-widest mb-1">Police Verified At</p>
-                                    <p className="text-[11px] font-black text-black">
+                                    <p className="text-[11px] font-black text-white">
                                         {selectedDriver.verification?.policeVerifiedAt
                                             ? new Date(selectedDriver.verification.policeVerifiedAt).toLocaleString('en-IN')
                                             : 'Pending'}
@@ -1712,8 +1723,8 @@ const AdminSpareDrivers = () => {
                             </div>
 
                             {selectedDriver.kit?.paymentProofUrl && (
-                                <div className="flex items-center justify-between px-3 py-2.5 border border-gray-100 rounded-md">
-                                    <span className="text-[10px] font-black text-black uppercase">Kit Payment Proof</span>
+                                <div className="flex items-center justify-between px-3 py-2.5 border border-white/5 rounded-md">
+                                    <span className="text-[10px] font-black text-white uppercase">Kit Payment Proof</span>
                                     <a href={selectedDriver.kit.paymentProofUrl} target="_blank" rel="noreferrer" className="text-[9px] font-black text-brand uppercase underline">
                                         View
                                     </a>
@@ -1727,7 +1738,7 @@ const AdminSpareDrivers = () => {
                                     value={driverActionNote}
                                     onChange={(event) => setDriverActionNote(event.target.value)}
                                     placeholder="Reason for approval, rejection, suspension, or support note..."
-                                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-[11px] font-bold text-black resize-none outline-none focus:border-black"
+                                    className="w-full border border-white/10 rounded-md px-3 py-2 text-[11px] font-bold text-white resize-none outline-none focus:border-black"
                                 />
                             </div>
                         </div>
@@ -1735,7 +1746,7 @@ const AdminSpareDrivers = () => {
                         <div className="px-6 pb-5 grid grid-cols-4 gap-3">
                             <button
                                 onClick={() => setSelectedDriver(null)}
-                                className="h-10 border border-gray-200 text-black/40 text-[10px] font-black uppercase rounded-md hover:border-gray-400 transition-colors"
+                                className="h-10 border border-white/10 text-white/40 text-[10px] font-black uppercase rounded-md hover:border-gray-400 transition-colors"
                             >
                                 Close
                             </button>
@@ -1750,7 +1761,7 @@ const AdminSpareDrivers = () => {
                             <button
                                 onClick={() => handleVerify('suspended')}
                                 disabled={driverActioning}
-                                className="h-10 bg-gray-100 text-gray-700 border border-gray-200 text-[10px] font-black uppercase rounded-md hover:bg-gray-200 transition-colors flex items-center justify-center gap-1.5"
+                                className="h-10 bg-white/[0.05] text-white/80 border border-white/10 text-[10px] font-black uppercase rounded-md hover:bg-gray-200 transition-colors flex items-center justify-center gap-1.5"
                             >
                                 <AlertTriangle size={13} />
                                 Suspend
@@ -1759,7 +1770,7 @@ const AdminSpareDrivers = () => {
                                 <button
                                     onClick={() => handleVerify(primaryDriverAction.status)}
                                     disabled={driverActioning}
-                                    className="h-10 bg-black text-white text-[10px] font-black uppercase rounded-md flex items-center justify-center gap-1.5 hover:bg-brand hover:text-black transition-colors"
+                                    className="h-10 bg-black text-white text-[10px] font-black uppercase rounded-md flex items-center justify-center gap-1.5 hover:bg-brand hover:text-white transition-colors"
                                 >
                                     <CheckCircle2 size={13} />
                                     {primaryDriverAction.label}
@@ -1767,7 +1778,7 @@ const AdminSpareDrivers = () => {
                             ) : (
                                 <button
                                     disabled
-                                    className="h-10 bg-gray-100 text-gray-400 text-[10px] font-black uppercase rounded-md flex items-center justify-center gap-1.5"
+                                    className="h-10 bg-white/[0.05] text-gray-400 text-[10px] font-black uppercase rounded-md flex items-center justify-center gap-1.5"
                                 >
                                     <CheckCircle2 size={13} />
                                     Waiting Kit
@@ -1796,15 +1807,15 @@ const AdminSpareDrivers = () => {
 
             {selectedPlan !== null && (
                 <div className="fixed inset-0 z-[204] flex items-center justify-center bg-black/50 px-4 py-6">
-                    <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-                        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <div className="bg-white/5 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+                        <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
                             <div>
                                 <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-1">Subscription Control</p>
-                                <h3 className="text-lg font-black text-black uppercase">
+                                <h3 className="text-lg font-black text-white uppercase">
                                     {selectedPlan?._id ? 'Edit Spare Driver Plan' : 'Create Spare Driver Plan'}
                                 </h3>
                             </div>
-                            <span className="px-2.5 py-1 rounded text-[8px] font-black uppercase bg-gray-100 text-black/60">
+                            <span className="px-2.5 py-1 rounded text-[8px] font-black uppercase bg-white/[0.05] text-white/60">
                                 spare-driver only
                             </span>
                         </div>
@@ -1816,7 +1827,7 @@ const AdminSpareDrivers = () => {
                                     <input
                                         value={planForm.name}
                                         onChange={(event) => setPlanForm((prev) => ({ ...prev, name: event.target.value }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                     />
                                 </div>
                                 <div>
@@ -1824,7 +1835,7 @@ const AdminSpareDrivers = () => {
                                     <select
                                         value={planForm.status}
                                         onChange={(event) => setPlanForm((prev) => ({ ...prev, status: event.target.value }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                     >
                                         <option value="Live">Live</option>
                                         <option value="Hidden">Hidden</option>
@@ -1837,7 +1848,7 @@ const AdminSpareDrivers = () => {
                                         min="0"
                                         value={planForm.price}
                                         onChange={(event) => setPlanForm((prev) => ({ ...prev, price: event.target.value }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                     />
                                 </div>
                                 <div>
@@ -1845,7 +1856,7 @@ const AdminSpareDrivers = () => {
                                     <select
                                         value={planForm.interval}
                                         onChange={(event) => setPlanForm((prev) => ({ ...prev, interval: event.target.value }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                     >
                                         <option value="Monthly">Monthly</option>
                                         <option value="Quarterly">Quarterly</option>
@@ -1859,7 +1870,7 @@ const AdminSpareDrivers = () => {
                                         min="1"
                                         value={planForm.credits}
                                         onChange={(event) => setPlanForm((prev) => ({ ...prev, credits: event.target.value }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                     />
                                 </div>
                                 <div>
@@ -1869,7 +1880,7 @@ const AdminSpareDrivers = () => {
                                         min="1"
                                         value={planForm.maxVehicles}
                                         onChange={(event) => setPlanForm((prev) => ({ ...prev, maxVehicles: event.target.value }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                     />
                                 </div>
                                 <div>
@@ -1879,7 +1890,7 @@ const AdminSpareDrivers = () => {
                                         min="0"
                                         value={planForm.rollover}
                                         onChange={(event) => setPlanForm((prev) => ({ ...prev, rollover: event.target.value }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                     />
                                 </div>
                                 <div>
@@ -1887,7 +1898,7 @@ const AdminSpareDrivers = () => {
                                     <input
                                         value={planForm.accent}
                                         onChange={(event) => setPlanForm((prev) => ({ ...prev, accent: event.target.value }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                     />
                                 </div>
                                 <div className="md:col-span-2">
@@ -1895,7 +1906,7 @@ const AdminSpareDrivers = () => {
                                     <select
                                         value={planForm.applicableService}
                                         onChange={(event) => setPlanForm((prev) => ({ ...prev, applicableService: event.target.value }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                     >
                                         <option value="SPARE_DRIVER">All Spare Driver Services</option>
                                         {chauffeurServices.map((service) => {
@@ -1920,7 +1931,7 @@ const AdminSpareDrivers = () => {
                                     value={planForm.featuresText}
                                     onChange={(event) => setPlanForm((prev) => ({ ...prev, featuresText: event.target.value }))}
                                     placeholder={'Priority chauffeur dispatch\nDiscounted spare-driver rates\nDedicated support'}
-                                    className="w-full border border-gray-200 rounded-md px-3 py-3 text-[11px] font-bold text-black resize-none outline-none focus:border-black"
+                                    className="w-full border border-white/10 rounded-md px-3 py-3 text-[11px] font-bold text-white resize-none outline-none focus:border-black"
                                 />
                             </div>
                         </div>
@@ -1928,14 +1939,14 @@ const AdminSpareDrivers = () => {
                         <div className="px-6 pb-5 flex items-center justify-end gap-3">
                             <button
                                 onClick={() => setSelectedPlan(null)}
-                                className="h-10 px-4 border border-gray-200 text-black/40 text-[10px] font-black uppercase rounded-md hover:border-gray-400 transition-colors"
+                                className="h-10 px-4 border border-white/10 text-white/40 text-[10px] font-black uppercase rounded-md hover:border-gray-400 transition-colors"
                             >
                                 Close
                             </button>
                             <button
                                 onClick={handlePlanSave}
                                 disabled={planSaving}
-                                className="h-10 px-4 bg-black text-white text-[10px] font-black uppercase rounded-md flex items-center justify-center gap-1.5 hover:bg-brand hover:text-black transition-colors"
+                                className="h-10 px-4 bg-black text-white text-[10px] font-black uppercase rounded-md flex items-center justify-center gap-1.5 hover:bg-brand hover:text-white transition-colors"
                             >
                                 {planSaving ? <RefreshCw size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
                                 Save Plan
@@ -1947,13 +1958,13 @@ const AdminSpareDrivers = () => {
 
             {selectedPricingService && (
                 <div className="fixed inset-0 z-[205] flex items-center justify-center bg-black/50 px-4 py-6">
-                    <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-                        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <div className="bg-white/5 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+                        <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
                             <div>
                                 <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-1">Pricing Control</p>
-                                <h3 className="text-lg font-black text-black uppercase">{selectedPricingService.title}</h3>
+                                <h3 className="text-lg font-black text-white uppercase">{selectedPricingService.title}</h3>
                             </div>
-                            <span className="px-2.5 py-1 rounded text-[8px] font-black uppercase bg-gray-100 text-black/60">
+                            <span className="px-2.5 py-1 rounded text-[8px] font-black uppercase bg-white/[0.05] text-white/60">
                                 {selectedPricingService.metadata?.id || selectedPricingService.key}
                             </span>
                         </div>
@@ -1965,7 +1976,7 @@ const AdminSpareDrivers = () => {
                                     <input
                                         value={pricingForm.title}
                                         onChange={(event) => setPricingForm((prev) => ({ ...prev, title: event.target.value }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                     />
                                 </div>
                                 <div>
@@ -1973,7 +1984,7 @@ const AdminSpareDrivers = () => {
                                     <input
                                         value={pricingForm.badge}
                                         onChange={(event) => setPricingForm((prev) => ({ ...prev, badge: event.target.value }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                     />
                                 </div>
                             </div>
@@ -1984,7 +1995,7 @@ const AdminSpareDrivers = () => {
                                     rows={3}
                                     value={pricingForm.description}
                                     onChange={(event) => setPricingForm((prev) => ({ ...prev, description: event.target.value }))}
-                                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-[11px] font-bold text-black resize-none outline-none focus:border-black"
+                                    className="w-full border border-white/10 rounded-md px-3 py-2 text-[11px] font-bold text-white resize-none outline-none focus:border-black"
                                 />
                             </div>
 
@@ -1996,7 +2007,7 @@ const AdminSpareDrivers = () => {
                                         min="0"
                                         value={pricingForm.price}
                                         onChange={(event) => setPricingForm((prev) => ({ ...prev, price: event.target.value }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                     />
                                 </div>
                                 <div>
@@ -2006,7 +2017,7 @@ const AdminSpareDrivers = () => {
                                         min="0"
                                         value={pricingForm.estimatedTime}
                                         onChange={(event) => setPricingForm((prev) => ({ ...prev, estimatedTime: event.target.value }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                     />
                                 </div>
                                 <div>
@@ -2015,7 +2026,7 @@ const AdminSpareDrivers = () => {
                                         type="number"
                                         value={pricingForm.sortOrder}
                                         onChange={(event) => setPricingForm((prev) => ({ ...prev, sortOrder: event.target.value }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                     />
                                 </div>
                                 <div>
@@ -2023,7 +2034,7 @@ const AdminSpareDrivers = () => {
                                     <select
                                         value={pricingForm.isActive ? 'live' : 'hidden'}
                                         onChange={(event) => setPricingForm((prev) => ({ ...prev, isActive: event.target.value === 'live' }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black uppercase outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white uppercase outline-none focus:border-black"
                                     >
                                         <option value="live">Live</option>
                                         <option value="hidden">Hidden</option>
@@ -2038,7 +2049,7 @@ const AdminSpareDrivers = () => {
                                     value={pricingForm.featuresText}
                                     onChange={(event) => setPricingForm((prev) => ({ ...prev, featuresText: event.target.value }))}
                                     placeholder="One feature per line"
-                                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-[11px] font-bold text-black resize-none outline-none focus:border-black"
+                                    className="w-full border border-white/10 rounded-md px-3 py-2 text-[11px] font-bold text-white resize-none outline-none focus:border-black"
                                 />
                             </div>
 
@@ -2049,7 +2060,7 @@ const AdminSpareDrivers = () => {
                                     value={pricingForm.durationOptionsText}
                                     onChange={(event) => setPricingForm((prev) => ({ ...prev, durationOptionsText: event.target.value }))}
                                     placeholder="One slot per line, for example 4 Hours"
-                                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-[11px] font-bold text-black resize-none outline-none focus:border-black"
+                                    className="w-full border border-white/10 rounded-md px-3 py-2 text-[11px] font-bold text-white resize-none outline-none focus:border-black"
                                 />
                             </div>
 
@@ -2060,7 +2071,7 @@ const AdminSpareDrivers = () => {
                                     value={pricingForm.durationPricingText}
                                     onChange={(event) => setPricingForm((prev) => ({ ...prev, durationPricingText: event.target.value }))}
                                     placeholder={"One slot per line, for example 1 Hour=299"}
-                                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-[11px] font-bold text-black resize-none outline-none focus:border-black"
+                                    className="w-full border border-white/10 rounded-md px-3 py-2 text-[11px] font-bold text-white resize-none outline-none focus:border-black"
                                 />
                                 <p className="mt-1 text-[9px] font-bold text-black/35">
                                     Leave blank to keep base price multiplier logic. Add explicit slot fares only when a service needs special pricing.
@@ -2075,7 +2086,7 @@ const AdminSpareDrivers = () => {
                                         min="0"
                                         value={pricingForm.waitingGraceMinutes}
                                         onChange={(event) => setPricingForm((prev) => ({ ...prev, waitingGraceMinutes: event.target.value }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                     />
                                 </div>
                                 <div>
@@ -2085,7 +2096,7 @@ const AdminSpareDrivers = () => {
                                         min="0"
                                         value={pricingForm.waitChargePerMinute}
                                         onChange={(event) => setPricingForm((prev) => ({ ...prev, waitChargePerMinute: event.target.value }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                     />
                                 </div>
                                 <div>
@@ -2095,7 +2106,7 @@ const AdminSpareDrivers = () => {
                                         min="0"
                                         value={pricingForm.overtimeGraceMinutes}
                                         onChange={(event) => setPricingForm((prev) => ({ ...prev, overtimeGraceMinutes: event.target.value }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                     />
                                 </div>
                             </div>
@@ -2109,7 +2120,7 @@ const AdminSpareDrivers = () => {
                                         value={pricingForm.extensionRatePerHour}
                                         onChange={(event) => setPricingForm((prev) => ({ ...prev, extensionRatePerHour: event.target.value }))}
                                         placeholder="Auto derive"
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                     />
                                 </div>
                                 <div>
@@ -2119,7 +2130,7 @@ const AdminSpareDrivers = () => {
                                         min="0"
                                         value={pricingForm.nightAllowance}
                                         onChange={(event) => setPricingForm((prev) => ({ ...prev, nightAllowance: event.target.value }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                     />
                                 </div>
                                 <div>
@@ -2129,7 +2140,7 @@ const AdminSpareDrivers = () => {
                                         min="0"
                                         value={pricingForm.outstationAllowancePerDay}
                                         onChange={(event) => setPricingForm((prev) => ({ ...prev, outstationAllowancePerDay: event.target.value }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                     />
                                 </div>
                                 <div>
@@ -2139,7 +2150,7 @@ const AdminSpareDrivers = () => {
                                         min="0"
                                         value={pricingForm.subscriptionHourlyRate}
                                         onChange={(event) => setPricingForm((prev) => ({ ...prev, subscriptionHourlyRate: event.target.value }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                     />
                                 </div>
                             </div>
@@ -2153,7 +2164,7 @@ const AdminSpareDrivers = () => {
                                         step="0.01"
                                         value={pricingForm.commissionPercent}
                                         onChange={(event) => setPricingForm((prev) => ({ ...prev, commissionPercent: event.target.value }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                     />
                                 </div>
                                 <div>
@@ -2164,7 +2175,7 @@ const AdminSpareDrivers = () => {
                                         step="0.01"
                                         value={pricingForm.gstPercent}
                                         onChange={(event) => setPricingForm((prev) => ({ ...prev, gstPercent: event.target.value }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white outline-none focus:border-black"
                                     />
                                 </div>
                                 <div>
@@ -2172,7 +2183,7 @@ const AdminSpareDrivers = () => {
                                     <select
                                         value={pricingForm.gstInclusive ? 'inclusive' : 'exclusive'}
                                         onChange={(event) => setPricingForm((prev) => ({ ...prev, gstInclusive: event.target.value === 'inclusive' }))}
-                                        className="w-full h-11 border border-gray-200 rounded-md px-3 text-[11px] font-black text-black uppercase outline-none focus:border-black"
+                                        className="w-full h-11 border border-white/10 rounded-md px-3 text-[11px] font-black text-white uppercase outline-none focus:border-black"
                                     >
                                         <option value="exclusive">Add on top</option>
                                         <option value="inclusive">Included in fare</option>
@@ -2184,14 +2195,14 @@ const AdminSpareDrivers = () => {
                         <div className="px-6 pb-6 flex items-center justify-end gap-3">
                             <button
                                 onClick={() => setSelectedPricingService(null)}
-                                className="h-10 px-5 border border-gray-200 text-black/50 text-[10px] font-black uppercase rounded-md hover:border-black hover:text-black transition-colors"
+                                className="h-10 px-5 border border-white/10 text-black/50 text-[10px] font-black uppercase rounded-md hover:border-black hover:text-white transition-colors"
                             >
                                 Close
                             </button>
                             <button
                                 onClick={handlePricingSave}
                                 disabled={pricingSaving}
-                                className="h-10 px-5 bg-black text-white text-[10px] font-black uppercase rounded-md hover:bg-brand hover:text-black transition-colors"
+                                className="h-10 px-5 bg-black text-white text-[10px] font-black uppercase rounded-md hover:bg-brand hover:text-white transition-colors"
                             >
                                 {pricingSaving ? 'Saving...' : 'Save Pricing'}
                             </button>
@@ -2209,10 +2220,10 @@ const AdminSpareDrivers = () => {
                         className="h-full w-full max-w-[42rem] bg-[linear-gradient(180deg,#FFF9EF_0%,#FFFFFF_18%,#FFFFFF_100%)] dark:bg-slate-950 overflow-y-auto shadow-[-12px_0_40px_rgba(15,23,42,0.24)] border-l border-black/[0.04] dark:border-white/10"
                         onClick={(event) => event.stopPropagation()}
                     >
-                        <div className="sticky top-0 z-10 px-6 py-4 border-b border-gray-100 dark:border-white/10 bg-white/85 dark:bg-slate-950/90 backdrop-blur flex items-center justify-between gap-3 flex-wrap">
+                        <div className="sticky top-0 z-10 px-6 py-4 border-b border-white/5 dark:border-white/10 bg-white/85 dark:bg-slate-950/90 backdrop-blur flex items-center justify-between gap-3 flex-wrap">
                             <div>
                                 <p className="text-[9px] font-black text-black/30 dark:text-white/45 uppercase tracking-widest mb-1">Operations Desk</p>
-                                <h3 className="text-lg font-black text-black dark:text-white uppercase">
+                                <h3 className="text-lg font-black text-white dark:text-white uppercase">
                                     {selectedBooking.serviceName || 'Chauffeur Service'} - {selectedBooking.bookingId || selectedBooking._id?.slice(-6)}
                                 </h3>
                             </div>
@@ -2221,13 +2232,13 @@ const AdminSpareDrivers = () => {
                                     {(BOOKING_STATUS_CONFIG[selectedBooking.status] || BOOKING_STATUS_CONFIG.pending).label}
                                 </span>
                                 {selectedBooking.payment?.status && (
-                                    <span className="px-2.5 py-1 rounded text-[8px] font-black uppercase bg-gray-100 dark:bg-white/10 text-black/60 dark:text-white/65">
+                                    <span className="px-2.5 py-1 rounded text-[8px] font-black uppercase bg-white/[0.05] dark:bg-white/10 text-white/60 dark:text-white/65">
                                         Payment {selectedBooking.payment.status}
                                     </span>
                                 )}
                                 <button
                                     onClick={() => setSelectedBooking(null)}
-                                    className="h-8 px-3 border border-gray-200 dark:border-white/15 rounded-md text-[10px] font-black uppercase text-black/55 dark:text-white/70 hover:border-black dark:hover:border-white/45 transition-colors"
+                                    className="h-8 px-3 border border-white/10 dark:border-white/15 rounded-md text-[10px] font-black uppercase text-black/55 dark:text-white/70 hover:border-black dark:hover:border-white/45 transition-colors"
                                 >
                                     Close
                                 </button>
@@ -2236,15 +2247,15 @@ const AdminSpareDrivers = () => {
 
                         <div className="px-6 py-5 space-y-5">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="border border-black/[0.04] dark:border-white/10 rounded-[1.1rem] p-4 space-y-2 bg-white dark:bg-slate-900 shadow-[0_14px_30px_rgba(15,23,42,0.04)] dark:shadow-none">
+                                <div className="border border-black/[0.04] dark:border-white/10 rounded-[1.1rem] p-4 space-y-2 bg-white/5 dark:bg-slate-900 shadow-[0_14px_30px_rgba(15,23,42,0.04)] dark:shadow-none">
                                     <p className="text-[8px] font-black text-black/25 dark:text-white/45 uppercase tracking-widest">Customer</p>
-                                    <p className="text-[12px] font-black text-black dark:text-white uppercase">{selectedBooking.consumer?.name || 'Pending'}</p>
+                                    <p className="text-[12px] font-black text-white dark:text-white uppercase">{selectedBooking.consumer?.name || 'Pending'}</p>
                                     <p className="text-[10px] font-bold text-black/45 dark:text-white/60">{selectedBooking.consumer?.phone || 'No phone'}</p>
                                     <p className="text-[10px] font-bold text-black/35 dark:text-white/55">{getBookingAddress(selectedBooking)}</p>
                                 </div>
-                                <div className="border border-gray-100 dark:border-white/10 rounded-[1.1rem] p-4 space-y-2 bg-white dark:bg-slate-900">
+                                <div className="border border-white/5 dark:border-white/10 rounded-[1.1rem] p-4 space-y-2 bg-white/5 dark:bg-slate-900">
                                     <p className="text-[8px] font-black text-black/25 dark:text-white/45 uppercase tracking-widest">Trip Snapshot</p>
-                                    <p className="text-[12px] font-black text-black dark:text-white uppercase">{getBookingAmount(selectedBooking)}</p>
+                                    <p className="text-[12px] font-black text-white dark:text-white uppercase">{getBookingAmount(selectedBooking)}</p>
                                     <p className="text-[10px] font-bold text-black/45 dark:text-white/60">Schedule: {getBookingSchedule(selectedBooking)}</p>
                                     {getBookedDurationLabel(selectedBooking) && (
                                         <p className="text-[10px] font-bold text-black/45 dark:text-white/60">
@@ -2275,9 +2286,9 @@ const AdminSpareDrivers = () => {
                                         </p>
                                     )}
                                 </div>
-                                <div className="border border-gray-100 dark:border-white/10 rounded-[1.1rem] p-4 space-y-2 bg-white dark:bg-slate-900">
+                                <div className="border border-white/5 dark:border-white/10 rounded-[1.1rem] p-4 space-y-2 bg-white/5 dark:bg-slate-900">
                                     <p className="text-[8px] font-black text-black/25 dark:text-white/45 uppercase tracking-widest">Current Driver</p>
-                                    <p className="text-[12px] font-black text-black dark:text-white uppercase">
+                                    <p className="text-[12px] font-black text-white dark:text-white uppercase">
                                         {getAssignedDriver(selectedBooking)?.name || 'Not assigned'}
                                     </p>
                                     <p className="text-[10px] font-bold text-black/45 dark:text-white/60">
@@ -2294,10 +2305,10 @@ const AdminSpareDrivers = () => {
                                 </div>
                             </div>
 
-                            <div className="border border-gray-100 dark:border-white/10 rounded-[1.1rem] p-4 space-y-4 bg-white dark:bg-slate-900">
+                            <div className="border border-white/5 dark:border-white/10 rounded-[1.1rem] p-4 space-y-4 bg-white/5 dark:bg-slate-900">
                                 <div className="flex items-center gap-2">
                                     <ShieldAlert size={16} className="text-[#F29F05]" />
-                                    <p className="text-[11px] font-black text-black dark:text-white uppercase">Manual Dispatch & Support Controls</p>
+                                    <p className="text-[11px] font-black text-white dark:text-white uppercase">Manual Dispatch & Support Controls</p>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-end">
@@ -2306,7 +2317,7 @@ const AdminSpareDrivers = () => {
                                         <select
                                             value={selectedAssignDriverId}
                                             onChange={(event) => setSelectedAssignDriverId(event.target.value)}
-                                            className="w-full h-11 border border-gray-200 dark:border-white/15 rounded-md px-3 text-[11px] font-black text-black dark:text-white uppercase outline-none bg-white dark:bg-slate-800"
+                                            className="w-full h-11 border border-white/10 dark:border-white/15 rounded-md px-3 text-[11px] font-black text-white dark:text-white uppercase outline-none bg-white/5 dark:bg-slate-800"
                                         >
                                             <option value="">Choose driver</option>
                                             {assignableDrivers.map((driver) => (
@@ -2319,7 +2330,7 @@ const AdminSpareDrivers = () => {
                                     <button
                                         onClick={handleAssignBooking}
                                         disabled={bookingActioning}
-                                        className="h-11 px-5 bg-black text-white text-[10px] font-black uppercase rounded-md hover:bg-brand hover:text-black transition-colors"
+                                        className="h-11 px-5 bg-black text-white text-[10px] font-black uppercase rounded-md hover:bg-brand hover:text-white transition-colors"
                                     >
                                         {getAssignedDriver(selectedBooking) ? 'Reassign Driver' : 'Assign Driver'}
                                     </button>
@@ -2332,7 +2343,7 @@ const AdminSpareDrivers = () => {
                                         value={bookingActionNote}
                                         onChange={(event) => setBookingActionNote(event.target.value)}
                                         placeholder="Explain why you are reassigning, releasing, cancelling, or updating support status..."
-                                        className="w-full border border-gray-200 dark:border-white/15 rounded-md px-3 py-2 text-[11px] font-bold text-black dark:text-white resize-none outline-none focus:border-black dark:bg-slate-800"
+                                        className="w-full border border-white/10 dark:border-white/15 rounded-md px-3 py-2 text-[11px] font-bold text-white dark:text-white resize-none outline-none focus:border-black dark:bg-slate-800"
                                     />
                                 </div>
 
@@ -2356,7 +2367,7 @@ const AdminSpareDrivers = () => {
                                     {getAssignedDriver(selectedBooking) && (
                                         <button
                                             onClick={() => openDriverReview(getAssignedDriver(selectedBooking))}
-                                            className="h-10 px-4 border border-gray-200 dark:border-white/15 text-[10px] font-black uppercase rounded-md hover:border-black dark:hover:border-white/45 transition-colors text-black dark:text-white"
+                                            className="h-10 px-4 border border-white/10 dark:border-white/15 text-[10px] font-black uppercase rounded-md hover:border-black dark:hover:border-white/45 transition-colors text-white dark:text-white"
                                         >
                                             Review Current Driver
                                         </button>
@@ -2364,20 +2375,20 @@ const AdminSpareDrivers = () => {
                                 </div>
                             </div>
 
-                            <div className="border border-gray-100 dark:border-white/10 rounded-[1.1rem] p-4 space-y-4 bg-white dark:bg-slate-900">
+                            <div className="border border-white/5 dark:border-white/10 rounded-[1.1rem] p-4 space-y-4 bg-white/5 dark:bg-slate-900">
                                 <div className="flex items-center gap-2">
                                     <ClipboardList size={16} className="text-black/55 dark:text-white/70" />
-                                    <p className="text-[11px] font-black text-black dark:text-white uppercase">Issue Resolution Desk</p>
+                                    <p className="text-[11px] font-black text-white dark:text-white uppercase">Issue Resolution Desk</p>
                                 </div>
 
                                 {selectedBooking.issues?.length ? (
                                     <div className="space-y-3">
                                         {selectedBooking.issues.map((issue) => (
-                                            <div key={issue._id} className="border border-gray-100 dark:border-white/10 rounded-md p-3">
+                                            <div key={issue._id} className="border border-white/5 dark:border-white/10 rounded-md p-3">
                                                 <div className="flex items-start justify-between gap-3 flex-wrap">
                                                     <div className="space-y-1">
                                                         <div className="flex items-center gap-2 flex-wrap">
-                                                            <span className="text-[10px] font-black text-black dark:text-white uppercase">{issue.type || 'Support'}</span>
+                                                            <span className="text-[10px] font-black text-white dark:text-white uppercase">{issue.type || 'Support'}</span>
                                                             <span className={`px-2 py-1 rounded text-[8px] font-black uppercase ${ISSUE_STATUS_CONFIG[issue.status] || ISSUE_STATUS_CONFIG.open}`}>
                                                                 {issue.status}
                                                             </span>
@@ -2405,7 +2416,7 @@ const AdminSpareDrivers = () => {
                                                         <button
                                                             onClick={() => handleIssueUpdate(issue._id, 'dismissed')}
                                                             disabled={bookingActioning}
-                                                            className="h-9 px-3 bg-gray-100 text-gray-700 text-[9px] font-black uppercase rounded-md hover:bg-gray-200 transition-colors"
+                                                            className="h-9 px-3 bg-white/[0.05] text-white/80 text-[9px] font-black uppercase rounded-md hover:bg-gray-200 transition-colors"
                                                         >
                                                             Dismiss
                                                         </button>
@@ -2415,7 +2426,7 @@ const AdminSpareDrivers = () => {
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="border border-dashed border-gray-200 dark:border-white/15 rounded-md p-6 text-center">
+                                    <div className="border border-dashed border-white/10 dark:border-white/15 rounded-md p-6 text-center">
                                         <p className="text-[10px] font-black text-black/25 dark:text-white/45 uppercase tracking-widest">No support issues linked to this trip yet</p>
                                     </div>
                                 )}
@@ -2425,7 +2436,7 @@ const AdminSpareDrivers = () => {
                         <div className="px-6 pb-6 flex items-center justify-end">
                             <button
                                 onClick={() => setSelectedBooking(null)}
-                                className="h-10 px-5 border border-gray-200 dark:border-white/15 text-black/50 dark:text-white/70 text-[10px] font-black uppercase rounded-md hover:border-black dark:hover:border-white/45 hover:text-black dark:hover:text-white transition-colors"
+                                className="h-10 px-5 border border-white/10 dark:border-white/15 text-black/50 dark:text-white/70 text-[10px] font-black uppercase rounded-md hover:border-black dark:hover:border-white/45 hover:text-white dark:hover:text-white transition-colors"
                             >
                                 Close Desk
                             </button>

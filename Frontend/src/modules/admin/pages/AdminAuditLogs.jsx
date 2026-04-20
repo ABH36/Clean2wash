@@ -71,7 +71,7 @@ const AdminAuditLogs = () => {
 
                 {/* ── Audit Stats ── */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div className="md:col-span-3 bg-surface p-8 rounded-[2.5rem] border border-gray-100/10 shadow-soft flex items-center justify-between">
+                    <div className="md:col-span-3 bg-surface p-8 rounded-[2.5rem] border border-slate-200/60 dark:border-white/10 shadow-soft flex items-center justify-between">
                         <div>
                             <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest mb-2">Audit Throughput</p>
                             <h3 className="text-3xl font-black text-content tracking-tighter">{pagination.total.toLocaleString()} <span className="text-xs text-brand">Logged Actions</span></h3>
@@ -85,7 +85,7 @@ const AdminAuditLogs = () => {
                             ))}
                         </div>
                     </div>
-                    <div className="bg-brand p-8 rounded-[2.5rem] shadow-brand/20 shadow-xl flex flex-col justify-center relative overflow-hidden group">
+                    <div className="bg-brand p-8 rounded-[2.5rem] shadow-brand/20 shadow-2xl shadow-black/50 flex flex-col justify-center relative overflow-hidden group">
                         <Activity className="absolute -right-4 -top-4 size-24 text-white/10 group-hover:scale-110 transition-transform" />
                         <p className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1">System Status</p>
                         <h4 className="text-xl font-black text-white">PROT-ACTIVE</h4>
@@ -94,21 +94,21 @@ const AdminAuditLogs = () => {
                 </div>
 
                 {/* ── Controls Bar ── */}
-                <div className="bg-surface rounded-3xl p-4 border border-gray-100/10 shadow-soft flex flex-wrap items-center gap-4">
-                    <div className="flex-1 min-w-[250px] relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-content-subtle" size={18} />
-                        <input
-                            type="text"
-                            placeholder="Search by action or resource protocol..."
-                            className="w-full bg-background border border-gray-100/10 rounded-2xl pl-12 pr-4 py-3 text-sm font-bold text-content outline-none focus:border-brand transition-all"
-                            value={filters.action}
-                            onChange={(e) => setFilters(prev => ({ ...prev, action: e.target.value }))}
-                        />
-                    </div>
+                <div className="bg-surface rounded-3xl p-4 border border-slate-200/60 dark:border-white/10 shadow-soft flex flex-wrap items-center gap-4">
+                        <div className="flex-1 lg:w-96 bg-background border border-slate-200/60 dark:border-white/10 rounded-2xl px-4 py-3 flex items-center gap-3 group focus-within:border-brand transition-all shadow-inner">
+                            <Search className="text-content-subtle group-focus-within:text-brand transition-colors" size={18} />
+                            <input
+                                type="text"
+                                placeholder="Search by action or resource protocol..."
+                                className="bg-transparent outline-none text-sm font-bold text-content w-full placeholder:text-content-subtle/50"
+                                value={filters.action}
+                                onChange={(e) => setFilters(prev => ({ ...prev, action: e.target.value }))}
+                            />
+                        </div>
 
                     <div className="flex items-center gap-3">
                         <select
-                            className="bg-background border border-gray-100/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-content outline-none"
+                            className="bg-background border border-slate-200/60 dark:border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-content outline-none"
                             value={filters.resource}
                             onChange={(e) => setFilters(prev => ({ ...prev, resource: e.target.value }))}
                         >
@@ -118,17 +118,17 @@ const AdminAuditLogs = () => {
                             <option value="Booking">Bookings</option>
                         </select>
 
-                        <button onClick={fetchLogs} className="p-3 bg-background border border-gray-100/10 rounded-xl text-content-subtle hover:text-brand transition-all active:scale-95">
+                        <button onClick={fetchLogs} className="p-3 bg-background border border-slate-200/60 dark:border-white/10 rounded-xl text-content-subtle hover:text-brand transition-all active:scale-95">
                             <RefreshCw size={18} className={loading ? 'animate-spin text-brand' : ''} />
                         </button>
                     </div>
                 </div>
 
                 {/* ── Logs Feed ── */}
-                <div className="bg-surface rounded-[2.5rem] border border-gray-100/10 shadow-soft overflow-hidden">
+                <div className="bg-surface rounded-[2.5rem] border border-slate-200/60 dark:border-white/10 shadow-soft overflow-hidden">
                     <div className="admin-table-container">
                         <table className="w-full text-left">
-                            <thead className="bg-background/80 border-b border-gray-100/5">
+                            <thead className="bg-background/80 border-b border-slate-200/60 dark:border-white/5">
                                 <tr>
                                     <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest">Chronology</th>
                                     <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest">Admin Entity</th>
@@ -156,7 +156,7 @@ const AdminAuditLogs = () => {
                                         <tr key={log._id} className="hover:bg-background/50 transition-all cursor-pointer group" onClick={() => setSelectedLog(log)}>
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-xl bg-background flex items-center justify-center border border-gray-100/10">
+                                                    <div className="w-8 h-8 rounded-xl bg-background flex items-center justify-center border border-slate-200/60 dark:border-white/10">
                                                         <Clock size={14} className="text-content-subtle" />
                                                     </div>
                                                     <div>
@@ -189,7 +189,7 @@ const AdminAuditLogs = () => {
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6 text-right">
-                                                <button className="w-8 h-8 rounded-xl bg-background border border-gray-100/10 flex items-center justify-center text-content-subtle hover:text-brand hover:border-brand/30 transition-all">
+                                                <button className="w-8 h-8 rounded-xl bg-background border border-slate-200/60 dark:border-white/10 flex items-center justify-center text-content-subtle hover:text-brand hover:border-brand/30 transition-all">
                                                     <Eye size={14} />
                                                 </button>
                                             </td>
@@ -207,8 +207,8 @@ const AdminAuditLogs = () => {
                 {selectedLog && (
                     <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedLog(null)} className="absolute inset-0 bg-background/80 backdrop-blur-md" />
-                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-surface w-full max-w-2xl rounded-[3rem] border border-gray-100/10 shadow-2xl overflow-hidden relative z-10 flex flex-col max-h-[85vh]">
-                            <div className="p-10 border-b border-gray-100/5 bg-background/30 flex items-center justify-between">
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-surface w-full max-w-2xl rounded-[3rem] border border-slate-200/60 dark:border-white/10 shadow-2xl overflow-hidden relative z-10 flex flex-col max-h-[85vh]">
+                            <div className="p-10 border-b border-slate-200/60 dark:border-white/5 bg-background/30 flex items-center justify-between">
                                 <div className="flex items-center gap-5">
                                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${getActionColor(selectedLog.action)}`}>
                                         <Terminal size={28} />
@@ -226,9 +226,9 @@ const AdminAuditLogs = () => {
                             <div className="p-10 overflow-y-auto space-y-8 custom-scrollbar">
                                 <div className="grid grid-cols-2 gap-10">
                                     <div className="space-y-4">
-                                        <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest border-b border-gray-100/5 pb-2">Administrative Context</p>
+                                        <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest border-b border-slate-200/60 dark:border-white/5 pb-2">Administrative Context</p>
                                         <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-xl bg-background border border-gray-100/10 flex items-center justify-center">
+                                            <div className="w-10 h-10 rounded-xl bg-background border border-slate-200/60 dark:border-white/10 flex items-center justify-center">
                                                 <User size={18} className="text-brand" />
                                             </div>
                                             <div>
@@ -238,7 +238,7 @@ const AdminAuditLogs = () => {
                                         </div>
                                     </div>
                                     <div className="space-y-4">
-                                        <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest border-b border-gray-100/5 pb-2">Technical Origin</p>
+                                        <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest border-b border-slate-200/60 dark:border-white/5 pb-2">Technical Origin</p>
                                         <div className="space-y-2">
                                             <div className="flex items-center gap-2">
                                                 <Globe size={12} className="text-brand" />
@@ -253,9 +253,9 @@ const AdminAuditLogs = () => {
                                 </div>
 
                                 <div className="space-y-4">
-                                    <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest border-b border-gray-100/5 pb-2">Action Delta (Before / After)</p>
+                                    <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest border-b border-slate-200/60 dark:border-white/5 pb-2">Action Delta (Before / After)</p>
                                     <div className="grid grid-cols-2 gap-6">
-                                        <div className="bg-background/50 rounded-2xl p-6 border border-gray-100/5">
+                                        <div className="bg-background/50 rounded-2xl p-6 border border-slate-200/60 dark:border-white/5">
                                             <span className="text-[8px] font-black text-red-500 uppercase mb-3 block tracking-widest">PRE-STATE</span>
                                             <pre className="text-[10px] font-mono text-content-subtle overflow-x-auto whitespace-pre-wrap">
                                                 {JSON.stringify(selectedLog.oldValue, null, 2) || 'NULL'}
@@ -271,7 +271,7 @@ const AdminAuditLogs = () => {
                                 </div>
                             </div>
 
-                            <div className="p-8 bg-background/50 flex items-center justify-between border-t border-gray-100/5">
+                            <div className="p-8 bg-background/50 flex items-center justify-between border-t border-slate-200/60 dark:border-white/5">
                                 <div className="flex items-center gap-4">
                                     <AlertCircle size={14} className="text-brand" />
                                     <span className="text-[10px] font-black text-content uppercase tracking-widest mt-0.5">Immutable Record Protocol Active</span>

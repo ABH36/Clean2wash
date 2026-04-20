@@ -1,47 +1,26 @@
-import apiClient from '../../../utils/adminApi';
+import { adminAPI } from '../../../utils/adminApi';
 
 class DriverService {
     // ── Driver Registry ─────────────────────────────────────────────
     async getAllDrivers(params = {}) {
-        const query = new URLSearchParams(params).toString();
-        return apiClient.request(`/drivers${query ? `?${query}` : ''}`);
+        return adminAPI.getSpareDrivers();
     }
 
     async getDriverById(id) {
-        return apiClient.request(`/drivers/${id}`);
+        return adminAPI.get(`/spare-drivers/${id}`);
     }
 
     // ── Actions ──────────────────────────────────────────────────
+    async updateDriverStatus(id, status, adminNote = '') {
+        return adminAPI.patch(`/spare-drivers/${id}`, { status, adminNote });
+    }
+
     async approveDriver(id) {
-        return apiClient.request(`/drivers/${id}/approve`, { method: 'PATCH' });
+        return adminAPI.patch(`/drivers/${id}/approve`, {});
     }
 
     async rejectDriver(id, reason) {
-        return apiClient.request(`/drivers/${id}/reject`, {
-            method: 'PATCH',
-            body: JSON.stringify({ reason })
-        });
-    }
-
-    async updateKitStatus(id, kitStatus) {
-        return apiClient.request(`/drivers/${id}/kit`, {
-            method: 'PATCH',
-            body: JSON.stringify({ kitStatus })
-        });
-    }
-
-    async updatePoliceVerification(id, policeVerification) {
-        return apiClient.request(`/drivers/${id}/police`, {
-            method: 'PATCH',
-            body: JSON.stringify({ policeVerification })
-        });
-    }
-
-    async updateDriverStatus(id, status) {
-        return apiClient.request(`/drivers/${id}/status`, {
-            method: 'PATCH',
-            body: JSON.stringify({ status }) // ACTIVE or BLOCKED
-        });
+        return adminAPI.patch(`/drivers/${id}/reject`, { reason });
     }
 }
 

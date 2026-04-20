@@ -29,8 +29,8 @@ const SOSAlertCard = ({ alert }) => (
         <div className="absolute -top-1 -right-1 w-3 h-3 bg-[var(--error)] rounded-full animate-pulse" />
         
         <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-[var(--error-light)] text-[var(--error)] rounded-lg flex items-center justify-center shrink-0">
-                <ShieldAlert size={16} />
+            <div className="w-10 h-10 bg-[var(--error-light)] text-[var(--error)] rounded-lg flex items-center justify-center shrink-0 border border-[var(--error)]/20">
+                <ShieldAlert size={18} />
             </div>
             
             <div className="flex-1 min-w-0">
@@ -48,18 +48,21 @@ const SOSAlertCard = ({ alert }) => (
                 </p>
                 
                 <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] mb-3">
-                    <MapPin size={10} />
-                    <span className="truncate">{alert.location?.address || 'Location unavailable'}</span>
+                    <MapPin size={14} />
+                    <span className="truncate font-medium">{alert.location?.address || 'Location unavailable'}</span>
                 </div>
                 
                 <div className="flex items-center gap-2">
-                    <button className="btn-danger text-xs px-2 py-1">
-                        <Phone size={10} className="mr-1" />
+                    <a href={`tel:${alert.consumer?.phone}`} className="btn-danger text-[10px] px-3 py-1.5 flex items-center group/call">
+                        <Phone size={14} className="mr-1.5 group-hover:rotate-12 transition-transform" />
                         Call
-                    </button>
-                    <button className="btn-secondary text-xs px-2 py-1">
-                        <Navigation size={10} className="mr-1" />
-                        Location
+                    </a>
+                    <button 
+                        onClick={() => window.dispatchEvent(new CustomEvent('open-sos-tactical', { detail: alert }))}
+                        className="btn-secondary text-[10px] px-3 py-1.5 flex items-center group/map"
+                    >
+                        <Navigation size={14} className="mr-1.5 group-hover:scale-110 transition-transform" />
+                        Tactical Map
                     </button>
                     <span className="text-xs text-[var(--text-muted)] ml-auto">
                         {alert.responders?.length || 0} responders
@@ -79,8 +82,8 @@ const BookingSplitCard = ({ instant, scheduled }) => {
     return (
         <div className="admin-card-compact">
             <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 bg-[var(--primary-light)] text-[var(--primary)] rounded-lg flex items-center justify-center">
-                    <BarChart3 size={14} />
+                <div className="w-8 h-8 bg-[var(--primary-light)] text-[var(--primary)] rounded-lg flex items-center justify-center">
+                    <BarChart3 size={18} />
                 </div>
                 <h3 className="text-sm font-semibold text-[var(--text-primary)]">Booking Split</h3>
             </div>
@@ -88,7 +91,7 @@ const BookingSplitCard = ({ instant, scheduled }) => {
             <div className="space-y-2">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <Zap size={12} className="text-[var(--success)]" />
+                        <Zap size={16} className="text-[var(--success)]" />
                         <span className="text-sm font-medium text-[var(--text-secondary)]">Instant</span>
                     </div>
                     <div className="text-right">
@@ -99,7 +102,7 @@ const BookingSplitCard = ({ instant, scheduled }) => {
                 
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <Calendar size={12} className="text-[var(--warning)]" />
+                        <Calendar size={16} className="text-[var(--warning)]" />
                         <span className="text-sm font-medium text-[var(--text-secondary)]">Scheduled</span>
                     </div>
                     <div className="text-right">
@@ -136,9 +139,9 @@ const KPICard = ({ title, value, icon, trend, trendValue, highlightClass }) => (
                 {trendValue && (
                     <div className="flex items-center gap-1.5">
                         {trend === 'up' ? (
-                            <TrendingUp size={10} className="text-[var(--success)]" />
+                            <TrendingUp size={14} className="text-[var(--success)]" />
                         ) : (
-                            <TrendingDown size={10} className="text-[var(--error)]" />
+                            <TrendingDown size={14} className="text-[var(--error)]" />
                         )}
                         <span className={`text-xs font-medium ${trend === 'up' ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
                             {trendValue}
@@ -148,7 +151,7 @@ const KPICard = ({ title, value, icon, trend, trendValue, highlightClass }) => (
                 )}
             </div>
             <div className={`p-2 rounded-lg ${highlightClass.replace('text-', 'bg-').replace('600', '-light')} ${highlightClass} shrink-0`}>
-                {React.cloneElement(icon, { size: 16 })}
+                {React.cloneElement(icon, { size: 20, className: 'group-hover:scale-110 transition-transform' })}
             </div>
         </div>
     </motion.div>
@@ -387,43 +390,43 @@ const AdminDashboardUpgraded = () => {
     );
 
     return (
-        <div className="admin-section space-y-8">
+        <div className="admin-section space-y-4">
             {/* ── HEADER ── */}
-            <header className="admin-card flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <header className="admin-card flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
                 <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-[var(--primary)] text-white rounded-lg flex items-center justify-center shrink-0">
                         <Zap size={20} />
                     </div>
                     <div>
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-1.5 mb-0.5">
                             <div className="w-2 h-2 rounded-full bg-[var(--success)] animate-pulse" />
-                            <span className="text-caption text-[var(--success)] uppercase">System Online</span>
+                            <span className="text-[10px] font-bold text-[var(--success)] uppercase tracking-tight">System Online</span>
                         </div>
-                        <h1 className="text-title text-[var(--text-primary)]">Operations Command Center</h1>
-                        <p className="text-body text-[var(--text-secondary)] mt-0.5">Structured Operations Control Panel</p>
+                        <h1 className="text-xl font-bold text-[var(--text-primary)]">Operations Command Center</h1>
+                        <p className="text-[11px] font-medium text-[var(--text-secondary)]">Structured Operations Control Panel</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-6 bg-[var(--bg-secondary)] px-4 py-3 rounded-lg border border-[var(--border)]">
+                <div className="flex items-center gap-4 bg-[var(--bg-secondary)] px-3 py-2 rounded-lg border border-[var(--border)] shadow-inner">
                     <div>
-                        <p className="text-caption text-[var(--text-muted)] uppercase">Active Dispatch</p>
-                        <p className="text-lg font-semibold text-[var(--text-primary)] tabular-nums">{stats.kpis.activeTrips}</p>
+                        <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-tight">Active Dispatch</p>
+                        <p className="text-base font-bold text-[var(--text-primary)] tabular-nums">{stats.kpis.activeTrips}</p>
                     </div>
-                    <div className="w-px h-6 bg-[var(--border)]" />
+                    <div className="w-px h-5 bg-[var(--border)]" />
                     <div>
-                        <p className="text-caption text-[var(--text-muted)] uppercase">Fleet Online</p>
-                        <p className="text-lg font-semibold text-[var(--text-primary)] tabular-nums">{stats.kpis.activeDrivers}</p>
+                        <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-tight">Fleet Online</p>
+                        <p className="text-base font-bold text-[var(--text-primary)] tabular-nums">{stats.kpis.activeDrivers}</p>
                     </div>
-                    <div className="w-px h-6 bg-[var(--border)]" />
+                    <div className="w-px h-5 bg-[var(--border)]" />
                     <div>
-                        <p className="text-caption text-[var(--text-muted)] uppercase">Completion</p>
-                        <p className="text-lg font-semibold text-[var(--success)] tabular-nums">{stats.kpis.completionRate}%</p>
+                        <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-tight">Completion</p>
+                        <p className="text-base font-bold text-[var(--success)] tabular-nums">{stats.kpis.completionRate}%</p>
                     </div>
                     {stats.kpis.activeSOSCount > 0 && (
                         <>
-                            <div className="w-px h-6 bg-[var(--border)]" />
+                            <div className="w-px h-5 bg-[var(--border)]" />
                             <div>
-                                <p className="text-caption text-[var(--error)] uppercase">SOS Alerts</p>
-                                <p className="text-lg font-semibold text-[var(--error)] tabular-nums animate-pulse">{stats.kpis.activeSOSCount}</p>
+                                <p className="text-[9px] font-bold text-[var(--error)] uppercase tracking-tight">SOS Alerts</p>
+                                <p className="text-base font-bold text-[var(--error)] tabular-nums animate-pulse">{stats.kpis.activeSOSCount}</p>
                             </div>
                         </>
                     )}
@@ -431,14 +434,14 @@ const AdminDashboardUpgraded = () => {
             </header>
 
             {/* ── SECTION 1: PERFORMANCE METRICS ── */}
-            <section className="space-y-4">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-[var(--primary-light)] text-[var(--primary)] rounded-lg flex items-center justify-center">
+            <section className="space-y-3">
+                <div className="flex items-center gap-2 mb-1">
+                    <div className="w-8 h-8 bg-[var(--primary-light)] text-[var(--primary)] rounded-lg flex items-center justify-center shadow-sm">
                         <Target size={18} />
                     </div>
                     <div>
-                        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Performance Metrics</h2>
-                        <p className="text-sm text-[var(--text-secondary)]">Core operational efficiency indicators</p>
+                        <h2 className="text-base font-bold text-[var(--text-primary)]">Performance Metrics</h2>
+                        <p className="text-[11px] font-medium text-[var(--text-secondary)] opacity-70">Core operational efficiency indicators</p>
                     </div>
                 </div>
                 
@@ -495,7 +498,7 @@ const AdminDashboardUpgraded = () => {
                     <motion.div 
                         initial={{ opacity: 0, y: -10 }} 
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-[var(--error-light)] border-2 border-[var(--error)] rounded-xl p-6"
+                        className="bg-[var(--error-light)] border-white/5 border-[var(--error)] rounded-xl p-4"
                     >
                         <div className="flex items-center gap-3 mb-4">
                             <div className="w-8 h-8 bg-[var(--error)] text-white rounded-lg flex items-center justify-center animate-pulse">
@@ -534,30 +537,30 @@ const AdminDashboardUpgraded = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="admin-card-compact border-l-4 border-l-[var(--warning)]">
                         <div className="flex items-center gap-3">
-                            <AlertCircle size={16} className="text-[var(--warning)]" />
+                            <AlertCircle size={18} className="text-[var(--warning)]" />
                             <div>
                                 <p className="text-sm font-semibold text-[var(--text-primary)]">Incident Alerts</p>
-                                <p className="text-lg font-bold text-[var(--warning)]">0 Active</p>
+                                <p className="text-lg font-bold text-[var(--warning)] tabular-nums">0 Active</p>
                             </div>
                         </div>
                     </div>
                     
                     <div className="admin-card-compact border-l-4 border-l-[var(--error)]">
                         <div className="flex items-center gap-3">
-                            <Percent size={16} className="text-[var(--error)]" />
+                            <Percent size={18} className="text-[var(--error)]" />
                             <div>
                                 <p className="text-sm font-semibold text-[var(--text-primary)]">Cancellation Rate</p>
-                                <p className="text-lg font-bold text-[var(--error)]">{stats.kpis.cancellationRate || 0}%</p>
+                                <p className="text-lg font-bold text-[var(--error)] tabular-nums">{stats.kpis.cancellationRate || 0}%</p>
                             </div>
                         </div>
                     </div>
 
                     <div className="admin-card-compact border-l-4 border-l-[var(--primary)]">
                         <div className="flex items-center gap-3">
-                            <Activity size={16} className="text-[var(--primary)]" />
+                            <Activity size={18} className="text-[var(--primary)]" />
                             <div>
                                 <p className="text-sm font-semibold text-[var(--text-primary)]">System Health</p>
-                                <p className="text-lg font-bold text-[var(--success)]">Optimal</p>
+                                <p className="text-lg font-bold text-[var(--success)] tabular-nums">Optimal</p>
                             </div>
                         </div>
                     </div>
@@ -775,15 +778,15 @@ const AdminDashboardUpgraded = () => {
                 </div>
 
                 {/* LIVE TRIPS PANEL */}
-                <div className="admin-card flex flex-col overflow-hidden">
-                    <div className="p-6 border-b border-[var(--border)] bg-[var(--bg-secondary)] flex items-center justify-between">
+                <div className="admin-card flex flex-col overflow-hidden shadow-premium-color">
+                    <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--bg-secondary)] flex items-center justify-between">
                         <div>
-                            <h3 className="text-base font-semibold text-[var(--text-primary)]">Live Trips Panel</h3>
-                            <p className="text-xs font-medium text-[var(--text-secondary)] mt-1 uppercase tracking-wide">Active Dispatch Monitor</p>
+                            <h3 className="text-sm font-bold text-[var(--text-primary)]">Live Trips Panel</h3>
+                            <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mt-0.5">Active Dispatch Monitor</p>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-[var(--success)] animate-pulse" />
-                            <span className="text-xs font-medium text-[var(--success)] uppercase">Live</span>
+                        <div className="flex items-center gap-2 bg-[var(--success-light)] px-2 py-1 rounded-full">
+                            <div className="w-1.5 h-1.5 rounded-full bg-[var(--success)] animate-pulse" />
+                            <span className="text-[10px] font-bold text-[var(--success-text)] uppercase tracking-tighter">Live Monitor</span>
                         </div>
                     </div>
                     

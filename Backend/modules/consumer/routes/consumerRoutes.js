@@ -1,3 +1,4 @@
+const supportController = require('../controllers/supportController');
 const express = require('express');
 const router = express.Router();
 
@@ -14,6 +15,7 @@ const reviewController = require('../controllers/reviewController');
 const sosController = require('../controllers/sosController');
 const webhookController = require('../controllers/webhookController');
 const subscriptionController = require('../controllers/subscriptionController');
+const pricingController = require('../controllers/pricingController');
 
 // Import Auth Middleware
 const authMiddleware = require('../../../middleware/authMiddleware');
@@ -38,6 +40,7 @@ router.get('/services/apartment-flow', serviceController.getApartmentFlowData);
 router.get('/services/instant-config', serviceController.getInstantWashConfig);
 router.get('/services/search', serviceController.search);
 router.get('/services/stats', serviceController.getPlatformStats);
+router.get('/bookings/share/:id', bookingController.getPublicTripShare);
 
 router.get('/portfolio', authMiddleware.optionalProtect, serviceController.getPortfolio);
 router.patch('/portfolio/:id/like', serviceController.likePortfolioItem);
@@ -56,6 +59,9 @@ router.get('/products/:id', productController.getProductDetails);
 router.get('/services/plans', serviceController.getPlans);
 router.get('/services/promotions/active-referral', serviceController.getActiveReferral);
 router.post('/services/calculate-pricing', serviceController.calculatePricing);
+router.post('/services/spare-driver/calculate-pricing', pricingController.calculateSpareDriverPricing);
+router.get('/services/spare-driver/pricing-breakdown', pricingController.getPricingBreakdown);
+router.get('/services/spare-driver/service-types', pricingController.getSpareDriverServiceTypes);
 router.get('/services/time-slots', serviceController.getTimeSlots);
 router.post('/services/validate-availability', serviceController.validateServiceAvailability);
 router.get('/services/:serviceId/plans', serviceController.getServicePlans);
@@ -86,6 +92,8 @@ router.get('/profile/stats', profileController.getStats);
 router.put('/profile', profileController.updateProfile);
 router.put('/profile/address', profileController.updateAddress); // Legacy
 router.put('/profile/avatar', profileController.updateAvatar);
+router.post('/profile/kyc', profileController.submitKYC);
+
 router.post('/services/apartment-flow/request', serviceController.requestApartmentLead);
 
 // Modern Multi-Address Routes (Phase 1)
@@ -118,6 +126,7 @@ router.get('/bookings/stats', bookingController.getBookingStats);
 router.post('/bookings', bookingController.createBooking);
 router.get('/bookings/:id', bookingController.getBooking);
 router.put('/bookings/:id', bookingController.updateBooking);
+router.patch('/bookings/:id/pricing', bookingController.updateBookingPricing);
 router.delete('/bookings/:id', bookingController.cancelBooking);
 router.post('/bookings/:id/settle-payment', bookingController.settleAdditionalPayment);
 router.post('/bookings/:id/feedback', bookingController.submitFeedback);
@@ -170,5 +179,11 @@ router.post('/subscription/skip', subscriptionController.skipSubscriptionService
 router.delete('/subscription', subscriptionController.cancelSubscription);
 router.post('/subscription/use-credit', subscriptionController.useSubscriptionCredit);
 router.delete('/account', profileController.deleteAccount);
+
+
+// Support System
+router.get('/support/tickets', authMiddleware.protect, supportController.getMyTickets);
+router.post('/support/tickets', authMiddleware.protect, supportController.createTicket);
+router.get('/support/tickets/:id', authMiddleware.protect, supportController.getTicket);
 
 module.exports = router;

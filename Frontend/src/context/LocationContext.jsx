@@ -77,7 +77,8 @@ export const LocationProvider = ({ children }) => {
                 }
 
                 // Trigger location prompt if no addresses found after a delay
-                if (addresses.length === 0) {
+                // Only trigger if user is NOT a "New User" (meaning they've finished signup)
+                if (addresses.length === 0 && user?.name !== 'New User') {
                     setTimeout(() => setShowLocationPrompt(true), 1500);
                 }
             }

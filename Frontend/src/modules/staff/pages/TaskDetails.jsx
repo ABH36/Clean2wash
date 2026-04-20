@@ -32,7 +32,7 @@ const PinModal = ({ isOpen, onConfirm, onCancel, title, isDarkMode }) => {
             <motion.div
                 initial={{ scale: 0.85, opacity: 0, y: 30 }} animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.85, opacity: 0, y: 30 }}
-                className={`relative w-full max-w-sm rounded-[3.5rem] p-10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] border ${isDarkMode ? 'bg-[#1E293B] border-white/10' : 'bg-white border-gray-100'}`}
+                className={`relative w-full max-w-sm rounded-[3.5rem] p-10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] border ${isDarkMode ? 'bg-[#1E293B] border-white/10' : 'bg-white/5 border-white/5'}`}
             >
                 <div className="flex flex-col items-center text-center">
                     <div className="w-20 h-20 bg-brand/5 rounded-[2rem] flex items-center justify-center text-brand mb-6 border border-brand/10">
@@ -45,13 +45,13 @@ const PinModal = ({ isOpen, onConfirm, onCancel, title, isDarkMode }) => {
 
                     <input
                         type="password" maxLength={4} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                        className={`w-full h-20 text-center text-5xl font-black tracking-[0.6em] rounded-3xl border-2 transition-all outline-none mb-10 ${isDarkMode ? 'bg-white/5 border-white/5 text-white focus:border-brand/40 shadow-inner' : 'bg-gray-50 border-gray-100 text-content focus:border-brand/40 shadow-inner'}`}
+                        className={`w-full h-20 text-center text-5xl font-black tracking-[0.6em] rounded-3xl border-white/5 transition-all outline-none mb-10 ${isDarkMode ? 'bg-white/5 border-white/5 text-white focus:border-brand/40 shadow-inner' : 'bg-white/[0.02] border-white/5 text-content focus:border-brand/40 shadow-inner'}`}
                         placeholder="••••" autoFocus
                     />
 
                     <div className="flex gap-4 w-full">
-                        <button onClick={onCancel} className={`flex-1 h-16 rounded-3xl font-black text-[10px] uppercase tracking-[0.2em] transition-all ${isDarkMode ? 'bg-white/5 text-white/40 hover:text-white' : 'bg-gray-100 text-content-muted hover:text-content'}`}>Abort</button>
-                        <button onClick={handleConfirm} disabled={pin.length < 4} className="flex-1 h-16 bg-brand text-white rounded-3xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-brand/30 disabled:opacity-30 disabled:scale-95 transition-all">Verify</button>
+                        <button onClick={onCancel} className={`flex-1 h-16 rounded-3xl font-black text-[10px] uppercase tracking-[0.2em] transition-all ${isDarkMode ? 'bg-white/5 text-white/40 hover:text-white' : 'bg-white/[0.05] text-content-muted hover:text-content'}`}>Abort</button>
+                        <button onClick={handleConfirm} disabled={pin.length < 4} className="flex-1 h-16 bg-brand text-white rounded-3xl font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl shadow-black/50 shadow-brand/30 disabled:opacity-30 disabled:scale-95 transition-all">Verify</button>
                     </div>
                 </div>
             </motion.div>
@@ -284,11 +284,11 @@ const TaskDetails = () => {
     return (
         <div className={`min-h-screen ${isDarkMode ? 'bg-[#0F172A]' : 'bg-[#FAFBFF]'} pb-40 transition-colors duration-500`}>
             {/* Elite Header */}
-            <header className={`${isDarkMode ? 'bg-[#0F172A]/80 border-white/5' : 'bg-white/80 border-gray-100'} backdrop-blur-3xl px-6 pt-12 pb-6 border-b flex items-center justify-between sticky top-0 z-50`}>
+            <header className={`${isDarkMode ? 'bg-[#0F172A]/80 border-white/5' : 'bg-white/80 border-white/5'} backdrop-blur-3xl px-6 pt-12 pb-6 border-b flex items-center justify-between sticky top-0 z-50`}>
                 <motion.button
                     whileTap={{ scale: 0.9 }}
                     onClick={() => navigate(-1)}
-                    className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/5 text-white' : 'bg-white border-gray-100 shadow-soft text-content'}`}
+                    className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/5 text-white' : 'bg-white/5 border-white/5 shadow-soft text-content'}`}
                 >
                     <ChevronLeft size={24} />
                 </motion.button>
@@ -315,7 +315,7 @@ const TaskDetails = () => {
                     <motion.div
                         initial={{ scale: 0.95, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        className={`p-8 rounded-[3.5rem] border-2 border-brand/20 shadow-2xl relative overflow-hidden ${isDarkMode ? 'bg-brand/5' : 'bg-brand/[0.02]'}`}
+                        className={`p-8 rounded-[3.5rem] border-white/5 border-brand/20 shadow-2xl relative overflow-hidden ${isDarkMode ? 'bg-brand/5' : 'bg-brand/[0.02]'}`}
                     >
                         <div className="absolute top-0 right-0 p-8 opacity-10">
                             <Clock size={80} className="text-brand rotate-12" />
@@ -333,11 +333,11 @@ const TaskDetails = () => {
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                <div className={`p-4 rounded-3xl border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white border-gray-100 shadow-soft'}`}>
+                                <div className={`p-4 rounded-3xl border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/5 border-white/5 shadow-soft'}`}>
                                     <p className="text-[8px] font-black uppercase tracking-widest opacity-40 mb-1">Target Slot</p>
                                     <p className={`text-sm font-black ${isDarkMode ? 'text-white' : 'text-content'}`}>{taskData.schedule.timeSlot?.start || '10:00 AM'}</p>
                                 </div>
-                                <div className={`p-4 rounded-3xl border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white border-gray-100 shadow-soft'}`}>
+                                <div className={`p-4 rounded-3xl border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/5 border-white/5 shadow-soft'}`}>
                                     <p className="text-[8px] font-black uppercase tracking-widest opacity-40 mb-1">Status</p>
                                     <p className="text-sm font-black text-brand">Awaiting Commitment</p>
                                 </div>
@@ -355,7 +355,7 @@ const TaskDetails = () => {
                                         toast.error(err.message || 'Operation Timing Failure');
                                     }
                                 }}
-                                className="w-full h-20 bg-brand text-white rounded-[2.5rem] font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-brand/40 active:scale-95 transition-all flex items-center justify-center gap-3"
+                                className="w-full h-20 bg-brand text-white rounded-[2.5rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-black/50 shadow-brand/40 active:scale-95 transition-all flex items-center justify-center gap-3"
                             >
                                 <CheckCircle2 size={20} />
                                 {isCommitted ? 'Slot Secured' : 'Acknowledge & Commit to Slot'}
@@ -369,7 +369,7 @@ const TaskDetails = () => {
 
             <div className="mt-8 px-6">
                 {/* 🛡️ Mission Context Protocol */}
-                <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} rounded-[3rem] p-8 border relative overflow-hidden group`}>
+                <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white/5 border-white/5 shadow-soft'} rounded-[3rem] p-8 border relative overflow-hidden group`}>
                     <div className="flex justify-between items-center relative z-10">
                         <div className="flex gap-5">
                             <div className={`w-16 h-16 rounded-[1.8rem] flex items-center justify-center transition-all duration-500 ${
@@ -424,7 +424,7 @@ const TaskDetails = () => {
 
             <div className="mt-8 px-6 space-y-6">
                 {/* 🗺️ Live Tactical Map Node */}
-                <div className={`relative h-72 rounded-[3.5rem] overflow-hidden border shadow-2xl transition-all ${isDarkMode ? 'border-white/5 bg-[#0F172A]' : 'border-gray-100 bg-white'}`}>
+                <div className={`relative h-72 rounded-[3.5rem] overflow-hidden border shadow-2xl transition-all ${isDarkMode ? 'border-white/5 bg-[#0F172A]' : 'border-white/5 bg-white/5'}`}>
                     <div className="absolute inset-0 z-0">
                         <GoogleMapBox 
                             center={{
@@ -510,7 +510,7 @@ const TaskDetails = () => {
                                 const query = coords?.lat ? `${coords.lat},${coords.lng}` : encodeURIComponent(address || '');
                                 window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
                             }}
-                            className={`w-16 h-16 rounded-[1.8rem] flex items-center justify-center shadow-2xl transition-all ${(statusIdx >= 3 && statusIdx < 5) ? 'bg-brand text-white shadow-brand/40' : 'bg-white text-black shadow-brand/20'
+                            className={`w-16 h-16 rounded-[1.8rem] flex items-center justify-center shadow-2xl transition-all ${(statusIdx >= 3 && statusIdx < 5) ? 'bg-brand text-white shadow-brand/40' : 'bg-white/5 text-white shadow-brand/20'
                                 }`}
                         >
                             <Navigation2 size={24} fill="currentColor" />
@@ -519,7 +519,7 @@ const TaskDetails = () => {
                 </div>
 
                 {/* 👤 Consumer Profile Node */}
-                <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} rounded-[3rem] p-8 border hover:border-brand/30 transition-all`}>
+                <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white/5 border-white/5 shadow-soft'} rounded-[3rem] p-8 border hover:border-brand/30 transition-all`}>
                     <div className="flex justify-between items-start mb-8">
                         <div className="flex gap-5">
                             <div className="w-16 h-16 bg-gradient-to-br from-brand/20 to-brand/5 border border-brand/20 rounded-[1.8rem] flex items-center justify-center">
@@ -534,16 +534,16 @@ const TaskDetails = () => {
                             </div>
                         </div>
                         <div className="flex flex-col gap-3">
-                            <a href={`tel:${taskData.consumer?.phone}`} className="w-12 h-12 bg-white text-[#0F172A] rounded-2xl flex items-center justify-center shadow-xl shadow-brand/5 active:scale-95 transition-all">
+                            <a href={`tel:${taskData.consumer?.phone}`} className="w-12 h-12 bg-white/5 text-[#0F172A] rounded-2xl flex items-center justify-center shadow-2xl shadow-black/50 shadow-brand/5 active:scale-95 transition-all">
                                 <Phone size={20} fill="currentColor" />
                             </a>
-                            <button className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/5 text-white/40' : 'bg-gray-50 border-gray-100 text-content-muted'}`}>
+                            <button className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/5 text-white/40' : 'bg-white/[0.02] border-white/5 text-content-muted'}`}>
                                 <MessageSquare size={20} />
                             </button>
                         </div>
                     </div>
 
-                    <div className={`p-6 rounded-[2rem] flex items-center justify-between transition-all ${isDarkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
+                    <div className={`p-6 rounded-[2rem] flex items-center justify-between transition-all ${isDarkMode ? 'bg-white/5' : 'bg-white/[0.02]'}`}>
                         <div className="space-y-1">
                             <p className={`text-[8px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-content-muted'}`}>Assigned Vehicle</p>
                             <h5 className={`text-sm font-black text-brand uppercase`}>{taskData.vehicle?.brand} {taskData.vehicle?.model}</h5>
@@ -555,7 +555,7 @@ const TaskDetails = () => {
                     </div>
 
                     {taskData.location?.instructions && (
-                        <div className={`mt-4 p-5 rounded-[2rem] border-2 border-dashed ${isDarkMode ? 'border-white/5 bg-white/5' : 'border-gray-100 bg-gray-50/30'}`}>
+                        <div className={`mt-4 p-5 rounded-[2rem] border-white/5 border-dashed ${isDarkMode ? 'border-white/5 bg-white/5' : 'border-white/5 bg-white/[0.02]/30'}`}>
                             <div className="flex items-center gap-2 mb-2">
                                 <MessageSquare size={12} className="text-brand" />
                                 <p className={`text-[8px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>Dispatch Instructions</p>
@@ -568,7 +568,7 @@ const TaskDetails = () => {
                 </div>
 
                 {/* 📋 Service Manifest Node */}
-                <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} rounded-[3rem] p-8 border overflow-hidden relative`}>
+                <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white/5 border-white/5 shadow-soft'} rounded-[3rem] p-8 border overflow-hidden relative`}>
                     <div className="absolute top-0 right-0 w-32 h-32 bg-brand/10 blur-3xl -mr-16 -mt-16 rounded-full" />
                     <div className="flex items-center justify-between mb-6 relative z-10">
                         <div className="flex items-center gap-3">
@@ -580,7 +580,7 @@ const TaskDetails = () => {
 
                     <div className="space-y-3 relative z-10">
                         {/* Main Service */}
-                        <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-gray-50 border-gray-100'} flex items-center justify-between`}>
+                        <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white/[0.02] border-white/5'} flex items-center justify-between`}>
                             <p className={`text-[10px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-white/60' : 'text-content'}`}>{taskData.service?.name || 'Protocol Service'}</p>
                             <span className="text-[10px] font-black text-brand">Core</span>
                         </div>
@@ -588,7 +588,7 @@ const TaskDetails = () => {
                         {/* Add-ons */}
                         {taskData.addons && taskData.addons.length > 0 ? (
                             taskData.addons.map((addon, idx) => (
-                                <div key={idx} className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-gray-50 border-gray-100'} flex items-center justify-between`}>
+                                <div key={idx} className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white/[0.02] border-white/5'} flex items-center justify-between`}>
                                     <div className="flex items-center gap-3">
                                         <div className="w-2 h-2 rounded-full bg-brand" />
                                         <p className={`text-[10px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-white/60' : 'text-content'}`}>{addon.name}</p>
@@ -606,7 +606,7 @@ const TaskDetails = () => {
                 <div className="space-y-6">
                     {/* 📦 Custody Context Node (Who picked it up?) */}
                     {isDelivery && taskData.pickupStaff && (
-                        <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} rounded-[3rem] p-8 border mt-6`}>
+                        <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white/5 border-white/5 shadow-soft'} rounded-[3rem] p-8 border mt-6`}>
                             <div className="flex items-center gap-3 mb-6">
                                 <Package size={18} className="text-brand" />
                                 <h4 className={`text-[11px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/80' : 'text-content'}`}>Origin Protocol</h4>
@@ -658,7 +658,7 @@ const TaskDetails = () => {
 
                     <div className="grid grid-cols-2 gap-4">
                         {photos.map((img, idx) => (
-                            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} key={idx} className="relative h-44 rounded-[2.5rem] overflow-hidden border-2 border-brand/20 group">
+                            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} key={idx} className="relative h-44 rounded-[2.5rem] overflow-hidden border-white/5 border-brand/20 group">
                                 <img src={img} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" alt="evidence" />
                                 <button
                                     onClick={() => setPhotos(prev => prev.filter((_, i) => i !== idx))}
@@ -669,7 +669,7 @@ const TaskDetails = () => {
                             </motion.div>
                         ))}
                         {photos.length < (isApartment ? 2 : 4) && (
-                            <label className={`h-44 rounded-[2.5rem] border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all cursor-pointer ${isDarkMode ? 'bg-white/5 border-white/10 text-white/20 hover:border-brand/40 hover:text-brand' : 'bg-white border-gray-100 text-gray-300 hover:border-brand hover:text-brand'}`}>
+                            <label className={`h-44 rounded-[2.5rem] border-white/5 border-dashed flex flex-col items-center justify-center gap-3 transition-all cursor-pointer ${isDarkMode ? 'bg-white/5 border-white/10 text-white/20 hover:border-brand/40 hover:text-brand' : 'bg-white/5 border-white/5 text-gray-300 hover:border-brand hover:text-brand'}`}>
                                 <Camera size={32} strokeWidth={1.5} />
                                 <p className="text-[9px] font-black uppercase tracking-widest">Initialize Camera</p>
                                 <input type="file" accept="image/*" multiple onChange={handlePhotoCapture} className="hidden" />
@@ -680,7 +680,7 @@ const TaskDetails = () => {
 
                 {/* 🛡️ Operational Checklist (Digital VCR) - Hidden for Apartment Wash */}
                 {!isApartment && (
-                    <div className={`p-8 rounded-[3rem] border transition-all ${isVcrReady ? (isDarkMode ? 'bg-green-500/5 border-green-500/20' : 'bg-green-50 border-green-100') : (isDarkMode ? 'bg-amber-500/5 border-amber-500/10' : 'bg-white border-gray-100 shadow-soft')}`}>
+                    <div className={`p-8 rounded-[3rem] border transition-all ${isVcrReady ? (isDarkMode ? 'bg-green-500/5 border-green-500/20' : 'bg-green-50 border-green-100') : (isDarkMode ? 'bg-amber-500/5 border-amber-500/10' : 'bg-white/5 border-white/5 shadow-soft')}`}>
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-3">
                                 <ShieldAlert size={20} className={isVcrReady ? 'text-green-500' : 'text-amber-500'} />
@@ -698,7 +698,7 @@ const TaskDetails = () => {
                                     onClick={() => setVcrChecklist(prev => ({ ...prev, [key]: !prev[key] }))}
                                     className={`p-4 rounded-2xl border flex items-center gap-3 transition-all ${vcrChecklist[key]
                                         ? (isDarkMode ? 'bg-brand/20 border-brand/40 text-white' : 'bg-brand/5 border-brand/20 text-brand')
-                                        : (isDarkMode ? 'bg-white/5 border-white/5 text-white/30' : 'bg-gray-50 border-gray-100 text-content-subtle')
+                                        : (isDarkMode ? 'bg-white/5 border-white/5 text-white/30' : 'bg-white/[0.02] border-white/5 text-content-subtle')
                                         }`}
                                 >
                                     <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${vcrChecklist[key] ? 'bg-brand border-brand text-white' : 'border-current'}`}>
@@ -724,7 +724,7 @@ const TaskDetails = () => {
             </div>
 
             {/* ⌨️ Terminal Dock */}
-            <div className={`fixed bottom-0 left-0 right-0 p-8 pt-4 backdrop-blur-3xl border-t z-50 transition-all ${isDarkMode ? 'bg-[#0F172A]/90 border-white/5 shadow-[0_-30px_60px_-15px_rgba(0,0,0,0.8)]' : 'bg-white/90 border-gray-100 shadow-[0_-30px_60px_-15px_rgba(0,0,0,0.1)]'}`}>
+            <div className={`fixed bottom-0 left-0 right-0 p-8 pt-4 backdrop-blur-3xl border-t z-50 transition-all ${isDarkMode ? 'bg-[#0F172A]/90 border-white/5 shadow-[0_-30px_60px_-15px_rgba(0,0,0,0.8)]' : 'bg-white/90 border-white/5 shadow-[0_-30px_60px_-15px_rgba(0,0,0,0.1)]'}`}>
                 {/* Protocol Progress */}
                 <div className="flex gap-1.5 mb-8 px-2">
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(step => (
@@ -736,12 +736,12 @@ const TaskDetails = () => {
                     // 🏢 Apartment Logic Dock
                     <>
                         {taskData.status === 'confirmed' && (
-                            <motion.button whileTap={{ scale: 0.98 }} onClick={() => handleUpdateStatus('washing')} disabled={isSubmitting} className="w-full h-20 bg-brand text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-xl">
+                            <motion.button whileTap={{ scale: 0.98 }} onClick={() => handleUpdateStatus('washing')} disabled={isSubmitting} className="w-full h-20 bg-brand text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-2xl shadow-black/50">
                                 {isSubmitting ? 'Syncing...' : 'Start Dry Wash'} <Zap size={22} />
                             </motion.button>
                         )}
                         {taskData.status === 'washing' && (
-                            <motion.button whileTap={{ scale: 0.98 }} onClick={() => handleUpdateStatus('completed')} disabled={isSubmitting || photos.length === 0} className="w-full h-20 bg-green-500 text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-xl disabled:opacity-30">
+                            <motion.button whileTap={{ scale: 0.98 }} onClick={() => handleUpdateStatus('completed')} disabled={isSubmitting || photos.length === 0} className="w-full h-20 bg-green-500 text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-2xl shadow-black/50 disabled:opacity-30">
                                 {isSubmitting ? 'Syncing...' : (photos.length > 0 ? 'Complete Mission' : 'Capture After-Wash Proof')} <CheckCircle2 size={22} />
                             </motion.button>
                         )}
@@ -764,7 +764,7 @@ const TaskDetails = () => {
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => handleActionTrigger('picked-up')}
                                 disabled={isSubmitting || !isVcrReady}
-                                className="w-full h-20 bg-brand text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-xl disabled:opacity-30 disabled:grayscale transition-all"
+                                className="w-full h-20 bg-brand text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-2xl shadow-black/50 disabled:opacity-30 disabled:grayscale transition-all"
                             >
                                 {isSubmitting ? 'Syncing...' : (isVcrReady ? 'Begin Handover Handshake' : 'Complete VCR Protocol')}
                                 {isVcrReady ? <Lock size={22} /> : <ShieldAlert size={22} />}
@@ -775,14 +775,14 @@ const TaskDetails = () => {
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => handleActionTrigger('at-studio')}
                                 disabled={isSubmitting || photos.length < 2}
-                                className="w-full h-20 bg-indigo-600 text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-xl disabled:opacity-30 transition-all"
+                                className="w-full h-20 bg-indigo-600 text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-2xl shadow-black/50 disabled:opacity-30 transition-all"
                             >
                                 {isSubmitting ? 'Syncing...' : (photos.length >= 2 ? 'Finalize Hub Entry' : 'Capture Hub Receipt Proofs')}
                                 <ArrowUpRight size={22} />
                             </motion.button>
                         )}
                         {['ready-for-delivery', 'delivery-assigned'].includes(taskData.status) && (
-                            <motion.button whileTap={{ scale: 0.98 }} onClick={() => handleUpdateStatus('out_for_delivery')} disabled={isSubmitting} className="w-full h-20 bg-brand text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-xl">
+                            <motion.button whileTap={{ scale: 0.98 }} onClick={() => handleUpdateStatus('out_for_delivery')} disabled={isSubmitting} className="w-full h-20 bg-brand text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-2xl shadow-black/50">
                                 {isSubmitting ? 'Syncing...' : 'Initialize Delivery'} <Package size={22} />
                             </motion.button>
                         )}
@@ -796,7 +796,7 @@ const TaskDetails = () => {
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => handleActionTrigger('completed')}
                                 disabled={isSubmitting || photos.length === 0}
-                                className="w-full h-20 bg-brand text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-xl disabled:opacity-30 transition-all"
+                                className="w-full h-20 bg-brand text-white rounded-3xl font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 shadow-2xl shadow-black/50 disabled:opacity-30 transition-all"
                             >
                                 {isSubmitting ? 'Syncing...' : (photos.length > 0 ? 'Deliver Vehicle' : 'Capture Delivery Proof')}
                                 <CheckCircle2 size={22} />
@@ -837,7 +837,7 @@ const TaskDetails = () => {
             <AnimatePresence>
                 {isUploading && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-[#0F172A]/90 backdrop-blur-2xl z-[500] flex flex-col items-center justify-center p-10 text-center">
-                        <div className="w-24 h-24 border-8 border-brand/10 border-t-brand rounded-full animate-spin mb-10" />
+                        <div className="w-24 h-24 border-white/5 border-brand/10 border-t-brand rounded-full animate-spin mb-10" />
                         <h3 className="text-3xl font-black text-white uppercase tracking-tighter mb-4">Evidence Streaming</h3>
                         <p className="text-[10px] font-black uppercase tracking-[0.5em] text-brand">Protocol Secured • Transmitting High-Resolution Proofs to Studio Node</p>
                     </motion.div>

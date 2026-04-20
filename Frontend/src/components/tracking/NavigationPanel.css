@@ -1,0 +1,126 @@
+.navigation-panel {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.panel-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 20px 0;
+    color: #333;
+}
+
+.navigation-options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.nav-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: #f8f9fa;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+.nav-option:hover {
+    border-color: #667eea;
+    background: #f0f4ff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.nav-icon {
+    font-size: 32px;
+    flex-shrink: 0;
+}
+
+.nav-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.nav-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+}
+
+.nav-desc {
+    font-size: 12px;
+    color: #666;
+}
+
+.nav-option.google-maps:hover {
+    border-color: #4285F4;
+    background: #E8F0FE;
+}
+
+.nav-option.waze:hover {
+    border-color: #33CCFF;
+    background: #E0F7FF;
+}
+
+.nav-option.apple-maps:hover {
+    border-color: #007AFF;
+    background: #E5F1FF;
+}
+
+.nav-option.copy-coords:hover {
+    border-color: #9E9E9E;
+    background: #F5F5F5;
+}
+
+.destination-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    color: white;
+}
+
+.info-icon {
+    font-size: 28px;
+}
+
+.info-text {
+    flex: 1;
+}
+
+.info-label {
+    font-size: 12px;
+    opacity: 0.9;
+    margin-bottom: 4px;
+}
+
+.info-value {
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+}
+
+@media (max-width: 768px) {
+    .navigation-options {
+        grid-template-columns: 1fr;
+    }
+
+    .nav-option {
+        padding: 14px;
+    }
+
+    .nav-icon {
+        font-size: 28px;
+    }
+}

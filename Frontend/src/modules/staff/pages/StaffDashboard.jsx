@@ -219,7 +219,7 @@ const StaffDashboard = () => {
                 {/* 🔌 Availability Toggle */}
                 <div onClick={handleToggleAvailability} className={`relative p-6 rounded-[2.5rem] border overflow-hidden cursor-pointer group transition-all duration-500 ${isOnline
                     ? (isDarkMode ? 'bg-brand/10 border-brand/20' : 'bg-brand/5 border-brand/20')
-                    : (isDarkMode ? 'bg-white/5 border-white/5' : 'bg-gray-50 border-gray-100')
+                    : (isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white/[0.02] border-white/5')
                     }`}>
                     <div className="flex items-center justify-between relative z-10">
                         <div className="flex items-center gap-5">
@@ -240,7 +240,7 @@ const StaffDashboard = () => {
                             }`}>
                             <motion.div
                                 animate={{ x: isOnline ? 32 : 0 }}
-                                className="w-6 h-6 bg-white rounded-full shadow-lg"
+                                className="w-6 h-6 bg-white/5 rounded-full shadow-lg"
                             />
                         </div>
                     </div>
@@ -251,7 +251,7 @@ const StaffDashboard = () => {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className={`p-5 rounded-[2.5rem] border-2 shadow-2xl relative overflow-hidden transition-all duration-500 ${isDarkMode ? 'bg-[#1E293B] border-brand/30' : 'bg-white border-brand/20'}`}
+                        className={`p-5 rounded-[2.5rem] border-white/5 shadow-2xl relative overflow-hidden transition-all duration-500 ${isDarkMode ? 'bg-[#1E293B] border-brand/30' : 'bg-white/5 border-brand/20'}`}
                     >
                         {/* Pulse effect */}
                         <div className="absolute inset-x-0 inset-y-0 bg-brand/5 animate-pulse" />
@@ -270,12 +270,12 @@ const StaffDashboard = () => {
                                         </div>
                                     </div>
                                 </div>
-                                <div className={`px-2 py-1 rounded-xl border text-[9px] font-black tabular-nums transition-colors ${isDarkMode ? 'bg-white/5 border-white/10 text-brand' : 'bg-gray-50 border-gray-100 text-brand'}`}>
+                                <div className={`px-2 py-1 rounded-xl border text-[9px] font-black tabular-nums transition-colors ${isDarkMode ? 'bg-white/5 border-white/10 text-brand' : 'bg-white/[0.02] border-white/5 text-brand'}`}>
                                     Starts in <CountdownTimer targetTime={needsCommitment.schedule?.date} />
                                 </div>
                             </div>
 
-                            <div className={`p-4 rounded-2xl mb-4 border transition-colors ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-gray-50 border-gray-100'}`}>
+                            <div className={`p-4 rounded-2xl mb-4 border transition-colors ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white/[0.02] border-white/5'}`}>
                                 <h3 className={`font-black text-base leading-none mb-1 truncate ${isDarkMode ? 'text-white' : 'text-content'}`}>{needsCommitment.service?.name || 'Studio Wash'}</h3>
                                 <p className={`text-[10px] font-bold truncate ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>{needsCommitment.consumer?.profile?.address?.street || needsCommitment.location?.address?.landmark || 'Hub Center'}</p>
                             </div>
@@ -284,7 +284,7 @@ const StaffDashboard = () => {
                                 whileTap={{ scale: 0.96 }}
                                 disabled={isCommitting === needsCommitment.id}
                                 onClick={() => handleCommit(needsCommitment._id || needsCommitment.id)}
-                                className={`w-full h-12 rounded-2xl font-black text-xs text-white shadow-xl transition-all flex items-center justify-center gap-3 bg-brand shadow-brand/30`}
+                                className={`w-full h-12 rounded-2xl font-black text-xs text-white shadow-2xl shadow-black/50 transition-all flex items-center justify-center gap-3 bg-brand shadow-brand/30`}
                             >
                                 {isCommitting === (needsCommitment._id || needsCommitment.id) ? (
                                     <>Syncing Protocol... <Zap size={14} className="animate-spin" /></>
@@ -300,7 +300,7 @@ const StaffDashboard = () => {
                     <motion.div
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} p-6 rounded-[2.5rem] border relative overflow-hidden group`}
+                        className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white/5 border-white/5 shadow-soft'} p-6 rounded-[2.5rem] border relative overflow-hidden group`}
                     >
                         <div className="relative z-10">
                             <div className="flex items-center gap-2 mb-2">
@@ -316,7 +316,7 @@ const StaffDashboard = () => {
                     <motion.div
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} p-6 rounded-[2.5rem] border relative overflow-hidden group`}
+                        className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white/5 border-white/5 shadow-soft'} p-6 rounded-[2.5rem] border relative overflow-hidden group`}
                     >
                         <div className="relative z-10">
                             <div className="flex items-center gap-2 mb-2">
@@ -351,14 +351,14 @@ const StaffDashboard = () => {
                                 </div>
                             </div>
                         </div>
-                        <div className={`rounded-3xl border p-4 transition-all duration-500 overflow-hidden space-y-4 ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/30' : 'bg-white border-gray-100 shadow-soft'}`}>
+                        <div className={`rounded-3xl border p-4 transition-all duration-500 overflow-hidden space-y-4 ${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/30' : 'bg-white/5 border-white/5 shadow-soft'}`}>
                             {nonApartmentTasks.filter(t => !['completed', 'cancelled'].includes(t.status)).map((task, i, arr) => {
                                 return (
                                     <div key={task._id} className="relative pl-6">
                                         {i < arr.length - 1 && (
-                                            <div className={`absolute left-[5px] top-4 w-[2px] h-[calc(100%+8px)] transition-colors ${i === 0 ? 'bg-brand' : isDarkMode ? 'bg-white/5' : 'bg-gray-100'}`} />
+                                            <div className={`absolute left-[5px] top-4 w-[2px] h-[calc(100%+8px)] transition-colors ${i === 0 ? 'bg-brand' : isDarkMode ? 'bg-white/5' : 'bg-white/[0.05]'}`} />
                                         )}
-                                        <div className={`absolute left-0 top-1 w-3 h-3 rounded-full border-2 z-10 transition-all ${i === 0 ? 'bg-brand border-white' : isDarkMode ? 'bg-[#0F172A] border-white/10' : 'bg-white border-gray-200'}`} />
+                                        <div className={`absolute left-0 top-1 w-3 h-3 rounded-full border-white/5 z-10 transition-all ${i === 0 ? 'bg-brand border-white' : isDarkMode ? 'bg-[#0F172A] border-white/10' : 'bg-white/5 border-white/10'}`} />
 
                                         <div onClick={() => navigate(`/staff/task/${task._id}`)} className={`p-3 rounded-2xl border transition-all active:scale-95 ${i === 0 ? (isDarkMode ? 'bg-brand/10 border-brand/20' : 'bg-brand/5 border-brand/10') : 'border-transparent'}`}>
                                             <div className="flex justify-between items-start">
@@ -380,13 +380,13 @@ const StaffDashboard = () => {
                     </section>
                 )}
 
-                <div className={`flex p-2 rounded-[2.2rem] border backdrop-blur-md transition-all ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-100/50 border-gray-200/30'}`}>
+                <div className={`flex p-2 rounded-[2.2rem] border backdrop-blur-md transition-all ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/[0.05]/50 border-white/10/30'}`}>
                     {['assigned', 'ongoing', 'completed'].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`flex-1 py-4 rounded-[1.8rem] text-[9px] font-black uppercase tracking-[0.2em] transition-all relative overflow-hidden ${activeTab === tab
-                                ? (isDarkMode ? 'bg-white text-[#0F172A] shadow-xl shadow-white/10 scale-[1.03]' : 'bg-content text-white shadow-xl shadow-content/30 scale-[1.03]')
+                                ? (isDarkMode ? 'bg-white/5 text-[#0F172A] shadow-2xl shadow-black/50 shadow-white/10 scale-[1.03]' : 'bg-content text-white shadow-2xl shadow-black/50 shadow-content/30 scale-[1.03]')
                                 : (isDarkMode ? 'text-white/30 hover:text-white/60' : 'text-content-subtle hover:text-content')
                                 }`}
                         >
@@ -419,7 +419,7 @@ const StaffDashboard = () => {
                                         key={task.id}
                                         whileTap={{ scale: 0.98 }}
                                         onClick={() => navigate(task.isProduct ? `/staff/product-task/${task.orderId}/${task.id}` : `/staff/task/${task.id}`)}
-                                        className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} rounded-[2.8rem] p-7 border relative overflow-hidden group hover:border-brand/40 transition-all duration-500`}
+                                        className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white/5 border-white/5 shadow-soft'} rounded-[2.8rem] p-7 border relative overflow-hidden group hover:border-brand/40 transition-all duration-500`}
                                     >
                                         <div className="flex justify-between items-start mb-6">
                                             <div className="flex gap-5">
@@ -443,7 +443,7 @@ const StaffDashboard = () => {
                                                 <div className={`${task.isScheduled ? (isDarkMode ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' : 'bg-amber-50 border-amber-100 text-amber-600') : (isDarkMode ? 'bg-brand/10 border-brand/20 text-brand' : 'bg-brand/5 border-brand/10 text-brand')} px-3 py-1 rounded-xl border text-[8px] font-black uppercase tracking-widest`}>
                                                     {task.isScheduled ? 'Scheduled Mission' : 'Instant Protocol'}
                                                 </div>
-                                                <div className={`${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-100'} px-4 py-2 rounded-2xl border transition-colors flex items-center gap-3`}>
+                                                <div className={`${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/[0.02] border-white/5'} px-4 py-2 rounded-2xl border transition-colors flex items-center gap-3`}>
                                                     <div className="flex items-center gap-2 border-r pr-3 border-current/10">
                                                         <Calendar size={12} className="text-brand" />
                                                         <p className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/80' : 'text-content'}`}>{task.date}</p>
@@ -458,7 +458,7 @@ const StaffDashboard = () => {
 
                                         <div className="space-y-5 mb-8">
                                             <div className="flex items-start gap-4">
-                                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-100 shadow-inner'}`}>
+                                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/[0.02] border-white/5 shadow-inner'}`}>
                                                     <MapPin size={18} className="text-brand" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
@@ -467,7 +467,7 @@ const StaffDashboard = () => {
                                                 </div>
                                             </div>
                                             {task.isProduct ? (
-                                                <div className={`p-5 rounded-[2rem] transition-all ${isDarkMode ? 'bg-white/5 border border-white/10' : 'bg-gray-50/50 border border-gray-100'}`}>
+                                                <div className={`p-5 rounded-[2rem] transition-all ${isDarkMode ? 'bg-white/5 border border-white/10' : 'bg-white/[0.02]/50 border border-white/5'}`}>
                                                     <div className="flex items-center justify-between">
                                                         <div>
                                                             <p className={`text-[8px] font-black uppercase tracking-[0.2em] ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Product Shipment</p>
@@ -480,7 +480,7 @@ const StaffDashboard = () => {
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <div className={`grid grid-cols-2 gap-3 p-5 rounded-[2rem] transition-all ${isDarkMode ? 'bg-white/5 border border-white/10' : 'bg-gray-50/50 border border-gray-100'}`}>
+                                                <div className={`grid grid-cols-2 gap-3 p-5 rounded-[2rem] transition-all ${isDarkMode ? 'bg-white/5 border border-white/10' : 'bg-white/[0.02]/50 border border-white/5'}`}>
                                                     <div className="space-y-1">
                                                         <p className={`text-[8px] font-black uppercase tracking-[0.2em] ${isDarkMode ? 'text-white/20' : 'text-content-subtle'}`}>Vehicle Identity</p>
                                                         <p className={`text-[10px] font-black uppercase ${isDarkMode ? 'text-white/80' : 'text-content'}`}>{task.vehicle}</p>
@@ -517,7 +517,7 @@ const StaffDashboard = () => {
                                 animate={{ opacity: 1 }}
                                 className="flex flex-col items-center justify-center py-20 text-center"
                             >
-                                <div className={`w-32 h-32 rounded-[3rem] flex items-center justify-center mb-8 border border-dashed transition-all ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
+                                <div className={`w-32 h-32 rounded-[3rem] flex items-center justify-center mb-8 border border-dashed transition-all ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/[0.02] border-white/10'}`}>
                                     <Bell size={48} className={isDarkMode ? 'text-white/10' : 'text-gray-200'} />
                                 </div>
                                 <h3 className={`font-black uppercase tracking-[0.5em] mb-3 ${isDarkMode ? 'text-white' : 'text-content'}`}>Silent Terminal</h3>

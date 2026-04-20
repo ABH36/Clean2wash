@@ -336,6 +336,49 @@ exports.getBooking = catchAsync(async (req, res, next) => {
 
 // Create new booking
 // Create new booking
+
+// Trip Sharing (Public Access Protocol)
+exports.getPublicTripShare = catchAsync(async (req, res, next) => {
+    const booking = await Booking.findOne({
+        _id: req.params.id,
+        isActive: true
+    })
+        .select('bookingId status service provider location schedule vehicle createdAt')
+        .populate('vehicle', 'brand model type plate')
+        .populate('provider.id', 'name rating photo currentLocation status');
+
+    if (!booking) {
+        return next(new AppError('The requested tracking session is no longer active or valid.', 404));
+    }
+
+    const publicStatuses = ['accepted', 'assigned', 'en_route', 'arrived', 'washing', 'in_progress', 'after_photo', 'completed'];
+    if (!publicStatuses.includes(booking.status)) {
+        return next(new AppError('Tracking is not yet active for this service protocol.', 403));
+    }
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            booking: {
+                id: booking.bookingId || booking._id,
+                status: booking.status,
+                serviceName: booking.service?.name,
+                serviceType: booking.service?.type,
+                location: booking.location,
+                schedule: booking.schedule,
+                vehicle: booking.vehicle,
+                provider: booking.provider?.id ? {
+                    name: booking.provider.id.name,
+                    rating: booking.provider.id.rating || 4.9,
+                    photo: booking.provider.id.photo,
+                    location: booking.provider.id.currentLocation,
+                    status: booking.provider.id.status
+                } : null
+            }
+        }
+    });
+});
+
 exports.createBooking = catchAsync(async (req, res, next) => {
     const {
         vehicleId,
@@ -800,6 +843,7 @@ exports.createBooking = catchAsync(async (req, res, next) => {
         }
 
         await session.commitTransaction();
+        await session.endSession();
 
         // Broadcasts (Outside transaction)
         try {
@@ -807,6 +851,7 @@ exports.createBooking = catchAsync(async (req, res, next) => {
                 .populate('vehicle', 'brand model type plate image')
                 .populate('consumer', 'name phone');
 
+            // 1. Notify Consumer
             await sendNotification(req.user.id, {
                 title: 'Order Received! 🚀',
                 message: `Your booking for ${service.name || service.title} has been placed successfully.`,
@@ -814,7 +859,7 @@ exports.createBooking = catchAsync(async (req, res, next) => {
                 priority: 'medium',
             });
 
-            // ➕ Phase 3: Global Admin Parity
+            // 2. Notify Admin HUD (Real-time & Persistent Log)
             const io = socketService.getIO();
             io.to('admin_room').emit('global_status_update', {
                 type: 'new_booking',
@@ -822,6 +867,15 @@ exports.createBooking = catchAsync(async (req, res, next) => {
                 userName: req.user.name,
                 serviceName: service.name || service.title,
                 totalAmount
+            });
+
+            await sendAdminNotification({
+                title: 'New Booking Received 📦',
+                message: `Order #${populatedBooking?.bookingId || populatedBooking?._id} received from ${req.user.name} for ${service.name || service.title}.`,
+                type: 'booking',
+                priority: 'medium',
+                actionUrl: `/admin/bookings-operations`,
+                metaData: { bookingId: newBooking._id, consumerId: req.user.id }
             });
 
             if (sanitizedServiceType === 'captain') {
@@ -1139,6 +1193,76 @@ exports.updateBooking = catchAsync(async (req, res, next) => {
         data: {
             booking: updatedBooking
         }
+    });
+});
+
+// Update booking pricing (e.g. adding tip/fare while searching)
+exports.updateBookingPricing = catchAsync(async (req, res, next) => {
+    const { tipAmount, addons } = req.body;
+
+    const booking = await Booking.findOne({
+        _id: req.params.id,
+        consumer: req.user.id,
+        isActive: true,
+        status: { $in: ['pending', 'en_route', 'arrived', 'active'] }
+    });
+
+    if (!booking) {
+        return next(new AppError('Booking not found or cannot be modified at this stage', 404));
+    }
+
+    if (tipAmount !== undefined) {
+        // Increase tip
+        const currentTip = booking.pricing?.tipAmount || 0;
+        const tipDelta = tipAmount - currentTip;
+        
+        if (tipDelta < 0) {
+            return next(new AppError('Fare cannot be decreased once offered', 400));
+        }
+
+        booking.pricing.tipAmount = tipAmount;
+        booking.pricing.totalAmount += tipDelta;
+        
+        booking.pricing.breakdown = booking.pricing.breakdown || [];
+        // Update or add tip breakdown
+        const tipIdx = booking.pricing.breakdown.findIndex(b => b.name === 'Extra Fare/Tip');
+        if (tipIdx > -1) {
+            booking.pricing.breakdown[tipIdx].amount = tipAmount;
+        } else {
+            booking.pricing.breakdown.push({ name: 'Extra Fare/Tip', amount: tipAmount, type: 'surcharge' });
+        }
+        
+        booking.notes.internal = `${booking.notes.internal || ''}\n[FARE_INCREASE] User added ₹${tipDelta} to attract drivers.`.trim();
+    }
+
+    if (addons && Array.isArray(addons)) {
+        // Handle addon updates if needed
+        booking.addons = addons;
+    }
+
+    await booking.save();
+
+    // Broadcast update to ecosystem (especially finding driver screens)
+    const io = socketService.getIO();
+    if (io) {
+        io.to(booking._id.toString()).emit('booking_status_updated', {
+            bookingId: booking._id,
+            status: booking.status,
+            pricing: booking.pricing
+        });
+        
+        // Notify admin
+        io.to('admin_room').emit('global_status_update', {
+            type: 'pricing_update',
+            bookingId: booking._id,
+            totalAmount: booking.pricing.totalAmount
+        });
+    }
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Pricing updated successfully',
+        data: { booking }
     });
 });
 

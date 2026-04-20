@@ -65,9 +65,9 @@ const BookingType = () => {
     return (
         <MobileLayout hideNav>
             {/* ── Header ── */}
-            <header className="px-4 pt-10 pb-4 bg-white sticky top-0 z-50 border-b border-gray-100">
+            <header className="px-4 pt-10 pb-4 bg-white/5 sticky top-0 z-50 border-b border-white/5">
                 <div className="flex items-center gap-3">
-                    <button onClick={() => navigate(-1)} className="w-9 h-9 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center">
+                    <button onClick={() => navigate(-1)} className="w-9 h-9 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-center">
                         <ChevronLeft size={18} strokeWidth={2.5} className="text-content" />
                     </button>
                     <div>
@@ -118,13 +118,13 @@ const BookingType = () => {
                 </div>
 
                 {/* ── Mode Toggle (Quick Switch) ── */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-soft p-1.5 flex gap-1.5">
+                <div className="bg-white/5 rounded-2xl border border-white/5 shadow-soft p-1.5 flex gap-1.5">
                     {[
                         { id: 'instant', label: 'Now', icon: <Zap size={13} fill={mode === 'instant' ? 'currentColor' : 'none'} />, sub: '20-30m ETA' },
                         { id: 'scheduled', label: 'Schedule', icon: <Calendar size={13} strokeWidth={2.5} />, sub: 'Pick a slot' },
                     ].map((m) => (
                         <motion.button key={m.id} onClick={() => setMode(m.id)} whileTap={{ scale: 0.97 }}
-                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl transition-all ${mode === m.id ? 'bg-brand text-white shadow-md' : 'text-content-muted hover:bg-gray-50'}`}>
+                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl transition-all ${mode === m.id ? 'bg-brand text-white shadow-2xl shadow-black/40' : 'text-content-muted hover:bg-white/[0.02]'}`}>
                             {m.icon}
                             <div className="text-left">
                                 <p className={`font-black text-[10px] uppercase tracking-wider leading-none ${mode === m.id ? 'text-white' : 'text-content'}`}>{m.label}</p>
@@ -134,9 +134,9 @@ const BookingType = () => {
                 </div>
 
                 {/* ── Coupon ── */}
-                <div className={`flex items-center justify-between px-4 py-3 rounded-2xl border transition-all ${couponApplied ? 'bg-green-50 border-green-200' : 'bg-white border-gray-100 shadow-soft'}`}>
+                <div className={`flex items-center justify-between px-4 py-3 rounded-2xl border transition-all ${couponApplied ? 'bg-green-50 border-green-200' : 'bg-white/5 border-white/5 shadow-soft'}`}>
                     <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${couponApplied ? 'bg-green-500' : 'bg-gray-50'}`}>
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${couponApplied ? 'bg-green-500' : 'bg-white/[0.02]'}`}>
                             {couponApplied ? <CheckCircle2 size={16} className="text-white" /> : <Tag size={16} className="text-content-muted" strokeWidth={2.5} />}
                         </div>
                         <div>
@@ -155,30 +155,30 @@ const BookingType = () => {
                 </div>
 
                 {/* ── Payment Methods ── */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden">
+                <div className="bg-white/5 rounded-2xl border border-white/5 shadow-soft overflow-hidden">
                     <div className="px-4 py-3 border-b border-gray-50 flex items-center justify-between">
                         <h3 className="font-black text-sm text-content tracking-tight">Payment Method</h3>
                         <span className="text-[10px] font-bold text-content-subtle flex items-center gap-1"><ShieldCheck size={10} className="text-green-500" /> Secure</span>
                     </div>
                     {PAYMENT_METHODS.map((pm) => (
                         <button key={pm.id} onClick={() => setPayMethod(pm.id)}
-                            className={`w-full flex items-center justify-between px-4 py-3 border-b border-gray-50 last:border-none ${payMethod === pm.id ? 'bg-brand/5' : 'hover:bg-gray-50'}`}>
+                            className={`w-full flex items-center justify-between px-4 py-3 border-b border-gray-50 last:border-none ${payMethod === pm.id ? 'bg-brand/5' : 'hover:bg-white/[0.02]'}`}>
                             <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-lg border border-gray-100">{pm.icon}</div>
+                                <div className="w-9 h-9 bg-white/[0.02] rounded-xl flex items-center justify-center text-lg border border-white/5">{pm.icon}</div>
                                 <div className="text-left">
                                     <p className="font-black text-sm text-content">{pm.label}</p>
                                     <p className="text-[9px] font-bold text-content-subtle">{pm.sub}</p>
                                 </div>
                             </div>
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${payMethod === pm.id ? 'border-brand' : 'border-gray-200'}`}>
-                                {payMethod === pm.id && <div className="w-2.5 h-2.5 bg-brand rounded-full shadow-sm" />}
+                            <div className={`w-5 h-5 rounded-full border-white/5 flex items-center justify-center transition-all ${payMethod === pm.id ? 'border-brand' : 'border-white/10'}`}>
+                                {payMethod === pm.id && <div className="w-2.5 h-2.5 bg-brand rounded-full " />}
                             </div>
                         </button>
                     ))}
                 </div>
 
                 {/* ── Bill Summary ── */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-soft p-4 space-y-2.5">
+                <div className="bg-white/5 rounded-2xl border border-white/5 shadow-soft p-4 space-y-2.5">
                     <h3 className="font-black text-sm text-content tracking-tight mb-2">Detailed Bill</h3>
                     {[
                         { label: 'Wash Charge', val: `₹${basePrice}` },
@@ -190,7 +190,7 @@ const BookingType = () => {
                             <span className={`font-black ${row.credit ? 'text-green-600' : 'text-content'}`}>{row.val}</span>
                         </div>
                     ))}
-                    <div className="border-t border-gray-100 pt-3 flex justify-between items-center mt-2">
+                    <div className="border-t border-white/5 pt-3 flex justify-between items-center mt-2">
                         <span className="font-black text-sm text-content uppercase tracking-widest">To Pay</span>
                         <span className="font-black text-brand text-xl">₹{total}</span>
                     </div>
@@ -207,9 +207,9 @@ const BookingType = () => {
             </div>
 
             {/* ── Sticky Pay Button ── */}
-            <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 px-4 pt-4 pb-8 z-50">
+            <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/5 border-t border-white/5 px-4 pt-4 pb-8 z-50">
                 <motion.button whileTap={{ scale: 0.98 }} onClick={handleConfirmBooking}
-                    className="group w-full h-14 bg-brand text-white rounded-2xl font-black text-base shadow-xl shadow-brand/30 flex items-center justify-between px-6 relative overflow-hidden">
+                    className="group w-full h-14 bg-brand text-white rounded-2xl font-black text-base shadow-2xl shadow-black/50 shadow-brand/30 flex items-center justify-between px-6 relative overflow-hidden">
                     <div className="text-left">
                         <span className="block text-[8px] font-black uppercase tracking-[0.2em] text-white/60 leading-none mb-1">Confirm Wash</span>
                         <span className="tracking-tight">Pay for Booking</span>

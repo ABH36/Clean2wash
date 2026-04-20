@@ -46,7 +46,14 @@ exports.getAllAdmins = catchAsync(async (req, res, next) => {
     // Execute query
     const [admins, total] = await Promise.all([
         Admin.find(filter)
-            .populate('role', 'name slug level')
+            .populate({
+                path: 'role',
+                select: 'name slug level permissions',
+                populate: {
+                    path: 'permissions',
+                    select: 'module action description'
+                }
+            })
             .populate('createdBy', 'name email')
             .sort(sort)
             .skip(skip)
@@ -73,7 +80,13 @@ exports.getAllAdmins = catchAsync(async (req, res, next) => {
  */
 exports.getAdmin = catchAsync(async (req, res, next) => {
     const admin = await Admin.findById(req.params.id)
-        .populate('role')
+        .populate({
+            path: 'role',
+            populate: {
+                path: 'permissions',
+                select: 'module action description'
+            }
+        })
         .populate('createdBy', 'name email')
         .populate('updatedBy', 'name email')
         .select('-password');

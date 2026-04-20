@@ -111,7 +111,7 @@ const StaffMapView = () => {
             infoContent: (
                 <div className="text-center p-2">
                     <p className="text-[10px] font-black uppercase tracking-widest text-brand">Your Terminal</p>
-                    <p className="text-xs font-bold mt-1 text-black">Active Pulse</p>
+                    <p className="text-xs font-bold mt-1 text-white">Active Pulse</p>
                 </div>
             )
         }] : []),
@@ -124,8 +124,8 @@ const StaffMapView = () => {
                 anchor: new window.google.maps.Point(19, 38)
             },
             infoContent: (
-                <div className="p-0 min-w-[200px] bg-white rounded-2xl overflow-hidden font-outfit shadow-2xl border border-gray-100">
-                    <div className="p-3 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between">
+                <div className="p-0 min-w-[200px] bg-white/5 rounded-2xl overflow-hidden font-outfit shadow-2xl border border-white/5">
+                    <div className="p-3 bg-white/[0.02]/50 border-b border-white/5 flex items-center justify-between">
                         <div className={`px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${
                             task.type === 'Pickup' ? 'bg-blue-500 text-white' :
                             task.type === 'Delivery' ? 'bg-green-500 text-white' : 'bg-purple-500 text-white'
@@ -137,7 +137,7 @@ const StaffMapView = () => {
 
                     <div className="p-4">
                         <div className="mb-3">
-                            <h4 className="text-[11px] font-black uppercase tracking-tight text-black mb-0.5 truncate">{task.consumer?.name || 'Protocol Client'}</h4>
+                            <h4 className="text-[11px] font-black uppercase tracking-tight text-white mb-0.5 truncate">{task.consumer?.name || 'Protocol Client'}</h4>
                             <div className="flex items-center gap-1 opacity-40">
                                 <MapPin size={8} />
                                 <p className="text-[8px] font-bold uppercase truncate">{task.location?.address?.street || 'Assigned Node'}</p>
@@ -146,10 +146,10 @@ const StaffMapView = () => {
 
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-1.5">
-                                <div className="w-6 h-6 rounded-lg bg-gray-100 flex items-center justify-center">
+                                <div className="w-6 h-6 rounded-lg bg-white/[0.05] flex items-center justify-center">
                                     <Clock size={10} className="text-brand" />
                                 </div>
-                                <p className="text-[9px] font-black text-black">{task.schedule?.timeSlot?.start || 'Instant'}</p>
+                                <p className="text-[9px] font-black text-white">{task.schedule?.timeSlot?.start || 'Instant'}</p>
                             </div>
                             <div className="text-right">
                                 <p className="text-[7px] font-black text-gray-400 uppercase leading-none">Status</p>
@@ -188,7 +188,7 @@ const StaffMapView = () => {
                     <motion.button
                         whileTap={{ scale: 0.9 }}
                         onClick={() => navigate(-1)}
-                        className={`w-12 h-12 rounded-2xl flex items-center justify-center border backdrop-blur-3xl shadow-2xl overflow-hidden active:scale-90 transition-all ${isDarkMode ? 'bg-[#0F172A]/80 border-white/5 text-white' : 'bg-white/80 border-gray-100 text-content'}`}
+                        className={`w-12 h-12 rounded-2xl flex items-center justify-center border backdrop-blur-3xl shadow-2xl overflow-hidden active:scale-90 transition-all ${isDarkMode ? 'bg-[#0F172A]/80 border-white/5 text-white' : 'bg-white/80 border-white/5 text-content'}`}
                     >
                         <ChevronLeft size={24} />
                     </motion.button>
@@ -198,7 +198,7 @@ const StaffMapView = () => {
                         <h1 className={`text-xl font-black leading-none tracking-tight uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>Mission Map</h1>
                     </div>
 
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border backdrop-blur-3xl shadow-2xl ${isDarkMode ? 'bg-[#0F172A]/80 border-white/5 text-brand' : 'bg-white/80 border-gray-100 text-brand'}`}>
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border backdrop-blur-3xl shadow-2xl ${isDarkMode ? 'bg-[#0F172A]/80 border-white/5 text-brand' : 'bg-white/80 border-white/5 text-brand'}`}>
                         <Shield size={24} fill="currentColor" className="opacity-20" />
                         <Activity size={12} className="absolute animate-pulse" />
                     </div>
@@ -206,7 +206,7 @@ const StaffMapView = () => {
 
                 {/* Sub-HUD: Search & Active Controls */}
                 <div className="mt-4 px-6 space-y-4 pointer-events-auto">
-                    <div className={`relative group shadow-2xl rounded-3xl overflow-hidden transition-all duration-500 border-2 ${isDarkMode ? 'bg-[#0F172A]/80 border-white/5 focus-within:border-brand/40' : 'bg-white/80 border-gray-100 focus-within:border-brand/40'} backdrop-blur-3xl`}>
+                    <div className={`relative group shadow-2xl rounded-3xl overflow-hidden transition-all duration-500 border-white/5 ${isDarkMode ? 'bg-[#0F172A]/80 border-white/5 focus-within:border-brand/40' : 'bg-white/80 border-white/5 focus-within:border-brand/40'} backdrop-blur-3xl`}>
                         <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-brand" size={18} />
                         <input
                             type="text"
@@ -220,12 +220,12 @@ const StaffMapView = () => {
                     <div className="flex gap-3">
                         <button
                             onClick={handleLocateMe}
-                            className={`h-12 px-6 rounded-2xl flex items-center gap-3 backdrop-blur-3xl border transition-all active:scale-95 shadow-xl ${isDarkMode ? 'bg-[#0F172A]/80 border-white/5 text-white' : 'bg-white/80 border-gray-100 text-content'}`}
+                            className={`h-12 px-6 rounded-2xl flex items-center gap-3 backdrop-blur-3xl border transition-all active:scale-95 shadow-2xl shadow-black/50 ${isDarkMode ? 'bg-[#0F172A]/80 border-white/5 text-white' : 'bg-white/80 border-white/5 text-content'}`}
                         >
                             <Locate size={18} className="text-brand" />
                             <span className="text-[10px] font-black uppercase tracking-widest">Recenter HUD</span>
                         </button>
-                        <div className={`h-12 px-6 rounded-2xl flex items-center gap-3 backdrop-blur-3xl border border-white/5 shadow-xl ${isDarkMode ? 'bg-brand/10 border-brand/20 text-brand' : 'bg-brand/5 border-brand/10 text-brand'}`}>
+                        <div className={`h-12 px-6 rounded-2xl flex items-center gap-3 backdrop-blur-3xl border border-white/5 shadow-2xl shadow-black/50 ${isDarkMode ? 'bg-brand/10 border-brand/20 text-brand' : 'bg-brand/5 border-brand/10 text-brand'}`}>
                             <Zap size={14} className="animate-pulse" />
                             <span className="text-[10px] font-black uppercase tracking-widest">{filteredTasks.length} NODES ACTIVE</span>
                         </div>
@@ -234,7 +234,7 @@ const StaffMapView = () => {
 
                 {/* Footer HUD: Quick Status & Legend */}
                 <div className="mt-auto p-8 pointer-events-auto">
-                    <div className={`max-w-md mx-auto rounded-[3rem] p-6 backdrop-blur-3xl border shadow-3xl flex items-end justify-between ${isDarkMode ? 'bg-[#0F172A]/80 border-white/5' : 'bg-white/95 border-gray-100'}`}>
+                    <div className={`max-w-md mx-auto rounded-[3rem] p-6 backdrop-blur-3xl border shadow-3xl flex items-end justify-between ${isDarkMode ? 'bg-[#0F172A]/80 border-white/5' : 'bg-white/95 border-white/5'}`}>
                         <div className="space-y-4 flex-1">
                             <div className="flex items-center gap-4">
                                 <div className="flex items-center gap-2">
@@ -257,7 +257,7 @@ const StaffMapView = () => {
                         </div>
                         <button
                             onClick={fetchTasks}
-                            className="w-14 h-14 rounded-2xl bg-brand text-white flex items-center justify-center shadow-xl shadow-brand/30 active:scale-90 transition-all"
+                            className="w-14 h-14 rounded-2xl bg-brand text-white flex items-center justify-center shadow-2xl shadow-black/50 shadow-brand/30 active:scale-90 transition-all"
                         >
                             <Activity size={24} />
                         </button>
@@ -274,7 +274,7 @@ const StaffMapView = () => {
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 z-[100] bg-[#0F172A] flex flex-col items-center justify-center gap-8"
                     >
-                        <div className="w-20 h-20 border-8 border-brand/10 border-t-brand rounded-full animate-spin" />
+                        <div className="w-20 h-20 border-white/5 border-brand/10 border-t-brand rounded-full animate-spin" />
                         <div className="text-center">
                             <h2 className="text-2xl font-black text-white uppercase tracking-tighter mb-2">Initializing Fleet Map</h2>
                             <p className="text-[10px] font-black uppercase tracking-[0.5em] text-brand">Pulling Geospatial Terminal Logs...</p>

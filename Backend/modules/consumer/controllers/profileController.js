@@ -10,8 +10,8 @@ const MasterData = require('../../../models/MasterData');
 const { sendNotification } = require('../../../utils/notificationService');
 const catchAsync = require('../../../utils/catchAsync');
 const AppError = require('../../../utils/AppError');
-
-
+const cloudinary = require('../../../utils/cloudinary');
+const { logAction } = require('../../../utils/auditHelper');
 
 // --- Payment Methods ---
 
@@ -309,6 +309,87 @@ exports.updateAvatar = catchAsync(async (req, res, next) => {
         data: {
             avatar: updatedConsumer.profile.avatar
         }
+    });
+});
+
+// Submit KYC documents
+exports.submitKYC = catchAsync(async (req, res, next) => {
+    const { idType, documentId, documents } = req.body;
+
+    if (!idType || !documents || !documents.front) {
+        return next(new AppError('Please provide ID type and at least front image of the document', 400));
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) return next(new AppError('Consumer not found', 404));
+
+    // Upload to Cloudinary if they are base64 strings
+    let frontUrl = documents.front;
+    let backUrl = documents.back;
+
+    try {
+        if (frontUrl && frontUrl.startsWith('data:image')) {
+            const uploadRes = await cloudinary.uploadImage(frontUrl, `clean2wash/consumers/kyc/${user._id}`);
+            frontUrl = uploadRes.secure_url;
+        }
+
+        if (backUrl && backUrl.startsWith('data:image')) {
+            const uploadRes = await cloudinary.uploadImage(backUrl, `clean2wash/consumers/kyc/${user._id}`);
+            backUrl = uploadRes.secure_url;
+        }
+    } catch (uploadError) {
+        return next(new AppError('Failed to upload KYC documents securely. Please try again.', 500));
+    }
+
+    const previousKycStatus = user.kyc?.status || 'none';
+
+    user.kyc = {
+        status: 'pending',
+        idType,
+        documentId,
+        documents: {
+            front: frontUrl,
+            back: backUrl
+        },
+        submittedAt: new Date()
+    };
+
+    await user.save();
+
+    // Log the action for administrative security tracking
+    await logAction({
+        userId: user._id,
+        action: 'SUBMIT_KYC',
+        resource: 'User',
+        resourceId: user._id,
+        oldValue: { status: previousKycStatus },
+        newValue: { status: 'pending', idType, documentId },
+        req,
+        metadata: { info: 'Consumer submitted KYC for identity verification' }
+    });
+
+    // Notify user
+    await sendNotification(req.user.id, {
+        title: 'KYC Submitted 🛡️',
+        message: 'Your documents have been submitted for verification. We will review them within 24 hours.',
+        type: 'verification',
+        priority: 'medium'
+    });
+
+    // 🕊️ Production-Grade Guard: Alert Admin Verification Desk
+    await sendAdminNotification({
+        title: 'New KYC Verification Request 🛡️',
+        message: `${user.name} has submitted documents (${idType}) for identity verification.`,
+        type: 'verification',
+        priority: 'high',
+        actionUrl: `/admin/users`,
+        metaData: { userId: user._id, idType }
+    });
+
+    res.status(200).json({
+        status: 'success',
+        message: 'KYC submitted successfully',
+        data: { kyc: user.kyc }
     });
 });
 

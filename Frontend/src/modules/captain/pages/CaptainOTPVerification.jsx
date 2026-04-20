@@ -108,7 +108,7 @@ const CaptainOTPVerification = () => {
                     animate={{ opacity: 1, y: 0 }}
                     className="text-center"
                 >
-                    <div className="w-16 h-16 bg-surface border border-gray-100/10 text-brand rounded-[2rem] flex items-center justify-center shadow-2xl mb-8 mx-auto">
+                    <div className="w-16 h-16 bg-surface border border-white/5/10 text-brand rounded-[2rem] flex items-center justify-center shadow-2xl mb-8 mx-auto">
                         <Zap size={32} />
                     </div>
 
@@ -142,7 +142,7 @@ const CaptainOTPVerification = () => {
                                     otpRefs.current[i - 1]?.focus();
                                 }
                             }}
-                            className={`w-14 h-16 text-center text-2xl font-[1000] rounded-2xl border-2 transition-all outline-none shadow-sm placeholder:opacity-20 ${otp[i]
+                            className={`w-14 h-16 text-center text-2xl font-[1000] rounded-2xl border-white/5 transition-all outline-none  placeholder:opacity-20 ${otp[i]
                                 ? 'border-brand bg-white/10 text-brand ring-4 ring-brand/5'
                                 : 'border-white/5 bg-white/5 text-white/40 focus:border-brand/30'
                                 }`}
@@ -166,7 +166,7 @@ const CaptainOTPVerification = () => {
                         disabled={otp.join('').length < 4 || loading}
                         whileTap={{ scale: 0.97 }}
                         onClick={handleVerify}
-                        className={`w-full h-16 rounded-2xl font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center transition-all shadow-xl ${otp.join('').length === 4
+                        className={`w-full h-16 rounded-2xl font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center transition-all shadow-2xl shadow-black/50 ${otp.join('').length === 4
                             ? 'bg-brand text-white shadow-brand/20 hover:scale-[1.02]'
                             : 'bg-white/5 text-white/10 border border-white/5 pointer-events-none'
                             }`}

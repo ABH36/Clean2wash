@@ -46,10 +46,10 @@ const CaptainPersonalInfo = () => {
 
     return (
         <CaptainLayout>
-            <div className={`min-h-screen ${isDarkMode ? 'bg-[#0F172A]' : 'bg-gray-50'} pb-32 transition-colors duration-500`}>
+            <div className={`min-h-screen ${isDarkMode ? 'bg-[#0F172A]' : 'bg-white/[0.02]'} pb-32 transition-colors duration-500`}>
                 {/* Header */}
-                <header className={`${isDarkMode ? 'bg-[#1E293B]/80 border-white/5' : 'bg-white/80 border-gray-100'} backdrop-blur-xl px-4 pt-12 pb-6 sticky top-0 z-40 border-b flex items-center gap-4`}>
-                    <button onClick={() => navigate(-1)} className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-gray-50 border-gray-100 text-content'}`}>
+                <header className={`${isDarkMode ? 'bg-[#1E293B]/80 border-white/5' : 'bg-white/80 border-white/5'} backdrop-blur-xl px-4 pt-12 pb-6 sticky top-0 z-40 border-b flex items-center gap-4`}>
+                    <button onClick={() => navigate(-1)} className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-white/[0.02] border-white/5 text-content'}`}>
                         <ChevronLeft size={18} strokeWidth={2.5} />
                     </button>
                     <div>
@@ -60,7 +60,7 @@ const CaptainPersonalInfo = () => {
 
                 <div className="px-4 py-8 space-y-8">
                     {/* Profile Card */}
-                    <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100'} p-6 rounded-[2.5rem] border shadow-2xl shadow-black/5 flex flex-col items-center text-center relative overflow-hidden`}>
+                    <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white/5 border-white/5'} p-6 rounded-[2.5rem] border shadow-2xl shadow-black/5 flex flex-col items-center text-center relative overflow-hidden`}>
                         <div className="relative group mb-4">
                             <div className={`w-28 h-28 rounded-[2.5rem] overflow-hidden border-4 ${isDarkMode ? 'border-brand/20' : 'border-brand/10'} shadow-2xl relative z-10`}>
                                 <img src={user.profile?.avatar || user.profile?.photo || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80"} alt="Profile" className="w-full h-full object-cover" />
@@ -82,7 +82,7 @@ const CaptainPersonalInfo = () => {
                     {infoGroups.map(group => (
                         <div key={group.title} className="space-y-4">
                             <p className={`text-[10px] font-black uppercase tracking-[0.2em] px-2 ${isDarkMode ? 'text-white/30' : 'text-content-subtle'}`}>{group.title}</p>
-                            <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} rounded-[2.5rem] border overflow-hidden`}>
+                            <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white/5 border-white/5 shadow-soft'} rounded-[2.5rem] border overflow-hidden`}>
                                 {group.items.map((item, i, arr) => (
                                     <div key={item.label} className={`flex items-center gap-4 px-6 py-5 ${i < arr.length - 1 ? (isDarkMode ? 'border-b border-white/5' : 'border-b border-gray-50') : ''}`}>
                                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isDarkMode ? 'bg-white/5 text-brand/60' : 'bg-brand/5 text-brand'}`}>

@@ -46,15 +46,15 @@ const CaptainHistory = () => {
         <CaptainLayout>
             <div className="pb-28 transition-colors duration-500">
                 {/* Header */}
-                <div className={`${isDarkMode ? 'bg-[#0F172A]' : 'bg-gray-50'} px-4 pt-12 pb-6 sticky top-0 z-50 transition-colors duration-500 border-b ${isDarkMode ? 'border-white/5' : 'border-gray-100'}`}>
+                <div className={`${isDarkMode ? 'bg-[#0F172A]' : 'bg-white/[0.02]'} px-4 pt-12 pb-6 sticky top-0 z-50 transition-colors duration-500 border-b ${isDarkMode ? 'border-white/5' : 'border-white/5'}`}>
                     <div className="flex items-center gap-4 mb-6">
-                        <button onClick={() => navigate(-1)} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isDarkMode ? 'bg-white/10 text-white' : 'bg-white border border-gray-100 text-content'}`}>
+                        <button onClick={() => navigate(-1)} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isDarkMode ? 'bg-white/10 text-white' : 'bg-white/5 border border-white/5 text-content'}`}>
                             <ArrowLeft size={20} />
                         </button>
                         <h1 className={`text-xl font-black tracking-tight uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>Wash History</h1>
                     </div>
 
-                    <div className={`${isDarkMode ? 'bg-white/5' : 'bg-gray-100'} flex gap-2 p-1 rounded-2xl overflow-x-auto scrollbar-hide transition-colors`}>
+                    <div className={`${isDarkMode ? 'bg-white/5' : 'bg-white/[0.05]'} flex gap-2 p-1 rounded-2xl overflow-x-auto scrollbar-hide transition-colors`}>
                         {['All', 'Completed', 'Cancelled'].map(tab => (
                             <button
                                 key={tab}
@@ -78,12 +78,21 @@ const CaptainHistory = () => {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.05 }}
-                            className={`${isDarkMode ? 'bg-[#1E293B] border-white/5 hover:border-brand/40 shadow-2xl shadow-black/20' : 'bg-white border-gray-100 hover:border-brand/30 shadow-soft'} border rounded-3xl p-5 group transition-all duration-500`}
+                            className={`${isDarkMode ? 'bg-[#1E293B] border-white/5 hover:border-brand/40 shadow-2xl shadow-black/20' : 'bg-white/5 border-white/5 hover:border-brand/30 shadow-soft'} border rounded-3xl p-5 group transition-all duration-500`}
                         >
                             <div className="flex justify-between items-start mb-4">
                                 <div>
-                                    <p className="text-[10px] font-black text-brand uppercase tracking-widest mb-1">{item.id}</p>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <p className="text-[10px] font-black text-brand uppercase tracking-widest">{item.id}</p>
+                                        {item.isUserVerified && (
+                                            <div className="flex items-center gap-1 px-1.5 py-0.5 bg-gradient-to-r from-amber-500/10 to-emerald-500/10 border border-amber-500/20 rounded-full">
+                                                <Shield size={8} className="text-amber-500" fill="currentColor" />
+                                                <span className="text-[7px] font-black uppercase tracking-wider text-amber-600">Verified Elite</span>
+                                            </div>
+                                        )}
+                                    </div>
                                     <h3 className={`font-black text-base uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>{item.serviceName}</h3>
+                                    <p className={`text-[10px] font-bold mt-1 ${isDarkMode ? 'text-white/40' : 'text-content-subtle'}`}>Customer: {item.userName}</p>
                                 </div>
                                 <div className={`px-3 py-1 rounded-lg flex items-center gap-1.5 ${item.status === 'completed'
                                     ? (isDarkMode ? 'bg-green-500/10 text-green-400' : 'bg-green-50 text-green-600')
@@ -113,7 +122,7 @@ const CaptainHistory = () => {
                                     <p className={`text-xl font-black ${isDarkMode ? 'text-white' : 'text-content'}`}>{item.price}</p>
                                 </div>
                                 <button onClick={() => navigate(`/captain/job?id=${item.id}`)}
-                                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 text-white/40' : 'bg-gray-50 text-content-subtle'} group-hover:bg-brand group-hover:text-white`}>
+                                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 text-white/40' : 'bg-white/[0.02] text-content-subtle'} group-hover:bg-brand group-hover:text-white`}>
                                     <ChevronRight size={18} strokeWidth={2.5} />
                                 </button>
                             </div>

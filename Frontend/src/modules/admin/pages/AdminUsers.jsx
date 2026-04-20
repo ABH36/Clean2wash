@@ -28,6 +28,7 @@ import {
     CheckCircle,
     XOctagon,
     CreditCard,
+    FileText,
     MapPin as LocationIcon,
     Calendar as CalendarIcon
 } from 'lucide-react';
@@ -48,6 +49,7 @@ const AdminUsers = () => {
     // Enhanced State for Customer Features Only
     const [selectedUser, setSelectedUser] = useState(null);
     const [isUserDetailsOpen, setIsUserDetailsOpen] = useState(false);
+    const [viewingDoc, setViewingDoc] = useState(null);
     const [statusFilter, setStatusFilter] = useState('All');
     const [kycFilter, setKycFilter] = useState('All');
     const [riskFilter, setRiskFilter] = useState('All');
@@ -103,9 +105,9 @@ const AdminUsers = () => {
 
     const getKycBadge = (status) => {
         switch (status) {
-            case 'Verified': return { label: 'Verified', color: 'text-[var(--success-text)]', bg: 'bg-[var(--success-light)]', border: 'border-[var(--success)]', icon: <CheckCircle size={12} /> };
-            case 'Rejected': return { label: 'Rejected', color: 'text-[var(--error-text)]', bg: 'bg-[var(--error-light)]', border: 'border-[var(--error)]', icon: <XOctagon size={12} /> };
-            default: return { label: 'Pending', color: 'text-[var(--warning-text)]', bg: 'bg-[var(--warning-light)]', border: 'border-[var(--warning)]', icon: <Clock size={12} /> };
+            case 'Verified': return { label: 'Verified', color: 'text-[var(--success-text)]', bg: 'bg-[var(--success-light)]', border: 'border-[var(--success)]', icon: <CheckCircle size={14} /> };
+            case 'Rejected': return { label: 'Rejected', color: 'text-[var(--error-text)]', bg: 'bg-[var(--error-light)]', border: 'border-[var(--error)]', icon: <XOctagon size={14} /> };
+            default: return { label: 'Pending', color: 'text-[var(--warning-text)]', bg: 'bg-[var(--warning-light)]', border: 'border-[var(--warning)]', icon: <Clock size={14} /> };
         }
     };
 
@@ -300,12 +302,12 @@ const AdminUsers = () => {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
-                        <div className="flex-1 lg:w-64 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-lg px-4 py-2 flex items-center gap-3 group focus-within:border-[var(--primary)] transition-all">
-                            <Search size={14} className="text-[var(--text-muted)] group-focus-within:text-[var(--primary)]" />
+                        <div className="flex-1 lg:w-72 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl px-4 py-2.5 flex items-center gap-3 group focus-within:border-[var(--primary)] transition-all">
+                            <Search size={18} className="text-[var(--text-muted)] group-focus-within:text-[var(--primary)]" />
                             <input
                                 type="text"
                                 placeholder="Search consumers..."
-                                className="bg-transparent outline-none text-sm font-medium text-[var(--text-primary)] w-full placeholder:text-[var(--text-muted)]"
+                                className="bg-transparent outline-none text-sm font-semibold text-[var(--text-primary)] w-full placeholder:text-[var(--text-muted)]"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
@@ -391,14 +393,14 @@ const AdminUsers = () => {
                         </div>
 
                         <div className="flex items-center gap-2">
-                            <button onClick={fetchUsers} className="btn-secondary w-10 h-10 p-0 flex items-center justify-center">
-                                <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+                            <button onClick={fetchUsers} className="btn-secondary w-12 h-12 p-0 flex items-center justify-center rounded-xl">
+                                <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
                             </button>
                             <button
                                 onClick={handleOpenAdd}
-                                className="btn-primary flex items-center gap-2"
+                                className="btn-primary flex items-center gap-2 h-12 px-6 rounded-xl text-sm font-bold"
                             >
-                                <UserPlus size={15} /> Add Consumer
+                                <UserPlus size={18} /> Add Consumer
                             </button>
                         </div>
                     </div>
@@ -465,12 +467,12 @@ const AdminUsers = () => {
                                                             ID-{(user._id || user.id).slice(-8).toUpperCase()}
                                                         </p>
                                                         <div className="flex items-center gap-1">
-                                                            <CreditCard size={10} className="text-[var(--primary)]" />
-                                                            <span className="text-xs font-medium text-[var(--primary)]">₹{totalSpent.toLocaleString()}</span>
+                                                            <CreditCard size={14} className="text-[var(--primary)]" />
+                                                            <span className="text-xs font-semibold text-[var(--primary)]">₹{totalSpent.toLocaleString()}</span>
                                                         </div>
                                                         <div className="flex items-center gap-1">
-                                                            <Briefcase size={10} className="text-[var(--text-secondary)]" />
-                                                            <span className="text-xs font-medium text-[var(--text-secondary)]">{bookingCount}</span>
+                                                            <Briefcase size={14} className="text-[var(--text-secondary)]" />
+                                                            <span className="text-xs font-semibold text-[var(--text-secondary)]">{bookingCount}</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -480,17 +482,17 @@ const AdminUsers = () => {
                                         {/* Contact & Location */}
                                         <td>
                                             <div className="flex flex-col gap-2 min-w-0">
-                                                <div className="flex items-center gap-2 min-w-0">
-                                                    <Phone size={12} className="text-[var(--primary)] shrink-0" />
-                                                    <span className="text-sm font-medium text-[var(--text-primary)] tabular-nums">{user.phone}</span>
+                                                <div className="flex items-center gap-2.5 min-w-0">
+                                                    <Phone size={16} className="text-[var(--primary)] shrink-0" />
+                                                    <span className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{user.phone}</span>
                                                 </div>
-                                                <div className="flex items-center gap-2 min-w-0">
-                                                    <Mail size={12} className="text-[var(--text-secondary)] shrink-0" />
-                                                    <span className="text-xs font-medium text-[var(--text-secondary)] truncate">{user.email || 'No email'}</span>
+                                                <div className="flex items-center gap-2.5 min-w-0">
+                                                    <Mail size={16} className="text-[var(--text-secondary)] shrink-0" />
+                                                    <span className="text-xs font-bold text-[var(--text-secondary)] truncate">{user.email || 'No email'}</span>
                                                 </div>
-                                                <div className="flex items-center gap-2 min-w-0">
-                                                    <LocationIcon size={12} className="text-[var(--text-secondary)] shrink-0" />
-                                                    <span className="text-xs font-medium text-[var(--text-secondary)] capitalize truncate">
+                                                <div className="flex items-center gap-2.5 min-w-0">
+                                                    <LocationIcon size={16} className="text-[var(--text-secondary)] shrink-0" />
+                                                    <span className="text-xs font-bold text-[var(--text-secondary)] capitalize truncate">
                                                         {user.profile?.city || user.profile?.address?.city || 'Unknown'}
                                                     </span>
                                                 </div>
@@ -550,9 +552,9 @@ const AdminUsers = () => {
                                         {/* Activity */}
                                         <td className="text-center">
                                             <div className="flex flex-col items-center gap-2">
-                                                <div className="flex items-center gap-1">
-                                                    <CalendarIcon size={12} className="text-[var(--text-secondary)]" />
-                                                    <span className="text-xs font-medium text-[var(--text-primary)]">{lastActivity}</span>
+                                                <div className="flex items-center gap-1.5">
+                                                    <CalendarIcon size={16} className="text-[var(--primary)] shrink-0" />
+                                                    <span className="text-xs font-bold text-[var(--text-primary)]">{lastActivity}</span>
                                                 </div>
                                                 <button 
                                                     onClick={() => openUserDetails(user)}
@@ -579,47 +581,47 @@ const AdminUsers = () => {
                                                 <button 
                                                     onClick={() => openUserDetails(user)} 
                                                     title="View Profile"
-                                                    className="btn-secondary w-9 h-9 p-0 flex items-center justify-center"
+                                                    className="btn-secondary w-11 h-11 p-0 flex items-center justify-center rounded-xl hover:text-brand transition-colors group/view"
                                                 >
-                                                    <Eye size={14} />
+                                                    <Eye size={18} className="group-hover/view:scale-110 transition-transform" />
                                                 </button>
                                                 
                                                 {user.status !== 'Blocked' ? (
                                                     <button 
                                                         onClick={() => handleBlockUser(user._id || user.id, true)} 
                                                         title="Block User"
-                                                        className="btn-danger w-9 h-9 p-0 flex items-center justify-center"
+                                                        className="btn-danger w-11 h-11 p-0 flex items-center justify-center rounded-xl shadow-lg shadow-red-500/10 group/ban"
                                                     >
-                                                        <Ban size={14} />
+                                                        <Ban size={18} className="group-hover/ban:scale-110 transition-transform" />
                                                     </button>
                                                 ) : (
                                                     <button 
                                                         onClick={() => handleBlockUser(user._id || user.id, false)} 
                                                         title="Unblock User"
-                                                        className="w-9 h-9 bg-[var(--success-light)] text-[var(--success-text)] hover:bg-[var(--success)] hover:text-white rounded-lg transition-all flex items-center justify-center border border-[var(--success)]"
+                                                        className="w-11 h-11 bg-[var(--success-light)] text-[var(--success-text)] hover:bg-[var(--success)] hover:text-white rounded-xl transition-all flex items-center justify-center border border-[var(--success)] shadow-lg shadow-emerald-500/10 group/unban"
                                                     >
-                                                        <CheckCircle size={14} />
+                                                        <CheckCircle size={18} className="group-hover/unban:scale-110 transition-transform" />
                                                     </button>
                                                 )}
 
                                                 <button 
                                                     onClick={() => handleFlagUser(user._id || user.id, !user.flagged)} 
                                                     title={user.flagged ? "Remove Flag" : "Flag as Risky"}
-                                                    className={`w-9 h-9 rounded-lg transition-all flex items-center justify-center border ${
+                                                    className={`w-11 h-11 rounded-xl transition-all flex items-center justify-center border group/flag ${
                                                         user.flagged 
                                                             ? 'bg-[var(--warning-light)] text-[var(--warning-text)] border-[var(--warning)] hover:bg-[var(--warning)] hover:text-white' 
                                                             : 'btn-secondary'
                                                     }`}
                                                 >
-                                                    <Flag size={14} />
+                                                    <Flag size={18} className="group-hover/flag:scale-110 transition-transform" />
                                                 </button>
 
                                                 <button 
                                                     onClick={() => handleOpenEdit(user)} 
                                                     title="Edit User"
-                                                    className="btn-secondary w-9 h-9 p-0 flex items-center justify-center"
+                                                    className="btn-secondary w-11 h-11 p-0 flex items-center justify-center rounded-xl group/edit"
                                                 >
-                                                    <Edit2 size={14} />
+                                                    <Edit2 size={18} className="group-hover/edit:rotate-12 transition-transform" />
                                                 </button>
                                             </div>
                                         </td>
@@ -682,20 +684,21 @@ const AdminUsers = () => {
                                 <form onSubmit={handleSave} className="space-y-6">
                                     <div className="grid grid-cols-2 gap-6">
                                         {[
-                                            { label: 'Consumer Name', key: 'name', type: 'text', icon: <UsersIcon size={16} />, placeholder: 'Full Name' },
-                                            { label: 'Phone Number', key: 'phone', type: 'tel', icon: <Phone size={16} />, placeholder: 'Contact Number' },
-                                            { label: 'Email Address', key: 'email', type: 'email', icon: <Mail size={16} />, placeholder: 'Email Address' },
-                                            ...(!editingUser ? [{ label: 'Password', key: 'password', type: 'password', icon: <Key size={16} />, placeholder: 'Account Password' }] : [])
+                                            { label: 'Consumer Name', key: 'name', type: 'text', icon: <UsersIcon size={18} />, placeholder: 'Full Name' },
+                                            { label: 'Phone Number', key: 'phone', type: 'tel', icon: <Phone size={18} />, placeholder: 'Contact Number' },
+                                            { label: 'Email Address', key: 'email', type: 'email', icon: <Mail size={18} />, placeholder: 'Email Address' },
+                                            ...(!editingUser ? [{ label: 'Password', key: 'password', type: 'password', icon: <Key size={18} />, placeholder: 'Account Password' }] : [])
                                         ].map((field) => (
                                             <div key={field.key} className="space-y-2.5">
                                                 <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest ml-1">{field.label}</label>
                                                 <div className="relative group">
-                                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] group-focus-within:text-[var(--primary)] transition-all">{field.icon}</div>
+                                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] group-focus-within:text-[var(--primary)] transition-all pointer-events-none z-10">{field.icon}</div>
                                                     <input
                                                         required
                                                         type={field.type}
                                                         placeholder={field.placeholder}
-                                                        className="admin-input pl-12"
+                                                        className="admin-input"
+                                                        style={{ paddingLeft: '48px' }}
                                                         value={formData[field.key]}
                                                         onChange={e => setFormData({ ...formData, [field.key]: e.target.value })}
                                                     />
@@ -731,21 +734,24 @@ const AdminUsers = () => {
                             className="admin-card w-full max-w-6xl h-[90vh] relative z-10 overflow-hidden flex flex-col"
                         >
                             {/* Header */}
-                            <div className="px-8 py-6 border-b border-[var(--border)] flex items-center justify-between bg-[var(--bg-secondary)]">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-16 h-16 bg-[var(--primary)] text-white rounded-2xl flex items-center justify-center text-2xl font-black">
+                            <div className="px-8 py-6 border-b border-[var(--border)] flex items-center justify-between bg-[var(--bg-secondary)] shrink-0">
+                                <div className="flex items-center gap-5">
+                                    <div className="w-16 h-16 bg-[var(--primary)] text-white rounded-2xl flex items-center justify-center text-3xl font-black shadow-lg shadow-[var(--primary)]/20 border-2 border-white/10">
                                         {(selectedUser.name || 'U')[0]}
                                     </div>
-                                    <div>
-                                        <h2 className="text-2xl font-black text-[var(--text-primary)] capitalize leading-none mb-1">{selectedUser.name}</h2>
-                                        <p className="text-[10px] font-black text-[var(--primary)] uppercase tracking-widest">Consumer Profile & Intelligence</p>
+                                    <div className="space-y-1">
+                                        <h2 className="text-2xl font-black text-[var(--text-primary)] tracking-tight leading-none">{selectedUser.name}</h2>
+                                        <div className="flex items-center gap-2">
+                                            <Activity size={10} className="text-[var(--primary)]" />
+                                            <p className="text-[10px] font-bold text-[var(--primary)] uppercase tracking-[0.2em] opacity-80">Consumer Profile & Intelligence</p>
+                                        </div>
                                     </div>
                                 </div>
                                 <button 
                                     onClick={() => setIsUserDetailsOpen(false)} 
-                                    className="btn-secondary w-12 h-12 p-0 flex items-center justify-center"
+                                    className="w-10 h-10 bg-[var(--bg-secondary)] hover:bg-[var(--card-hover)] rounded-xl border border-[var(--border)] text-[var(--text-muted)] transition-all flex items-center justify-center"
                                 >
-                                    <X size={24} />
+                                    <X size={20} />
                                 </button>
                             </div>
 
@@ -785,35 +791,35 @@ const AdminUsers = () => {
                                         <div className="admin-card-compact">
                                             <h3 className="text-lg font-black text-[var(--text-primary)] mb-4 uppercase tracking-wide">Consumer Statistics</h3>
                                             <div className="grid grid-cols-2 gap-4">
-                                                <div className="text-center p-4 bg-[var(--bg-secondary)] rounded-xl">
-                                                    <div className="text-2xl font-black text-[var(--primary)] mb-1">
+                                                <div className="text-center p-3 bg-[var(--bg-secondary)] rounded-xl border border-[var(--border)]">
+                                                    <div className="text-xl font-bold text-[var(--primary)] mb-0.5">
                                                         {selectedUser.stats?.totalBookings || 0}
                                                     </div>
-                                                    <div className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest">
+                                                    <div className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
                                                         Total Bookings
                                                     </div>
                                                 </div>
-                                                <div className="text-center p-4 bg-[var(--bg-secondary)] rounded-xl">
-                                                    <div className="text-2xl font-black text-[var(--primary)] mb-1">
+                                                <div className="text-center p-3 bg-[var(--bg-secondary)] rounded-xl border border-[var(--border)]">
+                                                    <div className="text-xl font-bold text-[var(--primary)] mb-0.5">
                                                         ₹{(selectedUser.stats?.totalSpent || 0).toLocaleString()}
                                                     </div>
-                                                    <div className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest">
+                                                    <div className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
                                                         Total Spent
                                                     </div>
                                                 </div>
-                                                <div className="text-center p-4 bg-[var(--bg-secondary)] rounded-xl">
-                                                    <div className="text-2xl font-black text-[var(--error)] mb-1">
+                                                <div className="text-center p-3 bg-[var(--bg-secondary)] rounded-xl border border-[var(--border)]">
+                                                    <div className="text-xl font-bold text-[var(--error)] mb-0.5">
                                                         {selectedUser.stats?.cancellations || 0}
                                                     </div>
-                                                    <div className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest">
+                                                    <div className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
                                                         Cancellations
                                                     </div>
                                                 </div>
-                                                <div className="text-center p-4 bg-[var(--bg-secondary)] rounded-xl">
-                                                    <div className="text-2xl font-black text-[var(--warning)] mb-1">
+                                                <div className="text-center p-3 bg-[var(--bg-secondary)] rounded-xl border border-[var(--border)]">
+                                                    <div className="text-xl font-bold text-[var(--warning)] mb-0.5">
                                                         {selectedUser.stats?.complaints || 0}
                                                     </div>
-                                                    <div className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest">
+                                                    <div className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
                                                         Complaints
                                                     </div>
                                                 </div>
@@ -824,7 +830,7 @@ const AdminUsers = () => {
                                         <div className="admin-card-compact">
                                             <h3 className="text-lg font-black text-[var(--text-primary)] mb-4 uppercase tracking-wide">Risk Assessment</h3>
                                             <div className="flex items-center justify-center mb-4">
-                                                <div className={`w-24 h-24 rounded-full border-8 ${getRiskBadge(calculateRiskScore(selectedUser)).border} ${getRiskBadge(calculateRiskScore(selectedUser)).bg} flex items-center justify-center relative`}>
+                                                <div className={`w-24 h-24 rounded-full border-white/5 ${getRiskBadge(calculateRiskScore(selectedUser)).border} ${getRiskBadge(calculateRiskScore(selectedUser)).bg} flex items-center justify-center relative`}>
                                                     <span className={`text-xl font-black ${getRiskBadge(calculateRiskScore(selectedUser)).color}`}>
                                                         {calculateRiskScore(selectedUser)}
                                                     </span>
@@ -885,28 +891,80 @@ const AdminUsers = () => {
                                                     </div>
                                                 </div>
                                                 
-                                                {selectedUser.kyc?.document && (
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-sm font-bold text-[var(--text-primary)]">Document</span>
-                                                        <span className="text-xs font-medium text-[var(--success-text)]">
-                                                            Submitted
-                                                        </span>
+                                                {selectedUser.kyc?.documents?.front && (
+                                                    <div className="space-y-4">
+                                                        <div className="flex items-center gap-2 mb-2 p-3 bg-[var(--primary-light)] rounded-xl border border-[var(--primary)]/30">
+                                                            <div className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center text-[var(--primary)]">
+                                                                <FileText size={16} />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-[9px] font-black text-[var(--primary)] uppercase tracking-widest leading-none mb-1">ID Number</p>
+                                                                <span className="text-xs font-bold text-[var(--text-primary)]">{selectedUser.kyc.documentId || 'Not provided'}</span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-2 gap-4">
+                                                            <div className="group relative aspect-[3/2] bg-[var(--bg-secondary)] rounded-xl border border-[var(--border)] overflow-hidden">
+                                                                <img 
+                                                                    src={selectedUser.kyc.documents.front} 
+                                                                    alt="Front Proof" 
+                                                                    className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                                                                />
+                                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                                    <button 
+                                                                        onClick={() => setViewingDoc({ url: selectedUser.kyc.documents.front, side: 'Front' })}
+                                                                        className="p-3 bg-white/5 rounded-full text-slate-900 shadow-2xl shadow-black/50"
+                                                                    >
+                                                                        <Eye size={20} />
+                                                                    </button>
+                                                                </div>
+                                                                <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-black/60 rounded text-[9px] font-black text-white uppercase tracking-widest">Front View</div>
+                                                            </div>
+
+                                                            {selectedUser.kyc.documents.back && (
+                                                                <div className="group relative aspect-[3/2] bg-[var(--bg-secondary)] rounded-xl border border-[var(--border)] overflow-hidden">
+                                                                    <img 
+                                                                        src={selectedUser.kyc.documents.back} 
+                                                                        alt="Back Proof" 
+                                                                        className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                                                                    />
+                                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                                        <button 
+                                                                            onClick={() => setViewingDoc({ url: selectedUser.kyc.documents.back, side: 'Back' })}
+                                                                            className="p-3 bg-white/5 rounded-full text-slate-900 shadow-2xl shadow-black/50"
+                                                                        >
+                                                                            <Eye size={20} />
+                                                                        </button>
+                                                                    </div>
+                                                                    <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-black/60 rounded text-[9px] font-black text-white uppercase tracking-widest">Back View</div>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 )}
 
                                                 {getKycStatus(selectedUser) === 'Pending' && (
                                                     <div className="flex gap-2 pt-2">
                                                         <button 
-                                                            onClick={() => handleKycAction(selectedUser._id || selectedUser.id, 'verified')}
-                                                            className="flex-1 py-2 bg-[var(--success-light)] text-[var(--success-text)] text-[10px] font-black uppercase rounded hover:bg-[var(--success)] hover:text-white transition-all"
+                                                            onClick={async () => {
+                                                                if(window.confirm('Approve this user for higher trust limits?')) {
+                                                                    handleKycAction(selectedUser._id || selectedUser.id, 'verified');
+                                                                }
+                                                            }}
+                                                            className="flex-1 py-3 bg-[var(--success)] text-white text-[10px] font-black uppercase rounded-xl shadow-lg shadow-[var(--success)]/20 hover:translate-y-[-2px] transition-all"
                                                         >
-                                                            Approve KYC
+                                                            Approve Identity
                                                         </button>
                                                         <button 
-                                                            onClick={() => handleKycAction(selectedUser._id || selectedUser.id, 'rejected')}
-                                                            className="flex-1 py-2 bg-[var(--error-light)] text-[var(--error-text)] text-[10px] font-black uppercase rounded hover:bg-[var(--error)] hover:text-white transition-all"
+                                                            onClick={async () => {
+                                                                const reason = prompt('Reason for rejection:');
+                                                                if(reason) {
+                                                                    handleKycAction(selectedUser._id || selectedUser.id, 'rejected', reason);
+                                                                }
+                                                            }}
+                                                            className="flex-1 py-3 bg-[var(--bg-secondary)] text-[var(--error)] border border-[var(--error)] text-[10px] font-black uppercase rounded-xl hover:bg-[var(--error)] hover:text-white transition-all"
                                                         >
-                                                            Reject KYC
+                                                            Reject Proof
                                                         </button>
                                                     </div>
                                                 )}
@@ -926,9 +984,9 @@ const AdminUsers = () => {
                                                             handleBlockUser(selectedUser._id || selectedUser.id, true);
                                                             setIsUserDetailsOpen(false);
                                                         }}
-                                                        className="btn-danger w-full py-3 text-sm font-black uppercase flex items-center justify-center gap-2"
+                                                        className="w-full py-4 bg-[var(--error-light)] text-[var(--error-text)] border border-[var(--error)] text-xs font-black uppercase rounded-xl hover:bg-[var(--error)] hover:text-white transition-all flex items-center justify-center gap-3 shadow-lg shadow-red-500/10"
                                                     >
-                                                        <Ban size={16} />
+                                                        <Ban size={18} />
                                                         Block Consumer
                                                     </button>
                                                 ) : (
@@ -937,9 +995,9 @@ const AdminUsers = () => {
                                                             handleBlockUser(selectedUser._id || selectedUser.id, false);
                                                             setIsUserDetailsOpen(false);
                                                         }}
-                                                        className="w-full py-3 bg-[var(--success-light)] text-[var(--success-text)] text-sm font-black uppercase rounded-lg hover:bg-[var(--success)] hover:text-white transition-all flex items-center justify-center gap-2"
+                                                        className="w-full py-4 bg-[var(--success-light)] text-[var(--success-text)] border border-[var(--success)] text-xs font-black uppercase rounded-xl hover:bg-[var(--success)] hover:text-white transition-all flex items-center justify-center gap-3 shadow-lg shadow-emerald-500/10"
                                                     >
-                                                        <CheckCircle size={16} />
+                                                        <CheckCircle size={18} />
                                                         Unblock Consumer
                                                     </button>
                                                 )}
@@ -949,13 +1007,13 @@ const AdminUsers = () => {
                                                         handleFlagUser(selectedUser._id || selectedUser.id, !selectedUser.flagged);
                                                         setIsUserDetailsOpen(false);
                                                     }}
-                                                    className={`w-full py-3 text-sm font-black uppercase rounded-lg transition-all flex items-center justify-center gap-2 ${
+                                                    className={`w-full py-4 text-xs font-black uppercase rounded-xl transition-all flex items-center justify-center gap-3 shadow-lg shadow-amber-500/10 border border-[var(--warning)] ${
                                                         selectedUser.flagged 
-                                                            ? 'bg-[var(--warning-light)] text-[var(--warning-text)] hover:bg-[var(--warning)] hover:text-white' 
+                                                            ? 'bg-[var(--warning)] text-white' 
                                                             : 'bg-[var(--warning-light)] text-[var(--warning-text)] hover:bg-[var(--warning)] hover:text-white'
                                                     }`}
                                                 >
-                                                    <Flag size={16} />
+                                                    <Flag size={18} />
                                                     {selectedUser.flagged ? 'Remove Flag' : 'Flag as Risky'}
                                                 </button>
 
@@ -964,9 +1022,9 @@ const AdminUsers = () => {
                                                         setIsUserDetailsOpen(false);
                                                         handleOpenEdit(selectedUser);
                                                     }}
-                                                    className="btn-primary w-full py-3 text-sm font-black uppercase flex items-center justify-center gap-2"
+                                                    className="w-full py-4 bg-[var(--primary-light)] text-[var(--primary)] border border-[var(--primary)] text-xs font-black uppercase rounded-xl hover:bg-[var(--primary)] hover:text-white transition-all flex items-center justify-center gap-3 shadow-lg shadow-[var(--primary)]/10"
                                                 >
-                                                    <Edit2 size={16} />
+                                                    <Edit2 size={18} />
                                                     Edit Consumer
                                                 </button>
                                             </div>
@@ -1011,6 +1069,46 @@ const AdminUsers = () => {
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Document Viewer Modal */}
+            <AnimatePresence>
+                {viewingDoc && (
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                        <motion.div 
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            onClick={() => setViewingDoc(null)} 
+                            className="absolute inset-0 bg-black/95 backdrop-blur-sm" 
+                        />
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="relative z-10 max-w-4xl w-full max-h-[90vh] bg-white/5 rounded-3xl overflow-hidden shadow-2xl flex flex-col"
+                        >
+                            <div className="p-6 border-b flex justify-between items-center bg-white/5">
+                                <div>
+                                     <h2 className="text-xl font-black text-slate-900 tracking-tighter uppercase">Verification Proof</h2>
+                                     <p className="text-xs font-medium text-white/40">Inspecting {viewingDoc.side} ID document for {selectedUser?.name}</p>
+                                </div>
+                                <button 
+                                     onClick={() => setViewingDoc(null)}
+                                     className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-900 hover:bg-slate-200 transition-all"
+                                >
+                                     <X size={20} />
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-auto bg-slate-100 flex items-center justify-center p-8">
+                                <img 
+                                     src={viewingDoc.url.startsWith('http') ? viewingDoc.url : `${import.meta.env.VITE_API_URL || ''}${viewingDoc.url}`} 
+                                     alt="KYC Proof" 
+                                     className="max-w-full max-h-full object-contain rounded-lg shadow-2xl shadow-black/50"
+                                />
+                            </div>
+                            <div className="p-6 bg-white/5 border-t flex justify-center gap-4">
+                                <button onClick={() => setViewingDoc(null)} className="btn-secondary px-8 font-black uppercase">Close Viewer</button>
                             </div>
                         </motion.div>
                     </div>

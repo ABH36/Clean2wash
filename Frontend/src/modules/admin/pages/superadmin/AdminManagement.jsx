@@ -7,75 +7,61 @@ import {
     Calendar, Mail, Phone, MapPin, Star
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { adminAPI } from '../../../../utils/adminApi';
 
 const AdminManagement = () => {
     const [admins, setAdmins] = useState([]);
+    const [roles, setRoles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterRole, setFilterRole] = useState('all');
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [selectedAdmin, setSelectedAdmin] = useState(null);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
-
-    // Mock data - replace with actual API calls
-    const mockAdmins = [
-        {
-            id: 1,
-            name: 'Super Administrator',
-            email: 'admin@clean2wash.com',
-            phone: '+91 98765 43210',
-            role: { name: 'Super Admin', level: 1, color: 'purple' },
-            status: 'active',
-            lastLogin: '2024-04-17T10:30:00Z',
-            createdAt: '2024-01-01T00:00:00Z',
-            permissions: 45,
-            activityCount: 1250,
-            location: 'Mumbai, India'
-        },
-        {
-            id: 2,
-            name: 'Operations Manager',
-            email: 'ops@clean2wash.com',
-            phone: '+91 98765 43211',
-            role: { name: 'Admin', level: 2, color: 'blue' },
-            status: 'active',
-            lastLogin: '2024-04-17T09:15:00Z',
-            createdAt: '2024-02-15T00:00:00Z',
-            permissions: 35,
-            activityCount: 890,
-            location: 'Delhi, India'
-        },
-        {
-            id: 3,
-            name: 'Support Lead',
-            email: 'support@clean2wash.com',
-            phone: '+91 98765 43212',
-            role: { name: 'Sub-Admin', level: 3, color: 'green' },
-            status: 'active',
-            lastLogin: '2024-04-16T18:45:00Z',
-            createdAt: '2024-03-01T00:00:00Z',
-            permissions: 15,
-            activityCount: 456,
-            location: 'Bangalore, India'
-        }
-    ];
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        phone: '',
+        role: '',
+        password: ''
+    });
 
     useEffect(() => {
-        // Simulate API call
-        setTimeout(() => {
-            setAdmins(mockAdmins);
-            setLoading(false);
-        }, 1000);
+        fetchData();
     }, []);
+
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const [adminsRes, rolesRes] = await Promise.all([
+                adminAPI.getAllAdmins(),
+                adminAPI.getAllRoles()
+            ]);
+            
+            if (adminsRes.status === 'success') {
+                setAdmins(adminsRes.data.admins);
+            }
+            
+            if (rolesRes.status === 'success') {
+                setRoles(rolesRes.data.roles);
+            }
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            toast.error('Failed to load admin data');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const filteredAdmins = admins.filter(admin => {
         const matchesSearch = admin.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             admin.email.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesRole = filterRole === 'all' || admin.role.name.toLowerCase().includes(filterRole.toLowerCase());
+        const matchesRole = filterRole === 'all' || admin.role?.name.toLowerCase().includes(filterRole.toLowerCase());
         return matchesSearch && matchesRole;
     });
 
     const getRoleColor = (role) => {
+        if (!role) return 'bg-gray-50 text-gray-600 border-gray-200';
         const colors = {
             purple: 'bg-purple-50 text-purple-600 border-purple-200',
             blue: 'bg-blue-50 text-blue-600 border-blue-200',
@@ -86,12 +72,16 @@ const AdminManagement = () => {
     };
 
     const getStatusColor = (status) => {
-        return status === 'active' 
-            ? 'bg-green-50 text-green-600 border-green-200'
-            : 'bg-red-50 text-red-600 border-red-200';
+        const statusMap = {
+            'ACTIVE': 'bg-green-50 text-green-600 border-green-200',
+            'INACTIVE': 'bg-gray-50 text-gray-600 border-gray-200',
+            'SUSPENDED': 'bg-red-50 text-red-600 border-red-200'
+        };
+        return statusMap[status] || statusMap.ACTIVE;
     };
 
     const formatLastLogin = (dateString) => {
+        if (!dateString) return 'Never';
         const date = new Date(dateString);
         const now = new Date();
         const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
@@ -102,12 +92,68 @@ const AdminManagement = () => {
     };
 
     const handleCreateAdmin = () => {
+        setFormData({
+            name: '',
+            email: '',
+            phone: '',
+            role: '',
+            password: ''
+        });
         setShowCreateModal(true);
+    };
+
+    const handleSubmitCreate = async () => {
+        try {
+            if (!formData.name || !formData.email || !formData.password || !formData.role) {
+                toast.error('Please fill all required fields');
+                return;
+            }
+
+            const response = await adminAPI.createAdmin(formData);
+            
+            if (response.status === 'success') {
+                toast.success('Admin created successfully!');
+                setShowCreateModal(false);
+                fetchData(); // Refresh list
+            } else {
+                toast.error(response.message || 'Failed to create admin');
+            }
+        } catch (error) {
+            console.error('Error creating admin:', error);
+            toast.error(error.message || 'Failed to create admin');
+        }
     };
 
     const handleViewDetails = (admin) => {
         setSelectedAdmin(admin);
         setShowDetailsModal(true);
+    };
+
+    const handleDeleteAdmin = async (adminId) => {
+        if (!confirm('Are you sure you want to delete this admin?')) return;
+        
+        try {
+            const response = await adminAPI.deleteAdmin(adminId);
+            if (response.status === 'success') {
+                toast.success('Admin deleted successfully');
+                fetchData();
+            }
+        } catch (error) {
+            toast.error(error.message || 'Failed to delete admin');
+        }
+    };
+
+    const handleResetPassword = async (adminId) => {
+        if (!confirm('Are you sure you want to reset this admin\'s password?')) return;
+        
+        try {
+            const response = await adminAPI.resetAdminPassword(adminId);
+            if (response.status === 'success') {
+                toast.success(`Password reset! Temporary password: ${response.data.temporaryPassword}`);
+            }
+        } catch (error) {
+            toast.error(error.message || 'Failed to reset password');
+        }
     };
 
     const CreateAdminModal = () => (
@@ -140,20 +186,24 @@ const AdminManagement = () => {
                             
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Full Name</label>
+                                    <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Full Name *</label>
                                     <input
                                         type="text"
                                         className="admin-input"
                                         placeholder="Enter full name"
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({...formData, name: e.target.value})}
                                     />
                                 </div>
                                 
                                 <div>
-                                    <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Email Address</label>
+                                    <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Email Address *</label>
                                     <input
                                         type="email"
                                         className="admin-input"
                                         placeholder="Enter email address"
+                                        value={formData.email}
+                                        onChange={(e) => setFormData({...formData, email: e.target.value})}
                                     />
                                 </div>
                                 
@@ -163,16 +213,33 @@ const AdminManagement = () => {
                                         type="tel"
                                         className="admin-input"
                                         placeholder="Enter phone number"
+                                        value={formData.phone}
+                                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
                                     />
                                 </div>
                                 
                                 <div>
-                                    <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Role</label>
-                                    <select className="admin-select">
+                                    <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Password *</label>
+                                    <input
+                                        type="password"
+                                        className="admin-input"
+                                        placeholder="Enter password"
+                                        value={formData.password}
+                                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Role *</label>
+                                    <select 
+                                        className="admin-select"
+                                        value={formData.role}
+                                        onChange={(e) => setFormData({...formData, role: e.target.value})}
+                                    >
                                         <option value="">Select role</option>
-                                        <option value="admin">Admin</option>
-                                        <option value="sub-admin">Sub-Admin</option>
-                                        <option value="manager">Manager</option>
+                                        {roles.map(role => (
+                                            <option key={role._id} value={role._id}>{role.name}</option>
+                                        ))}
                                     </select>
                                 </div>
                                 
@@ -184,10 +251,7 @@ const AdminManagement = () => {
                                         Cancel
                                     </button>
                                     <button
-                                        onClick={() => {
-                                            toast.success('Admin created successfully!');
-                                            setShowCreateModal(false);
-                                        }}
+                                        onClick={handleSubmitCreate}
                                         className="btn-primary flex-1"
                                     >
                                         Create Admin
@@ -252,15 +316,21 @@ const AdminManagement = () => {
                                 {/* Stats Grid */}
                                 <div className="grid grid-cols-3 gap-4">
                                     <div className="text-center p-3 bg-[var(--bg-secondary)] rounded-lg">
-                                        <div className="text-lg font-bold text-[var(--text-primary)]">{selectedAdmin.permissions}</div>
+                                        <div className="text-lg font-bold text-[var(--text-primary)]">
+                                            {selectedAdmin.role?.permissions?.length || 0}
+                                        </div>
                                         <div className="text-xs text-[var(--text-secondary)]">Permissions</div>
                                     </div>
                                     <div className="text-center p-3 bg-[var(--bg-secondary)] rounded-lg">
-                                        <div className="text-lg font-bold text-[var(--text-primary)]">{selectedAdmin.activityCount}</div>
+                                        <div className="text-lg font-bold text-[var(--text-primary)]">
+                                            {selectedAdmin.activityCount || 0}
+                                        </div>
                                         <div className="text-xs text-[var(--text-secondary)]">Activities</div>
                                     </div>
                                     <div className="text-center p-3 bg-[var(--bg-secondary)] rounded-lg">
-                                        <div className="text-lg font-bold text-[var(--text-primary)]">Level {selectedAdmin.role.level}</div>
+                                        <div className="text-lg font-bold text-[var(--text-primary)]">
+                                            Level {selectedAdmin.role?.level || 'N/A'}
+                                        </div>
                                         <div className="text-xs text-[var(--text-secondary)]">Access Level</div>
                                     </div>
                                 </div>
@@ -268,22 +338,22 @@ const AdminManagement = () => {
                                 {/* Details */}
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-3 text-sm">
-                                        <Phone size={16} className="text-[var(--text-secondary)]" />
-                                        <span className="text-[var(--text-primary)]">{selectedAdmin.phone}</span>
+                                        <Phone size={18} className="text-[var(--primary)]" />
+                                        <span className="text-[var(--text-primary)] font-medium">{selectedAdmin.phone || 'N/A'}</span>
                                     </div>
                                     <div className="flex items-center gap-3 text-sm">
-                                        <MapPin size={16} className="text-[var(--text-secondary)]" />
-                                        <span className="text-[var(--text-primary)]">{selectedAdmin.location}</span>
+                                        <Mail size={18} className="text-[var(--primary)]" />
+                                        <span className="text-[var(--text-primary)] font-medium">{selectedAdmin.email}</span>
                                     </div>
                                     <div className="flex items-center gap-3 text-sm">
-                                        <Calendar size={16} className="text-[var(--text-secondary)]" />
-                                        <span className="text-[var(--text-primary)]">
+                                        <Calendar size={18} className="text-[var(--primary)]" />
+                                        <span className="text-[var(--text-primary)] font-medium">
                                             Joined {new Date(selectedAdmin.createdAt).toLocaleDateString()}
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-3 text-sm">
-                                        <Activity size={16} className="text-[var(--text-secondary)]" />
-                                        <span className="text-[var(--text-primary)]">
+                                        <Activity size={18} className="text-[var(--primary)]" />
+                                        <span className="text-[var(--text-primary)] font-medium">
                                             Last active {formatLastLogin(selectedAdmin.lastLogin)}
                                         </span>
                                     </div>
@@ -291,12 +361,23 @@ const AdminManagement = () => {
 
                                 {/* Actions */}
                                 <div className="flex gap-3 pt-4 border-t border-[var(--border)]">
-                                    <button className="btn-secondary flex-1">
-                                        <Edit size={16} />
+                                    <button 
+                                        className="btn-secondary flex-1 flex items-center justify-center gap-2 group/edit"
+                                        onClick={() => {
+                                            setShowDetailsModal(false);
+                                        }}
+                                    >
+                                        <Edit size={18} className="group-hover/edit:scale-110 transition-transform" />
                                         Edit Admin
                                     </button>
-                                    <button className="btn-danger flex-1">
-                                        <Lock size={16} />
+                                    <button 
+                                        className="btn-danger flex-1 flex items-center justify-center gap-2 group/lock"
+                                        onClick={() => {
+                                            handleResetPassword(selectedAdmin._id);
+                                            setShowDetailsModal(false);
+                                        }}
+                                    >
+                                        <Lock size={18} className="group-hover/lock:scale-110 transition-transform" />
                                         Reset Password
                                     </button>
                                 </div>
@@ -325,28 +406,28 @@ const AdminManagement = () => {
     }
 
     return (
-        <div className="p-6 space-y-6">
+        <div className="space-y-4">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-[var(--text-primary)]">Admin Management</h1>
-                    <p className="text-[var(--text-secondary)] mt-1">Manage system administrators and their permissions</p>
+                <div className="flex flex-col gap-0.5">
+                    <h1 className="text-xl font-bold text-[var(--text-primary)] tracking-tight">Admin Management</h1>
+                    <p className="text-xs font-medium text-[var(--text-secondary)] opacity-70">Manage system administrators and their permissions</p>
                 </div>
                 <button
                     onClick={handleCreateAdmin}
-                    className="btn-primary"
+                    className="btn-primary flex items-center gap-2 group/new"
                 >
-                    <Plus size={16} />
+                    <Plus size={18} className="group-hover/new:scale-125 transition-transform" />
                     Create Admin
                 </button>
             </div>
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="admin-card-compact">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                            <Crown size={20} className="text-purple-600" />
+                <div className="admin-card-compact border-l-4 border-l-purple-500 shadow-sm">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center shrink-0">
+                            <Crown size={16} className="text-purple-600" />
                         </div>
                         <div>
                             <div className="text-lg font-bold text-[var(--text-primary)]">1</div>
@@ -355,10 +436,10 @@ const AdminManagement = () => {
                     </div>
                 </div>
                 
-                <div className="admin-card-compact">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <Shield size={20} className="text-blue-600" />
+                <div className="admin-card-compact border-l-4 border-l-blue-500 shadow-sm">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
+                            <Shield size={16} className="text-blue-600" />
                         </div>
                         <div>
                             <div className="text-lg font-bold text-[var(--text-primary)]">{admins.filter(a => a.role.name === 'Admin').length}</div>
@@ -395,8 +476,8 @@ const AdminManagement = () => {
             {/* Filters */}
             <div className="admin-card">
                 <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="relative flex-1">
-                        <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--text-secondary)]" />
+                    <div className="relative flex-1 group">
+                        <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--text-secondary)] group-focus-within:text-[var(--primary)] transition-colors" />
                         <input
                             type="text"
                             placeholder="Search admins..."
@@ -467,29 +548,29 @@ const AdminManagement = () => {
                                     </td>
                                     <td>
                                         <div className="text-sm font-medium text-[var(--text-primary)]">
-                                            {admin.permissions} permissions
+                                            {admin.role?.permissions?.length || 0} permissions
                                         </div>
                                     </td>
                                     <td>
                                         <div className="flex items-center gap-2">
                                             <button
                                                 onClick={() => handleViewDetails(admin)}
-                                                className="w-8 h-8 rounded-lg bg-[var(--bg-secondary)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--border)] transition-colors"
+                                                className="w-10 h-10 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] flex items-center justify-center text-[var(--text-secondary)] hover:text-brand hover:border-brand/40 transition-all group/view"
                                                 title="View Details"
                                             >
-                                                <Eye size={14} />
+                                                <Eye size={18} className="group-hover/view:scale-110 transition-transform" />
                                             </button>
                                             <button
-                                                className="w-8 h-8 rounded-lg bg-[var(--bg-secondary)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--border)] transition-colors"
+                                                className="w-10 h-10 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] flex items-center justify-center text-[var(--text-secondary)] hover:text-amber-600 hover:border-amber-200 transition-all group/edit"
                                                 title="Edit Admin"
                                             >
-                                                <Edit size={14} />
+                                                <Edit size={18} className="group-hover/edit:scale-110 transition-transform" />
                                             </button>
                                             <button
-                                                className="w-8 h-8 rounded-lg bg-[var(--bg-secondary)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--border)] transition-colors"
+                                                className="w-10 h-10 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--border)] transition-all"
                                                 title="More Actions"
                                             >
-                                                <MoreVertical size={14} />
+                                                <MoreVertical size={18} />
                                             </button>
                                         </div>
                                     </td>

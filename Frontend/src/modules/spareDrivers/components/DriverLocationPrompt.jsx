@@ -149,7 +149,7 @@ const DriverLocationPrompt = ({ onLocationSet }) => {
                             <button
                                 onClick={handleDetectLocation}
                                 disabled={isDetecting}
-                                className="w-full h-15 bg-brand text-black rounded-2xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl shadow-brand/20"
+                                className="w-full h-15 bg-brand text-white rounded-2xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-2xl shadow-black/50 shadow-brand/20"
                             >
                                 {isDetecting ? (
                                     <Loader2 className="animate-spin" size={18} />

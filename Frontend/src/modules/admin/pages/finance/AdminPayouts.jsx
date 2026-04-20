@@ -88,7 +88,7 @@ const AdminPayouts = () => {
             case 'PENDING': return 'bg-amber-50 text-amber-700 border-amber-200';
             case 'PROCESSING': return 'bg-blue-50 text-blue-700 border-blue-200';
             case 'FAILED': return 'bg-red-50 text-red-700 border-red-200';
-            default: return 'bg-gray-50 text-gray-700 border-gray-200';
+            default: return 'bg-white/[0.02] text-white/80 border-white/10';
         }
     };
 
@@ -99,7 +99,7 @@ const AdminPayouts = () => {
                 <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">Driver Payouts</h1>
-                        <p className="text-sm text-gray-600 mt-1">
+                        <p className="text-sm text-white/60 mt-1">
                             Manage weekly driver payouts and settlements
                         </p>
                     </div>
@@ -140,10 +140,10 @@ const AdminPayouts = () => {
                         >
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{stat.label}</p>
+                                    <p className="text-xs font-semibold text-white/40 uppercase tracking-wide">{stat.label}</p>
                                     <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
                                     {stat.count !== undefined && (
-                                        <p className="text-xs text-gray-500 mt-1">{stat.count} payouts</p>
+                                        <p className="text-xs text-white/40 mt-1">{stat.count} payouts</p>
                                     )}
                                 </div>
                                 <div className={`w-12 h-12 rounded-xl bg-${stat.color}-100 flex items-center justify-center text-${stat.color}-600`}>
@@ -159,7 +159,7 @@ const AdminPayouts = () => {
             <div className="admin-card">
                 <div className="flex flex-wrap gap-4">
                     <div className="flex-1 min-w-[200px]">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <label className="block text-sm font-semibold text-white/80 mb-2">
                             Status
                         </label>
                         <select
@@ -204,7 +204,7 @@ const AdminPayouts = () => {
                                 <tr>
                                     <td colSpan="8" className="text-center py-12">
                                         <DollarSign size={32} className="mx-auto text-gray-400 mb-2" />
-                                        <p className="text-gray-600">No payouts found</p>
+                                        <p className="text-white/60">No payouts found</p>
                                     </td>
                                 </tr>
                             ) : (
@@ -213,7 +213,7 @@ const AdminPayouts = () => {
                                         <td>
                                             <div>
                                                 <p className="font-semibold text-gray-900">{payout.driver?.name || 'N/A'}</p>
-                                                <p className="text-sm text-gray-500">{payout.driver?.driverId || 'N/A'}</p>
+                                                <p className="text-sm text-white/40">{payout.driver?.driverId || 'N/A'}</p>
                                             </div>
                                         </td>
                                         <td>
@@ -221,7 +221,7 @@ const AdminPayouts = () => {
                                                 <p className="text-gray-900">
                                                     {new Date(payout.payoutPeriod.start).toLocaleDateString()}
                                                 </p>
-                                                <p className="text-gray-500">
+                                                <p className="text-white/40">
                                                     to {new Date(payout.payoutPeriod.end).toLocaleDateString()}
                                                 </p>
                                             </div>
@@ -290,7 +290,7 @@ const AdminPayouts = () => {
                                 <h3 className="text-xl font-bold text-gray-900">Generate Payouts</h3>
                                 <button
                                     onClick={() => setShowGenerateModal(false)}
-                                    className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center"
+                                    className="w-8 h-8 rounded-lg hover:bg-white/[0.05] flex items-center justify-center"
                                 >
                                     <X size={20} />
                                 </button>
@@ -308,7 +308,7 @@ const AdminPayouts = () => {
                                 className="space-y-4"
                             >
                                 <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    <label className="block text-sm font-semibold text-white/80 mb-2">
                                         Start Date
                                     </label>
                                     <input
@@ -320,7 +320,7 @@ const AdminPayouts = () => {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    <label className="block text-sm font-semibold text-white/80 mb-2">
                                         End Date
                                     </label>
                                     <input
@@ -372,11 +372,11 @@ const AdminPayouts = () => {
                             <div className="flex items-center justify-between mb-6">
                                 <div>
                                     <h3 className="text-xl font-bold text-gray-900">Payout Details</h3>
-                                    <p className="text-sm text-gray-600">{selectedPayout.driver?.name}</p>
+                                    <p className="text-sm text-white/60">{selectedPayout.driver?.name}</p>
                                 </div>
                                 <button
                                     onClick={() => setShowModal(false)}
-                                    className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center"
+                                    className="w-8 h-8 rounded-lg hover:bg-white/[0.05] flex items-center justify-center"
                                 >
                                     <X size={20} />
                                 </button>
@@ -385,8 +385,8 @@ const AdminPayouts = () => {
                             <div className="space-y-6">
                                 {/* Summary */}
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-4 bg-gray-50 rounded-lg">
-                                        <p className="text-sm text-gray-600 mb-1">Total Trips</p>
+                                    <div className="p-4 bg-white/[0.02] rounded-lg">
+                                        <p className="text-sm text-white/60 mb-1">Total Trips</p>
                                         <p className="text-2xl font-bold text-gray-900">{selectedPayout.totalTrips}</p>
                                     </div>
                                     <div className="p-4 bg-emerald-50 rounded-lg">

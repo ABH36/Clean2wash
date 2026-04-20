@@ -88,11 +88,11 @@ const AdminNotifications = () => {
 
     const getIcon = (type) => {
         const iconMap = {
-            sos: <ShieldAlert className="text-red-500" size={14} />,
-            booking: <Zap className="text-blue-500" size={14} />,
-            product: <ShoppingBag className="text-amber-500" size={14} />,
-            verification: <CheckCheck className="text-emerald-500" size={14} />,
-            default: <Bell className="text-brand" size={14} />
+            sos: <ShieldAlert className="text-red-500" size={18} />,
+            booking: <Zap className="text-blue-500" size={18} />,
+            product: <ShoppingBag className="text-amber-500" size={18} />,
+            verification: <CheckCheck className="text-emerald-500" size={18} />,
+            default: <Bell className="text-brand" size={18} />
         };
         return iconMap[type.toLowerCase()] || iconMap.default;
     };
@@ -103,30 +103,29 @@ const AdminNotifications = () => {
     );
 
     return (
-        <div className="max-w-[1000px] mx-auto space-y-4 pb-20 px-3 lg:px-0 transition-colors duration-500">
+        <div className="space-y-3 pb-10 transition-colors duration-500">
             {/* COMPACT HUD HEADER */}
-            <div className="bg-surface p-5 rounded-2xl border border-slate-200/60 dark:border-white/5 shadow-soft flex flex-col sm:flex-row items-center justify-between gap-4 relative overflow-hidden transition-colors duration-500">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-brand/5 blur-[30px] rounded-full" />
-                <div className="flex items-center gap-4 relative z-10">
-                    <div className="w-10 h-10 bg-brand/10 text-brand rounded-xl flex items-center justify-center shadow-lg shadow-brand/5 border border-brand/10"><Activity size={20} /></div>
+            <div className="admin-card flex flex-col sm:flex-row items-center justify-between gap-4 relative overflow-hidden transition-colors duration-500">
+                <div className="flex items-center gap-3 relative z-10">
+                    <div className="w-8 h-8 bg-[var(--primary-light)] text-[var(--primary)] rounded-lg flex items-center justify-center border border-[var(--primary)]/10 shadow-sm"><Activity size={16} /></div>
                     <div>
-                        <h1 className="text-xl font-black text-content capitalize tracking-tighter leading-none">Operational <span className="text-brand">Logs</span></h1>
-                        <p className="text-[8.5px] font-black text-content-subtle capitalize tracking-[0.2em] mt-1.5 opacity-40">{unreadCount} Critical priority items</p>
+                        <h1 className="text-base font-bold text-[var(--text-primary)] capitalize tracking-tight leading-none">Operational <span className="text-[var(--primary)]">Logs</span></h1>
+                        <p className="text-[10px] font-medium text-[var(--text-secondary)] capitalize tracking-tight mt-1 opacity-70">{unreadCount} Critical priority items</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-3 w-full sm:w-auto relative z-10">
+                <div className="flex items-center gap-2 w-full sm:w-auto relative z-10">
                     <div className="relative flex-1 sm:w-64">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-content-subtle opacity-30" size={12} />
-                        <input type="text" placeholder="Quantum Scan..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full h-11 bg-background border border-slate-100 dark:border-white/5 rounded-xl pl-11 pr-4 text-[11px] font-black text-content outline-none focus:border-brand/40 transition-all placeholder:text-content-subtle opacity-60 tracking-widest shadow-inner" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={14} />
+                        <input type="text" placeholder="Scan logs..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full h-9 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-lg pl-9 pr-4 text-[11px] font-bold text-[var(--text-primary)] outline-none focus:border-[var(--primary)] transition-all placeholder:text-[var(--text-muted)]" />
                     </div>
-                    <button onClick={handleMarkAllRead} disabled={unreadCount === 0} className="h-11 px-5 bg-brand text-white rounded-xl font-bold text-[10px] uppercase shadow-lg shadow-brand/20 flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-30 disabled:grayscale"><Target size={16} /> Mark Safe</button>
+                    <button onClick={handleMarkAllRead} disabled={unreadCount === 0} className="h-9 px-4 bg-[var(--primary)] text-white rounded-lg font-bold text-[10px] uppercase shadow-md shadow-[var(--primary)]/10 flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-30 disabled:grayscale"><Target size={14} /> Mark Safe</button>
                 </div>
             </div>
 
             {/* TABS GRID */}
-            <div className="flex gap-2 p-1.5 bg-background rounded-2xl border border-slate-200/40 dark:border-white/5 w-fit shadow-inner">
+            <div className="flex gap-1.5 p-1 bg-[var(--bg-secondary)] rounded-xl border border-[var(--border)] w-fit">
                 {['all', 'unread'].map(tab => (
-                    <button key={tab} onClick={() => setActiveTab(tab)} className={`px-8 py-2 rounded-xl text-[10px] font-black capitalize tracking-widest transition-all ${activeTab === tab ? 'bg-surface text-brand shadow-sm border border-slate-100 dark:border-white/5' : 'text-content-muted hover:text-content'}`}>{tab} items</button>
+                    <button key={tab} onClick={() => setActiveTab(tab)} className={`px-5 py-1.5 rounded-lg text-[10px] font-bold capitalize tracking-tight transition-all ${activeTab === tab ? 'bg-white text-[var(--primary)] border border-[var(--border)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}>{tab} items</button>
                 ))}
             </div>
 
@@ -135,7 +134,7 @@ const AdminNotifications = () => {
                 <AnimatePresence mode="popLayout">
                     {loading && notifications.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-48 gap-4">
-                            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="w-8 h-8 border-2 border-brand/20 border-t-brand rounded-full" />
+                            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="w-8 h-8 border-white/5 border-brand/20 border-t-brand rounded-full" />
                             <span className="text-[9px] font-black capitalize tracking-[0.4em] text-content-subtle opacity-20">Established Link...</span>
                         </div>
                     ) : filteredNotifications.length === 0 ? (
@@ -152,11 +151,11 @@ const AdminNotifications = () => {
                                 animate={{ opacity: 1, scale: 1 }} 
                                 exit={{ opacity: 0, scale: 0.98 }} 
                                 transition={{ delay: i * 0.02 }} 
-                                className={`group p-4 rounded-2xl border transition-all flex items-center gap-5 ${notification.isRead 
-                                    ? 'bg-background/40 border-slate-200/60 dark:border-white/5 opacity-60' 
-                                    : 'bg-surface border-slate-100 dark:border-white/5 shadow-soft'}`}
+                                className={`group p-3 rounded-xl border transition-all flex items-center gap-4 ${notification.isRead 
+                                    ? 'bg-[var(--bg-secondary)] border-[var(--border)] opacity-60' 
+                                    : 'bg-white border-[var(--border)] shadow-sm hover:border-[var(--primary)]'}`}
                             >
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${notification.isRead ? 'bg-background' : 'bg-brand/10 border border-brand/5'}`}>{getIcon(notification.type)}</div>
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0  ${notification.isRead ? 'bg-[var(--bg-primary)]' : 'bg-[var(--primary-light)] border border-[var(--primary)]/5'}`}>{getIcon(notification.type)}</div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-3 mb-1">
                                         <h4 className={`text-[13px] font-bold capitalize tracking-tight truncate ${notification.isRead ? 'text-content-muted' : 'text-content'}`}>{notification.title}</h4>
@@ -171,10 +170,10 @@ const AdminNotifications = () => {
                                 </div>
                                 <div className="flex items-center gap-2.5 opacity-0 group-hover:opacity-100 transition-all shrink-0">
                                     {!notification.isRead && (
-                                        <button onClick={() => handleMarkAsRead(notification._id)} className="w-9 h-9 bg-emerald-500/10 text-emerald-500 rounded-xl flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all shadow-sm border border-emerald-500/20 active:scale-90" title="Neutralize"><CheckCheck size={16} /></button>
+                                        <button onClick={() => handleMarkAsRead(notification._id)} className="w-10 h-10 bg-emerald-500/10 text-emerald-500 rounded-xl flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all border border-emerald-500/20 active:scale-90 group/check" title="Neutralize"><CheckCheck size={18} className="group-hover/check:scale-110 transition-transform" /></button>
                                     )}
                                     {notification.actionUrl && (
-                                        <button onClick={() => navigate(notification.actionUrl)} className="w-9 h-9 bg-brand/10 text-brand rounded-xl flex items-center justify-center hover:bg-brand hover:text-white transition-all shadow-lg active:scale-90 border border-brand/10"><ChevronRight size={18} /></button>
+                                        <button onClick={() => navigate(notification.actionUrl)} className="w-10 h-10 bg-brand/10 text-brand rounded-xl flex items-center justify-center hover:bg-brand hover:text-white transition-all shadow-lg active:scale-90 border border-brand/10 group/arrow"><ChevronRight size={20} className="group-hover/arrow:translate-x-0.5 transition-transform" /></button>
                                     )}
                                 </div>
                             </motion.div>

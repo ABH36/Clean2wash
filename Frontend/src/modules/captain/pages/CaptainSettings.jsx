@@ -51,9 +51,9 @@ const CaptainSettings = () => {
         <CaptainLayout>
             <div className={`pb-28 transition-colors duration-500`}>
                 {/* Header */}
-                <div className={`${isDarkMode ? 'bg-[#0F172A]' : 'bg-gray-50'} px-4 pt-12 pb-6 sticky top-0 z-40 transition-colors border-b ${isDarkMode ? 'border-white/5' : 'border-gray-100'}`}>
+                <div className={`${isDarkMode ? 'bg-[#0F172A]' : 'bg-white/[0.02]'} px-4 pt-12 pb-6 sticky top-0 z-40 transition-colors border-b ${isDarkMode ? 'border-white/5' : 'border-white/5'}`}>
                     <div className="flex items-center gap-4">
-                        <button onClick={() => navigate(-1)} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isDarkMode ? 'bg-white/10 text-white' : 'bg-white border border-gray-100 shadow-sm text-content'}`}>
+                        <button onClick={() => navigate(-1)} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isDarkMode ? 'bg-white/10 text-white' : 'bg-white/5 border border-white/5  text-content'}`}>
                             <ArrowLeft size={20} />
                         </button>
                         <h1 className={`text-xl font-black tracking-tight uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>Settings</h1>
@@ -62,8 +62,8 @@ const CaptainSettings = () => {
 
                 <div className="px-4 space-y-8 mt-6">
                     {/* Profile Summary */}
-                    <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/40' : 'bg-white border-gray-100 shadow-soft'} border rounded-[2.5rem] p-6 flex items-center gap-4 transition-all hover:border-brand/30`}>
-                        <div className={`w-16 h-16 rounded-3xl overflow-hidden border-2 transition-colors flex items-center justify-center bg-brand/5 ${isDarkMode ? 'border-brand/20' : 'border-brand/10 shadow-sm'}`}>
+                    <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5 shadow-2xl shadow-black/40' : 'bg-white/5 border-white/5 shadow-soft'} border rounded-[2.5rem] p-6 flex items-center gap-4 transition-all hover:border-brand/30`}>
+                        <div className={`w-16 h-16 rounded-3xl overflow-hidden border-white/5 transition-colors flex items-center justify-center bg-brand/5 ${isDarkMode ? 'border-brand/20' : 'border-brand/10 '}`}>
                             {user.profile?.avatar || user.photo ? (
                                 <img src={user.profile?.avatar || user.photo} alt="Avatar" className="w-full h-full object-cover" />
                             ) : (
@@ -83,15 +83,15 @@ const CaptainSettings = () => {
                     {SETTINGS_GROUPS.map((group, i) => (
                         <div key={i} className="space-y-4">
                             <h4 className="px-4 text-[10px] font-black text-brand uppercase tracking-[0.2em]">{group.title}</h4>
-                            <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-soft'} border rounded-[2.5rem] overflow-hidden transition-all shadow-2xl shadow-black/5`}>
+                            <div className={`${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white/5 border-white/5 shadow-soft'} border rounded-[2.5rem] overflow-hidden transition-all shadow-2xl shadow-black/5`}>
                                 {group.items.map((item, j) => (
                                     <div
                                         key={j}
-                                        className={`flex items-center justify-between p-5 transition-all cursor-pointer ${isDarkMode ? 'hover:bg-white/5' : 'hover:bg-gray-50'
+                                        className={`flex items-center justify-between p-5 transition-all cursor-pointer ${isDarkMode ? 'hover:bg-white/5' : 'hover:bg-white/[0.02]'
                                             } ${j < group.items.length - 1 ? (isDarkMode ? 'border-b border-white/5' : 'border-b border-gray-50') : ''}`}
                                     >
                                         <div className="flex items-center gap-4">
-                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 text-white/40 group-hover:text-brand' : 'bg-gray-50 text-content-subtle group-hover:text-brand'}`}>
+                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 text-white/40 group-hover:text-brand' : 'bg-white/[0.02] text-content-subtle group-hover:text-brand'}`}>
                                                 {React.cloneElement(item.icon, { size: 18 })}
                                             </div>
                                             <div>
@@ -102,7 +102,7 @@ const CaptainSettings = () => {
 
                                         {item.toggle !== undefined && (
                                             <button className={`w-10 h-5 rounded-full relative transition-all ${item.toggle ? 'bg-brand shadow-lg shadow-brand/20' : 'bg-gray-200'} ${isDarkMode && !item.toggle ? 'bg-white/10' : ''}`}>
-                                                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${item.toggle ? 'right-1 shadow-sm' : 'left-1'}`} />
+                                                <div className={`absolute top-1 w-3 h-3 bg-white/5 rounded-full transition-all ${item.toggle ? 'right-1 ' : 'left-1'}`} />
                                             </button>
                                         )}
 

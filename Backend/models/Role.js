@@ -57,14 +57,13 @@ roleSchema.index({ level: 1 });
 roleSchema.index({ isActive: 1 });
 
 // Pre-save middleware to generate slug
-roleSchema.pre('save', function(next) {
+roleSchema.pre('save', async function() {
     if (this.isModified('name') && !this.slug) {
         this.slug = this.name
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, '_')
             .replace(/^_|_$/g, '');
     }
-    next();
 });
 
 // Method to check if role has specific permission
@@ -120,11 +119,10 @@ roleSchema.statics.nameExists = async function(name, excludeId = null) {
 };
 
 // Prevent deletion of system roles
-roleSchema.pre('remove', function(next) {
+roleSchema.pre('remove', async function() {
     if (this.isSystem) {
-        return next(new Error('Cannot delete system role'));
+        throw new Error('Cannot delete system role');
     }
-    next();
 });
 
 const Role = mongoose.model('Role', roleSchema);

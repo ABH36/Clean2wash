@@ -110,7 +110,7 @@ const AdminProductDashboard = () => {
 
 
             {/* Main Content Tabs */}
-            <div className="bg-white rounded-2xl shadow-sm border border-onyx-100 overflow-hidden">
+            <div className="bg-white/5 rounded-2xl  border border-onyx-100 overflow-hidden">
                 <div className="flex border-b border-onyx-100">
                     {['overview', 'missions', 'inventory', 'disputes'].map(tab => (
                         <button
@@ -158,7 +158,7 @@ const AdminProductDashboard = () => {
 };
 
 const StatCard = ({ title, value, icon, trend, isUp, warning }) => (
-    <div className={`p-6 rounded-2xl bg-white border ${warning ? 'border-amber-200' : 'border-onyx-100'} shadow-sm`}>
+    <div className={`p-6 rounded-2xl bg-white/5 border ${warning ? 'border-amber-200' : 'border-onyx-100'} `}>
         <div className="flex justify-between items-start mb-4">
             <div className="p-3 bg-onyx-50 rounded-xl">{icon}</div>
             <div className={`flex items-center space-x-1 text-sm font-medium ${isUp ? 'text-green-600' : 'text-red-600'}`}>
@@ -216,7 +216,7 @@ const InventoryTable = ({ inventory, searchTerm, setSearchTerm }) => (
                     className="w-full pl-10 pr-4 py-2 bg-onyx-50 border-none rounded-xl focus:ring-2 focus:ring-gold-500"
                 />
             </div>
-            <button className="flex items-center space-x-2 px-4 py-2 bg-white border border-onyx-100 rounded-xl text-onyx-600 hover:bg-onyx-50">
+            <button className="flex items-center space-x-2 px-4 py-2 bg-white/5 border border-onyx-100 rounded-xl text-onyx-600 hover:bg-onyx-50">
                 <Filter className="w-4 h-4" />
                 <span>Filters</span>
             </button>
@@ -255,7 +255,7 @@ const InventoryTable = ({ inventory, searchTerm, setSearchTerm }) => (
 );
 
 const DisputesPanel = ({ onResolve }) => (
-    <div className="text-center py-12 bg-onyx-50 rounded-2xl border-2 border-dashed border-onyx-100">
+    <div className="text-center py-12 bg-onyx-50 rounded-2xl border-white/5 border-dashed border-onyx-100">
         <Package className="w-12 h-12 text-onyx-300 mx-auto mb-4" />
         <h3 className="text-lg font-semibold text-onyx-800">No Active Product Disputes</h3>
         <p className="text-onyx-500 max-w-sm mx-auto mt-2">

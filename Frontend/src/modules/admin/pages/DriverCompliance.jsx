@@ -113,7 +113,7 @@ const DriverCompliance = () => {
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan="3" className="p-10 text-center"><div className="w-8 h-8 border-2 border-brand/20 border-t-brand rounded-full animate-spin mx-auto" /></td></tr>
+                                <tr><td colSpan="3" className="p-10 text-center"><div className="w-8 h-8 border-white/5 border-brand/20 border-t-brand rounded-full animate-spin mx-auto" /></td></tr>
                             ) : drivers.length === 0 ? (
                                 <tr>
                                     <td colSpan="3" className="p-16 text-center text-content-subtle">

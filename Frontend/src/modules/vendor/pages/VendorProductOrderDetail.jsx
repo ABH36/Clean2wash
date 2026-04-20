@@ -151,7 +151,7 @@ const VendorProductOrderDetail = () => {
                                 <ArrowLeft size={16} /> Back to History
                             </button>
                             <div className="flex gap-2">
-                                <button className="h-10 px-4 border border-gray-100/10 bg-surface rounded-xl text-content-muted font-black text-[10px] uppercase tracking-widest hover:text-brand transition-all">
+                                <button className="h-10 px-4 border border-white/5/10 bg-surface rounded-xl text-content-muted font-black text-[10px] uppercase tracking-widest hover:text-brand transition-all">
                                     Invoice
                                 </button>
                                 <button className="h-10 px-6 bg-red-50 text-red-500 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-100 transition-all">
@@ -164,7 +164,7 @@ const VendorProductOrderDetail = () => {
                             {/* Left Column: Order Items */}
                             <div className="lg:col-span-2 space-y-6">
                                 {/* Order Status Summary */}
-                                <div className="bg-surface rounded-[2.5rem] p-8 text-content relative overflow-hidden shadow-2xl border border-gray-100/10">
+                                <div className="bg-surface rounded-[2.5rem] p-8 text-content relative overflow-hidden shadow-2xl border border-white/5/10">
                                     <div className="relative z-10 flex items-center justify-between">
                                         <div>
                                             <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] mb-1">Order Status</p>
@@ -178,14 +178,14 @@ const VendorProductOrderDetail = () => {
                                 </div>
 
                                 {/* Product Items belonging to this Vendor */}
-                                <div className="bg-surface p-8 rounded-[2.5rem] border border-gray-100/10 shadow-soft">
+                                <div className="bg-surface p-8 rounded-[2.5rem] border border-white/5/10 shadow-soft">
                                     <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-widest mb-6">Dispatch Manifest</h3>
                                     <div className="space-y-4">
                                         {order.myItems.map(item => (
-                                            <div key={item._id} className="p-6 bg-background rounded-[2rem] border border-gray-100/10 space-y-6">
+                                            <div key={item._id} className="p-6 bg-background rounded-[2rem] border border-white/5/10 space-y-6">
                                                 <div className="flex items-start justify-between">
                                                     <div className="flex gap-4">
-                                                        <div className="w-16 h-16 bg-surface rounded-2xl overflow-hidden border border-gray-100/10">
+                                                        <div className="w-16 h-16 bg-surface rounded-2xl overflow-hidden border border-white/5/10">
                                                             <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                                                         </div>
                                                         <div>
@@ -247,9 +247,9 @@ const VendorProductOrderDetail = () => {
 
                                                 {/* Agent Details if Shipped */}
                                                 {item.fulfillment?.agentId && (
-                                                    <div className="pt-4 border-t border-gray-100/5 flex items-center justify-between">
+                                                    <div className="pt-4 border-t border-white/5/5 flex items-center justify-between">
                                                         <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 rounded-full bg-surface border border-gray-100/10 flex items-center justify-center text-content-subtle">
+                                                            <div className="w-8 h-8 rounded-full bg-surface border border-white/5/10 flex items-center justify-center text-content-subtle">
                                                                 <User size={14} />
                                                             </div>
                                                             <div>
@@ -271,9 +271,9 @@ const VendorProductOrderDetail = () => {
                             {/* Right Column: Sidebar */}
                             <div className="space-y-6">
                                 {/* Shipping Destination */}
-                                <div className="bg-surface p-6 rounded-[2rem] border border-gray-100/10 shadow-soft space-y-4">
+                                <div className="bg-surface p-6 rounded-[2rem] border border-white/5/10 shadow-soft space-y-4">
                                     <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Shipping Destination</h3>
-                                    <div className="h-32 bg-background rounded-2xl border border-gray-100/10 relative overflow-hidden group">
+                                    <div className="h-32 bg-background rounded-2xl border border-white/5/10 relative overflow-hidden group">
                                         <div className="absolute inset-0 flex items-center justify-center text-content-subtle">
                                             <MapPin size={24} className="group-hover:scale-125 transition-transform" />
                                         </div>
@@ -284,20 +284,20 @@ const VendorProductOrderDetail = () => {
                                         <p className="text-[11px] font-bold text-content-subtle">PIN: {order.shippingAddress?.pincode}</p>
                                     </div>
                                     <div className="flex gap-2 pt-2">
-                                        <button className="flex-1 h-10 bg-background border border-gray-100/10 rounded-xl text-brand font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
+                                        <button className="flex-1 h-10 bg-background border border-white/5/10 rounded-xl text-brand font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
                                             <Phone size={14} /> Call
                                         </button>
-                                        <button className="flex-1 h-10 bg-background border border-gray-100/10 rounded-xl text-brand font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
+                                        <button className="flex-1 h-10 bg-background border border-white/5/10 rounded-xl text-brand font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
                                             <MessageSquare size={14} /> Chat
                                         </button>
                                     </div>
                                 </div>
 
                                 {/* Order Timeline */}
-                                <div className="bg-surface p-6 rounded-[2rem] border border-gray-100/10 shadow-soft space-y-6">
+                                <div className="bg-surface p-6 rounded-[2rem] border border-white/5/10 shadow-soft space-y-6">
                                     <h3 className="text-[10px] font-black text-content-subtle uppercase tracking-widest">Logistics Timeline</h3>
                                     <div className="space-y-4 relative">
-                                        <div className="absolute left-3 top-2 bottom-2 w-0.5 bg-gray-100/10" />
+                                        <div className="absolute left-3 top-2 bottom-2 w-0.5 bg-white/[0.05]/10" />
                                         {order.history?.map((event, i) => (
                                             <div key={i} className="flex gap-4 relative z-10">
                                                 <div className="w-6 h-6 rounded-full bg-brand text-white flex items-center justify-center">
@@ -329,7 +329,7 @@ const VendorProductOrderDetail = () => {
                         <motion.div
                             initial={{ scale: 0.9, y: 20 }}
                             animate={{ scale: 1, y: 0 }}
-                            className="bg-surface w-full max-w-sm rounded-[3rem] border border-gray-100/10 p-10 space-y-8 text-center"
+                            className="bg-surface w-full max-w-sm rounded-[3rem] border border-white/5/10 p-10 space-y-8 text-center"
                         >
                             <div className="space-y-2">
                                 <div className="w-16 h-16 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -345,14 +345,14 @@ const VendorProductOrderDetail = () => {
                                 value={enteredPin}
                                 onChange={(e) => setEnteredPin(e.target.value.replace(/\D/g, ''))}
                                 placeholder="----"
-                                className="w-full h-20 bg-background border-2 border-gray-100/10 rounded-3xl text-center text-4xl font-black tracking-[0.5em] outline-none focus:border-amber-500 transition-all text-content"
+                                className="w-full h-20 bg-background border-white/5 border-white/5/10 rounded-3xl text-center text-4xl font-black tracking-[0.5em] outline-none focus:border-amber-500 transition-all text-content"
                             />
 
                             <div className="flex flex-col gap-3">
                                 <button
                                     onClick={handleVerifyPin}
                                     disabled={enteredPin.length !== 4}
-                                    className="w-full h-14 bg-amber-500 disabled:opacity-30 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-amber-500/20 transition-all active:scale-95"
+                                    className="w-full h-14 bg-amber-500 disabled:opacity-30 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-2xl shadow-black/50 shadow-amber-500/20 transition-all active:scale-95"
                                 >
                                     Confirm Delivery
                                 </button>
@@ -380,11 +380,11 @@ const VendorProductOrderDetail = () => {
                         <motion.div
                             initial={{ scale: 0.9, y: 20 }}
                             animate={{ scale: 1, y: 0 }}
-                            className="bg-surface w-full max-w-md rounded-[2.5rem] border border-gray-100/10 p-8 space-y-6"
+                            className="bg-surface w-full max-w-md rounded-[2.5rem] border border-white/5/10 p-8 space-y-6"
                         >
                             <div className="flex justify-between items-center">
                                 <h2 className="text-xl font-black text-content tracking-tight">Assign Delivery Staff</h2>
-                                <button onClick={() => setShowStaffPicker(false)} className="w-10 h-10 bg-background border border-gray-100/10 rounded-xl flex items-center justify-center text-content-muted">✕</button>
+                                <button onClick={() => setShowStaffPicker(false)} className="w-10 h-10 bg-background border border-white/5/10 rounded-xl flex items-center justify-center text-content-muted">✕</button>
                             </div>
                             <div className="space-y-2">
                                 {staffList.length > 0 ? (
@@ -392,10 +392,10 @@ const VendorProductOrderDetail = () => {
                                         <button
                                             key={staff.id}
                                             onClick={() => handleAssignAgent(staff.id)}
-                                            className="w-full flex items-center justify-between p-4 rounded-2xl border-2 border-gray-100/10 bg-background hover:border-brand hover:bg-brand/5 transition-all text-left group"
+                                            className="w-full flex items-center justify-between p-4 rounded-2xl border-white/5 border-white/5/10 bg-background hover:border-brand hover:bg-brand/5 transition-all text-left group"
                                         >
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-surface border border-gray-100/10 rounded-xl flex items-center justify-center text-content-muted group-hover:bg-brand group-hover:text-white transition-all">
+                                                <div className="w-10 h-10 bg-surface border border-white/5/10 rounded-xl flex items-center justify-center text-content-muted group-hover:bg-brand group-hover:text-white transition-all">
                                                     <User size={18} />
                                                 </div>
                                                 <div>
@@ -407,7 +407,7 @@ const VendorProductOrderDetail = () => {
                                         </button>
                                     ))
                                 ) : (
-                                    <div className="p-8 text-center bg-background rounded-2xl border border-dashed border-gray-100/10">
+                                    <div className="p-8 text-center bg-background rounded-2xl border border-dashed border-white/5/10">
                                         <p className="text-sm font-bold text-content-subtle">No staff members found.</p>
                                         <button onClick={() => navigate('/vendor/fleet')} className="text-[10px] font-black text-brand uppercase tracking-widest mt-2 border-b border-brand/20">Add Staff</button>
                                     </div>

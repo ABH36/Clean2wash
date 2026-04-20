@@ -140,9 +140,9 @@ const CaptainProductMission = () => {
 
     return (
         <CaptainLayout hideNav>
-            <header className={`${isDarkMode ? 'bg-[#1E293B]/70 border-white/5' : 'bg-white/70 border-gray-100'} backdrop-blur-xl px-4 pt-10 pb-4 border-b sticky top-0 z-40 transition-colors duration-500`}>
+            <header className={`${isDarkMode ? 'bg-[#1E293B]/70 border-white/5' : 'bg-white/70 border-white/5'} backdrop-blur-xl px-4 pt-10 pb-4 border-b sticky top-0 z-40 transition-colors duration-500`}>
                 <div className="flex items-center gap-3">
-                    <button onClick={() => navigate('/captain')} className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-gray-50 border-gray-100 text-content'}`}>
+                    <button onClick={() => navigate('/captain')} className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-white/[0.02] border-white/5 text-content'}`}>
                         <ChevronLeft size={18} strokeWidth={2.5} />
                     </button>
                     <div className="flex-1">
@@ -160,16 +160,16 @@ const CaptainProductMission = () => {
                 <div className="flex items-center gap-2">
                     {MISSION_STEPS.map((s, i) => (
                         <React.Fragment key={s}>
-                            <div className={`flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center border-2 transition-all ${i < stepIdx ? 'bg-green-500 border-green-500' :
+                            <div className={`flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center border-white/5 transition-all ${i < stepIdx ? 'bg-green-500 border-green-500' :
                                 i === stepIdx ? `bg-orange-500 border-transparent` :
-                                    isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white border-gray-100'}`}>
+                                    isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/5 border-white/5'}`}>
                                 {i < stepIdx
                                     ? <CheckCircle2 size={14} className="text-white" strokeWidth={3} />
                                     : <span className={`text-[9px] font-black ${i === stepIdx ? 'text-white' : isDarkMode ? 'text-white/20' : 'text-gray-300'}`}>{i + 1}</span>
                                 }
                             </div>
                             {i < MISSION_STEPS.length - 1 && (
-                                <div className={`flex-1 h-1 rounded-full transition-all ${i < stepIdx ? 'bg-green-400' : isDarkMode ? 'bg-white/5' : 'bg-gray-100'}`} />
+                                <div className={`flex-1 h-1 rounded-full transition-all ${i < stepIdx ? 'bg-green-400' : isDarkMode ? 'bg-white/5' : 'bg-white/[0.05]'}`} />
                             )}
                         </React.Fragment>
                     ))}
@@ -178,7 +178,7 @@ const CaptainProductMission = () => {
                 {/* Multi-Stop List */}
                 <div className="space-y-4">
                     {batchedItems.map((item, idx) => (
-                        <div key={item.id} className={`p-5 rounded-3xl border ${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white border-gray-100 shadow-sm'}`}>
+                        <div key={item.id} className={`p-5 rounded-3xl border ${isDarkMode ? 'bg-[#1E293B] border-white/5' : 'bg-white/5 border-white/5 '}`}>
                             <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center">
@@ -189,8 +189,8 @@ const CaptainProductMission = () => {
                                         <p className={`text-[10px] font-bold mt-1 ${isDarkMode ? 'text-white/40' : 'text-content-subtle'}`}>QTY: {item.quantity}</p>
                                     </div>
                                 </div>
-                                <div className="px-2 py-1 bg-black/5 rounded-lg">
-                                    <span className="text-[9px] font-black text-black/40 uppercase tracking-widest">Item #{idx + 1}</span>
+                                <div className="px-2 py-1 bg-white/5 rounded-lg">
+                                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Item #{idx + 1}</span>
                                 </div>
                             </div>
 
@@ -209,7 +209,7 @@ const CaptainProductMission = () => {
                                 </div>
 
                                 <div className="flex items-start gap-3">
-                                    <div className="w-6 h-6 bg-gray-100 rounded-lg flex items-center justify-center mt-0.5">
+                                    <div className="w-6 h-6 bg-white/[0.05] rounded-lg flex items-center justify-center mt-0.5">
                                         <Navigation size={12} className="text-gray-400" />
                                     </div>
                                     <div className="flex-1 min-w-0">
@@ -241,12 +241,12 @@ const CaptainProductMission = () => {
                             placeholder="0 0 0 0"
                             value={pinInput}
                             onChange={(e) => setPinInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                            className="w-full h-16 rounded-2xl text-center text-4xl font-black tracking-[1em] transition-all outline-none border-2 bg-white/10 border-white/10 text-brand"
+                            className="w-full h-16 rounded-2xl text-center text-4xl font-black tracking-[1em] transition-all outline-none border-white/5 bg-white/10 border-white/10 text-brand"
                         />
                         <button
                             onClick={handleRejectDelivery}
                             disabled={isVerifying}
-                            className={`w-full py-4 rounded-2xl border-2 border-dashed font-bold text-xs uppercase tracking-widest transition-all ${isDarkMode ? 'border-white/10 text-white/40 hover:text-red-400 hover:border-red-400/50' : 'border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-500/50'}`}
+                            className={`w-full py-4 rounded-2xl border-white/5 border-dashed font-bold text-xs uppercase tracking-widest transition-all ${isDarkMode ? 'border-white/10 text-white/40 hover:text-red-400 hover:border-red-400/50' : 'border-white/10 text-gray-400 hover:text-red-500 hover:border-red-500/50'}`}
                         >
                             Customer Rejected? Return to Studio
                         </button>
@@ -254,7 +254,7 @@ const CaptainProductMission = () => {
                 )}
             </div>
 
-            <div className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md backdrop-blur-md border-t px-4 py-4 z-50 transition-all duration-500 ${isDarkMode ? 'bg-[#1E293B]/90 border-white/5 shadow-2xl' : 'bg-white/90 border-gray-100'}`}>
+            <div className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md backdrop-blur-md border-t px-4 py-4 z-50 transition-all duration-500 ${isDarkMode ? 'bg-[#1E293B]/90 border-white/5 shadow-2xl' : 'bg-white/90 border-white/5'}`}>
                 <motion.button
                     whileTap={{ scale: 0.98 }}
                     onClick={handleNextStatus}

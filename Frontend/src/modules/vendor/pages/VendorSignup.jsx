@@ -98,7 +98,7 @@ const VendorSignup = () => {
             >
                 {/* Header */}
                 <div className="flex flex-col items-center text-center mb-10">
-                    <div className="w-16 h-16 bg-surface border border-gray-100/10 text-brand rounded-[2rem] flex items-center justify-center shadow-2xl mb-6 relative overflow-hidden group">
+                    <div className="w-16 h-16 bg-surface border border-white/5/10 text-brand rounded-[2rem] flex items-center justify-center shadow-2xl mb-6 relative overflow-hidden group">
                         <div className="absolute inset-0 bg-brand/10 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
                         <Building2 size={32} className="relative z-10" />
                     </div>
@@ -107,7 +107,7 @@ const VendorSignup = () => {
                 </div>
 
                 {/* Card */}
-                <div className="bg-surface rounded-[3rem] p-8 lg:p-10 shadow-soft border border-gray-100/10 backdrop-blur-sm">
+                <div className="bg-surface rounded-[3rem] p-8 lg:p-10 shadow-soft border border-white/5/10 backdrop-blur-sm">
                     {step === 1 ? (
                         <form onSubmit={handleSendOTP} className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -175,7 +175,7 @@ const VendorSignup = () => {
                                 <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest flex items-center gap-2 px-1">
                                     <FileText size={14} /> Identity Document (KYC)
                                 </label>
-                                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-100/10 rounded-[2rem] hover:border-brand/50 hover:bg-brand/5 cursor-pointer bg-background transition-all group shadow-sm">
+                                <label className="flex flex-col items-center justify-center w-full h-32 border-white/5 border-dashed border-white/5/10 rounded-[2rem] hover:border-brand/50 hover:bg-brand/5 cursor-pointer bg-background transition-all group ">
                                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                         {formData.idProof ? (
                                             <div className="flex flex-col items-center">
@@ -208,7 +208,7 @@ const VendorSignup = () => {
                             <label className="flex items-start gap-3 cursor-pointer group px-1">
                                 <input
                                     type="checkbox"
-                                    className="mt-1 w-4 h-4 rounded border-gray-200 text-brand focus:ring-brand"
+                                    className="mt-1 w-4 h-4 rounded border-white/10 text-brand focus:ring-brand"
                                     checked={formData.agreeToTerms}
                                     onChange={e => setFormData({ ...formData, agreeToTerms: e.target.checked })}
                                 />
@@ -249,7 +249,7 @@ const VendorSignup = () => {
                                     maxLength="6"
                                     placeholder="0 0 0 0 0 0"
                                     required
-                                    className="w-full h-20 bg-background border-2 border-brand/20 rounded-[1.5rem] text-center text-3xl font-black text-content tracking-[0.5em] focus:border-brand outline-none transition-all shadow-inner"
+                                    className="w-full h-20 bg-background border-white/5 border-brand/20 rounded-[1.5rem] text-center text-3xl font-black text-content tracking-[0.5em] focus:border-brand outline-none transition-all shadow-inner"
                                     value={formData.otp}
                                     onChange={e => setFormData({ ...formData, otp: e.target.value.replace(/\D/g, '') })}
                                 />
@@ -280,7 +280,7 @@ const VendorSignup = () => {
                 </div>
 
                 <div className="mt-8 flex justify-center">
-                    <div className="flex items-center gap-3 bg-blue-500/5 px-6 py-4 rounded-3xl border border-blue-500/10 shadow-sm shadow-blue-500/5">
+                    <div className="flex items-center gap-3 bg-blue-500/5 px-6 py-4 rounded-3xl border border-blue-500/10  shadow-blue-500/5">
                         <ShieldCheck size={20} className="text-blue-500" />
                         <p className="text-[10px] font-bold text-blue-500/70 uppercase tracking-tight">Enterprise Onboarding Protocol</p>
                     </div>
@@ -298,7 +298,7 @@ const InputField = ({ label, icon, ...props }) => (
         <input
             {...props}
             required
-            className="w-full h-14 bg-background border border-gray-100/10 rounded-2xl px-6 text-xs font-bold text-content outline-none focus:border-brand transition-all"
+            className="w-full h-14 bg-background border border-white/5/10 rounded-2xl px-6 text-xs font-bold text-content outline-none focus:border-brand transition-all"
         />
     </div>
 );

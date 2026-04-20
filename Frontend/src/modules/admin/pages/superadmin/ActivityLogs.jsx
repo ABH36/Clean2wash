@@ -120,12 +120,12 @@ const ActivityLogs = () => {
 
     const getActionIcon = (action) => {
         switch (action) {
-            case 'CREATE_ADMIN': return <Plus size={16} className="text-green-600" />;
-            case 'UPDATE_DRIVER': return <Edit size={16} className="text-blue-600" />;
-            case 'DELETE_BOOKING': return <Trash2 size={16} className="text-red-600" />;
-            case 'VIEW_USER_DETAILS': return <Eye size={16} className="text-purple-600" />;
-            case 'LOGIN': return <Shield size={16} className="text-green-600" />;
-            default: return <Activity size={16} className="text-gray-600" />;
+            case 'CREATE_ADMIN': return <Plus size={18} className="text-green-600" />;
+            case 'UPDATE_DRIVER': return <Edit size={18} className="text-blue-600" />;
+            case 'DELETE_BOOKING': return <Trash2 size={18} className="text-red-600" />;
+            case 'VIEW_USER_DETAILS': return <Eye size={18} className="text-purple-600" />;
+            case 'LOGIN': return <Shield size={18} className="text-green-600" />;
+            default: return <Activity size={18} className="text-white/60" />;
         }
     };
 
@@ -134,16 +134,16 @@ const ActivityLogs = () => {
             case 'success': return 'bg-green-50 text-green-600 border-green-200';
             case 'failed': return 'bg-red-50 text-red-600 border-red-200';
             case 'warning': return 'bg-yellow-50 text-yellow-600 border-yellow-200';
-            default: return 'bg-gray-50 text-gray-600 border-gray-200';
+            default: return 'bg-white/[0.02] text-white/60 border-white/10';
         }
     };
 
     const getStatusIcon = (status) => {
         switch (status) {
-            case 'success': return <CheckCircle size={14} />;
-            case 'failed': return <XCircle size={14} />;
-            case 'warning': return <AlertTriangle size={14} />;
-            default: return <Info size={14} />;
+            case 'success': return <CheckCircle size={18} />;
+            case 'failed': return <XCircle size={18} />;
+            case 'warning': return <AlertTriangle size={18} />;
+            default: return <Info size={18} />;
         }
     };
 
@@ -199,28 +199,28 @@ const ActivityLogs = () => {
     }
 
     return (
-        <div className="p-6 space-y-6">
+        <div className="space-y-4">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-[var(--text-primary)]">Activity Logs</h1>
-                    <p className="text-[var(--text-secondary)] mt-1">Monitor all admin activities and system events</p>
+                <div className="flex flex-col gap-0.5">
+                    <h1 className="text-xl font-bold text-[var(--text-primary)] tracking-tight">Activity Logs</h1>
+                    <p className="text-xs font-medium text-[var(--text-secondary)] opacity-70">Monitor all admin activities and system events</p>
                 </div>
                 <button
                     onClick={exportLogs}
-                    className="btn-primary"
+                    className="btn-primary flex items-center gap-2 group/export"
                 >
-                    <Download size={16} />
+                    <Download size={18} className="group-hover/export:translate-y-0.5 transition-transform" />
                     Export Logs
                 </button>
             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="admin-card-compact">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <Activity size={20} className="text-blue-600" />
+                <div className="admin-card-compact shadow-sm">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
+                            <Activity size={16} className="text-blue-600" />
                         </div>
                         <div>
                             <div className="text-lg font-bold text-[var(--text-primary)]">{logs.length}</div>
@@ -229,10 +229,10 @@ const ActivityLogs = () => {
                     </div>
                 </div>
                 
-                <div className="admin-card-compact">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                            <CheckCircle size={20} className="text-green-600" />
+                <div className="admin-card-compact shadow-sm">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center shrink-0">
+                            <CheckCircle size={16} className="text-green-600" />
                         </div>
                         <div>
                             <div className="text-lg font-bold text-[var(--text-primary)]">{logs.filter(l => l.status === 'success').length}</div>
@@ -269,8 +269,8 @@ const ActivityLogs = () => {
             {/* Filters */}
             <div className="admin-card">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="relative">
-                        <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--text-secondary)]" />
+                    <div className="relative group">
+                        <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--text-secondary)] group-focus-within:text-[var(--primary)] transition-colors" />
                         <input
                             type="text"
                             placeholder="Search activities..."
@@ -360,16 +360,16 @@ const ActivityLogs = () => {
                                     </div>
                                     
                                     <div className="flex items-center gap-4 text-sm text-[var(--text-secondary)] mb-3">
-                                        <div className="flex items-center gap-1">
-                                            <User size={14} />
+                                        <div className="flex items-center gap-1.5">
+                                            <User size={18} className="text-[var(--primary)]" />
                                             <span>{log.admin.name} ({log.admin.role})</span>
                                         </div>
-                                        <div className="flex items-center gap-1">
-                                            <Shield size={14} />
+                                        <div className="flex items-center gap-1.5">
+                                            <Shield size={18} className="text-[var(--primary)]" />
                                             <span>{log.resource}</span>
                                         </div>
-                                        <div className="flex items-center gap-1">
-                                            <MapPin size={14} />
+                                        <div className="flex items-center gap-1.5">
+                                            <MapPin size={18} className="text-[var(--primary)]" />
                                             <span>{log.location}</span>
                                         </div>
                                     </div>
@@ -393,7 +393,7 @@ const ActivityLogs = () => {
                                     {log.error && (
                                         <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
                                             <div className="flex items-center gap-2 text-red-600">
-                                                <AlertTriangle size={14} />
+                                                <AlertTriangle size={18} />
                                                 <span className="text-sm font-medium">Error:</span>
                                             </div>
                                             <p className="text-sm text-red-700 mt-1">{log.error}</p>
@@ -403,12 +403,12 @@ const ActivityLogs = () => {
                                     {/* Technical details */}
                                     <div className="flex items-center gap-4 text-xs text-[var(--text-secondary)]">
                                         <span>IP: {log.ipAddress}</span>
-                                        <span className="flex items-center gap-1">
-                                            <Smartphone size={12} />
+                                        <span className="flex items-center gap-1.5">
+                                            <Smartphone size={18} />
                                             {log.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'}
                                         </span>
-                                        <span className="flex items-center gap-1">
-                                            <Clock size={12} />
+                                        <span className="flex items-center gap-1.5">
+                                            <Clock size={18} />
                                             {new Date(log.timestamp).toLocaleString()}
                                         </span>
                                     </div>

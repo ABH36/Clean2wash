@@ -149,7 +149,7 @@ const GoldPassModal = ({ isOpen, onClose }) => {
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        className="bg-white w-full max-w-[340px] rounded-[2rem] overflow-hidden relative z-10 shadow-2xl"
+                        className="bg-white/5 w-full max-w-[340px] rounded-[2rem] overflow-hidden relative z-10 shadow-2xl"
                     >
                         {/* Premium Header - Compact Native Style */}
                         <div className="relative h-36 bg-black flex flex-col items-center justify-center overflow-hidden">
@@ -203,7 +203,7 @@ const GoldPassModal = ({ isOpen, onClose }) => {
                             {loading && !plan ? (
                                 <div className="py-8 flex flex-col items-center justify-center">
                                     <Loader2 className="w-8 h-8 text-brand animate-spin mb-4" />
-                                    <p className="text-[10px] font-black text-black/40 uppercase tracking-widest">Calibrating Benefits...</p>
+                                    <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">Calibrating Benefits...</p>
                                 </div>
                             ) : (
                                 <>
@@ -231,15 +231,15 @@ const GoldPassModal = ({ isOpen, onClose }) => {
                                         </div>
                                     )}
 
-                                    <div className="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-100 flex items-center justify-between">
+                                    <div className="bg-white/[0.02] rounded-2xl p-4 mb-6 border border-white/5 flex items-center justify-between">
                                         <div>
                                             <p className="text-[8px] font-black text-black/30 uppercase tracking-[0.2em] mb-0.5">Premium Price</p>
                                             <div className="flex items-baseline gap-1.5">
-                                                <span className="text-xl font-[1000] text-black italic leading-none">₹{plan?.price || 399}</span>
-                                                <span className="text-[9px] font-black text-black/40 uppercase tracking-widest">/ Limitless</span>
+                                                <span className="text-xl font-[1000] text-white italic leading-none">₹{plan?.price || 399}</span>
+                                                <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">/ Limitless</span>
                                             </div>
                                         </div>
-                                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-gray-100 shadow-sm">
+                                        <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/5 ">
                                             <Zap size={18} className="text-brand" fill="#F29F05" />
                                         </div>
                                     </div>
@@ -260,7 +260,7 @@ const GoldPassModal = ({ isOpen, onClose }) => {
                                         )}
                                     </motion.button>
 
-                                    <p className="text-center text-[7px] font-bold text-black/20 uppercase tracking-[0.2em] mt-5">
+                                    <p className="text-center text-[7px] font-bold text-white/20 uppercase tracking-[0.2em] mt-5">
                                         Powered by Razorpay Secure
                                     </p>
                                 </>

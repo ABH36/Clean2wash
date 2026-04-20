@@ -32,7 +32,7 @@ const PremiumBadge = ({ className = "" }) => {
                 animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
                 transition={{ repeat: Infinity, duration: 2, delay: 0.5 }}
             >
-                <div className="w-1 h-1 bg-white rounded-full blur-[1px]" />
+                <div className="w-1 h-1 bg-white/5 rounded-full blur-[1px]" />
             </motion.div>
         </motion.div>
     );

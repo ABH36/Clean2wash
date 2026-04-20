@@ -33,16 +33,16 @@ const CaptainPortfolio = () => {
                     exit={{ height: 0, opacity: 0 }}
                     className="overflow-hidden"
                 >
-                    <div className={`mt-4 pt-4 border-t ${isDarkMode ? 'border-white/10' : 'border-gray-100'} space-y-4`}>
+                    <div className={`mt-4 pt-4 border-t ${isDarkMode ? 'border-white/10' : 'border-white/5'} space-y-4`}>
                         <div className="grid grid-cols-2 gap-4">
-                            <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-100'}`}>
+                            <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/[0.02] border-white/5'}`}>
                                 <div className="flex items-center gap-2 mb-1">
                                     <Clock size={12} className="text-brand" />
                                     <span className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/40' : 'text-content-subtle'}`}>Duration</span>
                                 </div>
                                 <p className={`font-black text-sm ${isDarkMode ? 'text-white' : 'text-content'}`}>45 Mins</p>
                             </div>
-                            <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-100'}`}>
+                            <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/[0.02] border-white/5'}`}>
                                 <div className="flex items-center gap-2 mb-1">
                                     <Star size={12} className="text-yellow-400" />
                                     <span className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/40' : 'text-content-subtle'}`}>Rating</span>
@@ -80,11 +80,11 @@ const CaptainPortfolio = () => {
 
     return (
         <CaptainLayout>
-            <div className={`min-h-screen pb-24 transition-colors duration-500 ${isDarkMode ? 'bg-[#0F172A]' : 'bg-gray-50'}`}>
+            <div className={`min-h-screen pb-24 transition-colors duration-500 ${isDarkMode ? 'bg-[#0F172A]' : 'bg-white/[0.02]'}`}>
                 {/* Header */}
-                <header className={`${isDarkMode ? 'bg-[#1E293B]/70 border-white/5' : 'bg-white/70 border-gray-100'} backdrop-blur-xl px-4 pt-10 pb-4 border-b sticky top-0 z-40 relative overflow-hidden`}>
+                <header className={`${isDarkMode ? 'bg-[#1E293B]/70 border-white/5' : 'bg-white/70 border-white/5'} backdrop-blur-xl px-4 pt-10 pb-4 border-b sticky top-0 z-40 relative overflow-hidden`}>
                     <div className="relative z-10 flex items-center gap-3 mb-6">
-                        <button onClick={() => navigate('/captain')} className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' : 'bg-gray-50 border-gray-100 text-content hover:bg-gray-100'}`}>
+                        <button onClick={() => navigate('/captain')} className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' : 'bg-white/[0.02] border-white/5 text-content hover:bg-white/[0.05]'}`}>
                             <ChevronLeft size={18} strokeWidth={2.5} />
                         </button>
                         <div className="flex-1">
@@ -111,12 +111,12 @@ const CaptainPortfolio = () => {
                                 key={job.id}
                                 layout
                                 onClick={() => setSelectedJob(selectedJob?.id === job.id ? null : job)}
-                                className={`rounded-3xl border overflow-hidden cursor-pointer transition-all duration-300 ${isDarkMode ? 'bg-[#1E293B] border-white/10 shadow-2xl shadow-black/40 hover:border-brand/40' : 'bg-white border-gray-100 shadow-xl shadow-gray-200/50 hover:border-brand/30'}`}
+                                className={`rounded-3xl border overflow-hidden cursor-pointer transition-all duration-300 ${isDarkMode ? 'bg-[#1E293B] border-white/10 shadow-2xl shadow-black/40 hover:border-brand/40' : 'bg-white/5 border-white/5 shadow-2xl shadow-black/50 shadow-gray-200/50 hover:border-brand/30'}`}
                             >
                                 {/* Header Info */}
                                 <div className="p-4 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isDarkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isDarkMode ? 'bg-white/5' : 'bg-white/[0.02]'}`}>
                                             <span className={`font-black text-sm uppercase ${isDarkMode ? 'text-white' : 'text-content'}`}>{job.vehicleType?.[0] || 'V'}</span>
                                         </div>
                                         <div>
@@ -143,7 +143,7 @@ const CaptainPortfolio = () => {
                                     </div>
 
                                     {/* Diagonal separator */}
-                                    <div className={`absolute left-1/2 top-0 bottom-0 w-8 -ml-4 skew-x-[-15deg] border-x-[4px] z-10 ${isDarkMode ? 'bg-[#1E293B] border-[#1E293B]' : 'bg-white border-white'}`}>
+                                    <div className={`absolute left-1/2 top-0 bottom-0 w-8 -ml-4 skew-x-[-15deg] border-x-[4px] z-10 ${isDarkMode ? 'bg-[#1E293B] border-[#1E293B]' : 'bg-white/5 border-white'}`}>
                                         <div className="absolute inset-y-0 left-1/2 w-0.5 -ml-px bg-brand" />
                                     </div>
 
@@ -170,7 +170,7 @@ const CaptainPortfolio = () => {
                         ))
                     ) : (
                         <div className="flex flex-col items-center justify-center py-20 text-center">
-                            <div className={`w-20 h-20 rounded-[30px] flex items-center justify-center mb-6 shadow-xl ${isDarkMode ? 'bg-[#1E293B] border border-white/10' : 'bg-white border border-gray-100'}`}>
+                            <div className={`w-20 h-20 rounded-[30px] flex items-center justify-center mb-6 shadow-2xl shadow-black/50 ${isDarkMode ? 'bg-[#1E293B] border border-white/10' : 'bg-white/5 border border-white/5'}`}>
                                 <Camera size={32} className={isDarkMode ? 'text-white/20' : 'text-gray-300'} />
                             </div>
                             <h3 className={`text-lg font-black uppercase tracking-tight mb-2 ${isDarkMode ? 'text-white' : 'text-content'}`}>No Portfolio Items Yet</h3>

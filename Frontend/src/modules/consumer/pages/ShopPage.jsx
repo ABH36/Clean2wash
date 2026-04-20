@@ -82,12 +82,12 @@ const ShopPage = () => {
     return (
         <MobileLayout>
             {/* ── Header ── */}
-            <header className="sticky top-0 z-50 bg-white border-b border-gray-100">
+            <header className="sticky top-0 z-50 bg-white/5 border-b border-white/5">
                 <div className="px-4 pt-10 pb-3">
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
                             <button onClick={() => navigate(-1)}
-                                className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-50 border border-gray-100">
+                                className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/[0.02] border border-white/5">
                                 <ChevronLeft size={18} className="text-content" />
                             </button>
                             <div>
@@ -116,7 +116,7 @@ const ShopPage = () => {
                             placeholder="Search products..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
-                            className="w-full h-11 bg-gray-50 border border-gray-100 rounded-xl pl-10 pr-4 text-[12px] font-bold text-content outline-none focus:border-brand/40 transition-colors"
+                            className="w-full h-11 bg-white/[0.02] border border-white/5 rounded-xl pl-10 pr-4 text-[12px] font-bold text-content outline-none focus:border-brand/40 transition-colors"
                         />
                         {searchQuery && (
                             <button onClick={() => setSearchQuery('')} className="absolute right-3.5 top-1/2 -translate-y-1/2">
@@ -131,8 +131,8 @@ const ShopPage = () => {
                     {CATEGORIES.map(cat => (
                         <button key={cat} onClick={() => setActiveCategory(cat)}
                             className={`flex-shrink-0 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${activeCategory === cat
-                                ? 'bg-brand text-white shadow-md shadow-brand/20'
-                                : 'bg-gray-100 text-content-muted'
+                                ? 'bg-brand text-white shadow-2xl shadow-black/40 shadow-brand/20'
+                                : 'bg-white/[0.05] text-content-muted'
                                 }`}>
                             {cat}
                         </button>
@@ -148,7 +148,7 @@ const ShopPage = () => {
                     </p>
                     <div className="relative">
                         <button onClick={() => setShowSort(!showSort)}
-                            className="flex items-center gap-2 bg-white border border-gray-100 shadow-soft px-3 py-1.5 rounded-xl text-[10px] font-black text-content-muted uppercase tracking-widest">
+                            className="flex items-center gap-2 bg-white/5 border border-white/5 shadow-soft px-3 py-1.5 rounded-xl text-[10px] font-black text-content-muted uppercase tracking-widest">
                             <SlidersHorizontal size={12} />
                             {SORT_OPTIONS.find(o => o.value === sortBy)?.label}
                         </button>
@@ -158,11 +158,11 @@ const ShopPage = () => {
                                     initial={{ opacity: 0, y: -8, scale: 0.96 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, y: -8, scale: 0.96 }}
-                                    className="absolute right-0 top-10 bg-white border border-gray-100 shadow-xl rounded-2xl overflow-hidden z-50 min-w-[180px]"
+                                    className="absolute right-0 top-10 bg-white/5 border border-white/5 shadow-2xl shadow-black/50 rounded-2xl overflow-hidden z-50 min-w-[180px]"
                                 >
                                     {SORT_OPTIONS.map(o => (
                                         <button key={o.value} onClick={() => { setSortBy(o.value); setShowSort(false); }}
-                                            className={`w-full flex items-center justify-between px-4 py-3 text-[11px] font-bold text-left hover:bg-gray-50 transition-colors ${sortBy === o.value ? 'text-brand' : 'text-content'}`}>
+                                            className={`w-full flex items-center justify-between px-4 py-3 text-[11px] font-bold text-left hover:bg-white/[0.02] transition-colors ${sortBy === o.value ? 'text-brand' : 'text-content'}`}>
                                             {o.label}
                                             {sortBy === o.value && <Check size={12} />}
                                         </button>
@@ -228,7 +228,7 @@ const ShopPage = () => {
                     className="fixed bottom-24 left-4 right-4 z-50"
                 >
                     <button onClick={() => navigate('/cart')}
-                        className="w-full bg-brand text-white py-4 rounded-2xl font-black text-sm flex items-center justify-between px-5 shadow-xl shadow-brand/30">
+                        className="w-full bg-brand text-white py-4 rounded-2xl font-black text-sm flex items-center justify-between px-5 shadow-2xl shadow-black/50 shadow-brand/30">
                         <div className="flex items-center gap-2">
                             <span className="bg-white/20 w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black">
                                 {cartCount}
@@ -270,7 +270,7 @@ const ProductCard = ({ product, index, inCart, onAddToCart, onViewCart }) => {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.04, type: 'spring', damping: 25 }}
-            className="bg-white rounded-3xl border border-gray-100 shadow-soft overflow-hidden flex flex-col group transition-all"
+            className="bg-white/5 rounded-3xl border border-white/5 shadow-soft overflow-hidden flex flex-col group transition-all"
         >
             <div className="p-2.5">
                 <div
@@ -283,7 +283,7 @@ const ProductCard = ({ product, index, inCart, onAddToCart, onViewCart }) => {
                     {/* Badge */}
                     {product.badge && (
                         <div className="absolute top-3 left-3 z-20">
-                            <span className="bg-white/95 backdrop-blur-sm text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border border-gray-100 text-[#0f172a] shadow-sm">
+                            <span className="bg-white/95 backdrop-blur-sm text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border border-white/5 text-[#0f172a] ">
                                 {product.badge}
                             </span>
                         </div>
@@ -337,7 +337,7 @@ const ProductCard = ({ product, index, inCart, onAddToCart, onViewCart }) => {
                         </motion.button>
                     )
                 ) : (
-                    <button disabled className="w-full py-3 bg-gray-50 text-gray-300 rounded-xl text-[9px] font-bold uppercase tracking-widest cursor-not-allowed border border-gray-100">
+                    <button disabled className="w-full py-3 bg-white/[0.02] text-gray-300 rounded-xl text-[9px] font-bold uppercase tracking-widest cursor-not-allowed border border-white/5">
                         Out of Stock
                     </button>
                 )}

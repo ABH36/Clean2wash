@@ -115,10 +115,10 @@ const RoleManagement = () => {
 
     const getRoleIcon = (level) => {
         switch (level) {
-            case 1: return <Crown size={16} className="text-purple-600" />;
-            case 2: return <Shield size={16} className="text-blue-600" />;
-            case 3: return <Users size={16} className="text-green-600" />;
-            default: return <Settings size={16} className="text-orange-600" />;
+            case 1: return <Crown size={18} className="text-purple-600" />;
+            case 2: return <Shield size={18} className="text-blue-600" />;
+            case 3: return <Users size={18} className="text-green-600" />;
+            default: return <Settings size={18} className="text-orange-600" />;
         }
     };
 
@@ -190,7 +190,7 @@ const RoleManagement = () => {
                                         {['blue', 'green', 'orange', 'purple'].map(color => (
                                             <button
                                                 key={color}
-                                                className={`w-8 h-8 rounded-full border-2 ${getRoleColor(color).replace('text-', 'bg-').replace('border-', 'border-')}`}
+                                                className={`w-8 h-8 rounded-full border-white/5 ${getRoleColor(color).replace('text-', 'bg-').replace('border-', 'border-')}`}
                                             />
                                         ))}
                                     </div>
@@ -295,7 +295,7 @@ const RoleManagement = () => {
                                                 <div className="grid grid-cols-2 gap-2">
                                                     {modulePermissions.map((permission, idx) => (
                                                         <div key={idx} className="flex items-center gap-2 text-sm">
-                                                            <CheckCircle size={14} className="text-green-500" />
+                                                            <CheckCircle size={18} className="text-green-500" />
                                                             <span className="text-[var(--text-secondary)]">{permission.description}</span>
                                                         </div>
                                                     ))}
@@ -329,28 +329,28 @@ const RoleManagement = () => {
     }
 
     return (
-        <div className="p-6 space-y-6">
+        <div className="space-y-4">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-[var(--text-primary)]">Role Management</h1>
-                    <p className="text-[var(--text-secondary)] mt-1">Manage roles and their permissions</p>
+                <div className="flex flex-col gap-0.5">
+                    <h1 className="text-xl font-bold text-[var(--text-primary)] tracking-tight">Role Management</h1>
+                    <p className="text-xs font-medium text-[var(--text-secondary)] opacity-70">Define and manage system access levels</p>
                 </div>
                 <button
                     onClick={() => setShowCreateModal(true)}
-                    className="btn-primary"
+                    className="btn-primary h-11 flex items-center gap-2 group/new"
                 >
-                    <Plus size={16} />
+                    <Plus size={20} className="group-hover/new:scale-110 transition-transform" />
                     Create Role
                 </button>
             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="admin-card-compact">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                            <Crown size={20} className="text-purple-600" />
+                <div className="admin-card-compact shadow-sm">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center shrink-0">
+                            <Crown size={18} className="text-purple-600" />
                         </div>
                         <div>
                             <div className="text-lg font-bold text-[var(--text-primary)]">{roles.filter(r => r.level === 1).length}</div>
@@ -359,10 +359,10 @@ const RoleManagement = () => {
                     </div>
                 </div>
                 
-                <div className="admin-card-compact">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <Shield size={20} className="text-blue-600" />
+                <div className="admin-card-compact shadow-sm">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
+                            <Shield size={18} className="text-blue-600" />
                         </div>
                         <div>
                             <div className="text-lg font-bold text-[var(--text-primary)]">{roles.filter(r => r.isSystem).length}</div>
@@ -399,7 +399,7 @@ const RoleManagement = () => {
             {/* Search */}
             <div className="admin-card">
                 <div className="relative">
-                    <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--text-secondary)]" />
+                    <Search size={18} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[var(--text-secondary)]" />
                     <input
                         type="text"
                         placeholder="Search roles..."
@@ -429,7 +429,7 @@ const RoleManagement = () => {
                                 </div>
                             </div>
                             {role.isSystem && (
-                                <Lock size={16} className="text-[var(--text-secondary)]" title="System Role" />
+                                <Lock size={18} className="text-[var(--text-secondary)] scale-90" title="System Role" />
                             )}
                         </div>
                         
@@ -449,14 +449,14 @@ const RoleManagement = () => {
                         <div className="flex gap-2">
                             <button
                                 onClick={() => handleViewPermissions(role)}
-                                className="btn-secondary flex-1 text-sm"
+                                className="h-10 flex-1 rounded-xl bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--border)] flex items-center justify-center gap-2 hover:text-brand hover:border-brand/40 transition-all group/view"
                             >
-                                <Eye size={14} />
+                                <Eye size={18} className="group-hover/view:scale-110 transition-transform" />
                                 View Permissions
                             </button>
                             {!role.isSystem && (
-                                <button className="btn-primary flex-1 text-sm">
-                                    <Edit size={14} />
+                                <button className="h-10 flex-1 rounded-xl bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--border)] flex items-center justify-center gap-2 hover:text-amber-600 hover:border-amber-200 transition-all group/edit">
+                                    <Edit size={18} className="group-hover/edit:scale-110 transition-transform" />
                                     Edit
                                 </button>
                             )}

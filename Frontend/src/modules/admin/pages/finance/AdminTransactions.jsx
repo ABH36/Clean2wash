@@ -282,32 +282,36 @@ const AdminTransactions = () => {
                 {/* Enhanced Filters */}
                 <div className="admin-card">
                     <div className="flex flex-wrap items-center gap-4">
-                        <div className="flex-1 min-w-[300px] relative">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={16} />
+                        <div className="flex-1 min-w-[300px] bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl px-4 py-2 flex items-center gap-3 group focus-within:border-brand transition-all">
+                            <Search className="text-[var(--text-muted)] group-focus-within:text-brand" size={16} />
                             <input
                                 type="text"
                                 placeholder="Search by transaction ID, user, or description..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && fetchTransactions()}
-                                className="admin-input pl-12"
+                                className="bg-transparent outline-none text-sm text-[var(--text-primary)] w-full placeholder:text-[var(--text-muted)]"
                             />
                         </div>
 
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={() => setShowFilters(!showFilters)}
-                                className={`btn-secondary flex items-center gap-2 ${showFilters ? 'btn-primary' : ''}`}
+                                className={`h-11 px-6 rounded-xl flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-all ${
+                                    showFilters 
+                                        ? 'bg-brand text-white shadow-lg shadow-brand/20' 
+                                        : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--border)] hover:bg-[var(--card)]'
+                                }`}
                             >
-                                <Filter size={16} />
+                                <Filter size={18} />
                                 Filters
                             </button>
 
                             <button 
                                 onClick={fetchTransactions} 
-                                className="btn-secondary w-10 h-10 p-0 flex items-center justify-center"
+                                className="w-11 h-11 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-brand hover:border-brand/40 transition-all flex items-center justify-center"
                             >
-                                <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                                <RefreshCw size={20} className={loading ? 'animate-spin text-brand' : ''} />
                             </button>
                         </div>
                     </div>
@@ -527,9 +531,9 @@ const AdminTransactions = () => {
                                                 <td className="text-center">
                                                     <button
                                                         onClick={() => setSelectedPayment(txn)}
-                                                        className="btn-secondary w-8 h-8 p-0 flex items-center justify-center"
+                                                        className="w-11 h-11 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-brand transition-all flex items-center justify-center mx-auto"
                                                     >
-                                                        <Eye size={14} />
+                                                        <Eye size={18} />
                                                     </button>
                                                 </td>
                                             </tr>
@@ -544,24 +548,23 @@ const AdminTransactions = () => {
                     <div className="px-6 py-4 bg-[var(--bg-secondary)] border-t border-[var(--border)] flex items-center justify-between">
                         <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">
                             Showing {transactions.length} of {pagination.total || 0} transactions
-                        </p>
-                        <div className="flex items-center gap-2">
+                        </p>                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => setPagination(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
                                 disabled={pagination.page === 1}
-                                className="btn-secondary w-8 h-8 p-0 flex items-center justify-center disabled:opacity-50"
+                                className="w-10 h-10 rounded-xl bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-brand disabled:opacity-30 disabled:hover:text-[var(--text-secondary)] transition-all flex items-center justify-center"
                             >
-                                <ChevronLeft size={14} />
+                                <ChevronLeft size={20} />
                             </button>
-                            <span className="px-3 py-1 bg-[var(--card)] border border-[var(--border)] rounded-lg text-xs font-semibold text-[var(--text-primary)]">
-                                {pagination.page} of {pagination.pages || 1}
+                            <span className="px-4 py-2 bg-[var(--card)] border border-[var(--border)] rounded-xl text-xs font-black text-[var(--text-primary)]">
+                                {pagination.page} / {pagination.pages || 1}
                             </span>
                             <button
                                 onClick={() => setPagination(prev => ({ ...prev, page: Math.min(prev.pages || 1, prev.page + 1) }))}
                                 disabled={pagination.page === pagination.pages}
-                                className="btn-secondary w-8 h-8 p-0 flex items-center justify-center disabled:opacity-50"
+                                className="w-10 h-10 rounded-xl bg-[var(--card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-brand disabled:opacity-30 disabled:hover:text-[var(--text-secondary)] transition-all flex items-center justify-center"
                             >
-                                <ChevronRight size={14} />
+                                <ChevronRight size={20} />
                             </button>
                         </div>
                     </div>
@@ -571,15 +574,15 @@ const AdminTransactions = () => {
 
                 {/* Wallet Management Tab */}
                 {activeTab === 'wallets' && (
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden">
-                        <div className="p-6 border-b border-gray-100">
+                    <div className="bg-white/5 rounded-2xl border border-white/5 shadow-soft overflow-hidden">
+                        <div className="p-6 border-b border-white/5">
                             <h3 className="text-lg font-black text-content uppercase tracking-wide mb-2">Wallet Management System</h3>
                             <p className="text-[10px] font-black text-brand uppercase tracking-widest">User Wallet Balances & Transaction History</p>
                         </div>
 
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
-                                <thead className="bg-gray-50 border-b border-gray-100">
+                                <thead className="bg-white/[0.02] border-b border-white/5">
                                     <tr>
                                         <th className="px-6 py-4 text-[10px] font-black text-content-subtle uppercase tracking-widest">User Info</th>
                                         <th className="px-6 py-4 text-[10px] font-black text-content-subtle uppercase tracking-widest text-center">Wallet Balance</th>
@@ -600,7 +603,7 @@ const AdminTransactions = () => {
                                         </tr>
                                     ) : (
                                         walletData.map((wallet) => (
-                                            <tr key={wallet.userId} className="hover:bg-gray-50 transition-all group">
+                                            <tr key={wallet.userId} className="hover:bg-white/[0.02] transition-all group">
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -623,7 +626,7 @@ const AdminTransactions = () => {
                                                             {formatCurrency(wallet.balance || 0)}
                                                         </div>
                                                         <div className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg ${
-                                                            (wallet.balance || 0) > 0 ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'
+                                                            (wallet.balance || 0) > 0 ? 'bg-green-100 text-green-600' : 'bg-white/[0.05] text-white/60'
                                                         }`}>
                                                             {(wallet.balance || 0) > 0 ? 'Active' : 'Empty'}
                                                         </div>
@@ -661,7 +664,7 @@ const AdminTransactions = () => {
                                                 <td className="px-6 py-4 text-center">
                                                     <button
                                                         onClick={() => setSelectedWallet(wallet)}
-                                                        className="w-8 h-8 bg-gray-100 hover:bg-brand hover:text-white rounded-lg flex items-center justify-center transition-all"
+                                                        className="w-8 h-8 bg-white/[0.05] hover:bg-brand hover:text-white rounded-lg flex items-center justify-center transition-all"
                                                     >
                                                         <Eye size={14} />
                                                     </button>
@@ -677,15 +680,15 @@ const AdminTransactions = () => {
 
                 {/* Driver Payouts Tab */}
                 {activeTab === 'payouts' && (
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden">
-                        <div className="p-6 border-b border-gray-100">
+                    <div className="bg-white/5 rounded-2xl border border-white/5 shadow-soft overflow-hidden">
+                        <div className="p-6 border-b border-white/5">
                             <h3 className="text-lg font-black text-content uppercase tracking-wide mb-2">Driver Payout Management</h3>
                             <p className="text-[10px] font-black text-brand uppercase tracking-widest">Driver Earnings & Settlement Processing</p>
                         </div>
 
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
-                                <thead className="bg-gray-50 border-b border-gray-100">
+                                <thead className="bg-white/[0.02] border-b border-white/5">
                                     <tr>
                                         <th className="px-6 py-4 text-[10px] font-black text-content-subtle uppercase tracking-widest">Driver Info</th>
                                         <th className="px-6 py-4 text-[10px] font-black text-content-subtle uppercase tracking-widest text-center">Earnings</th>
@@ -706,7 +709,7 @@ const AdminTransactions = () => {
                                         </tr>
                                     ) : (
                                         payoutData.map((payout) => (
-                                            <tr key={payout._id} className="hover:bg-gray-50 transition-all group">
+                                            <tr key={payout._id} className="hover:bg-white/[0.02] transition-all group">
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-10 h-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
@@ -772,7 +775,7 @@ const AdminTransactions = () => {
                                                         )}
                                                         <button
                                                             onClick={() => setSelectedTxn(payout)}
-                                                            className="w-8 h-8 bg-gray-100 hover:bg-brand hover:text-white rounded-lg flex items-center justify-center transition-all"
+                                                            className="w-8 h-8 bg-white/[0.05] hover:bg-brand hover:text-white rounded-lg flex items-center justify-center transition-all"
                                                         >
                                                             <Eye size={14} />
                                                         </button>
@@ -792,7 +795,7 @@ const AdminTransactions = () => {
                     <div className="space-y-6">
                         {/* Analytics Cards */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-soft">
+                            <div className="bg-white/5 p-6 rounded-2xl border border-white/5 shadow-soft">
                                 <div className="flex items-center gap-3 mb-4">
                                     <div className="w-12 h-12 bg-green-50 text-green-600 rounded-xl flex items-center justify-center">
                                         <TrendingUp size={24} />
@@ -809,7 +812,7 @@ const AdminTransactions = () => {
                                 </div>
                             </div>
 
-                            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-soft">
+                            <div className="bg-white/5 p-6 rounded-2xl border border-white/5 shadow-soft">
                                 <div className="flex items-center gap-3 mb-4">
                                     <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
                                         <Activity size={24} />
@@ -826,7 +829,7 @@ const AdminTransactions = () => {
                                 </div>
                             </div>
 
-                            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-soft">
+                            <div className="bg-white/5 p-6 rounded-2xl border border-white/5 shadow-soft">
                                 <div className="flex items-center gap-3 mb-4">
                                     <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
                                         <PieChart size={24} />
@@ -845,9 +848,9 @@ const AdminTransactions = () => {
                         </div>
 
                         {/* Daily Earnings Chart Placeholder */}
-                        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-soft">
+                        <div className="bg-white/5 p-6 rounded-2xl border border-white/5 shadow-soft">
                             <h3 className="text-lg font-black text-content uppercase tracking-wide mb-4">Daily Earnings Trend</h3>
-                            <div className="h-64 bg-gray-50 rounded-xl flex items-center justify-center">
+                            <div className="h-64 bg-white/[0.02] rounded-xl flex items-center justify-center">
                                 <div className="text-center">
                                     <BarChart3 size={48} className="text-gray-300 mx-auto mb-3" />
                                     <p className="text-sm font-bold text-content-subtle">Chart visualization would be implemented here</p>
@@ -964,16 +967,16 @@ const AdminTransactions = () => {
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl relative z-10 overflow-hidden border border-gray-100"
+                            className="bg-white/5 w-full max-w-2xl rounded-2xl shadow-2xl relative z-10 overflow-hidden border border-white/5"
                         >
-                            <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+                            <div className="px-8 py-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
                                 <div>
                                     <h2 className="text-xl font-black text-content uppercase tracking-tight leading-none">Dynamic Pricing Configuration</h2>
                                     <p className="text-[10px] font-black text-brand uppercase tracking-widest mt-1">Platform Pricing Controls</p>
                                 </div>
                                 <button 
                                     onClick={() => setShowPricingModal(false)} 
-                                    className="w-10 h-10 bg-white hover:bg-gray-100 rounded-xl border border-gray-200 text-content-subtle transition-all flex items-center justify-center"
+                                    className="w-10 h-10 bg-white/5 hover:bg-white/[0.05] rounded-xl border border-white/10 text-content-subtle transition-all flex items-center justify-center"
                                 >
                                     <X size={20} />
                                 </button>
@@ -987,7 +990,7 @@ const AdminTransactions = () => {
                                             type="number"
                                             value={pricingConfig.basePrice}
                                             onChange={(e) => setPricingConfig(prev => ({ ...prev, basePrice: Number(e.target.value) }))}
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-content outline-none focus:border-brand transition-all"
+                                            className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-content outline-none focus:border-brand transition-all"
                                         />
                                     </div>
 
@@ -997,7 +1000,7 @@ const AdminTransactions = () => {
                                             type="number"
                                             value={pricingConfig.perKmRate}
                                             onChange={(e) => setPricingConfig(prev => ({ ...prev, perKmRate: Number(e.target.value) }))}
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-content outline-none focus:border-brand transition-all"
+                                            className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-content outline-none focus:border-brand transition-all"
                                         />
                                     </div>
 
@@ -1007,7 +1010,7 @@ const AdminTransactions = () => {
                                             type="number"
                                             value={pricingConfig.perMinRate}
                                             onChange={(e) => setPricingConfig(prev => ({ ...prev, perMinRate: Number(e.target.value) }))}
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-content outline-none focus:border-brand transition-all"
+                                            className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-content outline-none focus:border-brand transition-all"
                                         />
                                     </div>
 
@@ -1017,7 +1020,7 @@ const AdminTransactions = () => {
                                             type="number"
                                             value={pricingConfig.scheduledPremium}
                                             onChange={(e) => setPricingConfig(prev => ({ ...prev, scheduledPremium: Number(e.target.value) }))}
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-content outline-none focus:border-brand transition-all"
+                                            className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-content outline-none focus:border-brand transition-all"
                                         />
                                     </div>
                                 </div>
@@ -1030,7 +1033,7 @@ const AdminTransactions = () => {
                                             onClick={() => setPricingConfig(prev => ({ ...prev, surgeEnabled: !prev.surgeEnabled }))}
                                             className={`w-12 h-6 rounded-full relative transition-all ${pricingConfig.surgeEnabled ? 'bg-brand' : 'bg-gray-300'}`}
                                         >
-                                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${pricingConfig.surgeEnabled ? 'left-7' : 'left-1'}`} />
+                                            <div className={`absolute top-1 w-4 h-4 bg-white/5 rounded-full  transition-all ${pricingConfig.surgeEnabled ? 'left-7' : 'left-1'}`} />
                                         </button>
                                     </div>
                                     
@@ -1042,7 +1045,7 @@ const AdminTransactions = () => {
                                                 step="0.1"
                                                 value={pricingConfig.surgeMultiplier}
                                                 onChange={(e) => setPricingConfig(prev => ({ ...prev, surgeMultiplier: Number(e.target.value) }))}
-                                                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-content outline-none focus:border-brand transition-all"
+                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-content outline-none focus:border-brand transition-all"
                                             />
                                         </div>
                                     )}
@@ -1051,7 +1054,7 @@ const AdminTransactions = () => {
                                 <div className="flex gap-4">
                                     <button
                                         onClick={() => setShowPricingModal(false)}
-                                        className="flex-1 py-3 bg-gray-100 text-content rounded-xl font-bold text-sm uppercase tracking-wide hover:bg-gray-200 transition-all"
+                                        className="flex-1 py-3 bg-white/[0.05] text-content rounded-xl font-bold text-sm uppercase tracking-wide hover:bg-gray-200 transition-all"
                                     >
                                         Cancel
                                     </button>
@@ -1082,9 +1085,9 @@ const AdminTransactions = () => {
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="bg-white w-full max-w-md rounded-2xl border border-gray-100 shadow-2xl overflow-hidden relative z-10"
+                            className="bg-white/5 w-full max-w-md rounded-2xl border border-white/5 shadow-2xl overflow-hidden relative z-10"
                         >
-                            <div className="p-8 border-b border-gray-100 bg-gray-50">
+                            <div className="p-8 border-b border-white/5 bg-white/[0.02]">
                                 <div className="flex items-center justify-between mb-6">
                                     <div className={`px-3 py-1.5 rounded-xl flex items-center gap-2 ${getTypeColor(selectedTxn.type)}`}>
                                         <Shield size={12} />
@@ -1092,7 +1095,7 @@ const AdminTransactions = () => {
                                     </div>
                                     <button 
                                         onClick={() => setSelectedTxn(null)} 
-                                        className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-content-subtle hover:text-content transition-colors"
+                                        className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-content-subtle hover:text-content transition-colors"
                                     >
                                         <X size={14} />
                                     </button>
@@ -1114,9 +1117,9 @@ const AdminTransactions = () => {
                                 </div>
 
                                 <div className="space-y-4">
-                                    <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                                    <div className="bg-white/[0.02] rounded-2xl p-4 border border-white/5">
                                         <div className="flex items-center gap-4 mb-4">
-                                            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center border border-gray-100">
+                                            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5">
                                                 <User size={18} className="text-brand" />
                                             </div>
                                             <div>
@@ -1126,7 +1129,7 @@ const AdminTransactions = () => {
                                         </div>
 
                                         {selectedTxn.category === 'WITHDRAWAL' && selectedTxn.user?.bankDetails && (
-                                            <div className="mb-4 pt-4 border-t border-gray-100 space-y-2">
+                                            <div className="mb-4 pt-4 border-t border-white/5 space-y-2">
                                                 <p className="text-[8px] font-black text-brand uppercase tracking-widest mb-2">Bank Account Details</p>
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div>
@@ -1160,7 +1163,7 @@ const AdminTransactions = () => {
                                                     value={adminNote}
                                                     onChange={e => setAdminNote(e.target.value)}
                                                     placeholder="e.g. Verified by finance team"
-                                                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-xs font-bold text-content outline-none focus:border-brand"
+                                                    className="w-full bg-white/[0.02] border border-white/5 rounded-xl px-4 py-3 text-xs font-bold text-content outline-none focus:border-brand"
                                                 />
                                             </div>
                                             {selectedTxn.category === 'WITHDRAWAL' && (
@@ -1171,7 +1174,7 @@ const AdminTransactions = () => {
                                                         value={utr}
                                                         onChange={e => setUtr(e.target.value)}
                                                         placeholder="Enter Bank Reference Number"
-                                                        className="w-full bg-gray-50 border border-brand/20 rounded-xl px-4 py-3 text-xs font-black text-content outline-none focus:border-brand"
+                                                        className="w-full bg-white/[0.02] border border-brand/20 rounded-xl px-4 py-3 text-xs font-black text-content outline-none focus:border-brand"
                                                     />
                                                 </div>
                                             )}
@@ -1188,7 +1191,7 @@ const AdminTransactions = () => {
                                                     className={`py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
                                                         selectedTxn.status === status 
                                                             ? 'bg-brand text-white shadow-lg' 
-                                                            : 'bg-gray-100 text-content-subtle hover:bg-gray-200 hover:text-content'
+                                                            : 'bg-white/[0.05] text-content-subtle hover:bg-gray-200 hover:text-content'
                                                     }`}
                                                 >
                                                     {status === 'completed' && selectedTxn.category === 'WITHDRAWAL' ? 'Settle' : status}

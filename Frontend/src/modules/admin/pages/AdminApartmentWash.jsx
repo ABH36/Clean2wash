@@ -88,7 +88,7 @@ const STATUS_STYLES = {
     in_progress: 'bg-purple-50 text-purple-700',
     washing: 'bg-purple-50 text-purple-700',
     cancelled: 'bg-red-50 text-red-600',
-    expired: 'bg-gray-100 text-gray-600'
+    expired: 'bg-slate-200 dark:bg-white/10 text-content-subtle opacity-60'
 };
 
 const parseLines = (value = '') => value.split('\n').map((entry) => entry.trim()).filter(Boolean);
@@ -107,7 +107,7 @@ const formatDate = (value) => {
     return date.toLocaleString('en-IN');
 };
 
-const getBadgeClass = (status = '') => STATUS_STYLES[status] || 'bg-gray-100 text-gray-600';
+const getBadgeClass = (status = '') => STATUS_STYLES[status] || 'bg-slate-100 dark:bg-white/10 text-content-subtle';
 
 const getRouteLabel = (item = {}) => {
     const details = item.parkingDetails || item.subscription?.parkingDetails || {};
@@ -537,7 +537,7 @@ const AdminApartmentWash = () => {
     if (loading) {
         return (
             <div className="min-h-[60vh] flex items-center justify-center">
-                <div className="flex items-center gap-3 rounded-3xl border border-gray-100 bg-white px-6 py-4 shadow-soft">
+                <div className="flex items-center gap-3 rounded-3xl border border-slate-200/60 dark:border-white/5 bg-surface px-6 py-4 shadow-soft">
                     <Loader2 size={18} className="animate-spin text-brand" />
                     <span className="text-xs font-black uppercase tracking-[0.2em] text-content-subtle">Loading apartment ops</span>
                 </div>
@@ -582,7 +582,7 @@ const AdminApartmentWash = () => {
                                             }`}
                                         >
                                             <div className="flex items-center gap-3">
-                                                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all ${isActive ? 'bg-brand text-black shadow-lg shadow-brand/20' : 'bg-slate-100 dark:bg-white/5 text-content-subtle group-hover:bg-brand/10 group-hover:text-brand'}`}>
+                                                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all ${isActive ? 'bg-brand text-white shadow-lg shadow-brand/20' : 'bg-slate-100 dark:bg-white/5 text-content-subtle group-hover:bg-brand/10 group-hover:text-brand'}`}>
                                                     <Icon size={16} />
                                                 </div>
                                                 <div className="min-w-0">
@@ -635,7 +635,7 @@ const AdminApartmentWash = () => {
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
-                                <div className="h-10 px-4 bg-surface rounded-xl border border-slate-200/60 dark:border-white/5 flex items-center gap-3 shadow-sm">
+                                <div className="h-10 px-4 bg-surface rounded-xl border border-slate-200/60 dark:border-white/5 flex items-center gap-3 ">
                                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                                     <span className="text-[9px] font-black uppercase text-content tracking-widest leading-none">{stats.liveBookings || 0} active nodes</span>
                                 </div>
@@ -652,7 +652,7 @@ const AdminApartmentWash = () => {
                                 { label: 'Yield projection', value: formatCurrency(stats.totalRevenue), icon: CalendarClock, status: 'Monthly', color: 'emerald' },
                                 { label: 'Peak capacity', value: `${stats.capacityUsage || 0}%`, icon: Activity, status: 'Normal', color: 'blue' }
                             ].map((stat, i) => (
-                                <article key={i} className="bg-surface p-4 rounded-3xl border border-slate-200/60 dark:border-white/5 shadow-sm hover:border-brand/40 transition-all">
+                                <article key={i} className="bg-surface p-4 rounded-3xl border border-slate-200/60 dark:border-white/5  hover:border-brand/40 transition-all">
                                     <div className="flex items-center justify-between mb-3">
                                         <div className={`w-9 h-9 bg-slate-100 dark:bg-white/5 text-content rounded-xl flex items-center justify-center`}><stat.icon size={18} /></div>
                                         <span className={`text-[8px] font-black text-${stat.color}-500 bg-${stat.color}-500/10 px-2 py-0.5 rounded-md uppercase tracking-widest`}>{stat.status}</span>
@@ -665,7 +665,7 @@ const AdminApartmentWash = () => {
 
                         <div className="grid gap-5 lg:grid-cols-3 items-start">
                             <div className="lg:col-span-2 space-y-5">
-                                <section className="bg-surface rounded-3xl border border-slate-200/60 dark:border-white/5 p-6 shadow-sm relative overflow-hidden">
+                                <section className="bg-surface rounded-3xl border border-slate-200/60 dark:border-white/5 p-6  relative overflow-hidden">
                                      <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none transform translate-x-1/4 -translate-y-1/4"><Shield size={160} /></div>
                                     <div className="flex items-center gap-3 mb-6 relative z-10">
                                         <div className="w-1 h-5 bg-brand rounded-full" />
@@ -679,7 +679,7 @@ const AdminApartmentWash = () => {
                                         ].map((card) => (
                                             <button key={card.id} onClick={() => handleSectionChange(card.id)} className="flex items-center justify-between p-4 bg-slate-50/50 dark:bg-white/[0.01] rounded-[2rem] border border-slate-200/40 dark:border-white/5 hover:border-brand/40 transition-all group">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-white/5 flex items-center justify-center text-content group-hover:bg-brand group-hover:text-black transition-all shadow-sm"><card.icon size={20} /></div>
+                                                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/10 flex items-center justify-center text-content group-hover:bg-brand group-hover:text-white transition-all "><card.icon size={20} /></div>
                                                     <div className="text-left">
                                                         <p className="text-[13px] font-black text-content uppercase tracking-tight leading-none">{card.label}</p>
                                                         <p className="text-[9px] font-bold text-content-subtle mt-2 opacity-60 uppercase tracking-widest leading-none">{card.sub}</p>
@@ -693,7 +693,7 @@ const AdminApartmentWash = () => {
                                     </div>
                                 </section>
 
-                                <article className="bg-surface rounded-3xl border border-slate-200/60 dark:border-white/5 p-6 shadow-sm">
+                                <article className="bg-surface rounded-3xl border border-slate-200/60 dark:border-white/5 p-6 ">
                                     <div className="flex items-center justify-between mb-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-1 h-4 bg-emerald-500 rounded-full" />
@@ -709,7 +709,7 @@ const AdminApartmentWash = () => {
                             </div>
 
                             <aside className="space-y-5">
-                                <div className="bg-black rounded-[2rem] p-6 text-white shadow-xl relative overflow-hidden group">
+                                <div className="bg-black rounded-[2rem] p-6 text-white shadow-2xl shadow-black/50 relative overflow-hidden group">
                                     <div className="absolute -right-4 -top-4 w-32 h-32 bg-brand/10 blur-3xl group-hover:bg-brand/20 transition-all" />
                                     <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-brand mb-6 flex items-center gap-2">
                                         <Activity size={12} /> Resource pulse
@@ -723,7 +723,7 @@ const AdminApartmentWash = () => {
                                                         {(hub.mappedCaptainCount || 0) > 0 ? 'NOMINAL' : 'VACANT'}
                                                     </span>
                                                 </div>
-                                                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                                <div className="h-1 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden">
                                                     <div className="h-full bg-brand rounded-full transition-all duration-1000" style={{ width: (hub.mappedCaptainCount || 0) > 0 ? '100%' : '10%' }} />
                                                 </div>
                                             </div>
@@ -739,7 +739,7 @@ const AdminApartmentWash = () => {
                     <div className="space-y-6">
                         <header className="bg-surface/90 backdrop-blur-xl p-5 rounded-[2.5rem] border border-slate-200/60 dark:border-white/5 shadow-premium flex flex-col md:flex-row gap-6 items-center justify-between sticky top-[4.5rem] z-20">
                             <div className="flex items-center gap-5">
-                                <div className="w-14 h-14 bg-black text-brand rounded-2xl flex items-center justify-center border-2 border-black shadow-2xl shrink-0">
+                                <div className="w-14 h-14 bg-black text-brand rounded-2xl flex items-center justify-center border-slate-800 dark:border-white/5 border-black shadow-2xl shrink-0">
                                     <Building2 size={28} />
                                 </div>
                                 <div className="min-w-0">
@@ -748,19 +748,19 @@ const AdminApartmentWash = () => {
                                 </div>
                             </div>
                             <div className="flex items-center gap-3 w-full md:w-auto">
-                                <div className="relative flex-1 md:w-96">
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand" size={16} />
+                                <div className="flex-1 md:w-96 bg-background border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2 flex items-center gap-3 transition-all focus-within:border-brand/40 focus-within:ring-4 focus-within:ring-brand/5 shadow-inner">
+                                    <Search className="text-brand" size={16} />
                                     <input
                                         type="text"
                                         placeholder="Scan Registry Nodes..."
                                         value={hubSearch}
                                         onChange={e => setHubSearch(e.target.value)}
-                                        className="w-full h-12 bg-background border border-slate-200 dark:border-white/10 rounded-2xl pl-12 pr-4 text-[12px] font-black text-content outline-none focus:border-brand/40 focus:ring-4 focus:ring-brand/5 transition-all placeholder:text-content-subtle/30 shadow-inner uppercase tracking-tight"
+                                        className="w-full h-8 bg-transparent text-[12px] font-black text-content outline-none placeholder:text-content-subtle/30 uppercase tracking-tight"
                                     />
                                 </div>
                                 <button
                                     onClick={openCreateHub}
-                                    className="h-12 px-8 bg-black text-brand rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-xl hover:brightness-125 active:scale-95 transition-all shrink-0 border border-black"
+                                    className="h-12 px-8 bg-black text-brand rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-2xl shadow-black/50 hover:brightness-125 active:scale-95 transition-all shrink-0 border border-black"
                                 >
                                     <Plus size={18} /> Deploy asset
                                 </button>
@@ -769,7 +769,7 @@ const AdminApartmentWash = () => {
 
                         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                             {filteredHubs.map((hub) => (
-                                <article key={hub._id} className="group bg-surface rounded-[2.75rem] border border-slate-200/60 dark:border-white/5 p-6 shadow-sm hover:shadow-xl hover:border-brand/40 transition-all relative overflow-hidden flex flex-col min-h-[380px]">
+                                <article key={hub._id} className="group bg-surface rounded-[2.75rem] border border-slate-200/60 dark:border-white/5 p-6  hover:shadow-2xl shadow-black/50 hover:border-brand/40 transition-all relative overflow-hidden flex flex-col min-h-[380px]">
                                     {/* Action Deck */}
                                     <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all flex gap-2 z-10 pointer-events-none group-hover:pointer-events-auto">
                                         <button onClick={() => openEditHub(hub)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-black text-brand shadow-2xl border border-black hover:scale-110 active:scale-90 transition-all">
@@ -782,7 +782,7 @@ const AdminApartmentWash = () => {
 
                                     <div className="flex gap-5 items-start relative">
                                         <div className="relative">
-                                            <div className="w-16 h-16 rounded-[1.75rem] bg-slate-50 dark:bg-white/5 flex items-center justify-center text-brand border-2 border-slate-100 dark:border-white/10 group-hover:bg-black group-hover:border-black transition-all duration-700 shadow-sm overflow-hidden">
+                                            <div className="w-16 h-16 rounded-[1.75rem] bg-slate-100 dark:bg-white/5 flex items-center justify-center text-brand border-slate-200 dark:border-white/10 group-hover:bg-black group-hover:border-black transition-all duration-700  overflow-hidden">
                                                 <div className="absolute inset-0 bg-brand/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                                                 <Building2 size={32} className="relative z-10 group-hover:scale-110 transition-transform duration-500" />
                                             </div>
@@ -857,7 +857,7 @@ const AdminApartmentWash = () => {
                                 </article>
                             ))}
                             {filteredHubs.length === 0 && (
-                                <div className="py-32 text-center bg-surface border-2 border-dashed border-slate-100 dark:border-white/5 rounded-[3.5rem] lg:col-span-3">
+                                <div className="py-32 text-center bg-surface border-white/5 border-dashed border-slate-100 dark:border-white/5 rounded-[3.5rem] lg:col-span-3">
                                     <Building2 size={48} className="mx-auto mb-6 opacity-10" />
                                     <h3 className="text-lg font-black text-content uppercase tracking-tighter">Registry Signal Idle</h3>
                                     <p className="text-[10px] font-black text-content-subtle uppercase tracking-widest opacity-40 mt-3 max-w-[240px] mx-auto leading-relaxed">No logistical nodes detected in local scan. Start asset deployment for infrastructure initialization.</p>
@@ -871,7 +871,7 @@ const AdminApartmentWash = () => {
                     <div className="space-y-4">
                         <header className="bg-surface/80 backdrop-blur-md p-4 rounded-3xl border border-slate-200/60 dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col md:flex-row gap-4 items-center justify-between sticky top-[4.5rem] mt-4 z-20">
                             <div className="flex items-center gap-4">
-                                <div className="w-11 h-11 bg-black text-brand rounded-2xl flex items-center justify-center border border-black shadow-xl">
+                                <div className="w-11 h-11 bg-black text-brand rounded-2xl flex items-center justify-center border border-black shadow-2xl shadow-black/50">
                                     <Users size={22} />
                                 </div>
                                 <div className="min-w-0">
@@ -880,14 +880,14 @@ const AdminApartmentWash = () => {
                                 </div>
                             </div>
                             <div className="flex items-center gap-2.5 w-full md:w-auto">
-                                <div className="relative flex-1 md:w-80">
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-content-subtle opacity-50" size={13} />
+                                <div className="flex-1 md:w-80 bg-background border border-slate-100 dark:border-white/5 rounded-[1.1rem] px-4 py-2 flex items-center gap-3 transition-all focus-within:border-brand/50 focus-within:ring-4 focus-within:ring-brand/5 shadow-inner">
+                                    <Search className="text-content-subtle opacity-50" size={13} />
                                     <input
                                         type="text"
                                         placeholder="Find Captains..."
                                         value={captainSearch}
                                         onChange={e => setCaptainSearch(e.target.value)}
-                                        className="w-full h-11 bg-background border border-slate-100 dark:border-white/5 rounded-[1.1rem] pl-11 pr-4 text-[11px] font-extrabold text-content outline-none focus:border-brand/50 focus:ring-4 focus:ring-brand/5 transition-all placeholder:text-content-subtle/50 shadow-inner"
+                                        className="w-full h-7 bg-transparent text-[11px] font-extrabold text-content outline-none placeholder:text-content-subtle/50"
                                     />
                                 </div>
                                 <div className="h-11 px-4 bg-slate-100/50 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 flex items-center gap-2">
@@ -942,9 +942,9 @@ const AdminApartmentWash = () => {
                                                     <button
                                                         onClick={() => handleCaptainMapSave(captain)}
                                                         disabled={isSaving}
-                                                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-black text-brand hover:brightness-110 shadow-lg shadow-black/10 transition-all disabled:opacity-40"
+                                                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-black text-brand hover:brightness-125 shadow-lg shadow-black/20 transition-all disabled:opacity-40 active:scale-95 group/save"
                                                     >
-                                                        {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={16} />}
+                                                        {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} className="group-hover/save:scale-110 transition-transform" />}
                                                     </button>
                                                 </div>
                                             </div>
@@ -953,16 +953,16 @@ const AdminApartmentWash = () => {
                                                 <button
                                                     onClick={() => handleMarkCaptainTestReady(captain)}
                                                     disabled={isSaving}
-                                                    className="flex-1 h-9 rounded-xl bg-brand/10 border border-brand/20 text-brand text-[9px] font-black uppercase tracking-widest hover:bg-brand hover:text-black transition-all"
+                                                    className="flex-1 h-9 rounded-xl bg-brand/10 border border-brand/20 text-brand text-[9px] font-black uppercase tracking-widest hover:bg-brand hover:text-white transition-all"
                                                 >
                                                     Fast Verify
                                                 </button>
                                                 <button
                                                     onClick={() => handleDeactivateTestCaptain(captain)}
                                                     disabled={isSaving || (!captain.isActive && !captain.isVerified)}
-                                                    className="w-9 h-9 flex items-center justify-center rounded-xl bg-red-500/5 border border-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all"
+                                                    className="w-9 h-9 flex items-center justify-center rounded-xl bg-red-500/5 border border-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all group/trash"
                                                 >
-                                                    <Trash2 size={14} />
+                                                    <Trash2 size={16} className="group-hover/trash:scale-110 transition-transform" />
                                                 </button>
                                             </div>
                                         </div>
@@ -986,7 +986,7 @@ const AdminApartmentWash = () => {
                     <div className="space-y-6">
                         <header className="flex flex-col md:flex-row gap-6 items-start justify-between">
                             <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-black text-brand rounded-2xl flex items-center justify-center border border-black shadow-xl shrink-0">
+                                <div className="w-12 h-12 bg-black text-brand rounded-2xl flex items-center justify-center border border-black shadow-2xl shadow-black/50 shrink-0">
                                     <Crown size={24} />
                                 </div>
                                 <div className="min-w-0">
@@ -997,7 +997,7 @@ const AdminApartmentWash = () => {
                             <div className="flex items-center gap-3 w-full md:w-auto">
                                 <button
                                     onClick={openCreatePlan}
-                                    className="flex-1 md:flex-none h-11 px-6 bg-brand text-black rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-[0_10px_20px_rgba(242,159,5,0.2)] hover:scale-[1.02] active:scale-[0.98] transition-all"
+                                    className="flex-1 md:flex-none h-11 px-6 bg-brand text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-[0_10px_20px_rgba(242,159,5,0.2)] hover:scale-[1.02] active:scale-[0.98] transition-all"
                                 >
                                     <Plus size={16} /> New Asset Plan
                                 </button>
@@ -1007,7 +1007,7 @@ const AdminApartmentWash = () => {
                         <div className="grid gap-5 lg:grid-cols-12 items-start">
                             {/* Plans Sidebar */}
                             <aside className="lg:col-span-3 space-y-4 xl:sticky xl:top-[12.5rem]">
-                                <section className="bg-surface rounded-3xl border border-slate-200/60 dark:border-white/5 p-5 shadow-sm">
+                                <section className="bg-surface rounded-3xl border border-slate-200/60 dark:border-white/5 p-5 ">
                                     <div className="flex items-center justify-between mb-5 px-1">
                                         <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-content opacity-50">Active inventory</h3>
                                         <span className="text-[9px] font-black text-brand bg-brand/10 px-2 py-0.5 rounded-lg border border-brand/20">{plans.length} Live</span>
@@ -1021,15 +1021,15 @@ const AdminApartmentWash = () => {
                                                         {formatCurrency(plan.price)} <span className="mx-1 opacity-20">•</span> {plan.interval}
                                                     </p>
                                                 </div>
-                                                <button onClick={() => openEditPlan(plan)} className="w-7 h-7 rounded-lg bg-white dark:bg-white/5 flex items-center justify-center text-content-subtle hover:text-brand shadow-sm border border-slate-100 dark:border-white/5 transition-all shrink-0">
-                                                    <Edit2 size={11} />
+                                                <button onClick={() => openEditPlan(plan)} className="w-9 h-9 rounded-xl bg-white/5 dark:bg-white/5 flex items-center justify-center text-content-subtle hover:text-brand  border border-slate-100 dark:border-white/5 transition-all shrink-0 hover:scale-110 active:scale-90 shadow-sm">
+                                                    <Edit2 size={15} />
                                                 </button>
                                             </div>
                                         ))}
                                     </div>
                                 </section>
 
-                                <div className="p-5 bg-black rounded-3xl text-white overflow-hidden relative group shadow-xl">
+                                <div className="p-5 bg-black rounded-3xl text-white overflow-hidden relative group shadow-2xl shadow-black/50">
                                     <div className="absolute -right-4 -top-4 w-24 h-24 bg-brand/20 blur-2xl group-hover:bg-brand/30 transition-all" />
                                     <p className="text-[9px] font-black uppercase tracking-[0.25em] text-brand mb-1 leading-none">Yield Velocity</p>
                                     <p className="text-2xl font-black tracking-tighter tabular-nums whitespace-nowrap mt-2">
@@ -1066,7 +1066,7 @@ const AdminApartmentWash = () => {
                                             const isReviewing = reviewingSubscriptionId === subscription._id;
 
                                             return (
-                                                <article key={subscription._id} className="bg-surface rounded-3xl border border-slate-200/60 dark:border-white/5 p-4 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+                                                <article key={subscription._id} className="bg-surface rounded-3xl border border-slate-200/60 dark:border-white/5 p-4  hover:shadow-2xl shadow-black/40 transition-all group relative overflow-hidden">
                                                     <div className="grid lg:grid-cols-12 gap-5 items-center">
                                                         <div className="lg:col-span-4 flex items-center gap-4 border-r border-slate-100 dark:border-white/5 pr-4">
                                                             <div className="w-10 h-10 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center text-content shrink-0">
@@ -1144,7 +1144,7 @@ const AdminApartmentWash = () => {
                                         </button>
                                     </div>
 
-                                    <div className="bg-surface rounded-3xl border border-slate-200/60 dark:border-white/5 overflow-hidden shadow-sm">
+                                    <div className="bg-surface rounded-3xl border border-slate-200/60 dark:border-white/5 overflow-hidden ">
                                         <div className="overflow-x-auto">
                                             <table className="w-full text-left border-collapse">
                                                 <thead>
@@ -1216,7 +1216,7 @@ const AdminApartmentWash = () => {
                                 { label: 'Completed Today', value: stats.liveBookings || 0, icon: CheckCircle2, color: 'text-brand', bg: 'bg-brand/10' },
                                 { label: 'Critical Variance', value: 0, icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-500/10' }
                             ].map((met, idx) => (
-                                <div key={idx} className="bg-surface p-4 rounded-3xl border border-slate-200/60 dark:border-white/5 shadow-sm">
+                                <div key={idx} className="bg-surface p-4 rounded-3xl border border-slate-200/60 dark:border-white/5 ">
                                     <div className="flex items-center justify-between mb-3">
                                         <div className={`w-8 h-8 rounded-xl ${met.bg} ${met.color} flex items-center justify-center`}><met.icon size={16} /></div>
                                         <div className="h-1.5 w-1.5 rounded-full bg-slate-200 dark:bg-white/10" />
@@ -1229,7 +1229,7 @@ const AdminApartmentWash = () => {
 
                         <div className="space-y-4">
                             {filteredLiveBookings.map((booking) => (
-                                <article key={booking._id} className="group bg-surface rounded-[2.5rem] border border-slate-200/60 dark:border-white/5 p-6 shadow-sm hover:shadow-md hover:border-brand/40 transition-all relative overflow-hidden">
+                                <article key={booking._id} className="group bg-surface rounded-[2.5rem] border border-slate-200/60 dark:border-white/5 p-6  hover:shadow-2xl shadow-black/40 hover:border-brand/40 transition-all relative overflow-hidden">
                                      {booking.status === 'In Progress' && (
                                         <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--warning-light)] blur-3xl -translate-y-1/2 translate-x-1/2" />
                                      )}
@@ -1237,8 +1237,8 @@ const AdminApartmentWash = () => {
                                     <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between relative z-10">
                                         <div className="flex items-start gap-5">
                                             <div className="relative">
-                                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border-2 transition-all duration-500 ${booking.status === 'In Progress' ? 'bg-[var(--warning)] border-black shadow-lg shadow-[var(--warning)]/20' : 'bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/10 text-content-subtle'}`}>
-                                                    <Zap size={24} className={booking.status === 'In Progress' ? 'text-black animate-pulse' : 'opacity-40'} />
+                                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border-white/5 transition-all duration-500 ${booking.status === 'In Progress' ? 'bg-[var(--warning)] border-black shadow-lg shadow-[var(--warning)]/20' : 'bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/10 text-content-subtle'}`}>
+                                                    <Zap size={24} className={booking.status === 'In Progress' ? 'text-white animate-pulse' : 'opacity-40'} />
                                                 </div>
                                                 {booking.status === 'In Progress' && (
                                                     <span className="absolute -top-1 -right-1 flex h-3 w-3">
@@ -1271,7 +1271,7 @@ const AdminApartmentWash = () => {
                                                 <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest opacity-40 mb-1 leading-none">Operating Window</p>
                                                 <p className="text-xs font-black text-brand uppercase tracking-tighter leading-none">{booking.schedule?.slot || 'TBD Window'}</p>
                                             </div>
-                                            <div className={`px-5 py-3 rounded-2xl border transition-all ${booking.status === 'In Progress' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500 shadow-sm' : 'bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/10 text-content-subtle opacity-60'}`}>
+                                            <div className={`px-5 py-3 rounded-2xl border transition-all ${booking.status === 'In Progress' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500 ' : 'bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/10 text-content-subtle opacity-60'}`}>
                                                 <p className="text-[8px] font-black uppercase tracking-widest opacity-60 mb-1 leading-none">Process Signal</p>
                                                 <p className="text-xs font-black uppercase tracking-tighter leading-none">{booking.status}</p>
                                             </div>
@@ -1290,7 +1290,7 @@ const AdminApartmentWash = () => {
                                 </article>
                             ))}
                             {filteredLiveBookings.length === 0 && (
-                                <div className="py-24 text-center bg-surface border-2 border-dashed border-slate-100 dark:border-white/5 rounded-[3rem]">
+                                <div className="py-24 text-center bg-surface border-white/5 border-dashed border-slate-100 dark:border-white/5 rounded-[3rem]">
                                     <div className="w-16 h-16 bg-slate-50 dark:bg-white/5 text-slate-200 dark:text-white/10 rounded-full flex items-center justify-center mx-auto mb-6">
                                         <Zap size={32} />
                                     </div>
@@ -1303,10 +1303,10 @@ const AdminApartmentWash = () => {
                 )}
 
                 {activeSection === 'service' && (
-                    <section className="bg-surface rounded-3xl border border-slate-200/60 dark:border-white/5 p-8 shadow-sm">
+                    <section className="bg-surface rounded-3xl border border-slate-200/60 dark:border-white/5 p-8 ">
                         <header className="flex flex-col md:flex-row gap-6 items-start justify-between border-b border-slate-50 dark:border-white/[0.03] pb-8 mb-8">
                             <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-black text-brand rounded-2xl flex items-center justify-center border border-black shadow-xl shrink-0">
+                                <div className="w-12 h-12 bg-black text-brand rounded-2xl flex items-center justify-center border border-black shadow-2xl shadow-black/50 shrink-0">
                                     <Shield size={24} />
                                 </div>
                                 <div className="min-w-0">
@@ -1314,7 +1314,7 @@ const AdminApartmentWash = () => {
                                     <p className="text-[9px] font-black text-content-subtle uppercase tracking-[0.25em] mt-2 opacity-60">Master contract & capability configuration</p>
                                 </div>
                             </div>
-                            <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-sm border ${serviceForm.isActive ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
+                            <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em]  border ${serviceForm.isActive ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-slate-100 border-slate-200 text-white/40'}`}>
                                 {serviceForm.isActive ? 'OPERATIONAL' : 'DORMANT'}
                             </div>
                         </header>
@@ -1331,7 +1331,7 @@ const AdminApartmentWash = () => {
                                     <TextField label="SLA Duration (min)" type="number" value={serviceForm.estimatedTime} onChange={(value) => setServiceForm((current) => ({ ...current, estimatedTime: value }))} />
                                     <TextField label="Manifest Priority" type="number" value={serviceForm.sortOrder} onChange={(value) => setServiceForm((current) => ({ ...current, sortOrder: value }))} />
                                 </div>
-                                <label className="block rounded-2xl border-2 border-dashed border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.01] px-5 py-4 cursor-pointer group hover:border-brand/40 transition-all">
+                                <label className="block rounded-2xl border-white/5 border-dashed border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.01] px-5 py-4 cursor-pointer group hover:border-brand/40 transition-all">
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-content opacity-50">Operational Status</span>
@@ -1344,7 +1344,7 @@ const AdminApartmentWash = () => {
                                                 onChange={(e) => setServiceForm((current) => ({ ...current, isActive: e.target.checked }))} 
                                                 className="absolute inset-0 opacity-0 cursor-pointer z-10" 
                                             />
-                                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 ${serviceForm.isActive ? 'left-7' : 'left-1'}`} />
+                                            <div className={`absolute top-1 w-4 h-4 bg-white/5 rounded-full transition-all duration-300 ${serviceForm.isActive ? 'left-7' : 'left-1'}`} />
                                         </div>
                                     </div>
                                 </label>
@@ -1359,7 +1359,7 @@ const AdminApartmentWash = () => {
                             </div>
 
                             <div className="flex justify-end pt-4 border-t border-slate-50 dark:border-white/[0.03]">
-                                <button type="submit" disabled={serviceSaving} className="inline-flex h-12 items-center gap-2 rounded-xl bg-black px-8 text-[11px] font-black uppercase tracking-[0.25em] text-brand transition-all hover:brightness-125 disabled:opacity-60 shadow-xl shadow-black/10 active:scale-95">
+                                <button type="submit" disabled={serviceSaving} className="inline-flex h-12 items-center gap-2 rounded-xl bg-black px-8 text-[11px] font-black uppercase tracking-[0.25em] text-brand transition-all hover:brightness-125 disabled:opacity-60 shadow-2xl shadow-black/50 shadow-black/10 active:scale-95">
                                     {serviceSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                                     Sync manifest control
                                 </button>
@@ -1443,7 +1443,7 @@ const AdminApartmentWash = () => {
                             <button 
                                 type="submit" 
                                 disabled={hubSaving} 
-                                className="inline-flex h-12 items-center justify-center gap-3 rounded-xl bg-black px-10 text-[11px] font-black uppercase tracking-[0.2em] text-brand hover:brightness-125 transition-all disabled:opacity-60 shadow-xl shadow-black/10 active:scale-95"
+                                className="inline-flex h-12 items-center justify-center gap-3 rounded-xl bg-black px-10 text-[11px] font-black uppercase tracking-[0.2em] text-brand hover:brightness-125 transition-all disabled:opacity-60 shadow-2xl shadow-black/50 shadow-black/10 active:scale-95"
                             >
                                 {hubSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
                                 {editingHub ? 'Sync Registry Changes' : 'Commit Asset Deployment'}
@@ -1470,7 +1470,7 @@ const AdminApartmentWash = () => {
                         <TextAreaField label="Features" hint="One feature per line" value={planForm.featuresText} onChange={(value) => setPlanForm((current) => ({ ...current, featuresText: value }))} />
 
                         <div className="flex justify-end gap-3 pt-2">
-                            <button type="button" onClick={() => setPlanModalOpen(false)} className="rounded-2xl border border-gray-200 px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-content-subtle">
+                            <button type="button" onClick={() => setPlanModalOpen(false)} className="rounded-2xl border border-white/10 px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-content-subtle">
                                 Cancel
                             </button>
                             <button type="submit" disabled={planSaving} className="inline-flex items-center gap-2 rounded-2xl bg-black px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white hover:bg-brand disabled:opacity-60">
@@ -1486,7 +1486,7 @@ const AdminApartmentWash = () => {
 };
 
 const SectionToolbar = ({ title, description, searchValue, onSearchChange, searchPlaceholder, actionLabel, onAction }) => (
-    <section className="bg-surface rounded-3xl border border-slate-200/60 dark:border-white/5 p-5 shadow-sm">
+    <section className="bg-surface rounded-3xl border border-slate-200/60 dark:border-white/5 p-5 ">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-brand">{title}</p>
@@ -1495,13 +1495,13 @@ const SectionToolbar = ({ title, description, searchValue, onSearchChange, searc
 
             <div className="flex flex-wrap gap-2.5">
                 {typeof searchValue === 'string' && (
-                    <div className="relative group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-content-subtle opacity-40 group-focus-within:text-brand transition-colors" size={13} />
+                    <div className="flex-1 min-w-[300px] h-11 bg-background border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 flex items-center gap-3 group focus-within:border-brand shadow-inner transition-all">
+                        <Search className="text-content-subtle opacity-40 group-focus-within:text-brand transition-colors" size={13} />
                         <input
                             value={searchValue}
                             onChange={(event) => onSearchChange?.(event.target.value)}
                             placeholder={searchPlaceholder}
-                            className="h-11 min-w-[300px] rounded-xl border border-slate-200 dark:border-white/10 bg-background pl-11 pr-4 text-[11px] font-black text-content outline-none focus:border-brand shadow-inner transition-all placeholder:text-content-subtle/30"
+                            className="bg-transparent outline-none w-full text-[11px] font-black text-content placeholder:text-content-subtle/30"
                         />
                     </div>
                 )}
@@ -1517,7 +1517,7 @@ const SectionToolbar = ({ title, description, searchValue, onSearchChange, searc
 );
 
 const StatCard = ({ icon, label, value }) => (
-    <div className="rounded-[2.5rem] border border-slate-200/60 dark:border-white/5 bg-surface p-6 shadow-sm hover:shadow-md transition-all group">
+    <div className="rounded-[2.5rem] border border-slate-200/60 dark:border-white/5 bg-surface p-6  hover:shadow-2xl shadow-black/40 transition-all group">
         <div className="flex items-center justify-between gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand/10 text-brand shadow-inner group-hover:scale-110 transition-transform">{icon}</div>
             <div className="w-2 h-2 rounded-full bg-slate-200 dark:bg-white/10" />
@@ -1579,7 +1579,7 @@ const ModalShell = ({ title, children, onClose }) => (
         <div className="max-h-[90vh] w-full max-w-4xl overflow-auto rounded-[2.5rem] bg-surface border border-slate-200 dark:border-white/10 p-7 shadow-[0_35px_100px_rgba(0,0,0,0.5)]">
             <div className="mb-7 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-brand text-black rounded-2xl flex items-center justify-center border border-black/10 shadow-lg shadow-brand/20">
+                    <div className="w-12 h-12 bg-brand text-white rounded-2xl flex items-center justify-center border border-black/10 shadow-lg shadow-brand/20">
                         <Edit2 size={24} />
                     </div>
                     <div>

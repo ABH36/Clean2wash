@@ -1833,8 +1833,8 @@ const SpareDriverBooking = () => {
                         <button
                             key={mode}
                             onClick={() => setBookingDetails({ ...bookingDetails, bookingMode: mode })}
-                            className={`flex-1 py-3 rounded-xl text-[10px] font-[1000] uppercase tracking-widest transition-all duration-300 ${bookingMode === mode
-                                    ? isDarkMode ? 'bg-white/10 text-white shadow-xl' : 'bg-[#0A0F0D] text-white shadow-xl'
+                            className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${bookingMode === mode
+                                    ? isDarkMode ? 'bg-white/10 text-white shadow-lg' : 'bg-[#0F172A] text-white shadow-lg'
                                     : isDarkMode ? 'text-white/20 hover:text-white/40' : 'text-black/30 hover:text-black/50'
                                 }`}
                         >
@@ -1889,7 +1889,7 @@ const SpareDriverBooking = () => {
                             className={`rounded-2xl p-2.5 pl-4 flex items-center gap-3 border active:scale-[0.98] transition-all cursor-pointer ${isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'
                                 }`}
                         >
-                            <div className="w-6 h-6 rounded-full bg-[#0A0F0D] flex items-center justify-center text-white ring-4 ring-[#0A0F0D]/05">
+                            <div className="w-6 h-6 rounded-full bg-[#0F172A] flex items-center justify-center text-white ring-4 ring-[#0F172A]/05">
                                 <MapPin size={10} strokeWidth={3} />
                             </div>
                             <div className="flex-1 overflow-hidden">
@@ -1907,7 +1907,7 @@ const SpareDriverBooking = () => {
                                 className={`rounded-2xl p-2.5 pl-4 flex items-center gap-3 border active:scale-[0.98] transition-all cursor-pointer ${isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'
                                     }`}
                             >
-                                <div className="w-6 h-6 rounded-full bg-[#FF9900] flex items-center justify-center text-[#0A0F0D] ring-4 ring-[#FF9900]/05">
+                                <div className="w-6 h-6 rounded-full bg-[#FF9900] flex items-center justify-center text-[#0F172A] ring-4 ring-[#FF9900]/05">
                                     <Navigation size={10} strokeWidth={3} />
                                 </div>
                                 <div className="flex-1 overflow-hidden">
@@ -1935,8 +1935,8 @@ const SpareDriverBooking = () => {
                                     key={d}
                                     whileTap={{ scale: 0.95 }}
                                     onClick={() => setBookingDetails({ ...bookingDetails, duration: d })}
-                                    className={`flex-shrink-0 px-5 h-10 rounded-xl text-[9px] font-[1000] transition-all duration-300 border ${bookingDetails.duration === d
-                                        ? isDarkMode ? 'bg-white/10 text-white border-white/20 shadow-xl' : 'bg-[#0A0F0D] text-white border-[#0A0F0D] shadow-xl'
+                                    className={`flex-shrink-0 px-5 h-10 rounded-xl text-[9px] font-black transition-all duration-300 border ${bookingDetails.duration === d
+                                        ? isDarkMode ? 'bg-white/10 text-white border-white/20 shadow-xl' : 'bg-[#0F172A] text-white border-[#0F172A] shadow-lg'
                                         : isDarkMode ? 'bg-white/05 text-white/40 border-white/05 hover:border-white/10' : 'bg-black/05 text-black/30 border-black/05 hover:border-black/10'}`}
                                 >
                                     {d}
@@ -1974,20 +1974,19 @@ const SpareDriverBooking = () => {
                 </div>
 
                 {/* 6. Night Protocol Banner */}
-                <div className={`rounded-[1.2rem] p-3.5 shadow-2xl relative overflow-hidden transition-all duration-300 border ${
-                    isDarkMode ? 'bg-white/10 border-white/10 shadow-black/40' : 'bg-[#0A0F0D] border-transparent shadow-xl'
-                }`}>
+                <div className={`rounded-[1.2rem] p-3.5 shadow-2xl relative overflow-hidden transition-all duration-300 border ${isDarkMode ? 'bg-white/10 border-white/10 shadow-black/40' : 'bg-[#0F172A] text-white border-transparent'
+                    }`}>
                     <div className="relative z-10 flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-[#FF9900] ${isDarkMode ? 'bg-white/10 border border-white/05' : 'bg-white/10 border border-white/10'}`}>
                             <Clock size={16} strokeWidth={2.5} />
                         </div>
                         <div className="flex-1">
                             <div className="flex items-center gap-2">
-                                <h4 className={`text-[12px] font-[1000] tracking-tight text-white`}>Night allowance</h4>
+                                <h4 className={`text-[12px] font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-white'}`}>Night allowance</h4>
                                 <div className={`h-[1px] flex-1 ${isDarkMode ? 'bg-white/10' : 'bg-white/05'}`} />
                                 <span className="text-[11px] font-black text-[#FF9900]">+{formatInr(commercialRules.nightAllowance)}</span>
                             </div>
-                            <p className={`text-[6px] font-black tracking-widest mt-0.5 text-white/50`}>Active between 10:00 PM - 06:00 AM slots</p>
+                            <p className={`text-[6px] font-bold tracking-widest mt-0.5 ${isDarkMode ? 'text-white/40' : 'text-white/40'}`}>Active between 10:00 PM - 06:00 AM slots</p>
                         </div>
                     </div>
                 </div>
@@ -2253,12 +2252,10 @@ const SpareDriverBooking = () => {
                             </button>
                             <button
                                 onClick={driverAssigned ? () => navigate(`/spare-driver/support?bookingId=${activeBookingId}`) : handleCancelRequest}
-                                className={`flex-1 h-14 backdrop-blur-xl border rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-transform pointer-events-auto ${
-                                    isDarkMode ? 'bg-white/10 border-white/10' : 'bg-[#0F172A] border-transparent shadow-xl'
-                                }`}
+                                className="flex-1 h-14 bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-transform pointer-events-auto"
                             >
-                                {driverAssigned ? <MessageSquare size={18} className={isDarkMode ? "text-white/40" : "text-white/60"} /> : <X size={18} className={isDarkMode ? "text-white/40" : "text-white/60"} />}
-                                <span className="text-[13px] font-[1000] text-white uppercase tracking-widest">
+                                {driverAssigned ? <MessageSquare size={18} className="text-white/40" /> : <X size={18} className="text-white/40" />}
+                                <span className="text-[13px] font-black text-white uppercase tracking-widest">
                                     {driverAssigned ? 'Need help' : 'Cancel request'}
                                 </span>
                             </button>
@@ -2500,9 +2497,8 @@ const SpareDriverBooking = () => {
                             </button>
                             <button
                                 onClick={driverAssigned ? () => navigate(`/spare-driver/support?bookingId=${activeBookingId}`) : handleCancelRequest}
-                                className={`flex-1 h-16 rounded-2xl font-[1000] text-[13px] uppercase tracking-[0.2em] shadow-xl transition-all flex items-center justify-center gap-3 active:scale-[0.98] ${
-                                    isDarkMode ? 'bg-white text-black shadow-black/80' : 'bg-[#0A0F0D] text-white shadow-black/30'
-                                }`}
+                                className={`flex-1 h-16 rounded-2xl font-black text-[13px] uppercase tracking-[0.2em] shadow-xl transition-all flex items-center justify-center gap-3 active:scale-[0.98] ${isDarkMode ? 'bg-white text-black shadow-black/80' : 'bg-[#0F172A] text-white shadow-black/30'
+                                    }`}
                             >
                                 {driverAssigned ? (
                                     <>Mission Support <ChevronRight size={18} className="text-[#FF9900]" /></>

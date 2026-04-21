@@ -55,9 +55,9 @@ const Signup = () => {
         setLoading(false);
 
         if (res.success) {
-            toast.success(`Code sent`, {
+            toast.success(`Verification code sent`, {
                 icon: '📩',
-                style: { borderRadius: '20px', background: '#000', color: '#fff', fontSize: '12px' }
+                style: { borderRadius: '20px', background: '#000', color: '#fff' }
             });
             navigate('/otp-verify', {
                 state: {
@@ -73,40 +73,37 @@ const Signup = () => {
     };
 
     // Reusable input class builder
-    const inputClass = `w-full rounded-2xl px-6 py-[18px] font-bold text-base outline-none focus:ring-2 focus:ring-[#F59E0B]/20 transition-all placeholder:text-opacity-20 ${
-        isDarkMode
+    const inputClass = `w-full rounded-2xl px-6 py-[18px] font-bold text-base outline-none focus:ring-2 focus:ring-[#F59E0B]/20 transition-all placeholder:text-opacity-20 ${isDarkMode
             ? 'bg-white/10 text-white placeholder:text-white/20 focus:bg-white/15'
             : 'bg-black/05 text-[#0F172A] placeholder:text-black/20 focus:bg-white focus:border focus:border-black/10'
-    }`;
+        }`;
 
-    const iconInputClass = `w-full rounded-2xl pl-14 pr-6 py-[18px] font-bold text-base outline-none focus:ring-2 focus:ring-[#F59E0B]/20 transition-all ${
-        isDarkMode
+    const iconInputClass = `w-full rounded-2xl pl-14 pr-6 py-[18px] font-bold text-base outline-none focus:ring-2 focus:ring-[#F59E0B]/20 transition-all ${isDarkMode
             ? 'bg-white/10 text-white placeholder:text-white/20 focus:bg-white/15'
             : 'bg-black/05 text-[#0F172A] placeholder:text-black/20 focus:bg-white focus:border focus:border-black/10'
-    }`;
+        }`;
 
     return (
         <div className={`h-screen flex flex-col font-sans relative overflow-hidden transition-colors duration-300 ${isDarkMode ? 'bg-black text-white' : 'bg-[#FAF6EB] text-black'}`}>
 
             {/* Top Branding */}
-            <div className="relative flex-[0.7] flex flex-col items-center justify-center px-8 overflow-hidden">
-                <div className="absolute inset-0 z-0">
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/80 to-black z-10" />
+            <div className="relative flex-[1.1] flex flex-col items-center justify-center px-8 overflow-hidden">
+                <div className="absolute inset-0 z-0 opacity-40 grayscale">
                     <img
-                        src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&q=80&w=1200"
-                        alt="Luxury Car"
-                        className="w-full h-full object-cover opacity-60 scale-110"
+                        src="https://images.unsplash.com/photo-1493238507154-203698ad19fb?auto=format&fit=crop&q=80&w=1200"
+                        alt="High-end Drive"
+                        className="w-full h-full object-cover"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/80 to-black" />
                 </div>
 
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, ease: "easeOut" }}
                     className="relative z-20 flex flex-col items-center text-center"
                 >
-                    <img src={logo} alt="Logo" className="h-24 w-auto mb-2 drop-shadow-2xl" />
-                    <p className="text-white/60 text-[11px] font-bold uppercase tracking-[0.25em]">Spare Driver</p>
+                    <img src={logo} alt="Logo" className="h-32 w-auto mb-4 drop-shadow-2xl" />
+                    <h1 className="text-xl font-bold tracking-tight text-white/90">Create your account</h1>
                 </motion.div>
             </div>
 
@@ -127,7 +124,7 @@ const Signup = () => {
                     </button>
                     <div className="ml-2">
                         <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>Registration</h2>
-                        <p className={`text-[10px] uppercase tracking-widest font-bold ${isDarkMode ? 'text-white/30' : 'text-black/30'}`}>Welcome to Spare Driver App Team</p>
+                        <p className={`text-[10px] uppercase tracking-widest font-bold ${isDarkMode ? 'text-white/30' : 'text-black/30'}`}>Personal details</p>
                     </div>
                 </header>
 
@@ -205,15 +202,14 @@ const Signup = () => {
                             disabled={!formData.name || formData.phone.length < 10 || !formData.email || loading}
                             whileTap={{ scale: 0.98 }}
                             onClick={handleSignup}
-                            className={`w-full h-16 rounded-2xl font-bold text-sm flex items-center justify-center transition-all relative overflow-hidden shadow-lg ${
-                                formData.name && formData.phone.length === 10 && formData.email && !loading
+                            className={`w-full h-16 rounded-2xl font-bold text-sm flex items-center justify-center transition-all relative overflow-hidden shadow-lg ${formData.name && formData.phone.length === 10 && formData.email && !loading
                                     ? isDarkMode
                                         ? 'bg-[#F59E0B] text-black shadow-[#F59E0B]/20'
                                         : 'bg-black text-white shadow-black/20'
                                     : isDarkMode
                                         ? 'bg-white/10 text-white/20 shadow-none'
                                         : 'bg-black/05 text-black/20 shadow-none'
-                            }`}
+                                }`}
                         >
                             <span className="relative z-10">{loading ? 'Creating account...' : 'Create account'}</span>
                             {!loading && <ArrowRight size={18} strokeWidth={3} className="ml-2 relative z-10" />}

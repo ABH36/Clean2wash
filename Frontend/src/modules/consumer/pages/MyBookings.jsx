@@ -38,7 +38,7 @@ const getStatusColor = (rawStatus) => {
     if (rawStatus === 'completed') return 'text-emerald-500 bg-emerald-500/10 border border-emerald-500/20';
     if (rawStatus === 'cancelled') return 'text-rose-500 bg-rose-500/10 border border-rose-500/20';
     if (['pending', 'confirmed'].includes(rawStatus)) return 'text-[#F59E0B] bg-[#F59E0B]/10 border border-[#F59E0B]/20';
-    return 'text-slate-500 bg-slate-500/10 border border-slate-500/20';
+    return 'text-blue-500 bg-blue-500/10 border border-blue-500/20';
 };
 
 const normalizeBooking = (booking) => ({

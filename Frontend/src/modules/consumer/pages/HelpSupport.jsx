@@ -129,9 +129,8 @@ const ChatSheet = ({ onClose }) => {
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 320 }}
-            className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md rounded-t-[3rem] z-[100] flex flex-col shadow-2xl border-t transition-colors duration-300 ${
-                isDarkMode ? 'bg-[#0A0F0D] border-white/10 shadow-black/50' : 'bg-white border-black/5 shadow-black/10'
-            }`}
+            className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md rounded-t-[3rem] z-[100] flex flex-col shadow-2xl border-t transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D] border-white/10 shadow-black/50' : 'bg-white border-black/5 shadow-black/10'
+                }`}
             style={{ height: '88vh' }}
         >
             <div className={`flex items-center gap-4 px-6 pt-8 pb-6 border-b flex-shrink-0 ${isDarkMode ? 'border-white/5' : 'border-black/5'}`}>
@@ -153,18 +152,16 @@ const ChatSheet = ({ onClose }) => {
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
                 {messages.map((message) => (
                     <motion.div key={message.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex gap-3 ${message.from === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 self-end mb-1 ${
-                            message.from === 'bot' 
-                                ? (isDarkMode ? 'bg-[#F59E0B]/10 border border-[#F59E0B]/20' : 'bg-[#F59E0B]/05 border border-[#F59E0B]/10') 
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 self-end mb-1 ${message.from === 'bot'
+                                ? (isDarkMode ? 'bg-[#F59E0B]/10 border border-[#F59E0B]/20' : 'bg-[#F59E0B]/05 border border-[#F59E0B]/10')
                                 : (isDarkMode ? 'bg-white/5 border border-white/10' : 'bg-black/5 border border-black/10')
-                        }`}>
+                            }`}>
                             {message.from === 'bot' ? <Bot size={14} className="text-[#F59E0B]" strokeWidth={2.5} /> : <div className={`text-[10px] font-black uppercase ${isDarkMode ? 'text-white' : 'text-black'}`}>U</div>}
                         </div>
-                        <div className={`max-w-[75%] px-5 py-3.5 rounded-[1.5rem] text-[13px] font-black uppercase leading-relaxed ${
-                            message.from === 'bot' 
-                                ? (isDarkMode ? 'bg-white/[0.03] border border-white/5 text-white/80' : 'bg-black/[0.03] border border-black/5 text-black/80') 
+                        <div className={`max-w-[75%] px-5 py-3.5 rounded-[1.5rem] text-[13px] font-black uppercase leading-relaxed ${message.from === 'bot'
+                                ? (isDarkMode ? 'bg-white/[0.03] border border-white/5 text-white/80' : 'bg-black/[0.03] border border-black/5 text-black/80')
                                 : (isDarkMode ? 'bg-white text-black' : 'bg-black text-white')
-                        } ${message.from === 'bot' ? 'rounded-tl-md' : 'rounded-tr-md'}`}>
+                            } ${message.from === 'bot' ? 'rounded-tl-md' : 'rounded-tr-md'}`}>
                             {message.text}
                         </div>
                     </motion.div>
@@ -173,12 +170,12 @@ const ChatSheet = ({ onClose }) => {
                 <AnimatePresence>
                     {typing && (
                         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex gap-2 items-end">
-                            <div className={`w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 ${isDarkMode ? 'bg-[#F59E0B]/10' : 'bg-[#F59E0B]/05'}`}>
-                                <Bot size={13} className="text-[#F59E0B]" strokeWidth={2} />
+                            <div className="w-7 h-7 rounded-xl bg-brand/10 flex items-center justify-center flex-shrink-0">
+                                <Bot size={13} className="text-brand" strokeWidth={2} />
                             </div>
-                            <div className={`border rounded-2xl rounded-tl-md px-4 py-3 flex gap-1.5 items-center ${isDarkMode ? 'bg-white/[0.02] border-white/5' : 'bg-black/[0.02] border-black/5'}`}>
+                            <div className="bg-white/[0.02] border border-white/5 rounded-2xl rounded-tl-md px-4 py-3 flex gap-1.5 items-center">
                                 {[0, 1, 2].map((index) => (
-                                    <motion.span key={index} className={`w-1.5 h-1.5 rounded-full ${isDarkMode ? 'bg-white/20' : 'bg-black/20'}`} animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: index * 0.15 }} />
+                                    <motion.span key={index} className="w-1.5 h-1.5 bg-slate-400 rounded-full" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: index * 0.15 }} />
                                 ))}
                             </div>
                         </motion.div>
@@ -190,36 +187,24 @@ const ChatSheet = ({ onClose }) => {
 
             <div className="px-4 pb-4 flex gap-2.5 overflow-x-auto scrollbar-none flex-shrink-0">
                 {QUICK_CHIPS.map((chip) => (
-                    <button key={chip} onClick={() => sendMessage(chip)} className={`flex-shrink-0 h-10 px-5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] whitespace-nowrap active:scale-95 transition-all hover:text-[#F59E0B] hover:border-[#F59E0B]/30 hover:bg-[#F59E0B]/5 border ${
-                        isDarkMode ? 'bg-white/[0.03] border-white/10 text-white/40' : 'bg-black/[0.03] border-black/10 text-black/40'
-                    }`}>
+                    <button key={chip} onClick={() => sendMessage(chip)} className={`flex-shrink-0 h-10 px-5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] whitespace-nowrap active:scale-95 transition-all hover:text-[#F59E0B] hover:border-[#F59E0B]/30 hover:bg-[#F59E0B]/5 border ${isDarkMode ? 'bg-white/[0.03] border-white/10 text-white/40' : 'bg-black/[0.03] border-black/10 text-black/40'
+                        }`}>
                         {chip}
                     </button>
                 ))}
             </div>
 
-            <div className={`flex items-center gap-4 px-4 py-4 border-t flex-shrink-0 pb-10 transition-colors ${
-                isDarkMode ? 'bg-[#0A0F0D] border-white/5' : 'bg-white border-black/5'
-            }`}>
-                <div className={`flex-1 flex items-center gap-3 border rounded-2xl px-5 py-4 shadow-inner transition-colors ${
-                    isDarkMode ? 'bg-white/[0.03] border-white/10' : 'bg-black/[0.02] border-black/10'
-                }`}>
+            <div className="flex items-center gap-4 px-4 py-4 border-t border-white/5 bg-[#0A0F0D] flex-shrink-0 pb-10">
+                <div className="flex-1 flex items-center gap-3 bg-white/[0.03] border border-white/10 rounded-2xl px-5 py-4 shadow-inner">
                     <input
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
                         placeholder="Transmit intelligence request..."
-                        className={`flex-1 bg-transparent text-[13px] font-black uppercase outline-none transition-colors ${
-                            isDarkMode ? 'text-white placeholder:text-white/10' : 'text-black placeholder:text-black/20'
-                        }`}
+                        className="flex-1 bg-transparent text-[13px] font-black uppercase italic italic-black text-white outline-none placeholder:text-white/10"
                     />
                 </div>
-                <motion.button whileTap={{ scale: 0.9 }} onClick={() => sendMessage()} disabled={!input.trim()} 
-                    className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-all shadow-2xl ${
-                        input.trim() 
-                            ? (isDarkMode ? 'bg-white text-black shadow-white/10' : 'bg-black text-white shadow-black/20') 
-                            : (isDarkMode ? 'bg-white/5 text-white/10' : 'bg-black/5 text-black/10')
-                    }`}>
+                <motion.button whileTap={{ scale: 0.9 }} onClick={() => sendMessage()} disabled={!input.trim()} className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-all shadow-2xl ${input.trim() ? 'bg-white text-black shadow-white/10' : 'bg-white/5 text-white/10'}`}>
                     <Send size={18} strokeWidth={3} />
                 </motion.button>
             </div>
@@ -252,10 +237,10 @@ const TicketSheet = ({ onClose }) => {
     if (submitted) {
         return (
             <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} className={`fixed bottom-0 inset-x-0 rounded-t-[3rem] z-[1002] p-10 text-center flex flex-col items-center justify-center space-y-6 border-t transition-all duration-300 ${isDarkMode ? 'bg-[#0A0F0D] border-white/10' : 'bg-white border-black/5'}`} style={{ height: '70vh' }}>
-                <div className={`w-24 h-24 rounded-[2.5rem] flex items-center justify-center mb-4 border shadow-2xl ${isDarkMode ? 'bg-[#F59E0B]/10 border-[#F59E0B]/20 shadow-[#F59E0B]/05' : 'bg-[#F59E0B]/05 border-[#F59E0B]/10 shadow-[#F59E0B]/05'}`}>
-                    <CheckCircle2 size={44} className="text-[#F59E0B]" strokeWidth={3} />
+                <div className={`w-24 h-24 rounded-[2.5rem] flex items-center justify-center mb-4 border shadow-2xl ${isDarkMode ? 'bg-emerald-500/10 border-emerald-500/20 shadow-emerald-500/05' : 'bg-emerald-50 border-emerald-500/10 shadow-emerald-500/05'}`}>
+                    <CheckCircle2 size={44} className="text-emerald-500" strokeWidth={3} />
                 </div>
-                <h3 className={`text-3xl font-black tracking-tighter uppercase ${isDarkMode ? 'text-white' : 'text-black'}`}>Protocol Lodged</h3>
+                <h3 className={`text-3xl font-black text-white tracking-tighter uppercase ${isDarkMode ? 'text-white' : 'text-black'}`}>Protocol Lodged</h3>
                 <p className={`text-[11px] font-black uppercase tracking-[0.3em] max-w-[240px] leading-relaxed ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>Intelligence review expected within 120 cycles. Monitoring in dashboard.</p>
                 <div className="mt-10 w-12 h-1 bg-[#F59E0B] rounded-full animate-pulse shadow-[0_0_15px_#F59E0B]" />
             </motion.div>
@@ -263,9 +248,8 @@ const TicketSheet = ({ onClose }) => {
     }
 
     return (
-        <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} className={`fixed bottom-0 inset-x-0 rounded-t-[3rem] z-[1002] p-8 shadow-2xl flex flex-col border-t transition-all duration-300 ${
-            isDarkMode ? 'bg-[#0A0F0D] border-white/10 shadow-black/80' : 'bg-white border-black/5 shadow-black/10'
-        }`} style={{ height: '90vh' }}>
+        <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} className={`fixed bottom-0 inset-x-0 rounded-t-[3rem] z-[1002] p-8 shadow-2xl flex flex-col border-t transition-all duration-300 ${isDarkMode ? 'bg-[#0A0F0D] border-white/10 shadow-black/80' : 'bg-white border-black/5 shadow-black/10'
+            }`} style={{ height: '90vh' }}>
             <div className="flex items-center justify-between mb-10 overflow-hidden">
                 <div className="flex-1">
                     <h2 className={`text-2xl font-black uppercase tracking-tighter leading-none ${isDarkMode ? 'text-white' : 'text-black'}`}>Dossier Submission</h2>
@@ -287,11 +271,7 @@ const TicketSheet = ({ onClose }) => {
                             { id: 'ACCOUNT_APP', label: 'Intelligence' }
                         ].map(cat => (
                             <button type="button" key={cat.id} onClick={() => setForm(f => ({ ...f, category: cat.id }))}
-                                className={`h-14 rounded-2xl border transition-all text-[11px] font-black uppercase tracking-[0.2em] italic ${
-                                    form.category === cat.id 
-                                        ? (isDarkMode ? 'bg-white text-black border-white shadow-2xl' : 'bg-black text-white border-black shadow-2xl') 
-                                        : (isDarkMode ? 'bg-white/[0.03] border-white/5 text-white/20' : 'bg-black/[0.03] border-black/5 text-black/20')
-                                }`}>
+                                className={`h-14 rounded-2xl border transition-all text-[11px] font-black uppercase tracking-[0.2em] italic ${form.category === cat.id ? 'bg-white text-black border-white shadow-2xl' : 'bg-white/[0.03] border-white/5 text-white/20'}`}>
                                 {cat.label}
                             </button>
                         ))}
@@ -300,16 +280,14 @@ const TicketSheet = ({ onClose }) => {
 
                 <div className="space-y-4">
                     <p className={`text-[10px] font-black uppercase tracking-[0.3em] ml-1 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Subject Vector</p>
-                    <input value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))} required placeholder="Identify operational gap..." className={`w-full h-15 rounded-2xl px-6 text-[13px] font-black uppercase outline-none transition-all shadow-inner border ${
-                        isDarkMode ? 'bg-white/[0.03] border-white/10 text-white focus:border-[#F59E0B]/30' : 'bg-black/[0.02] border-black/10 text-black focus:border-[#F59E0B]/30'
-                    }`} />
+                    <input value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))} required placeholder="Identify operational gap..." className={`w-full h-15 rounded-2xl px-6 text-[13px] font-black uppercase outline-none transition-all shadow-inner border ${isDarkMode ? 'bg-white/[0.03] border-white/10 text-white focus:border-[#F59E0B]/30' : 'bg-black/[0.02] border-black/10 text-black focus:border-[#F59E0B]/30'
+                        }`} />
                 </div>
 
                 <div className="space-y-4">
                     <p className={`text-[10px] font-black uppercase tracking-[0.3em] ml-1 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Explanatory Dossier</p>
-                    <textarea rows={6} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} required placeholder="Detail the divergence in protocol..." className={`w-full rounded-[2rem] px-6 py-5 text-[13px] font-black uppercase outline-none transition-all resize-none leading-relaxed shadow-inner border ${
-                        isDarkMode ? 'bg-white/[0.03] border-white/10 text-white focus:border-[#F59E0B]/30' : 'bg-black/[0.02] border-black/10 text-black focus:border-[#F59E0B]/30'
-                    }`} />
+                    <textarea rows={6} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} required placeholder="Detail the divergence in protocol..." className={`w-full rounded-[2rem] px-6 py-5 text-[13px] font-black uppercase outline-none transition-all resize-none leading-relaxed shadow-inner border ${isDarkMode ? 'bg-white/[0.03] border-white/10 text-white focus:border-[#F59E0B]/30' : 'bg-black/[0.02] border-black/10 text-black focus:border-[#F59E0B]/30'
+                        }`} />
                 </div>
 
                 <button type="submit" disabled={loading} className="w-full h-16 bg-[#F59E0B] text-black rounded-[1.5rem] font-black text-[12px] uppercase tracking-[0.3em] shadow-[0_20px_40px_rgba(245,158,11,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 mt-10">
@@ -335,7 +313,7 @@ const HelpSupport = () => {
             try {
                 const res = await apiClient.get('/support/tickets');
                 if (res.status === 'success') setMyTickets(res.data.tickets);
-            } catch (err) {}
+            } catch (err) { }
         };
         fetchTickets();
     }, []);
@@ -427,19 +405,19 @@ const HelpSupport = () => {
 
                 {/* My Recent Tickets */}
                 {myTickets.length > 0 && (
-                    <div className={`rounded-[2.5rem] p-6 border space-y-6 shadow-2xl transition-colors ${isDarkMode ? 'bg-white/[0.03] border-white/5' : 'bg-white border-black/5'}`}>
+                    <div className="bg-white/[0.03] rounded-[2.5rem] p-6 border border-white/5 space-y-6 shadow-2xl">
                         <div className="flex items-center justify-between">
-                            <h3 className={`text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-3 italic ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>
+                            <h3 className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] flex items-center gap-3 italic">
                                 <ClockIcon size={14} className="text-[#F59E0B]" /> Operational Dossiers
                             </h3>
-                            <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase italic ${isDarkMode ? 'bg-white text-black' : 'bg-black text-white'}`}>{myTickets.length} ACTIVE</span>
+                            <span className="bg-white text-black text-[9px] font-black px-3 py-1 rounded-full uppercase italic">{myTickets.length} ACTIVE</span>
                         </div>
                         <div className="space-y-3">
                             {myTickets.slice(0, 2).map(ticket => (
-                                <div key={ticket._id} className={`p-4 border rounded-2xl flex items-center justify-between transition-colors ${isDarkMode ? 'bg-white/[0.03] border-white/5' : 'bg-black/[0.02] border-black/5'}`}>
+                                <div key={ticket._id} className="p-4 bg-white/[0.03] border border-white/5 rounded-2xl flex items-center justify-between backdrop-blur-xl">
                                     <div className="min-w-0">
-                                        <p className={`text-[12px] font-black uppercase italic tracking-tighter truncate ${isDarkMode ? 'text-white' : 'text-black'}`}>{ticket.subject}</p>
-                                        <p className={`text-[9px] font-black uppercase tracking-widest mt-1.5 italic ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>{new Date(ticket.createdAt).toLocaleDateString()}</p>
+                                        <p className="text-[12px] font-black text-white uppercase italic italic-black tracking-tighter truncate">{ticket.subject}</p>
+                                        <p className="text-[9px] font-black text-white/20 uppercase tracking-widest mt-1.5 italic">{new Date(ticket.createdAt).toLocaleDateString()}</p>
                                     </div>
                                     <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest italic ${ticket.status === 'open' ? 'bg-[#F59E0B]/10 text-[#F59E0B]' : 'bg-emerald-500/10 text-emerald-500'}`}>
                                         {ticket.status}
@@ -498,19 +476,19 @@ const HelpSupport = () => {
 
                 {filtered.length === 0 && (
                     <div className="text-center py-12">
-                        <p className={`font-black text-sm ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>No results for "{search}"</p>
-                        <p className={`text-[10px] font-bold mt-1 ${isDarkMode ? 'text-white/10' : 'text-black/20'}`}>Try another keyword or open live chat</p>
-                        <button onClick={() => setShowChat(true)} className={`mt-4 font-black text-[10px] px-8 py-3 rounded-xl uppercase tracking-widest shadow-2xl active:scale-95 transition-all ${isDarkMode ? 'bg-white text-black' : 'bg-black text-white'}`}>
+                        <p className="font-black text-slate-400 text-sm">No results for "{search}"</p>
+                        <p className="text-[10px] text-slate-400 font-bold mt-1">Try another keyword or open live chat</p>
+                        <button onClick={() => setShowChat(true)} className="mt-4 bg-brand text-white font-black text-xs px-5 py-2.5 rounded-xl uppercase tracking-widest">
                             Open chat
                         </button>
                     </div>
                 )}
 
                 <div className="text-center space-y-1 pt-2 pb-4">
-                <div className="text-center space-y-2 pt-6 pb-12">
-                    <p className={`text-[10px] font-black uppercase tracking-[0.4em] ${isDarkMode ? 'text-white/10' : 'text-black/10'}`}>Operational Support Desk • v2.0</p>
-                    <p className={`text-[10px] font-black uppercase tracking-[0.4em] ${isDarkMode ? 'text-white/10' : 'text-black/10'}`}>Protocol Window • 06:00 - 23:00 IST</p>
-                </div>
+                    <div className="text-center space-y-2 pt-6 pb-12">
+                        <p className={`text-[10px] font-black uppercase tracking-[0.4em] ${isDarkMode ? 'text-white/10' : 'text-black/10'}`}>Operational Support Desk • v2.0</p>
+                        <p className={`text-[10px] font-black uppercase tracking-[0.4em] ${isDarkMode ? 'text-white/10' : 'text-black/10'}`}>Protocol Window • 06:00 - 23:00 IST</p>
+                    </div>
                 </div>
             </div>
         </div>

@@ -22,7 +22,6 @@ import LocationIndicator from '../../../components/Location/LocationIndicator';
 import AddressSelector from '../components/AddressSelector';
 import GoogleMapBox from '../../../components/common/GoogleMapBox';
 import BenefitBadge from '../../../components/common/BenefitBadge';
-import { useTheme } from '../../../context/ThemeContext';
 
 const PHASES = {
     IDLE: 'IDLE',
@@ -62,10 +61,10 @@ const sanitizeUrl = (url) => {
 
 const JOB_STATES = [
     { id: 'CONFIRMED', label: 'Booking Confirmed', icon: CheckCircle2, color: 'text-emerald-500' },
-    { id: 'EN_ROUTE', label: 'Captain En Route', icon: Navigation, color: 'text-[#F59E0B]' },
-    { id: 'WASHING', label: 'Wash In Progress', icon: Droplets, color: 'text-[#F59E0B]' },
-    { id: 'QUALITY_CHECK', label: 'Quality Check', icon: ShieldCheck, color: 'text-[#F59E0B]' },
-    { id: 'COMPLETED', label: 'Completed', icon: CheckCircle, color: 'text-emerald-600' },
+    { id: 'EN_ROUTE', label: 'Captain En Route', icon: Navigation, color: 'text-blue-500' },
+    { id: 'WASHING', label: 'Wash In Progress', icon: Droplets, color: 'text-sky-500' },
+    { id: 'QUALITY_CHECK', label: 'Quality Check', icon: ShieldCheck, color: 'text-brand' },
+    { id: 'COMPLETED', label: 'Completed', icon: CheckCircle, color: 'text-green-600' },
 ];
 
 const pkgAddonImages = {
@@ -90,7 +89,6 @@ const InstantWash = () => {
         isGoldPassMember, isBlackPassMember, globalCatalog, loadGlobalCatalog, catalogLoading,
         addVehicle, vehiclesLoading
     } = useAuth();
-    const { isDarkMode } = useTheme();
     const { savedAddresses: addresses, loading: addressesLoading, primaryAddress, selectedAddress, setSelectedAddress, currentLocation } = useGeoLocation();
     const [searchParams] = useSearchParams();
     const user = getUser('consumer');
@@ -2712,8 +2710,8 @@ const InstantWash = () => {
                     {/* Monthly Packages (Dynamic Mapping) */}
                     <div className="space-y-4 pt-2">
                         <div className="flex items-center justify-between px-1">
-                            <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] ${isDarkMode ? 'text-white/30' : 'text-black/30'}`}>Monthly Subscription</h3>
-                            <span className="text-emerald-500 text-[8px] font-black uppercase tracking-widest bg-emerald-500/10 px-2 py-1 rounded-full border border-emerald-500/20">Upto 50% Savings</span>
+                            <h3 className="text-[10px] font-black text-black/30 uppercase tracking-[0.2em]">Monthly Subscription</h3>
+                            <span className="text-emerald-600 text-[8px] font-black uppercase tracking-widest bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100 ">Upto 50% Savings</span>
                         </div>
 
                         <div className="grid grid-cols-1 gap-2.5">
@@ -2735,24 +2733,21 @@ const InstantWash = () => {
                                 );
 
                                 return (
-                                    <div key={pkgId || i} className={`bg-white/5 rounded-2xl border p-4 flex items-center justify-between relative overflow-hidden group transition-all duration-300 ${isAdded ? 'border-brand ring-1 ring-brand/20' : (isDarkMode ? 'border-white/5' : 'border-black/[0.03]') + ' hover:border-brand/40'}`}>
+                                    <div key={pkgId || i} className={`bg-white/5 rounded-2xl border p-4  flex items-center justify-between relative overflow-hidden group transition-all duration-300 ${isAdded ? 'border-brand ring-1 ring-brand/20' : 'border-black/[0.03] hover:border-brand/40'}`}>
                                         <div className="absolute top-0 right-0 w-24 h-24 bg-brand/5 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-150 duration-700" />
 
                                         {/* Total Price Badge (Matching Screenshot) */}
-                                        <div className={`absolute top-0 left-0 px-3 py-1.5 text-[8px] font-black rounded-br-2xl uppercase tracking-widest leading-none ${
-                                            isDarkMode ? 'bg-[#F3E8DF] text-black' : 'bg-[#1A1A1A] text-white'
-                                        }`}>
+                                        <div className="absolute top-0 left-0 bg-[#F3E8DF] text-white px-3 py-1.5 text-[8px] font-black rounded-br-2xl uppercase tracking-widest leading-none">
                                             Total ₹{pkg.price}
                                         </div>
- 
+
                                         <div className="pt-5 flex-1 text-left">
-                                            <h4 className={`text-[14px] font-[1000] tracking-tight uppercase leading-none mb-1.5 ${isDarkMode ? 'text-white' : 'text-black'}`}>{pkg.title || pkg.name}</h4>
+                                            <h4 className="text-[14px] font-[1000] text-white tracking-tight uppercase leading-none mb-1.5">{pkg.title || pkg.name}</h4>
                                             <div className="flex items-center gap-2">
-                                                <span className="text-[16px] font-[1000] text-emerald-500 leading-none tracking-tighter">₹{perWash}/WASH</span>
-                                                <span className={`text-[9px] font-bold line-through tracking-tighter uppercase ${isDarkMode ? 'text-white/10' : 'text-black/10'}`}>Was ₹{perWash * 2}</span>
+                                                <span className="text-[16px] font-[1000] text-emerald-600 leading-none tracking-tighter">₹{perWash}/WASH</span>
+                                                <span className="text-[9px] font-bold text-black/10 line-through tracking-tighter uppercase">Was ₹{perWash * 2}</span>
                                             </div>
                                         </div>
-                                    </div>
 
                                         <button
                                             onClick={() => {
@@ -2794,8 +2789,8 @@ const InstantWash = () => {
                                     <MapPin size={18} strokeWidth={2.5} />
                                 </div>
                                 <div>
-                                    <h4 className={`text-[12px] font-black uppercase tracking-widest leading-none ${isDarkMode ? 'text-white' : 'text-black'}`}>Service Address</h4>
-                                    <p className={`text-[7.5px] font-black uppercase tracking-[0.2em] mt-1.5 font-outfit ${isDarkMode ? 'text-white/20' : 'text-black/20'}`}>Precision Pin Verified</p>
+                                    <h4 className="text-[12px] font-black text-white uppercase tracking-widest leading-none">Service Address</h4>
+                                    <p className="text-[7.5px] font-black text-white/20 uppercase tracking-[0.2em] mt-1.5 font-outfit">Precision Pin Verified</p>
                                 </div>
                             </div>
                             <button
@@ -3171,26 +3166,24 @@ const InstantWash = () => {
         const passPrice = goldPassPlan?.price || passConfig?.price || 499;
 
         return (
-            <div className={`min-h-screen pb-32 font-sans transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#F8F9FB]'}`}>
+            <div className="min-h-screen bg-[#F8F9FB] pb-32 font-sans">
                 {/* Header */}
-                <div className={`px-5 py-3 flex items-center gap-3 sticky top-0 z-50 border-b ${isDarkMode ? 'bg-[#0A0F0D]/80 backdrop-blur-xl border-white/5' : 'bg-white/80 backdrop-blur-xl border-black/5'}`}>
-                    <button onClick={() => setPhase(PHASES.SELECT_SLOT)} className={`w-8 h-8 flex items-center justify-center rounded-xl ${isDarkMode ? 'bg-white/5 text-white' : 'bg-black/5 text-black'}`}>
+                <div className="px-5 py-3 flex items-center gap-3 bg-white/5 border-b border-black/[0.04] sticky top-0 z-50">
+                    <button onClick={() => setPhase(PHASES.SELECT_SLOT)} className="w-8 h-8 flex items-center justify-center bg-white/[0.02] rounded-xl">
                         <ChevronLeft size={16} />
                     </button>
-                    <h2 className={`text-[13px] font-[1000] uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-black'}`}>Payment Selection</h2>
+                    <h2 className="text-[13px] font-[1000] text-white uppercase tracking-tight">Payment Selection</h2>
                 </div>
 
                 <div className="p-4 space-y-3.5">
                     {/* Security Badge - Compact & Pro */}
-                    <div className={`rounded-2xl p-3 flex items-center gap-3 border transition-colors ${
-                        isDarkMode ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50/80 border-emerald-100/50'
-                    }`}>
+                    <div className="bg-emerald-50/80 rounded-2xl p-3 flex items-center gap-3 border border-emerald-100/50">
                         <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-emerald-500/10">
                             <ShieldCheck size={16} strokeWidth={3} />
                         </div>
                         <div>
-                            <h4 className={`text-[11px] font-[1000] uppercase tracking-tighter leading-none mb-1 ${isDarkMode ? 'text-emerald-400' : 'text-emerald-900'}`}>100% Encrypted Payment</h4>
-                            <p className={`text-[8px] font-black uppercase tracking-widest leading-none ${isDarkMode ? 'text-emerald-500/60' : 'text-emerald-600/60'}`}>PCI-DSS Secure Network</p>
+                            <h4 className="text-[11px] font-[1000] text-emerald-900 uppercase tracking-tighter leading-none mb-1">100% Encrypted Payment</h4>
+                            <p className="text-[8px] font-black text-emerald-600/60 uppercase tracking-widest leading-none">PCI-DSS Secure Network</p>
                         </div>
                     </div>
 
@@ -3229,11 +3222,8 @@ const InstantWash = () => {
                             <button
                                 key={opt.id}
                                 onClick={() => setPaymentMethod(opt.id)}
-                                className={`w-full p-3.5 rounded-xl flex items-center justify-between transition-all border ${
-                                    paymentMethod === opt.id 
-                                        ? 'border-[#F59E0B] shadow-2xl shadow-[#F59E0B]/10 ring-1 ring-[#F59E0B]/10 ' + (isDarkMode ? 'bg-[#F59E0B]/10' : 'bg-[#F59E0B]/05')
-                                        : (isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white border-black/[0.04]')
-                                }`}
+                                className={`w-full bg-white/5 p-3.5 rounded-xl flex items-center justify-between transition-all border ${paymentMethod === opt.id ? 'border-brand shadow-2xl shadow-black/40 ring-1 ring-brand/10' : 'border-black/[0.03]'
+                                    }`}
                             >
                                 <div className="flex items-center gap-3">
                                     <div className="w-9 h-9 bg-white/[0.02]/50 rounded-xl flex items-center justify-center overflow-hidden border border-black/[0.04]">
@@ -3614,7 +3604,7 @@ const InstantWash = () => {
 
     return (
         <MobileLayout hideNav={phase === PHASES.LIVE_TRACK || phase === PHASES.CART || phase === PHASES.SELECT_SLOT || phase === PHASES.PAYMENT}>
-            <div className={`min-h-screen font-outfit relative transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#FAF6EB]'}`}>
+            <div className="bg-[#FFFFFF] min-h-screen font-outfit relative">
                 <style dangerouslySetInnerHTML={{ __html: `.font-outfit { font-family: 'Outfit', sans-serif; }` }} />
                 
                 {phase !== PHASES.CART && phase !== PHASES.SELECT_SLOT && phase !== PHASES.LIVE_TRACK && phase !== PHASES.PAYMENT}

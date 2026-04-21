@@ -150,9 +150,361 @@
 
 
 /* ========================================
-   REFINED MOBILE-FIRST DESIGN SYSTEM
-   Restored luxury typography and contrast controls
+   LIGHT THEME TEXT COLOR FIX
    ======================================== */
+
+/* Fix white text in light mode - make it black for readability */
+body:not(.dark) .text-white:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *):not([class*="from-"] *) {
+  color: #000 !important;
+}
+
+body:not(.dark) .text-white\/80:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
+  color: rgba(0, 0, 0, 0.8) !important;
+}
+
+body:not(.dark) .text-white\/70:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+body:not(.dark) .text-white\/60:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+body:not(.dark) .text-white\/50:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
+  color: rgba(0, 0, 0, 0.5) !important;
+}
+
+body:not(.dark) .text-white\/40:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
+  color: rgba(0, 0, 0, 0.4) !important;
+}
+
+body:not(.dark) .text-white\/30:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
+  color: rgba(0, 0, 0, 0.3) !important;
+}
+
+body:not(.dark) .text-white\/20:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
+  color: rgba(0, 0, 0, 0.2) !important;
+}
+
+body:not(.dark) .text-white\/10:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
+  color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Keep white text on dark/colored backgrounds */
+body:not(.dark) .bg-black .text-white,
+body:not(.dark) .bg-brand .text-white,
+body:not(.dark) .bg-slate-900 .text-white,
+body:not(.dark) .bg-gray-900 .text-white,
+body:not(.dark) [class*="bg-gradient"] .text-white,
+body:not(.dark) [class*="from-"] .text-white,
+body:not(.dark) [class*="to-"] .text-white {
+  color: #fff !important;
+}
+
+/* Fix for buttons with colored backgrounds */
+body:not(.dark) .bg-blue-500 .text-white,
+body:not(.dark) .bg-green-500 .text-white,
+body:not(.dark) .bg-red-500 .text-white,
+body:not(.dark) .bg-yellow-500 .text-white,
+body:not(.dark) .bg-purple-500 .text-white,
+body:not(.dark) .bg-indigo-500 .text-white,
+body:not(.dark) .bg-pink-500 .text-white,
+body:not(.dark) .bg-orange-500 .text-white {
+  color: #fff !important;
+}
+
+
+/* ========================================
+   PROFESSIONAL TYPOGRAPHY REFINEMENT
+   ======================================== */
+
+/* Reduce excessive font weights - make text more professional */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tone down overly bold text */
+.font-black {
+  font-weight: 700 !important; /* Changed from 900 to 700 */
+}
+
+.font-\[1000\],
+.font-\[900\] {
+  font-weight: 700 !important; /* Professional bold instead of ultra-black */
+}
+
+/* Reduce excessive letter spacing */
+.tracking-\[0\.3em\],
+.tracking-\[0\.2em\],
+.tracking-widest {
+  letter-spacing: 0.05em !important; /* Subtle spacing instead of wide */
+}
+
+.tracking-\[0\.25em\] {
+  letter-spacing: 0.03em !important;
+}
+
+/* Make uppercase text less aggressive */
+.uppercase {
+  text-transform: none !important; /* Remove all-caps for better readability */
+  font-weight: 600 !important; /* Slightly bold for emphasis */
+}
+
+/* Keep uppercase only for specific cases */
+.uppercase-keep,
+button.uppercase,
+.badge.uppercase {
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  font-weight: 600 !important;
+}
+
+/* Professional heading styles */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important; /* Tight, modern spacing */
+}
+
+h1 {
+  font-weight: 700 !important;
+}
+
+/* Refine button text */
+button {
+  font-weight: 600 !important;
+  letter-spacing: 0.01em !important;
+}
+
+/* Professional paragraph text */
+p {
+  font-weight: 400 !important;
+  line-height: 1.6 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Subtle emphasis instead of ultra-bold */
+.font-bold {
+  font-weight: 600 !important; /* Changed from 700 to 600 */
+}
+
+.font-semibold {
+  font-weight: 500 !important;
+}
+
+/* Clean, professional labels */
+label {
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Professional card titles */
+.card-title,
+[class*="card"] h3,
+[class*="card"] h4 {
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* Refined small text */
+.text-xs,
+.text-\[10px\],
+.text-\[11px\],
+.text-\[9px\] {
+  font-weight: 500 !important; /* Medium weight for small text */
+  letter-spacing: 0.01em !important;
+}
+
+/* Professional status badges */
+.badge,
+[class*="badge"],
+.status-badge {
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+  text-transform: capitalize !important; /* Capitalize instead of uppercase */
+}
+
+/* Clean navigation text */
+nav a,
+.nav-link {
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Professional form inputs */
+input,
+textarea,
+select {
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Refined italic text - remove excessive styling */
+.italic {
+  font-style: normal !important; /* Remove italic for cleaner look */
+}
+
+/* Keep italic only for specific emphasis */
+.italic-keep,
+em,
+cite {
+  font-style: italic !important;
+}
+
+/* Professional link styling */
+a {
+  font-weight: 500 !important;
+  text-decoration: none !important;
+}
+
+a:hover {
+  text-decoration: underline !important;
+}
+
+/* Clean table text */
+table th {
+  font-weight: 600 !important;
+  letter-spacing: 0.01em !important;
+  text-transform: capitalize !important;
+}
+
+table td {
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Professional pricing text */
+.price,
+[class*="price"] {
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+}
+
+/* Refined notification text */
+.notification,
+.toast,
+[class*="notification"] {
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Clean modal/dialog text */
+.modal h2,
+.dialog h2 {
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.modal p,
+.dialog p {
+  font-weight: 400 !important;
+  line-height: 1.6 !important;
+}
+
+/* Professional error/success messages */
+.error-message,
+.success-message {
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Refined loading text */
+.loading-text {
+  font-weight: 500 !important;
+  letter-spacing: 0.02em !important;
+}
+
+/* Clean breadcrumb text */
+.breadcrumb {
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Professional dropdown text */
+.dropdown-item {
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Refined tooltip text */
+.tooltip {
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+  font-size: 0.875rem !important;
+}
+
+/* Clean footer text */
+footer {
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Professional code/monospace text */
+code,
+pre,
+.font-mono {
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Refined quote text */
+blockquote {
+  font-weight: 400 !important;
+  font-style: normal !important;
+  letter-spacing: 0 !important;
+}
+
+/* Clean list text */
+ul li,
+ol li {
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.6 !important;
+}
+
+/* Professional tab text */
+.tab,
+[role="tab"] {
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Refined chip/tag text */
+.chip,
+.tag {
+  font-weight: 500 !important;
+  letter-spacing: 0.01em !important;
+  text-transform: capitalize !important;
+}
+
+/* Clean alert text */
+.alert {
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Professional metric/stat text */
+.metric,
+.stat {
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* Refined caption text */
+.caption,
+figcaption {
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+  font-size: 0.875rem !important;
+}
 
 
 /* ========================================

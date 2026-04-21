@@ -2,10 +2,12 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, Calendar, Shield, Star, Check, Zap, Crown, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../../../context/ThemeContext';
 import MobileLayout from '../components/layout/MobileLayout';
 
 const MonthlySpareDriver = () => {
     const navigate = useNavigate();
+    const { isDarkMode } = useTheme();
 
     const plans = [
         { id: 'silver', title: 'Silver pass', price: '₹4,999', washes: '10 sessions', tag: 'Best for work', color: '#94A3B8' },
@@ -15,12 +17,12 @@ const MonthlySpareDriver = () => {
 
     return (
         <MobileLayout>
-            <div className="min-h-screen bg-[#0A0F0D] flex flex-col">
-                <header className="px-5 pt-12 pb-4 flex items-center gap-4 border-b border-white/5">
-                    <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-xl bg-white/[0.02] flex items-center justify-center text-white">
+            <div className={`min-h-screen flex flex-col transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#FAF6EB]'}`}>
+                <header className={`px-5 pt-12 pb-4 flex items-center gap-4 border-b transition-colors ${isDarkMode ? 'border-white/5' : 'border-black/05'}`}>
+                    <button onClick={() => navigate(-1)} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isDarkMode ? 'bg-white/[0.02] text-white' : 'bg-black/[0.05] text-black'}`}>
                         <ChevronLeft size={20} strokeWidth={2.5} />
                     </button>
-                    <h1 className="text-xl font-black text-white tracking-tight uppercase leading-none">Monthly chauffeur</h1>
+                    <h1 className={`text-xl font-black tracking-tight uppercase leading-none ${isDarkMode ? 'text-white' : 'text-black'}`}>Monthly chauffeur</h1>
                 </header>
 
                 <div className="p-5 space-y-6">

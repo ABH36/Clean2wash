@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, History, MapPin, Clock, ShieldCheck, Star } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTheme } from '../../../context/ThemeContext';
 import MobileLayout from '../components/layout/MobileLayout';
 import api from '../../../utils/api';
 
@@ -33,6 +34,7 @@ const getBadgeClass = (status = '') => ({
 
 const ApartmentWashHistory = () => {
     const navigate = useNavigate();
+    const { isDarkMode } = useTheme();
     const [searchParams] = useSearchParams();
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -63,12 +65,12 @@ const ApartmentWashHistory = () => {
 
     return (
         <MobileLayout>
-            <div className="min-h-screen bg-[#0A0F0D]">
-                <header className="px-5 pt-12 pb-4 flex items-center gap-4 border-b border-white/5">
-                    <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-xl bg-white/[0.02] flex items-center justify-center text-white">
+            <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#FAF6EB]'}`}>
+                <header className={`px-5 pt-12 pb-4 flex items-center gap-4 border-b transition-colors ${isDarkMode ? 'border-white/5' : 'border-black/05'}`}>
+                    <button onClick={() => navigate(-1)} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isDarkMode ? 'bg-white/[0.02] text-white' : 'bg-black/[0.05] text-black'}`}>
                         <ChevronLeft size={20} strokeWidth={2.5} />
                     </button>
-                    <h1 className="text-xl font-black text-white tracking-tight uppercase leading-none">Apartment history</h1>
+                    <h1 className={`text-xl font-black tracking-tight uppercase leading-none ${isDarkMode ? 'text-white' : 'text-black'}`}>Apartment history</h1>
                 </header>
 
                 <div className="p-5 space-y-4 pb-24">

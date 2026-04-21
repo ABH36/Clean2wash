@@ -264,14 +264,23 @@ export const AuthProvider = ({ children }) => {
     }, [sessions, handleNewNotification]);
 
     // --- CORE AUTH FUNCTIONS (Moved to top to prevent reference errors) ---
-    const isLoggedIn = useCallback((role) => !!sessions[role], [sessions]);
+    const isLoggedIn = useCallback((role) => {
+        const loggedIn = !!sessions[role];
+        console.log(`🔐 isLoggedIn check for ${role}:`, loggedIn, sessions[role]);
+        return loggedIn;
+    }, [sessions]);
 
     const getUser = useCallback((role) => sessions[role], [sessions]);
 
     const login = useCallback((role, userData) => {
+        console.log(`✅ Login called for ${role}:`, userData);
         const data = { ...userData, loggedInAt: Date.now() };
         localStorage.setItem(SESSION_KEYS[role], JSON.stringify(data));
-        setSessions(prev => ({ ...prev, [role]: data }));
+        setSessions(prev => {
+            const newSessions = { ...prev, [role]: data };
+            console.log('📝 Sessions updated:', newSessions);
+            return newSessions;
+        });
         return true;
     }, []);
 
@@ -305,8 +314,27 @@ export const AuthProvider = ({ children }) => {
         try {
             const { isSignup = false, userData: signupUserData = null } = options;
             const response = await authAPI.verifyOTP(identifier, otp, type, { isSignup, userData: signupUserData });
+
+            console.log('🔑 verifyOTP raw response:', response);
+
+            const needsSignup = response.needsSignup || response.data?.needsSignup || false;
+
+            // ── LOGIN FLOW (isSignup=false): New phone → redirect to signup ──
+            // Only skip session creation if we're NOT already in the signup flow
+            if (needsSignup && !isSignup) {
+                return { success: true, data: { needsSignup: true } };
+            }
+
+            // ── SIGNUP FLOW (isSignup=true) OR existing user ──
+            // Build and persist the session from the response
             const token = response.token || response.data?.token;
             const consumer = response.data?.consumer || response.consumer || response.data;
+
+            // Safety guard — if consumer is missing, fail gracefully
+            if (!consumer || !consumer._id) {
+                console.error('verifyOTP: consumer object missing in response', response);
+                return { success: false, error: 'Account creation failed. Please try again.' };
+            }
 
             if (token) {
                 apiClient.setToken(token);
@@ -322,15 +350,15 @@ export const AuthProvider = ({ children }) => {
                 ...consumer
             };
 
-            const needsSignup = response.needsSignup || response.data?.needsSignup || false;
-
             login('consumer', userSession);
-            return { success: true, data: { consumer: userSession, token, needsSignup } };
+            return { success: true, data: { consumer: userSession, token, needsSignup: false } };
         } catch (error) {
             console.error('Verify OTP error:', error);
             return { success: false, error: error.message };
         }
     }, [login]);
+
+
 
     const apiLogin = useCallback(async (identifier, password) => {
         try {
@@ -426,9 +454,13 @@ export const AuthProvider = ({ children }) => {
         }
     }, []);
 
+    // Load global catalog for vehicle selection - only when logged in
     useEffect(() => {
-        loadGlobalCatalog();
-    }, [loadGlobalCatalog]);
+        // Only fetch if there's an active consumer token to avoid 401 on public pages
+        if (sessions.consumer?.token) {
+            loadGlobalCatalog();
+        }
+    }, [sessions.consumer?.token, loadGlobalCatalog]);
 
     // Load vehicles from backend when user logs in
     useEffect(() => {
@@ -438,24 +470,27 @@ export const AuthProvider = ({ children }) => {
     }, [sessions.consumer]);
 
     const loadVehicles = useCallback(async () => {
-        if (!sessions.consumer || !sessions.consumer.id) {
+        if (!sessions.consumer?.id || !sessions.consumer?.token) {
             console.log('User not logged in, skipping vehicle load');
             return;
+        }
+        // Ensure apiClient has the token set before calling
+        if (sessions.consumer.token) {
+            apiClient.setToken(sessions.consumer.token);
         }
         try {
             setVehiclesLoading(true);
             const response = await apiClient.getVehicles();
             setVehicles(response.data.vehicles || []);
         } catch (error) {
-            console.error('Failed to load vehicles:', error);
-            // Don't show error for unauthorized requests
-            if (error.response?.status !== 401) {
+            // Don't surface 401 errors — they're handled globally
+            if (error.status !== 401) {
                 console.error('Failed to load vehicles:', error);
             }
         } finally {
             setVehiclesLoading(false);
         }
-    }, [sessions.consumer?.id]);
+    }, [sessions.consumer?.id, sessions.consumer?.token]);
 
     const addVehicle = useCallback(async (vehicleData) => {
         try {
@@ -1419,20 +1454,54 @@ export const AuthProvider = ({ children }) => {
 
     // Global unauthorized handler
     useEffect(() => {
-        console.log('AuthContext: Attaching auth:unauthorized listener');
+        let debounceTimer = null;
+
         const handleUnauthorized = () => {
-            console.error('AuthContext: auth:unauthorized event caught! Logging out...');
-            Object.keys(SESSION_KEYS).forEach(role => logout(role));
-            // Optional: redirect to login
-            window.location.href = '/login';
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                // Check each role's session
+                let shouldLogout = false;
+                const now = Date.now();
+                const GRACE_PERIOD_MS = 30_000; // 30s grace after fresh login
+
+                for (const role of Object.keys(SESSION_KEYS)) {
+                    try {
+                        const raw = localStorage.getItem(SESSION_KEYS[role]);
+                        if (!raw) continue;
+                        const session = JSON.parse(raw);
+                        if (!session?.token) continue;
+
+                        // If user JUST logged in, ignore the 401 —
+                        // it's likely a race condition from Home's parallel API calls
+                        const loggedInAt = session.loggedInAt || 0;
+                        if (now - loggedInAt < GRACE_PERIOD_MS) {
+                            console.log(`AuthContext: 401 ignored — fresh login for role '${role}' (${Math.round((now - loggedInAt) / 1000)}s ago)`);
+                            return; // abort — don't logout
+                        }
+
+                        shouldLogout = true;
+                    } catch { /* ignore parse errors */ }
+                }
+
+                if (!shouldLogout) {
+                    console.log('AuthContext: 401 received but no expired active session — ignoring.');
+                    return;
+                }
+
+                console.error('AuthContext: Expired session 401 — logging out.');
+                Object.keys(SESSION_KEYS).forEach(role => logout(role));
+                window.location.href = '/login';
+            }, 500);
         };
 
         window.addEventListener('auth:unauthorized', handleUnauthorized);
         return () => {
-            console.log('AuthContext: Removing auth:unauthorized listener');
+            clearTimeout(debounceTimer);
             window.removeEventListener('auth:unauthorized', handleUnauthorized);
         };
     }, [logout]);
+
+
 
     return (
         <AuthContext.Provider value={{

@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { ChevronLeft, Star, ThumbsUp, Camera, Award, Loader2 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { bookingAPI } from '../../../utils/api';
+import { useTheme } from '../../../context/ThemeContext';
+import MobileLayout from '../components/layout/MobileLayout';
 
 const TAGS = ['On Time', 'Friendly', 'Professional', 'Careful', 'Safe Driving', 'Smooth Experience'];
 
@@ -22,6 +24,7 @@ const formatMoney = (booking = {}) => {
 
 const RateExperience = () => {
     const navigate = useNavigate();
+    const { isDarkMode } = useTheme();
     const [searchParams] = useSearchParams();
     const bookingId = searchParams.get('id');
     const [booking, setBooking] = useState(null);
@@ -103,7 +106,7 @@ const RateExperience = () => {
 
     if (loadingBooking) {
         return (
-            <div className="min-h-screen bg-[#0A0F0D] flex items-center justify-center">
+            <div className={`min-h-screen flex items-center justify-center transition-colors ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#FAF6EB]'}`}>
                 <Loader2 size={28} className="animate-spin text-[#F29F05]" />
             </div>
         );
@@ -111,7 +114,7 @@ const RateExperience = () => {
 
     if (submitted) {
         return (
-            <div className="min-h-screen bg-[#0A0F0D] flex flex-col items-center justify-center px-8 text-center">
+            <div className={`min-h-screen flex flex-col items-center justify-center px-8 text-center transition-colors ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#FAF6EB]'}`}>
                 <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', damping: 20 }}>
                     <div className="w-24 h-24 bg-emerald-500/10 rounded-[2rem] flex items-center justify-center mx-auto mb-8 border border-emerald-500/20 shadow-[0_0_50px_rgba(16,185,129,0.1)]">
                         <ThumbsUp size={40} className="text-emerald-500" fill="currentColor" strokeWidth={1.5} />
@@ -128,7 +131,7 @@ const RateExperience = () => {
 
     if (booking && !chauffeurMode) {
         return (
-            <div className="min-h-screen bg-[#0A0F0D] flex flex-col items-center justify-center px-6 text-center">
+            <div className={`min-h-screen flex flex-col items-center justify-center px-6 text-center transition-colors ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#FAF6EB]'}`}>
                 <h2 className="text-2xl font-black tracking-tight text-content mb-2">Spare driver only</h2>
                 <p className="text-sm font-bold text-content-subtle max-w-[280px]">
                     This feedback screen is available only for spare driver trips.
@@ -144,8 +147,8 @@ const RateExperience = () => {
     }
 
     return (
-        <div className="min-h-screen bg-[#0A0F0D] flex flex-col">
-            <header className="px-4 pt-10 pb-6 flex items-center gap-4 bg-[#0A0F0D]/90 sticky top-0 z-50 border-b border-white/5 backdrop-blur-xl">
+            <div className={`min-h-screen flex flex-col transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#FAF6EB]'}`}>
+            <header className={`px-4 pt-10 pb-6 flex items-center gap-4 sticky top-0 z-50 border-b backdrop-blur-xl transition-colors ${isDarkMode ? 'bg-[#0A0F0D]/90 border-white/5' : 'bg-white/80 border-black/05'}`}>
                 <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate(-1)} className="w-9 h-9 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center">
                     <ChevronLeft size={18} strokeWidth={3} className="text-white" />
                 </motion.button>

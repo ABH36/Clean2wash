@@ -991,9 +991,9 @@ const Home = () => {
 
                     <div className="grid grid-cols-3 gap-4">
                         {[
-                            { id: 'wash', title: 'Car Wash', image: '/assets/carwash/1.png' },
-                            { id: 'detailing', title: 'Detailing', image: '/assets/carwash/2.png' },
-                            { id: 'service', title: 'Maintenance', image: '/assets/carwash/3.png' }
+                            { id: 'instant', title: 'Instant Wash', image: '/assets/instantwash/carwash.png' },
+                            { id: 'studio', title: 'Studio Wash', image: '/assets/studiowash/studio.png' },
+                            { id: 'apartment', title: 'Apartment Wash', image: '/assets/appartment/appartment.png' }
                         ].map((item) => (
                             <motion.button
                                 key={item.id}

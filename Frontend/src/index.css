@@ -147,3 +147,963 @@
     @apply bg-white/5;
   }
 }
+
+
+/* ========================================
+   LIGHT THEME TEXT COLOR FIX
+   ======================================== */
+
+/* Fix white text in light mode - make it black for readability */
+body:not(.dark) .text-white:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *):not([class*="from-"] *) {
+  color: #000 !important;
+}
+
+body:not(.dark) .text-white\/80:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
+  color: rgba(0, 0, 0, 0.8) !important;
+}
+
+body:not(.dark) .text-white\/70:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+body:not(.dark) .text-white\/60:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+body:not(.dark) .text-white\/50:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
+  color: rgba(0, 0, 0, 0.5) !important;
+}
+
+body:not(.dark) .text-white\/40:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
+  color: rgba(0, 0, 0, 0.4) !important;
+}
+
+body:not(.dark) .text-white\/30:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
+  color: rgba(0, 0, 0, 0.3) !important;
+}
+
+body:not(.dark) .text-white\/20:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
+  color: rgba(0, 0, 0, 0.2) !important;
+}
+
+body:not(.dark) .text-white\/10:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
+  color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Keep white text on dark/colored backgrounds */
+body:not(.dark) .bg-black .text-white,
+body:not(.dark) .bg-brand .text-white,
+body:not(.dark) .bg-slate-900 .text-white,
+body:not(.dark) .bg-gray-900 .text-white,
+body:not(.dark) [class*="bg-gradient"] .text-white,
+body:not(.dark) [class*="from-"] .text-white,
+body:not(.dark) [class*="to-"] .text-white {
+  color: #fff !important;
+}
+
+/* Fix for buttons with colored backgrounds */
+body:not(.dark) .bg-blue-500 .text-white,
+body:not(.dark) .bg-green-500 .text-white,
+body:not(.dark) .bg-red-500 .text-white,
+body:not(.dark) .bg-yellow-500 .text-white,
+body:not(.dark) .bg-purple-500 .text-white,
+body:not(.dark) .bg-indigo-500 .text-white,
+body:not(.dark) .bg-pink-500 .text-white,
+body:not(.dark) .bg-orange-500 .text-white {
+  color: #fff !important;
+}
+
+
+/* ========================================
+   PROFESSIONAL TYPOGRAPHY REFINEMENT
+   ======================================== */
+
+/* Reduce excessive font weights - make text more professional */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tone down overly bold text */
+.font-black {
+  font-weight: 700 !important; /* Changed from 900 to 700 */
+}
+
+.font-\[1000\],
+.font-\[900\] {
+  font-weight: 700 !important; /* Professional bold instead of ultra-black */
+}
+
+/* Reduce excessive letter spacing */
+.tracking-\[0\.3em\],
+.tracking-\[0\.2em\],
+.tracking-widest {
+  letter-spacing: 0.05em !important; /* Subtle spacing instead of wide */
+}
+
+.tracking-\[0\.25em\] {
+  letter-spacing: 0.03em !important;
+}
+
+/* Make uppercase text less aggressive */
+.uppercase {
+  text-transform: none !important; /* Remove all-caps for better readability */
+  font-weight: 600 !important; /* Slightly bold for emphasis */
+}
+
+/* Keep uppercase only for specific cases */
+.uppercase-keep,
+button.uppercase,
+.badge.uppercase {
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  font-weight: 600 !important;
+}
+
+/* Professional heading styles */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important; /* Tight, modern spacing */
+}
+
+h1 {
+  font-weight: 700 !important;
+}
+
+/* Refine button text */
+button {
+  font-weight: 600 !important;
+  letter-spacing: 0.01em !important;
+}
+
+/* Professional paragraph text */
+p {
+  font-weight: 400 !important;
+  line-height: 1.6 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Subtle emphasis instead of ultra-bold */
+.font-bold {
+  font-weight: 600 !important; /* Changed from 700 to 600 */
+}
+
+.font-semibold {
+  font-weight: 500 !important;
+}
+
+/* Clean, professional labels */
+label {
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Professional card titles */
+.card-title,
+[class*="card"] h3,
+[class*="card"] h4 {
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* Refined small text */
+.text-xs,
+.text-\[10px\],
+.text-\[11px\],
+.text-\[9px\] {
+  font-weight: 500 !important; /* Medium weight for small text */
+  letter-spacing: 0.01em !important;
+}
+
+/* Professional status badges */
+.badge,
+[class*="badge"],
+.status-badge {
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+  text-transform: capitalize !important; /* Capitalize instead of uppercase */
+}
+
+/* Clean navigation text */
+nav a,
+.nav-link {
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Professional form inputs */
+input,
+textarea,
+select {
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Refined italic text - remove excessive styling */
+.italic {
+  font-style: normal !important; /* Remove italic for cleaner look */
+}
+
+/* Keep italic only for specific emphasis */
+.italic-keep,
+em,
+cite {
+  font-style: italic !important;
+}
+
+/* Professional link styling */
+a {
+  font-weight: 500 !important;
+  text-decoration: none !important;
+}
+
+a:hover {
+  text-decoration: underline !important;
+}
+
+/* Clean table text */
+table th {
+  font-weight: 600 !important;
+  letter-spacing: 0.01em !important;
+  text-transform: capitalize !important;
+}
+
+table td {
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Professional pricing text */
+.price,
+[class*="price"] {
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+}
+
+/* Refined notification text */
+.notification,
+.toast,
+[class*="notification"] {
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Clean modal/dialog text */
+.modal h2,
+.dialog h2 {
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.modal p,
+.dialog p {
+  font-weight: 400 !important;
+  line-height: 1.6 !important;
+}
+
+/* Professional error/success messages */
+.error-message,
+.success-message {
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Refined loading text */
+.loading-text {
+  font-weight: 500 !important;
+  letter-spacing: 0.02em !important;
+}
+
+/* Clean breadcrumb text */
+.breadcrumb {
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Professional dropdown text */
+.dropdown-item {
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Refined tooltip text */
+.tooltip {
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+  font-size: 0.875rem !important;
+}
+
+/* Clean footer text */
+footer {
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Professional code/monospace text */
+code,
+pre,
+.font-mono {
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Refined quote text */
+blockquote {
+  font-weight: 400 !important;
+  font-style: normal !important;
+  letter-spacing: 0 !important;
+}
+
+/* Clean list text */
+ul li,
+ol li {
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.6 !important;
+}
+
+/* Professional tab text */
+.tab,
+[role="tab"] {
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Refined chip/tag text */
+.chip,
+.tag {
+  font-weight: 500 !important;
+  letter-spacing: 0.01em !important;
+  text-transform: capitalize !important;
+}
+
+/* Clean alert text */
+.alert {
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Professional metric/stat text */
+.metric,
+.stat {
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* Refined caption text */
+.caption,
+figcaption {
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+  font-size: 0.875rem !important;
+}
+
+
+/* ========================================
+   MOBILE-FIRST COMPACT DESIGN SYSTEM
+   App-like compact spacing and sizing
+   ======================================== */
+
+/* CSS Variables for Compact Design */
+:root {
+  /* Desktop/Default Spacing */
+  --spacing-card: 1.5rem;          /* 24px */
+  --spacing-section: 1.5rem;       /* 24px */
+  --spacing-gap: 1rem;             /* 16px */
+  --spacing-button: 1rem 1.5rem;   /* 16px 24px */
+  
+  /* Desktop/Default Heights */
+  --height-button: 3.5rem;         /* 56px */
+  --height-input: 3.5rem;          /* 56px */
+  --height-card-min: 5rem;         /* 80px */
+  --height-icon-box: 4rem;         /* 64px */
+  
+  /* Desktop/Default Border Radius */
+  --radius-card: 2rem;             /* 32px */
+  --radius-button: 1.5rem;         /* 24px */
+  --radius-input: 1rem;            /* 16px */
+  --radius-icon: 1.5rem;           /* 24px */
+  
+  /* Desktop/Default Font Sizes */
+  --font-heading-xl: 2rem;         /* 32px */
+  --font-heading-lg: 1.5rem;       /* 24px */
+  --font-heading-md: 1.25rem;      /* 20px */
+  --font-body: 1rem;               /* 16px */
+  --font-small: 0.875rem;          /* 14px */
+}
+
+/* Mobile Compact Mode - App-like spacing */
+@media (max-width: 768px) {
+  :root {
+    /* Compact Spacing - 30-40% reduction */
+    --spacing-card: 1rem;          /* 24px → 16px */
+    --spacing-section: 0.75rem;    /* 24px → 12px */
+    --spacing-gap: 0.75rem;        /* 16px → 12px */
+    --spacing-button: 0.75rem 1rem; /* 16px 24px → 12px 16px */
+    
+    /* Compact Heights - 20-25% reduction */
+    --height-button: 2.75rem;      /* 56px → 44px */
+    --height-input: 2.75rem;       /* 56px → 44px */
+    --height-card-min: 4rem;       /* 80px → 64px */
+    --height-icon-box: 3rem;       /* 64px → 48px */
+    
+    /* Compact Border Radius - 40-50% reduction */
+    --radius-card: 1.25rem;        /* 32px → 20px */
+    --radius-button: 0.875rem;     /* 24px → 14px */
+    --radius-input: 0.75rem;       /* 16px → 12px */
+    --radius-icon: 1rem;           /* 24px → 16px */
+    
+    /* Compact Font Sizes - 15-20% reduction */
+    --font-heading-xl: 1.5rem;     /* 32px → 24px */
+    --font-heading-lg: 1.25rem;    /* 24px → 20px */
+    --font-heading-md: 1.125rem;   /* 20px → 18px */
+    --font-body: 0.9375rem;        /* 16px → 15px */
+    --font-small: 0.8125rem;       /* 14px → 13px */
+  }
+}
+
+/* ========================================
+   COMPACT CARD SYSTEM
+   ======================================== */
+
+/* All cards and containers - Compact padding */
+@media (max-width: 768px) {
+  /* Reduce large padding classes */
+  .p-8, [class*="p-8"] {
+    padding: 1rem !important;
+  }
+  
+  .p-6, [class*="p-6"] {
+    padding: 0.875rem !important;
+  }
+  
+  .px-8 {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  
+  .px-6 {
+    padding-left: 0.875rem !important;
+    padding-right: 0.875rem !important;
+  }
+  
+  .py-8 {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+  }
+  
+  .py-6 {
+    padding-top: 0.875rem !important;
+    padding-bottom: 0.875rem !important;
+  }
+  
+  .py-4 {
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+  }
+  
+  /* Compact margins */
+  .m-8 {
+    margin: 1rem !important;
+  }
+  
+  .m-6 {
+    margin: 0.875rem !important;
+  }
+  
+  .mb-8, .my-8 {
+    margin-bottom: 1rem !important;
+  }
+  
+  .mb-6, .my-6 {
+    margin-bottom: 0.875rem !important;
+  }
+  
+  .mt-8 {
+    margin-top: 1rem !important;
+  }
+  
+  .mt-6 {
+    margin-top: 0.875rem !important;
+  }
+}
+
+/* ========================================
+   COMPACT BORDER RADIUS
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* Reduce excessive rounded corners */
+  .rounded-\[2\.5rem\],
+  .rounded-\[40px\] {
+    border-radius: 1.25rem !important; /* 40px → 20px */
+  }
+  
+  .rounded-\[2rem\],
+  .rounded-\[32px\] {
+    border-radius: 1rem !important; /* 32px → 16px */
+  }
+  
+  .rounded-\[1\.5rem\],
+  .rounded-\[24px\] {
+    border-radius: 0.875rem !important; /* 24px → 14px */
+  }
+  
+  .rounded-3xl {
+    border-radius: 1rem !important; /* 24px → 16px */
+  }
+  
+  .rounded-2xl {
+    border-radius: 0.875rem !important; /* 16px → 14px */
+  }
+}
+
+/* ========================================
+   COMPACT HEIGHTS & WIDTHS
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* Button heights */
+  .h-16 {
+    height: 3rem !important; /* 64px → 48px */
+  }
+  
+  .h-14 {
+    height: 2.75rem !important; /* 56px → 44px */
+  }
+  
+  .h-12 {
+    height: 2.5rem !important; /* 48px → 40px */
+  }
+  
+  /* Icon container sizes */
+  .w-16.h-16,
+  .w-20.h-20 {
+    width: 3rem !important;
+    height: 3rem !important; /* 64px/80px → 48px */
+  }
+  
+  .w-14.h-14 {
+    width: 2.75rem !important;
+    height: 2.75rem !important; /* 56px → 44px */
+  }
+  
+  .w-12.h-12 {
+    width: 2.5rem !important;
+    height: 2.5rem !important; /* 48px → 40px */
+  }
+  
+  .w-10.h-10 {
+    width: 2.25rem !important;
+    height: 2.25rem !important; /* 40px → 36px */
+  }
+  
+  /* Card minimum heights */
+  .min-h-\[200px\],
+  .min-h-\[180px\] {
+    min-height: 140px !important;
+  }
+  
+  .min-h-\[150px\] {
+    min-height: 120px !important;
+  }
+}
+
+/* ========================================
+   COMPACT GAPS & SPACING
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* Grid and flex gaps */
+  .gap-8 {
+    gap: 0.875rem !important; /* 32px → 14px */
+  }
+  
+  .gap-6 {
+    gap: 0.75rem !important; /* 24px → 12px */
+  }
+  
+  .gap-4 {
+    gap: 0.625rem !important; /* 16px → 10px */
+  }
+  
+  .gap-y-10 {
+    row-gap: 1.5rem !important; /* 40px → 24px */
+  }
+  
+  .gap-y-8 {
+    row-gap: 1rem !important; /* 32px → 16px */
+  }
+  
+  .gap-y-6 {
+    row-gap: 0.75rem !important; /* 24px → 12px */
+  }
+  
+  /* Space between elements */
+  .space-y-8 > * + * {
+    margin-top: 1rem !important; /* 32px → 16px */
+  }
+  
+  .space-y-6 > * + * {
+    margin-top: 0.75rem !important; /* 24px → 12px */
+  }
+  
+  .space-y-4 > * + * {
+    margin-top: 0.625rem !important; /* 16px → 10px */
+  }
+  
+  .space-x-6 > * + * {
+    margin-left: 0.75rem !important; /* 24px → 12px */
+  }
+  
+  .space-x-4 > * + * {
+    margin-left: 0.625rem !important; /* 16px → 10px */
+  }
+}
+
+/* ========================================
+   COMPACT FONT SIZES
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* Heading sizes */
+  .text-4xl {
+    font-size: 1.75rem !important; /* 36px → 28px */
+    line-height: 1.2 !important;
+  }
+  
+  .text-3xl {
+    font-size: 1.5rem !important; /* 30px → 24px */
+    line-height: 1.25 !important;
+  }
+  
+  .text-2xl {
+    font-size: 1.25rem !important; /* 24px → 20px */
+    line-height: 1.3 !important;
+  }
+  
+  .text-xl {
+    font-size: 1.125rem !important; /* 20px → 18px */
+    line-height: 1.4 !important;
+  }
+  
+  /* Body text - slight reduction */
+  .text-lg {
+    font-size: 1rem !important; /* 18px → 16px */
+  }
+  
+  .text-base {
+    font-size: 0.9375rem !important; /* 16px → 15px */
+  }
+  
+  /* Small text stays readable */
+  .text-sm {
+    font-size: 0.8125rem !important; /* 14px → 13px */
+  }
+  
+  .text-xs {
+    font-size: 0.6875rem !important; /* 12px → 11px */
+  }
+  
+  /* Custom font sizes */
+  .text-\[32px\] {
+    font-size: 1.5rem !important; /* 32px → 24px */
+  }
+  
+  .text-\[24px\] {
+    font-size: 1.125rem !important; /* 24px → 18px */
+  }
+  
+  .text-\[20px\] {
+    font-size: 1rem !important; /* 20px → 16px */
+  }
+  
+  .text-\[18px\] {
+    font-size: 0.9375rem !important; /* 18px → 15px */
+  }
+  
+  .text-\[16px\] {
+    font-size: 0.875rem !important; /* 16px → 14px */
+  }
+  
+  .text-\[14px\] {
+    font-size: 0.8125rem !important; /* 14px → 13px */
+  }
+  
+  .text-\[12px\] {
+    font-size: 0.6875rem !important; /* 12px → 11px */
+  }
+  
+  .text-\[10px\] {
+    font-size: 0.625rem !important; /* 10px → 10px (minimum) */
+  }
+}
+
+/* ========================================
+   COMPACT SERVICE CARDS (Specific)
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* Service selection cards - like Point to Point, Hourly, etc. */
+  [class*="service-card"],
+  .booking-card,
+  .option-card {
+    padding: 1rem !important;
+    min-height: 4rem !important;
+    border-radius: 1.25rem !important;
+  }
+  
+  /* Icon containers in cards */
+  [class*="service-card"] [class*="w-16"],
+  [class*="service-card"] [class*="w-20"] {
+    width: 3rem !important;
+    height: 3rem !important;
+  }
+  
+  /* Price text in cards */
+  [class*="service-card"] .text-3xl,
+  [class*="service-card"] .text-4xl {
+    font-size: 1.5rem !important;
+  }
+}
+
+/* ========================================
+   COMPACT BUTTONS
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* Primary action buttons */
+  button.h-14,
+  button.h-16,
+  .btn-primary {
+    height: 2.75rem !important;
+    padding: 0.625rem 1rem !important;
+    font-size: 0.875rem !important;
+  }
+  
+  /* Icon buttons */
+  button.w-10.h-10,
+  button.w-12.h-12 {
+    width: 2.25rem !important;
+    height: 2.25rem !important;
+  }
+  
+  /* Button text sizing */
+  button .text-\[12px\],
+  button .text-sm {
+    font-size: 0.8125rem !important;
+  }
+}
+
+/* ========================================
+   COMPACT INPUTS & FORMS
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* Input fields */
+  input.h-14,
+  input.h-16,
+  textarea.h-14,
+  select.h-14 {
+    height: 2.75rem !important;
+    padding: 0.625rem 0.875rem !important;
+    font-size: 0.875rem !important;
+  }
+  
+  /* Input labels */
+  label.text-\[10px\],
+  label.text-xs {
+    font-size: 0.6875rem !important;
+    margin-bottom: 0.375rem !important;
+  }
+  
+  /* Form spacing */
+  .space-y-4 > div {
+    margin-top: 0.75rem !important;
+  }
+}
+
+/* ========================================
+   COMPACT MODALS & OVERLAYS
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* Modal padding */
+  .modal-content,
+  [role="dialog"] {
+    padding: 1.25rem !important;
+  }
+  
+  /* Modal headers */
+  .modal-header,
+  [role="dialog"] header {
+    padding: 1rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+}
+
+/* ========================================
+   COMPACT NAVIGATION
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* Header/navbar height */
+  header,
+  nav {
+    padding-top: 0.875rem !important;
+    padding-bottom: 0.875rem !important;
+  }
+  
+  /* Bottom navigation */
+  .bottom-nav,
+  [class*="bottom-navigation"] {
+    height: 4rem !important;
+    padding: 0.5rem !important;
+  }
+  
+  /* Nav items */
+  .nav-item {
+    padding: 0.5rem 0.75rem !important;
+  }
+}
+
+/* ========================================
+   COMPACT LISTS & GRIDS
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* List items */
+  .list-item,
+  li {
+    padding: 0.75rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  /* Grid spacing */
+  .grid.gap-6 {
+    gap: 0.75rem !important;
+  }
+  
+  .grid.gap-4 {
+    gap: 0.625rem !important;
+  }
+}
+
+/* ========================================
+   COMPACT BADGES & TAGS
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* Status badges */
+  .badge,
+  [class*="badge"],
+  .tag {
+    padding: 0.25rem 0.625rem !important;
+    font-size: 0.6875rem !important;
+    border-radius: 0.5rem !important;
+  }
+}
+
+/* ========================================
+   COMPACT IMAGES & MEDIA
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* Image containers */
+  .image-container,
+  [class*="image-wrapper"] {
+    border-radius: 1rem !important;
+  }
+  
+  /* Avatar sizes */
+  .avatar-lg {
+    width: 3rem !important;
+    height: 3rem !important;
+  }
+  
+  .avatar-md {
+    width: 2.5rem !important;
+    height: 2.5rem !important;
+  }
+}
+
+/* ========================================
+   UTILITY CLASSES FOR COMPACT MODE
+   ======================================== */
+
+/* Force compact spacing */
+.compact {
+  padding: 0.75rem !important;
+  gap: 0.5rem !important;
+}
+
+.compact-sm {
+  padding: 0.5rem !important;
+  gap: 0.375rem !important;
+}
+
+.compact-xs {
+  padding: 0.375rem !important;
+  gap: 0.25rem !important;
+}
+
+/* Compact text */
+.text-compact {
+  font-size: 0.875rem !important;
+  line-height: 1.4 !important;
+}
+
+/* Compact card utility */
+.card-compact {
+  padding: 1rem !important;
+  border-radius: 1rem !important;
+  gap: 0.75rem !important;
+}
+
+@media (max-width: 768px) {
+  .card-compact {
+    padding: 0.875rem !important;
+    border-radius: 0.875rem !important;
+  }
+}
+
+/* ========================================
+   PERFORMANCE OPTIMIZATIONS
+   ======================================== */
+
+/* Reduce motion for better performance on mobile */
+@media (max-width: 768px) and (prefers-reduced-motion: no-preference) {
+  * {
+    transition-duration: 0.2s !important;
+  }
+  
+  .animate-spin {
+    animation-duration: 0.8s !important;
+  }
+}
+
+/* Touch-friendly tap targets */
+@media (max-width: 768px) {
+  button,
+  a,
+  [role="button"],
+  [onclick] {
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+  }
+  
+  /* Increase tap target for small buttons */
+  button.w-8,
+  button.w-10 {
+    min-width: 2.75rem !important;
+    min-height: 2.75rem !important;
+  }
+}

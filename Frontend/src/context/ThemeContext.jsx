@@ -15,15 +15,18 @@ export const ThemeProvider = ({ children }) => {
     useEffect(() => {
         localStorage.setItem('carwash_dark_mode', JSON.stringify(isDarkMode));
         const root = document.documentElement;
+        const body = document.body;
         
         if (isDarkMode) {
             root.classList.add('dark_mode_active');
             root.classList.add('dark');
             root.setAttribute('data-theme', 'dark');
+            body.classList.add('dark');
         } else {
             root.classList.remove('dark_mode_active');
             root.classList.remove('dark');
             root.setAttribute('data-theme', 'light');
+            body.classList.remove('dark');
         }
     }, [isDarkMode]);
 

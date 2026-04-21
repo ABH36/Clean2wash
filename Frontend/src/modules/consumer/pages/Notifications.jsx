@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import MobileLayout from '../components/layout/MobileLayout';
 import { useAuth } from '../../../context/AuthContext';
+import { useTheme } from '../../../context/ThemeContext';
 import { notificationAPI } from '../../../utils/api';
 import { socketService } from '../../../utils/socket';
 
@@ -58,6 +59,7 @@ const resolveNotificationRoute = (notif) => {
 
 const Notifications = () => {
     const navigate = useNavigate();
+    const { isDarkMode } = useTheme();
     const { user } = useAuth();
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -157,22 +159,22 @@ const Notifications = () => {
 
     return (
         <MobileLayout>
-            <div className="bg-[#0A0F0D] min-h-screen">
+            <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#FAF6EB]'}`}>
                 {/* ── Header ── */}
-                <header className="px-4 py-6 flex items-center justify-between bg-[#0A0F0D]/90 sticky top-0 z-[60] border-b border-white/5 backdrop-blur-xl">
+                <header className={`px-4 py-6 flex items-center justify-between sticky top-0 z-[60] border-b backdrop-blur-xl transition-colors ${isDarkMode ? 'bg-[#0A0F0D]/90 border-white/5' : 'bg-white/80 border-black/05'}`}>
                     <div className="flex items-center gap-3">
-                        <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate(-1)} className="w-10 h-10 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center">
-                            <ChevronLeft size={18} className="text-white" strokeWidth={3} />
+                        <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate(-1)} className={`w-10 h-10 rounded-2xl border flex items-center justify-center ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-black/05 border-black/05'}`}>
+                            <ChevronLeft size={18} className={isDarkMode ? 'text-white' : 'text-black'} strokeWidth={3} />
                         </motion.button>
                         <div>
-                            <h1 className="text-lg font-[1000] text-white tracking-tighter leading-none">Notifications</h1>
+                            <h1 className={`text-lg font-[1000] tracking-tighter leading-none ${isDarkMode ? 'text-white' : 'text-black'}`}>Notifications</h1>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="w-10 h-10 bg-[#F59E0B]/10 rounded-2xl flex items-center justify-center border border-[#F59E0B]/20">
                             <Sparkles size={16} className="text-[#F59E0B]" fill="currentColor" />
                         </div>
-                        <button onClick={fetchNotifications} className={`w-10 h-10 rounded-2xl bg-white/5 text-white/20 flex items-center justify-center active:scale-75 transition-all ${loading ? 'animate-spin' : ''}`}>
+                        <button onClick={fetchNotifications} className={`w-10 h-10 rounded-2xl flex items-center justify-center active:scale-75 transition-all ${loading ? 'animate-spin' : ''} ${isDarkMode ? 'bg-white/5 text-white/20' : 'bg-black/05 text-black/30'}`}>
                             <RefreshCw size={16} strokeWidth={3} />
                         </button>
                         {notifications.length > 0 && (
@@ -183,7 +185,7 @@ const Notifications = () => {
                     </div>
                 </header>
 
-            <div className="px-5 pb-24 pt-6 min-h-[70vh]">
+            <div className={`px-5 pb-24 pt-6 min-h-[70vh]`}>
                 <AnimatePresence mode="wait">
                     {loading && notifications.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-32">
@@ -192,12 +194,12 @@ const Notifications = () => {
                         </div>
                     ) : notifications.length === 0 ? (
                         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center py-20 text-center">
-                            <div className="w-24 h-24 bg-white/[0.03] rounded-[2.5rem] flex items-center justify-center mb-8 border border-white/10 relative overflow-hidden group shadow-2xl">
+                            <div className={`w-24 h-24 rounded-[2.5rem] flex items-center justify-center mb-8 border relative overflow-hidden group shadow-2xl ${isDarkMode ? 'bg-white/[0.03] border-white/10' : 'bg-white border-black/05'}`}>
                                 <Inbox size={36} className="text-[#F59E0B] group-hover:scale-110 transition-transform duration-500" />
                                 <div className="absolute inset-0 bg-gradient-to-tr from-[#F59E0B]/5 to-transparent" />
                             </div>
-                            <h2 className="text-[17px] font-black text-white tracking-tighter">No active data</h2>
-                            <p className="text-[10px] text-white/20 mt-3 max-w-[220px] leading-relaxed uppercase font-black tracking-widest">
+                            <h2 className={`text-[17px] font-black tracking-tighter ${isDarkMode ? 'text-white' : 'text-black'}`}>No active data</h2>
+                            <p className={`text-[10px] mt-3 max-w-[220px] leading-relaxed uppercase font-black tracking-widest ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>
                                 Your secure encrypted feed is currently empty. We'll alert you on trip updates.
                             </p>
                             <button onClick={() => navigate('/spare-driver')} className="mt-10 h-14 px-10 bg-white text-black rounded-[1.25rem] text-[11px] font-black uppercase tracking-[0.2em] flex items-center gap-3 active:scale-95 transition-all shadow-2xl shadow-white/5">
@@ -256,23 +258,24 @@ const getIconForType = (type) => {
 
 const NotifCard = ({ n, delay, onClick }) => {
     const { icon, bg } = getIconForType(n.type);
+    const { isDarkMode } = useTheme();
     return (
         <motion.div
             initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay }}
             onClick={onClick}
-            className={`relative flex items-start gap-4 p-5 rounded-[2rem] border transition-all active:scale-[0.98] cursor-pointer shadow-2xl ${n.isNew 
-                ? 'bg-white/[0.04] border-[#F59E0B]/30 ring-1 ring-[#F59E0B]/5' 
-                : 'bg-white/[0.02] border-white/5 opacity-40 hover:opacity-100'}`}
+            className={`relative flex items-start gap-4 p-5 rounded-[2rem] border transition-all active:scale-[0.98] cursor-pointer shadow-sm ${n.isNew 
+                ? (isDarkMode ? 'bg-white/[0.04] border-[#F59E0B]/30 ring-1 ring-[#F59E0B]/5' : 'bg-white border-[#F59E0B]/40 shadow-md')
+                : (isDarkMode ? 'bg-white/[0.02] border-white/5 opacity-40 hover:opacity-100' : 'bg-white/60 border-black/05 opacity-60 hover:opacity-100')}`}
         >
             <div className={`w-12 h-12 rounded-[1.25rem] flex items-center justify-center shrink-0 ${bg} border border-white/5 shadow-inner`}>
                 {icon}
             </div>
             <div className="flex-1 min-w-0 pt-0.5">
                 <div className="flex items-center justify-between gap-3 mb-1.5">
-                    <h3 className={`text-[13px] font-black truncate tracking-tighter ${n.isNew ? 'text-white' : 'text-white/60'}`}>{n.title}</h3>
-                    <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em] shrink-0">{n.time}</span>
+                    <h3 className={`text-[13px] font-black truncate tracking-tighter ${n.isNew ? (isDarkMode ? 'text-white' : 'text-black') : (isDarkMode ? 'text-white/60' : 'text-black/40')}`}>{n.title}</h3>
+                    <span className={`text-[9px] font-black uppercase tracking-[0.2em] shrink-0 ${isDarkMode ? 'text-white/20' : 'text-black/25'}`}>{n.time}</span>
                 </div>
-                <p className={`text-[10px] leading-relaxed uppercase font-black tracking-widest ${n.isNew ? 'text-white/40' : 'text-white/20'}`}>{n.desc}</p>
+                <p className={`text-[10px] leading-relaxed uppercase font-black tracking-widest ${n.isNew ? (isDarkMode ? 'text-white/40' : 'text-black/50') : (isDarkMode ? 'text-white/20' : 'text-black/25')}`}>{n.desc}</p>
             </div>
             {n.isNew && (
                 <div className="absolute top-5 right-5">

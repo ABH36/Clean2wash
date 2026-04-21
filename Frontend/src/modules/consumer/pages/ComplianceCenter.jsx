@@ -7,10 +7,12 @@ import {
     FileText, Zap, ChevronRight, Filter, AlertCircle, Sparkles
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
+import { useTheme } from '../../../context/ThemeContext';
 import MobileLayout from '../components/layout/MobileLayout';
 
 const ComplianceCenter = () => {
     const navigate = useNavigate();
+    const { isDarkMode } = useTheme();
     const { vehicles } = useAuth();
     const [activeFilter, setActiveFilter] = useState('All');
 
@@ -65,11 +67,11 @@ const ComplianceCenter = () => {
 
     return (
         <MobileLayout hideNav>
-            <div className="bg-[#0A0F0D] min-h-screen font-outfit pb-24">
+            <div className={`min-h-screen font-outfit pb-24 transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#FAF6EB]'}`}>
                 <style dangerouslySetInnerHTML={{ __html: `@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap'); .font-outfit { font-family: 'Outfit', sans-serif; }` }} />
 
                 {/* ── Header ── */}
-                <header className="sticky top-0 z-50 bg-[#0A0F0D]/90 border-b border-white/5 px-5 py-6 backdrop-blur-xl">
+                <header className={`sticky top-0 z-50 border-b px-5 py-6 backdrop-blur-xl transition-colors ${isDarkMode ? 'bg-[#0A0F0D]/90 border-white/5' : 'bg-white/80 border-black/05'}`}>
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate(-1)} className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">

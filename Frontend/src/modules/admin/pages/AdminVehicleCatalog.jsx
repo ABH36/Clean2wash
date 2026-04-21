@@ -364,7 +364,6 @@ const AdminVehicleCatalog = () => {
                                                 </div>
                                                 <Zap size={10} className="text-[var(--primary)] opacity-30" />
                                             </div>
-                                        </div>
                                     </motion.div>
                                 ))}
                             </div>
@@ -431,7 +430,7 @@ const AdminVehicleCatalog = () => {
                                                             <Trash2 size={18} className="group-hover/trash:scale-110 transition-transform" />
                                                         </button>
                                                     </div>
-                                                </td>/td>
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>

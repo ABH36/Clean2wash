@@ -19,7 +19,6 @@ import { socketService } from '../../../utils/socket';
 import MobileLayout from '../components/layout/MobileLayout';
 import { toast } from 'react-hot-toast';
 import Header from '../../../components/common/Header';
-import FareEstimator from '../../../components/booking/FareEstimator';
 
 // 🏎️ Chauffeur Service Visuals
 import pointImg from '../../../assets/chauffeur/point.png';
@@ -1504,10 +1503,10 @@ const SpareDriverBooking = () => {
         }
         
         // Check if location is in serviceable zone
-        if (pickupLocation?.lat && pickupLocation?.lng) {
+        if (userCoords?.lat && userCoords?.lng) {
             try {
                 const zoneCheck = await fetch(
-                    `/api/zones/check-location?latitude=${pickupLocation.lat}&longitude=${pickupLocation.lng}&service=spareDriver`
+                    `/api/zones/check-location?latitude=${userCoords.lat}&longitude=${userCoords.lng}&service=spareDriver`
                 );
                 const zoneData = await zoneCheck.json();
                 
@@ -1526,9 +1525,9 @@ const SpareDriverBooking = () => {
         try {
             const multiplier = getVehicleMultiplier(selectedVehicle, vehicleTypes);
             
-            // Use calculated pricing from FareEstimator if available, otherwise fallback to estimated
-            const amount = calculatedPricing?.totalAmount || calculatedPricing?.total || estimatedTotal;
-            const baseFare = calculatedPricing?.baseFare || calculatedPricing?.baseAmount || selectedType.basePrice;
+            // Use locally computed pricing (dynamicPricingBreakdown) — no FareEstimator API needed
+            const amount = estimatedTotal;
+            const baseFare = dynamicPricingBreakdown.baseAmount || selectedType.basePrice;
             
             const selectedVehicleId = selectedVehicle?._id || selectedVehicle?.id;
             const liveScheduleSnapshot = bookingMode === 'instant'
@@ -1551,13 +1550,8 @@ const SpareDriverBooking = () => {
                     totalAmount: amount,
                     initialPaidAmount: amount,
                     currency: 'INR',
-                    // Include detailed pricing breakdown if available
-                    ...(calculatedPricing && {
-                        gst: calculatedPricing.gst,
-                        discount: calculatedPricing.discount || calculatedPricing.scheduledDiscount,
-                        surgeMultiplier: calculatedPricing.surgeMultiplier,
-                        breakdown: calculatedPricing
-                    })
+                    gst: dynamicPricingBreakdown.gstAmount || 0,
+                    breakdown: dynamicPricingBreakdown.breakdown || []
                 },
                 schedule: {
                     type: bookingMode,
@@ -2017,7 +2011,7 @@ const SpareDriverBooking = () => {
             </div>
 
             {/* 7. Bottom Bar */}
-            <div className={`fixed bottom-0 left-0 right-0 z-[100] px-5 py-4 backdrop-blur-lg border-t safe-area-bottom transition-all ${
+            <div className={`fixed bottom-[76px] left-0 right-0 z-[1100] px-5 py-4 backdrop-blur-lg border-t safe-area-bottom transition-all ${
                 isDarkMode ? 'bg-[#0A0F0D]/90 border-white/05' : 'bg-white/90 border-black/05'
             }`}>
                 <div className="max-w-[430px] mx-auto flex items-center justify-between">
@@ -2114,7 +2108,7 @@ const SpareDriverBooking = () => {
             </div>
 
             {/* Compact Sticky Footer */}
-            <div className={`fixed bottom-0 left-0 right-0 z-50 px-5 py-4 backdrop-blur-lg border-t safe-area-bottom transition-all ${
+            <div className={`fixed bottom-[76px] left-0 right-0 z-[1100] px-5 py-4 backdrop-blur-lg border-t safe-area-bottom transition-all ${
                 isDarkMode ? 'bg-[#0A0F0D]/90 border-white/05' : 'bg-white/90 border-black/05'
             }`}>
                 <div className="max-w-[430px] mx-auto flex items-center gap-4 bg-[#0F172A] p-4 rounded-xl shadow-2xl shadow-black/50">
@@ -3358,19 +3352,56 @@ const SpareDriverBooking = () => {
                     </div>
                 </div>
 
-                {/* 🎯 REAL-TIME FARE ESTIMATION */}
-                <FareEstimator
-                    serviceType={selectedServiceKind}
-                    vehicleType={selectedVehicle?.type?.toLowerCase() || 'hatchback'}
-                    duration={bookingDetails.duration}
-                    scheduledTime={bookingMode === 'scheduled' ? getScheduledServiceTime({ type: 'scheduled', date: bookingDetails.date, time: bookingDetails.time }) : null}
-                    isScheduled={bookingMode === 'scheduled'}
-                    onPriceCalculated={(pricing) => {
-                        setCalculatedPricing(pricing);
-                        setPricingError(null);
-                    }}
-                    className="mb-4"
-                />
+                {/* 🎯 FARE BREAKDOWN — uses local memo, no API loop */}
+                <div className={`rounded-2xl border overflow-hidden ${isDarkMode ? 'bg-[#0F172A] border-white/08' : 'bg-white border-black/06 shadow-sm'}`}>
+                    {/* Header */}
+                    <div className={`px-5 py-3.5 flex items-center gap-3 border-b ${isDarkMode ? 'border-white/05' : 'border-black/05'}`}>
+                        <div className="w-9 h-9 rounded-xl bg-[#FF9900] flex items-center justify-center shrink-0">
+                            <span className="text-[#0F172A] text-[14px] font-[1000]">₹</span>
+                        </div>
+                        <div>
+                            <p className={`text-[12px] font-black uppercase tracking-tight leading-none ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>Fare Estimate</p>
+                            <p className={`text-[8px] font-bold uppercase tracking-widest mt-0.5 ${isDarkMode ? 'text-white/30' : 'text-black/30'}`}>Pre-trip breakdown</p>
+                        </div>
+                        <div className="ml-auto text-right">
+                            <p className={`text-[22px] font-[1000] tracking-tight leading-none ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>₹{estimatedTotal}</p>
+                            <p className="text-[8px] font-black text-[#FF9900] uppercase tracking-widest">Total Est.</p>
+                        </div>
+                    </div>
+
+                    {/* Breakdown rows */}
+                    <div className="px-5 py-3 space-y-2">
+                        {dynamicPricingBreakdown.breakdown.map((item, i) => (
+                            <div key={i} className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[11px]">{item.icon}</span>
+                                    <span className={`text-[10px] font-bold uppercase tracking-wide ${isDarkMode ? 'text-white/50' : 'text-black/50'}`}>{item.label}</span>
+                                </div>
+                                <span className={`text-[11px] font-black ${item.type === 'surcharge' ? 'text-[#FF9900]' : isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
+                                    {item.type === 'base' ? '' : '+'} ₹{item.amount.toLocaleString('en-IN')}
+                                </span>
+                            </div>
+                        ))}
+                        {/* GST row */}
+                        {dynamicPricingBreakdown.gstAmount > 0 && (
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[11px]">🏛️</span>
+                                    <span className={`text-[10px] font-bold uppercase tracking-wide ${isDarkMode ? 'text-white/50' : 'text-black/50'}`}>GST (5%)</span>
+                                </div>
+                                <span className={`text-[11px] font-black ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
+                                    + ₹{dynamicPricingBreakdown.gstAmount.toLocaleString('en-IN')}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Total footer */}
+                    <div className={`px-5 py-3 border-t flex items-center justify-between ${isDarkMode ? 'border-white/05 bg-white/03' : 'border-black/05 bg-black/02'}`}>
+                        <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${isDarkMode ? 'text-white/30' : 'text-black/30'}`}>Grand Total</span>
+                        <span className={`text-[16px] font-[1000] tracking-tight ${isDarkMode ? 'text-[#FF9900]' : 'text-[#0F172A]'}`}>₹{estimatedTotal.toLocaleString('en-IN')}</span>
+                    </div>
+                </div>
 
                 {/* Reserve Info */}
                 <div className={`rounded-xl p-4 border transition-colors ${
@@ -3403,17 +3434,17 @@ const SpareDriverBooking = () => {
             </div>
 
             {/* Sticky Action Footer */}
-            <div className={`fixed bottom-0 left-0 right-0 z-[100] px-5 py-4 backdrop-blur-lg border-t safe-area-bottom transition-all ${
+            <div className={`fixed bottom-[76px] left-0 right-0 z-[1100] px-5 py-4 backdrop-blur-lg border-t safe-area-bottom transition-all ${
                 isDarkMode ? 'bg-[#0A0F0D]/90 border-white/05' : 'bg-white/90 border-black/05'
             }`}>
                 <div className="max-w-[430px] mx-auto flex items-center gap-4">
                     <motion.button
                         whileTap={{ scale: 0.98 }}
                         onClick={handleConfirmBooking}
-                        disabled={bookingInProgress}
+                        disabled={isProcessing}
                         className="flex-1 h-14 bg-orange-500 hover:bg-orange-600 text-[#0F172A] rounded-2xl font-[1000] text-[13px] uppercase tracking-[0.1em] shadow-xl shadow-orange-500/20 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                     >
-                        {bookingInProgress ? 'Establishing...' : 'Confirm Booking'}
+                        {isProcessing ? 'Establishing...' : 'Confirm Booking'}
                         <ArrowRight size={18} strokeWidth={4} />
                     </motion.button>
                 </div>

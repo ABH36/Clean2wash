@@ -70,40 +70,40 @@ const CountdownTimer = ({ targetTime }) => {
 
 const CAPTAIN_STEPS = [
     { id: 'pending', label: 'Booking Created', desc: 'Wash requested successfully', Icon: Zap, activeColor: 'text-[#F59E0B]', activeBg: 'bg-[#F59E0B]/10', activeBorder: 'border-[#F59E0B]/20' },
-    { id: 'assigned', label: 'Captain Assigned', desc: 'Expert captain on the job', Icon: ShieldCheck, activeColor: 'text-white', activeBg: 'bg-white/10', activeBorder: 'border-white/20' },
+    { id: 'assigned', label: 'Captain Assigned', desc: 'Expert captain on the job', Icon: ShieldCheck, activeColor: 'text-[#F59E0B]', activeBg: 'bg-[#F59E0B]/10', activeBorder: 'border-[#F59E0B]/20' },
     { id: 'en_route', label: 'En Route', desc: 'Captain is heading your way', Icon: Navigation, activeColor: 'text-[#F59E0B]', activeBg: 'bg-[#F59E0B]/10', activeBorder: 'border-[#F59E0B]/20' },
     { id: 'arrived', label: 'Arrived', desc: 'Captain reached your location', Icon: MapPin, activeColor: 'text-emerald-500', activeBg: 'bg-emerald-500/10', activeBorder: 'border-emerald-500/20' },
     { id: 'before_photo', label: 'Inspection Done', desc: 'Vehicle condition documented', Icon: CheckCircle2, activeColor: 'text-[#F59E0B]', activeBg: 'bg-[#F59E0B]/10', activeBorder: 'border-[#F59E0B]/20' },
-    { id: 'in_progress', label: 'Wash in Progress', desc: 'Deep cleaning in action', Icon: Droplets, activeColor: 'text-blue-500', activeBg: 'bg-blue-500/10', activeBorder: 'border-blue-500/20' },
+    { id: 'in_progress', label: 'Wash in Progress', desc: 'Deep cleaning in action', Icon: Droplets, activeColor: 'text-[#F59E0B]', activeBg: 'bg-[#F59E0B]/10', activeBorder: 'border-[#F59E0B]/20' },
     { id: 'after_photo', label: 'Final Inspection', desc: 'Quality check completed', Icon: CheckCircle2, activeColor: 'text-emerald-500', activeBg: 'bg-emerald-500/10', activeBorder: 'border-emerald-500/20' },
-    { id: 'completed', label: 'Completed', desc: 'Spotless! Enjoy your ride', Icon: CheckCircle2, activeColor: 'text-white', activeBg: 'bg-white/10', activeBorder: 'border-white/20' },
+    { id: 'completed', label: 'Completed', desc: 'Spotless! Enjoy your ride', Icon: CheckCircle2, activeColor: 'text-white', activeBg: 'bg-[#F59E0B]', activeBorder: 'border-[#F59E0B]' },
 ];
 
 const APARTMENT_STEPS = [
-    { id: 'pending', label: 'Plan Active', desc: 'Subscription wash scheduled', Icon: Zap, activeColor: 'text-violet-500', activeBg: 'bg-violet-50', activeBorder: 'border-violet-200' },
-    { id: 'assigned', label: 'Specialist Assigned', desc: 'Building supervisor ready', Icon: ShieldCheck, activeColor: 'text-blue-500', activeBg: 'bg-blue-50', activeBorder: 'border-blue-200' },
-    { id: 'en_route', label: 'Specialist In-Park', desc: 'Heading to your parking slot', Icon: Navigation, activeColor: 'text-blue-600', activeBg: 'bg-blue-100', activeBorder: 'border-blue-300' },
-    { id: 'arrived', label: 'At Vehicle', desc: 'Specialist reached the vehicle', Icon: MapPin, activeColor: 'text-brand', activeBg: 'bg-brand/10', activeBorder: 'border-brand/20' },
-    { id: 'before_photo', label: 'Inspection Done', desc: 'Initial state documented', Icon: CheckCircle2, activeColor: 'text-orange-500', activeBg: 'bg-orange-50', activeBorder: 'border-orange-200' },
-    { id: 'in_progress', label: 'Wash in Progress', desc: 'Premium detailing active', Icon: Droplets, activeColor: 'text-sky-500', activeBg: 'bg-sky-50', activeBorder: 'border-sky-200' },
-    { id: 'after_photo', label: 'Final Inspection', desc: 'Quality audit completed', Icon: CheckCircle2, activeColor: 'text-emerald-500', activeBg: 'bg-emerald-50', activeBorder: 'border-emerald-200' },
-    { id: 'completed', label: 'Service Done', desc: 'Spotless! Ready to drive', Icon: CheckCircle2, activeColor: 'text-green-600', activeBg: 'bg-green-50', activeBorder: 'border-green-200' },
+    { id: 'pending', label: 'Plan Active', desc: 'Subscription wash scheduled', Icon: Zap, activeColor: 'text-[#F59E0B]', activeBg: 'bg-[#F59E0B]/10', activeBorder: 'border-[#F59E0B]/20' },
+    { id: 'assigned', label: 'Specialist Assigned', desc: 'Building supervisor ready', Icon: ShieldCheck, activeColor: 'text-[#F59E0B]', activeBg: 'bg-[#F59E0B]/10', activeBorder: 'border-[#F59E0B]/20' },
+    { id: 'en_route', label: 'Specialist In-Park', desc: 'Heading to your parking slot', Icon: Navigation, activeColor: 'text-[#F59E0B]', activeBg: 'bg-[#F59E0B]/10', activeBorder: 'border-[#F59E0B]/20' },
+    { id: 'arrived', label: 'At Vehicle', desc: 'Specialist reached the vehicle', Icon: MapPin, activeColor: 'text-[#F59E0B]', activeBg: 'bg-[#F59E0B]/10', activeBorder: 'border-[#F59E0B]/20' },
+    { id: 'before_photo', label: 'Inspection Done', desc: 'Initial state documented', Icon: CheckCircle2, activeColor: 'text-[#F59E0B]', activeBg: 'bg-[#F59E0B]/10', activeBorder: 'border-[#F59E0B]/20' },
+    { id: 'in_progress', label: 'Wash in Progress', desc: 'Premium detailing active', Icon: Droplets, activeColor: 'text-[#F59E0B]', activeBg: 'bg-[#F59E0B]/10', activeBorder: 'border-[#F59E0B]/20' },
+    { id: 'after_photo', label: 'Final Inspection', desc: 'Quality audit completed', Icon: CheckCircle2, activeColor: 'text-emerald-500', activeBg: 'bg-emerald-500/10', activeBorder: 'border-emerald-500/20' },
+    { id: 'completed', label: 'Service Done', desc: 'Spotless! Ready to drive', Icon: CheckCircle2, activeColor: 'text-white', activeBg: 'bg-[#F59E0B]', activeBorder: 'border-[#F59E0B]' },
 ];
 
 const VENDOR_STEPS = [
-    { id: 'pending', label: 'Studio Request', desc: 'Awaiting studio confirmation', Icon: Zap, activeColor: 'text-violet-500', activeBg: 'bg-violet-50', activeBorder: 'border-violet-200' },
-    { id: 'accepted', label: 'Studio Confirmed', desc: 'Premium studio assigned', Icon: ShieldCheck, activeColor: 'text-blue-500', activeBg: 'bg-blue-50', activeBorder: 'border-blue-200' },
-    { id: 'pickup-assigned', label: 'Pickup Specialist', desc: 'Awaiting departure', Icon: Navigation, activeColor: 'text-blue-600', activeBg: 'bg-blue-100', activeBorder: 'border-blue-300' },
-    { id: 'en_route', label: 'En Route', desc: 'Specialist is heading your way', Icon: Navigation, activeColor: 'text-blue-600', activeBg: 'bg-blue-200', activeBorder: 'border-blue-400' },
-    { id: 'arrived', label: 'At Your Door', desc: 'Verify handover status', Icon: MapPin, activeColor: 'text-brand', activeBg: 'bg-brand/10', activeBorder: 'border-brand/20' },
-    { id: 'picked-up', label: 'Vehicle Secured', desc: 'Moving to Studio Node', Icon: ShieldCheck, activeColor: 'text-indigo-600', activeBg: 'bg-indigo-50', activeBorder: 'border-indigo-200' },
-    { id: 'at-studio', label: 'At Studio', desc: 'Vehicle reached detailing hub', Icon: Truck, activeColor: 'text-orange-500', activeBg: 'bg-orange-50', activeBorder: 'border-orange-200' },
-    { id: 'in_progress', label: 'Wash in Progress', desc: 'Deep cleaning in action', Icon: Droplets, activeColor: 'text-sky-500', activeBg: 'bg-sky-50', activeBorder: 'border-sky-200' },
-    { id: 'quality-check', label: 'Quality Check', desc: 'Luxury finishing & audit', Icon: CheckCircle2, activeColor: 'text-emerald-500', activeBg: 'bg-emerald-50', activeBorder: 'border-emerald-200' },
-    { id: 'ready-for-delivery', label: 'Ready for Home', desc: 'Wash done, awaiting driver', Icon: ShieldCheck, activeColor: 'text-green-600', activeBg: 'bg-green-50', activeBorder: 'border-green-200' },
-    { id: 'out_for_delivery', label: 'Out for Delivery', desc: 'Specialist heading to you', Icon: Navigation, activeColor: 'text-blue-600', activeBg: 'bg-blue-100', activeBorder: 'border-blue-300' },
-    { id: 'at_delivery_address', label: 'Specialist Arrived', desc: 'Collect your vehicle', Icon: MapPin, activeColor: 'text-brand', activeBg: 'bg-brand/10', activeBorder: 'border-brand/20' },
-    { id: 'completed', label: 'Delivered', desc: 'Returned in pristine condition', Icon: CheckCircle2, activeColor: 'text-green-600', activeBg: 'bg-green-50', activeBorder: 'border-green-200' },
+    { id: 'pending', label: 'Studio Request', desc: 'Awaiting studio confirmation', Icon: Zap, activeColor: 'text-[#F59E0B]', activeBg: 'bg-[#F59E0B]/10', activeBorder: 'border-[#F59E0B]/20' },
+    { id: 'accepted', label: 'Studio Confirmed', desc: 'Premium studio assigned', Icon: ShieldCheck, activeColor: 'text-[#F59E0B]', activeBg: 'bg-[#F59E0B]/10', activeBorder: 'border-[#F59E0B]/20' },
+    { id: 'pickup-assigned', label: 'Pickup Specialist', desc: 'Awaiting departure', Icon: Navigation, activeColor: 'text-[#F59E0B]', activeBg: 'bg-[#F59E0B]/10', activeBorder: 'border-[#F59E0B]/20' },
+    { id: 'en_route', label: 'En Route', desc: 'Specialist is heading your way', Icon: Navigation, activeColor: 'text-[#F59E0B]', activeBg: 'bg-[#F59E0B]/10', activeBorder: 'border-[#F59E0B]/20' },
+    { id: 'arrived', label: 'At Your Door', desc: 'Verify handover status', Icon: MapPin, activeColor: 'text-[#F59E0B]', activeBg: 'bg-[#F59E0B]/10', activeBorder: 'border-[#F59E0B]/20' },
+    { id: 'picked-up', label: 'Vehicle Secured', desc: 'Moving to Studio Node', Icon: ShieldCheck, activeColor: 'text-indigo-400', activeBg: 'bg-indigo-400/10', activeBorder: 'border-indigo-400/20' },
+    { id: 'at-studio', label: 'At Studio', desc: 'Vehicle reached detailing hub', Icon: Truck, activeColor: 'text-[#F59E0B]', activeBg: 'bg-[#F59E0B]/10', activeBorder: 'border-[#F59E0B]/20' },
+    { id: 'in_progress', label: 'Wash in Progress', desc: 'Deep cleaning in action', Icon: Droplets, activeColor: 'text-[#F59E0B]', activeBg: 'bg-[#F59E0B]/10', activeBorder: 'border-[#F59E0B]/20' },
+    { id: 'quality-check', label: 'Quality Check', desc: 'Luxury finishing & audit', Icon: CheckCircle2, activeColor: 'text-emerald-500', activeBg: 'bg-emerald-500/10', activeBorder: 'border-emerald-500/20' },
+    { id: 'ready-for-delivery', label: 'Ready for Home', desc: 'Wash done, awaiting driver', Icon: ShieldCheck, activeColor: 'text-[#F59E0B]', activeBg: 'bg-[#F59E0B]/10', activeBorder: 'border-[#F59E0B]/20' },
+    { id: 'out_for_delivery', label: 'Out for Delivery', desc: 'Specialist heading to you', Icon: Navigation, activeColor: 'text-[#F59E0B]', activeBg: 'bg-[#F59E0B]/10', activeBorder: 'border-[#F59E0B]/20' },
+    { id: 'at_delivery_address', label: 'Specialist Arrived', desc: 'Collect your vehicle', Icon: MapPin, activeColor: 'text-[#F59E0B]', activeBg: 'bg-[#F59E0B]/10', activeBorder: 'border-[#F59E0B]/20' },
+    { id: 'completed', label: 'Delivered', desc: 'Returned in pristine condition', Icon: CheckCircle2, activeColor: 'text-white', activeBg: 'bg-[#F59E0B]', activeBorder: 'border-[#F59E0B]' },
 ];
 
 const BookingStatus = () => {
@@ -455,13 +455,15 @@ const BookingStatus = () => {
                     </div>
 
                     {/* Route label */}
-                    <div className="absolute bottom-3 left-3 right-3 bg-white/80 backdrop-blur-sm rounded-xl px-3 py-2 flex items-center gap-2">
+                    <div className={`absolute bottom-3 left-3 right-3 backdrop-blur-sm rounded-xl px-3 py-2 flex items-center gap-2 border ${
+                        isDarkMode ? 'bg-black/60 border-white/10' : 'bg-white/80 border-black/05'
+                    }`}>
                         <div className="flex items-center gap-1.5 flex-1">
-                            <div className="w-1.5 h-1.5 rounded-full bg-brand" />
-                            <div className="flex-1 h-px bg-gradient-to-r from-brand to-blue-400" />
-                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
+                            <div className={`flex-1 h-px bg-gradient-to-r ${isDarkMode ? 'from-[#F59E0B] to-white/20' : 'from-[#F59E0B] to-black/10'}`} />
+                            <div className={`w-1.5 h-1.5 rounded-full ${isDarkMode ? 'bg-white/20' : 'bg-black/10'}`} />
                         </div>
-                        <span className="text-[8px] font-bold text-content-subtle ml-1">
+                        <span className={`text-[8px] font-bold ml-1 ${isDarkMode ? 'text-white/40' : 'text-black/30'}`}>
                             {type === 'vendor' ? 'Home → Studio Hub → Home' : (liveBooking.address?.city ? `Live at ${liveBooking.address?.city}` : 'Your Location')}
                         </span>
                     </div>
@@ -729,10 +731,12 @@ const BookingStatus = () => {
                 </div>
 
                 {/* ── Note ─────────────────────────────────────── */}
-                <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-2xl px-4 py-4">
-                    <Info size={16} className="text-blue-500 flex-shrink-0 mt-0.5" strokeWidth={2.5} />
-                    <p className="text-[11px] text-blue-700 font-medium leading-relaxed">
-                        Park your vehicle with <span className="font-black">2 ft clearance</span> on all sides for the signature 360° wash.
+                <div className={`flex items-start gap-3 rounded-2xl px-4 py-4 border ${
+                    isDarkMode ? 'bg-white/[0.03] border-white/5' : 'bg-blue-50 border-blue-100'
+                }`}>
+                    <Info size={16} className={`flex-shrink-0 mt-0.5 ${isDarkMode ? 'text-[#F59E0B]' : 'text-blue-500'}`} strokeWidth={2.5} />
+                    <p className={`text-[11px] font-medium leading-relaxed ${isDarkMode ? 'text-white/60' : 'text-blue-700'}`}>
+                        Park your vehicle with <span className={isDarkMode ? 'text-white font-[1000]' : 'font-black'}>2 ft clearance</span> on all sides for the signature 360° wash.
                     </p>
                 </div>
 

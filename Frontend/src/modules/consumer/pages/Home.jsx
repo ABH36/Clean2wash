@@ -531,7 +531,7 @@ const Home = () => {
                                                 <h4 className={`text-[14px] font-[1000] tracking-tight truncate ${isDarkMode ? 'text-white' : 'text-black'}`}>{item.title}</h4>
                                                 <div className="flex items-center gap-1.5">
                                                     <span className={`px-2 py-0.5 rounded-full text-[8px] font-black tracking-wider ${item.type === 'SERVICE' ? 'bg-[#F59E0B]/10 text-[#F59E0B]' :
-                                                        item.type === 'PRODUCT' ? 'bg-blue-500/10 text-blue-400' :
+                                                        item.type === 'PRODUCT' ? 'bg-indigo-500/10 text-indigo-400' :
                                                             isDarkMode ? 'bg-white/10 text-white/40' : 'bg-black/10 text-black/40'
                                                         }`}>
                                                         {item.cat || item.type}
@@ -869,8 +869,8 @@ const Home = () => {
                         isDarkMode ? 'bg-white/5 border-white/5 active:bg-white/[0.02]' : 'bg-white border-black/5 active:bg-black/[0.01] shadow-sm'
                     }`}
                 >
-                    <div className="absolute top-0 right-0 w-12 h-12 bg-blue-500/5 rounded-bl-[30px] -mr-3 -mt-3 group-hover:scale-150 transition-all" />
-                    <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-white/70 relative z-10">
+                    <div className="absolute top-0 right-0 w-12 h-12 bg-[#F59E0B]/5 rounded-bl-[30px] -mr-3 -mt-3 group-hover:scale-150 transition-all" />
+                    <div className="w-8 h-8 rounded-xl bg-[#F59E0B]/10 flex items-center justify-center text-[#F59E0B] relative z-10">
                         <Wallet size={16} strokeWidth={2.5} />
                     </div>
                     <div className="relative z-10">
@@ -1116,7 +1116,7 @@ const Home = () => {
                     animate={{ opacity: 1, scale: 1 }}
                     onClick={() => navigate('/compliance')}
                     className={`rounded-[24px] p-5 flex items-center justify-between shadow-2xl border relative overflow-hidden group transition-all duration-300 ${
-                        isDarkMode ? 'bg-[#111827] border-white/5 shadow-black/50' : 'bg-white border-black/5 shadow-black/5'
+                        isDarkMode ? 'bg-[#0F1412] border-white/5 shadow-black/50' : 'bg-white border-black/5 shadow-black/5'
                     }`}
                 >
                     <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF9900]/10 rounded-full blur-3xl -mr-10 -mt-10" />

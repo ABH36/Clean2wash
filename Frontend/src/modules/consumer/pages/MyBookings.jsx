@@ -38,7 +38,7 @@ const getStatusColor = (rawStatus) => {
     if (rawStatus === 'completed') return 'text-emerald-500 bg-emerald-500/10 border border-emerald-500/20';
     if (rawStatus === 'cancelled') return 'text-rose-500 bg-rose-500/10 border border-rose-500/20';
     if (['pending', 'confirmed'].includes(rawStatus)) return 'text-[#F59E0B] bg-[#F59E0B]/10 border border-[#F59E0B]/20';
-    return 'text-blue-500 bg-blue-500/10 border border-blue-500/20';
+    return 'text-slate-500 bg-slate-500/10 border border-slate-500/20';
 };
 
 const normalizeBooking = (booking) => ({
@@ -60,19 +60,21 @@ const normalizeBooking = (booking) => ({
     rated: Boolean(booking?.feedback?.rating)
 });
 
-const BookingSkeleton = () => (
+const BookingSkeleton = ({ isDarkMode }) => (
     <div className="space-y-4">
         {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white/[0.03] rounded-[2rem] border border-white/5  overflow-hidden animate-pulse">
-                <div className="h-24 bg-white/5 relative overflow-hidden">
+            <div key={i} className={`rounded-[2rem] border overflow-hidden animate-pulse ${
+                isDarkMode ? 'bg-white/[0.03] border-white/5' : 'bg-black/[0.02] border-black/5'
+            }`}>
+                <div className={`h-24 relative overflow-hidden ${isDarkMode ? 'bg-white/5' : 'bg-black/05'}`}>
                     <div className="absolute inset-0 shimmer-effect" />
                 </div>
                 <div className="px-3.5 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-white/5" />
+                        <div className={`w-8 h-8 rounded-lg ${isDarkMode ? 'bg-white/5' : 'bg-black/05'}`} />
                         <div className="space-y-2">
-                            <div className="w-24 h-3 bg-white/5 rounded" />
-                            <div className="w-16 h-2 bg-white/5 rounded" />
+                            <div className={`w-24 h-3 rounded ${isDarkMode ? 'bg-white/5' : 'bg-black/05'}`} />
+                            <div className={`w-16 h-2 rounded ${isDarkMode ? 'bg-white/5' : 'bg-black/05'}`} />
                         </div>
                     </div>
                 </div>
@@ -81,7 +83,7 @@ const BookingSkeleton = () => (
     </div>
 );
 
-const BookingCard = ({ booking, onNavigate }) => (
+const BookingCard = ({ booking, onNavigate, isDarkMode }) => (
     <motion.div
         whileTap={{ scale: 0.99 }}
         onClick={() => {
@@ -91,11 +93,13 @@ const BookingCard = ({ booking, onNavigate }) => (
             }
             onNavigate(`/spare-driver/history?bookingId=${booking.id}`);
         }}
-        className="bg-white/[0.03] rounded-[2rem] border border-white/5 overflow-hidden shadow-xl"
+        className={`rounded-[2rem] border overflow-hidden shadow-xl transition-all duration-300 ${
+            isDarkMode ? 'bg-white/[0.03] border-white/5' : 'bg-white border-black/5'
+        }`}
     >
         <div className="relative h-24 overflow-hidden">
             <img src={booking.carImg} alt="" className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0A0F0D] to-transparent" />
+            <div className={`absolute inset-0 bg-gradient-to-t to-transparent ${isDarkMode ? 'from-[#0A0F0D]' : 'from-black/40'}`} />
             <div className={`absolute top-2.5 left-2.5 flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[8px] font-black tracking-widest ${booking.statusColor} backdrop-blur-sm shadow-2xl`}>
                 {booking.status === 'Completed' && <CheckCircle2 size={10} />}
                 {booking.status === 'Cancelled' && <XCircle size={10} />}
@@ -107,7 +111,7 @@ const BookingCard = ({ booking, onNavigate }) => (
             <div className="absolute bottom-2.5 left-2.5">
                 <p className="text-white font-[1000] text-[13px] tracking-tighter leading-none mb-1">{booking.service}</p>
                 <div className="flex items-center gap-2">
-                    <p className="text-white/20 text-[8px] font-black tracking-widest leading-none uppercase">{booking.bookingId}</p>
+                    <p className="text-white/40 text-[8px] font-black tracking-widest leading-none uppercase">{booking.bookingId}</p>
                     <span className="w-1 h-1 bg-white/20 rounded-full" />
                     <p className="text-[#F59E0B] font-black text-[12px] leading-none">{booking.amount}</p>
                 </div>
@@ -117,15 +121,17 @@ const BookingCard = ({ booking, onNavigate }) => (
         <div className="px-3.5 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
                 {booking.driverImg ? (
-                    <img src={booking.driverImg} className="w-8 h-8 rounded-lg object-cover border border-white/10" alt="" />
+                    <img src={booking.driverImg} className={`w-8 h-8 rounded-lg object-cover border ${isDarkMode ? 'border-white/10' : 'border-black/5'}`} alt="" />
                 ) : (
-                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center border border-white/10">
-                        <Navigation size={14} className="text-white/20" />
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-colors ${
+                        isDarkMode ? 'bg-white/5 border-white/10' : 'bg-black/05 border-black/5'
+                    }`}>
+                        <Navigation size={14} className={isDarkMode ? 'text-white/20' : 'text-black/20'} />
                     </div>
                 )}
                 <div>
-                    <h4 className="text-[11px] font-black text-white tracking-tighter leading-none mb-1">{booking.driver}</h4>
-                    <p className="text-[9px] text-white/20 font-black uppercase tracking-widest leading-none">{booking.date}</p>
+                    <h4 className={`text-[11px] font-black tracking-tighter leading-none mb-1 ${isDarkMode ? 'text-white' : 'text-black'}`}>{booking.driver}</h4>
+                    <p className={`text-[9px] font-black uppercase tracking-widest leading-none ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>{booking.date}</p>
                 </div>
             </div>
 
@@ -142,7 +148,7 @@ const BookingCard = ({ booking, onNavigate }) => (
                         <span className="font-black text-[9px] uppercase">Rate</span>
                     </div>
                 )}
-                <ChevronRight size={14} className="text-white/10" />
+                <ChevronRight size={14} className={isDarkMode ? 'text-white/10' : 'text-black/10'} />
             </div>
         </div>
     </motion.div>
@@ -215,14 +221,14 @@ const MyBookings = () => {
                     <AnimatePresence mode="wait">
                         <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
                             {isLoading ? (
-                                <BookingSkeleton />
+                                <BookingSkeleton isDarkMode={isDarkMode} />
                             ) : list.length === 0 ? (
                                 <div className={`text-center py-20 rounded-[2.5rem] border border-dashed transition-all duration-300 ${isDarkMode ? 'bg-white/[0.03] border-white/10' : 'bg-white border-black/10'}`}>
                                     <Inbox size={32} className={isDarkMode ? 'text-white/10 mx-auto mb-3' : 'text-black/10 mx-auto mb-3'} />
                                     <p className={`text-[12px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-black/20'}`}>No history found</p>
                                 </div>
                             ) : (
-                                list.map((booking) => <BookingCard key={booking.id} booking={booking} onNavigate={navigate} />)
+                                list.map((booking) => <BookingCard key={booking.id} booking={booking} onNavigate={navigate} isDarkMode={isDarkMode} />)
                             )}
                         </motion.div>
                     </AnimatePresence>

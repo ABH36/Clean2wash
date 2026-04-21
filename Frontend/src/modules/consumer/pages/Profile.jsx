@@ -84,13 +84,13 @@ const Profile = () => {
 
     const getColorClass = (color) => {
         const classes = {
-            blue: 'bg-blue-500/10 text-blue-500',
-            green: 'bg-emerald-500/10 text-emerald-500',
-            purple: 'bg-purple-500/10 text-purple-500',
-            indigo: 'bg-indigo-500/10 text-indigo-500',
-            pink: 'bg-pink-500/10 text-pink-500',
-            gray: 'bg-white/5 text-white/40',
-            red: 'bg-rose-500/10 text-rose-500'
+            blue: isDarkMode ? 'bg-blue-500/10 text-blue-500' : 'bg-blue-500/05 text-blue-600',
+            green: isDarkMode ? 'bg-emerald-500/10 text-emerald-500' : 'bg-emerald-500/05 text-emerald-600',
+            purple: isDarkMode ? 'bg-purple-500/10 text-purple-500' : 'bg-purple-500/05 text-purple-600',
+            indigo: isDarkMode ? 'bg-indigo-500/10 text-indigo-500' : 'bg-indigo-500/05 text-indigo-600',
+            pink: isDarkMode ? 'bg-pink-500/10 text-pink-500' : 'bg-pink-500/05 text-pink-600',
+            gray: isDarkMode ? 'bg-white/5 text-white/40' : 'bg-black/05 text-black/40',
+            red: isDarkMode ? 'bg-rose-500/10 text-rose-500' : 'bg-rose-500/05 text-rose-600'
         };
         return classes[color] || classes.gray;
     };
@@ -122,45 +122,55 @@ const Profile = () => {
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
                                 onClick={() => setIsEditing(false)}
-                                className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[1000]"
+                                className={`fixed inset-0 z-[1000] ${isDarkMode ? 'bg-black/60' : 'bg-black/20'}`}
                             />
                             <motion.div
                                 initial={{ y: '100%' }}
                                 animate={{ y: 0 }}
                                 exit={{ y: '100%' }}
-                                className="fixed inset-x-0 bottom-0 bg-[#0F1412] rounded-t-[2.5rem] z-[1001] p-8 pb-12 shadow-2xl border-t border-white/10"
+                                className={`fixed inset-x-0 bottom-0 rounded-t-[2.5rem] z-[1001] p-8 pb-12 shadow-2xl border-t transition-colors ${
+                                    isDarkMode ? 'bg-[#0A0F0D] border-white/10' : 'bg-white border-black/5'
+                                }`}
                             >
                                 <div className="flex items-center justify-between mb-8">
-                                    <h2 className="text-xl font-[1000] text-white tracking-tighter">Edit profile</h2>
-                                    <button onClick={() => setIsEditing(false)} className="w-9 h-9 bg-white/5 rounded-full flex items-center justify-center text-white/40 border border-white/10">
+                                    <h2 className={`text-xl font-[1000] tracking-tighter ${isDarkMode ? 'text-white' : 'text-black'}`}>Edit profile</h2>
+                                    <button onClick={() => setIsEditing(false)} className={`w-9 h-9 rounded-full flex items-center justify-center border transition-colors ${
+                                        isDarkMode ? 'bg-white/5 text-white/40 border-white/10' : 'bg-black/05 text-black/40 border-black/5'
+                                    }`}>
                                         <X size={18} />
                                     </button>
                                 </div>
                                 <div className="space-y-6">
                                     <div className="space-y-2">
-                                        <p className="text-[11px] font-black text-white/20 uppercase tracking-widest ml-1">Full name</p>
+                                        <p className={`text-[11px] font-black uppercase tracking-widest ml-1 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Full name</p>
                                         <input
                                             type="text"
                                             value={editData.name}
                                             onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-                                            className="w-full h-14 bg-white/[0.03] border border-white/10 rounded-2xl px-5 font-bold text-white outline-none focus:border-[#F59E0B]/40 transition-all"
+                                            className={`w-full h-14 border rounded-2xl px-5 font-bold outline-none focus:border-[#F59E0B]/40 transition-all ${
+                                                isDarkMode ? 'bg-white/[0.03] border-white/10 text-white placeholder:text-white/10' : 'bg-black/[0.02] border-black/10 text-black placeholder:text-black/20'
+                                            }`}
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <p className="text-[11px] font-black text-white/20 uppercase tracking-widest ml-1">Email address</p>
+                                        <p className={`text-[11px] font-black uppercase tracking-widest ml-1 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Email address</p>
                                         <input
                                             type="email"
                                             value={editData.email}
                                             onChange={(e) => setEditData({ ...editData, email: e.target.value })}
-                                            className="w-full h-14 bg-white/[0.03] border border-white/10 rounded-2xl px-5 font-bold text-white outline-none focus:border-[#F59E0B]/40 transition-all"
+                                            className={`w-full h-14 border rounded-2xl px-5 font-bold outline-none focus:border-[#F59E0B]/40 transition-all ${
+                                                isDarkMode ? 'bg-white/[0.03] border-white/10 text-white placeholder:text-white/10' : 'bg-black/[0.02] border-black/10 text-black placeholder:text-black/20'
+                                            }`}
                                         />
                                     </div>
                                     <button
                                         onClick={handleUpdateProfile}
                                         disabled={saving}
-                                        className="w-full h-14 bg-white text-black rounded-2xl font-black uppercase tracking-[0.2em] text-[12px] flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-30"
+                                        className={`w-full h-14 rounded-2xl font-black uppercase tracking-[0.2em] text-[12px] flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-30 ${
+                                            isDarkMode ? 'bg-white text-black' : 'bg-black text-white'
+                                        }`}
                                     >
-                                        {saving ? <div className="w-5 h-5 border-black/5 border-black/30 border-t-black rounded-full animate-spin" /> : 'Save changes'}
+                                        {saving ? <div className={`w-5 h-5 border-t-transparent rounded-full animate-spin ${isDarkMode ? 'border-black' : 'border-white'}`} /> : 'Save changes'}
                                     </button>
                                 </div>
                             </motion.div>
@@ -197,14 +207,16 @@ const Profile = () => {
                         } flex items-center gap-4`}
                     >
                         <div className="relative shrink-0">
-                            <div className="w-20 h-20 bg-white/5 rounded-2xl border border-white/10  flex items-center justify-center overflow-hidden">
+                            <div className={`w-20 h-20 rounded-2xl border flex items-center justify-center overflow-hidden transition-colors ${
+                                isDarkMode ? 'bg-white/5 border-white/10' : 'bg-black/05 border-black/5'
+                            }`}>
                                 {user?.profile?.avatar ? (
                                     <img src={user.profile.avatar} className="w-full h-full object-cover" alt="" />
                                 ) : (
-                                    <User size={32} className="text-slate-300" />
+                                    <User size={32} className={isDarkMode ? 'text-white/20' : 'text-black/10'} />
                                 )}
                             </div>
-                            <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-emerald-500 border-white/5 border-white rounded-full flex items-center justify-center text-white ">
+                            <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-emerald-500 border-2 rounded-full flex items-center justify-center text-white border-white">
                                 <ShieldCheck size={14} />
                             </div>
                         </div>
@@ -288,9 +300,11 @@ const Profile = () => {
                                 </div>
                             ) : (
                                 recentTrips.map((booking, index) => (
-                                    <div key={booking._id || booking.id} className={`p-4 flex items-center justify-between ${index !== recentTrips.length - 1 ? 'border-b border-white/5' : ''}`}>
+                                    <div key={booking._id || booking.id} className={`p-4 flex items-center justify-between ${index !== recentTrips.length - 1 ? (isDarkMode ? 'border-b border-white/5' : 'border-b border-black/5') : ''}`}>
                                         <div className="flex items-center gap-3">
-                                            <div className="w-11 h-11 bg-white/5 rounded-xl flex items-center justify-center border border-white/10 overflow-hidden">
+                                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center border overflow-hidden transition-colors ${
+                                                isDarkMode ? 'bg-white/5 border-white/10' : 'bg-black/05 border-black/5'
+                                            }`}>
                                                 <img src={booking?.vehicle?.image || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80'} className="w-full h-full object-cover" alt="" />
                                             </div>
                                             <div>
@@ -318,9 +332,11 @@ const Profile = () => {
                                     isDarkMode ? 'bg-white/[0.03] border-white/5' : 'bg-white border-black/5 shadow-sm'
                                 }`}>
                                     {group.items.map((item, index) => (
-                                        <button key={item.label} onClick={() => navigate(item.path)} className={`w-full p-4 flex items-center justify-between active:bg-white/5 transition-all ${index !== group.items.length - 1 ? (isDarkMode ? 'border-b border-white/5/50' : 'border-b border-black/5') : ''}`}>
+                                        <button key={item.label} onClick={() => navigate(item.path)} className={`w-full p-4 flex items-center justify-between transition-all ${
+                                            isDarkMode ? 'active:bg-white/5' : 'active:bg-black/05'
+                                        } ${index !== group.items.length - 1 ? (isDarkMode ? 'border-b border-white/5/50' : 'border-b border-black/5') : ''}`}>
                                             <div className="flex items-center gap-3">
-                                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${getColorClass(item.color)} border ${isDarkMode ? 'border-white/10' : 'border-black/5'} shadow-lg`}>
+                                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${getColorClass(item.color)} border ${isDarkMode ? 'border-white/10' : 'border-black/5'} shadow-sm`}>
                                                     <item.icon size={16} strokeWidth={2.5} />
                                                 </div>
                                                 <span className={`text-[13px] font-black tracking-tighter leading-none ${isDarkMode ? 'text-white' : 'text-black'}`}>{item.label}</span>

@@ -40,7 +40,7 @@ const PHASES = {
 // 🛠️ Asset Protocol: Unique Service Identities
 const SERVICE_ASSETS = {
     'point': { icon: 'https://cdn-icons-png.flaticon.com/512/3202/3202926.png', color: '#1E293B', pulse: 'animate-pulse' }, // Slate-800
-    'hourly': { icon: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png', color: '#1E293B', pulse: 'animate-bounce' }, 
+    'hourly': { icon: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png', color: '#1E293B', pulse: 'animate-bounce' },
     'full': { icon: 'https://cdn-icons-png.flaticon.com/512/2436/2436874.png', color: '#FF9900', pulse: 'animate-pulse' }, // Brand
     'outstation': { icon: 'https://cdn-icons-png.flaticon.com/512/2330/2330453.png', color: '#334155', pulse: 'animate-pulse' },
     'user': 'https://cdn-icons-png.flaticon.com/512/7077/7077313.png'
@@ -372,7 +372,7 @@ const CHAUFFEUR_DISPATCH_LEAD_MINUTES = 15;
 const getVehicleMultiplier = (vehicle, vehicleTypes) => {
     // Priority 1: Direct ref from vehicle object
     if (vehicle?.typeRef?.multiplier) return vehicle.typeRef.multiplier;
-    
+
     // Priority 2: Lookup in fetched types
     const found = vehicleTypes.find(t => t.type === vehicle?.type || t.name === vehicle?.type);
     return found?.multiplier || 1.0;
@@ -415,9 +415,9 @@ const resolveChauffeurPhase = (booking = {}) => {
 
 const SpareDriverBooking = () => {
     const navigate = useNavigate();
-    const { 
+    const {
         vehicles, vehiclesLoading, refreshStats, getUser,
-        getRazorpayKey, createPaymentOrder, verifyPayment 
+        getRazorpayKey, createPaymentOrder, verifyPayment
     } = useAuth();
     const { isDarkMode, toggleTheme } = useTheme();
 
@@ -430,9 +430,9 @@ const SpareDriverBooking = () => {
         }
     }, [vehicles, vehiclesLoading, navigate]);
     const { savedAddresses: addresses, selectedAddress, currentLocation } = useGeoLocation();
-    const userCoords = useMemo(() => 
+    const userCoords = useMemo(() =>
         selectedAddress?.coordinates || currentLocation || { lat: 28.6139, lng: 77.2090 }
-    , [selectedAddress, currentLocation]);
+        , [selectedAddress, currentLocation]);
     const [searchParams] = useSearchParams();
     const typeFromUrl = searchParams.get('type');
     const vehicleIdFromUrl = searchParams.get('vehicleId');
@@ -570,11 +570,11 @@ const SpareDriverBooking = () => {
     const [useSubscription, setUseSubscription] = useState(false);
     const [isSettlingPayment, setIsSettlingPayment] = useState(false);
     const [driverSweepTick, setDriverSweepTick] = useState(0);
-    
+
     // 🎯 NEW: Real-time Fare Estimation
     const [calculatedPricing, setCalculatedPricing] = useState(null);
     const [pricingError, setPricingError] = useState(null);
-    
+
     // 🚀 NEW: Real-time Tracking Enhancements (Rapido-style)
     const [routePath, setRoutePath] = useState([]);
     const [routeInfo, setRouteInfo] = useState({ distance: '', duration: '', durationValue: 0 });
@@ -716,7 +716,7 @@ const SpareDriverBooking = () => {
 
         const vehicleMultiplier = getVehicleMultiplier(selectedVehicle, vehicleTypes);
         const slotPrice = getDurationSlotPrice(selectedType, bookingDetails.duration);
-        
+
         let baseAmount = 0;
         if (slotPrice !== null) {
             baseAmount = Math.round(slotPrice * vehicleMultiplier);
@@ -940,7 +940,7 @@ const SpareDriverBooking = () => {
             // Restore from session or start new
             const startTimeString = sessionStorage.getItem('chauffeur_trip_start_time');
             const startTime = startTimeString ? Number(startTimeString) : Date.now();
-            
+
             if (!startTimeString) {
                 sessionStorage.setItem('chauffeur_trip_start_time', startTime.toString());
             }
@@ -1016,7 +1016,7 @@ const SpareDriverBooking = () => {
                 socket.on('connect', () => {
                     console.log('[SpareDriver] Socket Connected');
                     setIsSocketConnected(true);
-                    
+
                     // Flush queued location updates
                     if (locationQueueRef.current.length > 0) {
                         console.log(`[SpareDriver] Flushing ${locationQueueRef.current.length} queued updates`);
@@ -1347,20 +1347,20 @@ const SpareDriverBooking = () => {
                         ...(selectedType ? { serviceKey: selectedType.metadata?.id || selectedType.key || selectedType.title } : {})
                     })
                 ]);
-                
+
                 if (serviceRes.status === 'success') {
                     const fetchedServices = serviceRes.data.services || [];
                     setServices(fetchedServices);
 
                     // 🎯 Direct Deep-Linking Logic
                     if (typeFromUrl && fetchedServices.length > 0) {
-                        const targetService = fetchedServices.find(s => 
-                            normalizeServiceKind(s) === typeFromUrl || 
-                            s.id === typeFromUrl || 
+                        const targetService = fetchedServices.find(s =>
+                            normalizeServiceKind(s) === typeFromUrl ||
+                            s.id === typeFromUrl ||
                             s.metadata?.id === typeFromUrl ||
                             s.title?.toLowerCase().includes(typeFromUrl.toLowerCase())
                         );
-                        
+
                         if (targetService) {
                             const built = buildSelectedType(targetService);
                             setSelectedType(built);
@@ -1394,7 +1394,7 @@ const SpareDriverBooking = () => {
             setSelectedVehicle(vehicles[0]);
         }
     }, [vehicles, selectedVehicle]);
-    
+
     // 🚨 SOS Handler 🚨
     const handleSOS = async () => {
         if (!activeBookingId) return;
@@ -1501,7 +1501,7 @@ const SpareDriverBooking = () => {
             alert("Please select your travel destination");
             return;
         }
-        
+
         // Check if location is in serviceable zone
         if (userCoords?.lat && userCoords?.lng) {
             try {
@@ -1509,7 +1509,7 @@ const SpareDriverBooking = () => {
                     `/api/zones/check-location?latitude=${userCoords.lat}&longitude=${userCoords.lng}&service=spareDriver`
                 );
                 const zoneData = await zoneCheck.json();
-                
+
                 if (!zoneData.data?.available) {
                     toast.error(zoneData.data?.reason || 'Service not available in this area');
                     setIsProcessing(false);
@@ -1520,15 +1520,15 @@ const SpareDriverBooking = () => {
                 // Continue with booking if zone check fails (graceful degradation)
             }
         }
-        
+
         setIsProcessing(true);
         try {
             const multiplier = getVehicleMultiplier(selectedVehicle, vehicleTypes);
-            
+
             // Use locally computed pricing (dynamicPricingBreakdown) — no FareEstimator API needed
             const amount = estimatedTotal;
             const baseFare = dynamicPricingBreakdown.baseAmount || selectedType.basePrice;
-            
+
             const selectedVehicleId = selectedVehicle?._id || selectedVehicle?.id;
             const liveScheduleSnapshot = bookingMode === 'instant'
                 ? getInstantScheduleSnapshot()
@@ -1605,7 +1605,7 @@ const SpareDriverBooking = () => {
             const razorKeyRes = await getRazorpayKey();
             if (!razorKeyRes.success) throw new Error("Could not fetch payment configuration");
 
-            const orderRes = await createPaymentOrder(amount, 'INR', `sd_${Date.now()}`); 
+            const orderRes = await createPaymentOrder(amount, 'INR', `sd_${Date.now()}`);
             if (!orderRes.success) throw new Error("Payment order creation failed");
 
             const options = {
@@ -1706,9 +1706,9 @@ const SpareDriverBooking = () => {
     };
 
     const renderHeader = (title, showBack = true) => (
-        <Header 
-            title={title} 
-            showBack={showBack} 
+        <Header
+            title={title}
+            showBack={showBack}
             onBackClick={() => {
                 if (phase === PHASES.BOOKING_DETAILS || phase === PHASES.SERVICE_TYPE) {
                     navigate(-1);
@@ -1728,7 +1728,7 @@ const SpareDriverBooking = () => {
                     {SERVICE_TYPES.map((service) => {
                         const kind = service.kind || normalizeServiceKind(service);
                         const isSelected = selectedType?.id === service.id;
-                        
+
                         return (
                             <motion.button
                                 key={service.id}
@@ -1737,47 +1737,41 @@ const SpareDriverBooking = () => {
                                     setSelectedType(buildSelectedType(service));
                                     setPhase(PHASES.BOOKING_DETAILS);
                                 }}
-                                className={`relative overflow-hidden rounded-[2rem] border p-5 text-left transition-all duration-500 ${
-                                    isSelected 
+                                className={`relative overflow-hidden rounded-[2rem] border p-5 text-left transition-all duration-500 ${isSelected
                                         ? isDarkMode ? 'bg-[#FF9900]/10 border-[#FF9900]/50 shadow-2xl shadow-[#FF9900]/10' : 'bg-[#0F172A] border-[#0F172A] shadow-xl'
                                         : isDarkMode ? 'bg-white/05 border-white/05 hover:bg-white/[0.08]' : 'bg-white border-black/05 hover:border-black/10 shadow-sm'
-                                }`}
+                                    }`}
                             >
                                 <div className="flex items-center justify-between relative z-10">
                                     <div className="flex items-center gap-4">
-                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
-                                            isSelected ? 'bg-[#FF9900] text-[#0F172A]' : isDarkMode ? 'bg-white/10 text-white/40' : 'bg-black/05 text-black/40'
-                                        }`}>
+                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${isSelected ? 'bg-[#FF9900] text-[#0F172A]' : isDarkMode ? 'bg-white/10 text-white/40' : 'bg-black/05 text-black/40'
+                                            }`}>
                                             {kind === 'point' ? <Navigation size={24} /> :
-                                             kind === 'hourly' ? <Clock size={24} /> :
-                                             kind === 'full' ? <Star size={24} fill="currentColor" /> :
-                                             <MapPin size={24} />}
+                                                kind === 'hourly' ? <Clock size={24} /> :
+                                                    kind === 'full' ? <Star size={24} fill="currentColor" /> :
+                                                        <MapPin size={24} />}
                                         </div>
                                         <div>
-                                            <h4 className={`text-[16px] font-[1000] uppercase tracking-tight leading-none mb-1.5 ${
-                                                isSelected ? 'text-white' : isDarkMode ? 'text-white' : 'text-[#0F172A]'
-                                            }`}>
+                                            <h4 className={`text-[16px] font-[1000] uppercase tracking-tight leading-none mb-1.5 ${isSelected ? 'text-white' : isDarkMode ? 'text-white' : 'text-[#0F172A]'
+                                                }`}>
                                                 {service.title}
                                             </h4>
-                                            <p className={`text-[9px] font-bold uppercase tracking-widest leading-none ${
-                                                isSelected ? 'text-white/40' : isDarkMode ? 'text-white/20' : 'text-[#0F172A]/30'
-                                            }`}>
+                                            <p className={`text-[9px] font-bold uppercase tracking-widest leading-none ${isSelected ? 'text-white/40' : isDarkMode ? 'text-white/20' : 'text-[#0F172A]/30'
+                                                }`}>
                                                 {service.subtitle}
                                             </p>
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <span className={`text-[8px] font-black uppercase tracking-widest block mb-1 ${
-                                            isSelected ? 'text-[#FF9900]' : isDarkMode ? 'text-white/20' : 'text-[#0F172A]/30'
-                                        }`}>Starts from</span>
-                                        <p className={`text-[20px] font-black leading-none ${
-                                            isSelected ? 'text-white' : isDarkMode ? 'text-white' : 'text-[#0F172A]'
-                                        }`}>
+                                        <span className={`text-[8px] font-black uppercase tracking-widest block mb-1 ${isSelected ? 'text-[#FF9900]' : isDarkMode ? 'text-white/20' : 'text-[#0F172A]/30'
+                                            }`}>Starts from</span>
+                                        <p className={`text-[20px] font-black leading-none ${isSelected ? 'text-white' : isDarkMode ? 'text-white' : 'text-[#0F172A]'
+                                            }`}>
                                             ₹{service.basePrice}
                                         </p>
                                     </div>
                                 </div>
-                                
+
                                 {isSelected && (
                                     <div className="absolute top-0 right-0 p-2">
                                         <div className="w-2 h-2 bg-[#FF9900] rounded-full" />
@@ -1787,10 +1781,9 @@ const SpareDriverBooking = () => {
                         );
                     })}
                 </div>
-                
-                <div className={`rounded-[2rem] p-6 border relative overflow-hidden ${
-                    isDarkMode ? 'bg-orange-500/10 border-orange-500/20' : 'bg-orange-50 border-orange-100'
-                }`}>
+
+                <div className={`rounded-[2rem] p-6 border relative overflow-hidden ${isDarkMode ? 'bg-orange-500/10 border-orange-500/20' : 'bg-orange-50 border-orange-100'
+                    }`}>
                     <div className="relative z-10 flex items-center justify-between">
                         <div>
                             <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-2 leading-none ${isDarkMode ? 'text-orange-400' : 'text-[#FF9900]'}`}>Luxury Protocol</p>
@@ -1810,11 +1803,10 @@ const SpareDriverBooking = () => {
             <div className={`px-5 pt-6 pb-3 border-b sticky top-0 z-[100] backdrop-blur-md transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D]/80 border-white/05' : 'bg-white/80 border-black/05'}`}>
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <button 
-                            onClick={() => setPhase(PHASES.SERVICE_TYPE)} 
-                            className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-all ${
-                                isDarkMode ? 'bg-white/05 border-white/05 text-white' : 'bg-black/05 border-black/05 text-black'
-                            }`}
+                        <button
+                            onClick={() => setPhase(PHASES.SERVICE_TYPE)}
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/05 border-white/05 text-white' : 'bg-black/05 border-black/05 text-black'
+                                }`}
                         >
                             <ChevronLeft size={16} />
                         </button>
@@ -1823,11 +1815,10 @@ const SpareDriverBooking = () => {
                             <p className={`text-[8px] font-bold uppercase tracking-[0.2em] mt-1 ${isDarkMode ? 'text-white/20' : 'text-[#0F172A]/30'}`}>STEP 1/3 • PROTOCOL DETAILS</p>
                         </div>
                     </div>
-                    <motion.button 
+                    <motion.button
                         whileTap={{ scale: 0.9 }}
-                        className={`w-9 h-9 rounded-2xl flex items-center justify-center border shadow-sm transition-all ${
-                            isDarkMode ? 'bg-orange-500/10 border-orange-500/20 text-[#FF9900]' : 'bg-[#FF9900]/05 border-transparent text-[#FF9900]'
-                        }`}
+                        className={`w-9 h-9 rounded-2xl flex items-center justify-center border shadow-sm transition-all ${isDarkMode ? 'bg-orange-500/10 border-orange-500/20 text-[#FF9900]' : 'bg-[#FF9900]/05 border-transparent text-[#FF9900]'
+                            }`}
                     >
                         <Zap size={16} fill="currentColor" />
                     </motion.button>
@@ -1836,18 +1827,16 @@ const SpareDriverBooking = () => {
 
             <div className="px-5 py-6 space-y-6 pb-32 overflow-y-auto">
                 {/* 1. Mode Selector */}
-                <div className={`p-1.5 rounded-2xl flex items-center gap-1.5 border shadow-inner transition-colors duration-300 ${
-                    isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'
-                }`}>
+                <div className={`p-1.5 rounded-2xl flex items-center gap-1.5 border shadow-inner transition-colors duration-300 ${isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'
+                    }`}>
                     {['instant', 'scheduled'].map((mode) => (
                         <button
                             key={mode}
                             onClick={() => setBookingDetails({ ...bookingDetails, bookingMode: mode })}
-                            className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${
-                                bookingMode === mode 
-                                    ? isDarkMode ? 'bg-white/10 text-white shadow-lg' : 'bg-[#0F172A] text-white shadow-lg'
+                            className={`flex-1 py-3 rounded-xl text-[10px] font-[1000] uppercase tracking-widest transition-all duration-300 ${bookingMode === mode
+                                    ? isDarkMode ? 'bg-white/10 text-white shadow-xl' : 'bg-[#0A0F0D] text-white shadow-xl'
                                     : isDarkMode ? 'text-white/20 hover:text-white/40' : 'text-black/30 hover:text-black/50'
-                            }`}
+                                }`}
                         >
                             {mode}
                         </button>
@@ -1857,15 +1846,14 @@ const SpareDriverBooking = () => {
                 {/* 2. Date/Time (Scheduled) */}
                 <AnimatePresence>
                     {bookingMode === 'scheduled' && (
-                        <motion.div 
+                        <motion.div
                             initial={{ height: 0, opacity: 0, scale: 0.95 }}
                             animate={{ height: 'auto', opacity: 1, scale: 1 }}
                             exit={{ height: 0, opacity: 0, scale: 0.95 }}
                             className="grid grid-cols-2 gap-2 overflow-hidden"
                         >
-                            <label className={`rounded-xl p-2 px-3 border flex flex-col gap-0.5 cursor-pointer transition-all ${
-                                isDarkMode ? 'bg-white/05 border-white/05 active:bg-white/[0.08]' : 'bg-black/05 border-black/05 active:bg-black/[0.08]'
-                            }`}>
+                            <label className={`rounded-xl p-2 px-3 border flex flex-col gap-0.5 cursor-pointer transition-all ${isDarkMode ? 'bg-white/05 border-white/05 active:bg-white/[0.08]' : 'bg-black/05 border-black/05 active:bg-black/[0.08]'
+                                }`}>
                                 <span className={`text-[6px] font-black tracking-[0.2em] flex items-center gap-1 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>
                                     <Calendar size={7} /> Select date
                                 </span>
@@ -1876,9 +1864,8 @@ const SpareDriverBooking = () => {
                                     className={`bg-transparent border-none p-0 outline-none text-[10px] font-bold w-full mt-0.5 ${isDarkMode ? 'text-white' : 'text-black'}`}
                                 />
                             </label>
-                            <label className={`rounded-xl p-2 px-3 border flex flex-col gap-0.5 cursor-pointer transition-all ${
-                                isDarkMode ? 'bg-white/05 border-white/05 active:bg-white/[0.08]' : 'bg-black/05 border-black/05 active:bg-black/[0.08]'
-                            }`}>
+                            <label className={`rounded-xl p-2 px-3 border flex flex-col gap-0.5 cursor-pointer transition-all ${isDarkMode ? 'bg-white/05 border-white/05 active:bg-white/[0.08]' : 'bg-black/05 border-black/05 active:bg-black/[0.08]'
+                                }`}>
                                 <span className={`text-[6px] font-black tracking-[0.2em] flex items-center gap-1 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>
                                     <Clock size={7} /> Select time
                                 </span>
@@ -1897,13 +1884,12 @@ const SpareDriverBooking = () => {
                 <div className="relative">
                     <div className={`absolute left-[23px] top-[30px] bottom-[30px] w-[1px] border-r border-dashed ${isDarkMode ? 'bg-white/05 border-white/10' : 'bg-black/05 border-black/10'}`} />
                     <div className="space-y-2">
-                        <div 
+                        <div
                             onClick={() => navigate('/addresses?from=spare-driver')}
-                            className={`rounded-2xl p-2.5 pl-4 flex items-center gap-3 border active:scale-[0.98] transition-all cursor-pointer ${
-                                isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'
-                            }`}
+                            className={`rounded-2xl p-2.5 pl-4 flex items-center gap-3 border active:scale-[0.98] transition-all cursor-pointer ${isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'
+                                }`}
                         >
-                            <div className="w-6 h-6 rounded-full bg-[#0F172A] flex items-center justify-center text-white ring-4 ring-[#0F172A]/05">
+                            <div className="w-6 h-6 rounded-full bg-[#0A0F0D] flex items-center justify-center text-white ring-4 ring-[#0A0F0D]/05">
                                 <MapPin size={10} strokeWidth={3} />
                             </div>
                             <div className="flex-1 overflow-hidden">
@@ -1916,13 +1902,12 @@ const SpareDriverBooking = () => {
                         </div>
 
                         {requiresDestination && (
-                            <div 
+                            <div
                                 onClick={() => navigate('/addresses?from=spare-driver&type=destination')}
-                                className={`rounded-2xl p-2.5 pl-4 flex items-center gap-3 border active:scale-[0.98] transition-all cursor-pointer ${
-                                    isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'
-                                }`}
+                                className={`rounded-2xl p-2.5 pl-4 flex items-center gap-3 border active:scale-[0.98] transition-all cursor-pointer ${isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'
+                                    }`}
                             >
-                                <div className="w-6 h-6 rounded-full bg-[#FF9900] flex items-center justify-center text-[#0F172A] ring-4 ring-[#FF9900]/05">
+                                <div className="w-6 h-6 rounded-full bg-[#FF9900] flex items-center justify-center text-[#0A0F0D] ring-4 ring-[#FF9900]/05">
                                     <Navigation size={10} strokeWidth={3} />
                                 </div>
                                 <div className="flex-1 overflow-hidden">
@@ -1950,8 +1935,8 @@ const SpareDriverBooking = () => {
                                     key={d}
                                     whileTap={{ scale: 0.95 }}
                                     onClick={() => setBookingDetails({ ...bookingDetails, duration: d })}
-                                    className={`flex-shrink-0 px-5 h-10 rounded-xl text-[9px] font-black transition-all duration-300 border ${bookingDetails.duration === d 
-                                        ? isDarkMode ? 'bg-white/10 text-white border-white/20 shadow-xl' : 'bg-[#0F172A] text-white border-[#0F172A] shadow-lg'
+                                    className={`flex-shrink-0 px-5 h-10 rounded-xl text-[9px] font-[1000] transition-all duration-300 border ${bookingDetails.duration === d
+                                        ? isDarkMode ? 'bg-white/10 text-white border-white/20 shadow-xl' : 'bg-[#0A0F0D] text-white border-[#0A0F0D] shadow-xl'
                                         : isDarkMode ? 'bg-white/05 text-white/40 border-white/05 hover:border-white/10' : 'bg-black/05 text-black/30 border-black/05 hover:border-black/10'}`}
                                 >
                                     {d}
@@ -1963,27 +1948,25 @@ const SpareDriverBooking = () => {
 
                 {/* 5. Split Policy Cards */}
                 <div className="grid grid-cols-2 gap-3">
-                    <div className={`rounded-2xl p-3.5 border space-y-1 group transition-colors ${
-                        isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'
-                    }`}>
+                    <div className={`rounded-2xl p-3.5 border space-y-1 group transition-colors ${isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'
+                        }`}>
                         <div className="flex items-center gap-2">
-                             <div className={`w-5 h-5 rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-600'}`}>
+                            <div className={`w-5 h-5 rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-600'}`}>
                                 <CreditCard size={10} />
-                             </div>
-                             <span className={`text-[6px] font-black tracking-widest ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Wallet limit</span>
+                            </div>
+                            <span className={`text-[6px] font-black tracking-widest ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Wallet limit</span>
                         </div>
                         <p className={`text-[14px] font-black ${isDarkMode ? 'text-white' : 'text-black'}`}>{formatInr(commercialRules.minimumWalletBalance)}</p>
                         <p className={`text-[6px] font-bold ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Entry threshold</p>
                     </div>
 
-                    <div className={`rounded-2xl p-3.5 border space-y-1 group transition-colors ${
-                        isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'
-                    }`}>
+                    <div className={`rounded-2xl p-3.5 border space-y-1 group transition-colors ${isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'
+                        }`}>
                         <div className="flex items-center gap-2">
-                             <div className={`w-5 h-5 rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-orange-500/10 text-orange-400' : 'bg-orange-50 text-orange-600'}`}>
+                            <div className={`w-5 h-5 rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-orange-500/10 text-orange-400' : 'bg-orange-50 text-orange-600'}`}>
                                 <Timer size={10} />
-                             </div>
-                             <span className={`text-[6px] font-black tracking-widest ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Waiting</span>
+                            </div>
+                            <span className={`text-[6px] font-black tracking-widest ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Waiting</span>
                         </div>
                         <p className={`text-[14px] font-black ${isDarkMode ? 'text-white' : 'text-black'}`}>{formatInr(commercialRules.waitChargePerMinute)}/m</p>
                         <p className={`text-[6px] font-bold ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Post {commercialRules.waitingGraceMinutes}m grace</p>
@@ -1992,7 +1975,7 @@ const SpareDriverBooking = () => {
 
                 {/* 6. Night Protocol Banner */}
                 <div className={`rounded-[1.2rem] p-3.5 shadow-2xl relative overflow-hidden transition-all duration-300 border ${
-                    isDarkMode ? 'bg-white/10 border-white/10 shadow-black/40' : 'bg-[#0F172A] text-white border-transparent'
+                    isDarkMode ? 'bg-white/10 border-white/10 shadow-black/40' : 'bg-[#0A0F0D] border-transparent shadow-xl'
                 }`}>
                     <div className="relative z-10 flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-[#FF9900] ${isDarkMode ? 'bg-white/10 border border-white/05' : 'bg-white/10 border border-white/10'}`}>
@@ -2000,20 +1983,19 @@ const SpareDriverBooking = () => {
                         </div>
                         <div className="flex-1">
                             <div className="flex items-center gap-2">
-                                <h4 className={`text-[12px] font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-white'}`}>Night allowance</h4>
+                                <h4 className={`text-[12px] font-[1000] tracking-tight text-white`}>Night allowance</h4>
                                 <div className={`h-[1px] flex-1 ${isDarkMode ? 'bg-white/10' : 'bg-white/05'}`} />
                                 <span className="text-[11px] font-black text-[#FF9900]">+{formatInr(commercialRules.nightAllowance)}</span>
                             </div>
-                            <p className={`text-[6px] font-bold tracking-widest mt-0.5 ${isDarkMode ? 'text-white/40' : 'text-white/40'}`}>Active between 10:00 PM - 06:00 AM slots</p>
+                            <p className={`text-[6px] font-black tracking-widest mt-0.5 text-white/50`}>Active between 10:00 PM - 06:00 AM slots</p>
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* 7. Bottom Bar */}
-            <div className={`fixed bottom-[76px] left-0 right-0 z-[1100] px-5 py-4 backdrop-blur-lg border-t safe-area-bottom transition-all ${
-                isDarkMode ? 'bg-[#0A0F0D]/90 border-white/05' : 'bg-white/90 border-black/05'
-            }`}>
+            <div className={`fixed bottom-[76px] left-0 right-0 z-[1100] px-5 py-4 backdrop-blur-lg border-t safe-area-bottom transition-all ${isDarkMode ? 'bg-[#0A0F0D]/90 border-white/05' : 'bg-white/90 border-black/05'
+                }`}>
                 <div className="max-w-[430px] mx-auto flex items-center justify-between">
                     <div className="flex flex-col">
                         <span className={`text-[7px] font-black tracking-widest mb-0.5 ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>Est. total</span>
@@ -2065,11 +2047,10 @@ const SpareDriverBooking = () => {
                                 <button
                                     key={v._id || v.id}
                                     onClick={() => setSelectedVehicle(v)}
-                                    className={`p-3 rounded-xl border transition-all flex items-center gap-3 text-left ${
-                                        isSelected 
-                                            ? isDarkMode ? 'bg-white/10 border-[#FF9900]/50 shadow-lg' : 'bg-[#0F172A] border-[#0F172A]' 
+                                    className={`p-3 rounded-xl border transition-all flex items-center gap-3 text-left ${isSelected
+                                            ? isDarkMode ? 'bg-white/10 border-[#FF9900]/50 shadow-lg' : 'bg-[#0F172A] border-[#0F172A]'
                                             : isDarkMode ? 'bg-white/05 border-white/05 hover:border-white/10' : 'bg-white border-black/05 hover:border-black/10'
-                                    }`}
+                                        }`}
                                 >
                                     <div className={`w-10 h-10 rounded-lg overflow-hidden border ${isDarkMode ? 'bg-white/10 border-white/10' : 'bg-black/05 border-black/05'}`}>
                                         <img src={v.image} className="w-full h-full object-cover" />
@@ -2087,9 +2068,8 @@ const SpareDriverBooking = () => {
                     </div>
                 </div>
 
-                <div className={`rounded-xl p-5 shadow-lg relative overflow-hidden border ${
-                    isDarkMode ? 'bg-white/10 border-white/10 shadow-black/40 text-white' : 'bg-[#0F172A] text-white border-transparent'
-                }`}>
+                <div className={`rounded-xl p-5 shadow-lg relative overflow-hidden border ${isDarkMode ? 'bg-white/10 border-white/10 shadow-black/40 text-white' : 'bg-[#0F172A] text-white border-transparent'
+                    }`}>
                     <div className="relative z-10 flex items-center justify-between">
                         <div>
                             <p className="text-[8px] font-bold uppercase tracking-widest mb-1 leading-none opacity-40">Trip Fee</p>
@@ -2108,9 +2088,8 @@ const SpareDriverBooking = () => {
             </div>
 
             {/* Compact Sticky Footer */}
-            <div className={`fixed bottom-[76px] left-0 right-0 z-[1100] px-5 py-4 backdrop-blur-lg border-t safe-area-bottom transition-all ${
-                isDarkMode ? 'bg-[#0A0F0D]/90 border-white/05' : 'bg-white/90 border-black/05'
-            }`}>
+            <div className={`fixed bottom-[76px] left-0 right-0 z-[1100] px-5 py-4 backdrop-blur-lg border-t safe-area-bottom transition-all ${isDarkMode ? 'bg-[#0A0F0D]/90 border-white/05' : 'bg-white/90 border-black/05'
+                }`}>
                 <div className="max-w-[430px] mx-auto flex items-center gap-4 bg-[#0F172A] p-4 rounded-xl shadow-2xl shadow-black/50">
                     <div className="flex-shrink-0">
                         <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest leading-none mb-1">Estimated Total</p>
@@ -2191,14 +2170,12 @@ const SpareDriverBooking = () => {
 
                 <div className="relative z-10 flex-1 flex flex-col items-center justify-between p-6 pb-12">
                     <div className="w-full flex items-center justify-between pt-4">
-                        <button onClick={handleCancelRequest} className={`w-10 h-10 backdrop-blur-xl rounded-full flex items-center justify-center pointer-events-auto active:scale-90 shadow-lg ${
-                            isDarkMode ? 'bg-black/40 text-white border border-white/10' : 'bg-white/80 text-black border border-black/05'
-                        }`}>
+                        <button onClick={handleCancelRequest} className={`w-10 h-10 backdrop-blur-xl rounded-full flex items-center justify-center pointer-events-auto active:scale-90 shadow-lg ${isDarkMode ? 'bg-black/40 text-white border border-white/10' : 'bg-white/80 text-black border border-black/05'
+                            }`}>
                             <X size={20} />
                         </button>
-                        <div className={`px-4 py-2 backdrop-blur-xl border rounded-full flex items-center gap-2 shadow-lg ${
-                            isDarkMode ? 'bg-black/40 border-white/10' : 'bg-white/80 border-black/05'
-                        }`}>
+                        <div className={`px-4 py-2 backdrop-blur-xl border rounded-full flex items-center gap-2 shadow-lg ${isDarkMode ? 'bg-black/40 border-white/10' : 'bg-white/80 border-black/05'
+                            }`}>
                             <div className="w-2 h-2 rounded-full animate-ping bg-orange-500" />
                             <span className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-black'}`}>
                                 {driverAssigned ? `${driverInfo?.name || 'Chauffeur'} matched` : `Scanning local network`}
@@ -2210,9 +2187,8 @@ const SpareDriverBooking = () => {
                     <div className="text-center space-y-6">
                         <div className="relative inline-block">
                             <div className="absolute -inset-12 bg-orange-500/10 rounded-full animate-ping opacity-20" />
-                            <div className={`relative w-32 h-32 backdrop-blur-2xl border rounded-full flex items-center justify-center shadow-2xl transition-all ${
-                                isDarkMode ? 'bg-black/40 border-white/10' : 'bg-white/80 border-black/10'
-                            }`}>
+                            <div className={`relative w-32 h-32 backdrop-blur-2xl border rounded-full flex items-center justify-center shadow-2xl transition-all ${isDarkMode ? 'bg-black/40 border-white/10' : 'bg-white/80 border-black/10'
+                                }`}>
                                 {driverAssigned ? (
                                     <div className="flex flex-col items-center">
                                         <Navigation className="w-10 h-10 text-orange-500 mb-2 animate-bounce" />
@@ -2240,9 +2216,8 @@ const SpareDriverBooking = () => {
                             </div>
                         </div>
                         <div>
-                            <div className={`inline-flex items-center gap-3 px-4 py-1.5 rounded-full mb-4 border transition-all ${
-                                isDarkMode ? 'bg-orange-500/10 border-orange-500/20 text-orange-400' : 'bg-orange-50 border-orange-100 text-orange-600'
-                            }`}>
+                            <div className={`inline-flex items-center gap-3 px-4 py-1.5 rounded-full mb-4 border transition-all ${isDarkMode ? 'bg-orange-500/10 border-orange-500/20 text-orange-400' : 'bg-orange-50 border-orange-100 text-orange-600'
+                                }`}>
                                 <Radar className={`w-4 h-4 ${driverAssigned ? '' : 'animate-spin'}`} />
                                 <span className="text-[9px] font-black uppercase tracking-[0.2em]">
                                     {driverAssigned
@@ -2255,33 +2230,35 @@ const SpareDriverBooking = () => {
                             </h3>
                             <p className={`text-[11px] font-bold uppercase tracking-widest leading-relaxed mt-4 ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>
                                 {driverAssigned
-                                    ? (bookingDetails?.status === 'arrived' 
-                                        ? 'Your elite chauffeur has arrived at the location.' 
+                                    ? (bookingDetails?.status === 'arrived'
+                                        ? 'Your elite chauffeur has arrived at the location.'
                                         : 'Your chauffeur is on the way. Live telemetry is now active.')
                                     : (lookingTime > 150 ? 'Pinging nearby driver terminals...' :
                                         lookingTime > 120 ? 'Connecting to local telemetry...' :
-                                        lookingTime > 90 ? 'Broadcasting to outer perimeter...' :
-                                        lookingTime > 60 ? 'Optimizing route assignments...' :
-                                        lookingTime > 30 ? 'Nearby chauffeurs notified...' :
-                                        'Securely finalizing driver pulse...')}
+                                            lookingTime > 90 ? 'Broadcasting to outer perimeter...' :
+                                                lookingTime > 60 ? 'Optimizing route assignments...' :
+                                                    lookingTime > 30 ? 'Nearby chauffeurs notified...' :
+                                                        'Securely finalizing driver pulse...')}
                             </p>
                         </div>
                     </div>
 
                     <div className="w-full space-y-4">
                         <div className="flex gap-3">
-                            <button 
+                            <button
                                 onClick={handleSOS}
                                 className="w-14 h-14 bg-red-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-red-600/20 active:scale-90 transition-transform pointer-events-auto"
                             >
                                 <AlertTriangle size={24} />
                             </button>
-                            <button 
+                            <button
                                 onClick={driverAssigned ? () => navigate(`/spare-driver/support?bookingId=${activeBookingId}`) : handleCancelRequest}
-                                className="flex-1 h-14 bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-transform pointer-events-auto"
+                                className={`flex-1 h-14 backdrop-blur-xl border rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-transform pointer-events-auto ${
+                                    isDarkMode ? 'bg-white/10 border-white/10' : 'bg-[#0F172A] border-transparent shadow-xl'
+                                }`}
                             >
-                                {driverAssigned ? <MessageSquare size={18} className="text-white/40" /> : <X size={18} className="text-white/40" />}
-                                <span className="text-[13px] font-black text-white uppercase tracking-widest">
+                                {driverAssigned ? <MessageSquare size={18} className={isDarkMode ? "text-white/40" : "text-white/60"} /> : <X size={18} className={isDarkMode ? "text-white/40" : "text-white/60"} />}
+                                <span className="text-[13px] font-[1000] text-white uppercase tracking-widest">
                                     {driverAssigned ? 'Need help' : 'Cancel request'}
                                 </span>
                             </button>
@@ -2399,32 +2376,29 @@ const SpareDriverBooking = () => {
                         polylines={liveSearchPolyline}
                         darkMode={isDarkMode}
                     />
-                    
+
                     {/* Map Header Overlay */}
                     <div className="absolute top-10 inset-x-4 z-50 flex items-center justify-between">
-                         <button onClick={handleCancelRequest} className={`w-10 h-10 backdrop-blur-xl rounded-full shadow-lg flex items-center justify-center transition-all border ${
-                            isDarkMode ? 'bg-black/60 border-white/10 text-white' : 'bg-white/90 border-black/05 text-black'
-                         }`}>
-                             <X size={20} />
-                         </button>
-                         <div className={`backdrop-blur-xl px-5 py-2 rounded-full shadow-lg border flex items-center gap-2 ${
-                            isDarkMode ? 'bg-black/60 border-white/10' : 'bg-white/90 border-black/05'
-                         }`}>
-                             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                             <span className={`text-[10px] font-black tracking-widest ${isDarkMode ? 'text-white/80' : 'text-black/60'}`}>SCANNING FOR CHAUFFEUR</span>
-                         </div>
-                         <button onClick={handleSOSNavigation} className="w-10 h-10 bg-black rounded-full shadow-lg flex items-center justify-center text-white active:scale-95 border border-white/10">
-                             <ShieldAlert size={18} />
-                         </button>
+                        <button onClick={handleCancelRequest} className={`w-10 h-10 backdrop-blur-xl rounded-full shadow-lg flex items-center justify-center transition-all border ${isDarkMode ? 'bg-black/60 border-white/10 text-white' : 'bg-white/90 border-black/05 text-black'
+                            }`}>
+                            <X size={20} />
+                        </button>
+                        <div className={`backdrop-blur-xl px-5 py-2 rounded-full shadow-lg border flex items-center gap-2 ${isDarkMode ? 'bg-black/60 border-white/10' : 'bg-white/90 border-black/05'
+                            }`}>
+                            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                            <span className={`text-[10px] font-black tracking-widest ${isDarkMode ? 'text-white/80' : 'text-black/60'}`}>SCANNING FOR CHAUFFEUR</span>
+                        </div>
+                        <button onClick={handleSOSNavigation} className="w-10 h-10 bg-black rounded-full shadow-lg flex items-center justify-center text-white active:scale-95 border border-white/10">
+                            <ShieldAlert size={18} />
+                        </button>
                     </div>
                 </div>
 
                 {/* 2. Bottom Information Deck */}
-                <div className={`h-auto rounded-t-[2.5rem] shadow-2xl relative z-10 -mt-8 flex flex-col overflow-hidden border-t transition-colors duration-300 ${
-                    isDarkMode ? 'bg-[#0A0F0D] border-white/05 shadow-black/80' : 'bg-white border-black/05 shadow-black/10'
-                }`}>
+                <div className={`h-auto rounded-t-[2.5rem] shadow-2xl relative z-10 -mt-8 flex flex-col overflow-hidden border-t transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D] border-white/05 shadow-black/80' : 'bg-white border-black/05 shadow-black/10'
+                    }`}>
                     <div className={`w-12 h-1 rounded-full mx-auto mt-3 mb-4 ${isDarkMode ? 'bg-white/10' : 'bg-black/05'}`} />
-                    
+
                     <div className="px-6 pb-2">
                         {/* Status Header */}
                         <div className="flex items-center justify-between mb-6">
@@ -2445,9 +2419,8 @@ const SpareDriverBooking = () => {
 
                         {/* Search Progress - Fast Pass */}
                         {!driverAssigned && (
-                            <div className={`mb-6 p-5 rounded-[2rem] border relative overflow-hidden group ${
-                                isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/[0.03] border-black/05'
-                            }`}>
+                            <div className={`mb-6 p-5 rounded-[2rem] border relative overflow-hidden group ${isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/[0.03] border-black/05'
+                                }`}>
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF9900]/10 rounded-full -mr-16 -mt-16 blur-2xl opacity-50" />
                                 <div className="relative z-10">
                                     <div className="flex items-center justify-between mb-3">
@@ -2458,12 +2431,11 @@ const SpareDriverBooking = () => {
                                     </div>
                                     <div className="flex gap-2">
                                         {[20, 50, 100].map(tip => (
-                                            <button 
+                                            <button
                                                 key={tip}
                                                 onClick={() => handleIncreaseTip(tip)}
-                                                className={`flex-1 h-12 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all border ${
-                                                    isDarkMode ? 'bg-white/05 border-white/05 text-white hover:border-[#FF9900]/40' : 'bg-white border-black/05 text-black hover:border-orange-200'
-                                                }`}
+                                                className={`flex-1 h-12 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all border ${isDarkMode ? 'bg-white/05 border-white/05 text-white hover:border-[#FF9900]/40' : 'bg-white border-black/05 text-black hover:border-orange-200'
+                                                    }`}
                                             >
                                                 <span className="text-[14px] font-black">+{tip}</span>
                                                 <Plus size={14} className="text-[#FF9900]" />
@@ -2476,24 +2448,24 @@ const SpareDriverBooking = () => {
 
                         {/* Details Grid */}
                         <div className="grid grid-cols-2 gap-4 mb-6">
-                             <div className={`rounded-2xl p-4 border flex items-center gap-4 ${isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'}`}>
+                            <div className={`rounded-2xl p-4 border flex items-center gap-4 ${isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'}`}>
                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isDarkMode ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-500'}`}>
                                     <MapPin size={18} />
                                 </div>
                                 <div className="flex-1 overflow-hidden">
-                                     <span className={`text-[7px] font-black uppercase tracking-widest block mb-0.5 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Pickup</span>
-                                     <p className={`text-[11px] font-black truncate leading-tight ${isDarkMode ? 'text-white' : 'text-black'}`}>{selectedAddress?.label || 'Pickup Terminal'}</p>
+                                    <span className={`text-[7px] font-black uppercase tracking-widest block mb-0.5 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Pickup</span>
+                                    <p className={`text-[11px] font-black truncate leading-tight ${isDarkMode ? 'text-white' : 'text-black'}`}>{selectedAddress?.label || 'Pickup Terminal'}</p>
                                 </div>
-                             </div>
-                             <div className={`rounded-2xl p-4 border flex items-center gap-4 ${isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'}`}>
+                            </div>
+                            <div className={`rounded-2xl p-4 border flex items-center gap-4 ${isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'}`}>
                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isDarkMode ? 'bg-orange-500/10 text-orange-400' : 'bg-orange-50 text-[#FF9900]'}`}>
                                     <Zap size={18} />
                                 </div>
                                 <div className="flex-1 overflow-hidden">
-                                     <span className={`text-[7px] font-black uppercase tracking-widest block mb-0.5 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Service</span>
-                                     <p className={`text-[11px] font-black truncate leading-tight ${isDarkMode ? 'text-white' : 'text-black'}`}>{selectedType?.title}</p>
+                                    <span className={`text-[7px] font-black uppercase tracking-widest block mb-0.5 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Service</span>
+                                    <p className={`text-[11px] font-black truncate leading-tight ${isDarkMode ? 'text-white' : 'text-black'}`}>{selectedType?.title}</p>
                                 </div>
-                             </div>
+                            </div>
                         </div>
 
                         {/* Security OTP */}
@@ -2520,7 +2492,7 @@ const SpareDriverBooking = () => {
                     {/* Bottom Action Area */}
                     <div className={`p-5 pb-10 border-t transition-colors ${isDarkMode ? 'bg-[#0A0F0D] border-white/05' : 'bg-[#FFFDF5] border-black/05'}`}>
                         <div className="flex gap-4">
-                            <button 
+                            <button
                                 onClick={handleSOSNavigation}
                                 className="w-16 h-16 bg-rose-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-rose-900/20 active:scale-95"
                             >
@@ -2528,8 +2500,8 @@ const SpareDriverBooking = () => {
                             </button>
                             <button
                                 onClick={driverAssigned ? () => navigate(`/spare-driver/support?bookingId=${activeBookingId}`) : handleCancelRequest}
-                                className={`flex-1 h-16 rounded-2xl font-black text-[13px] uppercase tracking-[0.2em] shadow-xl transition-all flex items-center justify-center gap-3 active:scale-[0.98] ${
-                                    isDarkMode ? 'bg-white text-black shadow-black/80' : 'bg-[#0F172A] text-white shadow-black/30'
+                                className={`flex-1 h-16 rounded-2xl font-[1000] text-[13px] uppercase tracking-[0.2em] shadow-xl transition-all flex items-center justify-center gap-3 active:scale-[0.98] ${
+                                    isDarkMode ? 'bg-white text-black shadow-black/80' : 'bg-[#0A0F0D] text-white shadow-black/30'
                                 }`}
                             >
                                 {driverAssigned ? (
@@ -2563,27 +2535,23 @@ const SpareDriverBooking = () => {
                 <div className="flex flex-col items-center text-center py-6">
                     <motion.div
                         initial={{ scale: 0 }} animate={{ scale: 1 }}
-                        className={`w-20 h-20 rounded-3xl flex items-center justify-center mb-6 shadow-xl transition-all ${
-                            isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-emerald-50 text-emerald-500 border border-emerald-100'
-                        }`}
+                        className={`w-20 h-20 rounded-3xl flex items-center justify-center mb-6 shadow-xl transition-all ${isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-emerald-50 text-emerald-500 border border-emerald-100'
+                            }`}
                     >
                         <Calendar size={32} strokeWidth={2.5} />
                     </motion.div>
                     <h2 className={`text-2xl font-[1000] uppercase tracking-tight leading-none mb-3 ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>Booking scheduled</h2>
-                    <div className={`inline-flex items-center px-4 py-2 rounded-xl border transition-all ${
-                        isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                    }`}>
+                    <div className={`inline-flex items-center px-4 py-2 rounded-xl border transition-all ${isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                        }`}>
                         <span className="text-[11px] font-black uppercase tracking-widest leading-none">{bookingDetails.date} @ {bookingDetails.time}</span>
                     </div>
                 </div>
 
-                <div className={`rounded-[2rem] border p-6 shadow-2xl relative overflow-hidden transition-all ${
-                    isDarkMode ? 'bg-white/05 border-white/05 shadow-black/60' : 'bg-white border-black/05 shadow-black/10'
-                }`}>
+                <div className={`rounded-[2rem] border p-6 shadow-2xl relative overflow-hidden transition-all ${isDarkMode ? 'bg-white/05 border-white/05 shadow-black/60' : 'bg-white border-black/05 shadow-black/10'
+                    }`}>
                     <div className="flex items-center gap-5 relative z-10">
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border transition-all ${
-                            isDarkMode ? 'bg-orange-500/10 text-orange-400 border-orange-500/10' : 'bg-[#FF9900]/10 text-[#FF9900] border-[#FF9900]/20'
-                        }`}>
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-orange-500/10 text-orange-400 border-orange-500/10' : 'bg-[#FF9900]/10 text-[#FF9900] border-[#FF9900]/20'
+                            }`}>
                             <User size={28} />
                         </div>
                         <div>
@@ -2612,9 +2580,8 @@ const SpareDriverBooking = () => {
                     </div>
                 </div>
 
-                <div className={`rounded-[2rem] p-5 space-y-3 transition-colors ${
-                    isDarkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-100'
-                }`}>
+                <div className={`rounded-[2rem] p-5 space-y-3 transition-colors ${isDarkMode ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-100'
+                    }`}>
                     <p className={`text-[8px] font-black uppercase tracking-[0.25em] ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>Dispatch window</p>
                     <div className="flex items-center justify-between gap-4">
                         <span className={`text-[10px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-white/40' : 'text-blue-900/50'}`}>matching begins at</span>
@@ -2632,9 +2599,8 @@ const SpareDriverBooking = () => {
                 <div className="pt-4 mt-auto">
                     <button
                         onClick={() => navigate(activeBookingId ? `/spare-driver/history?bookingId=${activeBookingId}` : '/spare-driver/history')}
-                        className={`w-full h-16 rounded-2xl font-black text-[13px] uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-3 active:scale-[0.98] ${
-                            isDarkMode ? 'bg-white text-black shadow-black/80' : 'bg-black text-white shadow-black/30'
-                        }`}
+                        className={`w-full h-16 rounded-2xl font-black text-[13px] uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-3 active:scale-[0.98] ${isDarkMode ? 'bg-white text-black shadow-black/80' : 'bg-black text-white shadow-black/30'
+                            }`}
                     >
                         View in history
                         <ChevronRight size={18} strokeWidth={3} />
@@ -2710,10 +2676,9 @@ const SpareDriverBooking = () => {
                             <span className="text-[9px] font-black text-white uppercase tracking-widest">Reconnecting...</span>
                         </div>
                     )}
-                    
-                    <div className={`backdrop-blur-2xl border rounded-[1.6rem] p-3.5 shadow-2xl transition-all duration-300 ${
-                        isDarkMode ? 'bg-black/60 border-white/10 shadow-black/40' : 'bg-white/80 border-black/05 shadow-black/10'
-                    }`}>
+
+                    <div className={`backdrop-blur-2xl border rounded-[1.6rem] p-3.5 shadow-2xl transition-all duration-300 ${isDarkMode ? 'bg-black/60 border-white/10 shadow-black/40' : 'bg-white/80 border-black/05 shadow-black/10'
+                        }`}>
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isDarkMode ? 'bg-orange-500/10 text-orange-400' : 'bg-[#FF9900]/10 text-[#FF9900]'}`}>
@@ -2724,12 +2689,12 @@ const SpareDriverBooking = () => {
                                     <p className={`text-[8px] font-bold uppercase tracking-[0.2em] leading-none ${isDarkMode ? 'text-white/30' : 'text-black/30'}`}>
                                         {driverLocation ? 'Mission in progress' : 'Establishing GPS pulse...'}
                                     </p>
-                                    
+
                                     {driverLocation && driverDistance > 0 && (
                                         <div className="flex items-center gap-2 mt-2">
                                             <span className="text-[10px] font-black text-blue-500">
-                                                {driverDistance < 1 
-                                                    ? `${Math.round(driverDistance * 1000)}m away` 
+                                                {driverDistance < 1
+                                                    ? `${Math.round(driverDistance * 1000)}m away`
                                                     : `${driverDistance.toFixed(1)}km away`}
                                             </span>
                                             {routeInfo.durationValue > 0 && (
@@ -2744,9 +2709,8 @@ const SpareDriverBooking = () => {
                                     )}
                                 </div>
                             </div>
-                            <div className={`px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest leading-none ${
-                                isDarkMode ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                            }`}>
+                            <div className={`px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest leading-none ${isDarkMode ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                }`}>
                                 {bookingDetails?.status === 'arrived' ? 'Arrived' : 'En Route'}
                             </div>
                         </div>
@@ -2754,9 +2718,8 @@ const SpareDriverBooking = () => {
                 </div>
             </div>
 
-            <div className={`rounded-t-[2.75rem] p-6 space-y-6 shadow-2xl relative z-30 pb-10 border-t transition-colors duration-300 ${
-                isDarkMode ? 'bg-[#0A0F0D] border-white/05 shadow-black/80' : 'bg-white border-black/05 shadow-black/10'
-            }`}>
+            <div className={`rounded-t-[2.75rem] p-6 space-y-6 shadow-2xl relative z-30 pb-10 border-t transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D] border-white/05 shadow-black/80' : 'bg-white border-black/05 shadow-black/10'
+                }`}>
                 <div className={`w-12 h-1 rounded-full mx-auto mb-2 ${isDarkMode ? 'bg-white/10' : 'bg-black/05'}`} />
 
                 <div className="flex items-center justify-between">
@@ -2772,9 +2735,8 @@ const SpareDriverBooking = () => {
                     </div>
                 </div>
 
-                <div className={`p-4 rounded-[1.75rem] flex items-center justify-between border transition-all ${
-                    isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'
-                }`}>
+                <div className={`p-4 rounded-[1.75rem] flex items-center justify-between border transition-all ${isDarkMode ? 'bg-white/05 border-white/05' : 'bg-black/05 border-black/05'
+                    }`}>
                     <div className="flex items-center gap-4">
                         <div className={`w-12 h-12 rounded-xl overflow-hidden border ${isDarkMode ? 'border-white/10' : 'border-black/05'}`}>
                             <img src={driverInfo?.img} className="w-full h-full object-cover" />
@@ -2958,12 +2920,10 @@ const SpareDriverBooking = () => {
                     darkMode={isDarkMode}
                 />
 
-                <div className={`absolute inset-x-0 top-0 h-28 pointer-events-none ${
-                    isDarkMode ? 'bg-gradient-to-b from-black/60 via-black/20 to-transparent' : 'bg-gradient-to-b from-white/90 via-white/40 to-transparent'
-                }`} />
-                <div className={`absolute inset-x-0 bottom-0 h-20 pointer-events-none ${
-                    isDarkMode ? 'bg-gradient-to-t from-[#0A0F0D] via-[#0A0F0D]/45 to-transparent' : 'bg-gradient-to-t from-[#f7f6f1] via-[#f7f6f1]/45 to-transparent'
-                }`} />
+                <div className={`absolute inset-x-0 top-0 h-28 pointer-events-none ${isDarkMode ? 'bg-gradient-to-b from-black/60 via-black/20 to-transparent' : 'bg-gradient-to-b from-white/90 via-white/40 to-transparent'
+                    }`} />
+                <div className={`absolute inset-x-0 bottom-0 h-20 pointer-events-none ${isDarkMode ? 'bg-gradient-to-t from-[#0A0F0D] via-[#0A0F0D]/45 to-transparent' : 'bg-gradient-to-t from-[#f7f6f1] via-[#f7f6f1]/45 to-transparent'
+                    }`} />
 
                 <div className="absolute top-4 left-4 right-4 z-20">
                     {!isSocketConnected && (
@@ -2972,15 +2932,13 @@ const SpareDriverBooking = () => {
                             <span className="text-[9px] font-black text-white uppercase tracking-widest">Reconnecting...</span>
                         </div>
                     )}
-                    
-                    <div className={`rounded-[1.4rem] backdrop-blur-xl border px-4 py-3 shadow-2xl transition-all ${
-                        isDarkMode ? 'bg-black/60 border-white/10 shadow-black/80' : 'bg-white/92 border-black/05 shadow-black/10'
-                    }`}>
+
+                    <div className={`rounded-[1.4rem] backdrop-blur-xl border px-4 py-3 shadow-2xl transition-all ${isDarkMode ? 'bg-black/60 border-white/10 shadow-black/80' : 'bg-white/92 border-black/05 shadow-black/10'
+                        }`}>
                         <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-full border flex items-center justify-center ${
-                                    isDarkMode ? 'bg-orange-500/10 border-orange-500/20' : 'bg-[#FFF7ED] border-[#FED7AA]'
-                                }`}>
+                                <div className={`w-10 h-10 rounded-full border flex items-center justify-center ${isDarkMode ? 'bg-orange-500/10 border-orange-500/20' : 'bg-[#FFF7ED] border-[#FED7AA]'
+                                    }`}>
                                     <Navigation size={18} className={`text-[#FF9900] ${animatedDriverLocation ? 'animate-pulse' : ''}`} />
                                 </div>
                                 <div>
@@ -2991,8 +2949,8 @@ const SpareDriverBooking = () => {
                                     {driverLocation && driverDistance > 0 && (
                                         <div className="flex items-center gap-2 mt-1.5">
                                             <span className="text-[9px] font-bold text-blue-500">
-                                                {driverDistance < 1 
-                                                    ? `${Math.round(driverDistance * 1000)}m away` 
+                                                {driverDistance < 1
+                                                    ? `${Math.round(driverDistance * 1000)}m away`
                                                     : `${driverDistance.toFixed(1)}km away`}
                                             </span>
                                             {routeInfo.durationValue > 0 && (
@@ -3007,9 +2965,8 @@ const SpareDriverBooking = () => {
                                     )}
                                 </div>
                             </div>
-                            <div className={`rounded-full border px-3 py-2 transition-all ${
-                                isDarkMode ? 'bg-orange-500/10 border-orange-500/20' : 'bg-orange-50 border-orange-100'
-                            }`}>
+                            <div className={`rounded-full border px-3 py-2 transition-all ${isDarkMode ? 'bg-orange-500/10 border-orange-500/20' : 'bg-orange-50 border-orange-100'
+                                }`}>
                                 <span className="text-[8px] font-black text-[#F97316] uppercase tracking-[0.24em]">
                                     {bookingDetails?.status === 'arrived' ? 'Arrived' : 'En Route'}
                                 </span>
@@ -3019,9 +2976,8 @@ const SpareDriverBooking = () => {
                 </div>
             </div>
 
-            <div className={`relative z-30 -mt-3 flex-1 rounded-t-[2.1rem] border-t shadow-2xl px-5 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.9rem)] transition-colors duration-300 ${
-                isDarkMode ? 'bg-[#0A0F0D] border-white/05 shadow-black/80' : 'bg-white border-black/04 shadow-black/10'
-            }`}>
+            <div className={`relative z-30 -mt-3 flex-1 rounded-t-[2.1rem] border-t shadow-2xl px-5 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.9rem)] transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D] border-white/05 shadow-black/80' : 'bg-white border-black/04 shadow-black/10'
+                }`}>
                 <div className={`mx-auto mb-3 h-1.5 w-16 rounded-full ${isDarkMode ? 'bg-white/10' : 'bg-black/08'}`} />
 
                 <div className="flex items-center justify-between gap-3">
@@ -3029,9 +2985,8 @@ const SpareDriverBooking = () => {
                         <p className={`text-[8px] font-black uppercase tracking-[0.28em] leading-none ${isDarkMode ? 'text-white/20' : 'text-black/25'}`}>Session duration</p>
                         <h4 className={`text-[2rem] font-[1000] tracking-tight leading-none tabular-nums ${isDarkMode ? 'text-white' : 'text-[#101828]'}`}>{formatTime(elapsedTime)}</h4>
                     </div>
-                    <div className={`rounded-2xl border px-3 py-2 text-right min-w-[110px] ${
-                        isDarkMode ? 'bg-white/05 border-white/05' : 'bg-orange-50 border-orange-100'
-                    }`}>
+                    <div className={`rounded-2xl border px-3 py-2 text-right min-w-[110px] ${isDarkMode ? 'bg-white/05 border-white/05' : 'bg-orange-50 border-orange-100'
+                        }`}>
                         <p className="text-[8px] font-black text-[#F97316] uppercase tracking-[0.24em] leading-none">Trip status</p>
                         <p className={`text-[11px] font-[1000] uppercase tracking-[0.16em] leading-none mt-2 ${isDarkMode ? 'text-white' : 'text-[#111827]'}`}>Live Session</p>
                     </div>
@@ -3045,9 +3000,8 @@ const SpareDriverBooking = () => {
                     />
                 </div>
 
-                <div className={`mt-3 rounded-[1.7rem] border p-4 shadow-xl transition-all ${
-                    isDarkMode ? 'bg-white/05 border-white/05' : 'bg-white border-black/05'
-                }`}>
+                <div className={`mt-3 rounded-[1.7rem] border p-4 shadow-xl transition-all ${isDarkMode ? 'bg-white/05 border-white/05' : 'bg-white border-black/05'
+                    }`}>
                     <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
                             <div className={`w-11 h-11 rounded-xl overflow-hidden border ${isDarkMode ? 'bg-white/10 border-white/10' : 'bg-black/05 border-black/05'}`}>
@@ -3084,9 +3038,8 @@ const SpareDriverBooking = () => {
 
                 {/* 🏷️ Phase 11: Real-time Surcharge Pulse 🏷️ */}
                 {(bookingDetails?.pricing?.totalAmount > (selectedType?.basePrice || 0)) && (
-                    <div className={`mt-3 px-4 py-3 border rounded-[1.4rem] space-y-1.5 transition-all anim-pulse-subtle ${
-                        isDarkMode ? 'bg-orange-500/05 border-orange-500/10' : 'bg-[#FFF7ED] border-[#FED7AA]'
-                    }`}>
+                    <div className={`mt-3 px-4 py-3 border rounded-[1.4rem] space-y-1.5 transition-all anim-pulse-subtle ${isDarkMode ? 'bg-orange-500/05 border-orange-500/10' : 'bg-[#FFF7ED] border-[#FED7AA]'
+                        }`}>
                         <p className={`text-[8px] font-black uppercase tracking-widest mb-1.5 opacity-60 ${isDarkMode ? 'text-[#FF9900]' : 'text-[#F97316]'}`}>Surcharges applied</p>
                         {bookingDetails.notes?.internal?.includes('[WAITING]') && (
                             <div className="flex items-center justify-between">
@@ -3105,9 +3058,8 @@ const SpareDriverBooking = () => {
 
                 {/* 🛡️ Outstation Safety & Allowance Context 🛡️ */}
                 {isOutstationService && (
-                    <div className={`mt-3 p-4 border rounded-[1.4rem] space-y-2 transition-all ${
-                        isDarkMode ? 'bg-blue-500/10 border-blue-500/20' : 'bg-blue-50 border-blue-100'
-                    }`}>
+                    <div className={`mt-3 p-4 border rounded-[1.4rem] space-y-2 transition-all ${isDarkMode ? 'bg-blue-500/10 border-blue-500/20' : 'bg-blue-50 border-blue-100'
+                        }`}>
                         <div className="flex items-center gap-2">
                             <Shield size={12} className="text-blue-600" />
                             <span className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-blue-300' : 'text-blue-700'}`}>Outstation mission protocol</span>
@@ -3131,18 +3083,16 @@ const SpareDriverBooking = () => {
                 <div className="grid grid-cols-2 gap-3 mt-4">
                     <button
                         onClick={() => navigate(`/spare-driver/support?bookingId=${bookingDetails?._id || activeBookingId}`)}
-                        className={`w-full h-12 rounded-[1rem] font-black text-[10px] uppercase tracking-[0.2em] border shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all ${
-                            isDarkMode ? 'bg-white/05 border-white/05 text-white' : 'bg-black/05 border-black/05 text-black'
-                        }`}
+                        className={`w-full h-12 rounded-[1rem] font-black text-[10px] uppercase tracking-[0.2em] border shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all ${isDarkMode ? 'bg-white/05 border-white/05 text-white' : 'bg-black/05 border-black/05 text-black'
+                            }`}
                     >
                         <MessageSquare size={14} className="opacity-40" />
                         Help
                     </button>
                     <button
                         onClick={() => navigate(`/spare-driver/history?bookingId=${bookingDetails?._id || activeBookingId}`)}
-                        className={`w-full h-12 rounded-[1rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all ${
-                            isDarkMode ? 'bg-white text-black' : 'bg-[#0F172A] text-white'
-                        }`}
+                        className={`w-full h-12 rounded-[1rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all ${isDarkMode ? 'bg-white text-black' : 'bg-[#0F172A] text-white'
+                            }`}
                     >
                         <Car size={14} className="opacity-40" />
                         Details
@@ -3157,9 +3107,8 @@ const SpareDriverBooking = () => {
             <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className={`w-24 h-24 rounded-[2rem] flex items-center justify-center shadow-xl mb-4 transition-all ${
-                    isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                }`}
+                className={`w-24 h-24 rounded-[2rem] flex items-center justify-center shadow-xl mb-4 transition-all ${isDarkMode ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                    }`}
             >
                 <CheckCircle2 size={44} strokeWidth={2.5} />
             </motion.div>
@@ -3171,9 +3120,8 @@ const SpareDriverBooking = () => {
                 </p>
             </div>
 
-            <div className={`w-full border p-6 rounded-[2.5rem] space-y-4 shadow-2xl transition-all ${
-                isDarkMode ? 'bg-white/05 border-white/05 shadow-black/80' : 'bg-white border-black/05 shadow-black/10'
-            }`}>
+            <div className={`w-full border p-6 rounded-[2.5rem] space-y-4 shadow-2xl transition-all ${isDarkMode ? 'bg-white/05 border-white/05 shadow-black/80' : 'bg-white border-black/05 shadow-black/10'
+                }`}>
                 <div className={`flex items-center justify-between border-b pb-4 ${isDarkMode ? 'border-white/05' : 'border-black/05'}`}>
                     <div className="text-left">
                         <span className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Service</span>
@@ -3192,7 +3140,7 @@ const SpareDriverBooking = () => {
                         <span className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Base Fare</span>
                         <span className={`text-[14px] font-black ${isDarkMode ? 'text-white' : 'text-black'}`}>{formatInr(selectedType?.basePrice)}</span>
                     </div>
-                    
+
                     {bookingDetails?.pricing?.breakdown?.map((item, idx) => (
                         <div key={idx} className="flex items-center justify-between">
                             <span className={`text-[10px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>{item.name}</span>
@@ -3207,7 +3155,7 @@ const SpareDriverBooking = () => {
                         <span className={`text-2xl font-[1000] tracking-tight ${isDarkMode ? 'text-white' : 'text-black'}`}>{formatInr(bookingDetails?.pricing?.totalAmount)}</span>
                     </div>
                 </div>
-                
+
                 <div className={`pt-4 border-t grid grid-cols-2 gap-4 ${isDarkMode ? 'border-white/05' : 'border-black/05'}`}>
                     <div className="text-left">
                         <span className={`text-[9px] font-black uppercase tracking-widest block mb-1 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Session Time</span>
@@ -3220,9 +3168,8 @@ const SpareDriverBooking = () => {
                 </div>
             </div>
 
-            <div className={`w-full border rounded-2xl px-5 py-4 transition-colors ${
-                isDarkMode ? 'bg-blue-500/10 border-blue-500/20' : 'bg-blue-50 border-blue-100'
-            }`}>
+            <div className={`w-full border rounded-2xl px-5 py-4 transition-colors ${isDarkMode ? 'bg-blue-500/10 border-blue-500/20' : 'bg-blue-50 border-blue-100'
+                }`}>
                 <p className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>Mission Summary</p>
                 <p className={`text-[11px] font-bold uppercase mt-2 leading-relaxed ${isDarkMode ? 'text-blue-300/70' : 'text-blue-900/70'}`}>
                     {serviceFlowMeta.supportNote}
@@ -3230,9 +3177,8 @@ const SpareDriverBooking = () => {
             </div>
 
             {hasOutstandingSettlement && (
-                <div className={`w-full border rounded-[2rem] p-6 text-left space-y-4 shadow-xl ${
-                    isDarkMode ? 'bg-orange-500/10 border-orange-500/20' : 'bg-amber-50 border-amber-200'
-                }`}>
+                <div className={`w-full border rounded-[2rem] p-6 text-left space-y-4 shadow-xl ${isDarkMode ? 'bg-orange-500/10 border-orange-500/20' : 'bg-amber-50 border-amber-200'
+                    }`}>
                     <div className="flex items-start justify-between gap-4">
                         <div>
                             <p className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-orange-400' : 'text-amber-700'}`}>Settlement Required</p>
@@ -3250,18 +3196,16 @@ const SpareDriverBooking = () => {
                         <button
                             onClick={() => handleSettlementPayment('wallet')}
                             disabled={isSettlingPayment}
-                            className={`h-14 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-lg active:scale-[0.98] transition-all disabled:opacity-50 ${
-                                isDarkMode ? 'bg-orange-500 text-white' : 'bg-amber-500 text-white'
-                            }`}
+                            className={`h-14 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-lg active:scale-[0.98] transition-all disabled:opacity-50 ${isDarkMode ? 'bg-orange-500 text-white' : 'bg-amber-500 text-white'
+                                }`}
                         >
                             {isSettlingPayment ? 'Processing...' : 'Wallet Pay'}
                         </button>
                         <button
                             onClick={() => handleSettlementPayment('online')}
                             disabled={isSettlingPayment}
-                            className={`h-14 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-lg active:scale-[0.98] transition-all disabled:opacity-50 ${
-                                isDarkMode ? 'bg-white text-black' : 'bg-black text-white'
-                            }`}
+                            className={`h-14 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-lg active:scale-[0.98] transition-all disabled:opacity-50 ${isDarkMode ? 'bg-white text-black' : 'bg-black text-white'
+                                }`}
                         >
                             {isSettlingPayment ? 'Opening...' : 'Online Pay'}
                         </button>
@@ -3273,9 +3217,8 @@ const SpareDriverBooking = () => {
                 {!hasOutstandingSettlement && (
                     <button
                         onClick={() => navigate(`/rate?id=${bookingDetails?._id || activeBookingId}`)}
-                        className={`w-full h-16 rounded-2xl font-black text-[13px] uppercase tracking-[0.15em] shadow-xl active:scale-[0.98] transition-all ${
-                            isDarkMode ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-[#FF9900] text-[#0F172A] hover:bg-orange-500'
-                        }`}
+                        className={`w-full h-16 rounded-2xl font-black text-[13px] uppercase tracking-[0.15em] shadow-xl active:scale-[0.98] transition-all ${isDarkMode ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-[#FF9900] text-[#0F172A] hover:bg-orange-500'
+                            }`}
                     >
                         Rate Chauffeur Experience
                     </button>
@@ -3286,17 +3229,15 @@ const SpareDriverBooking = () => {
                         navigate('/home');
                         refreshStats();
                     }}
-                    className={`w-full h-16 rounded-2xl font-black text-[13px] uppercase tracking-[0.15em] shadow-lg active:scale-[0.98] transition-all ${
-                        isDarkMode ? 'bg-white/10 text-white border border-white/10' : 'bg-black text-white'
-                    }`}
+                    className={`w-full h-16 rounded-2xl font-black text-[13px] uppercase tracking-[0.15em] shadow-lg active:scale-[0.98] transition-all ${isDarkMode ? 'bg-white/10 text-white border border-white/10' : 'bg-black text-white'
+                        }`}
                 >
                     {hasOutstandingSettlement ? 'Return Home (Pay Later)' : 'Dismiss Account'}
                 </button>
                 <button
                     onClick={() => navigate(`/spare-driver/history?bookingId=${bookingDetails?._id || activeBookingId}`)}
-                    className={`w-full h-14 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] active:scale-[0.98] transition-all border ${
-                        isDarkMode ? 'border-white/10 text-white/40 shadow-black/20' : 'border-black/05 text-black/40 shadow-black/05'
-                    }`}
+                    className={`w-full h-14 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] active:scale-[0.98] transition-all border ${isDarkMode ? 'border-white/10 text-white/40 shadow-black/20' : 'border-black/05 text-black/40 shadow-black/05'
+                        }`}
                 >
                     View Mission Record
                 </button>
@@ -3404,9 +3345,8 @@ const SpareDriverBooking = () => {
                 </div>
 
                 {/* Reserve Info */}
-                <div className={`rounded-xl p-4 border transition-colors ${
-                    isDarkMode ? 'bg-blue-500/10 border-blue-500/20' : 'bg-blue-50 border-blue-100'
-                }`}>
+                <div className={`rounded-xl p-4 border transition-colors ${isDarkMode ? 'bg-blue-500/10 border-blue-500/20' : 'bg-blue-50 border-blue-100'
+                    }`}>
                     <div className="flex items-start gap-4">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isDarkMode ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-500/10 text-blue-600'}`}>
                             <Lock size={14} />
@@ -3422,9 +3362,8 @@ const SpareDriverBooking = () => {
                     </div>
                 </div>
 
-                <div className={`rounded-xl p-5 flex items-center gap-4 border transition-colors ${
-                    isDarkMode ? 'bg-white/05 border-white/05 text-white' : 'bg-[#0F172A] text-white border-transparent'
-                }`}>
+                <div className={`rounded-xl p-5 flex items-center gap-4 border transition-colors ${isDarkMode ? 'bg-white/05 border-white/05 text-white' : 'bg-[#0F172A] text-white border-transparent'
+                    }`}>
                     <Shield size={20} className="text-orange-500" />
                     <div>
                         <p className="text-[11px] font-black uppercase leading-none mb-1">Insured Mission</p>
@@ -3434,9 +3373,8 @@ const SpareDriverBooking = () => {
             </div>
 
             {/* Sticky Action Footer */}
-            <div className={`fixed bottom-[76px] left-0 right-0 z-[1100] px-5 py-4 backdrop-blur-lg border-t safe-area-bottom transition-all ${
-                isDarkMode ? 'bg-[#0A0F0D]/90 border-white/05' : 'bg-white/90 border-black/05'
-            }`}>
+            <div className={`fixed bottom-[76px] left-0 right-0 z-[1100] px-5 py-4 backdrop-blur-lg border-t safe-area-bottom transition-all ${isDarkMode ? 'bg-[#0A0F0D]/90 border-white/05' : 'bg-white/90 border-black/05'
+                }`}>
                 <div className="max-w-[430px] mx-auto flex items-center gap-4">
                     <motion.button
                         whileTap={{ scale: 0.98 }}

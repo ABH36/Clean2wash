@@ -55,9 +55,9 @@ const Signup = () => {
         setLoading(false);
 
         if (res.success) {
-            toast.success(`Verification code sent`, {
+            toast.success(`Code sent`, {
                 icon: '📩',
-                style: { borderRadius: '20px', background: '#000', color: '#fff' }
+                style: { borderRadius: '20px', background: '#000', color: '#fff', fontSize: '12px' }
             });
             navigate('/otp-verify', {
                 state: {
@@ -89,23 +89,24 @@ const Signup = () => {
         <div className={`h-screen flex flex-col font-sans relative overflow-hidden transition-colors duration-300 ${isDarkMode ? 'bg-black text-white' : 'bg-[#FAF6EB] text-black'}`}>
 
             {/* Top Branding */}
-            <div className="relative flex-[1.1] flex flex-col items-center justify-center px-8 overflow-hidden">
-                <div className="absolute inset-0 z-0 opacity-40 grayscale">
+            <div className="relative flex-[0.7] flex flex-col items-center justify-center px-8 overflow-hidden">
+                <div className="absolute inset-0 z-0">
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/80 to-black z-10" />
                     <img
-                        src="https://images.unsplash.com/photo-1493238507154-203698ad19fb?auto=format&fit=crop&q=80&w=1200"
-                        alt="High-end Drive"
-                        className="w-full h-full object-cover"
+                        src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&q=80&w=1200"
+                        alt="Luxury Car"
+                        className="w-full h-full object-cover opacity-60 scale-110"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/80 to-black" />
                 </div>
 
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
                     className="relative z-20 flex flex-col items-center text-center"
                 >
-                    <img src={logo} alt="Logo" className="h-32 w-auto mb-4 drop-shadow-2xl" />
-                    <h1 className="text-xl font-bold tracking-tight text-white/90">Create your account</h1>
+                    <img src={logo} alt="Logo" className="h-24 w-auto mb-2 drop-shadow-2xl" />
+                    <p className="text-white/60 text-[11px] font-bold uppercase tracking-[0.25em]">Spare Driver</p>
                 </motion.div>
             </div>
 
@@ -126,7 +127,7 @@ const Signup = () => {
                     </button>
                     <div className="ml-2">
                         <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>Registration</h2>
-                        <p className={`text-[10px] uppercase tracking-widest font-bold ${isDarkMode ? 'text-white/30' : 'text-black/30'}`}>Personal details</p>
+                        <p className={`text-[10px] uppercase tracking-widest font-bold ${isDarkMode ? 'text-white/30' : 'text-black/30'}`}>Welcome to Spare Driver App Team</p>
                     </div>
                 </header>
 

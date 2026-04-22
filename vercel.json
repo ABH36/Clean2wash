@@ -13,22 +13,25 @@
       }
     }
   ],
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "/Backend/server.js"
+      "src": "/api/(.*)",
+      "dest": "Backend/server.js"
     },
     {
-      "source": "/socket.io/(.*)",
-      "destination": "/Backend/server.js"
+      "src": "/socket.io/(.*)",
+      "dest": "Backend/server.js"
     },
     {
-      "source": "/uploads/(.*)",
-      "destination": "/Backend/server.js"
+      "src": "/uploads/(.*)",
+      "dest": "Backend/server.js"
     },
     {
-      "source": "/((?!api|socket.io|uploads).*)",
-      "destination": "/Frontend/index.html"
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "Frontend/index.html"
     }
   ]
 }

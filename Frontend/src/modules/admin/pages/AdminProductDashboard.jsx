@@ -110,13 +110,13 @@ const AdminProductDashboard = () => {
 
 
             {/* Main Content Tabs */}
-            <div className="bg-white/5 rounded-2xl  border border-onyx-100 overflow-hidden">
-                <div className="flex border-b border-onyx-100">
+            <div className="bg-background/40 rounded-2xl border border-border overflow-hidden">
+                <div className="flex border-b border-border">
                     {['overview', 'missions', 'inventory', 'disputes'].map(tab => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`px-6 py-4 text-sm font-medium transition-colors relative ${activeTab === tab ? 'text-gold-600' : 'text-onyx-500 hover:text-onyx-700'
+                            className={`px-6 py-4 text-sm font-medium transition-colors relative ${activeTab === tab ? 'text-brand' : 'text-content-subtle hover:text-content'
                                 }`}
                         >
                             {tab === 'missions' && missions.length > 0 && (
@@ -126,7 +126,7 @@ const AdminProductDashboard = () => {
                             {activeTab === tab && (
                                 <motion.div
                                     layoutId="activeTabIndicator"
-                                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold-500"
+                                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand"
                                 />
                             )}
                         </button>
@@ -158,16 +158,16 @@ const AdminProductDashboard = () => {
 };
 
 const StatCard = ({ title, value, icon, trend, isUp, warning }) => (
-    <div className={`p-6 rounded-2xl bg-white/5 border ${warning ? 'border-amber-200' : 'border-onyx-100'} `}>
+    <div className={`p-6 rounded-2xl bg-background border ${warning ? 'border-amber-500/20' : 'border-border'} `}>
         <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-onyx-50 rounded-xl">{icon}</div>
+            <div className="p-3 bg-surface rounded-xl">{icon}</div>
             <div className={`flex items-center space-x-1 text-sm font-medium ${isUp ? 'text-green-600' : 'text-red-600'}`}>
                 <span>{trend}</span>
                 {isUp ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
             </div>
         </div>
-        <h3 className="text-onyx-500 text-sm font-medium uppercase tracking-wider mb-1">{title}</h3>
-        <p className="text-2xl font-bold text-onyx-900">{value}</p>
+        <h3 className="text-content-subtle text-sm font-medium uppercase tracking-wider mb-1">{title}</h3>
+        <p className="text-2xl font-bold text-content">{value}</p>
     </div>
 );
 
@@ -175,24 +175,24 @@ const VendorPerformanceTable = ({ vendors }) => (
     <div className="admin-table-container">
         <table className="w-full text-left">
             <thead>
-                <tr className="text-onyx-500 text-sm font-medium border-b border-onyx-50">
+                <tr className="text-content-subtle text-sm font-medium border-b border-border">
                     <th className="pb-4">Vendor / Studio</th>
                     <th className="pb-4">Total Sales</th>
                     <th className="pb-4">Gross Revenue</th>
                     <th className="pb-4 text-right">Actions</th>
                 </tr>
             </thead>
-            <tbody className="divide-y divide-onyx-50">
+            <tbody className="divide-y divide-border">
                 {vendors.map((vendor, idx) => (
-                    <tr key={idx} className="group hover:bg-onyx-50/50 transition-colors">
-                        <td className="py-4 font-medium text-onyx-900">
+                    <tr key={idx} className="group hover:bg-surface/50 transition-colors">
+                        <td className="py-4 font-medium text-content">
                             {vendor.studioName || vendor.vendorName}
-                            <span className="block text-xs text-onyx-500 font-normal">{vendor.vendorName}</span>
+                            <span className="block text-xs text-content-subtle font-normal">{vendor.vendorName}</span>
                         </td>
-                        <td className="py-4 text-onyx-700">{vendor.totalSales} units</td>
-                        <td className="py-4 text-onyx-900 font-semibold">₹{vendor.revenue?.toLocaleString()}</td>
+                        <td className="py-4 text-content-subtle">{vendor.totalSales} units</td>
+                        <td className="py-4 text-content font-semibold">₹{vendor.revenue?.toLocaleString()}</td>
                         <td className="py-4 text-right">
-                            <button className="p-2 text-onyx-400 hover:text-gold-600 transition-colors">
+                            <button className="p-2 text-content-subtle hover:text-brand transition-colors">
                                 <ArrowUpRight className="w-5 h-5" />
                             </button>
                         </td>
@@ -207,16 +207,16 @@ const InventoryTable = ({ inventory, searchTerm, setSearchTerm }) => (
     <div className="space-y-4">
         <div className="flex items-center space-x-4 mb-6">
             <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-onyx-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-content-subtle" />
                 <input
                     type="text"
                     placeholder="Search master inventory..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-onyx-50 border-none rounded-xl focus:ring-2 focus:ring-gold-500"
+                    className="w-full pl-12 pr-4 py-2 bg-surface border border-border rounded-xl focus:ring-2 focus:ring-brand outline-none"
                 />
             </div>
-            <button className="flex items-center space-x-2 px-4 py-2 bg-white/5 border border-onyx-100 rounded-xl text-onyx-600 hover:bg-onyx-50">
+            <button className="flex items-center space-x-2 px-4 py-2 bg-background border border-border rounded-xl text-content hover:bg-surface">
                 <Filter className="w-4 h-4" />
                 <span>Filters</span>
             </button>
@@ -224,7 +224,7 @@ const InventoryTable = ({ inventory, searchTerm, setSearchTerm }) => (
         <div className="admin-table-container">
             <table className="w-full text-left">
                 <thead>
-                    <tr className="text-onyx-500 text-sm font-medium border-b border-onyx-50">
+                    <tr className="text-content-subtle text-sm font-medium border-b border-border">
                         <th className="pb-4">Product Name</th>
                         <th className="pb-4">Studio</th>
                         <th className="pb-4">Price</th>
@@ -232,18 +232,18 @@ const InventoryTable = ({ inventory, searchTerm, setSearchTerm }) => (
                         <th className="pb-4">Status</th>
                     </tr>
                 </thead>
-                <tbody className="divide-y divide-onyx-50">
+                <tbody className="divide-y divide-border">
                     {inventory.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase())).map((item, idx) => (
                         <tr key={idx} className="group">
-                            <td className="py-4 font-medium text-onyx-900">{item.name}</td>
-                            <td className="py-4 text-onyx-600">{item.vendor}</td>
-                            <td className="py-4 text-onyx-900">₹{item.price}</td>
+                            <td className="py-4 font-medium text-content">{item.name}</td>
+                            <td className="py-4 text-content-subtle">{item.vendor}</td>
+                            <td className="py-4 text-content">₹{item.price}</td>
                             <td className="py-4 font-mono">{item.stock}</td>
                             <td className="py-4">
                                 {item.isLowStock ? (
-                                    <span className="px-3 py-1 bg-red-100 text-red-600 rounded-full text-xs font-bold">LOW STOCK</span>
+                                    <span className="px-3 py-1 bg-red-500/10 text-red-500 rounded-full text-xs font-bold">LOW STOCK</span>
                                 ) : (
-                                    <span className="px-3 py-1 bg-green-100 text-green-600 rounded-full text-xs font-bold">GOOD</span>
+                                    <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 rounded-full text-xs font-bold">GOOD</span>
                                 )}
                             </td>
                         </tr>
@@ -255,10 +255,10 @@ const InventoryTable = ({ inventory, searchTerm, setSearchTerm }) => (
 );
 
 const DisputesPanel = ({ onResolve }) => (
-    <div className="text-center py-12 bg-onyx-50 rounded-2xl border-white/5 border-dashed border-onyx-100">
-        <Package className="w-12 h-12 text-onyx-300 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-onyx-800">No Active Product Disputes</h3>
-        <p className="text-onyx-500 max-w-sm mx-auto mt-2">
+    <div className="text-center py-12 bg-surface rounded-2xl border border-border border-dashed">
+        <Package className="w-12 h-12 text-content-subtle mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-content">No Active Product Disputes</h3>
+        <p className="text-content-subtle max-w-sm mx-auto mt-2">
             Disputes will appear here if a vendor cancellation is contested or a returns window expires without acknowledgment.
         </p>
     </div>
@@ -268,13 +268,13 @@ const LiveMissionsTable = ({ missions }) => (
     <div className="admin-table-container">
         {missions.length === 0 ? (
             <div className="text-center py-12">
-                <Package className="w-12 h-12 text-onyx-200 mx-auto mb-4" />
-                <p className="text-onyx-500 font-medium">No live missions currently active.</p>
+                <Package className="w-12 h-12 text-border mx-auto mb-4" />
+                <p className="text-content-subtle font-medium">No live missions currently active.</p>
             </div>
         ) : (
             <table className="w-full text-left">
                 <thead>
-                    <tr className="text-onyx-500 text-sm font-medium border-b border-onyx-50">
+                    <tr className="text-content-subtle text-sm font-medium border-b border-border">
                         <th className="pb-4 px-4">Order / Product</th>
                         <th className="pb-4">Status</th>
                         <th className="pb-4">Roles (V/C/P)</th>
@@ -282,32 +282,32 @@ const LiveMissionsTable = ({ missions }) => (
                         <th className="pb-4 text-right">Activity</th>
                     </tr>
                 </thead>
-                <tbody className="divide-y divide-onyx-50">
+                <tbody className="divide-y divide-border">
                     {missions.map((mission, idx) => (
-                        <tr key={idx} className="group hover:bg-onyx-50/50 transition-colors">
+                        <tr key={idx} className="group hover:bg-surface/50 transition-colors">
                             <td className="py-4 px-4">
-                                <span className="text-xs font-bold text-gold-600 uppercase">#{mission.orderNumber}</span>
-                                <p className="text-sm font-bold text-onyx-900 mt-0.5">{mission.productName}</p>
+                                <span className="text-xs font-bold text-brand uppercase">#{mission.orderNumber}</span>
+                                <p className="text-sm font-bold text-content mt-0.5">{mission.productName}</p>
                             </td>
                             <td className="py-4">
                                 <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
-                                    mission.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                                    mission.status === 'pick_up_broadcasted' ? 'bg-blue-100 text-blue-700' :
-                                    mission.status === 'picked_up' ? 'bg-purple-100 text-purple-700' :
-                                    'bg-green-100 text-green-700'
+                                    mission.status === 'pending' ? 'bg-amber-500/10 text-amber-500' :
+                                    mission.status === 'pick_up_broadcasted' ? 'bg-blue-500/10 text-blue-500' :
+                                    mission.status === 'picked_up' ? 'bg-purple-500/10 text-purple-500' :
+                                    'bg-emerald-500/10 text-emerald-500'
                                 }`}>
                                     {mission.status.replace(/_/g, ' ')}
                                 </span>
                             </td>
                             <td className="py-4">
                                 <div className="flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-full bg-onyx-100 flex items-center justify-center text-[10px] font-black" title={`Vendor: ${mission.vendor?.name}`}>V</div>
-                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${mission.captain ? 'bg-gold-500 text-white' : 'bg-red-100 text-red-500'}`} title={mission.captain ? `Captain: ${mission.captain.name}` : 'Waiting for Captain'}>C</div>
-                                    <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-[10px] font-black text-emerald-700" title={`Consumer: ${mission.consumer?.name}`}>P</div>
+                                    <div className="w-6 h-6 rounded-full bg-border flex items-center justify-center text-[10px] font-black" title={`Vendor: ${mission.vendor?.name}`}>V</div>
+                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${mission.captain ? 'bg-brand text-white' : 'bg-red-500/10 text-red-500'}`} title={mission.captain ? `Captain: ${mission.captain.name}` : 'Waiting for Captain'}>C</div>
+                                    <div className="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center text-[10px] font-black text-emerald-500" title={`Consumer: ${mission.consumer?.name}`}>P</div>
                                 </div>
                             </td>
                             <td className="py-4">
-                                <p className="text-xs text-onyx-500 font-medium">Started {new Date(mission.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                <p className="text-xs text-content-subtle font-medium">Started {new Date(mission.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                             </td>
                             <td className="py-4 text-right">
                                 <button className="p-2 text-gold-600 hover:bg-gold-50 rounded-lg transition-colors">

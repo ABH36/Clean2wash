@@ -392,7 +392,7 @@ const RoleManagement = () => {
                         placeholder="Search roles..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="admin-input pl-10"
+                        className="admin-input pl-12"
                     />
                 </div>
             </div>

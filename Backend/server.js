@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const mongoose = require('mongoose');
@@ -55,6 +55,9 @@ const maintenanceMiddleware = require('./middleware/maintenanceMiddleware');
 
 // Initialize Express app
 const app = express();
+
+// Trust proxy for accurate rate limiting on cloud platforms (Render, Heroku, etc.)
+app.set('trust proxy', 1);
 
 // CORS configuration
 // CORS configuration

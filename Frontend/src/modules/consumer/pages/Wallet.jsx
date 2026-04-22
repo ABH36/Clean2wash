@@ -266,25 +266,31 @@ const Wallet = () => {
                                     } space-y-5`}>
                                     <div className="flex justify-between items-center">
                                         <h3 className={`text-[14px] font-[1000] uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-black'}`}>Deposit funds</h3>
-                                        <button onClick={() => setAddMode(false)} className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center text-white/40 active:scale-90"><X size={16} /></button>
+                                        <button onClick={() => setAddMode(false)} className={`w-8 h-8 rounded-lg flex items-center justify-center active:scale-90 transition-colors ${isDarkMode ? 'bg-white/5 text-white/40' : 'bg-black/5 text-black/40'}`}><X size={16} /></button>
                                     </div>
                                     <div className="grid grid-cols-4 gap-2">
                                         {QUICK_AMOUNTS.map((amt) => (
                                             <button key={amt} onClick={() => setSelectedAmt(amt)}
-                                                className={`h-11 rounded-xl text-[10px] font-black tracking-widest transition-all uppercase ${selectedAmt === amt ? 'bg-[#F59E0B] text-black shadow-2xl shadow-[#F59E0B]/20 transform -translate-y-0.5' : 'bg-white/5 text-white/40 border border-white/5'}`}>
+                                                className={`h-11 rounded-xl text-[10px] font-black tracking-widest transition-all uppercase ${selectedAmt === amt 
+                                                    ? 'bg-[#F59E0B] text-black shadow-2xl shadow-[#F59E0B]/20 transform -translate-y-0.5' 
+                                                    : (isDarkMode ? 'bg-white/5 text-white/40 border border-white/5' : 'bg-black/5 text-black/40 border border-black/5')}`}>
                                                 ₹{amt}
                                             </button>
                                         ))}
                                     </div>
                                     <div className="space-y-1.5">
-                                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest ml-1">Custom amount</p>
+                                        <p className={`text-[8px] font-black uppercase tracking-widest ml-1 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Custom amount</p>
                                         <div className="relative">
                                             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#F59E0B] font-black tracking-widest">₹</div>
                                             <input type="number" placeholder="0.00" value={selectedAmt || ''} onChange={(e) => setSelectedAmt(Number(e.target.value))}
-                                                className="w-full h-12 bg-white/[0.03] border border-white/10 focus:border-[#F59E0B]/40 rounded-[18px] px-10 font-[1000] text-white outline-none transition-all placeholder:text-white/10" />
+                                                className={`w-full h-12 border rounded-[18px] px-10 font-[1000] outline-none transition-all ${isDarkMode 
+                                                    ? 'bg-white/[0.03] border-white/10 text-white placeholder:text-white/10 focus:border-[#F59E0B]/40' 
+                                                    : 'bg-black/[0.02] border-black/10 text-black placeholder:text-black/20 focus:border-[#F59E0B]/40'}`} />
                                         </div>
                                     </div>
-                                    <button onClick={handleAddMoney} disabled={loading || !selectedAmt} className="w-full h-14 bg-white text-black rounded-[18px] font-black text-[12px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 active:scale-95 shadow-2xl shadow-black/50 disabled:opacity-30">
+                                    <button onClick={handleAddMoney} disabled={loading || !selectedAmt} className={`w-full h-14 rounded-[18px] font-black text-[12px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 active:scale-95 shadow-2xl disabled:opacity-30 ${isDarkMode 
+                                        ? 'bg-white text-black shadow-black/50' 
+                                        : 'bg-black text-white shadow-black/20'}`}>
                                         {loading ? <RefreshCw className="animate-spin" size={18} /> : <Plus size={18} strokeWidth={4} />}
                                         Initiate Recharge
                                     </button>
@@ -294,24 +300,29 @@ const Wallet = () => {
 
                         {withdrawMode && (
                             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                                <div className="bg-white/[0.03] rounded-[28px] p-6 border border-white/5 shadow-2xl shadow-black/50 space-y-5">
+                                <div className={`rounded-[28px] p-6 border shadow-2xl transition-all duration-300 ${isDarkMode 
+                                    ? 'bg-white/[0.03] border-white/5 shadow-black/50' 
+                                    : 'bg-white border-black/5 shadow-black/5'
+                                    } space-y-5`}>
                                     <div className="flex justify-between items-center">
-                                        <h3 className="text-[14px] font-[1000] text-white uppercase tracking-tight">Withdrawal Hub</h3>
-                                        <button onClick={() => setWithdrawMode(false)} className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center text-white/40 active:scale-90"><X size={16} /></button>
+                                        <h3 className={`text-[14px] font-[1000] uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-black'}`}>Withdrawal Hub</h3>
+                                        <button onClick={() => setWithdrawMode(false)} className={`w-8 h-8 rounded-lg flex items-center justify-center active:scale-90 transition-colors ${isDarkMode ? 'bg-white/5 text-white/40' : 'bg-black/5 text-black/40'}`}><X size={16} /></button>
                                     </div>
                                     <div className="space-y-1.5">
-                                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest ml-1">Payout Volume</p>
+                                        <p className={`text-[8px] font-black uppercase tracking-widest ml-1 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Payout Volume</p>
                                         <div className="relative">
-                                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 font-black tracking-widest">₹</div>
+                                            <div className={`absolute left-4 top-1/2 -translate-y-1/2 font-black tracking-widest ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>₹</div>
                                             <input type="number" placeholder="0.00" value={withdrawAmt} onChange={(e) => setWithdrawAmt(e.target.value)}
-                                                className="w-full h-12 bg-white/[0.03] border border-white/10 focus:border-[#F59E0B]/40 rounded-[18px] px-10 font-[1000] text-white outline-none transition-all placeholder:text-white/10" />
+                                                className={`w-full h-12 border rounded-[18px] px-10 font-[1000] outline-none transition-all ${isDarkMode 
+                                                    ? 'bg-white/[0.03] border-white/10 text-white placeholder:text-white/10 focus:border-[#F59E0B]/40' 
+                                                    : 'bg-black/[0.02] border-black/10 text-black placeholder:text-black/20 focus:border-[#F59E0B]/40'}`} />
                                         </div>
                                     </div>
                                     <button onClick={handleWithdraw} disabled={loading || !withdrawAmt} className="w-full h-14 bg-[#F59E0B] text-black rounded-[18px] font-black text-[12px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 active:scale-95 shadow-2xl shadow-[#F59E0B]/10 disabled:opacity-30">
                                         {loading ? <RefreshCw className="animate-spin" size={18} /> : <ArrowUpRight size={18} strokeWidth={4} />}
                                         Execute Payout
                                     </button>
-                                    <p className="text-[9px] font-black text-white/20 text-center uppercase tracking-tight">Verified bank settlement process</p>
+                                    <p className={`text-[9px] font-black text-center uppercase tracking-tight ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Verified bank settlement process</p>
                                 </div>
                             </motion.div>
                         )}
@@ -351,9 +362,9 @@ const Wallet = () => {
                             {loading && transactions.length === 0 ? (
                                 null
                             ) : transactions.length === 0 ? (
-                                <div className="py-16 text-center bg-white/[0.03] rounded-[32px] border border-dashed border-white/5">
-                                    <Clock size={28} className="mx-auto text-white/10 mb-3" />
-                                    <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Audit log empty</p>
+                                <div className={`py-16 text-center rounded-[32px] border border-dashed transition-colors ${isDarkMode ? 'bg-white/[0.03] border-white/5' : 'bg-black/[0.02] border-black/5'}`}>
+                                    <Clock size={28} className={`mx-auto mb-3 ${isDarkMode ? 'text-white/10' : 'text-black/10'}`} />
+                                    <p className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Audit log empty</p>
                                 </div>
                             ) : (
                                 transactions.map((txn, idx) => (

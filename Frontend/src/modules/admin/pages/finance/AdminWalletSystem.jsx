@@ -264,15 +264,15 @@ const AdminWalletSystem = () => {
                 {/* Filters */}
                 <div className="admin-card">
                     <div className="flex flex-wrap items-center gap-4">
-                        <div className="flex-1 min-w-[300px] bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl px-4 py-2 flex items-center gap-3 group focus-within:border-brand transition-all">
-                            <Search className="text-[var(--text-muted)] group-focus-within:text-brand" size={16} />
+                        <div className="relative flex-1 min-w-[300px] group">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-brand transition-colors" size={16} />
                             <input
                                 type="text"
                                 placeholder="Search by user name or phone..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && fetchWallets()}
-                                className="bg-transparent outline-none text-sm text-[var(--text-primary)] w-full placeholder:text-[var(--text-muted)]"
+                                className="w-full h-11 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl pl-12 pr-4 text-sm text-[var(--text-primary)] outline-none focus:border-brand transition-all placeholder:text-[var(--text-muted)] shadow-inner"
                             />
                         </div>
 

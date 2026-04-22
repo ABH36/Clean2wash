@@ -302,12 +302,12 @@ const AdminUsers = () => {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
-                        <div className="flex-1 lg:w-72 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl px-4 py-2.5 flex items-center gap-3 group focus-within:border-[var(--primary)] transition-all">
-                            <Search size={18} className="text-[var(--text-muted)] group-focus-within:text-[var(--primary)]" />
+                        <div className="relative flex-1 lg:w-72 group">
+                            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-content-subtle group-focus-within:text-brand transition-colors" />
                             <input
                                 type="text"
-                                placeholder="Search consumers..."
-                                className="bg-transparent outline-none text-sm font-semibold text-[var(--text-primary)] w-full placeholder:text-[var(--text-muted)]"
+                                placeholder="Search by name, email, or phone..."
+                                className="w-full h-11 bg-background/50 border border-border rounded-xl pl-12 pr-4 text-xs font-bold text-content outline-none focus:border-brand transition-all shadow-inner"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />

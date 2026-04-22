@@ -282,15 +282,15 @@ const AdminTransactions = () => {
                 {/* Enhanced Filters */}
                 <div className="admin-card">
                     <div className="flex flex-wrap items-center gap-4">
-                        <div className="flex-1 min-w-[300px] bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl px-4 py-2 flex items-center gap-3 group focus-within:border-brand transition-all">
-                            <Search className="text-[var(--text-muted)] group-focus-within:text-brand" size={16} />
+                        <div className="relative flex-1 min-w-[300px] group">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-brand transition-colors" size={16} />
                             <input
                                 type="text"
                                 placeholder="Search by transaction ID, user, or description..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && fetchTransactions()}
-                                className="bg-transparent outline-none text-sm text-[var(--text-primary)] w-full placeholder:text-[var(--text-muted)]"
+                                className="w-full h-11 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl pl-12 pr-4 text-sm text-[var(--text-primary)] outline-none focus:border-brand transition-all placeholder:text-[var(--text-muted)] shadow-inner"
                             />
                         </div>
 
@@ -574,10 +574,10 @@ const AdminTransactions = () => {
 
                 {/* Wallet Management Tab */}
                 {activeTab === 'wallets' && (
-                    <div className="bg-white/5 rounded-2xl border border-white/5 shadow-soft overflow-hidden">
-                        <div className="p-6 border-b border-white/5">
-                            <h3 className="text-lg font-black text-content uppercase tracking-wide mb-2">Wallet Management System</h3>
-                            <p className="text-[10px] font-black text-brand uppercase tracking-widest">User Wallet Balances & Transaction History</p>
+                    <div className="admin-card overflow-hidden">
+                        <div className="p-6 border-b border-[var(--border)]">
+                            <h3 className="text-lg font-black text-[var(--text-primary)] uppercase tracking-wide mb-2">Wallet Management System</h3>
+                            <p className="text-[10px] font-black text-[var(--primary)] uppercase tracking-widest">User Wallet Balances & Transaction History</p>
                         </div>
 
                         <div className="overflow-x-auto">
@@ -626,7 +626,7 @@ const AdminTransactions = () => {
                                                             {formatCurrency(wallet.balance || 0)}
                                                         </div>
                                                         <div className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg ${
-                                                            (wallet.balance || 0) > 0 ? 'bg-green-100 text-green-600' : 'bg-white/[0.05] text-white/60'
+                                                            (wallet.balance || 0) > 0 ? 'bg-green-500/10 text-green-500' : 'bg-[var(--bg-secondary)] text-[var(--text-muted)]'
                                                         }`}>
                                                             {(wallet.balance || 0) > 0 ? 'Active' : 'Empty'}
                                                         </div>
@@ -680,10 +680,10 @@ const AdminTransactions = () => {
 
                 {/* Driver Payouts Tab */}
                 {activeTab === 'payouts' && (
-                    <div className="bg-white/5 rounded-2xl border border-white/5 shadow-soft overflow-hidden">
-                        <div className="p-6 border-b border-white/5">
-                            <h3 className="text-lg font-black text-content uppercase tracking-wide mb-2">Driver Payout Management</h3>
-                            <p className="text-[10px] font-black text-brand uppercase tracking-widest">Driver Earnings & Settlement Processing</p>
+                    <div className="admin-card overflow-hidden">
+                        <div className="p-6 border-b border-[var(--border)]">
+                            <h3 className="text-lg font-black text-[var(--text-primary)] uppercase tracking-wide mb-2">Driver Payout Management</h3>
+                            <p className="text-[10px] font-black text-[var(--primary)] uppercase tracking-widest">Driver Earnings & Settlement Processing</p>
                         </div>
 
                         <div className="overflow-x-auto">

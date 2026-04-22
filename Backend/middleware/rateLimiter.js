@@ -21,7 +21,6 @@ const createRateLimiter = (options = {}) => {
         message = 'Too many requests from this IP, please try again later.',
         skipSuccessfulRequests = false,
         skipFailedRequests = false,
-        keyGenerator = (req) => req.ip,
         handler = (req, res) => {
             res.status(429).json({
                 status: 'error',
@@ -37,11 +36,15 @@ const createRateLimiter = (options = {}) => {
         message,
         skipSuccessfulRequests,
         skipFailedRequests,
-        keyGenerator,
         handler,
         standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
         legacyHeaders: false, // Disable the `X-RateLimit-*` headers
     };
+
+    // Only apply custom keyGenerator if provided in options
+    if (options.keyGenerator) {
+        limiterConfig.keyGenerator = options.keyGenerator;
+    }
 
     // Use Redis store if available (production)
     if (process.env.REDIS_URL && RedisStore) {
@@ -118,8 +121,9 @@ const createUserRateLimiter = (options = {}) => {
     return createRateLimiter({
         ...options,
         keyGenerator: (req) => {
-            // Use user ID if authenticated, otherwise fall back to IP
-            return req.user?.id || req.auth?.id || req.ip;
+            // Priority: User ID > Auth ID > Default IP detection
+            // Note: Returning undefined tells express-rate-limit to use its default IP generator
+            return req.user?._id?.toString() || req.user?.id || req.auth?.id || undefined;
         }
     });
 };

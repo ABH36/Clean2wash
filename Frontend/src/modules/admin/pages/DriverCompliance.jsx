@@ -78,7 +78,7 @@ const DriverCompliance = () => {
                             placeholder="Find Operative..." 
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full bg-background border border-slate-100 dark:border-white/5 rounded-xl pl-11 pr-4 py-3.5 text-xs font-black text-content placeholder:text-content-subtle/40 outline-none focus:border-brand/30 shadow-inner transition-all"
+                            className="w-full bg-background border border-slate-100 dark:border-white/5 rounded-xl pl-12 pr-4 py-3.5 text-xs font-black text-content placeholder:text-content-subtle/40 outline-none focus:border-brand/30 shadow-inner transition-all"
                         />
                     </div>
                     

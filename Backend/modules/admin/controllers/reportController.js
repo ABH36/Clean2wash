@@ -3,7 +3,7 @@ const User = require('../../../models/User');
 const SpareDriver = require('../../../models/SpareDriver');
 const WalletTransaction = require('../../../models/WalletTransaction');
 const catchAsync = require('../../../utils/catchAsync');
-const AppError = require('../../../utils/appError');
+const AppError = require('../../../utils/AppError');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 

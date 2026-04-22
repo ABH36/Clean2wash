@@ -114,9 +114,9 @@ const AdminNotifications = () => {
                     </div>
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto relative z-10">
-                    <div className="relative flex-1 sm:w-64">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={14} />
-                        <input type="text" placeholder="Scan logs..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full h-9 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-lg pl-9 pr-4 text-[11px] font-bold text-[var(--text-primary)] outline-none focus:border-[var(--primary)] transition-all placeholder:text-[var(--text-muted)]" />
+                    <div className="relative flex-1 sm:w-64 group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--primary)] transition-colors" size={14} />
+                        <input type="text" placeholder="Scan logs..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full h-9 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-lg pl-12 pr-4 text-[11px] font-bold text-[var(--text-primary)] outline-none focus:border-[var(--primary)] transition-all placeholder:text-[var(--text-muted)]" />
                     </div>
                     <button onClick={handleMarkAllRead} disabled={unreadCount === 0} className="h-9 px-4 bg-[var(--primary)] text-white rounded-lg font-bold text-[10px] uppercase shadow-md shadow-[var(--primary)]/10 flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-30 disabled:grayscale"><Target size={14} /> Mark Safe</button>
                 </div>
@@ -125,7 +125,7 @@ const AdminNotifications = () => {
             {/* TABS GRID */}
             <div className="flex gap-1.5 p-1 bg-[var(--bg-secondary)] rounded-xl border border-[var(--border)] w-fit">
                 {['all', 'unread'].map(tab => (
-                    <button key={tab} onClick={() => setActiveTab(tab)} className={`px-5 py-1.5 rounded-lg text-[10px] font-bold capitalize tracking-tight transition-all ${activeTab === tab ? 'bg-white text-[var(--primary)] border border-[var(--border)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}>{tab} items</button>
+                    <button key={tab} onClick={() => setActiveTab(tab)} className={`px-5 py-1.5 rounded-lg text-[10px] font-bold capitalize tracking-tight transition-all ${activeTab === tab ? 'bg-[var(--card)] text-[var(--primary)] border border-[var(--border)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}>{tab} items</button>
                 ))}
             </div>
 
@@ -134,13 +134,13 @@ const AdminNotifications = () => {
                 <AnimatePresence mode="popLayout">
                     {loading && notifications.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-48 gap-4">
-                            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="w-8 h-8 border-white/5 border-brand/20 border-t-brand rounded-full" />
-                            <span className="text-[9px] font-black capitalize tracking-[0.4em] text-content-subtle opacity-20">Established Link...</span>
+                            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="w-8 h-8 border-[var(--border)] border-t-[var(--primary)] rounded-full border-2" />
+                            <span className="text-[9px] font-black capitalize tracking-[0.4em] text-[var(--text-muted)] opacity-20">Established Link...</span>
                         </div>
                     ) : filteredNotifications.length === 0 ? (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-24 text-center bg-surface rounded-2xl border border-slate-200/60 dark:border-white/5 shadow-soft">
-                            <Bell size={40} className="mx-auto text-content-subtle opacity-10 mb-5" />
-                            <p className="text-[10px] font-black text-content-subtle capitalize tracking-[0.4em] opacity-40">System Secure: Logs Neutralized</p>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-24 text-center bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-sm">
+                            <Bell size={40} className="mx-auto text-[var(--text-muted)] opacity-10 mb-5" />
+                            <p className="text-[10px] font-black text-[var(--text-muted)] capitalize tracking-[0.4em] opacity-40">System Secure: Logs Neutralized</p>
                         </motion.div>
                     ) : (
                         filteredNotifications.map((notification, i) => (
@@ -153,19 +153,19 @@ const AdminNotifications = () => {
                                 transition={{ delay: i * 0.02 }} 
                                 className={`group p-3 rounded-xl border transition-all flex items-center gap-4 ${notification.isRead 
                                     ? 'bg-[var(--bg-secondary)] border-[var(--border)] opacity-60' 
-                                    : 'bg-white border-[var(--border)] shadow-sm hover:border-[var(--primary)]'}`}
+                                    : 'bg-[var(--card)] border-[var(--border)] shadow-sm hover:border-[var(--primary)]'}`}
                             >
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0  ${notification.isRead ? 'bg-[var(--bg-primary)]' : 'bg-[var(--primary-light)] border border-[var(--primary)]/5'}`}>{getIcon(notification.type)}</div>
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0  ${notification.isRead ? 'bg-[var(--bg)]' : 'bg-[var(--primary-light)] border border-[var(--primary)]/5'}`}>{getIcon(notification.type)}</div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-3 mb-1">
-                                        <h4 className={`text-[13px] font-bold capitalize tracking-tight truncate ${notification.isRead ? 'text-content-muted' : 'text-content'}`}>{notification.title}</h4>
+                                        <h4 className={`text-[13px] font-bold capitalize tracking-tight truncate ${notification.isRead ? 'text-[var(--text-muted)]' : 'text-[var(--text-primary)]'}`}>{notification.title}</h4>
                                         {!notification.isRead && <div className="w-2 h-2 rounded-full bg-brand animate-pulse shrink-0" />}
                                     </div>
-                                    <p className={`text-[11.5px] font-bold tracking-tight leading-none mb-3 truncate ${notification.isRead ? 'text-content-subtle' : 'text-content-muted'}`}>{notification.message}</p>
-                                    <div className="flex items-center gap-4 text-[9px] font-black text-content-subtle capitalize tracking-widest opacity-40">
+                                    <p className={`text-[11.5px] font-bold tracking-tight leading-none mb-3 truncate ${notification.isRead ? 'text-[var(--text-muted)]' : 'text-[var(--text-secondary)]'}`}>{notification.message}</p>
+                                    <div className="flex items-center gap-4 text-[9px] font-black text-[var(--text-muted)] capitalize tracking-widest opacity-40">
                                         <span className="flex items-center gap-2"><Clock size={12} /> {formatDistanceToNow(new Date(notification.createdAt))} ago</span>
-                                        <span className="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-white/10" />
-                                        <span className={`px-2 py-0.5 rounded-lg border ${notification.priority === 'urgent' ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-background border-slate-200/40 dark:border-white/5'}`}>Protocol: {notification.priority}</span>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--border)]" />
+                                        <span className={`px-2 py-0.5 rounded-lg border ${notification.priority === 'urgent' ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-[var(--bg-secondary)] border-[var(--border)]'}`}>Protocol: {notification.priority}</span>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2.5 opacity-0 group-hover:opacity-100 transition-all shrink-0">

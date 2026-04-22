@@ -49,10 +49,7 @@ const createRateLimiter = (options) => {
             }
             return false;
         },
-        keyGenerator: options.keyGenerator || ((req) => {
-            // Use proper IP extraction that handles IPv6
-            return req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
-        }),
+        keyGenerator: options.keyGenerator, // If undefined, express-rate-limit uses its internal safe IP generator
         handler: (req, res) => {
             res.status(429).json({
                 status: 'error',
@@ -233,7 +230,8 @@ const apiKeyLimiter = createRateLimiter({
     windowMs: 60 * 1000, // 1 minute
     max: 100, // 100 requests per minute per API key
     keyGenerator: (req) => {
-        return req.headers['x-api-key'] || req.ip;
+        // Return undefined to let express-rate-limit handle IP detection safely
+        return req.headers['x-api-key'] || undefined;
     },
     message: {
         status: 'error',

@@ -184,7 +184,7 @@ const AdminProductVerification = () => {
                         placeholder="Scan Assets or Vendors..."
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
-                        className="w-full h-11 bg-background border border-slate-100 dark:border-white/5 rounded-xl pl-11 pr-4 text-[11px] font-black text-content outline-none focus:border-brand/40 transition-all placeholder:text-content-subtle opacity-60 tracking-widest shadow-inner"
+                        className="w-full h-11 bg-background border border-slate-100 dark:border-white/5 rounded-xl pl-12 pr-4 text-[11px] font-black text-content outline-none focus:border-brand/40 transition-all placeholder:text-content-subtle opacity-60 tracking-widest shadow-inner"
                     />
                 </div>
             </div>

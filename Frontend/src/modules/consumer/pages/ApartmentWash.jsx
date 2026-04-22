@@ -995,7 +995,7 @@ const ApartmentWash = () => {
                 <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-brand transition-colors" />
                 <input
                     placeholder="Search apartment name, area, or landmark"
-                    className="w-full bg-white/[0.02]/70 border border-black/[0.03] px-14 py-5 rounded-3xl text-[11px] font-[1000] text-white outline-none focus:border-brand/20 transition-all  placeholder:text-black/25 tracking-[0.08em] font-outfit"
+                    className="w-full bg-white/[0.02]/70 border border-black/[0.03] pl-[3.5rem] pr-14 py-5 rounded-3xl text-[11px] font-[1000] text-white outline-none focus:border-brand/20 transition-all  placeholder:text-black/25 tracking-[0.08em] font-outfit"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -1226,7 +1226,7 @@ const ApartmentWash = () => {
                         <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20" />
                         <input
                             placeholder="Enter full apartment name"
-                            className="w-full rounded-[1.75rem] border border-black/[0.05] bg-white/[0.02] px-14 py-5 text-[12px] font-[1000] text-white outline-none transition-all placeholder:text-black/25 focus:border-brand/20 focus:bg-white/5"
+                            className="w-full rounded-[1.75rem] border border-black/[0.05] bg-white/[0.02] pl-[3.5rem] pr-14 py-5 text-[12px] font-[1000] text-white outline-none transition-all placeholder:text-black/25 focus:border-brand/20 focus:bg-white/5"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />

@@ -6,7 +6,7 @@ import {
     Coffee, Calendar, Target, Percent, Timer, Zap, XCircle,
     Eye, Edit, BarChart3, Award, AlertCircle, ChevronDown,
     ChevronUp, Filter, Download, Plus, Settings, Gauge, 
-    UserCheck, Briefcase, X, Camera, Package, Car
+    UserCheck, Briefcase, X, Camera, Package, Car, CreditCard
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -41,14 +41,14 @@ const AdminDriversOperations = () => {
 
     const toggleOnlineStatus = (driverId) => {
         setDrivers(prev => prev.map(d => 
-            d.id === driverId ? { ...d, isOnline: !d.isOnline } : d
+            (d._id === driverId || d.id === driverId) ? { ...d, isOnline: !d.isOnline } : d
         ));
         toast.success('Driver status updated');
     };
 
     const toggleBlockStatus = (driverId) => {
         setDrivers(prev => prev.map(d => 
-            d.id === driverId ? { ...d, status: d.status === 'BLOCKED' ? 'ACTIVE' : 'BLOCKED' } : d
+            (d._id === driverId || d.id === driverId) ? { ...d, status: d.status === 'BLOCKED' ? 'ACTIVE' : 'BLOCKED' } : d
         ));
         toast.success('Driver access modified');
     };
@@ -82,9 +82,9 @@ const AdminDriversOperations = () => {
     };
 
     const filteredDrivers = drivers.filter(d =>
-        d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        d.phone.includes(searchTerm) ||
-        d.id.toLowerCase().includes(searchTerm.toLowerCase())
+        d.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        d.phone?.includes(searchTerm) ||
+        (d.driverId || d._id || d.id)?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
@@ -239,7 +239,7 @@ const AdminDriversOperations = () => {
                             ) : (
                                 filteredDrivers.map((driver) => (
                                     <motion.tr 
-                                        key={driver.id} 
+                                        key={driver._id || driver.id} 
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
                                         className="group hover:bg-white/[0.02] transition-all duration-300"
@@ -251,7 +251,7 @@ const AdminDriversOperations = () => {
                                                 </div>
                                                 <div className="min-w-0">
                                                     <p className="text-sm font-semibold text-[var(--text-primary)] capitalize leading-none mb-1 truncate">{driver.name}</p>
-                                                    <p className="text-xs font-medium text-[var(--text-muted)] font-mono tracking-wide truncate">{driver.id}</p>
+                                                    <p className="text-xs font-medium text-[var(--text-muted)] font-mono tracking-wide truncate">{driver.driverId || driver._id}</p>
                                                 </div>
                                             </div>
                                         </td>
@@ -300,11 +300,11 @@ const AdminDriversOperations = () => {
                                             <div className="flex flex-col items-center gap-2">
                                                 <div className="flex items-center gap-2">
                                                     <TrendingUp size={12} className="text-[var(--primary)]" />
-                                                    <span className="text-sm font-medium text-[var(--text-primary)]">Score: {driver.reliabilityScore}/5.0</span>
+                                                    <span className="text-sm font-medium text-[var(--text-primary)]">Score: {driver.reliabilityScore?.score || 0}/5.0</span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <Clock size={12} className="text-[var(--text-muted)]" />
-                                                    <span className="text-sm font-medium text-[var(--text-muted)]">{driver.dutyHours}h duty</span>
+                                                    <span className="text-sm font-medium text-[var(--text-muted)]">{Math.round((driver.dutyHours?.today?.totalMinutes || 0) / 60)}h duty</span>
                                                 </div>
                                                 <span className="text-xs font-medium text-gray-400">{driver.completedTrips} trips</span>
                                             </div>
@@ -339,7 +339,7 @@ const AdminDriversOperations = () => {
                                                     <div className="flex flex-col items-center gap-1">
                                                         <div className="flex items-center gap-2">
                                                             <Timer size={12} className="text-amber-600" />
-                                                            <span className="text-sm font-semibold text-gray-900">{driver.weeklyDutyHours}h</span>
+                                                            <span className="text-sm font-semibold text-gray-900">{Math.round((driver.dutyHours?.weekly?.totalMinutes || 0) / 60)}h</span>
                                                         </div>
                                                         <span className="text-xs text-white/40">This week</span>
                                                     </div>
@@ -365,7 +365,8 @@ const AdminDriversOperations = () => {
                                             </>
                                         )}
                                          <td className="px-6 py-4 pr-10">
-                                            <div className="flex items-center justify-end gap-2">
+                                             <div className="flex items-center justify-end gap-2">
+
                                                 <button 
                                                     onClick={() => openDriverDetails(driver)}
                                                     className="w-11 h-11 rounded-xl bg-[var(--primary-light)] text-[var(--primary)] border border-[var(--primary)] hover:bg-[var(--primary)] hover:text-white transition-all flex items-center justify-center shadow-lg shadow-[var(--primary)]/10"
@@ -374,7 +375,7 @@ const AdminDriversOperations = () => {
                                                     <Eye size={18} />
                                                 </button>
                                                 <button 
-                                                    onClick={() => toggleOnlineStatus(driver.id)}
+                                                    onClick={() => toggleOnlineStatus(driver._id || driver.id)}
                                                     className={`w-11 h-11 rounded-xl transition-all flex items-center justify-center border shadow-lg ${
                                                         driver.isOnline
                                                             ? 'bg-[var(--bg-secondary)] text-[var(--text-muted)] border-[var(--border)] hover:bg-[var(--card-hover)]'
@@ -385,7 +386,7 @@ const AdminDriversOperations = () => {
                                                     <Power size={18} />
                                                 </button>
                                                 <button 
-                                                    onClick={() => toggleBlockStatus(driver.id)}
+                                                    onClick={() => toggleBlockStatus(driver._id || driver.id)}
                                                     className={`w-11 h-11 rounded-xl transition-all flex items-center justify-center border shadow-lg ${
                                                         driver.status === 'BLOCKED'
                                                             ? 'bg-[var(--primary-light)] text-[var(--primary)] border border-[var(--primary)] hover:bg-[var(--primary)] hover:text-white shadow-[var(--primary)]/10'
@@ -408,7 +409,7 @@ const AdminDriversOperations = () => {
             ) : (
                 // Verification Queue Tab Content
                 <VerificationQueue 
-                    drivers={drivers.filter(d => ['pending', 'PENDING'].includes(d.status))}
+                    drivers={drivers.filter(d => ['pending', 'PENDING', 'kit_payment_pending'].includes(d.status))}
                     onApprove={async (driverId) => {
                         const loadingToast = toast.loading('Approving driver...');
                         try {
@@ -530,7 +531,7 @@ const AdminDriversOperations = () => {
                                             <div className="space-y-3">
                                                 <div className="flex justify-between">
                                                     <span className="text-[var(--text-muted)]">Reliability Score:</span>
-                                                    <span className="font-medium text-[var(--text-primary)]">{selectedDriver.reliabilityScore}/5.0</span>
+                                                    <span className="font-medium text-[var(--text-primary)]">{selectedDriver.reliabilityScore?.score || 0}/5.0</span>
                                                 </div>
                                                 <div className="flex justify-between">
                                                     <span className="text-[var(--text-muted)]">Utilization Rate:</span>
@@ -555,11 +556,11 @@ const AdminDriversOperations = () => {
                                             <div className="space-y-3">
                                                 <div className="flex justify-between">
                                                     <span className="text-[var(--text-muted)]">Today:</span>
-                                                    <span className="font-medium text-[var(--text-primary)]">{selectedDriver.dutyHours}h</span>
+                                                    <span className="font-medium text-[var(--text-primary)]">{Math.round((selectedDriver.dutyHours?.today?.totalMinutes || 0) / 60)}h</span>
                                                 </div>
                                                 <div className="flex justify-between">
                                                     <span className="text-[var(--text-muted)]">This Week:</span>
-                                                    <span className="font-medium text-[var(--text-primary)]">{selectedDriver.weeklyDutyHours}h</span>
+                                                    <span className="font-medium text-[var(--text-primary)]">{Math.round((selectedDriver.dutyHours?.weekly?.totalMinutes || 0) / 60)}h</span>
                                                 </div>
                                                 <div className="flex justify-between">
                                                     <span className="text-[var(--text-muted)]">Last Break:</span>
@@ -674,12 +675,12 @@ const AdminDriversOperations = () => {
                                                 <div className="space-y-2">
                                                     <div className="flex justify-between text-sm">
                                                         <span className="text-[var(--text-muted)]">Duty Hours:</span>
-                                                        <span className="font-medium text-[var(--text-primary)]">{selectedDriver.weeklyDutyHours}h / 60h</span>
+                                                        <span className="font-medium text-[var(--text-primary)]">{Math.round((selectedDriver.dutyHours?.weekly?.totalMinutes || 0) / 60)}h / 60h</span>
                                                     </div>
                                                     <div className="w-full bg-[var(--border)] rounded-full h-2">
                                                         <div 
                                                             className="bg-amber-600 h-2 rounded-full transition-all duration-300"
-                                                            style={{ width: `${(selectedDriver.weeklyDutyHours / 60) * 100}%` }}
+                                                            style={{ width: `${Math.min(100, (Math.round((selectedDriver.dutyHours?.weekly?.totalMinutes || 0) / 60) / 60) * 100)}%` }}
                                                         />
                                                     </div>
                                                 </div>
@@ -717,8 +718,16 @@ const VerificationQueue = ({ drivers, onApprove, onReject }) => {
     };
 
     const getComplianceStatus = (driver) => {
-        const policeStatus = driver.policeVerification || 'PENDING';
-        const kitStatus = driver.kitStatus || 'PENDING';
+        // Check police verification status - can be set at root level or in documents
+        const policeStatus = driver.policeVerification || 
+                           (driver.documents?.policeVerification?.url ? 'VERIFIED' : 'PENDING');
+        
+        // Kit status - check kit payment status (match backend statuses)
+        const pStatus = driver.kit?.paymentStatus?.toLowerCase();
+        let kitStatus = 'PENDING';
+        if (['completed', 'verified'].includes(pStatus)) kitStatus = 'COMPLETED';
+        else if (pStatus === 'under_review') kitStatus = 'UNDER REVIEW';
+        
         return { policeStatus, kitStatus };
     };
 
@@ -728,9 +737,15 @@ const VerificationQueue = ({ drivers, onApprove, onReject }) => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {[
                     { label: 'Pending Review', value: drivers.length, icon: <Clock size={18} />, color: 'text-amber-600' },
-                    { label: 'Documents Ready', value: drivers.filter(d => d.documents?.aadhaarCard && d.documents?.drivingLicense && d.documents?.selfie).length, icon: <CheckCircle size={18} />, color: 'text-emerald-600' },
-                    { label: 'Kit Completed', value: drivers.filter(d => d.kitStatus === 'COMPLETED').length, icon: <Package size={18} />, color: 'text-[var(--primary)]' },
-                    { label: 'Police Verified', value: drivers.filter(d => d.policeVerification === 'VERIFIED').length, icon: <Shield size={18} />, color: 'text-blue-600' }
+                    { label: 'Documents Ready', value: drivers.filter(d => {
+                        const hasAadhaar = d.documents?.aadhaarCard?.url || d.documents?.aadhaarCard?.frontUrl;
+                        const hasPAN = d.documents?.panCard?.url;
+                        const hasLicense = d.documents?.drivingLicense?.url;
+                        const hasSelfie = d.documents?.selfie?.url;
+                        return hasAadhaar && hasPAN && hasLicense && hasSelfie;
+                    }).length, icon: <CheckCircle size={18} />, color: 'text-emerald-600' },
+                    { label: 'Kit Purchased', value: drivers.filter(d => d.kit?.paymentStatus === 'completed').length, icon: <Package size={18} />, color: 'text-[var(--primary)]' },
+                    { label: 'Police Verified', value: drivers.filter(d => d.policeVerification === 'VERIFIED' || d.documents?.policeVerification?.url).length, icon: <Shield size={18} />, color: 'text-blue-600' }
                 ].map((stat, idx) => (
                     <motion.div
                         key={idx}
@@ -763,13 +778,24 @@ const VerificationQueue = ({ drivers, onApprove, onReject }) => {
                 <div className="space-y-4">
                     {drivers.map(driver => {
                         const { policeStatus, kitStatus } = getComplianceStatus(driver);
-                        const allDocumentsReady = driver.documents?.aadhaarCard && driver.documents?.drivingLicense && driver.documents?.selfie;
-                        const allComplianceReady = policeStatus === 'VERIFIED' && kitStatus === 'COMPLETED';
-                        const readyForApproval = allDocumentsReady && allComplianceReady;
+                        
+                        // Check if all required documents are present
+                        const hasAadhaar = driver.documents?.aadhaarCard?.url || driver.documents?.aadhaarCard?.frontUrl;
+                        const hasPAN = driver.documents?.panCard?.url;
+                        const hasLicense = driver.documents?.drivingLicense?.url;
+                        const hasSelfie = driver.documents?.selfie?.url;
+                        
+                        const allDocumentsReady = hasAadhaar && hasPAN && hasLicense && hasSelfie;
+                        
+                        // Updated approval logic: Only documents required, kit can be purchased later
+                        const readyForApproval = allDocumentsReady;
+                        
+                        // Police verification is a bonus but not required for approval
+                        const hasPoliceVerification = policeStatus === 'VERIFIED';
 
                         return (
                             <motion.div 
-                                key={driver.id}
+                                key={driver._id || driver.id}
                                 initial={{ opacity: 0, y: 15 }} 
                                 animate={{ opacity: 1, y: 0 }}
                                 className={`admin-card border-white/5 transition-all duration-300 ${
@@ -815,30 +841,30 @@ const VerificationQueue = ({ drivers, onApprove, onReject }) => {
                                         
                                         <div className="grid grid-cols-2 gap-3">
                                             {/* Aadhaar Front */}
-                                            <a href={driver.documents?.aadhaarCard?.frontUrl || '#'} target="_blank" rel="noreferrer" className="block text-center p-3 bg-white/5 rounded-lg border border-white/10 hover:border-yellow-500 hover:shadow-2xl shadow-black/40 transition-all cursor-pointer">
+                                            <a href={driver.documents?.aadhaarCard?.frontUrl || driver.documents?.aadhaarCard?.url || '#'} target="_blank" rel="noreferrer" className="block text-center p-3 bg-white/5 rounded-lg border border-white/10 hover:border-yellow-500 hover:shadow-2xl shadow-black/40 transition-all cursor-pointer">
                                                 <div className="w-8 h-8 mx-auto mb-2 bg-blue-100 rounded-lg flex items-center justify-center">
                                                     <User size={16} className="text-blue-600" />
                                                 </div>
                                                 <p className="text-xs font-semibold text-white/60 mb-1">Aadhaar Front</p>
                                                 <p className={`text-xs font-bold ${
-                                                    getDocumentStatus(driver.documents?.aadhaarCard?.frontUrl) === 'READY' 
+                                                    getDocumentStatus(driver.documents?.aadhaarCard?.frontUrl || driver.documents?.aadhaarCard?.url) === 'READY' 
                                                         ? 'text-emerald-600' : 'text-red-600'
                                                 }`}>
-                                                    {getDocumentStatus(driver.documents?.aadhaarCard?.frontUrl)}
+                                                    {getDocumentStatus(driver.documents?.aadhaarCard?.frontUrl || driver.documents?.aadhaarCard?.url)}
                                                 </p>
                                             </a>
 
                                             {/* Aadhaar Back */}
-                                            <a href={driver.documents?.aadhaarCard?.backUrl || '#'} target="_blank" rel="noreferrer" className="block text-center p-3 bg-white/5 rounded-lg border border-white/10 hover:border-yellow-500 hover:shadow-2xl shadow-black/40 transition-all cursor-pointer">
+                                            <a href={driver.documents?.aadhaarCard?.backUrl || driver.documents?.aadhaarCard?.url || '#'} target="_blank" rel="noreferrer" className="block text-center p-3 bg-white/5 rounded-lg border border-white/10 hover:border-yellow-500 hover:shadow-2xl shadow-black/40 transition-all cursor-pointer">
                                                 <div className="w-8 h-8 mx-auto mb-2 bg-blue-100 rounded-lg flex items-center justify-center">
                                                     <User size={16} className="text-blue-600" />
                                                 </div>
                                                 <p className="text-xs font-semibold text-white/60 mb-1">Aadhaar Back</p>
                                                 <p className={`text-xs font-bold ${
-                                                    getDocumentStatus(driver.documents?.aadhaarCard?.backUrl) === 'READY' 
+                                                    getDocumentStatus(driver.documents?.aadhaarCard?.backUrl || driver.documents?.aadhaarCard?.url) === 'READY' 
                                                         ? 'text-emerald-600' : 'text-red-600'
                                                 }`}>
-                                                    {getDocumentStatus(driver.documents?.aadhaarCard?.backUrl)}
+                                                    {getDocumentStatus(driver.documents?.aadhaarCard?.backUrl || driver.documents?.aadhaarCard?.url)}
                                                 </p>
                                             </a>
 
@@ -869,7 +895,34 @@ const VerificationQueue = ({ drivers, onApprove, onReject }) => {
                                                     {getDocumentStatus(driver.documents?.selfie?.url)}
                                                 </p>
                                             </a>
+
+                                            {/* PAN Card */}
+                                            <a href={driver.documents?.panCard?.url || '#'} target="_blank" rel="noreferrer" className="block text-center p-3 bg-white/5 rounded-lg border border-white/10 hover:border-yellow-500 hover:shadow-2xl shadow-black/40 transition-all cursor-pointer">
+                                                <div className="w-8 h-8 mx-auto mb-2 bg-orange-100 rounded-lg flex items-center justify-center">
+                                                    <CreditCard size={16} className="text-orange-600" />
+                                                </div>
+                                                <p className="text-xs font-semibold text-white/60 mb-1">PAN Card</p>
+                                                <p className={`text-xs font-bold ${
+                                                    getDocumentStatus(driver.documents?.panCard?.url) === 'READY' 
+                                                        ? 'text-emerald-600' : 'text-red-600'
+                                                }`}>
+                                                    {getDocumentStatus(driver.documents?.panCard?.url)}
+                                                </p>
+                                            </a>
                                         </div>
+
+                                        {/* Police Verification Document (if available) */}
+                                        {driver.documents?.policeVerification?.url && (
+                                            <div className="mt-3">
+                                                <a href={driver.documents.policeVerification.url} target="_blank" rel="noreferrer" className="block text-center p-3 bg-blue-50 rounded-lg border border-blue-200 hover:border-blue-400 hover:shadow-lg transition-all cursor-pointer">
+                                                    <div className="w-8 h-8 mx-auto mb-2 bg-blue-100 rounded-lg flex items-center justify-center">
+                                                        <Shield size={16} className="text-blue-600" />
+                                                    </div>
+                                                    <p className="text-xs font-semibold text-blue-700 mb-1">Police Verification</p>
+                                                    <p className="text-xs font-bold text-emerald-600">VERIFIED</p>
+                                                </a>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* RIGHT: Compliance */}
@@ -892,9 +945,19 @@ const VerificationQueue = ({ drivers, onApprove, onReject }) => {
                                                         {policeStatus}
                                                     </span>
                                                 </div>
+                                                {driver.documents?.policeVerification?.url && (
+                                                    <a 
+                                                        href={driver.documents.policeVerification.url} 
+                                                        target="_blank" 
+                                                        rel="noreferrer"
+                                                        className="text-xs text-blue-500 hover:text-blue-700 underline"
+                                                    >
+                                                        View Certificate
+                                                    </a>
+                                                )}
                                             </div>
 
-                                            {/* Kit Status */}
+                                            {/* Kit Status - OPTIONAL (Not required for approval) */}
                                             <div className="p-3 bg-white/5 rounded-lg border border-white/10">
                                                 <div className="flex items-center justify-between mb-2">
                                                     <div className="flex items-center gap-2">
@@ -904,11 +967,14 @@ const VerificationQueue = ({ drivers, onApprove, onReject }) => {
                                                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${
                                                         kitStatus === 'COMPLETED' 
                                                             ? 'bg-emerald-100 text-emerald-700' 
-                                                            : 'bg-amber-100 text-amber-700'
+                                                            : kitStatus === 'UNDER REVIEW'
+                                                            ? 'bg-blue-100 text-blue-700 animate-pulse'
+                                                            : 'bg-gray-100 text-gray-600'
                                                     }`}>
                                                         {kitStatus}
                                                     </span>
                                                 </div>
+                                                <p className="text-xs text-white/40 mt-1">Optional - Can purchase later</p>
                                             </div>
 
                                             {/* Background Check */}
@@ -946,14 +1012,14 @@ const VerificationQueue = ({ drivers, onApprove, onReject }) => {
 
                                         <div className="flex gap-3">
                                             <button 
-                                                onClick={() => setRejectionModal({ isOpen: true, driverId: driver.id, reason: '' })}
+                                                onClick={() => setRejectionModal({ isOpen: true, driverId: driver._id || driver.id, reason: '' })}
                                                 className="btn-danger flex items-center gap-2 text-sm px-4 py-2"
                                             >
                                                 <Ban size={14} />
                                                 REJECT
                                             </button>
                                             <button 
-                                                onClick={() => handleApproveAll(driver.id)}
+                                                onClick={() => handleApproveAll(driver._id || driver.id)}
                                                 disabled={!readyForApproval}
                                                 className={`flex items-center gap-2 text-sm px-6 py-2 rounded-lg font-semibold transition-all ${
                                                     readyForApproval

@@ -313,6 +313,19 @@ const setupEventHandlers = (socket) => {
         }
     });
 
+    // Sync Route Path (Driver to Consumer)
+    socket.on('update_route_path', (data) => {
+        try {
+            const { bookingId, path } = data;
+            if (!bookingId || !path) return;
+
+            // Broadcast to the booking room so the consumer can see the driver's route
+            socket.to(bookingId).emit('route_path_updated', { bookingId, path });
+        } catch (error) {
+            console.error(`[Socket] Route path sync error:`, error);
+        }
+    });
+
     // Chat events with error handling
     socket.on('join_booking', ({ bookingId }) => {
         try {

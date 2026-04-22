@@ -456,9 +456,9 @@ const VehicleManager = () => {
             {vehicles?.map((v) => (
                 <motion.div 
                     key={v._id || v.id} 
-                    className={`rounded-[2.5rem] border overflow-hidden relative transition-all group ${v.isPrimary ? 'border-[#F59E0B]/30 shadow-2xl shadow-black/5' : isDarkMode ? 'bg-white/5 border-white/5' : 'bg-black/[0.03] border-black/10'}`}
+                    className={`rounded-3xl border overflow-hidden relative transition-all group ${v.isPrimary ? 'border-[#F59E0B]/30 shadow-xl shadow-black/5' : isDarkMode ? 'bg-white/5 border-white/5' : 'bg-black/[0.03] border-black/10'}`}
                 >
-                    <div className={`relative h-48 flex items-center justify-center p-8 ${isDarkMode ? 'bg-white/[0.02]' : 'bg-black/[0.02]'}`}>
+                    <div className={`relative h-32 flex items-center justify-center p-4 ${isDarkMode ? 'bg-white/[0.02]' : 'bg-black/[0.02]'}`}>
                         <img 
                             src={v.image || "https://images.unsplash.com/photo-1494905998402-395d579af36f?auto=format&fit=crop&q=80&w=600"} 
                             onError={(e) => {
@@ -467,28 +467,28 @@ const VehicleManager = () => {
                                     ? 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"%3E%3Crect fill="%23f3f4f6" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="24" fill="%239ca3af"%3EBike%3C/text%3E%3C/svg%3E'
                                     : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"%3E%3Crect fill="%23f3f4f6" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="24" fill="%239ca3af"%3ECar%3C/text%3E%3C/svg%3E';
                             }}
-                            className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700" 
+                            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700" 
                             alt="" 
                         />
                         {v.isPrimary && (
-                            <div className="absolute top-6 left-6 bg-black text-[#F59E0B] text-[8px] font-black px-4 py-1.5 rounded-full uppercase tracking-[0.2em] shadow-2xl shadow-black/50">
+                            <div className="absolute top-4 left-4 bg-black text-[#F59E0B] text-[7px] font-black px-3 py-1 rounded-full uppercase tracking-[0.2em] shadow-lg shadow-black/50">
                                 Primary Asset
                             </div>
                         )}
-                        <div className="absolute bottom-6 right-6 flex gap-2">
-                            <button onClick={() => removeVehicle(v._id || v.id)} className={`w-10 h-10 shadow-2xl shadow-black/50 rounded-2xl flex items-center justify-center text-rose-500 active:scale-90 transition-all border ${isDarkMode ? 'bg-white/5 border-black/05' : 'bg-white border-black/10'}`}><Trash2 size={18} /></button>
+                        <div className="absolute top-4 right-4 flex gap-1.5">
+                            <button onClick={() => removeVehicle(v._id || v.id)} className={`w-8 h-8 shadow-lg shadow-black/50 rounded-xl flex items-center justify-center text-rose-500 active:scale-90 transition-all border ${isDarkMode ? 'bg-white/5 border-black/05' : 'bg-white border-black/10'}`}><Trash2 size={14} /></button>
                              {!v.isPrimary && (
-                                <button onClick={() => setPrimaryVehicle(v._id || v.id)} className="h-10 px-6 bg-black text-white text-[9px] font-black uppercase tracking-widest rounded-2xl active:scale-95 transition-all shadow-2xl shadow-black/50">Activate</button>
+                                <button onClick={() => setPrimaryVehicle(v._id || v.id)} className="h-8 px-4 bg-black text-white text-[8px] font-black uppercase tracking-widest rounded-xl active:scale-95 transition-all shadow-lg shadow-black/50">Activate</button>
                              )}
                         </div>
                     </div>
-                    <div className="px-8 py-6 flex items-center justify-between">
+                    <div className="px-5 py-3 flex items-center justify-between">
                         <div>
-                            <span className="text-[#F59E0B] text-[9px] font-black tracking-[0.2em]">{v.brand}</span>
-                            <h4 className={`text-2xl font-[1000] tracking-tighter leading-none mt-1 ${isDarkMode ? 'text-white' : 'text-black'}`}>{v.model}</h4>
+                            <span className="text-[#F59E0B] text-[8px] font-black tracking-[0.2em]">{v.brand}</span>
+                            <h4 className={`text-lg font-[1000] tracking-tighter leading-none mt-0.5 ${isDarkMode ? 'text-white' : 'text-black'}`}>{v.model}</h4>
                         </div>
-                        <div className={`border px-4 py-2 rounded-xl ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/10'}`}>
-                            <span className={`text-[12px] font-black tracking-widest uppercase ${isDarkMode ? 'text-white' : 'text-black'}`}>{v.plate || v.regNo}</span>
+                        <div className={`border px-3 py-1.5 rounded-lg ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/10'}`}>
+                            <span className={`text-[10px] font-black tracking-widest uppercase ${isDarkMode ? 'text-white' : 'text-black'}`}>{v.plate || v.regNo}</span>
                         </div>
                     </div>
                 </motion.div>

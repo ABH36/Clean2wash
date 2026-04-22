@@ -5,6 +5,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 
 // Public routes (no authentication required)
 router.get('/check-location', zoneController.checkLocation);
+router.get('/debug-detection', zoneController.debugZoneDetection);
 router.get('/nearby', zoneController.getNearbyZones);
 router.get('/geojson', zoneController.getZonesGeoJSON);
 router.get('/active', zoneController.getAllZones);

@@ -6,7 +6,7 @@
   --brand-dark: #d95e0d;
   --brand-rgb: 244, 117, 33;
 
-  --bg-main: #F8FAFC;
+  --bg-main: #FAF6EB;
   --bg-surface: #FFFFFF;
   --bg-surface-hover: #F1F5F9;
 
@@ -29,14 +29,28 @@
 
 /* Hardened Theme Synchronization */
 .dark {
-  --bg-main: #0B1222;
-  --bg-surface: #0F172A;
+  --bg-main: #0A0F0D;
+  --bg-surface: #121A22;
   --bg-surface-hover: #1E293B;
 
   --text-main: #F8FAFC;
   --text-muted: #94A3B8;
   --text-subtle: #64748B;
   --border-color: #1E293B;
+  --color-white: #FFFFFF;
+}
+
+/* 🛡️ Global Anti-Blindness Layer: Fixes white text on white backgrounds */
+[data-theme='light'] .text-white:not(.keep-white):not(button *):not(.bg-black *):not(.bg-gray-900 *):not(.bg-slate-900 *):not(.bg-\[#0A0F0D\] *):not(.bg-\[#0B0F19\] *) {
+  color: var(--text-main) !important;
+}
+
+[data-theme='light'] .text-white\/30:not(.keep-white):not(.bg-black *):not(.bg-gray-900 *):not(.bg-slate-900 *):not(.bg-\[#0A0F0D\] *):not(.bg-\[#0B0F19\] *) {
+  color: rgba(15, 23, 42, 0.3) !important;
+}
+
+[data-theme='light'] .text-white\/40:not(.keep-white):not(.bg-black *):not(.bg-gray-900 *):not(.bg-slate-900 *):not(.bg-\[#0A0F0D\] *):not(.bg-\[#0B0F19\] *) {
+  color: rgba(15, 23, 42, 0.4) !important;
 }
 
 @theme {
@@ -56,6 +70,16 @@
   --color-content: var(--text-main);
   --color-content-muted: var(--text-muted);
   --color-content-subtle: var(--text-subtle);
+  
+  /* 📱 Global Ultra-Compact Spacing Scale: Shrinks everything to 'App-like' density */
+  --spacing-6: 1.15rem;  /* Was 1.5rem */
+  --spacing-8: 1.25rem;  /* Was 2rem */
+  --spacing-10: 1.5rem;  /* Was 2.5rem */
+  --spacing-12: 1.75rem; /* Was 3rem */
+  --spacing-14: 2rem;
+  --spacing-16: 2.25rem;
+  --spacing-20: 2.75rem;
+  --spacing-24: 3rem;
 
   --radius-card: 1rem;
   --radius-button: 0.75rem;
@@ -85,7 +109,8 @@
 
 @layer components {
   .mobile-container {
-    @apply max-w-[430px] mx-auto min-h-screen relative flex flex-col bg-white overflow-x-hidden;
+    @apply max-w-[430px] mx-auto min-h-screen relative flex flex-col overflow-x-hidden;
+    background-color: var(--bg-main);
     box-shadow: 0 0 100px rgba(0, 0, 0, 0.05);
   }
 
@@ -99,6 +124,11 @@
     mask-image: linear-gradient(to right, black 95%, transparent 100%);
     -webkit-overflow-scrolling: touch;
   }
+
+  /* Compact Mode Overrides for extreme cases */
+  [class*="pt-32"] { padding-top: 5rem !important; }
+  [class*="pt-24"] { padding-top: 4rem !important; }
+  [class*="pb-24"] { padding-bottom: 4rem !important; }
 
   .admin-table-container::-webkit-scrollbar {
     display: none;
@@ -153,53 +183,64 @@
    LIGHT THEME TEXT COLOR FIX
    ======================================== */
 
-/* Fix white text in light mode - make it black for readability */
-body:not(.dark) .text-white:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *):not([class*="from-"] *) {
+/* Fix white text in light mode - make it black for readability unless on a dark background */
+body:not(.dark) .text-white:not(.bg-black):not(.bg-black *):not(.bg-brand):not(.bg-brand *):not(.bg-slate-900):not(.bg-slate-900 *):not(.bg-gray-900):not(.bg-gray-900 *):not(.bg-slate-950):not(.bg-slate-950 *):not([class*="bg-gradient"]):not([class*="bg-gradient"] *):not([class*="from-"]):not([class*="from-"] *):not([class*="to-"]):not([class*="to-"] *):not([class*="bg-[#"]):not([class*="bg-[#"] *) {
   color: #000 !important;
 }
 
-body:not(.dark) .text-white\/80:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
-  color: rgba(0, 0, 0, 0.8) !important;
+body:not(.dark) [class*="text-white/"]:not(.bg-black):not(.bg-black *):not(.bg-brand):not(.bg-brand *):not(.bg-slate-900):not(.bg-slate-900 *):not(.bg-gray-900):not(.bg-gray-900 *):not(.bg-slate-950):not(.bg-slate-950 *):not([class*="bg-gradient"]):not([class*="bg-gradient"] *):not([class*="from-"]):not([class*="from-"] *):not([class*="to-"]):not([class*="to-"] *):not([class*="bg-[#"]):not([class*="bg-[#"] *) {
+  color: inherit !important;
 }
 
-body:not(.dark) .text-white\/70:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
-  color: rgba(0, 0, 0, 0.7) !important;
-}
-
-body:not(.dark) .text-white\/60:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
-  color: rgba(0, 0, 0, 0.6) !important;
-}
-
-body:not(.dark) .text-white\/50:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
-  color: rgba(0, 0, 0, 0.5) !important;
-}
-
-body:not(.dark) .text-white\/40:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
-  color: rgba(0, 0, 0, 0.4) !important;
-}
-
-body:not(.dark) .text-white\/30:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
-  color: rgba(0, 0, 0, 0.3) !important;
-}
-
-body:not(.dark) .text-white\/20:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
-  color: rgba(0, 0, 0, 0.2) !important;
-}
-
-body:not(.dark) .text-white\/10:not(.bg-black *):not(.bg-brand *):not(.bg-slate-900 *):not([class*="bg-gradient"] *) {
-  color: rgba(0, 0, 0, 0.1) !important;
-}
-
-/* Keep white text on dark/colored backgrounds */
+/* Comprehensive fix for all white variations inside dark backgrounds */
 body:not(.dark) .bg-black .text-white,
-body:not(.dark) .bg-brand .text-white,
-body:not(.dark) .bg-slate-900 .text-white,
+body:not(.dark) .bg-black.text-white,
 body:not(.dark) .bg-gray-900 .text-white,
+body:not(.dark) .bg-gray-900.text-white,
+body:not(.dark) .bg-slate-900 .text-white,
+body:not(.dark) .bg-slate-900.text-white,
+body:not(.dark) .bg-brand .text-white,
+body:not(.dark) .bg-brand.text-white,
 body:not(.dark) [class*="bg-gradient"] .text-white,
-body:not(.dark) [class*="from-"] .text-white,
-body:not(.dark) [class*="to-"] .text-white {
+body:not(.dark) [class*="bg-gradient"].text-white,
+body:not(.dark) [class*="from-black"] .text-white,
+body:not(.dark) [class*="from-black"].text-white,
+body:not(.dark) [class*="from-gray-900"] .text-white,
+body:not(.dark) [class*="from-gray-900"].text-white,
+body:not(.dark) [class*="bg-[#"] .text-white,
+body:not(.dark) [class*="bg-[#"].text-white,
+body:not(.dark) [class*="bg-black"] [class*="text-white/"],
+body:not(.dark) [class*="bg-black"][class*="text-white/"],
+body:not(.dark) [class*="bg-gray-900"] [class*="text-white/"],
+body:not(.dark) [class*="bg-gray-900"][class*="text-white/"],
+body:not(.dark) [class*="bg-slate-900"] [class*="text-white/"],
+body:not(.dark) [class*="bg-slate-900"][class*="text-white/"],
+body:not(.dark) [class*="bg-brand"] [class*="text-white/"],
+body:not(.dark) [class*="bg-brand"][class*="text-white/"],
+body:not(.dark) [class*="bg-gradient"] [class*="text-white/"],
+body:not(.dark) [class*="bg-gradient"][class*="text-white/"],
+body:not(.dark) [class*="from-"] [class*="text-white/"],
+body:not(.dark) [class*="from-"][class*="text-white/"],
+body:not(.dark) [class*="bg-[#"] [class*="text-white/"],
+body:not(.dark) [class*="bg-[#"][class*="text-white/"] {
   color: #fff !important;
 }
+
+/* Explicit force-white utility */
+.keep-white {
+  color: #fff !important;
+}
+
+/* Ensure opacity is preserved for white text inside dark backgrounds */
+body:not(.dark) .bg-black .text-white\/90, body:not(.dark) [class*="bg-gradient"] .text-white\/90 { color: rgba(255,255,255,0.9) !important; }
+body:not(.dark) .bg-black .text-white\/80, body:not(.dark) [class*="bg-gradient"] .text-white\/80 { color: rgba(255,255,255,0.8) !important; }
+body:not(.dark) .bg-black .text-white\/70, body:not(.dark) [class*="bg-gradient"] .text-white\/70 { color: rgba(255,255,255,0.7) !important; }
+body:not(.dark) .bg-black .text-white\/60, body:not(.dark) [class*="bg-gradient"] .text-white\/60 { color: rgba(255,255,255,0.6) !important; }
+body:not(.dark) .bg-black .text-white\/50, body:not(.dark) [class*="bg-gradient"] .text-white\/50 { color: rgba(255,255,255,0.5) !important; }
+body:not(.dark) .bg-black .text-white\/40, body:not(.dark) [class*="bg-gradient"] .text-white\/40 { color: rgba(255,255,255,0.4) !important; }
+body:not(.dark) .bg-black .text-white\/30, body:not(.dark) [class*="bg-gradient"] .text-white\/30 { color: rgba(255,255,255,0.3) !important; }
+body:not(.dark) .bg-black .text-white\/20, body:not(.dark) [class*="bg-gradient"] .text-white\/20 { color: rgba(255,255,255,0.2) !important; }
+body:not(.dark) .bg-black .text-white\/10, body:not(.dark) [class*="bg-gradient"] .text-white\/10 { color: rgba(255,255,255,0.1) !important; }
 
 /* Fix for buttons with colored backgrounds */
 body:not(.dark) .bg-blue-500 .text-white,
@@ -914,7 +955,7 @@ figcaption {
   textarea.h-14,
   select.h-14 {
     height: 2.75rem !important;
-    padding: 0.625rem 0.875rem !important;
+    padding: 0.625rem 0.875rem;
     font-size: 0.875rem !important;
   }
   
@@ -1106,4 +1147,70 @@ figcaption {
     min-width: 2.75rem !important;
     min-height: 2.75rem !important;
   }
+}
+
+/* 🌍 Google Maps Autocomplete (pac-container) - Premium Styling */
+.pac-container {
+    z-index: 10000 !important;
+    border-radius: 1.5rem !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+    background-color: #ffffff !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    margin-top: 8px !important;
+    font-family: var(--font-sans) !important;
+    padding: 8px 0 !important;
+}
+
+.dark .pac-container {
+    background-color: #121A22 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+}
+
+.pac-item {
+    padding: 12px 20px !important;
+    border-top: 1px solid rgba(0, 0, 0, 0.03) !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.dark .pac-item {
+    border-top: 1px solid rgba(255, 255, 255, 0.03) !important;
+    color: #ffffff !important;
+}
+
+.pac-item:hover {
+    background-color: rgba(245, 158, 11, 0.08) !important;
+}
+
+.pac-item-query {
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    color: inherit !important;
+    padding-right: 5px !important;
+}
+
+.pac-matched {
+    color: #F59E0B !important;
+}
+
+.pac-item > span:last-child {
+    font-size: 11px !important;
+    color: rgba(0, 0, 0, 0.4) !important;
+    font-weight: 600 !important;
+}
+
+.dark .pac-item > span:last-child {
+    color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.pac-icon {
+    display: none !important;
+}
+
+.pac-logo:after {
+    display: none !important;
 }

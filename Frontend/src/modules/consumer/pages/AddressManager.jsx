@@ -11,11 +11,16 @@ import { useGeoLocation } from '../../../hooks/useGeoLocation';
 import GoogleMapBox from '../../../components/common/GoogleMapBox';
 import { toast } from 'react-hot-toast';
 import { geocodingService } from '../../../utils/geocoding';
+import { GoogleMap, useJsApiLoader } from '@react-google-maps/api';
 import MobileLayout from '../components/layout/MobileLayout';
+import { useTheme } from '../../../context/ThemeContext';
+
+const LIBRARIES = ['places'];
 
 const ICONS = { home: Home, office: Briefcase, other: MapPin };
 
 const AddressManager = () => {
+    const { isDarkMode } = useTheme();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const returnPath = searchParams.get('from');
@@ -33,6 +38,12 @@ const AddressManager = () => {
         setSelectedAddress,
         detectCurrentLocation
     } = useGeoLocation();
+
+    const { isLoaded } = useJsApiLoader({
+        id: 'google-map-script',
+        googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAP_API_KEY,
+        libraries: LIBRARIES
+    });
 
     const [showSheet, setShowSheet] = useState(false);
     const [editing, setEditing] = useState(null);
@@ -78,7 +89,11 @@ const AddressManager = () => {
 
     const onMapLoad = useCallback((mapInstance) => {
         setMap(mapInstance);
-        if (window.google && searchInputRef.current) {
+    }, []);
+
+    // Initialize Autocomplete when script is loaded AND input is mounted
+    useEffect(() => {
+        if (isLoaded && window.google && searchInputRef.current && !autocompleteRef.current) {
             const autocomplete = new window.google.maps.places.Autocomplete(searchInputRef.current, {
                 componentRestrictions: { country: 'in' },
                 fields: ['address_components', 'geometry', 'formatted_address']
@@ -89,8 +104,10 @@ const AddressManager = () => {
                 if (place.geometry && place.geometry.location) {
                     const pos = { lat: place.geometry.location.lat(), lng: place.geometry.location.lng() };
                     setCenter(pos);
-                    mapInstance.panTo(pos);
-                    mapInstance.setZoom(17);
+                    if (map) {
+                        map.panTo(pos);
+                        map.setZoom(17);
+                    }
                     setGeocodedAddress(place.formatted_address);
                     const components = place.address_components;
                     const pincode = components.find(c => c.types.includes('postal_code'))?.long_name || '';
@@ -102,7 +119,7 @@ const AddressManager = () => {
                 }
             });
         }
-    }, []);
+    }, [isLoaded, map]);
 
     const getAddressFromCoords = useCallback(async (lat, lng) => {
         setIsGeocoding(true);
@@ -211,14 +228,14 @@ const AddressManager = () => {
 
     return (
         <MobileLayout>
-            <div className="min-h-screen bg-[#0A0F0D] font-sans pb-32">
-                <header className="px-4 py-3 flex items-center justify-between bg-[#0A0F0D]/90 sticky top-0 z-[60] border-b border-white/5 backdrop-blur-xl">
+            <div className={`min-h-screen font-sans pb-32 transition-colors duration-500 bg-transparent`}>
+                <header className={`px-4 py-3 flex items-center justify-between sticky top-0 z-[60] border-b backdrop-blur-xl transition-all ${isDarkMode ? 'bg-[#0A0F0D]/90 border-white/5' : 'bg-white/90 border-black/5'}`}>
                     <div className="flex items-center gap-3">
-                        <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate(-1)} className="w-8 h-8 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center">
-                            <ChevronLeft size={16} className="text-white" strokeWidth={2.5} />
+                        <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate(-1)} className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-all ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/10'}`}>
+                            <ChevronLeft size={16} className={isDarkMode ? "text-white" : "text-black"} strokeWidth={3} />
                         </motion.button>
                         <div>
-                            <h1 className="text-[17px] font-[1000] text-white tracking-tighter leading-none">Coordinates</h1>
+                            <h1 className={`text-[17px] font-[1000] tracking-tighter leading-none ${isDarkMode ? 'text-white' : 'text-black'}`}>Coordinates</h1>
                         </div>
                     </div>
                     <div className="w-8 h-8 bg-[#F59E0B]/10 rounded-lg flex items-center justify-center border border-[#F59E0B]/20">
@@ -228,19 +245,19 @@ const AddressManager = () => {
 
                 <div className="px-4 pt-4 space-y-6">
                     <div className="relative">
-                        <div className="h-72 rounded-[2rem] overflow-hidden border border-white/10 relative z-0 shadow-2xl">
+                        <div className={`h-72 rounded-[2rem] overflow-hidden border relative z-0 shadow-2xl transition-all ${isDarkMode ? 'border-white/10' : 'border-black/5'}`}>
                             <GoogleMapBox center={center} zoom={15} onLoad={onMapLoad} onIdle={handleIdle} />
 
                             <div className="absolute top-4 inset-x-4 z-10">
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-4 flex items-center text-[#F59E0B]"><Search size={14} strokeWidth={3} /></div>
                                     <input ref={searchInputRef} type="text" placeholder="Search locale..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full h-11 bg-black/60 backdrop-blur-md rounded-2xl pl-10 pr-4 text-[12px] font-black uppercase tracking-wider text-white border border-white/10 shadow-2xl outline-none" />
+                                        className={`w-full h-11 backdrop-blur-md rounded-2xl pl-10 pr-4 text-[12px] font-black uppercase tracking-wider border shadow-2xl outline-none transition-all ${isDarkMode ? 'bg-black/60 text-white border-white/10' : 'bg-white/80 text-black border-black/10'}`} />
                                 </div>
                             </div>
 
-                            <button onClick={handleLocate} className="absolute bottom-4 right-4 w-10 h-10 rounded-xl bg-black/60 text-white border border-white/10 shadow-2xl flex items-center justify-center active:scale-90 transition-all z-10 backdrop-blur-md">
-                                <Locate size={18} className={isLocating ? 'text-[#F59E0B] animate-pulse' : ''} />
+                            <button onClick={handleLocate} className={`absolute bottom-4 right-4 w-10 h-10 rounded-xl shadow-2xl flex items-center justify-center active:scale-90 transition-all z-10 backdrop-blur-md border ${isDarkMode ? 'bg-black/60 text-white border-white/10' : 'bg-white/80 text-black border-black/10'}`}>
+                                <Locate size={18} className={isLocating ? 'text-[#F59E0B] animate-pulse' : (isDarkMode ? 'text-white' : 'text-black')} />
                             </button>
 
                             <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
@@ -256,12 +273,12 @@ const AddressManager = () => {
                         {geocodedAddress && (
                             <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                                 onClick={() => openAdd(geocodedAddress, geocodedParts)}
-                                className="mt-4 w-full bg-white p-4 rounded-[2rem] flex flex-col items-center gap-0.5 shadow-2xl shadow-white/5 active:scale-95 transition-all">
+                                className={`mt-4 w-full p-4 rounded-[2rem] flex flex-col items-center gap-0.5 shadow-2xl active:scale-95 transition-all ${isDarkMode ? 'bg-[#121A22] border border-white/5 shadow-black/50' : 'bg-white border border-black/5 shadow-black/5'}`}>
                                 <div className="flex items-center gap-2">
-                                    {isGeocoding ? <div className="w-3 h-3 border-black border-[#F59E0B] border-t-transparent rounded-full animate-spin" /> : <Plus size={14} className="text-black" strokeWidth={4} />}
-                                    <span className="text-black font-black text-[12px] tracking-widest">{isGeocoding ? 'Detecting...' : (geocodedParts?.area || 'Add new hub location')}</span>
+                                    {isGeocoding ? <div className={`w-3 h-3 border-t-transparent rounded-full animate-spin ${isDarkMode ? 'border-white' : 'border-black'}`} /> : <Plus size={14} className={isDarkMode ? "text-white" : "text-black"} strokeWidth={4} />}
+                                    <span className={`font-black text-[12px] tracking-widest ${isDarkMode ? 'text-white' : 'text-black'}`}>{isGeocoding ? 'Detecting...' : (geocodedParts?.area || 'Add new hub location')}</span>
                                 </div>
-                                {!isGeocoding && <p className="text-black/30 text-[8px] font-black tracking-[0.2em] line-clamp-1 px-4">{geocodedAddress}</p>}
+                                {!isGeocoding && <p className={`text-[8px] font-black tracking-[0.2em] line-clamp-1 px-4 ${isDarkMode ? 'text-white/30' : 'text-black/30'}`}>{geocodedAddress}</p>}
                             </motion.button>
                         )}
                     </div>
@@ -270,7 +287,7 @@ const AddressManager = () => {
                     {recentAddresses && recentAddresses.length > 0 && (
                         <div className="space-y-3">
                             <div className="flex items-center justify-between px-1">
-                                <h3 className="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em]">Recent Locations ({recentAddresses.length})</h3>
+                                <h3 className={`text-[9px] font-black uppercase tracking-[0.2em] ${isDarkMode ? 'text-slate-300' : 'text-slate-500'}`}>Recent Locations ({recentAddresses.length})</h3>
                             </div>
                             <div className="space-y-2">
                                 {recentAddresses.slice(0, 3).map((addr, idx) => (
@@ -282,14 +299,15 @@ const AddressManager = () => {
                                             if (map) map.panTo(addr.coordinates);
                                             openAdd(addr.street, { city: addr.city, state: addr.state, postcode: addr.pincode });
                                         }}
-                                        className="bg-white/[0.03] rounded-[1.5rem] p-4 border border-white/5 flex items-center gap-4 active:bg-white/5 transition-all"
+                                        className={`rounded-[1.5rem] p-4 border flex items-center gap-4 transition-all active:scale-[0.98] ${isDarkMode ? 'bg-[#121A22] border-white/5 shadow-xl shadow-black/20 active:bg-white/[0.05]' : 'bg-white shadow-lg shadow-black/[0.03] border-transparent active:bg-gray-50'}`}
                                     >
-                                        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                                            <MapPin size={16} className="text-white/20" />
+                                        <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-[#F8F9FB] border-black/5'}`}>
+
+                                            <MapPin size={16} className={isDarkMode ? "text-white/20" : "text-black/20"} />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-[11px] font-black text-white tracking-tighter truncate">{addr.city}</p>
-                                            <p className="text-[9px] font-black text-white/20 uppercase tracking-widest truncate mt-1">{addr.street}</p>
+                                            <p className={`text-[11px] font-black tracking-tighter truncate ${isDarkMode ? 'text-white' : 'text-black'}`}>{addr.city}</p>
+                                            <p className={`text-[9px] font-black uppercase tracking-widest truncate mt-1 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>{addr.street}</p>
                                         </div>
                                         <div className="text-[8px] font-black text-[#F59E0B] uppercase tracking-widest bg-[#F59E0B]/10 px-3 py-1.5 rounded-xl border border-[#F59E0B]/10">
                                             {addr.usageCount}X
@@ -302,7 +320,7 @@ const AddressManager = () => {
 
                     <div className="space-y-3">
                         <div className="flex items-center justify-between px-1">
-                            <h3 className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-1 italic">Vaulted Hubs ({addresses.length})</h3>
+                            <h3 className={`text-[10px] font-black uppercase tracking-[0.3em] mb-1 italic ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Vaulted Hubs ({addresses.length})</h3>
                         </div>
 
                         {addressLoading ? (
@@ -310,9 +328,9 @@ const AddressManager = () => {
                                 <div className="w-7 h-7 border-[2px] border-slate-100 border-t-[#FF9900] rounded-full animate-spin" />
                             </div>
                         ) : addresses.length === 0 ? (
-                            <div className="bg-white/[0.02] rounded-[2rem] border border-dashed border-white/10 py-16 text-center shadow-2xl">
-                                <MapIcon size={28} className="text-white/10 mx-auto mb-4" />
-                                <p className="text-[11px] font-black text-white/20 uppercase tracking-[0.2em]">No hub coordinates registered</p>
+                            <div className={`rounded-[2rem] border border-dashed py-16 text-center shadow-2xl transition-all ${isDarkMode ? 'bg-[#121A22] border-white/10' : 'bg-white border-black/10'}`}>
+                                <MapIcon size={28} className={`mx-auto mb-4 ${isDarkMode ? 'text-white/10' : 'text-black/10'}`} />
+                                <p className={`text-[11px] font-black uppercase tracking-[0.2em] ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>No hub coordinates registered</p>
                             </div>
                         ) : (
                             addresses.map((addr) => {
@@ -320,21 +338,21 @@ const AddressManager = () => {
                                 const isSelected = selectedAddress?._id === (addr._id || addr.id) || selectedAddress?.id === (addr._id || addr.id);
                                 return (
                                     <motion.div key={addr._id || addr.id} whileTap={{ scale: 0.99 }} onClick={() => handleSelectAddress(addr)}
-                                        className={`bg-white/[0.03] rounded-[2rem] p-5 border transition-all flex items-start gap-5 active:bg-white/[0.05] shadow-2xl ${isSelected ? 'border-[#F59E0B]/30 bg-[#F59E0B]/05 ' : 'border-white/5'}`}>
-                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border transition-all ${isSelected ? 'bg-[#F59E0B] text-black border-[#F59E0B] shadow-[0_0_20px_rgba(245,158,11,0.3)]' : 'bg-white/5 text-white/20 border-white/10'}`}>
+                                        className={`rounded-[2rem] p-5 border transition-all flex items-start gap-5 active:scale-[0.98] shadow-2xl ${isSelected ? 'border-[#F59E0B]/30 ' + (isDarkMode ? 'bg-[#F59E0B]/05' : 'bg-[#F59E0B]/5 bg-white') : (isDarkMode ? 'bg-[#121A22] border-white/5 shadow-black/40 active:bg-white/[0.05]' : 'bg-white border-transparent shadow-black/[0.04] active:bg-gray-50')}`}>
+                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border transition-all ${isSelected ? 'bg-[#F59E0B] text-black border-[#F59E0B] shadow-[0_0_20px_rgba(245,158,11,0.3)]' : (isDarkMode ? 'bg-white/5 text-white/20 border-white/10' : 'bg-[#F8F9FB] text-black/40 border-black/5')}`}>
                                             <Icon size={22} strokeWidth={isSelected ? 3 : 2} />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-1.5">
-                                                <h4 className="text-[14px] font-black text-white tracking-tighter">{addr.label}</h4>
-                                                {isSelected && <span className="text-[8px] bg-white text-black px-2 py-0.5 rounded-lg font-black uppercase tracking-widest">Active</span>}
+                                                <h4 className={`text-[14px] font-black tracking-tighter ${isDarkMode ? 'text-white' : 'text-black'}`}>{addr.label}</h4>
+                                                {isSelected && <span className={`text-[8px] px-2 py-0.5 rounded-lg font-black uppercase tracking-widest ${isDarkMode ? 'bg-white text-black' : 'bg-black text-white'}`}>Active</span>}
                                                 {addr.isPrimary && <span className="text-[8px] bg-[#F59E0B] text-black px-2 py-0.5 rounded-lg font-black uppercase tracking-widest">Prime</span>}
                                             </div>
-                                            <p className="text-[10px] font-black text-white/40 leading-relaxed uppercase tracking-widest line-clamp-2">{addr.street || addr.full || addr.address}</p>
-                                            <div className="flex items-center gap-5 mt-4 pt-4 border-t border-white/5">
-                                                <button onClick={(e) => { e.stopPropagation(); openEdit(addr); }} className="text-[9px] font-black text-white/40 uppercase tracking-widest flex items-center gap-2 hover:text-white transition-colors"><Edit3 size={11} /> Edit</button>
+                                            <p className={`text-[10px] font-black leading-relaxed uppercase tracking-widest line-clamp-2 ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>{addr.street || addr.full || addr.address}</p>
+                                            <div className={`flex items-center gap-5 mt-4 pt-4 border-t ${isDarkMode ? 'border-white/5' : 'border-black/5'}`}>
+                                                <button onClick={(e) => { e.stopPropagation(); openEdit(addr); }} className={`text-[9px] font-black uppercase tracking-widest flex items-center gap-2 transition-colors ${isDarkMode ? 'text-white/40 hover:text-white' : 'text-black/40 hover:text-black'}`}><Edit3 size={11} /> Edit</button>
                                                 {!addr.isPrimary && <button onClick={(e) => { e.stopPropagation(); setPrimaryAddress(addr._id || addr.id); }} className="text-[9px] font-black text-[#F59E0B] uppercase tracking-widest flex items-center gap-2"><Star size={11} /> Primary</button>}
-                                                <button onClick={(e) => { e.stopPropagation(); removeAddress(addr._id || addr.id); }} className="text-[9px] font-black text-white/10 hover:text-rose-500 uppercase tracking-widest ml-auto flex items-center gap-2 transition-all"><Trash2 size={11} /> Erase</button>
+                                                <button onClick={(e) => { e.stopPropagation(); removeAddress(addr._id || addr.id); }} className={`text-[9px] font-black hover:text-rose-500 uppercase tracking-widest ml-auto flex items-center gap-2 transition-all ${isDarkMode ? 'text-white/10' : 'text-black/20'}`}><Trash2 size={11} /> Erase</button>
                                             </div>
                                         </div>
                                     </motion.div>

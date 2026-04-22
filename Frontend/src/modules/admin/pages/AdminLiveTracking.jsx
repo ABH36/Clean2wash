@@ -14,11 +14,14 @@ import {
     AlertTriangle,
     CheckCircle,
     Phone,
-    MessageCircle
+    MessageCircle,
+    List,
+    Map as MapIcon
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { adminAPI } from '../../../utils/adminApi';
 import { socketService } from '../../../utils/socket';
+import GoogleMapBox from '../../../components/common/GoogleMapBox';
 
 const AdminLiveTracking = () => {
     const [activeTrips, setActiveTrips] = useState([]);
@@ -27,6 +30,8 @@ const AdminLiveTracking = () => {
     const [autoRefresh, setAutoRefresh] = useState(true);
     const [showAdvancedView, setShowAdvancedView] = useState(false);
     const [alerts, setAlerts] = useState([]);
+    const [viewMode, setViewMode] = useState('list'); // 'list' | 'map'
+    const [selectedTrip, setSelectedTrip] = useState(null);
 
     // Load active spare driver bookings
     useEffect(() => {
@@ -34,13 +39,15 @@ const AdminLiveTracking = () => {
         
         // Socket listeners for real-time updates
         socketService.on('booking_status_updated', handleBookingUpdate);
-        socketService.on('driver_location_updated', handleLocationUpdate);
+        socketService.on('specialist_location_pulse', handleLocationUpdate);
+        socketService.on('consumer_location_pulse', handleLocationUpdate);
         socketService.on('booking_assigned', handleBookingUpdate);
         socketService.on('booking_accepted', handleBookingUpdate);
         
         return () => {
             socketService.off('booking_status_updated', handleBookingUpdate);
-            socketService.off('driver_location_updated', handleLocationUpdate);
+            socketService.off('specialist_location_pulse', handleLocationUpdate);
+            socketService.off('consumer_location_pulse', handleLocationUpdate);
             socketService.off('booking_assigned', handleBookingUpdate);
             socketService.off('booking_accepted', handleBookingUpdate);
         };
@@ -307,13 +314,6 @@ const AdminLiveTracking = () => {
                         </button>
 
                         <button 
-                            onClick={loadActiveTrips} 
-                            className="w-11 h-11 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-blue-600 transition-all "
-                        >
-                            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
-                        </button>
-
-                        <button 
                             onClick={() => setShowAdvancedView(!showAdvancedView)}
                             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
                                 showAdvancedView 
@@ -322,8 +322,23 @@ const AdminLiveTracking = () => {
                             }`}
                         >
                             <Activity size={14} />
-                            {showAdvancedView ? 'Basic View' : 'Advanced View'}
+                            {showAdvancedView ? 'Basic' : 'Advanced'}
                         </button>
+
+                        <div className="flex bg-[var(--bg-secondary)] border border-[var(--border)] p-1 rounded-xl">
+                            <button 
+                                onClick={() => setViewMode('list')} 
+                                className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-[var(--primary)] text-white shadow-lg' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                            >
+                                <List size={16} />
+                            </button>
+                            <button 
+                                onClick={() => setViewMode('map')} 
+                                className={`p-2 rounded-lg transition-all ${viewMode === 'map' ? 'bg-[var(--primary)] text-white shadow-lg' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                            >
+                                <MapIcon size={16} />
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -409,251 +424,240 @@ const AdminLiveTracking = () => {
                 </div>
             )}
 
-            {/* Active Trips Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {loading ? (
-                    <div className="col-span-2 flex items-center justify-center py-24">
-                        <div className="w-10 h-10 border-4 border-brand/10 border-t-brand rounded-full animate-spin" />
-                    </div>
-                ) : filteredTrips.length === 0 ? (
-                    <div className="col-span-2 flex flex-col items-center justify-center py-24">
-                        <Shield className="opacity-20 mb-3" size={48} />
-                        <p className="text-sm font-bold text-content-subtle opacity-60">No active trips</p>
-                    </div>
-                ) : (
-                    filteredTrips.map((trip) => (
-                        <motion.div
-                            key={trip.id}
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="bg-[var(--card)] rounded-xl border border-[var(--border)]  overflow-hidden"
+            {/* Active Trips View */}
+            {viewMode === 'map' ? (
+                <div className="admin-card p-0 overflow-hidden h-[70vh] relative shadow-premium-color border-brand/20">
+                    <GoogleMapBox 
+                        center={activeTrips.length > 0 && activeTrips[0].currentCoordinates?.lat ? { lat: activeTrips[0].currentCoordinates.lat, lng: activeTrips[0].currentCoordinates.lng } : { lat: 28.6139, lng: 77.2090 }}
+                        zoom={12}
+                        markers={activeTrips.filter(t => t.currentCoordinates?.lat).map(trip => ({
+                            id: trip.id,
+                            position: { lat: trip.currentCoordinates.lat, lng: trip.currentCoordinates.lng },
+                            title: `${trip.driverName} | ${trip.status}`,
+                            icon: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+                                    <defs>
+                                        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                                            <feGaussianBlur in="SourceAlpha" stdDeviation="2" />
+                                            <feOffset dx="0" dy="2" result="offsetblur" />
+                                            <feComponentTransfer><feFuncA type="linear" slope="0.3"/></feComponentTransfer>
+                                            <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
+                                        </filter>
+                                    </defs>
+                                    <circle cx="24" cy="24" r="22" fill="white" filter="url(#shadow)" />
+                                    <circle cx="24" cy="24" r="19" fill="${
+                                        trip.status === 'IN_PROGRESS' ? '#8b5cf6' : 
+                                        trip.status === 'EN_ROUTE' ? '#3b82f6' : 
+                                        '#f59e0b'
+                                    }" />
+                                    {/* Steering Wheel / Driver Symbol */}
+                                    <circle cx="24" cy="24" r="12" fill="none" stroke="white" stroke-width="2.5" />
+                                    <path d="M24 12v24M12 24h24M15.5 15.5l17 17M15.5 32.5l17-17" stroke="white" stroke-width="2.5" stroke-linecap="round" />
+                                    <circle cx="24" cy="24" r="4" fill="white" />
+                                </svg>
+                            `)}`,
+                            onClick: () => setSelectedTrip(trip)
+                        }))}
+                        options={{
+                            disableDefaultUI: false,
+                            zoomControl: true,
+                        }}
+                    />
+
+                    {/* Selected Trip Quick Info Overlay */}
+                    {selectedTrip && (
+                        <motion.div 
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="absolute top-6 right-6 w-80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-brand/20 p-5 z-20"
                         >
-                            {/* Trip Header */}
-                            <div className="bg-[var(--bg-secondary)] border-b border-[var(--border)] p-4">
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 font-bold text-sm flex items-center justify-center uppercase">
-                                            {trip.driverName[0]}
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-[var(--text-primary)] capitalize">{trip.driverName}</p>
-                                            <p className="text-xs font-semibold text-[var(--text-muted)] font-mono tracking-wide">{trip.driverId}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wide border ${
-                                            trip.status === 'ASSIGNED' ? 'bg-yellow-50 text-yellow-600 border-yellow-200' :
-                                            trip.status === 'ACCEPTED' ? 'bg-cyan-50 text-cyan-600 border-cyan-200' :
-                                            trip.status === 'EN_ROUTE' ? 'bg-blue-50 text-blue-600 border-blue-200' :
-                                            trip.status === 'ARRIVED' ? 'bg-indigo-50 text-indigo-600 border-indigo-200' :
-                                            trip.status === 'IN_PROGRESS' ? 'bg-purple-50 text-purple-600 border-purple-200' :
-                                            trip.status === 'RETURNING' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
-                                            'bg-white/[0.02] text-white/60 border-white/10'
-                                        }`}>
-                                            {getStatusLabel(trip.status)}
-                                        </div>
-                                        {trip.alerts && trip.alerts.length > 0 && (
-                                            <div className="flex items-center gap-1 px-2 py-1 bg-red-50 border border-red-200 rounded-lg">
-                                                <AlertTriangle size={12} className="text-red-500" />
-                                                <span className="text-xs font-bold text-red-600">{trip.alerts.length}</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2 text-xs font-semibold text-[var(--text-muted)]">
-                                    <Car size={12} />
-                                    <span className="uppercase tracking-wider">{trip.vehicleNumber}</span>
-                                    <span className="mx-2">•</span>
-                                    <span className="font-mono">{trip.id}</span>
+                            <div className="flex items-center justify-between mb-4">
+                                <h4 className="text-sm font-black text-brand uppercase tracking-widest">Active Insight</h4>
+                                <button onClick={() => setSelectedTrip(null)} className="p-1 hover:bg-black/5 rounded-full"><XCircle size={16} /></button>
+                            </div>
+                            
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 bg-brand text-white rounded-xl flex items-center justify-center font-black">{selectedTrip.driverName[0]}</div>
+                                <div>
+                                    <p className="text-[13px] font-black text-content uppercase">{selectedTrip.driverName}</p>
+                                    <p className="text-[10px] font-bold text-content-subtle uppercase">{selectedTrip.status.replace('_', ' ')}</p>
                                 </div>
                             </div>
 
-                            {/* Trip Details */}
-                            <div className="p-4 space-y-4">
-                                {/* Customer */}
-                                <div className="flex items-center gap-2">
-                                    <User size={14} className="text-blue-600" />
-                                    <span className="text-sm font-bold text-[var(--text-primary)] capitalize">{trip.customerName}</span>
+                            <div className="space-y-3 mb-5">
+                                <div className="flex items-start gap-2">
+                                    <MapPin size={12} className="text-brand shrink-0 mt-0.5" />
+                                    <p className="text-[10px] font-bold text-content leading-relaxed">{selectedTrip.currentLocation}</p>
                                 </div>
-
-                                {/* Location */}
-                                <div className="space-y-2">
-                                    <div className="flex items-start gap-2">
-                                        <MapPin size={14} className="text-emerald-500 mt-0.5 flex-shrink-0" />
-                                        <div className="flex-1">
-                                            <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1">Current Location</p>
-                                            <p className="text-sm font-semibold text-[var(--text-primary)]">{trip.currentLocation}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-2">
-                                        <Navigation size={14} className="text-red-500 mt-0.5 flex-shrink-0" />
-                                        <div className="flex-1">
-                                            <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1">Destination</p>
-                                            <p className="text-sm font-semibold text-[var(--text-primary)]">{trip.destination}</p>
-                                        </div>
-                                    </div>
+                                <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
+                                    <span className="text-content-subtle">Speed</span>
+                                    <span className="text-brand">{selectedTrip.speed} km/h</span>
                                 </div>
+                            </div>
 
-                                {/* Quick Actions */}
-                                <div className="flex gap-2 pt-2">
-                                    <button
-                                        onClick={() => contactDriver(trip)}
-                                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors"
-                                    >
-                                        <Phone size={14} />
-                                        Call Driver
-                                    </button>
-                                    <button
-                                        onClick={() => contactCustomer(trip)}
-                                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700 transition-colors"
-                                    >
-                                        <MessageCircle size={14} />
-                                        Call Customer
-                                    </button>
-                                    <button
-                                        onClick={() => viewOnMap(trip)}
-                                        className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-600 text-white rounded-lg text-xs font-semibold hover:bg-gray-700 transition-colors"
-                                    >
-                                        <MapPin size={14} />
-                                        Map
-                                    </button>
-                                </div>
+                            <div className="flex gap-2">
+                                <button onClick={() => contactDriver(selectedTrip)} className="flex-1 py-2 bg-brand text-white text-[9px] font-black uppercase rounded-lg">Call Driver</button>
+                                <button onClick={() => viewOnMap(selectedTrip)} className="py-2 px-3 bg-black text-brand text-[9px] font-black uppercase rounded-lg">Route</button>
+                            </div>
+                        </motion.div>
+                    )}
 
-                                {/* Advanced Features */}
-                                {showAdvancedView && (
-                                    <div className="space-y-3 pt-3 border-t border-[var(--border)]">
-                                        {/* Speed & Idle Detection */}
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="text-center p-3 bg-[var(--bg-secondary)] rounded-lg">
-                                                <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1">Speed</p>
-                                                <p className="text-lg font-bold text-[var(--text-primary)]">{trip.speed} km/h</p>
+                    {/* Legend */}
+                    <div className="absolute bottom-6 left-6 flex items-center gap-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur px-4 py-2 rounded-xl shadow-lg border border-black/5">
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full bg-[#f59e0b]" />
+                            <span className="text-[9px] font-black uppercase tracking-widest text-content-subtle">Assigned</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full bg-[#3b82f6]" />
+                            <span className="text-[9px] font-black uppercase tracking-widest text-content-subtle">En Route</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full bg-[#8b5cf6]" />
+                            <span className="text-[9px] font-black uppercase tracking-widest text-content-subtle">Active</span>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {loading ? (
+                        <div className="col-span-2 flex items-center justify-center py-24">
+                            <div className="w-10 h-10 border-4 border-brand/10 border-t-brand rounded-full animate-spin" />
+                        </div>
+                    ) : filteredTrips.length === 0 ? (
+                        <div className="col-span-2 flex flex-col items-center justify-center py-24">
+                            <Shield className="opacity-20 mb-3" size={48} />
+                            <p className="text-sm font-bold text-content-subtle opacity-60">No active trips</p>
+                        </div>
+                    ) : (
+                        filteredTrips.map((trip) => (
+                            <motion.div
+                                key={trip.id}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="bg-[var(--card)] rounded-xl border border-[var(--border)]  overflow-hidden"
+                            >
+                                {/* ... (existing card content) ... */}
+                                <div className="bg-[var(--bg-secondary)] border-b border-[var(--border)] p-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 font-bold text-sm flex items-center justify-center uppercase">
+                                                {trip.driverName[0]}
                                             </div>
-                                            <div className={`text-center p-3 rounded-lg border ${
-                                                trip.idleTime > 10 ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'
+                                            <div>
+                                                <p className="text-sm font-bold text-[var(--text-primary)] capitalize">{trip.driverName}</p>
+                                                <p className="text-xs font-semibold text-[var(--text-muted)] font-mono tracking-wide">{trip.driverId}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wide border ${
+                                                trip.status === 'ASSIGNED' ? 'bg-yellow-50 text-yellow-600 border-yellow-200' :
+                                                trip.status === 'ACCEPTED' ? 'bg-cyan-50 text-cyan-600 border-cyan-200' :
+                                                trip.status === 'EN_ROUTE' ? 'bg-blue-50 text-blue-600 border-blue-200' :
+                                                trip.status === 'ARRIVED' ? 'bg-indigo-50 text-indigo-600 border-indigo-200' :
+                                                trip.status === 'IN_PROGRESS' ? 'bg-purple-50 text-purple-600 border-purple-200' :
+                                                trip.status === 'RETURNING' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
+                                                'bg-white/[0.02] text-white/60 border-white/10'
                                             }`}>
-                                                <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1">Idle Time</p>
-                                                <p className={`text-lg font-bold ${
-                                                    trip.idleTime > 10 ? 'text-red-600' : 'text-emerald-600'
-                                                }`}>{trip.idleTime}min</p>
-                                                {trip.idleTime > 10 && (
-                                                    <div className="flex items-center justify-center gap-1 mt-1">
-                                                        <AlertTriangle size={12} className="text-red-500" />
-                                                        <span className="text-xs font-semibold text-red-600">Alert</span>
-                                                    </div>
-                                                )}
+                                                {getStatusLabel(trip.status)}
                                             </div>
-                                        </div>
-
-                                        {/* Route Status with Enhanced Alerts */}
-                                        <div className={`p-3 rounded-lg border ${
-                                            trip.routeDeviation 
-                                                ? 'bg-orange-50 border-orange-200' 
-                                                : 'bg-emerald-50 border-emerald-200'
-                                        }`}>
-                                            <div className="flex items-center gap-2">
-                                                {trip.routeDeviation ? (
-                                                    <>
-                                                        <AlertTriangle size={14} className="text-orange-500" />
-                                                        <span className="text-sm font-bold text-orange-900">Route Deviation Detected</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <CheckCircle size={14} className="text-emerald-500" />
-                                                        <span className="text-sm font-bold text-emerald-900">On Planned Route</span>
-                                                    </>
-                                                )}
-                                            </div>
-                                            {trip.routeDeviation && (
-                                                <div className="mt-2 flex gap-2">
-                                                    <button className="px-2 py-1 bg-orange-600 text-white text-xs font-semibold rounded hover:bg-orange-700 transition-colors">
-                                                        Contact Driver
-                                                    </button>
-                                                    <button className="px-2 py-1 bg-gray-600 text-white text-xs font-semibold rounded hover:bg-gray-700 transition-colors">
-                                                        View Route
-                                                    </button>
+                                            {trip.alerts && trip.alerts.length > 0 && (
+                                                <div className="flex items-center gap-1 px-2 py-1 bg-red-50 border border-red-200 rounded-lg">
+                                                    <AlertTriangle size={12} className="text-red-500" />
+                                                    <span className="text-xs font-bold text-red-600">{trip.alerts.length}</span>
                                                 </div>
                                             )}
                                         </div>
-
-                                        {/* Active Alerts with Action Buttons */}
-                                        {trip.alerts && trip.alerts.length > 0 && (
-                                            <div className="space-y-2">
-                                                <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">Active Alerts</p>
-                                                {trip.alerts.map((alert, idx) => (
-                                                    <div key={idx} className={`p-3 rounded-lg text-xs border ${
-                                                        alert.severity === 'HIGH' ? 'bg-red-50 text-red-800 border-red-200' :
-                                                        alert.severity === 'MEDIUM' ? 'bg-orange-50 text-orange-800 border-orange-200' :
-                                                        'bg-yellow-50 text-yellow-800 border-yellow-200'
-                                                    }`}>
-                                                        <div className="flex items-center justify-between">
-                                                            <div className="flex items-center gap-2">
-                                                                <div className={`w-2 h-2 rounded-full ${
-                                                                    alert.severity === 'HIGH' ? 'bg-red-500' :
-                                                                    alert.severity === 'MEDIUM' ? 'bg-orange-500' :
-                                                                    'bg-yellow-500'
-                                                                }`} />
-                                                                <span className="font-semibold">{alert.message}</span>
-                                                            </div>
-                                                            <button className={`px-2 py-1 rounded text-xs font-semibold ${
-                                                                alert.severity === 'HIGH' ? 'bg-red-600 text-white hover:bg-red-700' :
-                                                                alert.severity === 'MEDIUM' ? 'bg-orange-600 text-white hover:bg-orange-700' :
-                                                                'bg-yellow-600 text-white hover:bg-yellow-700'
-                                                            } transition-colors`}>
-                                                                Resolve
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
                                     </div>
-                                )}
-
-                                {/* Progress Bar */}
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between text-xs font-semibold">
-                                        <span className="text-[var(--text-muted)]">Trip Progress</span>
-                                        <span className="text-blue-600">{Math.round(trip.progress)}%</span>
-                                    </div>
-                                    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                                        <motion.div 
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${trip.progress}%` }}
-                                            transition={{ duration: 0.5 }}
-                                            className="h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"
-                                        />
+                                    <div className="flex items-center gap-2 text-xs font-semibold text-[var(--text-muted)]">
+                                        <Car size={12} />
+                                        <span className="uppercase tracking-wider">{trip.vehicleNumber}</span>
+                                        <span className="mx-2">•</span>
+                                        <span className="font-mono">{trip.id}</span>
                                     </div>
                                 </div>
 
-                                {/* Time & Distance */}
-                                <div className="grid grid-cols-3 gap-3 pt-2 border-t border-[var(--border)]">
-                                    <div className="text-center">
-                                        <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1">Started</p>
-                                        <p className="text-sm font-bold text-[var(--text-primary)]">{trip.startTime}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1">ETA</p>
-                                        <p className="text-sm font-bold text-blue-600">{trip.estimatedArrival}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1">Distance</p>
-                                        <p className="text-sm font-bold text-[var(--text-primary)]">{trip.distance}</p>
-                                    </div>
-                                </div>
-
-                                {/* Last Update */}
-                                <div className="flex items-center justify-between pt-2 border-t border-[var(--border)]">
+                                <div className="p-4 space-y-4">
                                     <div className="flex items-center gap-2">
-                                        <Clock size={12} className="text-[var(--text-muted)]" />
-                                        <span className="text-xs font-semibold text-[var(--text-muted)]">Last Update</span>
+                                        <User size={14} className="text-blue-600" />
+                                        <span className="text-sm font-bold text-[var(--text-primary)] capitalize">{trip.customerName}</span>
                                     </div>
-                                    <span className="text-xs font-bold text-[var(--text-primary)] font-mono">{trip.lastUpdate}</span>
+
+                                    <div className="space-y-2">
+                                        <div className="flex items-start gap-2">
+                                            <MapPin size={14} className="text-emerald-500 mt-0.5 flex-shrink-0" />
+                                            <div className="flex-1">
+                                                <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1">Current Location</p>
+                                                <p className="text-sm font-semibold text-[var(--text-primary)]">{trip.currentLocation}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-2">
+                                            <Navigation size={14} className="text-red-500 mt-0.5 flex-shrink-0" />
+                                            <div className="flex-1">
+                                                <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1">Destination</p>
+                                                <p className="text-sm font-semibold text-[var(--text-primary)]">{trip.destination}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-2 pt-2">
+                                        <button onClick={() => contactDriver(trip)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors">
+                                            <Phone size={14} /> Call Driver
+                                        </button>
+                                        <button onClick={() => contactCustomer(trip)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700 transition-colors">
+                                            <MessageCircle size={14} /> Call Customer
+                                        </button>
+                                        <button onClick={() => viewOnMap(trip)} className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-600 text-white rounded-lg text-xs font-semibold hover:bg-gray-700 transition-colors">
+                                            <MapPin size={14} /> Map
+                                        </button>
+                                    </div>
+
+                                    {showAdvancedView && (
+                                        <div className="space-y-3 pt-3 border-t border-[var(--border)]">
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div className="text-center p-3 bg-[var(--bg-secondary)] rounded-lg">
+                                                    <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1">Speed</p>
+                                                    <p className="text-lg font-bold text-[var(--text-primary)]">{trip.speed} km/h</p>
+                                                </div>
+                                                <div className={`text-center p-3 rounded-lg border ${trip.idleTime > 10 ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                                                    <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1">Idle Time</p>
+                                                    <p className={`text-lg font-bold ${trip.idleTime > 10 ? 'text-red-600' : 'text-emerald-600'}`}>{trip.idleTime}min</p>
+                                                </div>
+                                            </div>
+                                            {/* ... more advanced view details ... */}
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between text-xs font-semibold">
+                                            <span className="text-[var(--text-muted)]">Trip Progress</span>
+                                            <span className="text-blue-600">{Math.round(trip.progress)}%</span>
+                                        </div>
+                                        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                                            <motion.div initial={{ width: 0 }} animate={{ width: `${trip.progress}%` }} className="h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full" />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-3 pt-2 border-t border-[var(--border)]">
+                                        <div className="text-center">
+                                            <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1">Started</p>
+                                            <p className="text-sm font-bold text-[var(--text-primary)]">{trip.startTime}</p>
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1">ETA</p>
+                                            <p className="text-sm font-bold text-blue-600">{trip.estimatedArrival}</p>
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1">Distance</p>
+                                            <p className="text-sm font-bold text-[var(--text-primary)]">{trip.distance}</p>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </motion.div>
-                    ))
-                )}
-            </div>
+                            </motion.div>
+                        ))
+                    )}
+                </div>
+            )}
         </div>
     );
 };

@@ -155,8 +155,9 @@ const DriverProfile = () => {
                     {[
                         { title: 'Wallet & Earnings', subtitle: `₹${(driver?.wallet?.balance || 0).toLocaleString()} Yield`, icon: Wallet, action: () => navigate('/spare-driver/wallet') },
                         { title: 'Trip History', subtitle: `${driver?.reliabilityScore?.metrics?.completedTrips || 0} completed trips`, icon: Clock, action: () => navigate('/spare-driver/trip-history') },
-                        { title: 'Duty Dashboard', subtitle: `${((driver?.dutyHours?.today?.totalMinutes || 0)/60).toFixed(1)}h logged today`, icon: Clock, action: () => {} },
-                        { title: 'Service Portfolio', subtitle: `${driver?.allowedServices?.filter(s => s.isActive).length || 0} active protocols`, icon: Zap, action: () => {} },
+                        { title: 'Duty Dashboard', subtitle: `${((driver?.dutyHours?.today?.totalMinutes || 0)/60).toFixed(1)}h logged today`, icon: Clock, action: () => navigate('/spare-driver/duty-dashboard') },
+                        { title: 'Service Portfolio', subtitle: `${driver?.allowedServices?.filter(s => s.isActive).length || 0} active protocols`, icon: Zap, action: () => navigate('/spare-driver/service-portfolio') },
+                        { title: 'Shift Planner', subtitle: `${driver?.availabilitySlots?.length || 0} future shifts`, icon: Calendar, action: () => navigate('/spare-driver/availability') },
                         { title: 'Base Sector', subtitle: fullAddress.substring(0, 30) + '...', icon: MapPin, action: () => navigate('/spare-driver/address') }
                     ].map((item, index) => (
                         <button key={index} onClick={item.action} className="w-full p-4 flex items-center justify-between border-b border-content/[0.02] last:border-0 hover:bg-content/[0.01] active:bg-content/[0.02] transition-colors">
@@ -172,6 +173,30 @@ const DriverProfile = () => {
                             <ChevronRight size={16} className="text-content/20" />
                         </button>
                     ))}
+                </motion.div>
+
+                {/* ── Performance & Trust ── */}
+                <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.35 }} className="space-y-2 pt-2">
+                    <p className="text-[9px] font-black text-content/30 uppercase tracking-[0.2em] px-3">Performance & Metrics</p>
+                    <div className="bg-surface border border-content/[0.04] rounded-[2rem] overflow-hidden shadow-sm">
+                        {[
+                            { title: 'Reliability Hub', subtitle: `${driver?.reliabilityScore?.score || 100}% Operational Index`, icon: Target, action: () => navigate('/spare-driver/reliability'), color: 'text-brand' },
+                            { title: 'Premium Badge', subtitle: driver?.isPremium ? 'Active Protocol' : 'Upgrade Available', icon: ShieldCheck, action: () => navigate('/spare-driver/premium'), color: 'text-blue-500' }
+                        ].map((item, index) => (
+                            <button key={index} onClick={item.action} className="w-full p-4 flex items-center justify-between border-b border-content/[0.02] last:border-0 hover:bg-content/[0.01] active:bg-content/[0.02] transition-colors">
+                                <div className="flex items-center gap-4">
+                                    <div className={`w-10 h-10 rounded-xl bg-content/[0.02] border border-content/[0.02] flex items-center justify-center ${item.color}`}>
+                                        <item.icon size={18} />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-[12px] font-black text-content uppercase tracking-tight">{item.title}</p>
+                                        <p className="text-[9px] font-black text-content/40 uppercase tracking-widest mt-0.5">{item.subtitle}</p>
+                                    </div>
+                                </div>
+                                <ChevronRight size={16} className="text-content/20" />
+                            </button>
+                        ))}
+                    </div>
                 </motion.div>
 
                 {/* ── Security & Compliance Menu ── */}

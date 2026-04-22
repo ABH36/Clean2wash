@@ -88,7 +88,8 @@ exports.getAvailableDrivers = catchAsync(async (req, res) => {
                     phone: driverData.driver.phone,
                     driverId: driverData.driver.driverId,
                     reliabilityScore: driverData.reliabilityScore,
-                    isOnline: driverData.isOnline
+                    isOnline: driverData.isOnline,
+                    currentLocation: driverData.driver.currentLocation // ✅ Added for Admin Map View
                 },
                 distance: driverData.distance,
                 eligible: eligibility.canAccept,

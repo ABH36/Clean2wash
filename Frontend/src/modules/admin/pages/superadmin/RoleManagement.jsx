@@ -264,19 +264,6 @@ const RoleManagement = () => {
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
-                                        {permissions
-                                            .filter(p => selectedRole.permissions.some(rp => 
-                                                rp === `${p.module}:${p.action}` || 
-                                                rp === `${p.module}:*` ||
-                                                rp === '*:*'
-                                            ))
-                                            .reduce((acc, permission) => {
-                                                const module = permission.module;
-                                                if (!acc[module]) acc[module] = [];
-                                                acc[module].push(permission);
-                                                return acc;
-                                            }, {})
-                                        }
                                         {Object.entries(
                                             permissions
                                                 .filter(p => selectedRole.permissions.some(rp => 

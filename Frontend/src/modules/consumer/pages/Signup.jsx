@@ -5,6 +5,7 @@ import { ArrowRight, User, Mail, ChevronLeft } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
 import { toast } from 'react-hot-toast';
+import MobileLayout from '../components/layout/MobileLayout';
 
 import logo from '../../../assets/spareDriverLogo.png';
 
@@ -73,159 +74,174 @@ const Signup = () => {
     };
 
     // Reusable input class builder
-    const inputClass = `w-full rounded-2xl px-6 py-[18px] font-bold text-base outline-none focus:ring-2 focus:ring-[#F59E0B]/20 transition-all placeholder:text-opacity-20 ${isDarkMode
-            ? 'bg-white/10 text-white placeholder:text-white/20 focus:bg-white/15'
-            : 'bg-black/05 text-[#0F172A] placeholder:text-black/20 focus:bg-white focus:border focus:border-black/10'
+    const inputClass = `w-full h-[54px] rounded-2xl px-6 font-black text-sm outline-none focus:ring-4 focus:ring-[#F59E0B]/10 transition-all placeholder:text-opacity-20 border ${isDarkMode
+            ? 'bg-white/05 border-white/5 text-white placeholder:text-white/20'
+            : 'bg-black/05 border-black/5 text-[#0F172A] placeholder:text-black/20 focus:bg-white'
         }`;
 
-    const iconInputClass = `w-full rounded-2xl pl-14 pr-6 py-[18px] font-bold text-base outline-none focus:ring-2 focus:ring-[#F59E0B]/20 transition-all ${isDarkMode
-            ? 'bg-white/10 text-white placeholder:text-white/20 focus:bg-white/15'
-            : 'bg-black/05 text-[#0F172A] placeholder:text-black/20 focus:bg-white focus:border focus:border-black/10'
+    const iconInputClass = `w-full h-[54px] rounded-2xl pl-[3.5rem] pr-6 font-black text-sm outline-none focus:ring-4 focus:ring-[#F59E0B]/10 transition-all border ${isDarkMode
+            ? 'bg-white/05 border-white/5 text-white placeholder:text-white/20'
+            : 'bg-black/05 border-black/5 text-[#0F172A] placeholder:text-black/20 focus:bg-white'
         }`;
 
     return (
-        <div className={`h-screen flex flex-col font-sans relative overflow-hidden transition-colors duration-300 ${isDarkMode ? 'bg-black text-white' : 'bg-[#FAF6EB] text-black'}`}>
+        <MobileLayout hideNav={true}>
+            <div className={`h-screen flex flex-col font-sans relative overflow-hidden transition-colors duration-300`}>
 
-            {/* Top Branding */}
-            <div className="relative flex-[1.1] flex flex-col items-center justify-center px-8 overflow-hidden">
-                <div className="absolute inset-0 z-0 opacity-40 grayscale">
-                    <img
-                        src="https://images.unsplash.com/photo-1493238507154-203698ad19fb?auto=format&fit=crop&q=80&w=1200"
-                        alt="High-end Drive"
-                        className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/80 to-black" />
+                {/* Top Branding */}
+                <div className="relative flex-[0.8] flex flex-col items-center justify-center px-8 overflow-hidden">
+                    <div className="absolute inset-0 z-0">
+                        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/80 to-black z-10" />
+                        <img
+                            src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&q=80&w=1200"
+                            alt="Luxury Car"
+                            className="w-full h-full object-cover opacity-60 scale-110"
+                        />
+                    </div>
+
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="relative z-20 flex flex-col items-center text-center"
+                    >
+                        <div className="w-20 h-20 bg-white/10 backdrop-blur-xl border border-white/20 rounded-[2rem] flex items-center justify-center mb-4 shadow-2xl">
+                            <img src={logo} alt="Logo" className="h-[75%] w-auto drop-shadow-2xl" />
+                        </div>
+                        <h1 className="text-white text-lg font-black tracking-tight uppercase tracking-[0.2em]">Spare Driver</h1>
+                    </motion.div>
                 </div>
 
+                {/* Bottom Form Area */}
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="relative z-20 flex flex-col items-center text-center"
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                    className={`rounded-t-[3rem] flex-[2.2] z-30 shadow-[0_-20px_50px_rgba(0,0,0,0.1)] px-8 pt-6 pb-10 flex flex-col overflow-y-auto transition-colors border-t safe-area-bottom ${
+                        isDarkMode ? 'bg-[#0A0F0D]/90 backdrop-blur-xl border-white/5' : 'bg-white border-black/5'
+                    }`}
                 >
-                    <img src={logo} alt="Logo" className="h-32 w-auto mb-4 drop-shadow-2xl" />
-                    <h1 className="text-xl font-bold tracking-tight text-white/90">Create your account</h1>
-                </motion.div>
-            </div>
+                    <div className={`w-12 h-1.5 rounded-full mx-auto mb-6 ${isDarkMode ? 'bg-white/10' : 'bg-black/10'}`} />
 
-            {/* Bottom Form Area */}
-            <motion.div
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className={`rounded-t-[2.5rem] flex-[1.9] z-30 shadow-[0_-20px_50px_rgba(0,0,0,0.08)] px-8 pt-10 pb-10 flex flex-col overflow-y-auto transition-colors ${isDarkMode ? 'bg-white/5' : 'bg-white'}`}
-            >
-                {/* Header row */}
-                <header className="flex items-center mb-8">
-                    <button
-                        onClick={() => navigate(-1)}
-                        className={`p-2 -ml-2 rounded-full transition-all ${isDarkMode ? 'hover:bg-white/10 text-white' : 'hover:bg-black/05 text-black'}`}
-                    >
-                        <ChevronLeft size={24} />
-                    </button>
-                    <div className="ml-2">
-                        <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>Registration</h2>
-                        <p className={`text-[10px] uppercase tracking-widest font-bold ${isDarkMode ? 'text-white/30' : 'text-black/30'}`}>Personal details</p>
-                    </div>
-                </header>
-
-                <div className="space-y-5">
-                    {/* Name */}
-                    <div className="space-y-1.5">
-                        <label className={`text-[10px] font-bold uppercase ml-2 ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>Full Name</label>
-                        <div className="relative group">
-                            <div className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#F59E0B] ${isDarkMode ? 'text-white/20' : 'text-black/20'}`}>
-                                <User size={18} />
-                            </div>
-                            <input
-                                type="text"
-                                placeholder="Enter your full name"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                className={iconInputClass}
-                            />
+                    {/* Header row */}
+                    <header className="flex items-center mb-8">
+                        <button
+                            onClick={() => navigate(-1)}
+                            className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/10 text-white shadow-lg' : 'bg-black/05 text-black shadow-sm'}`}
+                        >
+                            <ChevronLeft size={24} strokeWidth={3} />
+                        </button>
+                        <div className="ml-4">
+                            <h2 className={`text-2xl font-[1000] tracking-tight ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>Enrollment</h2>
+                            <p className={`text-[10px] uppercase tracking-[0.25em] font-black ${isDarkMode ? 'text-[#F59E0B]' : 'text-[#F59E0B]'}`}>Identity verification</p>
                         </div>
-                    </div>
+                    </header>
 
-                    {/* Phone */}
-                    <div className="space-y-1.5">
-                        <label className={`text-[10px] font-bold uppercase ml-2 ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>Mobile Number</label>
-                        <div className="flex gap-3">
-                            <div className={`rounded-2xl px-5 flex items-center gap-2 flex-shrink-0 ${isDarkMode ? 'bg-white/10' : 'bg-black/05'}`}>
-                                <span className="text-base">🇮🇳</span>
-                                <span className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>+91</span>
-                            </div>
-                            <div className="relative flex-1">
+                    <div className="space-y-5">
+                        {/* Name */}
+                        <div className="space-y-1.5">
+                            <label className={`text-[11px] font-black uppercase ml-2 tracking-widest ${isDarkMode ? 'text-white/30' : 'text-black/40'}`}>Full Name</label>
+                            <div className="relative group">
+                                <div className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#F59E0B] ${isDarkMode ? 'text-white/30' : 'text-black/30'}`}>
+                                    <User size={20} />
+                                </div>
                                 <input
-                                    type="tel"
-                                    maxLength={10}
-                                    placeholder="Phone number"
-                                    value={formData.phone}
-                                    onChange={(e) => {
-                                        if (prefilledIdentifier) return;
-                                        const val = e.target.value.replace(/\D/g, '');
-                                        if (val.length <= 10) setFormData({ ...formData, phone: val });
-                                    }}
-                                    readOnly={!!prefilledIdentifier}
-                                    className={`${inputClass} ${prefilledIdentifier ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                    type="text"
+                                    placeholder="Enter your full name"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    className={iconInputClass}
                                 />
                             </div>
                         </div>
-                    </div>
 
-                    {/* Email */}
-                    <div className="space-y-1.5">
-                        <label className={`text-[10px] font-bold uppercase ml-2 ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>Email Address</label>
-                        <div className="relative group">
-                            <div className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#F59E0B] ${isDarkMode ? 'text-white/20' : 'text-black/20'}`}>
-                                <Mail size={18} />
+                        {/* Phone */}
+                        <div className="space-y-1.5">
+                            <label className={`text-[11px] font-black uppercase ml-2 tracking-widest ${isDarkMode ? 'text-white/30' : 'text-black/40'}`}>Mobile Number</label>
+                            <div className="flex gap-3">
+                                <div className={`rounded-2xl px-5 h-[54px] flex items-center justify-center gap-2 flex-shrink-0 border ${isDarkMode ? 'bg-white/10 border-white/5' : 'bg-black/05 border-black/10'}`}>
+                                    <span className="text-xl">🇮🇳</span>
+                                    <span className={`font-black text-sm ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>+91</span>
+                                </div>
+                                <div className="relative flex-1">
+                                    <input
+                                        type="tel"
+                                        maxLength={10}
+                                        placeholder="Phone number"
+                                        value={formData.phone}
+                                        onChange={(e) => {
+                                            if (prefilledIdentifier) return;
+                                            const val = e.target.value.replace(/\D/g, '');
+                                            if (val.length <= 10) setFormData({ ...formData, phone: val });
+                                        }}
+                                        readOnly={!!prefilledIdentifier}
+                                        className={`${inputClass} ${prefilledIdentifier ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                    />
+                                </div>
                             </div>
-                            <input
-                                type="email"
-                                placeholder="john@example.com"
-                                value={formData.email}
-                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                className={iconInputClass}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSignup()}
-                            />
+                        </div>
+
+                        {/* Email */}
+                        <div className="space-y-1.5">
+                            <label className={`text-[11px] font-black uppercase ml-2 tracking-widest ${isDarkMode ? 'text-white/30' : 'text-black/40'}`}>Email Address</label>
+                            <div className="relative group">
+                                <div className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#F59E0B] ${isDarkMode ? 'text-white/30' : 'text-black/30'}`}>
+                                    <Mail size={20} />
+                                </div>
+                                <input
+                                    type="email"
+                                    placeholder="john@example.com"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                    className={iconInputClass}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSignup()}
+                                />
+                            </div>
+                        </div>
+
+                        {error && (
+                            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-[11px] font-black uppercase tracking-widest text-center">
+                                {error}
+                            </motion.p>
+                        )}
+
+                        {/* Submit */}
+                        <div className="pt-4">
+                            <motion.button
+                                disabled={!formData.name || formData.phone.length < 10 || !formData.email || loading}
+                                whileTap={{ scale: 0.97 }}
+                                onClick={handleSignup}
+                                className={`w-full h-16 rounded-[2rem] font-black uppercase tracking-[0.2em] text-[14px] flex items-center justify-center transition-all relative overflow-hidden shadow-2xl ${formData.name && formData.phone.length === 10 && formData.email && !loading
+                                        ? isDarkMode
+                                            ? 'bg-[#F59E0B] text-black shadow-[#F59E0B]/30'
+                                            : 'bg-[#F59E0B] text-white shadow-[#F59E0B]/30'
+                                        : isDarkMode
+                                            ? 'bg-white/10 text-white/40 border border-white/5 shadow-none'
+                                            : 'bg-black/10 text-black/40 border border-black/5 shadow-none'
+                                    }`}
+                            >
+                                <span className="relative z-10">{loading ? 'Creating account...' : 'Create account'}</span>
+                                {!loading && <ArrowRight size={20} strokeWidth={3} className="ml-2 relative z-10" />}
+                            </motion.button>
+                        </div>
+
+                        {/* Login link */}
+                        <div className={`flex items-center justify-center h-14 rounded-[1.5rem] mt-2 border transition-colors ${
+                            isDarkMode ? 'border-white/5 bg-white/[0.03]' : 'border-black/5 bg-black/[0.02]'
+                        }`}>
+                            <span className={`flex items-center h-full text-[13px] font-bold !leading-none ${isDarkMode ? 'text-white/40' : 'text-black/50'}`}>
+                                Joined before?
+                            </span>
+                            <Link 
+                                to="/login" 
+                                className="flex items-center h-full ml-2 text-[13px] font-black text-[#F59E0B] uppercase tracking-widest hover:underline decoration-2 underline-offset-4 !leading-none"
+                            >
+                                Log in
+                            </Link>
                         </div>
                     </div>
-
-                    {error && (
-                        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-[11px] font-semibold text-center">
-                            {error}
-                        </motion.p>
-                    )}
-
-                    {/* Submit */}
-                    <div className="pt-4">
-                        <motion.button
-                            disabled={!formData.name || formData.phone.length < 10 || !formData.email || loading}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={handleSignup}
-                            className={`w-full h-16 rounded-2xl font-bold text-sm flex items-center justify-center transition-all relative overflow-hidden shadow-lg ${formData.name && formData.phone.length === 10 && formData.email && !loading
-                                    ? isDarkMode
-                                        ? 'bg-[#F59E0B] text-black shadow-[#F59E0B]/20'
-                                        : 'bg-black text-white shadow-black/20'
-                                    : isDarkMode
-                                        ? 'bg-white/10 text-white/20 shadow-none'
-                                        : 'bg-black/05 text-black/20 shadow-none'
-                                }`}
-                        >
-                            <span className="relative z-10">{loading ? 'Creating account...' : 'Create account'}</span>
-                            {!loading && <ArrowRight size={18} strokeWidth={3} className="ml-2 relative z-10" />}
-                        </motion.button>
-                    </div>
-
-                    {/* Login link */}
-                    <div className="text-center pt-2">
-                        <p className={`text-[11px] font-medium ${isDarkMode ? 'text-white/30' : 'text-black/30'}`}>
-                            Already have an account?{' '}
-                            <Link to="/login" className="text-[#F59E0B] font-bold">Log in</Link>
-                        </p>
-                    </div>
-                </div>
-            </motion.div>
-        </div>
+                </motion.div>
+            </div>
+        </MobileLayout>
     );
 };
 

@@ -78,39 +78,80 @@ const buildBroadcastPayload = (booking, options = {}) => ({
 
 const fetchNearbyDrivers = async (booking, excludeDriverIds = [], maxDistance = 7000) => {
     const normalizedExclusions = [...new Set(excludeDriverIds.map(normalizeId).filter(Boolean))];
+    
+    // Determine the service type required (e.g., 'outstation', 'hourly')
+    const requiredServiceType = booking.service?.type || booking.serviceType || 'point';
+
     const query = {
         isOnline: true,
         status: 'ACTIVE',
         verificationStatus: 'APPROVED',
-        'kit.paymentStatus': 'verified',  // ✅ Kit validation
-        'dutyHours.status.canAcceptBookings': true  // ✅ Duty hours check
+        'kit.paymentStatus': 'verified',
+        'dutyHours.status.canAcceptBookings': true,
+        // ✅ SERVICE FILTERING: Driver must be authorized for this specific service
+        allowedServices: { 
+            $elemMatch: { 
+                name: requiredServiceType, 
+                isActive: true 
+            } 
+        }
     };
 
+    // ✅ ZONE FILTERING
+    if (booking.zone?.code) {
+        query['currentLocation.zone'] = booking.zone.code;
+    }
+
     if (normalizedExclusions.length > 0) {
-        query._id = {
-            $nin: normalizedExclusions
-        };
+        query._id = { $nin: normalizedExclusions };
     }
 
     const coordinates = booking.location?.address?.coordinates;
     if (coordinates?.lat && coordinates?.lng) {
-        query.currentLocation = {
-            $nearSphere: {
-                $geometry: {
-                    type: 'Point',
-                    coordinates: [parseFloat(coordinates.lng), parseFloat(coordinates.lat)]
-                },
-                $maxDistance: maxDistance
+        // We use an $or query to check both Live GPS (currentLocation) 
+        // AND the Driver's saved Base Address (address.coordinates)
+        query.$or = [
+            {
+                currentLocation: {
+                    $nearSphere: {
+                        $geometry: {
+                            type: 'Point',
+                            coordinates: [parseFloat(coordinates.lng), parseFloat(coordinates.lat)]
+                        },
+                        $maxDistance: maxDistance
+                    }
+                }
+            },
+            {
+                'address.coordinates': {
+                    $nearSphere: {
+                        $geometry: {
+                            type: 'Point',
+                            coordinates: [parseFloat(coordinates.lng), parseFloat(coordinates.lat)]
+                        },
+                        $maxDistance: maxDistance
+                    }
+                }
             }
-        };
+        ];
 
-        return SpareDriver.find(query).select('_id name allowedServices');
+        // Fetch drivers and sort by Preference Boost
+        const drivers = await SpareDriver.find(query).select('_id name allowedServices preferredServices');
+        
+        // Sort drivers: Those who "Prefer" this service type come first
+        return drivers.sort((a, b) => {
+            const aPrefers = (a.preferredServices || []).includes(requiredServiceType);
+            const bPrefers = (b.preferredServices || []).includes(requiredServiceType);
+            if (aPrefers && !bPrefers) return -1;
+            if (!aPrefers && bPrefers) return 1;
+            return 0;
+        });
     }
 
     return SpareDriver.find(query)
         .sort({ updatedAt: -1 })
         .limit(20)
-        .select('_id name allowedServices');
+        .select('_id name allowedServices preferredServices');
 };
 
 const broadcastBookingToDrivers = async (booking, options = {}) => {

@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import MobileLayout from '../components/layout/MobileLayout';
-import { bookingAPI } from '../../../utils/api';
+import { bookingAPI, supportAPI } from '../../../utils/api';
 import { useTheme } from '../../../context/ThemeContext';
 import { toast } from 'react-hot-toast';
 
@@ -93,18 +93,42 @@ const SpareDriverSupport = () => {
     };
 
     const handleSubmitIssue = async () => {
-        if (!supportBookingId) { toast.error('No active trip selected'); return; }
-        if (!issueDescription.trim()) { toast.error('Enter description'); return; }
+        if (!issueDescription.trim()) {
+            toast.error('Enter description');
+            return;
+        }
+
         setSubmittingIssue(true);
         try {
-            await bookingAPI.reportIssue(supportBookingId, {
-                type: selectedIssueType.toUpperCase(),
-                description: issueDescription.trim()
-            });
-            toast.success('Support ticket created');
+            if (supportBookingId) {
+                // Booking-specific issue (uses different endpoint/logic)
+                await bookingAPI.reportIssue(supportBookingId, {
+                    type: selectedIssueType.toUpperCase(),
+                    description: issueDescription.trim()
+                });
+                toast.success('Issue reported for this trip');
+            } else {
+                // General support ticket (must match backend SupportTicket model enums)
+                const categoryMap = {
+                    'driver_late': 'TRIP_ISSUE',
+                    'driver_behavior': 'TRIP_ISSUE',
+                    'route_concern': 'TRIP_ISSUE',
+                    'billing_issue': 'PAYMENT_WALLET',
+                    'refund_request': 'PAYMENT_WALLET',
+                    'sos': 'SAFETY_SOS'
+                };
+
+                await supportAPI.createTicket({
+                    subject: `Support Request: ${selectedIssueType.toUpperCase()}`,
+                    description: issueDescription.trim(),
+                    category: categoryMap[selectedIssueType] || 'OTHER'
+                });
+                toast.success('Support ticket created');
+            }
             setIssueDescription('');
         } catch (error) {
-            toast.error('Failed to report issue');
+            console.error('Support submission error:', error);
+            toast.error(error?.message || 'Failed to submit request');
         } finally {
             setSubmittingIssue(false);
         }
@@ -194,18 +218,24 @@ const SpareDriverSupport = () => {
                             ))}
                         </div>
 
-                        <textarea rows={2} value={issueDescription} onChange={(e) => setIssueDescription(e.target.value)}
-                            placeholder="Explain problem briefly..." disabled={!supportBookingId || submittingIssue}
+                        <textarea 
+                            rows={3} 
+                            value={issueDescription} 
+                            onChange={(e) => setIssueDescription(e.target.value)}
+                            placeholder={supportBookingId ? "Describe the issue with this trip..." : "Describe your problem or question..."} 
+                            disabled={submittingIssue}
                             className={`w-full rounded-2xl px-4 py-3 text-[11px] font-bold outline-none transition-all resize-none border ${
                                 isDarkMode ? 'bg-white/[0.03] border-white/10 text-white focus:border-[#F59E0B]/40' : 'bg-black/[0.02] border-black/10 text-slate-900 focus:border-[#F59E0B]/40'
                             }`}
                         />
 
-                        <button onClick={handleSubmitIssue} disabled={!supportBookingId || submittingIssue}
+                        <button 
+                            onClick={handleSubmitIssue} 
+                            disabled={submittingIssue}
                             className={`w-full h-13 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all shadow-xl ${
                                 selectedIssueType === 'sos' ? 'bg-red-600 text-white shadow-red-500/20' : (isDarkMode ? 'bg-white text-black' : 'bg-[#0F172A] text-white')
-                            } disabled:opacity-20`}>
-                            {submittingIssue ? 'Sending...' : 'Report Concern'}
+                            } active:scale-95 disabled:opacity-20`}>
+                            {submittingIssue ? 'Sending...' : (supportBookingId ? 'Report Concern' : 'Submit Ticket')}
                         </button>
                     </div>
 

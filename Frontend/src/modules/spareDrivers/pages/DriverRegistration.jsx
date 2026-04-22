@@ -46,25 +46,68 @@ const DriverRegistration = () => {
         const token = localStorage.getItem('chauffeur_token');
         if (!token) return;
         spareDriverAPI.getProfile().then(res => {
-            const s = res.data?.driver?.status || res.driver?.status;
-            if (s === 'pending_verification' || s === 'PENDING') {
+            const s = (res.data?.driver?.status || res.driver?.status || '').toLowerCase();
+            if (['pending_verification', 'pending'].includes(s)) {
                 setStep(STEPS.VERIFYING);
-            } else if (s === 'REJECTED' || s === 'rejected') {
+            } else if (['verified_pending_kit', 'kit_payment_pending', 'active'].includes(s)) {
+                // If verified but kit is pending, or already active, go to dashboard/success
+                if (s === 'active') {
+                    setStep(STEPS.SUCCESS);
+                } else {
+                    navigate('/spare-driver/dashboard');
+                }
+            } else if (s === 'rejected') {
                 setStep(STEPS.VERIFYING);
                 setRejectReason(res.data?.driver?.adminNote || res.driver?.adminNote);
-            } else if (s === 'active' || s === 'ACTIVE') {
-                setStep(STEPS.SUCCESS);
             }
         }).catch(() => { });
     }, [location.state]);
 
-    const handleNext = () => {
-        if (step === STEPS.IDENTITY) {
-            if (!form.name || !form.phone || !form.password) { setError('Name, phone and password are required.'); return; }
-            if (form.phone.length !== 10) { setError('Enter a valid 10-digit phone number.'); return; }
-            if (form.password.length < 4) { setError('Password must be at least 4 characters.'); return; }
-            if (form.password !== form.confirmPassword) { setError('Passwords do not match.'); return; }
+    const validateStep = (stepNumber) => {
+        switch (stepNumber) {
+            case STEPS.IDENTITY:
+                if (!form.name?.trim()) return 'Full name is required';
+                if (!form.phone || form.phone.length !== 10) return 'Valid 10-digit phone number required';
+                if (!form.password || form.password.length < 4) return 'Password must be at least 4 characters';
+                if (form.password !== form.confirmPassword) return 'Passwords do not match';
+                if (!form.city?.trim()) return 'City is required';
+                if (!form.aadhaarNumber?.trim()) return 'Aadhaar number is required';
+                if (!form.panNumber?.trim()) return 'PAN number is required';
+                if (!docs.aadhaarCard) return 'Aadhaar card photo is required';
+                if (!docs.panCard) return 'PAN card photo is required';
+                return null;
+                
+            case STEPS.DRIVING:
+                if (!form.licenseNumber?.trim()) return 'License number is required';
+                if (!form.licenseExpiry) return 'License expiry date is required';
+                if (!form.experienceYears || form.experienceYears < 0) return 'Experience years required';
+                if (!docs.drivingLicense) return 'Driving license photo is required';
+                if (!docs.passportPhoto) return 'Selfie/photo is required';
+                return null;
+                
+            case STEPS.FINANCIAL:
+                if (!form.accountName?.trim()) return 'Account holder name is required';
+                if (!form.accountNumber?.trim()) return 'Account number is required';
+                if (!form.ifscCode?.trim()) return 'IFSC code is required';
+                if (!form.bankName?.trim()) return 'Bank name is required';
+                return null;
+                
+            case STEPS.SAFETY:
+                if (!form.criminalDeclaration) return 'You must accept the declaration to proceed';
+                return null;
+                
+            default:
+                return null;
         }
+    };
+
+    const handleNext = () => {
+        const validationError = validateStep(step);
+        if (validationError) {
+            setError(validationError);
+            return;
+        }
+        
         setError('');
         step < STEPS.SAFETY ? setStep(step + 1) : handleSubmit();
     };
@@ -72,46 +115,95 @@ const DriverRegistration = () => {
     const handleBack = () => step > 1 && setStep(step - 1);
 
     const handleSubmit = async () => {
-        if (!form.criminalDeclaration) { setError('You must accept the declaration to proceed.'); return; }
-        setLoading(true); setError('');
+        // Final validation
+        if (!form.criminalDeclaration) { 
+            setError('You must accept the declaration to proceed.'); 
+            return; 
+        }
+        
+        // Validate all documents are present
+        if (!docs.aadhaarCard) {
+            setError('Aadhaar card photo is required');
+            return;
+        }
+        if (!docs.panCard) {
+            setError('PAN card photo is required');
+            return;
+        }
+        if (!docs.drivingLicense) {
+            setError('Driving license photo is required');
+            return;
+        }
+        if (!docs.passportPhoto) {
+            setError('Selfie/photo is required');
+            return;
+        }
+        
+        setLoading(true); 
+        setError('');
+        
         try {
-            // Step 1: Register the driver
-            const registerRes = await spareDriverAPI.register({
-                name: form.name,
-                email: form.email,
-                phone: form.phone,
-                password: form.password,
-                city: form.city,
-                availability: form.availability,
-                bankDetails: {
-                    accountName: form.accountName,
-                    accountNumber: form.accountNumber,
-                    ifscCode: form.ifscCode,
-                    bankName: form.bankName,
-                    upiId: form.upiId
-                },
-                kitOption: form.kitId,
-                kitPrice: form.kitPrice
-            });
-
-            // Step 2: Upload documents if token is available
-            if (registerRes?.token || localStorage.getItem('chauffeur_token')) {
-                const formData = new FormData();
-                if (docs.aadhaarCard) formData.append('aadhaarFront', docs.aadhaarCard);
-                if (docs.panCard) formData.append('panCard', docs.panCard);
-                if (docs.passportPhoto) formData.append('selfie', docs.passportPhoto);
-                if (docs.drivingLicense) formData.append('drivingLicense', docs.drivingLicense);
-                if (docs.policeVerification) formData.append('policeVerification', docs.policeVerification);
-
-                if ([...formData.keys()].length > 0) {
-                    await spareDriverAPI.uploadDocs(formData).catch(e => console.warn('Doc upload partial:', e.message));
-                }
+            // Create FormData with ALL fields + documents
+            const formData = new FormData();
+            
+            // Basic info
+            formData.append('name', form.name);
+            if (form.email) formData.append('email', form.email);
+            formData.append('phone', form.phone);
+            formData.append('password', form.password);
+            formData.append('city', form.city);
+            formData.append('availability', form.availability);
+            
+            // Identity documents
+            formData.append('aadhaarNumber', form.aadhaarNumber);
+            formData.append('panNumber', form.panNumber);
+            
+            // Driving credentials
+            formData.append('licenseNumber', form.licenseNumber);
+            formData.append('licenseExpiry', form.licenseExpiry);
+            formData.append('experienceYears', form.experienceYears || 0);
+            
+            // Bank details as JSON string
+            formData.append('bankDetails', JSON.stringify({
+                accountName: form.accountName,
+                accountNumber: form.accountNumber,
+                ifscCode: form.ifscCode,
+                bankName: form.bankName,
+                upiId: form.upiId || ''
+            }));
+            
+            // Documents
+            formData.append('aadhaarFront', docs.aadhaarCard);
+            formData.append('aadhaarBack', docs.aadhaarCard); // Use same image for both sides
+            formData.append('panCard', docs.panCard);
+            formData.append('drivingLicense', docs.drivingLicense);
+            formData.append('selfie', docs.passportPhoto);
+            
+            // Optional police verification
+            if (docs.policeVerification) {
+                formData.append('policeVerification', docs.policeVerification);
             }
-
+            
+            console.log('📤 Submitting complete registration with all data and documents');
+            
+            // Single API call with everything
+            const registerRes = await spareDriverAPI.registerComplete(formData);
+            
+            console.log('✅ Registration complete:', registerRes);
+            
+            // Store token
+            if (registerRes?.token) {
+                localStorage.setItem('chauffeur_token', registerRes.token);
+            }
+            
             setStep(STEPS.VERIFYING);
+            
         } catch (err) {
+            console.error('❌ Registration failed:', err);
             setError(err.message || 'Registration failed. Please try again.');
-        } finally { setLoading(false); }
+        } finally { 
+            setLoading(false); 
+        }
     };
 
     const renderStep = () => {

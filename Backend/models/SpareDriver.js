@@ -35,7 +35,7 @@ const spareDriverSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['PENDING', 'ACTIVE', 'BLOCKED', 'REJECTED'],
+        enum: ['PENDING', 'ACTIVE', 'BLOCKED', 'REJECTED', 'verified_pending_kit', 'kit_payment_pending', 'suspended', 'kit_payment_under_review'],
         default: 'PENDING'
     },
     verificationStatus: {
@@ -204,6 +204,15 @@ const spareDriverSchema = new mongoose.Schema({
         coordinates: {
             type: [Number],
             default: [0, 0]
+        },
+        address: String,
+        zone: {
+            type: String,
+            index: true
+        },
+        lastUpdated: {
+            type: Date,
+            default: Date.now
         }
     },
     wallet: {

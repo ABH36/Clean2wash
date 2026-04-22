@@ -8,254 +8,192 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 
 // ══════════════════════════════════════════════════════════════════════════════
-// REVENUE REPORTS
+// DATA FETCHING HELPERS
 // ══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Get Revenue Report
- * @route GET /api/admin/reports/revenue
- * @query period: daily|weekly|monthly|custom
- * @query startDate: ISO date string (for custom)
- * @query endDate: ISO date string (for custom)
- */
-exports.getRevenueReport = catchAsync(async (req, res, next) => {
-    const { period = 'monthly', startDate, endDate, serviceType } = req.query;
-
+const fetchRevenueData = async (params) => {
+    const { period = 'monthly', startDate, endDate, serviceType } = params;
     let dateFilter = {};
     const now = new Date();
 
-    // Calculate date range based on period
     switch (period) {
         case 'daily':
             const startOfDay = new Date(now.setHours(0, 0, 0, 0));
             const endOfDay = new Date(now.setHours(23, 59, 59, 999));
             dateFilter = { createdAt: { $gte: startOfDay, $lte: endOfDay } };
             break;
-
         case 'weekly':
             const startOfWeek = new Date(now);
             startOfWeek.setDate(now.getDate() - now.getDay());
             startOfWeek.setHours(0, 0, 0, 0);
             dateFilter = { createdAt: { $gte: startOfWeek } };
             break;
-
         case 'monthly':
             const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
             dateFilter = { createdAt: { $gte: startOfMonth } };
             break;
-
         case 'custom':
-            if (!startDate || !endDate) {
-                return next(new AppError('Start date and end date are required for custom period', 400));
-            }
-            dateFilter = {
-                createdAt: {
-                    $gte: new Date(startDate),
-                    $lte: new Date(endDate)
-                }
-            };
+            if (!startDate || !endDate) throw new AppError('Dates required', 400);
+            dateFilter = { createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) } };
             break;
-
-        default:
-            return next(new AppError('Invalid period specified', 400));
     }
 
-    // Build query
-    const query = {
-        status: 'completed',
-        isActive: true,
-        ...dateFilter
+    const query = { status: 'completed', isActive: true, ...dateFilter };
+    if (serviceType) query['service.type'] = serviceType;
+
+    const [summaryData, serviceWise, dailyTrend, paymentMethods] = await Promise.all([
+        Booking.aggregate([{ $match: query }, { $group: { _id: null, totalRevenue: { $sum: '$pricing.totalAmount' }, totalBookings: { $sum: 1 }, averageBookingValue: { $avg: '$pricing.totalAmount' }, totalCommission: { $sum: '$payment.platformCommissionAmount' }, totalDriverPayout: { $sum: '$payment.providerPayoutAmount' } } }]),
+        Booking.aggregate([{ $match: query }, { $group: { _id: '$service.name', revenue: { $sum: '$pricing.totalAmount' }, bookings: { $sum: 1 }, avgValue: { $avg: '$pricing.totalAmount' } } }, { $sort: { revenue: -1 } }]),
+        Booking.aggregate([{ $match: { status: 'completed', isActive: true, createdAt: { $gte: new Date(new Date().setDate(new Date().getDate() - 30)) } } }, { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, revenue: { $sum: '$pricing.totalAmount' }, bookings: { $sum: 1 } } }, { $sort: { '_id': 1 } }]),
+        Booking.aggregate([{ $match: query }, { $group: { _id: '$payment.method', revenue: { $sum: '$pricing.totalAmount' }, count: { $sum: 1 } } }])
+    ]);
+
+    return {
+        summary: summaryData[0] || { totalRevenue: 0, totalBookings: 0, averageBookingValue: 0, totalCommission: 0, totalDriverPayout: 0 },
+        serviceWise,
+        dailyTrend,
+        paymentMethods,
+        period,
+        dateRange: { start: dateFilter.createdAt?.$gte, end: dateFilter.createdAt?.$lte || now }
     };
+};
 
-    if (serviceType) {
-        query['service.type'] = serviceType;
+const fetchDriverEarningsData = async (params) => {
+    const { period = 'monthly', driverId, startDate, endDate } = params;
+    let dateFilter = {};
+    const now = new Date();
+
+    switch (period) {
+        case 'daily': dateFilter = { createdAt: { $gte: new Date(now.setHours(0,0,0,0)) } }; break;
+        case 'weekly':
+            const sw = new Date(now); sw.setDate(now.getDate() - now.getDay()); sw.setHours(0,0,0,0);
+            dateFilter = { createdAt: { $gte: sw } }; break;
+        case 'monthly': dateFilter = { createdAt: { $gte: new Date(now.getFullYear(), now.getMonth(), 1) } }; break;
+        case 'custom':
+            if (!startDate || !endDate) throw new AppError('Dates required', 400);
+            dateFilter = { createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) } }; break;
     }
 
-    // Aggregate revenue data
-    const revenueData = await Booking.aggregate([
+    const query = { status: 'completed', isActive: true, 'service.type': 'sparedriver', ...dateFilter };
+    if (driverId) query['provider.id'] = driverId;
+
+    const driverEarnings = await Booking.aggregate([
         { $match: query },
-        {
-            $group: {
-                _id: null,
-                totalRevenue: { $sum: '$pricing.totalAmount' },
-                totalBookings: { $sum: 1 },
-                averageBookingValue: { $avg: '$pricing.totalAmount' },
-                totalCommission: { $sum: '$payment.platformCommissionAmount' },
-                totalDriverPayout: { $sum: '$payment.providerPayoutAmount' }
-            }
-        }
+        { $group: { _id: '$provider.id', driverName: { $first: '$provider.name' }, totalEarnings: { $sum: '$payment.providerPayoutAmount' }, totalTrips: { $sum: 1 }, totalRevenue: { $sum: '$pricing.totalAmount' }, avgEarningsPerTrip: { $avg: '$payment.providerPayoutAmount' }, totalCommission: { $sum: '$payment.platformCommissionAmount' } } },
+        { $sort: { totalEarnings: -1 } },
+        { $limit: 50 }
     ]);
 
-    // Service-wise breakdown
-    const serviceWiseRevenue = await Booking.aggregate([
-        { $match: query },
-        {
-            $group: {
-                _id: '$service.name',
-                revenue: { $sum: '$pricing.totalAmount' },
-                bookings: { $sum: 1 },
-                avgValue: { $avg: '$pricing.totalAmount' }
-            }
+    return {
+        driverEarnings,
+        topPerformers: driverEarnings.slice(0, 10),
+        summary: {
+            totalDrivers: driverEarnings.length,
+            totalEarnings: driverEarnings.reduce((sum, d) => sum + d.totalEarnings, 0),
+            totalTrips: driverEarnings.reduce((sum, d) => sum + d.totalTrips, 0),
+            avgEarningsPerDriver: driverEarnings.length > 0 ? driverEarnings.reduce((sum, d) => sum + d.totalEarnings, 0) / driverEarnings.length : 0
         },
-        { $sort: { revenue: -1 } }
+        period
+    };
+};
+
+const fetchBookingAnalyticsData = async (params) => {
+    const { period = 'monthly', startDate, endDate } = params;
+    let dateFilter = {};
+    const now = new Date();
+
+    switch (period) {
+        case 'daily': dateFilter = { createdAt: { $gte: new Date(now.setHours(0,0,0,0)) } }; break;
+        case 'weekly':
+            const sw = new Date(now); sw.setDate(now.getDate() - now.getDay()); sw.setHours(0,0,0,0);
+            dateFilter = { createdAt: { $gte: sw } }; break;
+        case 'monthly': dateFilter = { createdAt: { $gte: new Date(now.getFullYear(), now.getMonth(), 1) } }; break;
+        case 'custom':
+            if (!startDate || !endDate) throw new AppError('Dates required', 400);
+            dateFilter = { createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) } }; break;
+    }
+
+    const [statusBreakdown, avgDuration, peakHours, serviceDistribution] = await Promise.all([
+        Booking.aggregate([{ $match: { isActive: true, ...dateFilter } }, { $group: { _id: '$status', count: { $sum: 1 } } }]),
+        Booking.aggregate([{ $match: { status: 'completed', isActive: true, 'tracking.startedAt': { $exists: true }, 'tracking.completedAt': { $exists: true }, ...dateFilter } }, { $project: { duration: { $subtract: ['$tracking.completedAt', '$tracking.startedAt'] } } }, { $group: { _id: null, avgDuration: { $avg: '$duration' } } }]),
+        Booking.aggregate([{ $match: { isActive: true, ...dateFilter } }, { $project: { hour: { $hour: '$createdAt' } } }, { $group: { _id: '$hour', bookings: { $sum: 1 } } }, { $sort: { bookings: -1 } }]),
+        Booking.aggregate([{ $match: { isActive: true, ...dateFilter } }, { $group: { _id: '$service.type', count: { $sum: 1 }, revenue: { $sum: '$pricing.totalAmount' } } }, { $sort: { count: -1 } }])
     ]);
 
-    // Daily trend (last 30 days)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const totalBookings = statusBreakdown.reduce((sum, s) => sum + s.count, 0);
+    const completed = statusBreakdown.find(s => s._id === 'completed')?.count || 0;
+    const cancelled = statusBreakdown.find(s => s._id === 'cancelled')?.count || 0;
 
-    const dailyTrend = await Booking.aggregate([
-        {
-            $match: {
-                status: 'completed',
-                isActive: true,
-                createdAt: { $gte: thirtyDaysAgo }
-            }
+    return {
+        summary: {
+            totalBookings,
+            completedBookings: completed,
+            cancelledBookings: cancelled,
+            completionRate: totalBookings > 0 ? (completed / totalBookings * 100).toFixed(2) : 0,
+            cancellationRate: totalBookings > 0 ? (cancelled / totalBookings * 100).toFixed(2) : 0,
+            avgTripDuration: avgDuration[0]?.avgDuration ? Math.round(avgDuration[0].avgDuration / 60000) : 0
         },
-        {
-            $group: {
-                _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-                revenue: { $sum: '$pricing.totalAmount' },
-                bookings: { $sum: 1 }
-            }
-        },
-        { $sort: { '_id': 1 } }
+        statusBreakdown,
+        peakHours,
+        serviceDistribution,
+        period
+    };
+};
+
+const fetchFinancialSummaryData = async (params) => {
+    const { period = 'monthly', startDate, endDate } = params;
+    let dateFilter = {};
+    const now = new Date();
+
+    switch (period) {
+        case 'monthly': dateFilter = { createdAt: { $gte: new Date(now.getFullYear(), now.getMonth(), 1) } }; break;
+        case 'custom':
+            if (!startDate || !endDate) throw new AppError('Dates required', 400);
+            dateFilter = { createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) } }; break;
+    }
+
+    const [revenueData, walletStats, refundsData, outstandingData] = await Promise.all([
+        Booking.aggregate([{ $match: { status: 'completed', isActive: true, ...dateFilter } }, { $group: { _id: null, totalRevenue: { $sum: '$pricing.totalAmount' }, totalCommission: { $sum: '$payment.platformCommissionAmount' }, totalDriverPayout: { $sum: '$payment.providerPayoutAmount' }, totalBookings: { $sum: 1 } } }]),
+        WalletTransaction.aggregate([{ $match: { ...dateFilter, status: 'completed' } }, { $group: { _id: '$type', total: { $sum: '$amount' }, count: { $sum: 1 } } }]),
+        Booking.aggregate([{ $match: { 'payment.status': { $in: ['refunded', 'refund_pending'] }, isActive: true, ...dateFilter } }, { $group: { _id: null, totalRefunds: { $sum: '$payment.refundAmount' }, count: { $sum: 1 } } }]),
+        Booking.aggregate([{ $match: { 'payment.status': 'settlement_pending', isActive: true } }, { $group: { _id: null, totalOutstanding: { $sum: '$payment.pendingAmount' }, count: { $sum: 1 } } }])
     ]);
 
-    // Payment method breakdown
-    const paymentMethodBreakdown = await Booking.aggregate([
-        { $match: query },
-        {
-            $group: {
-                _id: '$payment.method',
-                revenue: { $sum: '$pricing.totalAmount' },
-                count: { $sum: 1 }
-            }
-        }
-    ]);
+    const rev = revenueData[0] || { totalRevenue: 0, totalCommission: 0, totalDriverPayout: 0, totalBookings: 0 };
+    const walletCredits = walletStats.find(w => w._id === 'credit')?.total || 0;
+    const walletDebits = walletStats.find(w => w._id === 'debit')?.total || 0;
 
-    res.status(200).json({
-        status: 'success',
-        data: {
-            summary: revenueData[0] || {
-                totalRevenue: 0,
-                totalBookings: 0,
-                averageBookingValue: 0,
-                totalCommission: 0,
-                totalDriverPayout: 0
-            },
-            serviceWise: serviceWiseRevenue,
-            dailyTrend,
-            paymentMethods: paymentMethodBreakdown,
-            period,
-            dateRange: {
-                start: dateFilter.createdAt?.$gte || startOfMonth,
-                end: dateFilter.createdAt?.$lte || now
-            }
-        }
-    });
+    return {
+        revenue: { gross: rev.totalRevenue, commission: rev.totalCommission, driverPayouts: rev.totalDriverPayout, net: rev.totalCommission, bookings: rev.totalBookings },
+        wallet: { credits: walletCredits, debits: walletDebits, net: walletCredits - walletDebits },
+        refunds: { total: refundsData[0]?.totalRefunds || 0, count: refundsData[0]?.count || 0 },
+        outstanding: { total: outstandingData[0]?.totalOutstanding || 0, count: outstandingData[0]?.count || 0 },
+        profitLoss: { revenue: rev.totalCommission, expenses: rev.totalDriverPayout, profit: rev.totalCommission },
+        period
+    };
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// REVENUE REPORTS
+// ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Get Revenue Report
+ * @route GET /api/admin/reports/revenue
+ */
+exports.getRevenueReport = catchAsync(async (req, res, next) => {
+    const data = await fetchRevenueData(req.query);
+    res.status(200).json({ status: 'success', data });
 });
+
 
 /**
  * Get Driver Earnings Report
  * @route GET /api/admin/reports/driver-earnings
  */
 exports.getDriverEarningsReport = catchAsync(async (req, res, next) => {
-    const { period = 'monthly', driverId, startDate, endDate } = req.query;
-
-    let dateFilter = {};
-    const now = new Date();
-
-    switch (period) {
-        case 'daily':
-            const startOfDay = new Date(now.setHours(0, 0, 0, 0));
-            dateFilter = { createdAt: { $gte: startOfDay } };
-            break;
-        case 'weekly':
-            const startOfWeek = new Date(now);
-            startOfWeek.setDate(now.getDate() - now.getDay());
-            startOfWeek.setHours(0, 0, 0, 0);
-            dateFilter = { createdAt: { $gte: startOfWeek } };
-            break;
-        case 'monthly':
-            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-            dateFilter = { createdAt: { $gte: startOfMonth } };
-            break;
-        case 'custom':
-            if (!startDate || !endDate) {
-                return next(new AppError('Start date and end date required for custom period', 400));
-            }
-            dateFilter = {
-                createdAt: {
-                    $gte: new Date(startDate),
-                    $lte: new Date(endDate)
-                }
-            };
-            break;
-    }
-
-    const query = {
-        status: 'completed',
-        isActive: true,
-        'service.type': 'sparedriver',
-        ...dateFilter
-    };
-
-    if (driverId) {
-        query['provider.id'] = driverId;
-    }
-
-    // Driver-wise earnings
-    const driverEarnings = await Booking.aggregate([
-        { $match: query },
-        {
-            $group: {
-                _id: '$provider.id',
-                driverName: { $first: '$provider.name' },
-                totalEarnings: { $sum: '$payment.providerPayoutAmount' },
-                totalTrips: { $sum: 1 },
-                totalRevenue: { $sum: '$pricing.totalAmount' },
-                avgEarningsPerTrip: { $avg: '$payment.providerPayoutAmount' },
-                totalCommission: { $sum: '$payment.platformCommissionAmount' }
-            }
-        },
-        { $sort: { totalEarnings: -1 } },
-        { $limit: 50 }
-    ]);
-
-    // Top performers
-    const topPerformers = driverEarnings.slice(0, 10);
-
-    // Earnings trend
-    const earningsTrend = await Booking.aggregate([
-        { $match: query },
-        {
-            $group: {
-                _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-                totalEarnings: { $sum: '$payment.providerPayoutAmount' },
-                totalTrips: { $sum: 1 }
-            }
-        },
-        { $sort: { '_id': 1 } }
-    ]);
-
-    res.status(200).json({
-        status: 'success',
-        data: {
-            driverEarnings,
-            topPerformers,
-            earningsTrend,
-            summary: {
-                totalDrivers: driverEarnings.length,
-                totalEarnings: driverEarnings.reduce((sum, d) => sum + d.totalEarnings, 0),
-                totalTrips: driverEarnings.reduce((sum, d) => sum + d.totalTrips, 0),
-                avgEarningsPerDriver: driverEarnings.length > 0
-                    ? driverEarnings.reduce((sum, d) => sum + d.totalEarnings, 0) / driverEarnings.length
-                    : 0
-            },
-            period
-        }
-    });
+    const data = await fetchDriverEarningsData(req.query);
+    res.status(200).json({ status: 'success', data });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -267,132 +205,8 @@ exports.getDriverEarningsReport = catchAsync(async (req, res, next) => {
  * @route GET /api/admin/reports/bookings
  */
 exports.getBookingAnalytics = catchAsync(async (req, res, next) => {
-    const { period = 'monthly', startDate, endDate } = req.query;
-
-    let dateFilter = {};
-    const now = new Date();
-
-    switch (period) {
-        case 'daily':
-            const startOfDay = new Date(now.setHours(0, 0, 0, 0));
-            dateFilter = { createdAt: { $gte: startOfDay } };
-            break;
-        case 'weekly':
-            const startOfWeek = new Date(now);
-            startOfWeek.setDate(now.getDate() - now.getDay());
-            startOfWeek.setHours(0, 0, 0, 0);
-            dateFilter = { createdAt: { $gte: startOfWeek } };
-            break;
-        case 'monthly':
-            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-            dateFilter = { createdAt: { $gte: startOfMonth } };
-            break;
-        case 'custom':
-            if (!startDate || !endDate) {
-                return next(new AppError('Start date and end date required', 400));
-            }
-            dateFilter = {
-                createdAt: {
-                    $gte: new Date(startDate),
-                    $lte: new Date(endDate)
-                }
-            };
-            break;
-    }
-
-    // Status-wise breakdown
-    const statusBreakdown = await Booking.aggregate([
-        { $match: { isActive: true, ...dateFilter } },
-        {
-            $group: {
-                _id: '$status',
-                count: { $sum: 1 }
-            }
-        }
-    ]);
-
-    // Completion rate
-    const totalBookings = statusBreakdown.reduce((sum, s) => sum + s.count, 0);
-    const completedBookings = statusBreakdown.find(s => s._id === 'completed')?.count || 0;
-    const cancelledBookings = statusBreakdown.find(s => s._id === 'cancelled')?.count || 0;
-    const completionRate = totalBookings > 0 ? (completedBookings / totalBookings) * 100 : 0;
-    const cancellationRate = totalBookings > 0 ? (cancelledBookings / totalBookings) * 100 : 0;
-
-    // Average trip duration (for completed bookings)
-    const avgDuration = await Booking.aggregate([
-        {
-            $match: {
-                status: 'completed',
-                isActive: true,
-                'tracking.startedAt': { $exists: true },
-                'tracking.completedAt': { $exists: true },
-                ...dateFilter
-            }
-        },
-        {
-            $project: {
-                duration: {
-                    $subtract: ['$tracking.completedAt', '$tracking.startedAt']
-                }
-            }
-        },
-        {
-            $group: {
-                _id: null,
-                avgDuration: { $avg: '$duration' }
-            }
-        }
-    ]);
-
-    // Peak hours analysis
-    const peakHours = await Booking.aggregate([
-        { $match: { isActive: true, ...dateFilter } },
-        {
-            $project: {
-                hour: { $hour: '$createdAt' }
-            }
-        },
-        {
-            $group: {
-                _id: '$hour',
-                bookings: { $sum: 1 }
-            }
-        },
-        { $sort: { bookings: -1 } }
-    ]);
-
-    // Service type distribution
-    const serviceDistribution = await Booking.aggregate([
-        { $match: { isActive: true, ...dateFilter } },
-        {
-            $group: {
-                _id: '$service.type',
-                count: { $sum: 1 },
-                revenue: { $sum: '$pricing.totalAmount' }
-            }
-        },
-        { $sort: { count: -1 } }
-    ]);
-
-    res.status(200).json({
-        status: 'success',
-        data: {
-            summary: {
-                totalBookings,
-                completedBookings,
-                cancelledBookings,
-                completionRate: completionRate.toFixed(2),
-                cancellationRate: cancellationRate.toFixed(2),
-                avgTripDuration: avgDuration[0]?.avgDuration
-                    ? Math.round(avgDuration[0].avgDuration / (1000 * 60)) // Convert to minutes
-                    : 0
-            },
-            statusBreakdown,
-            peakHours,
-            serviceDistribution,
-            period
-        }
-    });
+    const data = await fetchBookingAnalyticsData(req.query);
+    res.status(200).json({ status: 'success', data });
 });
 
 /**
@@ -496,137 +310,8 @@ exports.getDriverPerformance = catchAsync(async (req, res, next) => {
  * @route GET /api/admin/reports/financial-summary
  */
 exports.getFinancialSummary = catchAsync(async (req, res, next) => {
-    const { period = 'monthly', startDate, endDate } = req.query;
-
-    let dateFilter = {};
-    const now = new Date();
-
-    switch (period) {
-        case 'monthly':
-            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-            dateFilter = { createdAt: { $gte: startOfMonth } };
-            break;
-        case 'custom':
-            if (!startDate || !endDate) {
-                return next(new AppError('Start date and end date required', 400));
-            }
-            dateFilter = {
-                createdAt: {
-                    $gte: new Date(startDate),
-                    $lte: new Date(endDate)
-                }
-            };
-            break;
-    }
-
-    // Revenue & Commission
-    const revenueData = await Booking.aggregate([
-        {
-            $match: {
-                status: 'completed',
-                isActive: true,
-                ...dateFilter
-            }
-        },
-        {
-            $group: {
-                _id: null,
-                totalRevenue: { $sum: '$pricing.totalAmount' },
-                totalCommission: { $sum: '$payment.platformCommissionAmount' },
-                totalDriverPayout: { $sum: '$payment.providerPayoutAmount' },
-                totalBookings: { $sum: 1 }
-            }
-        }
-    ]);
-
-    // Wallet transactions
-    const walletStats = await WalletTransaction.aggregate([
-        { $match: { ...dateFilter, status: 'completed' } },
-        {
-            $group: {
-                _id: '$type',
-                total: { $sum: '$amount' },
-                count: { $sum: 1 }
-            }
-        }
-    ]);
-
-    // Refunds
-    const refunds = await Booking.aggregate([
-        {
-            $match: {
-                'payment.status': { $in: ['refunded', 'refund_pending'] },
-                isActive: true,
-                ...dateFilter
-            }
-        },
-        {
-            $group: {
-                _id: null,
-                totalRefunds: { $sum: '$payment.refundAmount' },
-                count: { $sum: 1 }
-            }
-        }
-    ]);
-
-    // Outstanding payments
-    const outstanding = await Booking.aggregate([
-        {
-            $match: {
-                'payment.status': 'settlement_pending',
-                isActive: true
-            }
-        },
-        {
-            $group: {
-                _id: null,
-                totalOutstanding: { $sum: '$payment.pendingAmount' },
-                count: { $sum: 1 }
-            }
-        }
-    ]);
-
-    const revenue = revenueData[0] || {
-        totalRevenue: 0,
-        totalCommission: 0,
-        totalDriverPayout: 0,
-        totalBookings: 0
-    };
-
-    const walletCredits = walletStats.find(w => w._id === 'credit')?.total || 0;
-    const walletDebits = walletStats.find(w => w._id === 'debit')?.total || 0;
-
-    res.status(200).json({
-        status: 'success',
-        data: {
-            revenue: {
-                gross: revenue.totalRevenue,
-                commission: revenue.totalCommission,
-                driverPayouts: revenue.totalDriverPayout,
-                net: revenue.totalCommission,
-                bookings: revenue.totalBookings
-            },
-            wallet: {
-                credits: walletCredits,
-                debits: walletDebits,
-                net: walletCredits - walletDebits
-            },
-            refunds: {
-                total: refunds[0]?.totalRefunds || 0,
-                count: refunds[0]?.count || 0
-            },
-            outstanding: {
-                total: outstanding[0]?.totalOutstanding || 0,
-                count: outstanding[0]?.count || 0
-            },
-            profitLoss: {
-                revenue: revenue.totalCommission,
-                expenses: revenue.totalDriverPayout,
-                profit: revenue.totalCommission
-            },
-            period
-        }
-    });
+    const data = await fetchFinancialSummaryData(req.query);
+    res.status(200).json({ status: 'success', data });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -644,20 +329,16 @@ exports.exportToExcel = catchAsync(async (req, res, next) => {
     let data;
     switch (reportType) {
         case 'revenue':
-            const revenueReq = { query: { period, startDate, endDate } };
-            await exports.getRevenueReport(revenueReq, { status: () => ({ json: (d) => { data = d.data; } }) }, () => {});
+            data = await fetchRevenueData({ period, startDate, endDate });
             break;
         case 'driver-earnings':
-            const earningsReq = { query: { period, startDate, endDate } };
-            await exports.getDriverEarningsReport(earningsReq, { status: () => ({ json: (d) => { data = d.data; } }) }, () => {});
+            data = await fetchDriverEarningsData({ period, startDate, endDate });
             break;
         case 'bookings':
-            const bookingsReq = { query: { period, startDate, endDate } };
-            await exports.getBookingAnalytics(bookingsReq, { status: () => ({ json: (d) => { data = d.data; } }) }, () => {});
+            data = await fetchBookingAnalyticsData({ period, startDate, endDate });
             break;
         case 'financial':
-            const financialReq = { query: { period, startDate, endDate } };
-            await exports.getFinancialSummary(financialReq, { status: () => ({ json: (d) => { data = d.data; } }) }, () => {});
+            data = await fetchFinancialSummaryData({ period, startDate, endDate });
             break;
         default:
             return next(new AppError('Invalid report type', 400));
@@ -758,20 +439,16 @@ exports.exportToPDF = catchAsync(async (req, res, next) => {
     let data;
     switch (reportType) {
         case 'revenue':
-            const revenueReq = { query: { period, startDate, endDate } };
-            await exports.getRevenueReport(revenueReq, { status: () => ({ json: (d) => { data = d.data; } }) }, () => {});
+            data = await fetchRevenueData({ period, startDate, endDate });
             break;
         case 'driver-earnings':
-            const earningsReq = { query: { period, startDate, endDate } };
-            await exports.getDriverEarningsReport(earningsReq, { status: () => ({ json: (d) => { data = d.data; } }) }, () => {});
+            data = await fetchDriverEarningsData({ period, startDate, endDate });
             break;
         case 'bookings':
-            const bookingsReq = { query: { period, startDate, endDate } };
-            await exports.getBookingAnalytics(bookingsReq, { status: () => ({ json: (d) => { data = d.data; } }) }, () => {});
+            data = await fetchBookingAnalyticsData({ period, startDate, endDate });
             break;
         case 'financial':
-            const financialReq = { query: { period, startDate, endDate } };
-            await exports.getFinancialSummary(financialReq, { status: () => ({ json: (d) => { data = d.data; } }) }, () => {});
+            data = await fetchFinancialSummaryData({ period, startDate, endDate });
             break;
         default:
             return next(new AppError('Invalid report type', 400));

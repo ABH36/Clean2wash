@@ -336,7 +336,7 @@ const Home = () => {
                                             initial={{ y: 10, opacity: 0 }}
                                             animate={{ y: 0, opacity: 1 }}
                                             transition={{ delay: 0.1 }}
-                                            className="text-xl font-black leading-tight text-white mb-2 max-w-[200px]"
+                                            className="text-xl font-black leading-tight text-white keep-white mb-2 max-w-[200px]"
                                         >
                                             {banner.title}
                                         </motion.h2>
@@ -363,10 +363,10 @@ const Home = () => {
                                 <button
                                     key={i}
                                     onClick={() => { setActiveBanner(i); setProgress(0); }}
-                                    className={`h-1 rounded-full transition-all duration-700 ${
+                                    className={`h-1.5 rounded-full transition-all duration-700 !min-h-0 !min-w-0 ${
                                         i === activeBanner 
                                             ? 'w-6 bg-[#F59E0B]' 
-                                            : 'w-2 bg-white/20'
+                                            : (isDarkMode ? 'w-1.5 bg-white/40' : 'w-1.5 bg-black/20')
                                     }`}
                                 />
                             ))}
@@ -560,8 +560,8 @@ const Home = () => {
                                 <div className="w-20 h-20 bg-white/[0.03] rounded-full flex items-center justify-center mb-6 border border-white/10">
                                     <Search size={32} className="text-white/5" />
                                 </div>
-                                <h3 className="text-lg font-[1000] text-white uppercase tracking-tight mb-2">No results found</h3>
-                                <p className="text-[11px] font-black text-white/30 uppercase tracking-[0.2em] leading-relaxed">
+                                <h3 className={`text-lg font-[1000] uppercase tracking-tight mb-2 ${isDarkMode ? 'text-white' : 'text-black'}`}>No results found</h3>
+                                <p className={`text-[11px] font-black uppercase tracking-[0.2em] leading-relaxed ${isDarkMode ? 'text-white/30' : 'text-black/30'}`}>
                                     We couldn't find anything matching <span className="text-[#F59E0B]">"{searchQuery}"</span> in our ecosystem.
                                 </p>
                                 <button
@@ -622,38 +622,30 @@ const Home = () => {
                         animate={{ y: 0 }}
                         exit={{ y: "100%" }}
                         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                        className={`fixed bottom-0 left-0 right-0 rounded-t-[2.5rem] z-[2101] px-6 pt-2 pb-10 shadow-3xl safe-area-bottom border-t transition-colors duration-300 ${
+                        className={`fixed bottom-0 left-0 right-0 rounded-t-[2rem] z-[2101] px-5 pt-1 pb-32 shadow-3xl safe-area-bottom border-t transition-colors duration-300 ${
                             isDarkMode ? 'bg-[#0F1412] border-white/10' : 'bg-white border-black/10'
                         }`}
                     >
-                        <div className={`w-12 h-1.5 rounded-full mx-auto mt-2 mb-8 ${isDarkMode ? 'bg-white/10' : 'bg-black/10'}`} onClick={() => setShowVehicleModal(false)} />
+                        <div className={`w-10 h-1 rounded-full mx-auto mt-2 mb-4 ${isDarkMode ? 'bg-white/10' : 'bg-black/10'}`} onClick={() => setShowVehicleModal(false)} />
 
-                        <div className="flex items-center justify-between mb-8">
-                            <h2 className={`text-xl font-[1000] tracking-tight ${isDarkMode ? 'text-white' : 'text-black'}`}>Select vehicle</h2>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className={`text-lg font-[1000] tracking-tighter ${isDarkMode ? 'text-white' : 'text-black'}`}>Select vehicle</h2>
                             <button
                                 onClick={() => navigate('/vehicles?mode=add')}
-                                className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase flex items-center gap-2 active:scale-95 transition-all border ${
+                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase flex items-center gap-1.5 active:scale-95 transition-all border ${
                                     isDarkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-black/5 border-black/10 text-black'
                                 }`}
                             >
-                                <Plus size={14} strokeWidth={3} /> Add New Vehicle
+                                <Plus size={12} strokeWidth={4} /> Add
                             </button>
                         </div>
 
-                        <div className="space-y-4 mb-8">
-                            <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] ml-1 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Saved vehicles</h3>
-                            <div className="space-y-2.5">
+                        <div className="space-y-3 mb-2">
+                            <h3 className={`text-[9px] font-black uppercase tracking-[0.2em] ml-1 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Garage</h3>
+                            <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
                                 {vehicles?.length === 0 ? (
-                                    <div className={`py-12 rounded-[2rem] flex flex-col items-center justify-center text-center px-6 border transition-all ${
-                                        isDarkMode ? 'bg-white/[0.02] border-white/5' : 'bg-black/[0.02] border-black/5'
-                                    }`}>
-                                        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 border shadow-sm ${
-                                            isDarkMode ? 'bg-white/[0.03] border-white/5 text-white/10' : 'bg-black/[0.03] border-black/5 text-black/10'
-                                        }`}>
-                                            <Car size={32} strokeWidth={1.5} />
-                                        </div>
-                                        <h4 className={`text-sm font-black uppercase ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>No vehicles found</h4>
-                                        <p className={`text-[10px] font-bold uppercase mt-2 ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>Add your first vehicle to continue</p>
+                                    <div className="py-6 text-center">
+                                        <p className={`text-[9px] font-bold uppercase ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>No vehicles</p>
                                     </div>
                                 ) : (
                                     vehicles?.map((vehicle, idx) => (
@@ -663,27 +655,27 @@ const Home = () => {
                                                 setShowVehicleModal(false);
                                                 navigate(`/spare-driver?type=${selectedServiceForBooking?.id}&vehicleId=${vehicle.id || vehicle._id}`);
                                             }}
-                                            className={`w-full border px-5 py-4 rounded-[1.8rem] flex items-center justify-between group transition-all ${
+                                            className={`w-full border px-3 py-2 rounded-xl flex items-center justify-between group transition-all ${
                                                 isDarkMode ? 'bg-white/[0.03] border-white/5 active:bg-white/[0.05]' : 'bg-black/[0.02] border-black/5 active:bg-black/[0.04]'
                                             }`}
                                         >
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-14 h-14 bg-white/[0.02] rounded-2xl flex items-center justify-center overflow-hidden border border-white/5">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-white/[0.01] rounded-lg flex items-center justify-center overflow-hidden border border-white/5">
                                                     <img 
                                                         src={vehicle.image || "https://images.unsplash.com/photo-1494905998402-395d579af36f?auto=format&fit=crop&q=80&w=200"} 
-                                                        className="w-[85%] h-full object-contain group-hover:scale-110 transition-transform duration-500" 
+                                                        className="w-[90%] h-full object-contain" 
                                                         alt="" 
                                                     />
                                                 </div>
-                                                <div className="text-left">
-                                                    <h4 className={`text-[14px] font-[1000] leading-none uppercase ${isDarkMode ? 'text-white' : 'text-black'}`}>
-                                                        {vehicle.brand}, <span className={isDarkMode ? 'text-white/40' : 'text-black/40'}>{vehicle.model}</span>
+                                                <div className="text-left leading-tight">
+                                                    <h4 className={`text-[12px] font-[1000] uppercase truncate max-w-[120px] ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                                                        {vehicle.brand} <span className={isDarkMode ? 'text-white/30' : 'text-black/30'}>{vehicle.model}</span>
                                                     </h4>
-                                                    <p className="text-[10px] font-bold text-[#F59E0B] mt-2 tracking-widest">{vehicle.plate || vehicle.regNo || 'NO PLATE'}</p>
+                                                    <p className="text-[9px] font-bold text-[#F59E0B] mt-0.5 tracking-wider">{vehicle.plate || vehicle.regNo || 'NO PLATE'}</p>
                                                 </div>
                                             </div>
-                                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${idx === 0 ? 'border-[#F59E0B] bg-[#F59E0B]' : 'border-white/10'}`}>
-                                                {idx === 0 && <Check size={14} className="text-white" strokeWidth={4} />}
+                                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${idx === 0 ? 'border-[#F59E0B] bg-[#F59E0B]' : 'border-white/10'}`}>
+                                                {idx === 0 && <Check size={10} className="text-white" strokeWidth={5} />}
                                             </div>
                                         </button>
                                     ))
@@ -720,12 +712,12 @@ const Home = () => {
                                     transition={{ repeat: Infinity, duration: 1.5 }}
                                     className="w-32 h-32 bg-red-500/20 rounded-full absolute -inset-4 blur-2xl"
                                 />
-                                <div className="w-24 h-24 bg-red-600 rounded-full flex items-center justify-center text-white text-4xl font-black shadow-2xl shadow-red-600/50">
+                                <div className="w-24 h-24 bg-red-600 rounded-full flex items-center justify-center text-white keep-white text-4xl font-black shadow-2xl shadow-red-600/50">
                                     {sosCountdown}
                                 </div>
                             </div>
-                            <h2 className="text-2xl font-black text-white tracking-tight mb-2">Emergency SOS triggering</h2>
-                            <p className="text-white/40 text-xs font-bold uppercase tracking-widest max-w-[240px]">Alerting nearest captains, vendors and trusted contacts in {sosCountdown}s</p>
+                            <h2 className="text-2xl font-black text-white keep-white tracking-tight mb-2">Emergency SOS triggering</h2>
+                            <p className="text-white/40 keep-white text-xs font-bold uppercase tracking-widest max-w-[240px]">Alerting nearest captains, vendors and trusted contacts in {sosCountdown}s</p>
 
                             <motion.button
                                 whileTap={{ scale: 0.9 }}
@@ -870,7 +862,9 @@ const Home = () => {
                     }`}
                 >
                     <div className="absolute top-0 right-0 w-12 h-12 bg-blue-500/5 rounded-bl-[30px] -mr-3 -mt-3 group-hover:scale-150 transition-all" />
-                    <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-white/70 relative z-10">
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center relative z-10 ${
+                        isDarkMode ? 'bg-white/5 text-white/70' : 'bg-blue-500/10 text-blue-600'
+                    }`}>
                         <Wallet size={16} strokeWidth={2.5} />
                     </div>
                     <div className="relative z-10">
@@ -944,7 +938,9 @@ const Home = () => {
                                                     isDarkMode ? 'bg-white/[0.02] border-white/5' : 'bg-black/[0.02] border-black/5'
                                                 }`}>
                                                     {/* Badge */}
-                                                    <div className="absolute top-3 left-3 px-2 py-0.5 bg-black text-[#F59E0B] rounded-full text-[7px] font-black uppercase tracking-widest z-20">
+                                                    <div className={`absolute top-3 left-3 px-2 py-0.5 rounded-full text-[7px] font-black uppercase tracking-widest z-20 ${
+                                                        isDarkMode ? 'bg-black text-[#F59E0B]' : 'bg-white shadow-sm text-[#F59E0B]'
+                                                    }`}>
                                                         {item.badge}
                                                     </div>
 
@@ -1093,11 +1089,13 @@ const Home = () => {
                         </motion.div>
 
                         {/* Minimalist Progress Indicators */}
-                        <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1 z-20">
+                        <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-20">
                             {sliderCards.map((_, i) => (
                                 <div 
                                     key={i} 
-                                    className={`h-0.5 rounded-full transition-all duration-300 ${i === activePromo ? 'w-4 bg-[#F59E0B]' : 'w-1 bg-white/20'}`} 
+                                    className={`h-1.5 rounded-full transition-all duration-300 !min-h-0 !min-w-0 ${
+                                        i === activePromo ? 'w-5 bg-[#F59E0B]' : (isDarkMode ? 'w-1.5 bg-white/40' : 'w-1.5 bg-black/20')
+                                    }`} 
                                 />
                             ))}
                         </div>
@@ -1167,7 +1165,7 @@ const Home = () => {
 
     return (
         <MobileLayout hideNav={false}>
-            <div className={`flex flex-col min-h-screen font-sans transition-colors duration-300 ${isDarkMode ? 'bg-[#0A0F0D]' : 'bg-[#FAF6EB]'}`}>
+            <div className={`flex flex-col min-h-screen font-sans transition-colors duration-300 bg-transparent`}>
                 <style dangerouslySetInnerHTML={{
                     __html: `
                     .shadow-card { box-shadow: 0 15px 40px -15px rgba(0,0,0,0.5); }

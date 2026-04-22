@@ -606,19 +606,19 @@ const ModelDetail = () => {
                                             <div className="grid grid-cols-1 gap-4">
                                                 <div className="relative group">
                                                     <User className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand transition-colors" size={18} />
-                                                    <input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="YOUR FULL NAME" className="w-full h-16 bg-white/[0.02] border border-transparent rounded-[1.25rem] pl-14 pr-6 text-[11px] font-black uppercase tracking-widest focus:bg-white/5 focus:border-brand/30 transition-all outline-none" />
+                                                    <input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="YOUR FULL NAME" className="w-full h-16 bg-white/[0.02] border border-transparent rounded-[1.25rem] pl-[3.5rem] pr-6 text-[11px] font-black uppercase tracking-widest focus:bg-white/5 focus:border-brand/30 transition-all outline-none" />
                                                 </div>
                                                 <div className="relative group">
                                                     <Building className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand transition-colors" size={18} />
-                                                    <input required value={form.org} onChange={e => setForm({ ...form, org: e.target.value })} placeholder={data.placeholder} className="w-full h-16 bg-white/[0.02] border border-transparent rounded-[1.25rem] pl-14 pr-6 text-[11px] font-black uppercase tracking-widest focus:bg-white/5 focus:border-brand/30 transition-all outline-none" />
+                                                    <input required value={form.org} onChange={e => setForm({ ...form, org: e.target.value })} placeholder={data.placeholder} className="w-full h-16 bg-white/[0.02] border border-transparent rounded-[1.25rem] pl-[3.5rem] pr-6 text-[11px] font-black uppercase tracking-widest focus:bg-white/5 focus:border-brand/30 transition-all outline-none" />
                                                 </div>
                                                 <div className="relative group">
                                                     <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand transition-colors" size={18} />
-                                                    <input required value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="PRIMARY CONTACT" className="w-full h-16 bg-white/[0.02] border border-transparent rounded-[1.25rem] pl-14 pr-6 text-[11px] font-black uppercase tracking-widest focus:bg-white/5 focus:border-brand/30 transition-all outline-none" />
+                                                    <input required value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="PRIMARY CONTACT" className="w-full h-16 bg-white/[0.02] border border-transparent rounded-[1.25rem] pl-[3.5rem] pr-6 text-[11px] font-black uppercase tracking-widest focus:bg-white/5 focus:border-brand/30 transition-all outline-none" />
                                                 </div>
                                                 <div className="relative group">
                                                     <MessageSquare className="absolute left-5 top-6 text-gray-400 group-focus-within:text-brand transition-colors" size={18} />
-                                                    <textarea value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} placeholder="OPTIONAL MESSAGE / REQUIREMENTS" className="w-full h-28 bg-white/[0.02] border border-transparent rounded-[1.25rem] pl-14 pr-6 pt-6 text-[11px] font-black uppercase tracking-widest focus:bg-white/5 focus:border-brand/30 transition-all outline-none resize-none" />
+                                                    <textarea value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} placeholder="OPTIONAL MESSAGE / REQUIREMENTS" className="w-full h-28 bg-white/[0.02] border border-transparent rounded-[1.25rem] pl-[3.5rem] pr-6 pt-6 text-[11px] font-black uppercase tracking-widest focus:bg-white/5 focus:border-brand/30 transition-all outline-none resize-none" />
                                                 </div>
                                             </div>
 

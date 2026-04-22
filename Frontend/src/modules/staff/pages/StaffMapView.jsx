@@ -213,7 +213,7 @@ const StaffMapView = () => {
                             placeholder="Find Mission or Node..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full h-14 bg-transparent pl-14 pr-6 text-xs font-black uppercase tracking-widest placeholder:text-gray-400 outline-none"
+                            className="w-full h-14 bg-transparent pl-[3.5rem] pr-6 text-xs font-black uppercase tracking-widest placeholder:text-gray-400 outline-none"
                         />
                     </div>
 

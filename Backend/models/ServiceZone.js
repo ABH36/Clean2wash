@@ -237,7 +237,10 @@ serviceZoneSchema.methods.toGeoJSON = function() {
  * Find zone containing a specific point
  */
 serviceZoneSchema.statics.findZoneByPoint = async function(longitude, latitude) {
-    return this.findOne({
+    console.log('🔍 ServiceZone.findZoneByPoint called:');
+    console.log('   📍 Searching for point:', { longitude, latitude });
+    
+    const query = {
         status: 'active',
         geometry: {
             $geoIntersects: {
@@ -247,7 +250,14 @@ serviceZoneSchema.statics.findZoneByPoint = async function(longitude, latitude) 
                 }
             }
         }
-    });
+    };
+    
+    console.log('   🔧 MongoDB Query:', JSON.stringify(query, null, 2));
+    
+    const zone = await this.findOne(query);
+    console.log('   🎯 Query Result:', zone ? `Found: ${zone.displayName} (${zone.code})` : 'No zone found');
+    
+    return zone;
 };
 
 /**
@@ -281,9 +291,15 @@ serviceZoneSchema.statics.findNearbyZones = async function(longitude, latitude, 
  * Check service availability at location
  */
 serviceZoneSchema.statics.checkServiceAvailability = async function(longitude, latitude, serviceType) {
+    console.log('🔍 ServiceZone.checkServiceAvailability called:');
+    console.log('   📍 Coordinates:', { longitude, latitude });
+    console.log('   🔧 Service Type:', serviceType);
+    
     const zone = await this.findZoneByPoint(longitude, latitude);
+    console.log('   🎯 Found Zone:', zone ? `${zone.displayName} (${zone.code})` : 'None');
     
     if (!zone) {
+        console.log('   ❌ No zone found for coordinates');
         return {
             available: false,
             reason: 'Service not available in this area',
@@ -291,7 +307,9 @@ serviceZoneSchema.statics.checkServiceAvailability = async function(longitude, l
         };
     }
     
+    console.log('   🔧 Zone Status:', zone.status);
     if (!zone.isOperational()) {
+        console.log('   ❌ Zone not operational');
         return {
             available: false,
             reason: 'Service is currently not operational in this zone',
@@ -299,7 +317,9 @@ serviceZoneSchema.statics.checkServiceAvailability = async function(longitude, l
         };
     }
     
+    console.log('   🔧 Checking service availability for:', serviceType);
     if (!zone.isServiceAvailable(serviceType)) {
+        console.log('   ❌ Service not available in zone');
         return {
             available: false,
             reason: `${serviceType} service is not available in this zone`,
@@ -307,6 +327,7 @@ serviceZoneSchema.statics.checkServiceAvailability = async function(longitude, l
         };
     }
     
+    console.log('   ✅ Service available in zone');
     return {
         available: true,
         zone: zone.toObject()

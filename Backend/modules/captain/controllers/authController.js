@@ -61,21 +61,27 @@ exports.register = async (req, res) => {
 
         // 2a) Upload documents if provided
         try {
-            if (drivingLicense && drivingLicense.startsWith('data:')) {
+            if (drivingLicense && String(drivingLicense).startsWith('data:')) {
+                console.log('📤 Uploading Driving License to Cloudinary...');
                 const dlRes = await cloudinary.uploadImage(drivingLicense, 'clean2wash/captains/documents');
                 captainData.profile.drivingLicense = dlRes.secure_url;
+                console.log('✅ DL Uploaded:', dlRes.secure_url);
             }
-            if (aadharCard && aadharCard.startsWith('data:')) {
+            if (aadharCard && String(aadharCard).startsWith('data:')) {
+                console.log('📤 Uploading Aadhar Card to Cloudinary...');
                 const aadharRes = await cloudinary.uploadImage(aadharCard, 'clean2wash/captains/documents');
                 captainData.profile.aadharCard = aadharRes.secure_url;
+                console.log('✅ Aadhar Uploaded:', aadharRes.secure_url);
             }
-            if (photo && photo.startsWith('data:')) {
+            if (photo && String(photo).startsWith('data:')) {
+                console.log('📤 Uploading Photo to Cloudinary...');
                 const photoRes = await cloudinary.uploadImage(photo, 'clean2wash/captains/photos');
                 captainData.profile.photo = photoRes.secure_url;
+                console.log('✅ Photo Uploaded:', photoRes.secure_url);
             }
         } catch (uploadError) {
-            console.error('Document upload failed:', uploadError);
-            // Non-blocking for now, or you can fail the request
+            console.error('❌ Document upload failed in register:', uploadError);
+            // Non-blocking for now, but we've logged the error
         }
 
         const newCaptain = await Captain.create(captainData);
@@ -193,20 +199,23 @@ exports.verifyOTP = async (req, res) => {
             // Handle file uploads if present in userData
             const cloudinary = require('../../../utils/cloudinary');
             try {
-                if (userData.drivingLicense && userData.drivingLicense.startsWith('data:')) {
+                if (userData.drivingLicense && String(userData.drivingLicense).startsWith('data:')) {
+                    console.log('📤 Uploading DL during verification...');
                     const dlRes = await cloudinary.uploadImage(userData.drivingLicense, 'clean2wash/captains/documents');
                     captain.profile.drivingLicense = dlRes.secure_url;
                 }
-                if (userData.aadharCard && userData.aadharCard.startsWith('data:')) {
+                if (userData.aadharCard && String(userData.aadharCard).startsWith('data:')) {
+                    console.log('📤 Uploading Aadhar during verification...');
                     const aadharRes = await cloudinary.uploadImage(userData.aadharCard, 'clean2wash/captains/documents');
                     captain.profile.aadharCard = aadharRes.secure_url;
                 }
-                if (userData.photo && userData.photo.startsWith('data:')) {
+                if (userData.photo && String(userData.photo).startsWith('data:')) {
+                    console.log('📤 Uploading Photo during verification...');
                     const photoRes = await cloudinary.uploadImage(userData.photo, 'clean2wash/captains/photos');
                     captain.profile.photo = photoRes.secure_url;
                 }
             } catch (uploadError) {
-                console.error('Document upload failed during verifyOTP:', uploadError);
+                console.error('❌ Document upload failed during verifyOTP:', uploadError);
                 // We'll still allow verification to succeed but documents might be missing
             }
         }

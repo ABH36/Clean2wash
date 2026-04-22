@@ -172,6 +172,19 @@ const bookingSchema = new mongoose.Schema({
             area: String // e.g. "Visitor Parking", "Resident Level 1"
         }
     },
+    
+    // Service Zone Information
+    zone: {
+        id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'ServiceZone',
+            index: true
+        },
+        name: String,
+        code: String,
+        displayName: String
+    },
+    
     status: {
         type: String,
         enum: [

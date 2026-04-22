@@ -20,23 +20,40 @@ import SOSButton from '../../../components/SOSButton';
 const svgToDataUrl = (svg) => `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 
 const createMarkerIcon = (accent) => svgToDataUrl(`
-<svg width="64" height="78" viewBox="0 0 64 78" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <ellipse cx="32" cy="69" rx="15" ry="5" fill="rgba(15,23,42,0.1)"/>
-  <path d="M32 4C20.9 4 12 12.9 12 24C12 39 32 58 32 58C32 58 52 39 52 24C52 12.9 43.1 4 32 4Z" fill="#111827" stroke="${accent}" stroke-width="2.5"/>
-  <circle cx="32" cy="24" r="10" fill="white" fill-opacity="0.9"/>
-  <circle cx="32" cy="24" r="5" fill="${accent}"/>
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow-d" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2" />
+      <feOffset dx="0" dy="2" result="offsetblur" />
+      <feComponentTransfer><feFuncA type="linear" slope="0.3"/></feComponentTransfer>
+      <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
+    </filter>
+  </defs>
+  <circle cx="32" cy="32" r="28" fill="white" filter="url(#shadow-d)" />
+  <circle cx="32" cy="32" r="24" fill="${accent}" />
+  <circle cx="32" cy="32" r="14" fill="none" stroke="white" stroke-width="3" />
+  <path d="M32 18v28M18 32h28M22 22l20 20M22 42l20-20" stroke="white" stroke-width="3" stroke-linecap="round" />
+  <circle cx="32" cy="32" r="5" fill="white" />
 </svg>
 `);
 
 const createConsumerMarkerIcon = () => svgToDataUrl(`
-<svg width="68" height="82" viewBox="0 0 68 82" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <ellipse cx="34" cy="73" rx="16" ry="5" fill="rgba(15,23,42,0.12)"/>
-  <path d="M34 5C22.4 5 13 14.4 13 26C13 41.8 34 62 34 62C34 62 55 41.8 55 26C55 14.4 45.6 5 34 5Z" fill="white" stroke="#FACD15" stroke-width="2.2"/>
-  <circle cx="34" cy="24" r="11.5" fill="#FEF9C3"/>
-  <rect x="24.5" y="23.2" width="19" height="5.4" rx="2.7" fill="#111827"/>
-  <rect x="28" y="18.6" width="12" height="4.8" rx="2.4" fill="#FACD15"/>
-  <circle cx="29.5" cy="30.7" r="2.7" fill="#111827"/>
-  <circle cx="38.5" cy="30.7" r="2.7" fill="#111827"/>
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow-c" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2" />
+      <feOffset dx="0" dy="2" result="offsetblur" />
+      <feComponentTransfer><feFuncA type="linear" slope="0.3"/></feComponentTransfer>
+      <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
+    </filter>
+  </defs>
+  <circle cx="32" cy="32" r="28" fill="white" filter="url(#shadow-c)" />
+  <circle cx="32" cy="32" r="24" fill="#FACD15" />
+  <path d="M46 42H18v-4.5c0-1.8 1.4-3.2 3.2-3.2h21.6c1.8 0 3.2 1.4 3.2 3.2V42z" fill="#111827" />
+  <rect x="21" y="42" width="7" height="3" rx="1" fill="#111827" />
+  <rect x="36" y="42" width="7" height="3" rx="1" fill="#111827" />
+  <circle cx="32" cy="24" r="7" fill="#111827" />
+  <path d="M40 33.5c0-2-3.6-3.5-8-3.5s-8 1.5-8 3.5" stroke="#111827" stroke-width="2.5" stroke-linecap="round" />
 </svg>
 `);
 
@@ -356,12 +373,18 @@ const DriverDashboard = () => {
                             travelMode: window.google.maps.TravelMode.DRIVING
                         }, (result, status) => {
                             if (status === 'OK' && result.routes[0]) {
-                                setRoutePath(
-                                    result.routes[0].overview_path.map((point) => ({
-                                        lat: point.lat(),
-                                        lng: point.lng()
-                                    }))
-                                );
+                                const path = result.routes[0].overview_path.map((point) => ({
+                                    lat: point.lat(),
+                                    lng: point.lng()
+                                }));
+                                
+                                setRoutePath(path);
+
+                                // 🚀 NEW: Sync Route Path to Consumer
+                                socketService.emit('update_route_path', {
+                                    bookingId: activeJob._id,
+                                    path: path
+                                });
                             }
                         });
                     }
@@ -402,7 +425,7 @@ const DriverDashboard = () => {
     }, [smoothedDriver, smoothedConsumer]);
 
     const handleToggle = async () => {
-        if (driver?.status !== DRIVER_ACTIVE_STATUS) return toast.error('VERIFICATION REQUIRED');
+        if (driver?.status?.toLowerCase() !== DRIVER_ACTIVE_STATUS) return toast.error('VERIFICATION REQUIRED');
         try {
             const res = await spareDriverAPI.toggleOnline(!isOnline);
             setIsOnline(res.data.isOnline);
@@ -715,6 +738,38 @@ const DriverDashboard = () => {
                 /* ── Standard Dashboard Interface ── */
                 <div className="px-6 py-6 space-y-6 pb-24">
 
+                {/* ── Verification Rejected Banner ── */}
+                {driver && (driver.status === 'REJECTED' || driver.verificationStatus === 'REJECTED') && driver.rejectionReason && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="relative overflow-hidden rounded-2xl border border-red-500/30 bg-red-500/5 p-4 shadow-lg shadow-red-500/10"
+                    >
+                        <div className="flex items-start gap-3 mb-3">
+                            <div className="w-12 h-12 rounded-xl bg-red-500 flex items-center justify-center shadow-lg shadow-red-500/20 flex-shrink-0">
+                                <AlertCircle size={20} className="text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[9px] font-black text-red-500 uppercase tracking-widest leading-none mb-1">Verification Failed</p>
+                                <h3 className="text-sm font-black text-white leading-tight mb-2">Your application has been rejected</h3>
+                                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                                    <p className="text-[8px] font-black text-red-400 uppercase tracking-widest mb-1">Rejection Reason:</p>
+                                    <p className="text-[11px] font-semibold text-white leading-relaxed">
+                                        {driver.rejectionReason}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={() => navigate('/spare-driver/inquiry')}
+                            className="w-full h-11 bg-red-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 active:scale-[0.98] transition-all"
+                        >
+                            <MessageSquareText size={14} />
+                            Contact Support
+                        </button>
+                    </motion.div>
+                )}
+
                 {/* ── Security Alerts (Fraud Detection) ── */}
                 {driver && driver.fraudAlerts && driver.fraudAlerts.length > 0 && (
                     <motion.div
@@ -764,7 +819,7 @@ const DriverDashboard = () => {
                 )}
 
                 {/* ── Kit Payment Banner (persistent nudge after approval) ── */}
-                {driver && ['active', 'ACTIVE', 'verified_pending_kit'].includes(driver.status) && driver.kitStatus === 'NOT_PURCHASED' && (
+                {driver && ['active', 'verified_pending_kit'].includes(driver.status?.toLowerCase()) && !['COMPLETED', 'PENDING'].includes(driver.kitStatus) && (
                     <motion.div
                         initial={{ opacity: 0, y: -12 }}
                         animate={{ opacity: 1, y: 0 }}

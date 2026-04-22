@@ -19,6 +19,10 @@ class SpareDriverApiClient {
         this.setToken(null);
     }
 
+    async get(endpoint, options = {}) {
+        return this.request(endpoint, { ...options, method: 'GET' });
+    }
+
     async request(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
         const isFormData = options.body instanceof FormData;
@@ -56,6 +60,16 @@ class SpareDriverApiClient {
         const data = await this.request('/register', {
             method: 'POST',
             body: JSON.stringify(driverData),
+        });
+        const token = data.token || data.data?.token;
+        if (token) this.setToken(token);
+        return data;
+    }
+
+    async registerComplete(formData) {
+        const data = await this.request('/register-complete', {
+            method: 'POST',
+            body: formData,
         });
         const token = data.token || data.data?.token;
         if (token) this.setToken(token);
@@ -235,6 +249,17 @@ class SpareDriverApiClient {
     async clearNotifications() {
         return this.request('/notifications/clear', {
             method: 'DELETE'
+        });
+    }
+
+    async getDutyStats() {
+        return this.request('/duty-stats');
+    }
+
+    async updateAvailability(availabilitySlots) {
+        return this.request('/availability', {
+            method: 'PATCH',
+            body: JSON.stringify({ availabilitySlots })
         });
     }
 

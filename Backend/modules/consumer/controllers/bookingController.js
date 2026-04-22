@@ -6,8 +6,9 @@ const Vehicle = require('../../../models/Vehicle');
 const User = require('../../../models/User');
 const Captain = require('../../../models/Captain');
 const SpareDriver = require('../../../models/SpareDriver');
+const ServiceZone = require('../../../models/ServiceZone');
 const { sendNotification, sendVendorNotification, sendSpareDriverNotification } = require('../../../utils/notificationService');
-const socketService = require('../../../socketService');
+const socketService = require('../../../services/enhancedSocketService');
 const catchAsync = require('../../../utils/catchAsync');
 const AppError = require('../../../utils/AppError');
 const PricingEngine = require('../../../utils/pricingHelper');
@@ -705,6 +706,8 @@ exports.createBooking = catchAsync(async (req, res, next) => {
     const session = await mongoose.startSession();
     session.startTransaction();
 
+    let newBooking;
+
     try {
         const bookingId = new mongoose.Types.ObjectId();
         let paymentStatus = 'pending';
@@ -771,11 +774,57 @@ exports.createBooking = catchAsync(async (req, res, next) => {
             await holdChauffeurReserve(req.user.id, bookingId.toString(), chauffeurReserve.reserveAmount, session);
         }
 
+        // ✅ ZONE VALIDATION - Check if service is available in the pickup location
+        const pickupLat = bookingLocation?.address?.coordinates?.lat;
+        const pickupLng = bookingLocation?.address?.coordinates?.lng;
+        
+        console.log('🔍 Zone Validation Debug:');
+        console.log('   📍 Pickup Coordinates:', { lat: pickupLat, lng: pickupLng });
+        console.log('   📦 Booking Location:', JSON.stringify(bookingLocation, null, 2));
+        
+        if (!pickupLat || !pickupLng) {
+            console.log('   ❌ Missing coordinates');
+            throw new AppError('Pickup location coordinates are required for service validation', 400);
+        }
+
+        // Check zone availability for the service type
+        const serviceTypeForZone = sanitizedServiceType === 'sparedriver' ? 'spareDriver' : 
+                                 sanitizedServiceType === 'captain' ? 'carWash' : 'carWash';
+        
+        console.log('   🔧 Service Type Mapping:', { 
+            sanitizedServiceType, 
+            serviceTypeForZone 
+        });
+        
+        const zoneCheck = await ServiceZone.checkServiceAvailability(
+            pickupLng,
+            pickupLat,
+            serviceTypeForZone
+        );
+
+        console.log('   🎯 Zone Check Result:', JSON.stringify(zoneCheck, null, 2));
+
+        if (!zoneCheck.available) {
+            console.log('   ❌ Zone validation failed:', zoneCheck.reason);
+            throw new AppError(zoneCheck.reason || 'Service not available in this area. Please try a different location.', 400);
+        }
+
+        console.log('   ✅ Zone validation passed:', zoneCheck.zone?.displayName);
+
         // Create booking
-        const [newBooking] = await Booking.create([{
+        [newBooking] = await Booking.create([{
             _id: bookingId,
             consumer: req.user.id,
             vehicle: effectiveVehicleId,
+            
+            // ✅ Store zone information in booking
+            zone: {
+                id: zoneCheck.zone._id,
+                name: zoneCheck.zone.name,
+                code: zoneCheck.zone.code,
+                displayName: zoneCheck.zone.displayName
+            },
+            
             service: {
                 id: service.id || 'service_' + Date.now(),
                 name: service.name || service.title,
@@ -842,24 +891,36 @@ exports.createBooking = catchAsync(async (req, res, next) => {
             }, { session });
         }
 
+        // Commit transaction and end session
         await session.commitTransaction();
-        await session.endSession();
+        session.endSession();
 
-        // Broadcasts (Outside transaction)
+    } catch (error) {
+        // Only abort if transaction is still active
+        if (session.inTransaction()) {
+            await session.abortTransaction();
+        }
+        session.endSession();
+        console.error('Booking Transaction Aborted:', error);
+        return next(error);
+    }
+
+    // Broadcasts and notifications (Outside transaction - no session dependency)
+    try {
+        const populatedBooking = await Booking.findById(newBooking._id)
+            .populate('vehicle', 'brand model type plate image')
+            .populate('consumer', 'name phone');
+
+        // 1. Notify Consumer
+        await sendNotification(req.user.id, {
+            title: 'Order Received! 🚀',
+            message: `Your booking for ${service.name || service.title} has been placed successfully.`,
+            type: 'booking',
+            priority: 'medium',
+        });
+
+        // 2. Notify Admin HUD (Real-time & Persistent Log)
         try {
-            const populatedBooking = await Booking.findById(newBooking._id)
-                .populate('vehicle', 'brand model type plate image')
-                .populate('consumer', 'name phone');
-
-            // 1. Notify Consumer
-            await sendNotification(req.user.id, {
-                title: 'Order Received! 🚀',
-                message: `Your booking for ${service.name || service.title} has been placed successfully.`,
-                type: 'booking',
-                priority: 'medium',
-            });
-
-            // 2. Notify Admin HUD (Real-time & Persistent Log)
             const io = socketService.getIO();
             io.to('admin_room').emit('global_status_update', {
                 type: 'new_booking',
@@ -868,173 +929,168 @@ exports.createBooking = catchAsync(async (req, res, next) => {
                 serviceName: service.name || service.title,
                 totalAmount
             });
+        } catch (socketError) {
+            console.error('Socket broadcast failed for new booking:', socketError.message);
+        }
 
-            await sendAdminNotification({
-                title: 'New Booking Received 📦',
-                message: `Order #${populatedBooking?.bookingId || populatedBooking?._id} received from ${req.user.name} for ${service.name || service.title}.`,
-                type: 'booking',
-                priority: 'medium',
-                actionUrl: `/admin/bookings-operations`,
-                metaData: { bookingId: newBooking._id, consumerId: req.user.id }
-            });
+        await sendAdminNotification({
+            title: 'New Booking Received 📦',
+            message: `Order #${populatedBooking?.bookingId || populatedBooking?._id} received from ${req.user.name} for ${service.name || service.title}.`,
+            type: 'booking',
+            priority: 'medium',
+            actionUrl: `/admin/bookings-operations`,
+            metaData: { bookingId: newBooking._id, consumerId: req.user.id }
+        });
 
-            if (sanitizedServiceType === 'captain') {
-                const requestedCapability = getVehicleCapability(vehicle);
-                const broadcastPayload = {
-                    bookingId: newBooking._id,
-                    serviceName: service.name || service.title,
-                    location: bookingLocation,
-                    vehicle: { brand: vehicle.brand, model: vehicle.model, plate: vehicle.plate },
-                    capabilityRequired: requestedCapability || 'car',
-                    pricing: { total: totalAmount },
-                    timestamp: new Date()
-                };
+        if (sanitizedServiceType === 'captain') {
+            const requestedCapability = getVehicleCapability(vehicle);
+            const broadcastPayload = {
+                bookingId: newBooking._id,
+                serviceName: service.name || service.title,
+                location: bookingLocation,
+                vehicle: { brand: vehicle.brand, model: vehicle.model, plate: vehicle.plate },
+                capabilityRequired: requestedCapability || 'car',
+                pricing: { total: totalAmount },
+                timestamp: new Date()
+            };
 
-                if (bookingLocation.address?.coordinates?.lat) {
-                    const nearbyCaptains = await Captain.find({
-                        isOnline: true, isActive: true, isVerified: true,
-                        location: {
-                            $nearSphere: {
-                                $geometry: { type: 'Point', coordinates: [parseFloat(bookingLocation.address.coordinates.lng), parseFloat(bookingLocation.address.coordinates.lat)] },
-                                $maxDistance: 5000 
-                            }
+            if (bookingLocation.address?.coordinates?.lat) {
+                const nearbyCaptains = await Captain.find({
+                    isOnline: true, isActive: true, isVerified: true,
+                    location: {
+                        $nearSphere: {
+                            $geometry: { type: 'Point', coordinates: [parseFloat(bookingLocation.address.coordinates.lng), parseFloat(bookingLocation.address.coordinates.lat)] },
+                            $maxDistance: 5000 
                         }
-                    });
+                    }
+                });
 
-                    const captainsWithTaggedCapability = nearbyCaptains.filter(c => normalizeCapabilityLabel(c.profile?.vehicleType));
-                    const eligibleCaptains = requestedCapability && captainsWithTaggedCapability.length > 0
-                        ? nearbyCaptains.filter(c => captainMatchesCapability(c.profile?.vehicleType, requestedCapability))
-                        : nearbyCaptains;
-                    const eligibleCaptainIds = eligibleCaptains.map((captain) => captain._id);
-                    const blockingMissions = eligibleCaptainIds.length > 0
-                        ? await Booking.find({
-                            'provider.id': { $in: eligibleCaptainIds },
-                            isActive: true,
-                            status: { $in: [...NON_TERMINAL_ASSIGNED_STATUSES, ...NON_TERMINAL_ACTIVE_STATUSES] }
-                        }).select('provider.id status schedule service location').lean()
-                        : [];
-
-                    const blockedCaptainIds = new Set(
-                        blockingMissions
-                            .filter((mission) => isCaptainMissionBlockingInstant(mission))
-                            .map((mission) => String(mission?.provider?.id || ''))
-                            .filter(Boolean)
-                    );
-
-                    const dispatchReadyCaptains = eligibleCaptains.filter(
-                        (captain) => !blockedCaptainIds.has(String(captain._id))
-                    );
-
-                    dispatchReadyCaptains.forEach(c => io.to(c._id.toString()).emit('new_booking_broadcast', broadcastPayload));
-                } else {
-                    const onlineCaptains = await Captain.find({
-                        isOnline: true,
+                const captainsWithTaggedCapability = nearbyCaptains.filter(c => normalizeCapabilityLabel(c.profile?.vehicleType));
+                const eligibleCaptains = requestedCapability && captainsWithTaggedCapability.length > 0
+                    ? nearbyCaptains.filter(c => captainMatchesCapability(c.profile?.vehicleType, requestedCapability))
+                    : nearbyCaptains;
+                const eligibleCaptainIds = eligibleCaptains.map((captain) => captain._id);
+                const blockingMissions = eligibleCaptainIds.length > 0
+                    ? await Booking.find({
+                        'provider.id': { $in: eligibleCaptainIds },
                         isActive: true,
-                        isVerified: true
-                    }).select('_id profile.vehicleType').lean();
+                        status: { $in: [...NON_TERMINAL_ASSIGNED_STATUSES, ...NON_TERMINAL_ACTIVE_STATUSES] }
+                    }).select('provider.id status schedule service location').lean()
+                    : [];
 
-                    const captainsWithTaggedCapability = onlineCaptains.filter(c => normalizeCapabilityLabel(c.profile?.vehicleType));
-                    const eligibleCaptains = requestedCapability && captainsWithTaggedCapability.length > 0
-                        ? onlineCaptains.filter(c => captainMatchesCapability(c.profile?.vehicleType, requestedCapability))
-                        : onlineCaptains;
+                const blockedCaptainIds = new Set(
+                    blockingMissions
+                        .filter((mission) => isCaptainMissionBlockingInstant(mission))
+                        .map((mission) => String(mission?.provider?.id || ''))
+                        .filter(Boolean)
+                );
 
-                    const eligibleCaptainIds = eligibleCaptains.map((captain) => captain._id);
-                    const blockingMissions = eligibleCaptainIds.length > 0
-                        ? await Booking.find({
-                            'provider.id': { $in: eligibleCaptainIds },
-                            isActive: true,
-                            status: { $in: [...NON_TERMINAL_ASSIGNED_STATUSES, ...NON_TERMINAL_ACTIVE_STATUSES] }
-                        }).select('provider.id status schedule service location').lean()
-                        : [];
+                const dispatchReadyCaptains = eligibleCaptains.filter(
+                    (captain) => !blockedCaptainIds.has(String(captain._id))
+                );
 
-                    const blockedCaptainIds = new Set(
-                        blockingMissions
-                            .filter((mission) => isCaptainMissionBlockingInstant(mission))
-                            .map((mission) => String(mission?.provider?.id || ''))
-                            .filter(Boolean)
-                    );
+                dispatchReadyCaptains.forEach(c => io.to(c._id.toString()).emit('new_booking_broadcast', broadcastPayload));
+            } else {
+                const onlineCaptains = await Captain.find({
+                    isOnline: true,
+                    isActive: true,
+                    isVerified: true
+                }).select('_id profile.vehicleType').lean();
 
-                    eligibleCaptains
-                        .filter((captain) => !blockedCaptainIds.has(String(captain._id)))
-                        .forEach((captain) => io.to(String(captain._id)).emit('new_booking_broadcast', broadcastPayload));
-                }
-            } else if (sanitizedServiceType === 'sparedriver') {
-                if (chauffeurDispatchReady) {
-                    await broadcastBookingToDrivers(newBooking, {
-                        serviceName: service.name || service.title || 'Spare Driver service',
-                        vehicle: { brand: vehicle.brand, model: vehicle.model, plate: vehicle.plate },
-                        reason: 'booking_created'
-                    });
-                } else {
-                    await sendNotification(req.user.id, {
-                        title: 'Trip Scheduled',
-                        message: 'Your chauffeur trip is confirmed. Driver matching will begin closer to your booking time.',
-                        type: 'booking',
-                        priority: 'high',
-                        actionUrl: '/spare-driver/history',
-                        actionText: 'View Booking',
-                        metaData: {
-                            bookingId: newBooking._id.toString(),
-                            status: 'pending',
-                            dispatchState: 'scheduled_hold'
-                        }
-                    });
-                }
-            } else if (sanitizedServiceType === 'vendor') {
-                // If a specific hub was assigned, notify that vendor primarily
-                const targetVendorId = bookingLocation?.hubId ? (await mongoose.model('Hub').findById(bookingLocation.hubId))?.vendor : null;
-                
-                if (targetVendorId) {
-                    await sendVendorNotification(targetVendorId, { 
+                const captainsWithTaggedCapability = onlineCaptains.filter(c => normalizeCapabilityLabel(c.profile?.vehicleType));
+                const eligibleCaptains = requestedCapability && captainsWithTaggedCapability.length > 0
+                    ? onlineCaptains.filter(c => captainMatchesCapability(c.profile?.vehicleType, requestedCapability))
+                    : onlineCaptains;
+
+                const eligibleCaptainIds = eligibleCaptains.map((captain) => captain._id);
+                const blockingMissions = eligibleCaptainIds.length > 0
+                    ? await Booking.find({
+                        'provider.id': { $in: eligibleCaptainIds },
+                        isActive: true,
+                        status: { $in: [...NON_TERMINAL_ASSIGNED_STATUSES, ...NON_TERMINAL_ACTIVE_STATUSES] }
+                    }).select('provider.id status schedule service location').lean()
+                    : [];
+
+                const blockedCaptainIds = new Set(
+                    blockingMissions
+                        .filter((mission) => isCaptainMissionBlockingInstant(mission))
+                        .map((mission) => String(mission?.provider?.id || ''))
+                        .filter(Boolean)
+                );
+
+                eligibleCaptains
+                    .filter((captain) => !blockedCaptainIds.has(String(captain._id)))
+                    .forEach((captain) => io.to(String(captain._id)).emit('new_booking_broadcast', broadcastPayload));
+            }
+        } else if (sanitizedServiceType === 'sparedriver') {
+            if (chauffeurDispatchReady) {
+                await broadcastBookingToDrivers(newBooking, {
+                    serviceName: service.name || service.title || 'Spare Driver service',
+                    vehicle: { brand: vehicle.brand, model: vehicle.model, plate: vehicle.plate },
+                    reason: 'booking_created'
+                });
+            } else {
+                await sendNotification(req.user.id, {
+                    title: 'Trip Scheduled',
+                    message: 'Your chauffeur trip is confirmed. Driver matching will begin closer to your booking time.',
+                    type: 'booking',
+                    priority: 'high',
+                    actionUrl: '/spare-driver/history',
+                    actionText: 'View Booking',
+                    metaData: {
+                        bookingId: newBooking._id.toString(),
+                        status: 'pending',
+                        dispatchState: 'scheduled_hold'
+                    }
+                });
+            }
+        } else if (sanitizedServiceType === 'vendor') {
+            // If a specific hub was assigned, notify that vendor primarily
+            const targetVendorId = bookingLocation?.hubId ? (await mongoose.model('Hub').findById(bookingLocation.hubId))?.vendor : null;
+            
+            if (targetVendorId) {
+                await sendVendorNotification(targetVendorId, { 
+                    title: 'New Studio Lead! 💎', 
+                    message: `New booking for ${service.name || 'Studio service'} at your Hub.`, 
+                    type: 'order-assigned', 
+                    metaData: { bookingId: newBooking._id } 
+                });
+                io.to(targetVendorId.toString()).emit('new_studio_booking', { bookingId: newBooking._id });
+            } else {
+                const vendors = await User.find({ role: 'vendor', isActive: true });
+                for (const v of vendors) {
+                    await sendVendorNotification(v._id, { 
                         title: 'New Studio Lead! 💎', 
-                        message: `New booking for ${service.name || 'Studio service'} at your Hub.`, 
+                        message: 'New studio booking available in your hub.', 
                         type: 'order-assigned', 
                         metaData: { bookingId: newBooking._id } 
                     });
-                    io.to(targetVendorId.toString()).emit('new_studio_booking', { bookingId: newBooking._id });
-                } else {
-                    const vendors = await User.find({ role: 'vendor', isActive: true });
-                    for (const v of vendors) {
-                        await sendVendorNotification(v._id, { 
-                            title: 'New Studio Lead! 💎', 
-                            message: 'New studio booking available in your hub.', 
-                            type: 'order-assigned', 
-                            metaData: { bookingId: newBooking._id } 
-                        });
-                    }
-                    io.emit('new_studio_booking', { bookingId: newBooking._id });
                 }
+                io.emit('new_studio_booking', { bookingId: newBooking._id });
             }
-
-            return res.status(201).json({ 
-                status: 'success', 
-                message: 'Booking created successfully', 
-                data: { 
-                    booking: populatedBooking,
-                    securityPin: populatedBooking.securityPin,
-                    dispatchReady: chauffeurDispatchReady
-                } 
-            });
-
-        } catch (sideErr) {
-            console.error('Post-transaction side-effects error:', sideErr);
-            return res.status(201).json({ 
-                status: 'success', 
-                message: 'Booking created, notifications may delay.', 
-                data: { 
-                    bookingId: newBooking._id,
-                    securityPin: newBooking.securityPin,
-                    dispatchReady: chauffeurDispatchReady
-                } 
-            });
         }
 
-    } catch (error) {
-        await session.abortTransaction();
-        console.error('Booking Transaction Aborted:', error);
-        return next(error);
-    } finally {
-        session.endSession();
+        return res.status(201).json({ 
+            status: 'success', 
+            message: 'Booking created successfully', 
+            data: { 
+                booking: populatedBooking,
+                securityPin: populatedBooking.securityPin,
+                dispatchReady: chauffeurDispatchReady
+            } 
+        });
+
+    } catch (sideErr) {
+        console.error('Post-transaction side-effects error:', sideErr);
+        return res.status(201).json({ 
+            status: 'success', 
+            message: 'Booking created, notifications may delay.', 
+            data: { 
+                booking: newBooking,
+                securityPin: newBooking.securityPin,
+                dispatchReady: chauffeurDispatchReady
+            } 
+        });
     }
 });
 
@@ -1243,20 +1299,25 @@ exports.updateBookingPricing = catchAsync(async (req, res, next) => {
     await booking.save();
 
     // Broadcast update to ecosystem (especially finding driver screens)
-    const io = socketService.getIO();
-    if (io) {
-        io.to(booking._id.toString()).emit('booking_status_updated', {
-            bookingId: booking._id,
-            status: booking.status,
-            pricing: booking.pricing
-        });
-        
-        // Notify admin
-        io.to('admin_room').emit('global_status_update', {
-            type: 'pricing_update',
-            bookingId: booking._id,
-            totalAmount: booking.pricing.totalAmount
-        });
+    try {
+        const io = socketService.getIO();
+        if (io) {
+            io.to(booking._id.toString()).emit('booking_status_updated', {
+                bookingId: booking._id,
+                status: booking.status,
+                pricing: booking.pricing
+            });
+            
+            // Notify admin
+            io.to('admin_room').emit('global_status_update', {
+                type: 'pricing_update',
+                bookingId: booking._id,
+                totalAmount: booking.pricing.totalAmount
+            });
+        }
+    } catch (socketError) {
+        console.error('Socket broadcast failed for pricing update:', socketError.message);
+        // Continue without socket - don't break the API call
     }
 
     res.status(200).json({

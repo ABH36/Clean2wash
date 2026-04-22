@@ -343,7 +343,7 @@ const VendorSettings = () => {
                                             type={field.type}
                                             value={form[field.id]}
                                             onChange={e => setForm({ ...form, [field.id]: e.target.value })}
-                                            className={`w-full h-16 bg-background/60 backdrop-blur-sm border border-white/5/10 rounded-2xl pl-14 pr-6 text-sm font-black text-content outline-none focus:border-brand/50 focus:bg-background transition-all shadow-inner ${field.font || ''} uppercase tracking-tight`}
+                                            className={`w-full h-16 bg-background/60 backdrop-blur-sm border border-white/5/10 rounded-2xl pl-[3.5rem] pr-6 text-sm font-black text-content outline-none focus:border-brand/50 focus:bg-background transition-all shadow-inner ${field.font || ''} uppercase tracking-tight`}
                                         />
                                     </div>
                                 </div>

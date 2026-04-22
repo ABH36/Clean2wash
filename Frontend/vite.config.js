@@ -15,7 +15,7 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:5001',
+        target: 'http://127.0.0.1:5000',
         changeOrigin: true,
         secure: false,
         timeout: 120000,
@@ -29,7 +29,7 @@ export default defineConfig({
         },
       },
       '/socket.io': {
-        target: 'http://127.0.0.1:5001',
+        target: 'http://127.0.0.1:5002',
         changeOrigin: true,
         secure: false,
         ws: true,

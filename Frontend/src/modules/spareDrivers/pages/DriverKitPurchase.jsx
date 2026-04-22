@@ -133,9 +133,10 @@ const DriverKitPurchase = () => {
         );
     }
 
-    const isUnderReview = driver?.status === 'kit_payment_pending';
-    const isActive = driver?.status === 'active';
-    const isPaymentRequired = driver?.status === 'verified_pending_kit';
+    const isUnderReview = driver?.status?.toLowerCase() === 'kit_payment_pending' || driver?.status?.toLowerCase() === 'kit_payment_under_review';
+    const isActive = driver?.status?.toLowerCase() === 'active';
+    const isPaymentRequired = driver?.status?.toLowerCase() === 'verified_pending_kit';
+    const isProfilePending = driver?.status?.toLowerCase() === 'pending';
 
     return (
         <DriverLayout title="Kit Purchasing">
@@ -181,6 +182,13 @@ const DriverKitPurchase = () => {
                     <div className="rounded-[1.3rem] border border-yellow-200 bg-yellow-50 p-4">
                         <p className="text-[10px] font-black text-yellow-800 uppercase tracking-widest">Payment Under Review</p>
                         <p className="text-[10px] font-black text-yellow-700 uppercase tracking-wider mt-2">Admin verification in progress. Dashboard will unlock after approval.</p>
+                    </div>
+                )}
+
+                {isProfilePending && (
+                    <div className="rounded-[1.3rem] border border-blue-200 bg-blue-50 p-4">
+                        <p className="text-[10px] font-black text-blue-800 uppercase tracking-widest">Profile Under Review</p>
+                        <p className="text-[10px] font-black text-blue-700 uppercase tracking-wider mt-2">Admin is verifying your documents. You can purchase the kit once verified.</p>
                     </div>
                 )}
 

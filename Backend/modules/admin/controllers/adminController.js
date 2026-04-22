@@ -743,7 +743,7 @@ exports.getUsers = async (req, res) => {
 exports.getSpareDrivers = async (req, res) => {
     try {
         const SpareDriver = require('../../../models/SpareDriver');
-        const drivers = await SpareDriver.find({ isActive: true })
+        const drivers = await SpareDriver.find({})
             .select('-password -tokens')
             .sort({ createdAt: -1 });
 

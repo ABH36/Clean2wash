@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const SpareDriver = require('../../../models/SpareDriver');
 const Booking = require('../../../models/Booking');
+const ServiceZone = require('../../../models/ServiceZone');
 const User = require('../../../models/User');
 const Setting = require('../../../models/Setting');
 const WalletTransaction = require('../../../models/WalletTransaction');
@@ -52,7 +53,7 @@ const getSocketIO = () => {
 };
 
 const getActorRole = (req) => req.auth?.role || req.user?.role || 'sparedriver';
-const isDriverOperational = (driver) => driver?.status === 'active';
+const isDriverOperational = (driver) => driver?.status?.toLowerCase() === 'active';
 const hasValidLatLng = (coordinates = {}) => (
     Number.isFinite(Number(coordinates?.lat))
     && Number.isFinite(Number(coordinates?.lng))
@@ -595,6 +596,267 @@ exports.register = async (req, res) => {
     }
 };
 
+// ── Complete Registration (Single API Call with All Data + Documents) ──
+exports.registerComplete = async (req, res) => {
+    try {
+        const {
+            name, email, phone, password,
+            city, availability,
+            aadhaarNumber, panNumber,
+            licenseNumber, licenseExpiry, experienceYears,
+            bankDetails
+        } = req.body;
+        
+        const files = req.files;
+        
+        console.log('📥 Complete registration request received');
+        console.log('📋 Fields:', { name, phone, city, availability, licenseNumber });
+        console.log('📎 Files:', files ? Object.keys(files) : 'none');
+        
+        // Debug Cloudinary config
+        console.log('☁️ Cloudinary config check:');
+        console.log('- Cloud Name:', process.env.CLOUDINARY_CLOUD_NAME ? '✅ Set' : '❌ Missing');
+        console.log('- API Key:', process.env.CLOUDINARY_API_KEY ? '✅ Set' : '❌ Missing');
+        console.log('- API Secret:', process.env.CLOUDINARY_API_SECRET ? '✅ Set' : '❌ Missing');
+        
+        // Normalize phone number FIRST (remove any non-digits)
+        const normalizedPhone = String(phone || '').replace(/\D/g, '');
+        console.log('📱 Phone Normalization:', { original: phone, normalized: normalizedPhone });
+        console.log('📂 Total files received:', req.files ? Object.keys(req.files).length : 0);
+
+        
+        // Validate ALL required fields
+        if (!name || !normalizedPhone || !password) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'Name, phone, and password are required'
+            });
+        }
+        
+        // Validate phone format
+        if (!/^[6-9]\d{9}$/.test(normalizedPhone)) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'Please provide a valid 10-digit phone number starting with 6-9'
+            });
+        }
+        
+        console.log('📞 Normalized phone:', normalizedPhone);
+        
+        if (!city || !availability) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'City and availability are required'
+            });
+        }
+        
+        if (!licenseNumber || !licenseExpiry) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'Driving license details are required'
+            });
+        }
+        
+        // Validate ALL required documents
+        if (!files?.aadhaarFront || !files?.panCard || 
+            !files?.drivingLicense || !files?.selfie) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'All document photos are required (Aadhaar, PAN, License, Selfie)'
+            });
+        }
+        
+        // Check if phone already exists
+        const existingDriver = await SpareDriver.findOne({ phone: normalizedPhone });
+        if (existingDriver) {
+            return res.status(409).json({
+                status: 'fail',
+                message: 'This phone number is already registered. Please sign in instead.'
+            });
+        }
+        
+        // Upload documents to Cloudinary FIRST
+        const uploadFile = async (fileArray, docType) => {
+            const filePath = fileArray[0].path;
+            console.log(`📤 Uploading ${docType}:`, filePath);
+            
+            try {
+                // Check if file exists
+                const fs = require('fs');
+                if (!fs.existsSync(filePath)) {
+                    throw new Error(`File not found: ${filePath}`);
+                }
+                
+                console.log(`📁 File exists, size: ${fs.statSync(filePath).size} bytes`);
+                
+                const result = await cloudinary.uploadImage(
+                    filePath, 
+                    `clean2wash/sparedrivers/pending/${normalizedPhone}`  // Use normalized phone
+                );
+                console.log(`✅ ${docType} uploaded to Cloudinary:`, result.secure_url);
+                
+                // Clean up temp file
+                try { 
+                    fs.unlinkSync(filePath); 
+                    console.log(`🗑️ Temp file deleted: ${filePath}`);
+                } catch (e) { 
+                    console.warn('Could not delete temp file:', filePath);
+                }
+                
+                return result.secure_url;
+            } catch (uploadError) {
+                console.error(`❌ ${docType} Cloudinary upload failed:`, uploadError.message);
+                console.error('📋 Full error:', uploadError);
+                
+                // Fallback to local storage URL
+                const path = require('path');
+                const fileName = path.basename(filePath);
+                const localUrl = `${req.protocol}://${req.get('host')}/uploads/sparedrivers/${fileName}`;
+                
+                console.warn(`🔄 Using local storage fallback: ${localUrl}`);
+                return localUrl;
+            }
+        };
+        
+        // Upload all documents
+        const aadhaarFrontUrl = await uploadFile(files.aadhaarFront, 'Aadhaar Front');
+        const aadhaarBackUrl = files.aadhaarBack 
+            ? await uploadFile(files.aadhaarBack, 'Aadhaar Back') 
+            : aadhaarFrontUrl;
+        const panCardUrl = await uploadFile(files.panCard, 'PAN Card');
+        const dlUrl = await uploadFile(files.drivingLicense, 'Driving License');
+        const selfieUrl = await uploadFile(files.selfie, 'Selfie');
+        
+        // Optional police verification
+        let policeVerificationUrl = '';
+        if (files.policeVerification) {
+            policeVerificationUrl = await uploadFile(files.policeVerification, 'Police Verification');
+        }
+        
+        // Parse bank details
+        const parsedBankDetails = typeof bankDetails === 'string' 
+            ? JSON.parse(bankDetails) 
+            : bankDetails || {};
+        
+        // Normalize availability to match model enum (Full-time, Part-time)
+        let normalizedAvailability = 'Full-time'; // Default
+        if (availability) {
+            const lowerAvailability = availability.toLowerCase();
+            console.log('🔍 Original availability:', availability);
+            console.log('🔍 Lowercase availability:', lowerAvailability);
+            
+            if (lowerAvailability === 'full-time' || lowerAvailability === 'fulltime') {
+                normalizedAvailability = 'Full-time';
+            } else if (lowerAvailability === 'part-time' || lowerAvailability === 'parttime') {
+                normalizedAvailability = 'Part-time';
+            } else {
+                console.warn('⚠️ Unknown availability value:', availability);
+                normalizedAvailability = 'Full-time'; // Default fallback
+            }
+        }
+        
+        console.log('💾 Creating driver with complete data...');
+        console.log('📋 Original availability:', availability);
+        console.log('📋 Normalized availability:', normalizedAvailability);
+        console.log('📋 Model expects: ["Full-time", "Part-time"]');
+        
+        // Get kit config
+        const kitConfig = await getSpareDriverKitConfig();
+        
+        // Create driver with ALL data
+        const newDriver = await SpareDriver.create({
+            name,
+            email: email || undefined,
+            phone: normalizedPhone,  // Use normalized phone
+            password,
+            profile: {
+                city,
+                availability: normalizedAvailability,
+                experience: experienceYears || 0,
+            },
+            bankDetails: {
+                accountName: parsedBankDetails.accountName || '',
+                accountNumber: parsedBankDetails.accountNumber || '',
+                ifscCode: parsedBankDetails.ifscCode || '',
+                bankName: parsedBankDetails.bankName || '',
+                upiId: parsedBankDetails.upiId || ''
+            },
+            documents: {
+                aadhaarCard: {
+                    url: aadhaarFrontUrl,
+                    frontUrl: aadhaarFrontUrl,
+                    backUrl: aadhaarBackUrl,
+                },
+                panCard: { url: panCardUrl },
+                drivingLicense: { url: dlUrl },
+                selfie: { url: selfieUrl },
+                policeVerification: { url: policeVerificationUrl }
+            },
+            // Set police verification status based on document upload
+            policeVerification: policeVerificationUrl ? 'VERIFIED' : 'PENDING',
+            status: 'PENDING',  // Ready for admin verification
+            verificationStatus: 'PENDING',
+            kit: {
+                required: true,
+                price: Number(kitConfig.kitPrice || 1499),
+                paymentStatus: 'pending'
+            }
+        });
+
+        
+        console.log('✅ Driver created successfully:', newDriver._id);
+        console.log('📋 Final driver data check:');
+        console.log('- Phone:', newDriver.phone);
+        console.log('- Availability:', newDriver.profile?.availability);
+        console.log('- City:', newDriver.profile?.city);
+        
+        // Send notifications
+        await Promise.all([
+            sendSpareDriverNotification(newDriver._id, {
+                title: 'Registration Submitted',
+                message: 'Your application is under review. We will notify you within 24-48 hours.',
+                type: 'verification',
+                priority: 'high',
+                actionUrl: '/spare-driver/dashboard',
+                actionText: 'View Status'
+            }),
+            sendAdminNotification({
+                title: 'New Driver Application',
+                message: `${name} has submitted a complete application for verification.`,
+                type: 'verification',
+                priority: 'high',
+                actionUrl: '/admin/drivers/verification',
+                actionText: 'Review Application',
+                metaData: { 
+                    driverId: newDriver._id,
+                    phone: normalizedPhone,  // Use normalized phone
+                    city
+                }
+            })
+        ]);
+        
+        const token = signToken(newDriver._id);
+        
+        res.status(201).json({
+            status: 'success',
+            message: 'Registration complete. Your application is under review.',
+            token,
+            data: {
+                driver: {
+                    ...newDriver.toObject(),
+                    password: undefined
+                }
+            }
+        });
+    } catch (err) {
+        console.error('❌ Complete registration error:', err);
+        res.status(400).json({
+            status: 'fail',
+            message: err.message || 'Registration failed. Please try again.'
+        });
+    }
+};
+
 exports.sendSignupOTP = async (req, res) => {
     try {
         const { phone, userData = {} } = req.body || {};
@@ -781,22 +1043,35 @@ exports.uploadDocuments = async (req, res) => {
 
         const files = req.files; // { aadhaarFront, aadhaarBack, panCard, drivingLicense, selfie }
 
-        if (!files?.aadhaarFront || !files?.aadhaarBack || !files?.panCard || !files?.drivingLicense || !files?.selfie) {
+        // Check required documents - allow aadhaarBack to fallback to aadhaarFront
+        if (!files?.aadhaarFront || !files?.panCard || !files?.drivingLicense || !files?.selfie) {
             return res.status(400).json({
                 status: 'fail',
-                message: 'All required documents must be uploaded: aadhaarFront, aadhaarBack, panCard, drivingLicense, selfie'
+                message: 'Required documents missing: aadhaarFront, panCard, drivingLicense, selfie'
             });
+        }
+
+        // Use aadhaarFront for both sides if aadhaarBack is missing
+        if (!files.aadhaarBack && files.aadhaarFront) {
+            files.aadhaarBack = files.aadhaarFront;
+            console.log('📋 Using aadhaarFront for both sides (aadhaarBack missing)');
         }
 
         // Upload to Cloudinary
         const uploadFile = async (fileArray) => {
             const filePath = fileArray[0].path;
+            console.log('🔍 Attempting Cloudinary upload for:', filePath);
+            console.log('📁 File exists:', require('fs').existsSync(filePath));
+            
             try {
                 const result = await cloudinary.uploadImage(filePath, `clean2wash/sparedrivers/${driverId}`);
+                console.log('✅ Cloudinary upload SUCCESS:', result.secure_url);
                 try { fs.unlinkSync(filePath); } catch (e) { }
                 return result.secure_url;
             } catch (uploadError) {
-                console.warn('Falling back to local spare driver document storage:', uploadError.message);
+                console.error('❌ Cloudinary upload FAILED:', uploadError.message);
+                console.error('📋 Full error:', uploadError);
+                console.warn('🔄 Falling back to local spare driver document storage');
                 return `${req.protocol}://${req.get('host')}/uploads/sparedrivers/${path.basename(filePath)}`;
             }
         };
@@ -874,6 +1149,71 @@ exports.getProfile = async (req, res) => {
         res.status(200).json({ status: 'success', data: { driver } });
     } catch (err) {
         res.status(404).json({ status: 'fail', message: 'Driver not found' });
+    }
+};
+
+exports.getDutyStats = async (req, res) => {
+    try {
+        const driverId = getDriverIdFromRequest(req);
+        const driver = await SpareDriver.findById(driverId).select('name driverId dutyHours onlineStatus breaks fatigueAlerts availabilitySlots');
+        
+        if (!driver) {
+            return res.status(404).json({ status: 'fail', message: 'Driver not found' });
+        }
+
+        // Calculate summary using model methods if available, otherwise manual
+        const summary = typeof driver.getDutySummary === 'function' ? driver.getDutySummary() : {
+            todayMinutes: driver.dutyHours?.today?.totalMinutes || 0,
+            weeklyMinutes: driver.dutyHours?.weekly?.totalMinutes || 0,
+            isOverworked: driver.dutyHours?.status?.isOverworked || false,
+            needsBreak: driver.dutyHours?.status?.needsBreak || false,
+            currentSessionMinutes: driver.onlineStatus?.isOnline && driver.onlineStatus?.sessionStart 
+                ? Math.floor((Date.now() - driver.onlineStatus.sessionStart) / 60000)
+                : 0
+        };
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                summary,
+                dutyHours: driver.dutyHours,
+                onlineStatus: driver.onlineStatus,
+                availabilitySlots: driver.availabilitySlots || [],
+                fatigueAlerts: driver.fatigueAlerts?.filter(a => !a.acknowledged) || []
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ status: 'error', message: err.message });
+    }
+};
+
+exports.updateAvailability = async (req, res) => {
+    try {
+        const driverId = getDriverIdFromRequest(req);
+        const { availabilitySlots } = req.body;
+
+        if (!Array.isArray(availabilitySlots)) {
+            return res.status(400).json({ status: 'fail', message: 'Availability slots must be an array' });
+        }
+
+        const driver = await SpareDriver.findByIdAndUpdate(
+            driverId,
+            { availabilitySlots },
+            { new: true, runValidators: true }
+        );
+
+        if (!driver) {
+            return res.status(404).json({ status: 'fail', message: 'Driver not found' });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                availabilitySlots: driver.availabilitySlots
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ status: 'error', message: err.message });
     }
 };
 
@@ -1016,7 +1356,7 @@ exports.verifyKitPayment = async (req, res) => {
             razorpayPaymentId: razorpay_payment_id,
             paidAt: new Date()
         };
-        driver.status = 'kit_payment_pending';
+        driver.status = 'kit_payment_pending'; driver.kitStatus = 'PENDING';
         await driver.save();
 
         await Promise.all([
@@ -1092,7 +1432,7 @@ exports.submitKitPaymentProof = async (req, res) => {
             paymentReference: paymentReference || '',
             paidAt: new Date()
         };
-        driver.status = 'kit_payment_pending';
+        driver.status = 'kit_payment_pending'; driver.kitStatus = 'PENDING';
         await driver.save();
 
         await Promise.all([
@@ -1254,6 +1594,7 @@ exports.adminVerifyDriver = async (req, res) => {
             update['kit.required'] = true;
             update['kit.paymentStatus'] = 'verified';
             update['kit.verifiedAt'] = now;
+            update.kitStatus = 'COMPLETED';
             update.onboardingRecovery = {
                 enabled: Number(kitConfig.monthlyDeductionAmount || 0) > 0 && Number(kitConfig.monthlyDeductionMonths || 0) > 0,
                 monthlyDeductionAmount: Number(kitConfig.monthlyDeductionAmount || 0),
@@ -1416,7 +1757,11 @@ exports.acceptBooking = async (req, res) => {
 
     try {
         const driverId = getDriverIdFromRequest(req);
-        const driver = await SpareDriver.findById(driverId).select('status isOnline').session(session);
+        // ✅ ELITE SELECTION: Get all necessary driver details for the consumer
+        const driver = await SpareDriver.findById(driverId)
+            .select('name phone status isOnline selfie reliabilityScore driverId')
+            .session(session);
+
         if (!driver) {
             await session.abortTransaction();
             session.endSession();
@@ -1442,13 +1787,12 @@ exports.acceptBooking = async (req, res) => {
         }
 
         // 🛡️ ATOMIC UPDATE: Use findOneAndUpdate with strict conditions to prevent race conditions
-        // This ensures only ONE driver can successfully update the booking from 'pending' to 'en_route'
         const booking = await Booking.findOneAndUpdate(
             {
                 _id: req.params.id,
                 isActive: true,
                 'service.type': 'sparedriver',
-                status: 'pending', // 🔒 Critical: Only accept if still pending
+                status: 'pending',
                 $or: [
                     { 'provider.id': null },
                     { 'provider.id': { $exists: false } }
@@ -1462,16 +1806,18 @@ exports.acceptBooking = async (req, res) => {
                     'provider.model': 'SpareDriver',
                     'provider.name': driver.name || '',
                     'provider.phone': driver.phone || '',
+                    'provider.photo': driver.selfie || '', // ✅ Driver Photo revealed to Consumer
+                    'provider.rating': (driver.reliabilityScore?.score / 20) || 5, // ✅ Convert 100-scale to 5-star
                     'tracking.assignedAt': new Date()
                 },
-                $inc: { __v: 1 } // 🔒 Optimistic locking: increment version
+                $inc: { __v: 1 }
             },
             { 
                 new: true,
-                session, // 🔒 Use transaction session
+                session,
                 runValidators: true
             }
-        );
+        ).populate('consumer', 'name phone profilePicture'); // ✅ POPULATE: Give Consumer info to Driver
 
         if (!booking) {
             await session.abortTransaction();
@@ -2083,9 +2429,23 @@ exports.updateLocation = async (req, res) => {
             });
         }
 
+        // ✅ ZONE DETECTION - Auto-detect and update driver zone
+        let driverZone = null;
+        try {
+            const zone = await ServiceZone.findZoneByPoint(parseFloat(lng), parseFloat(lat));
+            if (zone) {
+                driverZone = zone.code;
+            }
+        } catch (error) {
+            console.log('Zone detection failed:', error.message);
+            // Continue without zone - not critical for location update
+        }
+
         driver.currentLocation = {
             type: 'Point',
-            coordinates: [parseFloat(lng), parseFloat(lat)]
+            coordinates: [parseFloat(lng), parseFloat(lat)],
+            zone: driverZone,
+            lastUpdated: new Date()
         };
         await driver.save({ validateBeforeSave: false });
 

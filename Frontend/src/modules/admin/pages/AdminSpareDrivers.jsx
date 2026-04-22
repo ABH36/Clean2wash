@@ -17,12 +17,14 @@ import {
     Trash2,
     User,
     XCircle,
-    MessageCircle
+    MessageCircle,
+    Flag
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { spareDriverAPI } from '../../../utils/spareDriverApi';
 import { adminAPI } from '../../../utils/adminApi';
 import { socketService } from '../../../utils/socket';
+import GoogleMapBox from '../../../components/common/GoogleMapBox';
 import VerificationSection from '../components/spareDrivers/VerificationSection';
 import DriversSection from '../components/spareDrivers/DriversSection';
 import OperationsSection from '../components/spareDrivers/OperationsSection';
@@ -2305,6 +2307,18 @@ const AdminSpareDrivers = () => {
                                 </div>
                             </div>
 
+                            {/* Tactical Map View */}
+                            <div className="border border-white/5 dark:border-white/10 rounded-[1.1rem] overflow-hidden bg-white/5 dark:bg-slate-900 shadow-soft h-[300px] relative">
+                                <TacticalMapView 
+                                    booking={selectedBooking} 
+                                    pulses={livePulseMap[selectedBooking._id]} 
+                                />
+                                <div className="absolute top-4 left-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur px-3 py-2 rounded-xl shadow-lg border border-white/20 pointer-events-none">
+                                    <h4 className="text-[9px] font-black text-brand uppercase tracking-widest">Live Tactical Grid</h4>
+                                    <p className="text-[8px] font-bold text-content-subtle uppercase">Proximity & Route Sync</p>
+                                </div>
+                            </div>
+
                             <div className="border border-white/5 dark:border-white/10 rounded-[1.1rem] p-4 space-y-4 bg-white/5 dark:bg-slate-900">
                                 <div className="flex items-center gap-2">
                                     <ShieldAlert size={16} className="text-[#F29F05]" />
@@ -2445,6 +2459,94 @@ const AdminSpareDrivers = () => {
                 </div>
             )}
         </div>
+    );
+};
+
+const TacticalMapView = ({ booking, pulses }) => {
+    const pickup = booking.location?.address?.coordinates;
+    const destination = booking.location?.destination?.coordinates;
+    const driver = pulses?.driver;
+    const consumer = pulses?.consumer;
+
+    const markers = useMemo(() => {
+        const list = [];
+        
+        // Pickup Marker (User + Car)
+        if (pickup?.lat) {
+            list.push({
+                id: 'pickup',
+                position: { lat: pickup.lat, lng: pickup.lng },
+                title: 'User Vehicle',
+                icon: {
+                    path: 'M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z M12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm2 5h-4c-.55 0-1 .45-1 1v2c0 .55.45 1 1 1h4c.55 0 1-.45 1-1V6c0-.55-.45-1-1-1z',
+                    fillColor: '#ef4444',
+                    fillOpacity: 1,
+                    strokeWeight: 1,
+                    strokeColor: '#ffffff',
+                    scale: 1.2,
+                    anchor: new window.google.maps.Point(12, 12)
+                }
+            });
+        }
+
+        // Destination Marker
+        if (destination?.lat) {
+            list.push({
+                id: 'destination',
+                position: { lat: destination.lat, lng: destination.lng },
+                title: 'Destination',
+                icon: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png'
+            });
+        }
+
+        // Driver Marker (Specialist)
+        if (driver?.lat) {
+            list.push({
+                id: 'driver',
+                position: { lat: driver.lat, lng: driver.lng },
+                title: 'Driver Live',
+                icon: {
+                    path: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-15c-3.86 0-7 3.14-7 7s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 12h-2v-2h2v2zm0-4h-2V7h2v6z',
+                    fillColor: '#3b82f6',
+                    fillOpacity: 1,
+                    strokeWeight: 1,
+                    strokeColor: '#ffffff',
+                    scale: 1.5,
+                    anchor: new window.google.maps.Point(12, 12)
+                }
+            });
+        }
+
+        // Consumer Marker (if pulse active)
+        if (consumer?.lat && (!driver?.lat || Math.abs(consumer.lat - driver.lat) > 0.001)) {
+            list.push({
+                id: 'consumer',
+                position: { lat: consumer.lat, lng: consumer.lng },
+                title: 'Consumer Live',
+                icon: 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png'
+            });
+        }
+
+        return list;
+    }, [pickup, destination, driver, consumer]);
+
+    const center = driver || consumer || pickup || { lat: 28.6139, lng: 77.2090 };
+
+    return (
+        <GoogleMapBox 
+            center={center}
+            zoom={14}
+            markers={markers}
+            options={{
+                disableDefaultUI: true,
+                zoomControl: true,
+                styles: [
+                    { "elementType": "geometry", "stylers": [{ "color": "#f5f5f5" }] },
+                    { "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
+                    { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#ffffff" }] }
+                ]
+            }}
+        />
     );
 };
 

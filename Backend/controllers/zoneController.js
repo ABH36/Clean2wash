@@ -299,4 +299,56 @@ exports.bulkUpdateZones = catchAsync(async (req, res, next) => {
     });
 });
 
+/**
+ * Debug zone detection
+ */
+exports.debugZoneDetection = catchAsync(async (req, res, next) => {
+    const { latitude, longitude } = req.query;
+    
+    if (!latitude || !longitude) {
+        return next(new AppError('Please provide latitude and longitude', 400));
+    }
+    
+    const lat = parseFloat(latitude);
+    const lng = parseFloat(longitude);
+    
+    console.log('🔍 Debug Zone Detection:');
+    console.log('   📍 Input:', { latitude, longitude });
+    console.log('   📍 Parsed:', { lat, lng });
+    
+    // Test findZoneByPoint directly
+    const zone = await ServiceZone.findZoneByPoint(lng, lat);
+    console.log('   🎯 Direct findZoneByPoint result:', zone ? zone.displayName : 'None');
+    
+    // Test checkServiceAvailability
+    const result = await ServiceZone.checkServiceAvailability(lng, lat, 'spareDriver');
+    console.log('   🎯 checkServiceAvailability result:', result);
+    
+    // Get all zones for comparison
+    const allZones = await ServiceZone.find({ status: 'active' }).select('name displayName code geometry');
+    console.log('   📊 Total active zones:', allZones.length);
+    
+    res.status(200).json({
+        status: 'success',
+        data: {
+            input: { latitude, longitude },
+            parsed: { lat, lng },
+            zone: zone ? {
+                id: zone._id,
+                name: zone.name,
+                displayName: zone.displayName,
+                code: zone.code,
+                status: zone.status
+            } : null,
+            serviceCheck: result,
+            totalActiveZones: allZones.length,
+            allZones: allZones.map(z => ({
+                name: z.displayName,
+                code: z.code,
+                bounds: z.geometry.coordinates[0]
+            }))
+        }
+    });
+});
+
 module.exports = exports;

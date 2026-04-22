@@ -97,12 +97,10 @@ const AdminBookings = () => {
                 if (b._id === data.bookingId || b.id === data.bookingId) {
                     return {
                         ...b,
-                        location: {
-                            ...b.location,
-                            address: {
-                                ...b.location?.address,
-                                coordinates: { lat: data.lat, lng: data.lng }
-                            }
+                        driverLocation: {
+                            lat: data.lat,
+                            lng: data.lng,
+                            lastUpdated: new Date()
                         }
                     };
                 }
@@ -114,6 +112,22 @@ const AdminBookings = () => {
         socketService.on('new_booking', handleBookingUpdate);
         socketService.on('new_booking_broadcast', handleBookingUpdate);
         socketService.on('specialist_location_pulse', handleLocationPulse);
+        socketService.on('consumer_location_pulse', (data) => {
+            console.log('[Admin Bookings] 📍 Consumer pulse received:', data.bookingId);
+            setBookings(prev => prev.map(b => {
+                if (b._id === data.bookingId || b.id === data.bookingId) {
+                    return {
+                        ...b,
+                        consumerLocation: {
+                            lat: data.lat || data.location?.lat,
+                            lng: data.lng || data.location?.lng,
+                            lastUpdated: new Date()
+                        }
+                    };
+                }
+                return b;
+            }));
+        });
         socketService.on('SOS_EMERGENCY_ALERT', (data) => {
             console.log('[Admin SOS] 🚨 Emergency received:', data);
             toast.error(`🚨 SOS ALERT: Booking #${data.bookingId}`, {
@@ -128,6 +142,7 @@ const AdminBookings = () => {
             socketService.off('new_booking', handleBookingUpdate);
             socketService.off('new_booking_broadcast', handleBookingUpdate);
             socketService.off('specialist_location_pulse', handleLocationPulse);
+            socketService.off('consumer_location_pulse');
             socketService.off('SOS_EMERGENCY_ALERT');
         };
     }, []);
@@ -822,8 +837,8 @@ const LiveMapView = ({ bookings, onSelectBooking }) => {
     // Filter active bookings with coordinates
     const activeMappableBookings = bookings.filter(b =>
         ['pending', 'confirmed', 'assigned', 'pickup-assigned', 'en_route', 'at-studio', 'in_progress', 'quality-check', 'delivery-assigned'].includes(b.status) &&
-        b.location?.address?.coordinates?.lat &&
-        b.location?.address?.coordinates?.lng
+        ((b.location?.address?.coordinates?.lat && b.location?.address?.coordinates?.lng) ||
+         (b.driverLocation?.lat && b.driverLocation?.lng))
     );
 
     useEffect(() => {
@@ -882,56 +897,136 @@ const LiveMapView = ({ bookings, onSelectBooking }) => {
         let hasPoints = false;
 
         activeMappableBookings.forEach(booking => {
-            const lat = booking.location.address.coordinates.lat;
-            const lng = booking.location.address.coordinates.lng;
             const bId = booking._id || booking.id;
-            const pos = { lat, lng };
+            const pickupLat = booking.location?.address?.coordinates?.lat;
+            const pickupLng = booking.location?.address?.coordinates?.lng;
+            const driverLat = booking.driverLocation?.lat;
+            const driverLng = booking.driverLocation?.lng;
+            const consumerLat = booking.consumerLocation?.lat;
+            const consumerLng = booking.consumerLocation?.lng;
 
-            // Status-based coloring
-            let color = '#2563eb'; // Blue
-            if (booking.status === 'pending') color = '#f59e0b'; // Amber
-            else if (['in_progress', 'at-studio', 'washing'].includes(booking.status)) color = '#8b5cf6'; // Purple
-            else if (['en_route'].includes(booking.status)) color = '#0ea5e9'; // Light Blue (Moving)
+            // 1. PICKUP MARKER (STATIC)
+            // ... (rest of markers logic) ...
+            if (pickupLat && pickupLng) {
+                const pickupPos = { lat: pickupLat, lng: pickupLng };
+                const pickupMarkerId = `${bId}_pickup`;
+                
+                const pickupIcon = {
+                    path: 'M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z M12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm2 5h-4c-.55 0-1 .45-1 1v2c0 .55.45 1 1 1h4c.55 0 1-.45 1-1V6c0-.55-.45-1-1-1z',
+                    fillColor: '#ef4444', // Red for pickup (User car)
+                    fillOpacity: 1,
+                    strokeWeight: 1,
+                    strokeColor: '#ffffff',
+                    scale: 1.5,
+                    anchor: new window.google.maps.Point(12, 12)
+                };
 
-            const svgMarker = {
-                path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
-                fillColor: color,
-                fillOpacity: 1,
-                strokeWeight: 2,
-                strokeColor: '#ffffff',
-                scale: 1.5,
-                anchor: new window.google.maps.Point(12, 24)
-            };
-
-            if (markersRef.current[bId]) {
-                // UPDATE EXISTING MARKER
-                const marker = markersRef.current[bId];
-
-                // Only update position if it actually changed significantly (prevent micro-jitter)
-                const currentPos = marker.getPosition();
-                if (!currentPos || Math.abs(currentPos.lat() - lat) > 0.00001 || Math.abs(currentPos.lng() - lng) > 0.00001) {
-                    marker.setPosition(pos);
+                if (markersRef.current[pickupMarkerId]) {
+                    markersRef.current[pickupMarkerId].setPosition(pickupPos);
+                } else {
+                    const marker = new window.google.maps.Marker({
+                        position: pickupPos,
+                        map,
+                        icon: pickupIcon,
+                        title: `Pickup: ${booking.bookingId || bId}`
+                    });
+                    marker.addListener('click', () => onSelectBooking(booking));
+                    markersRef.current[pickupMarkerId] = marker;
                 }
-                marker.setIcon(svgMarker);
-            } else {
-                // CREATE NEW MARKER
-                const marker = new window.google.maps.Marker({
-                    position: pos,
-                    map,
-                    icon: svgMarker,
-                    title: `${booking.bookingId || bId} | ${booking.provider?.name || 'Pending Provider'}`,
-                    animation: window.google.maps.Animation.DROP
-                });
-
-                marker.addListener('click', () => {
-                    onSelectBooking(booking);
-                });
-
-                markersRef.current[bId] = marker;
+                bounds.extend(pickupPos);
+                hasPoints = true;
             }
 
-            bounds.extend(pos);
-            hasPoints = true;
+            // 2. DRIVER MARKER (DYNAMIC)
+            if (driverLat && driverLng) {
+                const driverPos = { lat: driverLat, lng: driverLng };
+                const driverMarkerId = `${bId}_driver`;
+                
+                let color = '#2563eb'; // Blue
+                if (booking.status === 'en_route') color = '#0ea5e9';
+                else if (booking.status === 'in_progress') color = '#8b5cf6';
+
+                const driverIcon = {
+                    path: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-15c-3.86 0-7 3.14-7 7s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 12h-2v-2h2v2zm0-4h-2V7h2v6z', // Alert/Target Style for driver
+                    fillColor: color,
+                    fillOpacity: 1,
+                    strokeWeight: 2,
+                    strokeColor: '#ffffff',
+                    scale: 1.8,
+                    anchor: new window.google.maps.Point(12, 12)
+                };
+
+                if (markersRef.current[driverMarkerId]) {
+                    markersRef.current[driverMarkerId].setPosition(driverPos);
+                    markersRef.current[driverMarkerId].setIcon(driverIcon);
+                } else {
+                    const marker = new window.google.maps.Marker({
+                        position: driverPos,
+                        map,
+                        icon: driverIcon,
+                        title: `Driver: ${booking.provider?.name || 'Assigned'}`
+                    });
+                    marker.addListener('click', () => onSelectBooking(booking));
+                    markersRef.current[driverMarkerId] = marker;
+                }
+                bounds.extend(driverPos);
+                hasPoints = true;
+
+                // 3. POLYLINE (CONNECTION)
+                if (pickupLat && pickupLng && booking.status === 'en_route') {
+                    const polyId = `${bId}_poly`;
+                    const path = [driverPos, { lat: pickupLat, lng: pickupLng }];
+                    
+                    if (markersRef.current[polyId]) {
+                        markersRef.current[polyId].setPath(path);
+                    } else {
+                        const poly = new window.google.maps.Polyline({
+                            path,
+                            geodesic: true,
+                            strokeColor: '#3b82f6',
+                            strokeOpacity: 0.6,
+                            strokeWeight: 2,
+                            icons: [{
+                                icon: { path: window.google.maps.SymbolPath.FORWARD_CLOSED_ARROW },
+                                offset: '100%'
+                            }],
+                            map
+                        });
+                        markersRef.current[polyId] = poly;
+                    }
+                }
+            }
+
+            // 4. CONSUMER MARKER (DYNAMIC)
+            if (consumerLat && consumerLng) {
+                const consumerPos = { lat: consumerLat, lng: consumerLng };
+                const consumerMarkerId = `${bId}_consumer`;
+                
+                const consumerIcon = {
+                    path: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
+                    fillColor: '#f59e0b', // Amber for consumer
+                    fillOpacity: 1,
+                    strokeWeight: 2,
+                    strokeColor: '#ffffff',
+                    scale: 1,
+                    anchor: new window.google.maps.Point(12, 12)
+                };
+
+                if (markersRef.current[consumerMarkerId]) {
+                    markersRef.current[consumerMarkerId].setPosition(consumerPos);
+                } else {
+                    const marker = new window.google.maps.Marker({
+                        position: consumerPos,
+                        map,
+                        icon: consumerIcon,
+                        title: `Consumer: ${booking.consumer?.name || 'User'}`
+                    });
+                    marker.addListener('click', () => onSelectBooking(booking));
+                    markersRef.current[consumerMarkerId] = marker;
+                }
+                bounds.extend(consumerPos);
+                hasPoints = true;
+            }
         });
 
         // Soft fit bounds - only if significantly changed or new points added

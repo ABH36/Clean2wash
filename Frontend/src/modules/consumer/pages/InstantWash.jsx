@@ -22,6 +22,7 @@ import LocationIndicator from '../../../components/Location/LocationIndicator';
 import AddressSelector from '../components/AddressSelector';
 import GoogleMapBox from '../../../components/common/GoogleMapBox';
 import BenefitBadge from '../../../components/common/BenefitBadge';
+import { useTheme } from '../../../context/ThemeContext';
 
 const PHASES = {
     IDLE: 'IDLE',
@@ -81,6 +82,7 @@ const pkgAddonImages = {
 };
 
 const InstantWash = () => {
+    const { isDarkMode } = useTheme();
     const navigate = useNavigate();
     const {
         vehicles, addBooking, updateBookingStatus, bookings,
@@ -2912,21 +2914,21 @@ const InstantWash = () => {
         const effectiveDateKey = dates.find(d => d.fullDate === effectiveDateFull)?.key || dates[0].key;
 
         return (
-            <div className="min-h-screen bg-[#F8F9FB] pb-32">
+            <div className={`min-h-screen pb-32 transition-colors duration-500 bg-transparent`}>
                 {/* Header */}
-                <div className="px-5 py-3 flex items-center gap-3 bg-white/5 border-b border-black/[0.04] sticky top-0 z-50">
-                    <button onClick={handleBack} className="w-8 h-8 flex items-center justify-center bg-white/[0.02] rounded-xl">
+                <div className={`px-5 py-3 flex items-center gap-3 border-b sticky top-0 z-50 transition-all ${isDarkMode ? 'bg-black/40 border-white/5' : 'bg-white/5 border-black/[0.04]'}`}>
+                    <button onClick={handleBack} className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all ${isDarkMode ? 'bg-white/[0.02] text-white' : 'bg-black/[0.02] text-black'}`}>
                         <ChevronLeft size={18} />
                     </button>
-                    <h2 className="text-[14px] font-[1000] text-white uppercase tracking-tight">Select Slot</h2>
+                    <h2 className={`text-[14px] font-[1000] uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-black'}`}>Select Slot</h2>
                 </div>
 
                 {/* Location Subheader */}
-                <div className="px-6 py-4 flex items-center justify-between gap-2 bg-white/50 border-b border-black/[0.02]">
+                <div className={`px-6 py-4 flex items-center justify-between gap-2 border-b transition-all ${isDarkMode ? 'bg-white/[0.02] border-white/5' : 'bg-white/50 border-black/[0.02]'}`}>
                     <div className="flex items-center gap-2">
-                        <MapPin size={16} fill="currentColor" className="text-white" />
-                        <p className="text-[11px] font-[1000] text-white uppercase tracking-tight">
-                            Service at - <span className="text-black/30">{(() => {
+                        <MapPin size={16} fill="currentColor" className={isDarkMode ? "text-white" : "text-black"} />
+                        <p className={`text-[11px] font-[1000] uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                            Service at - <span className={isDarkMode ? 'text-white/40' : 'text-black/30'}>{(() => {
                                 const a = selectedAddress || addresses.find(x => x.isPrimary) || addresses[0];
                                 if (!a) return 'Address not saved';
                                 return a.street || a.address || a.full || a.label || 'Your Address';
@@ -3604,7 +3606,7 @@ const InstantWash = () => {
 
     return (
         <MobileLayout hideNav={phase === PHASES.LIVE_TRACK || phase === PHASES.CART || phase === PHASES.SELECT_SLOT || phase === PHASES.PAYMENT}>
-            <div className="bg-[#FFFFFF] min-h-screen font-outfit relative">
+            <div className={`min-h-screen font-outfit relative transition-colors duration-500 bg-transparent`}>
                 <style dangerouslySetInnerHTML={{ __html: `.font-outfit { font-family: 'Outfit', sans-serif; }` }} />
                 
                 {phase !== PHASES.CART && phase !== PHASES.SELECT_SLOT && phase !== PHASES.LIVE_TRACK && phase !== PHASES.PAYMENT}

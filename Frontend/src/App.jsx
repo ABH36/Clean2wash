@@ -52,6 +52,10 @@ import DriverChatEnhanced from './modules/spareDrivers/pages/DriverChatEnhanced'
 import DriverWallet from './modules/spareDrivers/pages/DriverWallet';
 import DriverProfileEdit from './modules/spareDrivers/pages/DriverProfileEdit';
 import DriverTripHistory from './modules/spareDrivers/pages/DriverTripHistory';
+import DriverDutyDashboard from './modules/spareDrivers/pages/DriverDutyDashboard';
+import DriverServicePortfolio from './modules/spareDrivers/pages/DriverServicePortfolio';
+import DriverReliability from './modules/spareDrivers/pages/DriverReliability';
+import DriverAvailability from './modules/spareDrivers/pages/DriverAvailability';
 
 import AdminPanelLayout from './modules/admin/components/AdminLayout';
 import AdminLogin from './modules/admin/pages/AdminLogin';
@@ -127,6 +131,10 @@ function App() {
                                             <Route path="/spare-driver/chat/:bookingId" element={<DriverChatEnhanced />} />
                                             <Route path="/spare-driver/wallet" element={<DriverWallet />} />
                                             <Route path="/spare-driver/profile/edit" element={<DriverProfileEdit />} />
+                                            <Route path="/spare-driver/duty-dashboard" element={<DriverDutyDashboard />} />
+                                            <Route path="/spare-driver/service-portfolio" element={<DriverServicePortfolio />} />
+                                            <Route path="/spare-driver/reliability" element={<DriverReliability />} />
+                                            <Route path="/spare-driver/availability" element={<DriverAvailability />} />
                                             <Route path="/spare-driver/trip-history" element={<DriverTripHistory />} />
 
                                             <Route path="/profile" element={P('consumer', <Profile />)} />

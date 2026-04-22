@@ -98,22 +98,50 @@ exports.approveDriver = async (req, res) => {
         const driverObj = await SpareDriver.findById(req.params.id);
         if (!driverObj) return res.status(404).json({ status: 'error', message: 'Driver not found' });
 
-        // Enforce Verification Constraints
-        if (driverObj.kitStatus !== 'COMPLETED') {
-            return res.status(400).json({ status: 'error', message: 'Driver kit purchase is not completed.' });
-        }
-        if (driverObj.policeVerification !== 'VERIFIED') {
-            return res.status(400).json({ status: 'error', message: 'Driver police verification is not completed.' });
+        // ✅ UPDATED: Only check if required documents are present
+        // Kit purchase and police verification are OPTIONAL
+        const hasAadhaar = driverObj.documents?.aadhaarCard?.url || driverObj.documents?.aadhaarCard?.frontUrl;
+        const hasPAN = driverObj.documents?.panCard?.url;
+        const hasLicense = driverObj.documents?.drivingLicense?.url;
+        const hasSelfie = driverObj.documents?.selfie?.url;
+        
+        if (!hasAadhaar || !hasPAN || !hasLicense || !hasSelfie) {
+            return res.status(400).json({ 
+                status: 'error', 
+                message: 'Driver must upload all required documents (Aadhaar, PAN, License, Selfie) before approval.' 
+            });
         }
 
+        // ✅ Approve driver - set status to ACTIVE
         const driver = await SpareDriver.findByIdAndUpdate(
             req.params.id,
-            { verificationStatus: 'APPROVED', status: 'ACTIVE' },
+            { 
+                verificationStatus: 'APPROVED', 
+                status: 'ACTIVE',
+                kitStatus: 'COMPLETED',
+                approvedAt: new Date()
+            },
             { new: true, runValidators: true }
         ).select('-password -bankDetails.accountNumber');
 
-        res.status(200).json({ status: 'success', data: { driver } });
+        // Send notification to driver
+        const { sendSpareDriverNotification } = require('../../../utils/notificationService');
+        await sendSpareDriverNotification(driver._id, {
+            title: '🎉 Verification Approved!',
+            message: 'Congratulations! Your driver account has been verified and activated. You can now start accepting rides.',
+            type: 'verification',
+            priority: 'high',
+            actionUrl: '/spare-driver/dashboard',
+            actionText: 'Go to Dashboard'
+        });
+
+        res.status(200).json({ 
+            status: 'success', 
+            message: 'Driver approved successfully. Kit purchase is optional and can be done later.',
+            data: { driver } 
+        });
     } catch (error) {
+        console.error('Approve driver error:', error);
         res.status(500).json({ status: 'error', message: error.message });
     }
 };
@@ -122,19 +150,41 @@ exports.approveDriver = async (req, res) => {
 exports.rejectDriver = async (req, res) => {
     try {
         const { reason } = req.body;
-        if (!reason) {
+        if (!reason || !reason.trim()) {
             return res.status(400).json({ status: 'error', message: 'Rejection reason is required' });
         }
+        
         const driver = await SpareDriver.findByIdAndUpdate(
             req.params.id,
-            { verificationStatus: 'REJECTED', status: 'rejected', rejectionReason: reason },
+            { 
+                verificationStatus: 'REJECTED', 
+                status: 'REJECTED', 
+                rejectionReason: reason.trim(),
+                rejectedAt: new Date()
+            },
             { new: true, runValidators: true }
         ).select('-password -bankDetails.accountNumber');
 
         if (!driver) return res.status(404).json({ status: 'error', message: 'Driver not found' });
 
-        res.status(200).json({ status: 'success', data: { driver } });
+        // Send notification to driver
+        const { sendSpareDriverNotification } = require('../../../utils/notificationService');
+        await sendSpareDriverNotification(driver._id, {
+            title: '❌ Verification Rejected',
+            message: `Your driver application has been rejected. Reason: ${reason.trim()}`,
+            type: 'verification',
+            priority: 'high',
+            actionUrl: '/spare-driver/dashboard',
+            actionText: 'View Details'
+        });
+
+        res.status(200).json({ 
+            status: 'success',
+            message: 'Driver rejected successfully. Notification sent.',
+            data: { driver } 
+        });
     } catch (error) {
+        console.error('Reject driver error:', error);
         res.status(500).json({ status: 'error', message: error.message });
     }
 };

@@ -150,7 +150,7 @@ const DriverProfileEdit = () => {
                                     value={form.name}
                                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                                     placeholder="Enter your full name"
-                                    className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-brand transition-colors"
+                                    className="w-full pl-16 pr-4 py-3 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-brand transition-colors"
                                 />
                             </div>
                         </div>
@@ -166,7 +166,7 @@ const DriverProfileEdit = () => {
                                     value={form.email}
                                     onChange={(e) => setForm({ ...form, email: e.target.value })}
                                     placeholder="your@email.com"
-                                    className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-brand transition-colors"
+                                    className="w-full pl-16 pr-4 py-3 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-brand transition-colors"
                                 />
                             </div>
                         </div>
@@ -182,7 +182,7 @@ const DriverProfileEdit = () => {
                                     value={form.city}
                                     onChange={(e) => setForm({ ...form, city: e.target.value })}
                                     placeholder="Your city"
-                                    className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-brand transition-colors"
+                                    className="w-full pl-16 pr-4 py-3 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-brand transition-colors"
                                 />
                             </div>
                         </div>
@@ -217,7 +217,7 @@ const DriverProfileEdit = () => {
                                         value={form.accountName}
                                         onChange={(e) => setForm({ ...form, accountName: e.target.value })}
                                         placeholder="As per bank account"
-                                        className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-brand transition-colors"
+                                        className="w-full pl-16 pr-4 py-3 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-brand transition-colors"
                                     />
                                 </div>
                             </div>
@@ -233,7 +233,7 @@ const DriverProfileEdit = () => {
                                         value={form.accountNumber}
                                         onChange={(e) => setForm({ ...form, accountNumber: e.target.value.replace(/\D/g, '') })}
                                         placeholder="Bank account number"
-                                        className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-brand transition-colors"
+                                        className="w-full pl-16 pr-4 py-3 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-brand transition-colors"
                                     />
                                 </div>
                             </div>
@@ -252,7 +252,7 @@ const DriverProfileEdit = () => {
                                         onChange={(e) => setForm({ ...form, ifscCode: e.target.value.toUpperCase() })}
                                         placeholder="HDFC0001234"
                                         maxLength={11}
-                                        className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-brand transition-colors uppercase"
+                                        className="w-full pl-16 pr-4 py-3 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-brand transition-colors uppercase"
                                     />
                                 </div>
                                 {form.ifscCode && !validateIFSC(form.ifscCode) && (
@@ -271,7 +271,7 @@ const DriverProfileEdit = () => {
                                         value={form.bankName}
                                         onChange={(e) => setForm({ ...form, bankName: e.target.value })}
                                         placeholder="Bank name"
-                                        className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-brand transition-colors"
+                                        className="w-full pl-16 pr-4 py-3 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-brand transition-colors"
                                     />
                                 </div>
                             </div>
@@ -288,7 +288,7 @@ const DriverProfileEdit = () => {
                                     value={form.upiId}
                                     onChange={(e) => setForm({ ...form, upiId: e.target.value })}
                                     placeholder="yourname@upi"
-                                    className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-brand transition-colors"
+                                    className="w-full pl-16 pr-4 py-3 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-brand transition-colors"
                                 />
                             </div>
                         </div>

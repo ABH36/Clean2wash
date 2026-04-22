@@ -89,7 +89,7 @@ const Onboarding = () => {
                     <div className="flex gap-2 mt-6 mb-6">
                         {SLIDES.map((_, i) => (
                             <button key={i} onClick={() => setIdx(i)}
-                                className={`h-1.5 rounded-full transition-all ${i === idx ? 'bg-brand w-8' : 'bg-white/20 w-1.5'}`} />
+                                className={`h-1.5 rounded-full transition-all !min-h-0 !min-w-0 ${i === idx ? 'bg-brand w-8' : 'bg-white/20 w-1.5'}`} />
                         ))}
                     </div>
 

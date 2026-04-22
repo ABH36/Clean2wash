@@ -20,6 +20,7 @@ const adminDriverController = require('../controllers/adminDriverController');
 const adminVehicleManagementController = require('../controllers/adminVehicleManagementController');
 const authMiddleware = require('../../../middleware/authMiddleware');
 const featureGuard = require('../../../middleware/featureGuard');
+const zoneRoutes = require('../../../routes/zoneRoutes');
 
 // ── SECURITY MIDDLEWARE ────────────────────────────────────────
 const { authLimiter, apiLimiter, readLimiter } = require('../../../middleware/rateLimiter');
@@ -255,5 +256,8 @@ router.get('/fraud/users/:userId/risk', adminFraudController.getUserRiskProfile)
 router.get('/fraud/drivers/:driverId/risk', adminFraudController.getDriverRiskProfile);
 router.post('/fraud/users/:userId/check', adminFraudController.runUserFraudCheck);
 router.post('/fraud/drivers/:driverId/check', adminFraudController.runDriverFraudCheck);
+
+// ── SERVICE ZONES ─────────────────────────────────────────────
+router.use('/zones', zoneRoutes);
 
 module.exports = router;

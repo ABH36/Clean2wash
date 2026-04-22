@@ -7,6 +7,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "seed:rbac": "node scripts/seedRBAC.js",
+    "seed:indore": "node scripts/runIndoreSeed.js",
     "create:superadmin": "node scripts/createSuperAdmin.js",
     "reset:password": "node scripts/resetAdminPassword.js",
     "list:admins": "node scripts/listAdmins.js"

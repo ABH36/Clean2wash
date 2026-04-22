@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const mongoose = require('mongoose');
@@ -12,7 +12,9 @@ const colors = require('colors');
 const path = require('path');
 
 // Load environment variables
-dotenv.config({ path: './.env.local' });
+dotenv.config(); // Load default .env
+dotenv.config({ path: './.env.local', override: true }); // Override with local if exists
+
 
 // Elite Hardening: Production Environment Safety Check
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
@@ -70,7 +72,7 @@ app.use(cors({
         if (allowedOrigins.includes(normalizedOrigin) || process.env.NODE_ENV === 'development') {
             return callback(null, true);
         } else {
-            console.warn(`🚨 CORS Blocked for: ${origin}`);
+            console.warn(`ðŸš¨ CORS Blocked for: ${origin}`);
             const msg = 'Origin not allowed by Clean2Wash Security Policy';
             return callback(new Error(msg), false);
         }
@@ -89,9 +91,9 @@ const mongoOptions = {
 };
 
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/carwash', mongoOptions)
-    .then(() => console.log('✅ MongoDB Connected'.green.bold))
+    .then(() => console.log('âœ… MongoDB Connected'.green.bold))
     .catch((err) => {
-        console.log('❌ MongoDB Connection Error:'.red.bold, err);
+        console.log('âŒ MongoDB Connection Error:'.red.bold, err);
         // Do not exit, allow server to heart-beat and try re-connecting
     });
 
@@ -123,7 +125,7 @@ const limiter = rateLimit({
     skip: (req) => process.env.NODE_ENV === 'development' && (req.ip === '::1' || req.ip === '127.0.0.1' || req.ip.includes('localhost')),
     handler: (req, res, next, options) => {
         if (process.env.NODE_ENV === 'development') {
-            console.warn(`⚠️  Rate limit triggered for IP: ${req.ip}`.red.bold);
+            console.warn(`âš ï¸  Rate limit triggered for IP: ${req.ip}`.red.bold);
         }
         res.status(options.statusCode).send(options.message);
     }
@@ -184,7 +186,7 @@ const server = http.createServer(app);
 // Initialize Enhanced Socket.io with robust error handling
 const enhancedSocket = require('./services/enhancedSocketService');
 enhancedSocket.init(server);
-console.log('✅ Enhanced Socket.IO initialized with auto-reconnect & error recovery');
+console.log('âœ… Enhanced Socket.IO initialized with auto-reconnect & error recovery');
 
 // Make io accessible globally if needed
 app.set('io', enhancedSocket.getIO ? enhancedSocket.getIO() : null);
@@ -192,14 +194,14 @@ app.set('io', enhancedSocket.getIO ? enhancedSocket.getIO() : null);
 // Start server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`.yellow.bold);
-    console.log(`📱 Consumer API: http://localhost:${PORT}/api/consumer`.cyan.bold);
-    console.log(`🚗 SpareDriver API: http://localhost:${PORT}/api/sparedrivers`.cyan.bold);
+    console.log(`ðŸš€ Server running on port ${PORT}`.yellow.bold);
+    console.log(`ðŸ“± Consumer API: http://localhost:${PORT}/api/consumer`.cyan.bold);
+    console.log(`ðŸš— SpareDriver API: http://localhost:${PORT}/api/sparedrivers`.cyan.bold);
     if (PLATFORM_MODE !== 'SPARE_DRIVER') {
-        console.log(`👷 Captain API: http://localhost:${PORT}/api/captain`.cyan.bold);
+        console.log(`ðŸ‘· Captain API: http://localhost:${PORT}/api/captain`.cyan.bold);
     }
-    console.log(`🏥 Health Check: http://localhost:${PORT}/api/health`.green.bold);
-    console.log(`📡 Socket.io initialized on port ${PORT}`.magenta.bold);
+    console.log(`ðŸ¥ Health Check: http://localhost:${PORT}/api/health`.green.bold);
+    console.log(`ðŸ“¡ Socket.io initialized on port ${PORT}`.magenta.bold);
 
     // Start Background Monitor for Scheduled Bookings
     const startBookingMonitor = require('./utils/bookingMonitor');
@@ -216,8 +218,11 @@ server.listen(PORT, () => {
     // Start Dispatch Queue Processor (Auto-assign drivers to bookings)
     const dispatchService = require('./services/dispatchService');
     dispatchService.startQueueProcessor();
-    console.log(`🚀 Dispatch Engine started - Auto-assignment active`.green.bold);
+    console.log(`ðŸš€ Dispatch Engine started - Auto-assignment active`.green.bold);
 });
 
 module.exports = app;
 module.exports.server = server;
+
+
+

@@ -150,7 +150,7 @@ const VendorStaff = () => {
                                     placeholder="Enter Mobile Number (e.g. 9876543210)"
                                     value={searchPhone}
                                     onChange={(e) => setSearchPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                    className="w-full h-16 bg-background border border-white/5/10 rounded-[1.5rem] pl-14 pr-6 text-sm font-bold text-content outline-none focus:border-brand transition-all font-mono"
+                                    className="w-full h-16 bg-background border border-white/5/10 rounded-[1.5rem] pl-[3.5rem] pr-6 text-sm font-bold text-content outline-none focus:border-brand transition-all font-mono"
                                 />
                             </div>
                             <button

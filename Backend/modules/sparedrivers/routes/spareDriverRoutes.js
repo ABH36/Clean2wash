@@ -18,6 +18,18 @@ router.get('/maps/proxy/search', mapController.searchProxy);
 router.post('/auth/send-otp', ctrl.sendSignupOTP);
 router.post('/auth/verify-otp', ctrl.verifySignupOTP);
 router.post('/register', ctrl.register);
+router.post(
+    '/register-complete',
+    ctrl.upload.fields([
+        { name: 'aadhaarFront', maxCount: 1 },
+        { name: 'aadhaarBack', maxCount: 1 },
+        { name: 'panCard', maxCount: 1 },
+        { name: 'drivingLicense', maxCount: 1 },
+        { name: 'selfie', maxCount: 1 },
+        { name: 'policeVerification', maxCount: 1 }
+    ]),
+    ctrl.registerComplete
+);
 router.post('/login', ctrl.login);
 
 // ── EARNINGS & PAYOUTS ─────────────────────────────────────────
@@ -69,6 +81,7 @@ router.patch(
 );
 router.patch('/profile', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.updateProfile);
 router.patch('/toggle-online', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.toggleOnline);
+router.patch('/availability', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.updateAvailability);
 router.get('/bookings', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.getBookings);
 router.patch('/location', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.updateLocation);
 router.patch('/bookings/:id/accept', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.acceptBooking);
@@ -81,6 +94,7 @@ router.get('/notifications', authMiddleware.protect, authMiddleware.restrictTo('
 router.patch('/notifications/:id/read', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.markNotificationRead);
 router.delete('/notifications/clear', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.clearNotifications);
 router.post('/fcm-token', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.updateFCMToken);
+router.get('/duty-stats', authMiddleware.protect, authMiddleware.restrictTo('sparedriver'), ctrl.getDutyStats);
 router.post('/emergency', authMiddleware.protect, ctrl.reportEmergency);
 
 // 💬 Chat & Message Dummy Routes

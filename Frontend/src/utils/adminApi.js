@@ -185,20 +185,12 @@ class ApiClient {
     // Auth methods
     async login(email, password) {
         // Use RBAC admin login endpoint (superadmin/auth/login)
-        const response = await fetch('/api/superadmin/auth/login', {
+        // We use the absolute path /api/superadmin/auth/login to ensure it hits the correct RBAC system
+        // using this.request ensures robust error handling and JSON parsing
+        return this.request('/../../superadmin/auth/login', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
             body: JSON.stringify({ email, password })
         });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Login failed');
-        }
-        
-        return response.json();
     }
 
     async getProfile() {

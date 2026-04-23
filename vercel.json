@@ -31,12 +31,12 @@
     },
     {
       "src": "/(.*)",
-      "dest": "Frontend/$1",
+      "dest": "/Frontend/$1",
       "check": true
     },
     {
       "src": "/(.*)",
-      "dest": "Frontend/index.html"
+      "dest": "/Frontend/index.html"
     }
   ]
 }

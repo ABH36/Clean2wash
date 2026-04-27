@@ -27,25 +27,23 @@
       "dest": "api/index.js"
     },
     {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(assets|static|public|favicon.ico|manifest.json|vite.svg)/(.*)",
-      "dest": "/Frontend/$1/$2",
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1",
       "check": true
     },
     {
-      "src": "/(admin|spare-driver|captain|profile|bookings|vehicles|addresses|wallet|refer|help|rate|notifications|sos-active|safety|kyc-verification|compliance|payments|onboarding|login|signup|otp-verify|share-trip)(/.*)?",
-      "dest": "/Frontend/index.html"
+      "src": "/static/(.*)",
+      "dest": "/static/$1",
+      "check": true
     },
     {
-      "src": "/(.*)",
-      "dest": "/Frontend/$1",
+      "src": "/(.*)\\.(js|css|png|jpg|jpeg|gif|svg|ico|json|woff|woff2|ttf|otf|map)",
+      "dest": "/$1.$2",
       "check": true
     },
     {
       "src": "/(.*)",
-      "dest": "/Frontend/index.html"
+      "dest": "/index.html"
     }
   ]
 }

@@ -34,6 +34,11 @@ const captainSchema = new mongoose.Schema({
         code: String,
         expiresAt: Date
     },
+    status: {
+        type: String,
+        enum: ['PENDING', 'ACTIVE', 'BLOCKED', 'REJECTED', 'verified_pending_kit', 'kit_payment_pending', 'kit_payment_under_review'],
+        default: 'PENDING'
+    },
     isVerified: {
         type: Boolean,
         default: false
@@ -44,7 +49,15 @@ const captainSchema = new mongoose.Schema({
         hub: { type: String, default: '' },
         vehicleType: { type: String, default: '' },
         plate: { type: String, default: '' },
-        kit: { type: String, default: '' },
+        kit: {
+            required: { type: Boolean, default: true },
+            status: { type: String, enum: ['NOT_PURCHASED', 'PENDING', 'COMPLETED'], default: 'NOT_PURCHASED' },
+            price: { type: Number, default: 1499 },
+            razorpayOrderId: { type: String, default: '' },
+            razorpayPaymentId: { type: String, default: '' },
+            paidAt: Date,
+            verifiedAt: Date
+        },
         experience: { type: String, default: '' },
         drivingLicense: { type: String, default: '' },
         aadharCard: { type: String, default: '' },

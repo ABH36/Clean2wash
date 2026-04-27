@@ -280,9 +280,18 @@ class SpareDriverApiClient {
         });
     }
 
-    async adminGetDrivers(status) {
-        const qs = status ? `?status=${status}` : '';
+    async adminGetDrivers(status, scope = 'assigned') {
+        const params = new URLSearchParams();
+        if (status) params.set('status', status);
+        if (scope) params.set('scope', scope);
+        const qs = params.toString() ? `?${params.toString()}` : '';
         return this.adminRequest(`/admin/drivers${qs}`);
+    }
+
+    async adminRebalanceDriverQueue() {
+        return this.adminRequest('/admin/drivers/rebalance-queue', {
+            method: 'POST'
+        });
     }
 
     async adminVerifyDriver(id, status, adminNote = '') {

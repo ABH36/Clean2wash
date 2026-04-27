@@ -30,6 +30,15 @@
       "handle": "filesystem"
     },
     {
+      "src": "/(assets|static|public|favicon.ico|manifest.json|vite.svg)/(.*)",
+      "dest": "/Frontend/$1/$2",
+      "check": true
+    },
+    {
+      "src": "/(admin|spare-driver|captain|profile|bookings|vehicles|addresses|wallet|refer|help|rate|notifications|sos-active|safety|kyc-verification|compliance|payments|onboarding|login|signup|otp-verify|share-trip)(/.*)?",
+      "dest": "/Frontend/index.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/Frontend/$1",
       "check": true

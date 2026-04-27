@@ -115,6 +115,15 @@ const CaptainHome = () => {
         acceptProductBatch
     } = useCaptain();
 
+    useEffect(() => {
+        const userStatus = sessions.captain?.status;
+        const kitStatus = sessions.captain?.profile?.kit?.status;
+        
+        if (userStatus === 'verified_pending_kit' || (userStatus === 'ACTIVE' && kitStatus === 'NOT_PURCHASED')) {
+            navigate('/captain/kit-purchase');
+        }
+    }, [sessions.captain, navigate]);
+
     const handleAcceptProductMission = async (orderId, itemId, isBatch = false, batchItems = []) => {
         let res;
         if (isBatch) {
@@ -753,6 +762,26 @@ const CaptainHome = () => {
                             })}
                         </div>
                     </section>
+                )}
+
+                {/* ── Kit Purchase Alert ── */}
+                {user.isVerified && user.profile?.kit?.status !== 'COMPLETED' && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        onClick={() => navigate('/captain/kit-purchase')}
+                        className={`p-4 rounded-[2rem] border flex items-center gap-4 cursor-pointer shadow-2xl transition-all active:scale-95 ${isDarkMode ? 'bg-brand/10 border-brand/20 shadow-brand/5' : 'bg-brand/5 border-brand/10 shadow-brand/5'}`}
+                    >
+                        <div className={`w-12 h-12 rounded-[1.5rem] flex items-center justify-center flex-shrink-0 ${isDarkMode ? 'bg-brand text-white shadow-lg shadow-brand/20' : 'bg-brand text-white shadow-lg shadow-brand/10'}`}>
+                            <Zap size={22} fill="currentColor" />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-[10px] font-black text-brand uppercase tracking-widest leading-none mb-1">Activation Required</p>
+                            <h4 className={`text-sm font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-content'}`}>Purchase your Starter Kit</h4>
+                            <p className={`text-[9px] font-bold mt-1 ${isDarkMode ? 'text-white/40' : 'text-content-subtle'}`}>Complete payment to activate your account and start accepting wash missions.</p>
+                        </div>
+                        <ChevronRight size={18} className="text-brand opacity-40" strokeWidth={3} />
+                    </motion.div>
                 )}
 
                 {/* ── Verification Banner ── */}

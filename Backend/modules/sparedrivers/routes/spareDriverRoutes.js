@@ -103,6 +103,7 @@ router.get('/messages/active-chats', authMiddleware.protect, authMiddleware.rest
 
 // Admin-only routes
 router.get('/admin/drivers', authMiddleware.protect, authMiddleware.restrictTo('admin'), ctrl.adminListDrivers);
+router.post('/admin/drivers/rebalance-queue', authMiddleware.protect, authMiddleware.restrictTo('admin'), ctrl.adminRebalanceVerificationQueue);
 router.patch('/admin/drivers/:id', authMiddleware.protect, authMiddleware.restrictTo('admin'), ctrl.adminVerifyDriver);
 router.patch('/admin/drivers/:id/premium', authMiddleware.protect, authMiddleware.restrictTo('admin'), ctrl.adminUpdatePremiumVerification);
 router.patch('/admin/bookings/:id/assign', authMiddleware.protect, authMiddleware.restrictTo('admin'), ctrl.adminAssignBooking);

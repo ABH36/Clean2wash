@@ -191,6 +191,20 @@ const spareDriverSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    verificationQueue: {
+        assignedAdmin: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Admin',
+            default: null
+        },
+        assignedAt: Date,
+        releasedAt: Date,
+        assignmentSource: {
+            type: String,
+            enum: ['auto', 'manual'],
+            default: 'auto'
+        }
+    },
     isOnline: {
         type: Boolean,
         default: false
@@ -534,6 +548,7 @@ spareDriverSchema.index({ currentLocation: '2dsphere' });
 spareDriverSchema.index({ phone: 1 });
 spareDriverSchema.index({ status: 1 });
 spareDriverSchema.index({ verificationStatus: 1 });
+spareDriverSchema.index({ 'verificationQueue.assignedAdmin': 1, status: 1 });
 spareDriverSchema.index({ 'onlineStatus.isOnline': 1 });
 spareDriverSchema.index({ 'reliabilityScore.score': -1 });
 spareDriverSchema.index({ lastActive: -1 });

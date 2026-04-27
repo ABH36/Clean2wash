@@ -113,7 +113,28 @@ class ApiClient {
     }
 
     async getProfile() {
-        return this.request('/profile');
+        return this.request('/profile/me');
+    }
+
+    async getKitConfig() {
+        return this.request('/kit-config');
+    }
+
+    async getKitPaymentKey() {
+        return this.request('/kit-payment/key');
+    }
+
+    async createKitPaymentOrder() {
+        return this.request('/kit-payment/order', {
+            method: 'POST'
+        });
+    }
+
+    async verifyKitPayment(paymentData) {
+        return this.request('/kit-payment/verify', {
+            method: 'POST',
+            body: JSON.stringify(paymentData)
+        });
     }
 
     async updateProfile(profileData) {
@@ -294,6 +315,10 @@ export const captainAPI = {
     acceptProductMission: (orderId, itemId) => apiClient.acceptProductMission(orderId, itemId),
     acceptProductBatch: (batchItems) => apiClient.acceptProductBatch(batchItems),
     updateProductMissionStatus: (orderId, itemId, status, metadata) => apiClient.updateProductMissionStatus(orderId, itemId, status, metadata),
+    getKitConfig: () => apiClient.getKitConfig(),
+    getKitPaymentKey: () => apiClient.getKitPaymentKey(),
+    createKitPaymentOrder: () => apiClient.createKitPaymentOrder(),
+    verifyKitPayment: (data) => apiClient.verifyKitPayment(data),
     registerFCMToken: (token, platform) => apiClient.registerFCMToken(token, platform),
     setToken: (token) => apiClient.setToken(token)
 };

@@ -80,6 +80,19 @@ const DEFAULT_PREMIUM_CONFIG = {
     ]
 };
 
+const normalizeStatus = (value) => String(value || '').toLowerCase();
+const hasKitPurchaseCompleted = (driverData = {}) => (
+    String(driverData?.kitStatus || '').toUpperCase() === 'COMPLETED'
+    || ['verified', 'under_review'].includes(normalizeStatus(driverData?.kit?.paymentStatus))
+);
+const canInitiateKitPurchase = (driverData = {}) => {
+    const status = normalizeStatus(driverData?.status);
+    const kitPaymentStatus = normalizeStatus(driverData?.kit?.paymentStatus);
+    if (hasKitPurchaseCompleted(driverData)) return false;
+    if (kitPaymentStatus === 'under_review') return false;
+    return ['verified_pending_kit', 'kit_payment_pending', 'active'].includes(status);
+};
+
 const loadRazorpayScript = () => new Promise((resolve, reject) => {
     if (window.Razorpay) return resolve(true);
 
@@ -153,7 +166,8 @@ const DriverDashboard = () => {
 
     const shouldShowAddressPopup = (driverData) => {
         if (!driverData?._id) return false;
-        if (!['kit_payment_pending', 'active'].includes(driverData.status)) return false;
+        const status = normalizeStatus(driverData.status);
+        if (!['kit_payment_pending', 'active'].includes(status)) return false;
         if (hasAddressConfigured(driverData)) return false;
         const cooldownKey = `spare_driver_address_prompt_next_at_${driverData._id}`;
         const nextAllowedAt = Number(localStorage.getItem(cooldownKey) || 0);
@@ -163,7 +177,7 @@ const DriverDashboard = () => {
 
     const shouldShowKitPopup = (driverData) => {
         if (!driverData?._id) return false;
-        if (driverData.status !== 'verified_pending_kit') return false;
+        if (!canInitiateKitPurchase(driverData)) return false;
         const cooldownKey = `spare_driver_kit_prompt_next_at_${driverData._id}`;
         const nextAllowedAt = Number(localStorage.getItem(cooldownKey) || 0);
         const shownInSession = sessionStorage.getItem(`spare_driver_kit_prompt_shown_${driverData._id}`) === '1';
@@ -175,7 +189,7 @@ const DriverDashboard = () => {
         const policeUploaded = Boolean(driverData?.documents?.policeVerification?.url);
         const policeApproved = driverData?.verification?.policeStatus === 'approved';
         const policeRejected = driverData?.verification?.policeStatus === 'rejected';
-        const eligible = driverData?.status === 'active' && !policeApproved && (policeRejected || !policeUploaded);
+        const eligible = normalizeStatus(driverData?.status) === 'active' && !policeApproved && (policeRejected || !policeUploaded);
         if (!eligible) return false;
         const cooldownKey = `spare_driver_police_prompt_next_at_${driverData._id}`;
         const nextAllowedAt = Number(localStorage.getItem(cooldownKey) || 0);
@@ -198,6 +212,11 @@ const DriverDashboard = () => {
             setBookings(b.data.bookings || []);
             setIsOnline(!!driverData.isOnline);
 
+            // Mandatory Kit Redirection
+            if (canInitiateKitPurchase(driverData)) {
+                navigate('/spare-driver/kit-purchase');
+            }
+
             const needsKitPayment = shouldShowKitPopup(driverData);
             if (needsKitPayment) {
                 setKitPopupOpen(true);
@@ -205,7 +224,7 @@ const DriverDashboard = () => {
                     sessionStorage.setItem(`spare_driver_kit_prompt_shown_${driverData._id}`, '1');
                 }
                 setAddressPopupOpen(false);
-            } else if (driverData?.status !== 'verified_pending_kit') {
+            } else if (!canInitiateKitPurchase(driverData)) {
                 setKitPopupOpen(false);
             }
 
@@ -819,7 +838,7 @@ const DriverDashboard = () => {
                 )}
 
                 {/* ── Kit Payment Banner (persistent nudge after approval) ── */}
-                {driver && ['active', 'verified_pending_kit'].includes(driver.status?.toLowerCase()) && !['COMPLETED', 'PENDING'].includes(driver.kitStatus) && (
+                {driver && canInitiateKitPurchase(driver) && (
                     <motion.div
                         initial={{ opacity: 0, y: -12 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -1025,7 +1044,7 @@ const DriverDashboard = () => {
             </div>
         )}
         <AnimatePresence>
-                {kitPopupOpen && driver?.status === 'verified_pending_kit' && (
+                {kitPopupOpen && driver && canInitiateKitPurchase(driver) && (
                     <motion.div
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         className="fixed inset-0 z-[120] bg-black/80 backdrop-blur-sm px-6 flex items-end justify-center pb-12"

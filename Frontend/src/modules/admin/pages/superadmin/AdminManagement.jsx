@@ -454,7 +454,7 @@ const AdminManagement = () => {
                             <Users size={20} className="text-green-600" />
                         </div>
                         <div>
-                            <div className="text-lg font-bold text-[var(--text-primary)]">{admins.filter(a => a.status === 'active').length}</div>
+                            <div className="text-lg font-bold text-[var(--text-primary)]">{admins.filter(a => a.status === 'ACTIVE').length}</div>
                             <div className="text-sm text-[var(--text-secondary)]">Active</div>
                         </div>
                     </div>
@@ -516,7 +516,7 @@ const AdminManagement = () => {
                         </thead>
                         <tbody>
                             {filteredAdmins.map((admin) => (
-                                <tr key={admin.id}>
+                                <tr key={admin._id}>
                                     <td>
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-[var(--primary)] rounded-full flex items-center justify-center text-white font-medium">

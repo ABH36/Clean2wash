@@ -94,6 +94,9 @@ const DEFAULT_PREMIUM_MANAGEMENT = {
     ]
 };
 
+const normalizeDriverStatus = (status) => String(status || '').toLowerCase();
+const normalizePoliceStatus = (status) => String(status || '').toLowerCase();
+
 const ADMIN_SECTION_META = {
     verification: {
         title: 'Verification queue',
@@ -510,32 +513,32 @@ const AdminSpareDrivers = () => {
 
     const verificationQueue = useMemo(() => (
         allDrivers.filter((driver) => (
-            ['pending_docs', 'pending_verification', 'verified_pending_kit', 'kit_payment_pending', 'rejected', 'suspended'].includes(driver.status)
-            || (driver.status === 'active' && driver.verification?.policeStatus !== 'approved')
+            ['pending_docs', 'pending_verification', 'verified_pending_kit', 'kit_payment_pending', 'rejected', 'suspended'].includes(normalizeDriverStatus(driver.status))
+            || (normalizeDriverStatus(driver.status) === 'active' && normalizePoliceStatus(driver.verification?.policeStatus) !== 'approved')
         ))
     ), [allDrivers]);
 
     const assignableDrivers = useMemo(() => (
-        allDrivers.filter((driver) => driver.status === 'active' && driver.isOnline)
+        allDrivers.filter((driver) => normalizeDriverStatus(driver.status) === 'active' && driver.isOnline)
     ), [allDrivers]);
 
     const laneCounts = useMemo(() => ({
         all: allDrivers.length,
-        pending_docs: allDrivers.filter((driver) => driver.status === 'pending_docs').length,
-        pending_verification: allDrivers.filter((driver) => driver.status === 'pending_verification').length,
-        verified_pending_kit: allDrivers.filter((driver) => driver.status === 'verified_pending_kit').length,
-        kit_payment_pending: allDrivers.filter((driver) => driver.status === 'kit_payment_pending').length,
-        active: allDrivers.filter((driver) => driver.status === 'active').length,
-        suspended: allDrivers.filter((driver) => driver.status === 'suspended').length,
-        rejected: allDrivers.filter((driver) => driver.status === 'rejected').length
+        pending_docs: allDrivers.filter((driver) => normalizeDriverStatus(driver.status) === 'pending_docs').length,
+        pending_verification: allDrivers.filter((driver) => normalizeDriverStatus(driver.status) === 'pending_verification').length,
+        verified_pending_kit: allDrivers.filter((driver) => normalizeDriverStatus(driver.status) === 'verified_pending_kit').length,
+        kit_payment_pending: allDrivers.filter((driver) => normalizeDriverStatus(driver.status) === 'kit_payment_pending').length,
+        active: allDrivers.filter((driver) => normalizeDriverStatus(driver.status) === 'active').length,
+        suspended: allDrivers.filter((driver) => normalizeDriverStatus(driver.status) === 'suspended').length,
+        rejected: allDrivers.filter((driver) => normalizeDriverStatus(driver.status) === 'rejected').length
     }), [allDrivers]);
 
     const verificationDrivers = useMemo(() => (
-        verificationQueue.filter((driver) => driverLane === 'all' ? true : driver.status === driverLane)
+        verificationQueue.filter((driver) => driverLane === 'all' ? true : normalizeDriverStatus(driver.status) === driverLane)
     ), [driverLane, verificationQueue]);
 
     const directoryDrivers = useMemo(() => (
-        allDrivers.filter((driver) => driverLane === 'all' ? true : driver.status === driverLane)
+        allDrivers.filter((driver) => driverLane === 'all' ? true : normalizeDriverStatus(driver.status) === driverLane)
     ), [driverLane, allDrivers]);
 
     const filteredLiveBookings = useMemo(() => {
@@ -568,8 +571,8 @@ const AdminSpareDrivers = () => {
         });
     }, [liveBookings, opsFilter, opsSearch]);
 
-    const pendingDocsCount = allDrivers.filter((driver) => driver.status === 'pending_docs').length;
-    const pendingCount = allDrivers.filter((driver) => ['pending_verification', 'verified_pending_kit', 'kit_payment_pending'].includes(driver.status)).length;
+    const pendingDocsCount = allDrivers.filter((driver) => normalizeDriverStatus(driver.status) === 'pending_docs').length;
+    const pendingCount = allDrivers.filter((driver) => ['pending_verification', 'verified_pending_kit', 'kit_payment_pending'].includes(normalizeDriverStatus(driver.status))).length;
     const onlineDrivers = assignableDrivers.length;
     const unassignedTrips = liveBookings.filter((booking) => !booking.provider?.id).length;
     const refundAttention = liveBookings.filter((booking) => ['refund_pending', 'refund_failed'].includes(booking.payment?.status)).length;
@@ -636,20 +639,21 @@ const AdminSpareDrivers = () => {
 
     const primaryDriverAction = useMemo(() => {
         if (!selectedDriver) return null;
+        const selectedStatus = normalizeDriverStatus(selectedDriver.status);
 
-        if (selectedDriver.status === 'pending_docs') {
+        if (selectedStatus === 'pending_docs') {
             return null;
         }
 
-        if (selectedDriver.status === 'pending_verification') {
+        if (selectedStatus === 'pending_verification') {
             return { status: 'verified_pending_kit', label: 'Verify Docs' };
         }
 
-        if (selectedDriver.status === 'kit_payment_pending') {
+        if (selectedStatus === 'kit_payment_pending') {
             return { status: 'active', label: 'Approve Kit' };
         }
 
-        if (selectedDriver.status === 'verified_pending_kit') {
+        if (selectedStatus === 'verified_pending_kit') {
             return null;
         }
 
@@ -1646,8 +1650,8 @@ const AdminSpareDrivers = () => {
                                 <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mb-1">Driver Review</p>
                                 <h3 className="text-lg font-black text-white uppercase">{selectedDriver.name}</h3>
                             </div>
-                            <span className={`px-2.5 py-1 rounded text-[8px] font-black uppercase ${STATUS_CONFIG[selectedDriver.status]?.color || STATUS_CONFIG.pending_docs.color}`}>
-                                {STATUS_CONFIG[selectedDriver.status]?.label || STATUS_CONFIG.pending_docs.label}
+                            <span className={`px-2.5 py-1 rounded text-[8px] font-black uppercase ${STATUS_CONFIG[normalizeDriverStatus(selectedDriver.status)]?.color || STATUS_CONFIG.pending_docs.color}`}>
+                                {STATUS_CONFIG[normalizeDriverStatus(selectedDriver.status)]?.label || STATUS_CONFIG.pending_docs.label}
                             </span>
                         </div>
 

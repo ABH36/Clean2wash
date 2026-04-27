@@ -7,13 +7,26 @@ import {
     CheckCircle2, Edit2, Save, X,
     TrendingUp, Clock, Star, Target,
     Zap, Activity, DollarSign, Lock,
-    Unlock, Calendar, BarChart3, Award, Wallet
+    Unlock, Calendar, BarChart3, Award, Wallet, Package
 } from 'lucide-react';
 import DriverLayout from '../components/DriverLayout';
 import { spareDriverAPI } from '../../../utils/spareDriverApi';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
+
+const normalizeStatus = (value) => String(value || '').toLowerCase();
+const hasKitPurchaseCompleted = (driverData = {}) => (
+    String(driverData?.kitStatus || '').toUpperCase() === 'COMPLETED'
+    || ['verified', 'under_review'].includes(normalizeStatus(driverData?.kit?.paymentStatus))
+);
+const canInitiateKitPurchase = (driverData = {}) => {
+    const status = normalizeStatus(driverData?.status);
+    const kitPaymentStatus = normalizeStatus(driverData?.kit?.paymentStatus);
+    if (hasKitPurchaseCompleted(driverData)) return false;
+    if (kitPaymentStatus === 'under_review') return false;
+    return ['verified_pending_kit', 'kit_payment_pending', 'active'].includes(status);
+};
 
 const DriverProfile = () => {
     const navigate = useNavigate();
@@ -150,6 +163,30 @@ const DriverProfile = () => {
                     </motion.button>
                 )}
 
+                {/* ── Kit Purchase Promotion (High Visibility) ── */}
+                {canInitiateKitPurchase(driver) && (
+                    <motion.div
+                        initial={{ scale: 0.95, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ delay: 0.25 }}
+                        onClick={() => navigate('/spare-driver/kit-purchase')}
+                        className={`p-5 rounded-[2rem] border flex items-center gap-4 cursor-pointer shadow-2xl transition-all active:scale-[0.98] bg-brand/10 border-brand/20 shadow-brand/5`}
+                    >
+                        <div className={`w-14 h-14 rounded-[1.5rem] flex items-center justify-center flex-shrink-0 bg-brand text-white shadow-lg shadow-brand/20`}>
+                            <Package size={24} fill="currentColor" />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-[10px] font-black text-brand uppercase tracking-widest leading-none mb-1">Mandatory Protocol</p>
+                            <h4 className={`text-sm font-black tracking-tight text-content`}>Starter Driver Kit</h4>
+                            <p className={`text-[9px] font-bold mt-1 text-content/40 uppercase leading-tight`}>Complete activation to unlock full operational dashboard and premium missions.</p>
+                        </div>
+                        <div className="flex flex-col items-center gap-1">
+                             <ChevronRight size={18} className="text-brand" strokeWidth={3} />
+                             <span className="text-[8px] font-black text-brand uppercase">Buy Now</span>
+                        </div>
+                    </motion.div>
+                )}
+
                 {/* ── Operational Menu ── */}
                 <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="bg-surface border border-content/[0.04] rounded-[2rem] overflow-hidden shadow-sm">
                     {[
@@ -203,17 +240,6 @@ const DriverProfile = () => {
                 <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.4 }} className="space-y-2 pt-2">
                     <p className="text-[9px] font-black text-content/30 uppercase tracking-[0.2em] px-3">Compliance & Access</p>
                     <div className="bg-surface border border-content/[0.04] rounded-[1.5rem] overflow-hidden shadow-sm">
-                        {['verified_pending_kit', 'kit_payment_pending', 'active'].includes(driver?.status) && (
-                            <button onClick={() => navigate('/spare-driver/kit-purchase')} className="w-full p-4 flex items-center justify-between border-b border-content/[0.02] hover:bg-content/[0.01] transition-colors">
-                                <div className="flex items-center gap-3">
-                                    <CreditCard size={16} className="text-content/40" />
-                                    <span className="text-[11px] font-bold text-content uppercase tracking-widest">Protocol Kit</span>
-                                </div>
-                                <span className={`text-[8px] font-black uppercase px-2 py-1 rounded border ${driver?.kitStatus === 'PURCHASED' ? 'text-green-500 border-green-500/20 bg-green-500/10' : 'text-brand border-brand/20 bg-brand/10'}`}>
-                                    {driver?.kitStatus === 'PURCHASED' ? 'Deployed' : 'Pending'}
-                                </span>
-                            </button>
-                        )}
                         <button onClick={() => navigate('/spare-driver/premium')} className="w-full p-4 flex items-center justify-between border-b border-content/[0.02] hover:bg-content/[0.01] transition-colors">
                             <div className="flex items-center gap-3">
                                 <ShieldAlert size={16} className="text-content/40" />

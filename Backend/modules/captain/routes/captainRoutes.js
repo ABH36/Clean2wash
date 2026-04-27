@@ -24,6 +24,12 @@ router.get('/profile/me', profileController.getProfile);
 router.put('/profile', profileController.updateProfile);
 router.put('/profile/location', profileController.updateLocation);
 
+// Kit Payment Routes
+router.get('/kit-config', profileController.getKitConfig);
+router.get('/kit-payment/key', profileController.getKitPaymentKey);
+router.post('/kit-payment/order', profileController.createKitPaymentOrder);
+router.post('/kit-payment/verify', profileController.verifyKitPayment);
+
 router.get('/jobs/pending', jobController.getPendingJobs);
 router.get('/jobs', jobController.getMyJobs);
 router.get('/jobs/:id', jobController.getMyJob);

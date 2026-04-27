@@ -14,6 +14,19 @@ const DEFAULT_KIT_CONFIG = {
     imageUrls: []
 };
 
+const normalizeStatus = (value) => String(value || '').toLowerCase();
+const hasKitPurchaseCompleted = (driverData = {}) => (
+    String(driverData?.kitStatus || '').toUpperCase() === 'COMPLETED'
+    || ['verified', 'under_review'].includes(normalizeStatus(driverData?.kit?.paymentStatus))
+);
+const canInitiateKitPurchase = (driverData = {}) => {
+    const status = normalizeStatus(driverData?.status);
+    const kitPaymentStatus = normalizeStatus(driverData?.kit?.paymentStatus);
+    if (hasKitPurchaseCompleted(driverData)) return false;
+    if (kitPaymentStatus === 'under_review') return false;
+    return ['verified_pending_kit', 'kit_payment_pending', 'active'].includes(status);
+};
+
 const loadRazorpayScript = () => new Promise((resolve, reject) => {
     if (window.Razorpay) return resolve(true);
 
@@ -133,10 +146,13 @@ const DriverKitPurchase = () => {
         );
     }
 
-    const isUnderReview = driver?.status?.toLowerCase() === 'kit_payment_pending' || driver?.status?.toLowerCase() === 'kit_payment_under_review';
-    const isActive = driver?.status?.toLowerCase() === 'active';
-    const isPaymentRequired = driver?.status?.toLowerCase() === 'verified_pending_kit';
-    const isProfilePending = driver?.status?.toLowerCase() === 'pending';
+    const status = normalizeStatus(driver?.status);
+    const kitPaymentStatus = normalizeStatus(driver?.kit?.paymentStatus);
+    const isProfilePending = ['pending', 'pending_docs', 'pending_verification'].includes(status);
+    const isUnderReview = status === 'kit_payment_under_review' || kitPaymentStatus === 'under_review';
+    const isKitCompleted = hasKitPurchaseCompleted(driver);
+    const isPaymentRequired = canInitiateKitPurchase(driver);
+    const isActive = status === 'active' && isKitCompleted;
 
     return (
         <DriverLayout title="Kit Purchasing">

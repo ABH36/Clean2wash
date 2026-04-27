@@ -1103,14 +1103,25 @@ exports.updateUser = async (req, res) => {
 
             // Trigger Notification for Verification
             if ((modelType === 'Captain' || modelType === 'SpareDriver') && updates.isVerified === true) {
+                // Enforce Kit Purchase workflow - move to pending_kit instead of direct ACTIVE
+                if (user.profile?.kit?.status !== 'COMPLETED') {
+                    user.status = 'verified_pending_kit';
+                } else {
+                    user.status = 'ACTIVE';
+                }
+
                 const io = socketService.getIO();
                 io.to(user._id.toString()).emit('captain_verified', {
-                    message: 'Your account has been verified by an admin. You can now receive requests.'
+                    message: user.status === 'verified_pending_kit' 
+                        ? 'Your documents are verified! Please purchase your activation kit to start working.' 
+                        : 'Your account has been verified by an admin. You can now receive requests.'
                 });
 
                 await sendCaptainNotification(user._id, {
-                    title: 'Account Verified!',
-                    message: 'Congratulations! Your account has been verified by an admin. You can now go online.',
+                    title: 'Verification Approved! 🛡️',
+                    message: user.status === 'verified_pending_kit'
+                        ? 'Your identity is verified. Next step: Purchase your activation kit to go online.'
+                        : 'Congratulations! Your account has been verified. You can now go online.',
                     type: 'verification',
                     priority: 'high'
                 });

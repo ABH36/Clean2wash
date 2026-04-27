@@ -57,6 +57,10 @@ import DriverServicePortfolio from './modules/spareDrivers/pages/DriverServicePo
 import DriverReliability from './modules/spareDrivers/pages/DriverReliability';
 import DriverAvailability from './modules/spareDrivers/pages/DriverAvailability';
 
+import CaptainKitPurchase from './modules/captain/pages/CaptainKitPurchase';
+import CaptainProfile from './modules/captain/pages/CaptainProfile';
+import CaptainHome from './modules/captain/pages/CaptainHome';
+
 import AdminPanelLayout from './modules/admin/components/AdminLayout';
 import AdminLogin from './modules/admin/pages/AdminLogin';
 import { getFlattenedRoutes } from './modules/admin/AdminRoutesConfig.jsx';
@@ -136,6 +140,10 @@ function App() {
                                             <Route path="/spare-driver/reliability" element={<DriverReliability />} />
                                             <Route path="/spare-driver/availability" element={<DriverAvailability />} />
                                             <Route path="/spare-driver/trip-history" element={<DriverTripHistory />} />
+
+                                            <Route path="/captain" element={P('captain', <CaptainHome />)} />
+                                            <Route path="/captain/profile" element={P('captain', <CaptainProfile />)} />
+                                            <Route path="/captain/kit-purchase" element={P('captain', <CaptainKitPurchase />)} />
 
                                             <Route path="/profile" element={P('consumer', <Profile />)} />
                                             <Route path="/vehicles" element={P('consumer', <VehicleManager />)} />

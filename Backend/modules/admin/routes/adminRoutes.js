@@ -20,6 +20,7 @@ const adminDriverController = require('../controllers/adminDriverController');
 const adminVehicleManagementController = require('../controllers/adminVehicleManagementController');
 const authMiddleware = require('../../../middleware/authMiddleware');
 const featureGuard = require('../../../middleware/featureGuard');
+const { requirePermission } = require('../../../middleware/rbacMiddleware');
 const zoneRoutes = require('../../../routes/zoneRoutes');
 
 // ── SECURITY MIDDLEWARE ────────────────────────────────────────
@@ -48,6 +49,13 @@ const walletRoutes = require('./walletRoutes');
 const dispatchRoutes = require('./dispatchRoutes');
 const reportRoutes = require('./reportRoutes');
 
+const withRbac = (module, action) => (req, res, next) => {
+    if (process.env.ENABLE_ADMIN_RBAC !== 'true') {
+        return next();
+    }
+    return requirePermission(module, action)(req, res, next);
+};
+
 // ── PUBLIC ROUTES (with rate limiting) ────────────────────────
 router.post('/login', authLimiter, validateLogin, adminAuthController.login);
 
@@ -72,29 +80,29 @@ router.post('/users', validateUserCreation, adminController.createUser);
 router.patch('/users/:id', validateUserUpdate, adminController.updateUser);
 router.patch('/users/:id/kyc', validateObjectId('id'), adminController.updateUserKyc);
 router.delete('/users/:id', validateObjectId('id'), adminController.deleteUser);
-router.get('/bookings', validatePagination, adminController.getAllBookings);
+router.get('/bookings', validatePagination, withRbac('bookings', 'view'), adminController.getAllBookings);
 
 // Admin Booking Management (with validation)
-router.get('/bookings/pending', readLimiter, adminController.getPendingBookings);
-router.patch('/bookings/:id/status', validateBookingStatusUpdate, adminController.updateBookingStatus);
-router.post('/bookings/:id/assign-staff', validateObjectId('id'), adminController.assignStaff);
-router.get('/captains', readLimiter, adminController.getActiveCaptains);
-router.post('/bookings/:bookingId/assign', validateObjectId('bookingId'), adminController.assignCaptain);
-router.get('/spare-drivers', readLimiter, adminController.getSpareDrivers);
-router.get('/bookings/chauffeur', validatePagination, adminController.getSpareDriverBookings);
+router.get('/bookings/pending', readLimiter, withRbac('bookings', 'view'), adminController.getPendingBookings);
+router.patch('/bookings/:id/status', validateBookingStatusUpdate, withRbac('bookings', 'update'), adminController.updateBookingStatus);
+router.post('/bookings/:id/assign-staff', validateObjectId('id'), withRbac('bookings', 'update'), adminController.assignStaff);
+router.get('/captains', readLimiter, withRbac('drivers', 'view'), adminController.getActiveCaptains);
+router.post('/bookings/:bookingId/assign', validateObjectId('bookingId'), withRbac('bookings', 'update'), adminController.assignCaptain);
+router.get('/spare-drivers', readLimiter, withRbac('drivers', 'view'), adminController.getSpareDrivers);
+router.get('/bookings/chauffeur', validatePagination, withRbac('bookings', 'view'), adminController.getSpareDriverBookings);
 
 // SOS & Emergency
 router.get('/sos/active', adminController.getActiveSOS);
 router.patch('/sos/:id/resolve', adminController.resolveSOS);
 
 // ── Drivers Management (Spare Driver Lifecycle) ────────────────
-router.get('/drivers', adminDriverController.getAllDrivers);
-router.get('/drivers/:id', adminDriverController.getDriverById);
-router.patch('/drivers/:id/approve', adminDriverController.approveDriver);
-router.patch('/drivers/:id/reject', adminDriverController.rejectDriver);
-router.patch('/drivers/:id/kit', adminDriverController.updateKitStatus);
-router.patch('/drivers/:id/police', adminDriverController.updatePoliceVerification);
-router.patch('/drivers/:id/status', adminDriverController.updateDriverStatus);
+router.get('/drivers', withRbac('drivers', 'view'), adminDriverController.getAllDrivers);
+router.get('/drivers/:id', withRbac('drivers', 'view'), adminDriverController.getDriverById);
+router.patch('/drivers/:id/approve', withRbac('drivers', 'update'), adminDriverController.approveDriver);
+router.patch('/drivers/:id/reject', withRbac('drivers', 'update'), adminDriverController.rejectDriver);
+router.patch('/drivers/:id/kit', withRbac('drivers', 'update'), adminDriverController.updateKitStatus);
+router.patch('/drivers/:id/police', withRbac('drivers', 'update'), adminDriverController.updatePoliceVerification);
+router.patch('/drivers/:id/status', withRbac('drivers', 'update'), adminDriverController.updateDriverStatus);
 
 // ── PHASE 1: Driver Operations Upgrade ──────────────────────────
 router.patch('/drivers/:id/online-status', adminDriverController.toggleOnlineStatus);

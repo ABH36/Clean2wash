@@ -32,6 +32,12 @@ const CaptainProfile = () => {
             group: 'Account',
             items: [
                 { label: 'Personal Information', sub: user.isVerified ? '✅ Identity Verified' : '⚠️ Verification Pending', icon: User, route: '/captain/profile/personal' },
+                { 
+                    label: 'Activation Kit', 
+                    sub: user.profile?.kit?.status === 'COMPLETED' ? '✅ Kit Purchased' : (user.status === 'kit_payment_under_review' ? '⏳ Verification Pending' : '⚠️ Purchase Required'), 
+                    icon: Shield, 
+                    route: '/captain/kit-purchase' 
+                },
                 { label: 'Wallet & Payouts', sub: `Current Balance: ₹${(captainEarnings.balance || 0).toLocaleString()}`, icon: Wallet, route: '/captain/earnings' },
                 { label: 'Portfolio', sub: 'Showcase your best washes', icon: Camera, route: '/captain/portfolio' },
                 { label: 'History', sub: 'Your past washes', icon: History, route: '/captain/history' },

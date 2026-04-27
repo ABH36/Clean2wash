@@ -4,6 +4,8 @@ const Booking = require('../../../models/Booking');
 const ServiceZone = require('../../../models/ServiceZone');
 const User = require('../../../models/User');
 const Setting = require('../../../models/Setting');
+const Role = require('../../../models/Role');
+const Admin = require('../../../models/Admin');
 const WalletTransaction = require('../../../models/WalletTransaction');
 const Notification = require('../../../models/Notification');
 const AuditLog = require('../../../models/AuditLog');
@@ -25,6 +27,8 @@ const { executeWalletTransaction, adjustWalletHold } = require('../../../utils/w
 const CHAUFFEUR_DISPATCH_LEAD_MINUTES = 15;
 const spareDriverSignupOTPStore = new Map();
 const validateSignupPhone = (phone = '') => /^[6-9]\d{9}$/.test(String(phone).trim());
+const VERIFICATION_QUEUE_STATUSES = ['pending', 'pending_verification', 'kit_payment_pending', 'kit_payment_under_review', 'verified_pending_kit'];
+const NON_QUEUE_DRIVER_STATUSES = ['active', 'rejected', 'suspended'];
 
 const getScheduledDispatchTime = (schedule = {}) => {
     if (!schedule?.date) return new Date();
@@ -37,6 +41,175 @@ const getScheduledDispatchTime = (schedule = {}) => {
     }
 
     return scheduledAt;
+};
+
+const getAdminRoleLevel = (admin = {}) => {
+    const roleLevel = admin?.role?.level;
+    if (Number.isFinite(Number(roleLevel))) return Number(roleLevel);
+    return 99;
+};
+
+const hasReviewCapability = async (admin = {}) => {
+    const roleId = admin?.role?._id || admin?.role;
+    if (!roleId) return false;
+
+    const role = await Role.findById(roleId).populate('permissions').lean();
+    if (!role) return false;
+    if (Number(role.level) === 1) return true;
+
+    const permissions = Array.isArray(role.permissions) ? role.permissions : [];
+    return permissions.some((permission) => {
+        const moduleName = String(permission?.module || '').toLowerCase();
+        const actionName = String(permission?.action || '').toLowerCase();
+        return (
+            moduleName === '*'
+            || (moduleName === 'drivers' && (actionName === '*' || actionName === 'update' || actionName === 'manage'))
+            || (moduleName === 'admins' && actionName === 'manage_roles')
+        );
+    });
+};
+
+const isVerificationQueueCandidate = (driver = {}) => {
+    const normalizedStatus = String(driver.status || '').toLowerCase();
+    const normalizedVerificationStatus = String(driver.verificationStatus || '').toLowerCase();
+    const docs = driver.documents || {};
+    const hasAllDocs = Boolean(
+        docs?.aadhaarCard?.frontUrl
+        && docs?.aadhaarCard?.backUrl
+        && docs?.panCard?.url
+        && docs?.drivingLicense?.url
+        && docs?.selfie?.url
+    );
+
+    if (NON_QUEUE_DRIVER_STATUSES.includes(normalizedStatus)) {
+        return false;
+    }
+
+    if (normalizedStatus === 'pending' && !hasAllDocs) {
+        return true;
+    }
+
+    if (VERIFICATION_QUEUE_STATUSES.includes(normalizedStatus)) {
+        return true;
+    }
+
+    return normalizedVerificationStatus === 'pending';
+};
+
+const getQueueScopeFilter = (status) => {
+    if (!status) {
+        return { status: { $nin: ['active', 'ACTIVE', 'rejected', 'REJECTED', 'suspended', 'SUSPENDED'] } };
+    }
+
+    const normalizedStatus = String(status).toLowerCase();
+    if (normalizedStatus === 'all') {
+        return {};
+    }
+
+    const isUpperPreferred = ['pending', 'active', 'blocked', 'rejected'].includes(normalizedStatus);
+    const candidates = isUpperPreferred
+        ? [normalizedStatus, normalizedStatus.toUpperCase()]
+        : [normalizedStatus];
+
+    return { status: { $in: candidates } };
+};
+
+const runVerificationQueueAutoAssignment = async () => {
+    const activeAdmins = await Admin.find({ status: 'ACTIVE' }).populate({
+        path: 'role',
+        populate: { path: 'permissions', select: 'module action' }
+    });
+
+    if (!activeAdmins.length) return 0;
+
+    const eligibleAdmins = activeAdmins.filter((admin) => {
+        if (Number(admin?.role?.level) === 1) return true;
+        const permissions = Array.isArray(admin?.role?.permissions) ? admin.role.permissions : [];
+        return permissions.some((permission) => {
+            const moduleName = String(permission?.module || '').toLowerCase();
+            const actionName = String(permission?.action || '').toLowerCase();
+            return moduleName === '*' || (moduleName === 'drivers' && (actionName === 'update' || actionName === 'manage' || actionName === '*'));
+        });
+    });
+
+    if (!eligibleAdmins.length) return 0;
+
+    const adminIds = eligibleAdmins.map((admin) => admin._id);
+    const baseQueueFilter = {
+        status: { $nin: ['active', 'ACTIVE', 'rejected', 'REJECTED', 'suspended', 'SUSPENDED'] }
+    };
+    const assignedDrivers = await SpareDriver.find({
+        ...baseQueueFilter,
+        'verificationQueue.assignedAdmin': { $in: adminIds }
+    }).select('_id verificationQueue.assignedAdmin status verificationStatus documents').lean();
+
+    const activeAssignedByAdmin = new Map();
+    adminIds.forEach((id) => activeAssignedByAdmin.set(String(id), 0));
+
+    const staleAssignments = [];
+    assignedDrivers.forEach((driver) => {
+        if (!isVerificationQueueCandidate(driver)) {
+            staleAssignments.push(driver._id);
+            return;
+        }
+        const key = String(driver.verificationQueue?.assignedAdmin || '');
+        activeAssignedByAdmin.set(key, (activeAssignedByAdmin.get(key) || 0) + 1);
+    });
+
+    if (staleAssignments.length) {
+        await SpareDriver.updateMany(
+            { _id: { $in: staleAssignments } },
+            {
+                $set: {
+                    'verificationQueue.assignedAdmin': null,
+                    'verificationQueue.assignedAt': null,
+                    'verificationQueue.releasedAt': new Date(),
+                    'verificationQueue.assignmentSource': 'auto'
+                }
+            }
+        );
+    }
+
+    const unassignedCandidates = await SpareDriver.find({
+        ...baseQueueFilter,
+        'verificationQueue.assignedAdmin': null
+    }).select('_id status verificationStatus documents createdAt').sort({ createdAt: 1 }).lean();
+
+    const eligibleCandidates = unassignedCandidates.filter(isVerificationQueueCandidate);
+    if (!eligibleCandidates.length) return 0;
+
+    const sortedAdminIds = [...adminIds].sort((a, b) => {
+        const loadA = activeAssignedByAdmin.get(String(a)) || 0;
+        const loadB = activeAssignedByAdmin.get(String(b)) || 0;
+        if (loadA !== loadB) return loadA - loadB;
+        return String(a).localeCompare(String(b));
+    });
+
+    const assignments = [];
+    eligibleCandidates.forEach((driver, index) => {
+        const adminId = sortedAdminIds[index % sortedAdminIds.length];
+        const key = String(adminId);
+        activeAssignedByAdmin.set(key, (activeAssignedByAdmin.get(key) || 0) + 1);
+        assignments.push({
+            updateOne: {
+                filter: { _id: driver._id },
+                update: {
+                    $set: {
+                        'verificationQueue.assignedAdmin': adminId,
+                        'verificationQueue.assignedAt': new Date(),
+                        'verificationQueue.releasedAt': null,
+                        'verificationQueue.assignmentSource': 'auto'
+                    }
+                }
+            }
+        });
+    });
+
+    if (assignments.length) {
+        await SpareDriver.bulkWrite(assignments);
+    }
+
+    return assignments.length;
 };
 
 const isDispatchReadySchedule = (schedule = {}, leadMinutes = CHAUFFEUR_DISPATCH_LEAD_MINUTES) => {
@@ -1267,7 +1440,16 @@ exports.createKitPaymentOrder = async (req, res) => {
             return res.status(404).json({ status: 'fail', message: 'Driver not found' });
         }
 
-        if (!['verified_pending_kit', 'kit_payment_pending'].includes(driver.status)) {
+        const normalizedStatus = String(driver.status || '').toLowerCase();
+        const normalizedKitPaymentStatus = String(driver?.kit?.paymentStatus || '').toLowerCase();
+        const kitAlreadyCompleted = String(driver?.kitStatus || '').toUpperCase() === 'COMPLETED'
+            || ['verified', 'under_review'].includes(normalizedKitPaymentStatus);
+
+        if (kitAlreadyCompleted) {
+            return res.status(400).json({ status: 'fail', message: 'Kit payment is already completed for this account' });
+        }
+
+        if (!['verified_pending_kit', 'kit_payment_pending', 'active'].includes(normalizedStatus)) {
             return res.status(400).json({ status: 'fail', message: 'Kit payment is available only after verification approval' });
         }
 
@@ -1350,24 +1532,40 @@ exports.verifyKitPayment = async (req, res) => {
             ...(driver.kit || {}),
             required: true,
             price: Number(driver.kit?.price || kitConfig.kitPrice || DRIVER_KIT_PRICE),
-            paymentStatus: 'under_review',
+            paymentStatus: 'verified', // Automatically verify since signature is valid
             paymentReference: razorpay_payment_id,
             razorpayOrderId: razorpay_order_id,
             razorpayPaymentId: razorpay_payment_id,
             paidAt: new Date()
         };
-        driver.status = 'kit_payment_pending'; driver.kitStatus = 'PENDING';
+
+        // Automatically activate the driver after payment
+        driver.status = 'ACTIVE';
+        driver.kitStatus = 'COMPLETED';
+        driver.verificationStatus = 'APPROVED'; 
+        driver.isVerified = true; 
+
+        // ✅ AUTO-ASSIGN DEFAULT SERVICES
+        // This ensures the driver doesn't have an empty portfolio after activation
+        if (!driver.allowedServices || driver.allowedServices.length === 0) {
+            driver.allowedServices = [
+                { type: 'point', isActive: true, rating: 5.0 },
+                { type: 'hourly', isActive: true, rating: 5.0 }
+            ];
+            driver.preferredServices = ['point', 'hourly'];
+        }
+        
         await driver.save();
 
         await Promise.all([
             sendSpareDriverNotification(driver._id, {
-                title: 'Kit Payment Successful',
-                message: 'Your driver kit payment was received and is now under admin review for final activation.',
-                type: 'payment',
+                title: '🎉 Account Activated!',
+                message: 'Your kit payment was verified successfully. Your account is now ACTIVE and you can start accepting requests.',
+                type: 'verification',
                 priority: 'high',
-                actionUrl: '/spare-driver/register',
-                actionText: 'Track Activation',
-                metaData: { status: 'kit_payment_pending', paymentId: razorpay_payment_id }
+                actionUrl: '/spare-driver/dashboard',
+                actionText: 'Go Online',
+                metaData: { status: 'ACTIVE', paymentId: razorpay_payment_id }
             }),
             sendAdminNotification({
                 title: 'Kit Payment Received',
@@ -1529,14 +1727,60 @@ exports.submitInquiry = async (req, res) => {
 // ── Admin: List all drivers (with optional status filter) ──
 exports.adminListDrivers = async (req, res) => {
     try {
-        const { status } = req.query;
-        const filter = status ? { status } : {};
+        const { status, scope = 'assigned' } = req.query;
+        const adminId = req.admin?._id;
+        const adminLevel = getAdminRoleLevel(req.admin);
+        const isSuperAdmin = adminLevel === 1;
+
+        await runVerificationQueueAutoAssignment();
+
+        const filter = getQueueScopeFilter(status);
+        const canReview = await hasReviewCapability(req.admin);
+
+        if (canReview && !isSuperAdmin && scope !== 'all') {
+            filter['verificationQueue.assignedAdmin'] = adminId;
+        }
+
         const drivers = await SpareDriver.find(filter)
             .select('-password')
+            .populate('verificationQueue.assignedAdmin', 'name email')
             .sort({ createdAt: -1 });
-        res.status(200).json({ status: 'success', results: drivers.length, data: { drivers } });
+
+        const queuedDrivers = drivers.filter((driver) => isVerificationQueueCandidate(driver));
+        const activeWorkload = await SpareDriver.countDocuments({
+            status: { $nin: ['active', 'ACTIVE', 'rejected', 'REJECTED', 'suspended', 'SUSPENDED'] },
+            'verificationQueue.assignedAdmin': adminId
+        });
+
+        res.status(200).json({
+            status: 'success',
+            results: drivers.length,
+            data: {
+                drivers,
+                queue: {
+                    queuedCount: queuedDrivers.length,
+                    assignedToMe: activeWorkload,
+                    canViewGlobal: isSuperAdmin
+                }
+            }
+        });
     } catch (err) {
         res.status(500).json({ status: 'fail', message: err.message });
+    }
+};
+
+exports.adminRebalanceVerificationQueue = async (req, res) => {
+    try {
+        const assignedCount = await runVerificationQueueAutoAssignment();
+        return res.status(200).json({
+            status: 'success',
+            message: assignedCount > 0
+                ? `Verification queue rebalanced. ${assignedCount} driver(s) assigned.`
+                : 'Verification queue already balanced.',
+            data: { assignedCount }
+        });
+    } catch (err) {
+        return res.status(500).json({ status: 'fail', message: err.message });
     }
 };
 
@@ -1553,6 +1797,17 @@ exports.adminVerifyDriver = async (req, res) => {
         const existingDriver = await SpareDriver.findById(req.params.id);
         if (!existingDriver) {
             return res.status(404).json({ status: 'fail', message: 'Driver not found' });
+        }
+
+        const adminLevel = getAdminRoleLevel(req.admin);
+        const isSuperAdmin = adminLevel === 1;
+        const assignedReviewerId = existingDriver.verificationQueue?.assignedAdmin?.toString?.() || '';
+        const actingAdminId = req.admin?._id?.toString?.() || '';
+        if (assignedReviewerId && !isSuperAdmin && assignedReviewerId !== actingAdminId) {
+            return res.status(403).json({
+                status: 'fail',
+                message: 'This verification request is assigned to another admin.'
+            });
         }
 
         if (
@@ -1586,6 +1841,11 @@ exports.adminVerifyDriver = async (req, res) => {
             update['kit.required'] = true;
             update['kit.price'] = Number(kitConfig.kitPrice || DRIVER_KIT_PRICE);
             update['kit.paymentStatus'] = 'pending';
+            update.verificationStatus = 'APPROVED';
+            update['verificationQueue.assignedAdmin'] = req.admin?._id || null;
+            update['verificationQueue.assignedAt'] = existingDriver.verificationQueue?.assignedAt || new Date();
+            update['verificationQueue.releasedAt'] = null;
+            update['verificationQueue.assignmentSource'] = existingDriver.verificationQueue?.assignmentSource || 'auto';
         }
 
         if (status === 'active') {
@@ -1595,6 +1855,12 @@ exports.adminVerifyDriver = async (req, res) => {
             update['kit.paymentStatus'] = 'verified';
             update['kit.verifiedAt'] = now;
             update.kitStatus = 'COMPLETED';
+            update.verificationStatus = 'APPROVED';
+            update.isVerified = true;
+            update['verificationQueue.assignedAdmin'] = null;
+            update['verificationQueue.assignedAt'] = null;
+            update['verificationQueue.releasedAt'] = new Date();
+            update['verificationQueue.assignmentSource'] = 'auto';
             update.onboardingRecovery = {
                 enabled: Number(kitConfig.monthlyDeductionAmount || 0) > 0 && Number(kitConfig.monthlyDeductionMonths || 0) > 0,
                 monthlyDeductionAmount: Number(kitConfig.monthlyDeductionAmount || 0),
@@ -1609,6 +1875,19 @@ exports.adminVerifyDriver = async (req, res) => {
 
         if (status === 'rejected') {
             // Document rejection doesn't necessarily mean PVR is rejected
+            update.verificationStatus = 'REJECTED';
+            update.isVerified = false;
+            update['verificationQueue.assignedAdmin'] = null;
+            update['verificationQueue.assignedAt'] = null;
+            update['verificationQueue.releasedAt'] = new Date();
+            update['verificationQueue.assignmentSource'] = 'auto';
+        }
+
+        if (status === 'suspended') {
+            update['verificationQueue.assignedAdmin'] = null;
+            update['verificationQueue.assignedAt'] = null;
+            update['verificationQueue.releasedAt'] = new Date();
+            update['verificationQueue.assignmentSource'] = 'auto';
         }
 
         const driver = await SpareDriver.findByIdAndUpdate(

@@ -4,6 +4,7 @@ const { sendSpareDriverNotification } = require('./notificationService');
 
 const REJECTION_STATUS = 'sparedriver_rejected';
 const BROADCAST_STATUS = 'sparedriver_broadcast';
+const EARTH_RADIUS_METERS = 6371000;
 
 const getSafeIO = () => {
     try {
@@ -54,6 +55,56 @@ const getBroadcastRadius = (booking, overrideRadius) => {
     return Math.min(15000, 7000 + (priorBroadcasts * 2000));
 };
 
+const hasValidLngLatArray = (coordinates) => (
+    Array.isArray(coordinates)
+    && coordinates.length === 2
+    && Number.isFinite(Number(coordinates[0]))
+    && Number.isFinite(Number(coordinates[1]))
+    && Number(coordinates[0]) !== 0
+    && Number(coordinates[1]) !== 0
+);
+
+const hasValidLatLngObject = (coordinates = {}) => (
+    Number.isFinite(Number(coordinates?.lat))
+    && Number.isFinite(Number(coordinates?.lng))
+    && Number(coordinates.lat) !== 0
+    && Number(coordinates.lng) !== 0
+);
+
+const toRadians = (value) => (value * Math.PI) / 180;
+
+const getDistanceMeters = (fromLat, fromLng, toLat, toLng) => {
+    const dLat = toRadians(toLat - fromLat);
+    const dLng = toRadians(toLng - fromLng);
+    const lat1 = toRadians(fromLat);
+    const lat2 = toRadians(toLat);
+
+    const a = Math.sin(dLat / 2) ** 2
+        + Math.cos(lat1) * Math.cos(lat2) * (Math.sin(dLng / 2) ** 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return EARTH_RADIUS_METERS * c;
+};
+
+const getDriverSearchPoint = (driver = {}) => {
+    if (hasValidLngLatArray(driver?.currentLocation?.coordinates)) {
+        return {
+            lat: Number(driver.currentLocation.coordinates[1]),
+            lng: Number(driver.currentLocation.coordinates[0]),
+            source: 'currentLocation'
+        };
+    }
+
+    if (hasValidLatLngObject(driver?.address?.coordinates)) {
+        return {
+            lat: Number(driver.address.coordinates.lat),
+            lng: Number(driver.address.coordinates.lng),
+            source: 'address'
+        };
+    }
+
+    return null;
+};
+
 const buildVehicleSnapshot = (booking, fallbackVehicle = {}) => {
     const populatedVehicle = booking.vehicle && typeof booking.vehicle === 'object' && !Array.isArray(booking.vehicle)
         ? booking.vehicle
@@ -79,79 +130,108 @@ const buildBroadcastPayload = (booking, options = {}) => ({
 const fetchNearbyDrivers = async (booking, excludeDriverIds = [], maxDistance = 7000) => {
     const normalizedExclusions = [...new Set(excludeDriverIds.map(normalizeId).filter(Boolean))];
     
-    // Determine the service type required (e.g., 'outstation', 'hourly')
-    const requiredServiceType = booking.service?.type || booking.serviceType || 'point';
+    // Determine the service type required (e.g., 'outstation', 'hourly', 'sparedriver')
+    const requiredServiceType = booking.service?.type || booking.serviceType || 'sparedriver';
 
     const query = {
         isOnline: true,
-        status: 'ACTIVE',
-        verificationStatus: 'APPROVED',
-        'kit.paymentStatus': 'verified',
-        'dutyHours.status.canAcceptBookings': true,
-        // ✅ SERVICE FILTERING: Driver must be authorized for this specific service
-        allowedServices: { 
-            $elemMatch: { 
-                name: requiredServiceType, 
-                isActive: true 
-            } 
-        }
+        status: { $in: ['ACTIVE', 'active'] },
+        verificationStatus: { $in: ['APPROVED', 'approved'] },
+        // ✅ FIXED: Kit payment can be 'completed' or 'verified' (both are valid)
+        $or: [
+            { kitStatus: 'COMPLETED' },
+            { 'kit.paymentStatus': 'completed' },
+            { 'kit.paymentStatus': 'verified' },
+            { 'kit.paymentStatus': { $exists: false } }  // Allow drivers without kit requirement
+        ],
+        'dutyHours.status.canAcceptBookings': { $ne: false }  // Allow if field doesn't exist or is true
     };
 
-    // ✅ ZONE FILTERING
-    if (booking.zone?.code) {
-        query['currentLocation.zone'] = booking.zone.code;
-    }
+    const zoneCode = String(booking?.zone?.code || '').trim().toUpperCase();
 
     if (normalizedExclusions.length > 0) {
         query._id = { $nin: normalizedExclusions };
     }
 
-    const coordinates = booking.location?.address?.coordinates;
-    if (coordinates?.lat && coordinates?.lng) {
-        // We use an $or query to check both Live GPS (currentLocation) 
-        // AND the Driver's saved Base Address (address.coordinates)
-        query.$or = [
-            {
-                currentLocation: {
-                    $nearSphere: {
-                        $geometry: {
-                            type: 'Point',
-                            coordinates: [parseFloat(coordinates.lng), parseFloat(coordinates.lat)]
-                        },
-                        $maxDistance: maxDistance
-                    }
-                }
-            },
-            {
-                'address.coordinates': {
-                    $nearSphere: {
-                        $geometry: {
-                            type: 'Point',
-                            coordinates: [parseFloat(coordinates.lng), parseFloat(coordinates.lat)]
-                        },
-                        $maxDistance: maxDistance
-                    }
+    const coordinates = booking?.location?.address?.coordinates;
+    if (hasValidLatLngObject(coordinates)) {
+        const targetLat = Number(coordinates.lat);
+        const targetLng = Number(coordinates.lng);
+        const nearSphereFilter = {
+            currentLocation: {
+                $nearSphere: {
+                    $geometry: {
+                        type: 'Point',
+                        coordinates: [targetLng, targetLat]
+                    },
+                    $maxDistance: maxDistance
                 }
             }
-        ];
+        };
 
-        // Fetch drivers and sort by Preference Boost
-        const drivers = await SpareDriver.find(query).select('_id name allowedServices preferredServices');
-        
-        // Sort drivers: Those who "Prefer" this service type come first
+        const strictZoneQuery = zoneCode ? { ...query, 'currentLocation.zone': zoneCode, ...nearSphereFilter } : { ...query, ...nearSphereFilter };
+        let drivers = await SpareDriver.find(strictZoneQuery).select('_id name allowedServices preferredServices currentLocation address status isOnline');
+
+        // If zone pinning gives zero results, relax zone but keep geo-near.
+        if (drivers.length === 0 && zoneCode) {
+            drivers = await SpareDriver.find({ ...query, ...nearSphereFilter }).select('_id name allowedServices preferredServices currentLocation address status isOnline');
+        }
+
+        // Fallback for drivers without live GPS zone/point but with saved address coordinates.
+        if (drivers.length === 0) {
+            const fallbackZoneQuery = zoneCode
+                ? {
+                    ...query,
+                    $or: [
+                        { 'currentLocation.zone': zoneCode },
+                        { 'currentLocation.zone': { $exists: false } },
+                        { 'currentLocation.zone': null },
+                        { 'currentLocation.zone': '' }
+                    ]
+                }
+                : { ...query };
+
+            const candidates = await SpareDriver.find(fallbackZoneQuery)
+                .limit(300)
+                .select('_id name allowedServices preferredServices currentLocation address status isOnline');
+
+            drivers = candidates.filter((driver) => {
+                const point = getDriverSearchPoint(driver);
+                if (!point) return false;
+                const distance = getDistanceMeters(targetLat, targetLng, point.lat, point.lng);
+                return distance <= maxDistance;
+            });
+        }
+
+        console.log(`📡 Broadcast Query Results: Found ${drivers.length} eligible drivers`);
+        console.log(`📍 Search Location: ${coordinates.lat}, ${coordinates.lng}`);
+        console.log(`📏 Search Radius: ${maxDistance}m`);
+        console.log(`🗺️ Zone Code: ${zoneCode || 'none'}`);
+        console.log('🔍 Query Conditions:', JSON.stringify(query, null, 2));
+
         return drivers.sort((a, b) => {
             const aPrefers = (a.preferredServices || []).includes(requiredServiceType);
             const bPrefers = (b.preferredServices || []).includes(requiredServiceType);
             if (aPrefers && !bPrefers) return -1;
             if (!aPrefers && bPrefers) return 1;
-            return 0;
+
+            const aPoint = getDriverSearchPoint(a);
+            const bPoint = getDriverSearchPoint(b);
+            const aDistance = aPoint ? getDistanceMeters(targetLat, targetLng, aPoint.lat, aPoint.lng) : Number.MAX_SAFE_INTEGER;
+            const bDistance = bPoint ? getDistanceMeters(targetLat, targetLng, bPoint.lat, bPoint.lng) : Number.MAX_SAFE_INTEGER;
+            return aDistance - bDistance;
         });
     }
 
-    return SpareDriver.find(query)
+    // Fallback: No coordinates, just find nearby active drivers
+    const drivers = await SpareDriver.find(query)
         .sort({ updatedAt: -1 })
         .limit(20)
-        .select('_id name allowedServices preferredServices');
+        .select('_id name allowedServices preferredServices currentLocation status isOnline');
+    
+    console.log(`📡 Fallback Query: Found ${drivers.length} drivers (no location filter)`);
+    
+    return drivers;
 };
 
 const broadcastBookingToDrivers = async (booking, options = {}) => {

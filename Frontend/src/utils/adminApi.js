@@ -187,7 +187,7 @@ class ApiClient {
         // Use RBAC admin login endpoint (superadmin/auth/login)
         // We use the absolute path /api/superadmin/auth/login to ensure it hits the correct RBAC system
         // using this.request ensures robust error handling and JSON parsing
-        return this.request('/../../superadmin/auth/login', {
+        return this.request('/../superadmin/auth/login', {
             method: 'POST',
             body: JSON.stringify({ email, password })
         });

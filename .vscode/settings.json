@@ -1,5 +1,2 @@
 {
-    "kiroAgent.configureMCP": "Disabled",
-    "css.lint.unknownAtRules": "ignore",
-    "javascript.autoClosingTags": false
 }

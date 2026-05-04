@@ -196,10 +196,10 @@ const AdminLayout = ({ title: propTitle }) => {
                             <Menu size={18} />
                         </button>
                         <div className="hidden sm:flex flex-col">
-                            <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest leading-none">
+                            <h2 className="text-sm font-black !text-white uppercase tracking-widest leading-none">
                                 {getPageTitle()}
                             </h2>
-                            <p className="text-[10px] font-medium text-slate-400 mt-0.5">Clean2Wash Admin</p>
+                            <p className="text-[10px] font-medium text-slate-400 mt-0.5 uppercase tracking-wide">Clean2Wash Control</p>
                         </div>
                     </div>
 
@@ -238,7 +238,7 @@ const AdminLayout = ({ title: propTitle }) => {
                         {/* Profile */}
                         <div className="flex items-center gap-2.5 pl-1 cursor-pointer group">
                             <div className="text-right hidden sm:block">
-                                <p className="text-[11px] font-black text-slate-800 leading-none group-hover:text-amber-600 transition-colors uppercase tracking-wide">Super Admin</p>
+                                <p className="text-[11px] font-black text-white leading-none group-hover:text-amber-600 transition-colors uppercase tracking-wide">Super Admin</p>
                                 <p className="text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">Administrator</p>
                             </div>
                             <div className="relative">
@@ -286,7 +286,7 @@ const SidebarContent = ({ isSidebarOpen, NAV_ITEMS, location, navigate, onLogout
                     <motion.h1 
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="text-xl font-black text-white tracking-tight"
+                        className="text-xl font-black !text-white tracking-tight"
                     >
                         SpareDriver
                     </motion.h1>
@@ -312,17 +312,17 @@ const SidebarContent = ({ isSidebarOpen, NAV_ITEMS, location, navigate, onLogout
                                     }`}
                                 >
                                     <div className="flex items-center gap-3">
-                                        <span className={`${isActive ? 'text-amber-500' : 'text-slate-500'} group-hover:text-amber-400 transition-colors`}>
+                                        <span className={`${isActive ? 'text-amber-500' : 'text-slate-400'} group-hover:text-amber-400 transition-colors`}>
                                             {item.icon}
                                         </span>
                                         {isSidebarOpen && (
-                                            <span className="text-[13px] font-black tracking-wide uppercase opacity-80 group-hover:opacity-100">
+                                            <span className="text-[13px] font-black tracking-wide uppercase opacity-70 group-hover:opacity-100 text-slate-300">
                                                 {item.category}
                                             </span>
                                         )}
                                     </div>
                                     {isSidebarOpen && (
-                                        <ChevronDown size={12} strokeWidth={3} className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                                        <ChevronDown size={12} strokeWidth={3} className={`transition-transform duration-300 text-slate-400 ${isExpanded ? 'rotate-180' : ''}`} />
                                     )}
                                 </button>
                                 
@@ -341,7 +341,7 @@ const SidebarContent = ({ isSidebarOpen, NAV_ITEMS, location, navigate, onLogout
                                                     className={`w-full text-left px-5 py-2 rounded-r-xl text-[12px] font-bold transition-all relative ${
                                                         location.pathname === route.path 
                                                             ? 'text-amber-500 bg-amber-500/10' 
-                                                            : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                                            : 'text-slate-300 hover:text-white hover:bg-white/5'
                                                     }`}
                                                 >
                                                     {route.label}
@@ -365,12 +365,12 @@ const SidebarContent = ({ isSidebarOpen, NAV_ITEMS, location, navigate, onLogout
                                         : 'hover:bg-slate-800/50 hover:text-white'
                                 }`}
                             >
-                                <span className={`${location.pathname === item.path ? 'text-slate-900' : 'text-slate-500 group-hover:text-amber-400'}`}>
+                                <span className={`${location.pathname === item.path ? 'text-slate-900' : 'text-slate-400 group-hover:text-amber-400'}`}>
                                     {item.icon}
                                 </span>
                                 {isSidebarOpen && (
                                     <div className="flex-1 flex items-center justify-between">
-                                        <span className="text-[13px] font-black tracking-wide uppercase">
+                                        <span className={`text-[13px] font-black tracking-wide uppercase ${location.pathname === item.path ? 'text-slate-900' : 'text-slate-300'}`}>
                                             {item.label}
                                         </span>
                                         {item.badge && (

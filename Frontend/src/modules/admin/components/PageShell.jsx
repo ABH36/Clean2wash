@@ -45,7 +45,7 @@ const PageShell = ({
                     )}
                     <div>
                         <div className="flex items-center gap-2 mb-0.5">
-                            <h1 className="text-xl font-black text-slate-800 uppercase tracking-tight leading-none">
+                            <h1 className="text-xl font-black text-slate-900 uppercase tracking-tight leading-none">
                                 {title}
                             </h1>
                             {badge && (

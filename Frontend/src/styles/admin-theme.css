@@ -209,9 +209,9 @@
 ──────────────────────────────────────────*/
 .adm-header {
     height: var(--header-h);
-    background: #ffffff;
-    border-bottom: 1px solid var(--adm-border-light);
-    box-shadow: var(--shadow-sm);
+    background: var(--adm-navy);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
     display: flex;
     align-items: center;
     padding: 0 1.5rem;
@@ -229,24 +229,24 @@
 
 .adm-search-input {
     width: 100%;
-    background: var(--adm-bg);
-    border: 1.5px solid var(--adm-border);
+    background: rgba(255,255,255,0.04);
+    border: 1.5px solid rgba(255,255,255,0.08);
     border-radius: var(--r-lg);
     padding: 0.5rem 1rem 0.5rem 2.5rem;
     font-size: 12px;
     font-weight: 500;
-    color: var(--adm-text-primary);
+    color: #fff;
     font-family: inherit;
     transition: all 0.2s ease;
 }
 
-.adm-search-input::placeholder { color: var(--adm-text-muted); }
+.adm-search-input::placeholder { color: rgba(255,255,255,0.3); }
 
 .adm-search-input:focus {
     outline: none;
     border-color: var(--adm-amber);
-    background: #fff;
-    box-shadow: var(--shadow-glow);
+    background: rgba(255,255,255,0.08);
+    box-shadow: 0 0 0 4px rgba(245,158,11,0.1);
 }
 
 /* ─────────────────────────────────────────

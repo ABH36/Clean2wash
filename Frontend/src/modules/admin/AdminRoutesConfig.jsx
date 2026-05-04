@@ -34,6 +34,7 @@ const ZoneManagement = React.lazy(() => import('./pages/operations/ZoneManagemen
 // ── Driver Management ──
 const AdminDriversOperations = React.lazy(() => import('./pages/AdminDriversOperations'));
 const AdminSpareDrivers = React.lazy(() => import('./pages/AdminSpareDrivers'));
+const AdminKYCVerification = React.lazy(() => import('./pages/AdminKYCVerification'));
 
 // ── User Management ──
 const AdminUsers = React.lazy(() => import('./pages/AdminUsers'));
@@ -62,11 +63,11 @@ const AdminSystemSettings = React.lazy(() => import('./pages/superadmin/AdminSys
 
 // ── Placeholder Shells (remaining small modules) ──
 const ComingSoon = ({ title }) => (
-    <div className="flex items-center justify-center min-h-[400px] flex-col gap-4 text-slate-400 bg-white rounded-2xl border border-slate-100 shadow-sm">
-        <Activity size={48} className="animate-pulse" />
+    <div className="flex items-center justify-center min-h-[400px] flex-col gap-4 text-slate-400 bg-slate-900 rounded-2xl border border-slate-800 shadow-sm">
+        <Activity size={48} className="animate-pulse text-amber-500" />
         <div className="text-center">
-            <p className="text-sm font-black text-slate-800 uppercase tracking-widest">{title || 'Module'} Coming Soon</p>
-            <p className="text-[10px] font-medium text-slate-400 mt-1 uppercase">Wiring data feed in Phase 5</p>
+            <p className="text-sm font-black text-white uppercase tracking-widest">{title || 'Module'} Coming Soon</p>
+            <p className="text-[10px] font-medium text-slate-500 mt-1 uppercase">Wiring data feed in Phase 5</p>
         </div>
     </div>
 );
@@ -133,7 +134,7 @@ export const ADMIN_ROUTES_CONFIG = [
             {
                 path: '/admin/drivers/kyc',
                 label: 'KYC Verification',
-                component: <AdminSpareDrivers />,
+                component: <AdminKYCVerification />,
                 icon: <Shield size={14} />
             }
         ]

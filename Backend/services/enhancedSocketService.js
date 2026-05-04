@@ -373,6 +373,10 @@ const setupEventHandlers = (socket) => {
     socket.on('ping', () => {
         socket.emit('pong', { timestamp: Date.now() });
     });
+
+    // Support Chat Handlers
+    const chatSocketHandler = require('../socket/chatSocketHandler');
+    chatSocketHandler(io, socket);
 };
 
 /**

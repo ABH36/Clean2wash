@@ -2,58 +2,45 @@ const Booking = require('../../../models/Booking');
 const SpareDriver = require('../../../models/SpareDriver');
 const User = require('../../../models/User');
 const SOSAlert = require('../../../models/SOSAlert');
+const SupportTicket = require('../../../models/SupportTicket');
+const ChatRoom = require('../../../models/ChatRoom');
+const Promotion = require('../../../models/Promotion');
+const Task = require('../../../models/Task');
 const catchAsync = require('../../../utils/catchAsync');
 const { PLATFORM_MODE } = require('../../../middleware/featureGuard');
+const mongoose = require('mongoose');
 
 // ─── CONFIGURATION & CONSTANTS ───────────────────────────────────
 const SERVICE_TYPE = process.env.SERVICE_TYPE || 'sparedriver';
-const LOAD_THRESHOLD = 0.8;
-const CANCELLATION_THRESHOLD = 0.15; // 15% cancellation rate alert
-const IDLE_THRESHOLD_MINUTES = 30;
-const OVERWORK_THRESHOLD_HOURS = 12;
-const ACTIVE_TRIP_STATUSES = [
-    'accepted',
-    'assigned',
-    'en_route',
-    'arrived',
-    'active',
-    'picked-up',
-    'in_progress'
-];
+const ONGOING_STATUSES = ['accepted', 'assigned', 'en_route', 'arrived', 'active', 'picked-up', 'in_progress', 'washing', 'at-studio'];
 
 /**
- * PRODUCTION-GRADE DASHBOARD CONTROLLER - UPGRADED
- * Aggregates Spare Driver platform metrics with advanced analytics.
- * Includes: Utilization, Cancellation, Duty Hours, Hybrid Booking Split, Enhanced Alerts
+ * PRODUCTION-GRADE DASHBOARD CONTROLLER - PHASE 2 (DATA CONTRACT)
+ * Redesigned to support the "Industrial Pro" cockpit UI.
+ * Aggregates multi-module data for KPIs, Trends, Alerts, and Operations.
  */
 exports.getDashboard = catchAsync(async (req, res) => {
     const now = new Date();
     const startOfToday = new Date(now.setHours(0, 0, 0, 0));
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const thirtyMinutesAgo = new Date(Date.now() - IDLE_THRESHOLD_MINUTES * 60 * 1000);
 
-    // ─── 1. CORE KPIs (PARALLEL AGGREGATION) ─────────────────────────
+    // ─── 1. PARALLEL AGGREGATION ─────────────────────────────────────
     const [
-        totalDrivers,
-        activeDrivers,
-        totalUsers,
-        totalBookings,
-        todayStats,
-        activeTripsCount,
-        bookingTypeStats,
-        completedBookings,
-        cancelledBookings,
-        idleDrivers,
-        dutyHoursData,
-        activeSOSAlerts
+        kpis,
+        bookingByStatus,
+        alertsOverview,
+        driverStatusBreakdown,
+        earningsOverview,
+        trends,
+        recentBookings,
+        liveTrips,
+        taskSummary,
+        couponsAds,
+        sosLive,
+        refundRequests
     ] = await Promise.all([
-        SpareDriver.countDocuments({}),
-        SpareDriver.countDocuments({ isActive: true, isOnline: true }),
-        User.countDocuments({ role: 'consumer', isActive: true }),
-        Booking.countDocuments({ 'service.type': SERVICE_TYPE, isActive: true }),
-        
-        // Today's bookings and revenue
+        // A. KPI Aggregation (Today)
         Booking.aggregate([
             { 
                 $match: { 
@@ -65,142 +52,64 @@ exports.getDashboard = catchAsync(async (req, res) => {
             {
                 $group: {
                     _id: null,
-                    count: { $sum: 1 },
-                    revenue: { 
-                        $sum: { 
-                            $cond: [{ $eq: ['$status', 'completed'] }, '$pricing.totalAmount', 0] 
-                        } 
+                    totalBookings: { $sum: 1 },
+                    totalRevenue: { 
+                        $sum: { $cond: [{ $eq: ['$status', 'completed'] }, '$pricing.totalAmount', 0] } 
+                    },
+                    cancelledBookings: { 
+                        $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] } 
+                    },
+                    ongoingTrips: {
+                        $sum: { $cond: [{ $in: ['$status', ONGOING_STATUSES] }, 1, 0] }
                     }
                 }
             }
         ]),
-        
-        // Active trips count
-        Booking.countDocuments({ 
-            'service.type': SERVICE_TYPE, 
-            status: { $in: ACTIVE_TRIP_STATUSES },
-            isActive: true
-        }),
-        
-        // Booking type split (instant vs scheduled)
+
+        // B. Bookings by Status (Donut Chart)
         Booking.aggregate([
-            {
-                $match: {
-                    'service.type': SERVICE_TYPE,
-                    isActive: true,
-                    createdAt: { $gte: startOfToday }
-                }
-            },
-            {
-                $group: {
-                    _id: '$schedule.type',
-                    count: { $sum: 1 }
-                }
-            }
+            { $match: { 'service.type': SERVICE_TYPE, isActive: true, createdAt: { $gte: sevenDaysAgo } } },
+            { $group: { _id: '$status', count: { $sum: 1 } } }
         ]),
-        
-        // Completed bookings (for fulfillment rate)
-        Booking.countDocuments({
-            'service.type': SERVICE_TYPE,
-            status: 'completed',
-            isActive: true
-        }),
-        
-        // Cancelled bookings (for cancellation rate)
-        Booking.countDocuments({
-            'service.type': SERVICE_TYPE,
-            status: 'cancelled',
-            isActive: true
-        }),
-        
-        // Idle drivers (online but no activity for 30+ min)
-        SpareDriver.find({
-            isActive: true,
-            isOnline: true,
-            lastActive: { $lt: thirtyMinutesAgo }
-        }).select('name driverId phone lastActive').lean(),
-        
-        // Calculate duty hours from completed bookings today
+
+        // C. Alerts Overview Counts
+        Promise.all([
+            SOSAlert.countDocuments({ status: 'active' }),
+            Booking.countDocuments({ 'payment.status': 'refund_pending' }),
+            SupportTicket.countDocuments({ status: 'open' }),
+            ChatRoom.countDocuments({ status: 'active', 'metadata.lastMessageFrom': 'user' }), // Mocking unread logic
+            SpareDriver.countDocuments({ status: 'PENDING' })
+        ]),
+
+        // D. Driver Status Breakdown
+        Promise.all([
+            SpareDriver.countDocuments({ isOnline: true, status: 'ACTIVE' }),
+            Booking.countDocuments({ 'service.type': SERVICE_TYPE, status: { $in: ONGOING_STATUSES }, isActive: true }),
+            SpareDriver.countDocuments({ isOnline: false, status: 'ACTIVE' })
+        ]),
+
+        // E. Earnings Overview (Today)
         Booking.aggregate([
-            {
-                $match: {
-                    'service.type': SERVICE_TYPE,
-                    status: 'completed',
-                    isActive: true,
-                    createdAt: { $gte: startOfToday }
-                }
-            },
-            {
-                $group: {
-                    _id: '$provider.id',
-                    totalMinutes: {
-                        $sum: {
-                            $divide: [
-                                { $subtract: ['$completedAt', '$acceptedAt'] },
-                                60000 // Convert ms to minutes
-                            ]
-                        }
-                    }
-                }
+            { 
+                $match: { 
+                    'service.type': SERVICE_TYPE, 
+                    status: 'completed', 
+                    isActive: true, 
+                    createdAt: { $gte: startOfToday } 
+                } 
             },
             {
                 $group: {
                     _id: null,
-                    totalHours: { $sum: { $divide: ['$totalMinutes', 60] } },
-                    driverCount: { $sum: 1 }
+                    totalRevenue: { $sum: '$pricing.totalAmount' },
+                    driverPayouts: { $sum: '$pricing.driverEarning' },
+                    platformCommission: { $sum: '$pricing.platformCommission' },
+                    otherEarnings: { $sum: 0 } // Reserved for fees/addons
                 }
             }
         ]),
-        
-        // Active SOS Alerts (last 24 hours)
-        SOSAlert.find({
-            status: 'active',
-            createdAt: { $gte: oneDayAgo }
-        })
-        .populate('consumer', 'name phone profile.avatar')
-        .populate('responders.user', 'name phone')
-        .sort({ createdAt: -1 })
-        .limit(20)
-        .lean()
-    ]);
 
-    // ─── 2. CALCULATE ADVANCED METRICS ───────────────────────────────
-    const instantBookings = bookingTypeStats.find(b => b._id === 'instant')?.count || 0;
-    const scheduledBookings = bookingTypeStats.find(b => b._id === 'scheduled')?.count || 0;
-    
-    const utilizationRate = totalDrivers > 0 ? ((activeDrivers / totalDrivers) * 100).toFixed(1) : 0;
-    const cancellationRate = totalBookings > 0 ? ((cancelledBookings / totalBookings) * 100).toFixed(1) : 0;
-    const fulfillmentRate = totalBookings > 0 ? ((completedBookings / totalBookings) * 100).toFixed(1) : 0;
-    
-    const activeDutyHours = dutyHoursData[0]?.totalHours || 0;
-    const revenuePerHour = activeDutyHours > 0 
-        ? ((todayStats[0]?.revenue || 0) / activeDutyHours).toFixed(0) 
-        : 0;
-
-    // ─── 3. LIVE TRIPS & RECENT ACTIVITY ─────────────────────────────
-    const [liveTrips, recentActivities] = await Promise.all([
-        Booking.find({ 
-            'service.type': SERVICE_TYPE, 
-            status: { $in: ACTIVE_TRIP_STATUSES },
-            isActive: true 
-        })
-        .populate('consumer', 'name phone profile.avatar')
-        .populate('provider.id', 'name phone driverId')
-        .sort({ updatedAt: -1 })
-        .limit(10)
-        .lean(),
-
-        Booking.find({ 'service.type': SERVICE_TYPE, isActive: true })
-        .populate('consumer', 'name')
-        .populate('provider.id', 'name')
-        .sort({ createdAt: -1 })
-        .limit(10)
-        .lean()
-    ]);
-
-    // ─── 4. PERFORMANCE CHARTS (7 DAYS) ──────────────────────────────
-    const [chartsData, bookingTypeChartData, utilizationChartData, cancellationChartData] = await Promise.all([
-        // Existing: Bookings & Revenue
+        // F. Trends (7 Days)
         Booking.aggregate([
             { 
                 $match: { 
@@ -214,328 +123,183 @@ exports.getDashboard = catchAsync(async (req, res) => {
                     _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
                     bookings: { $sum: 1 },
                     revenue: { 
-                        $sum: { 
-                            $cond: [{ $eq: ['$status', 'completed'] }, '$pricing.totalAmount', 0] 
-                        } 
+                        $sum: { $cond: [{ $eq: ['$status', 'completed'] }, '$pricing.totalAmount', 0] } 
                     }
                 }
             },
             { $sort: { "_id": 1 } }
         ]),
-        
-        // New: Instant vs Scheduled trend
-        Booking.aggregate([
-            {
-                $match: {
-                    'service.type': SERVICE_TYPE,
-                    isActive: true,
-                    createdAt: { $gte: sevenDaysAgo }
-                }
-            },
-            {
-                $group: {
-                    _id: {
-                        date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-                        type: '$schedule.type'
-                    },
-                    count: { $sum: 1 }
-                }
-            },
-            { $sort: { "_id.date": 1 } }
+
+        // G. Recent Bookings (List)
+        Booking.find({ 'service.type': SERVICE_TYPE, isActive: true })
+            .select('bookingId createdAt status pricing.totalAmount location.address.city')
+            .sort({ createdAt: -1 })
+            .limit(5)
+            .lean(),
+
+        // H. Live Trips (List)
+        Booking.find({ 
+            'service.type': SERVICE_TYPE, 
+            status: { $in: ONGOING_STATUSES },
+            isActive: true 
+        })
+            .populate('consumer', 'name')
+            .populate('provider.id', 'name')
+            .select('bookingId status consumer provider location.address tracking')
+            .sort({ updatedAt: -1 })
+            .limit(5)
+            .lean(),
+
+        // I. Task Summary
+        Promise.all([
+            Task.countDocuments({}),
+            Task.countDocuments({ status: 'pending' }),
+            Task.countDocuments({ status: 'in_progress' }),
+            Task.countDocuments({ status: 'completed' }),
+            Task.find({}).sort({ createdAt: -1 }).limit(4).lean()
         ]),
-        
-        // New: Driver utilization trend (daily active/total ratio)
-        SpareDriver.aggregate([
-            {
-                $facet: {
-                    total: [{ $count: 'count' }],
-                    dailyActive: [
-                        {
-                            $match: {
-                                isActive: true,
-                                updatedAt: { $gte: sevenDaysAgo }
-                            }
-                        },
-                        {
-                            $group: {
-                                _id: { $dateToString: { format: "%Y-%m-%d", date: "$updatedAt" } },
-                                active: { $sum: 1 }
-                            }
-                        },
-                        { $sort: { "_id": 1 } }
-                    ]
-                }
-            }
+
+        // J. Coupons & Ads
+        Promise.all([
+            Promotion.find({ type: 'Coupons', status: 'Active' }).limit(4).lean(),
+            Promotion.find({ type: 'Banners', status: 'Active' }).limit(4).lean()
         ]),
-        
-        // New: Cancellation trend
-        Booking.aggregate([
-            {
-                $match: {
-                    'service.type': SERVICE_TYPE,
-                    isActive: true,
-                    createdAt: { $gte: sevenDaysAgo }
-                }
-            },
-            {
-                $group: {
-                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-                    total: { $sum: 1 },
-                    cancelled: {
-                        $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] }
-                    }
-                }
-            },
-            {
-                $project: {
-                    _id: 1,
-                    rate: {
-                        $multiply: [
-                            { $divide: ['$cancelled', '$total'] },
-                            100
-                        ]
-                    }
-                }
-            },
-            { $sort: { "_id": 1 } }
-        ])
+
+        // K. SOS Live Feed
+        SOSAlert.find({ status: 'active' })
+            .populate('consumer', 'name phone')
+            .sort({ createdAt: -1 })
+            .limit(3)
+            .lean(),
+
+        // L. Refund Requests
+        Booking.find({ 'payment.status': 'refund_pending', isActive: true })
+            .populate('consumer', 'name')
+            .select('bookingId consumer pricing.totalAmount createdAt status')
+            .sort({ createdAt: -1 })
+            .limit(3)
+            .lean()
     ]);
 
-    // Fill missing days for chart stability
-    const charts = { 
-        bookings: [], 
-        revenue: [], 
-        instantVsScheduled: [],
-        utilization: [],
-        cancellation: []
-    };
-    
+    // ─── 2. DATA POST-PROCESSING ─────────────────────────────────────
+    const processedKPIs = kpis[0] || { totalBookings: 0, totalRevenue: 0, cancelledBookings: 0, ongoingTrips: 0 };
+    const activeDriversCount = await SpareDriver.countDocuments({ isOnline: true, status: 'ACTIVE' });
+
+    // Format Trends for 7 days (fill gaps)
+    const trendsFormatted = [];
     for (let i = 6; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
         const dateStr = d.toISOString().split('T')[0];
-        
-        // Existing charts
-        const dayData = chartsData.find(item => item._id === dateStr) || { bookings: 0, revenue: 0 };
-        charts.bookings.push({ date: dateStr, count: dayData.bookings });
-        charts.revenue.push({ date: dateStr, amount: dayData.revenue });
-        
-        // Instant vs Scheduled
-        const instantCount = bookingTypeChartData.find(b => b._id.date === dateStr && b._id.type === 'instant')?.count || 0;
-        const scheduledCount = bookingTypeChartData.find(b => b._id.date === dateStr && b._id.type === 'scheduled')?.count || 0;
-        charts.instantVsScheduled.push({ 
-            date: dateStr, 
-            instant: instantCount, 
-            scheduled: scheduledCount 
-        });
-        
-        // Utilization
-        const totalDriverCount = utilizationChartData[0]?.total[0]?.count || 1;
-        const activeCount = utilizationChartData[0]?.dailyActive.find(d => d._id === dateStr)?.active || 0;
-        const utilizationPercent = ((activeCount / totalDriverCount) * 100).toFixed(1);
-        charts.utilization.push({ date: dateStr, rate: parseFloat(utilizationPercent) });
-        
-        // Cancellation
-        const cancellationData = cancellationChartData.find(c => c._id === dateStr);
-        charts.cancellation.push({ 
-            date: dateStr, 
-            rate: cancellationData?.rate ? parseFloat(cancellationData.rate.toFixed(1)) : 0 
-        });
+        const dayData = trends.find(t => t._id === dateStr) || { bookings: 0, revenue: 0 };
+        trendsFormatted.push({ date: dateStr, bookings: dayData.bookings, revenue: dayData.revenue });
     }
 
-    // ─── 5. ENHANCED SMART ALERTS ────────────────────────────────────
-    const alerts = [];
-    
-    // Alert: CRITICAL - Active SOS Alerts
-    if (activeSOSAlerts.length > 0) {
-        alerts.push({
-            type: 'CRITICAL',
-            category: 'SOS_EMERGENCY',
-            message: `${activeSOSAlerts.length} active SOS alert${activeSOSAlerts.length > 1 ? 's' : ''} require immediate attention`,
-            data: activeSOSAlerts.map(sos => ({
-                id: sos._id,
-                consumer: sos.consumer?.name || 'Unknown',
-                phone: sos.consumer?.phone || 'N/A',
-                location: sos.location?.address || 'Location unavailable',
-                coordinates: sos.location?.coordinates,
-                description: sos.description || 'No description provided',
-                createdAt: sos.createdAt,
-                respondersCount: sos.responders?.length || 0,
-                timeSinceAlert: Math.floor((Date.now() - new Date(sos.createdAt)) / 60000) // minutes
-            })),
-            suggestion: 'Dispatch nearest available drivers or contact emergency services immediately'
-        });
-    }
-    
-    // Alert: High cancellation rate
-    if (parseFloat(cancellationRate) > (CANCELLATION_THRESHOLD * 100)) {
-        alerts.push({
-            type: 'CRITICAL',
-            category: 'CANCELLATION_RATE',
-            message: `Cancellation rate is ${cancellationRate}% (threshold: ${CANCELLATION_THRESHOLD * 100}%)`,
-            suggestion: 'Review driver quality, customer expectations, and booking flow'
-        });
-    }
-    
-    // Alert: Low driver availability
-    if (activeDrivers < 5 && totalDrivers > 10) {
-        alerts.push({
-            type: 'WARNING',
-            category: 'LOW_AVAILABILITY',
-            message: `Only ${activeDrivers} drivers online out of ${totalDrivers} total`,
-            suggestion: 'Send push notifications or incentives to bring drivers online'
-        });
-    }
-    
-    // Alert: Idle drivers
-    if (idleDrivers.length > 0) {
-        alerts.push({
-            type: 'WARNING',
-            category: 'IDLE_DRIVERS',
-            message: `${idleDrivers.length} drivers are online but idle for ${IDLE_THRESHOLD_MINUTES}+ minutes`,
-            data: idleDrivers.slice(0, 5),
-            suggestion: 'Check driver app connectivity or send engagement notifications'
-        });
-    }
-    
-    // Alert: Overworked drivers (check if any driver has > threshold hours today)
-    const overworkedDrivers = await Booking.aggregate([
-        {
-            $match: {
-                'service.type': SERVICE_TYPE,
-                status: 'completed',
-                isActive: true,
-                createdAt: { $gte: startOfToday }
-            }
-        },
-        {
-            $group: {
-                _id: '$provider.id',
-                totalHours: {
-                    $sum: {
-                        $divide: [
-                            { $divide: [
-                                { $subtract: ['$completedAt', '$acceptedAt'] },
-                                60000
-                            ] },
-                            60
-                        ]
-                    }
-                }
-            }
-        },
-        {
-            $match: {
-                totalHours: { $gt: OVERWORK_THRESHOLD_HOURS }
-            }
-        }
-    ]);
-    
-    if (overworkedDrivers.length > 0) {
-        alerts.push({
-            type: 'WARNING',
-            category: 'OVERWORKED_DRIVERS',
-            message: `${overworkedDrivers.length} drivers have worked more than ${OVERWORK_THRESHOLD_HOURS} hours today`,
-            suggestion: 'Monitor driver fatigue and consider mandatory breaks'
-        });
-    }
-    
-    // Alert: Inactive qualified drivers (Security/Engagement risk)
-    const inactiveHighRisk = await SpareDriver.find({ 
-        isActive: true, 
-        isOnline: false, 
-        status: 'ACTIVE',
-        updatedAt: { $lt: oneDayAgo } 
-    }).limit(5).select('name driverId phone');
+    // Earnings Overview formatting
+    const earnings = earningsOverview[0] || { totalRevenue: 0, driverPayouts: 0, platformCommission: 0, otherEarnings: 0 };
 
-    if (inactiveHighRisk.length > 0) {
-        alerts.push({
-            type: 'WARNING',
-            category: 'FLEET_ENGAGEMENT',
-            message: `${inactiveHighRisk.length} active drivers have not logged in for 24h`,
-            data: inactiveHighRisk
-        });
-    }
-
-    // Alert: High load warning (Dynamic threshold)
-    if (activeTripsCount > activeDrivers * LOAD_THRESHOLD && activeDrivers > 0) {
-        alerts.push({
-            type: 'CRITICAL',
-            category: 'LOAD_BALANCING',
-            message: `Dispatch load is at ${(activeTripsCount/activeDrivers*100).toFixed(0)}% capacity`,
-            suggestion: 'Consider surge pricing or boosting driver incentives'
-        });
-    }
-
-    // ─── 6. FINAL ASSEMBLY ──────────────────────────────────────────
+    // ─── 3. FINAL RESPONSE ───────────────────────────────────────────
     res.status(200).json({
         status: 'success',
         meta: {
             timestamp: new Date(),
             platform: PLATFORM_MODE,
-            version: "2.0.0"
+            version: "2.1.0"
         },
         data: {
             kpis: {
-                // Existing KPIs
-                totalDrivers,
-                activeDrivers,
-                totalUsers,
-                totalBookings,
-                todayBookings: todayStats[0]?.count || 0,
-                todayRevenue: todayStats[0]?.revenue || 0,
-                activeTrips: activeTripsCount,
-                
-                // New KPIs
-                utilizationRate: parseFloat(utilizationRate),
-                cancellationRate: parseFloat(cancellationRate),
-                fulfillmentRate: parseFloat(fulfillmentRate),
-                revenuePerHour: parseFloat(revenuePerHour),
-                activeDutyHours: parseFloat(activeDutyHours.toFixed(1)),
-                
-                // SOS KPI
-                activeSOSCount: activeSOSAlerts.length
+                totalBookings: processedKPIs.totalBookings,
+                totalRevenue: processedKPIs.totalRevenue,
+                activeDrivers: activeDriversCount,
+                ongoingTrips: processedKPIs.ongoingTrips,
+                cancelledBookings: processedKPIs.cancelledBookings,
+                sosAlerts: alertsOverview[0]
             },
-            bookingSplit: {
-                instant: instantBookings,
-                scheduled: scheduledBookings
+            charts: {
+                bookingTrend: trendsFormatted.map(t => ({ day: t.date, count: t.bookings })),
+                revenueTrend: trendsFormatted.map(t => ({ day: t.date, amount: t.revenue })),
+                bookingByStatus: bookingByStatus.map(s => ({ status: s._id, count: s.count }))
             },
-            sosAlerts: activeSOSAlerts.map(sos => ({
-                id: sos._id,
-                consumer: {
-                    name: sos.consumer?.name || 'Unknown',
-                    phone: sos.consumer?.phone || 'N/A',
-                    avatar: sos.consumer?.profile?.avatar
+            alertsOverview: {
+                sosAlerts: alertsOverview[0],
+                pendingRefunds: alertsOverview[1],
+                openTickets: alertsOverview[2],
+                unreadChats: alertsOverview[3],
+                kycPending: alertsOverview[4]
+            },
+            operations: {
+                recentBookings: recentBookings.map(b => ({
+                    id: b.bookingId,
+                    time: b.createdAt,
+                    city: b.location?.address?.city || 'Unknown',
+                    amount: b.pricing?.totalAmount || 0,
+                    status: b.status
+                })),
+                liveTrips: liveTrips.map(t => ({
+                    id: t.bookingId,
+                    customer: t.consumer?.name || 'N/A',
+                    driver: t.provider?.name || 'N/A',
+                    status: t.status,
+                    location: t.location?.address?.street || 'On Trip'
+                })),
+                driverStatus: {
+                    online: driverStatusBreakdown[0],
+                    onTrip: driverStatusBreakdown[1],
+                    offline: driverStatusBreakdown[2]
                 },
-                location: {
-                    address: sos.location?.address || 'Location unavailable',
-                    coordinates: sos.location?.coordinates
+                earnings: {
+                    totalRevenue: earnings.totalRevenue,
+                    driverPayouts: earnings.driverPayouts,
+                    platformCommission: earnings.platformCommission,
+                    otherEarnings: earnings.otherEarnings
+                }
+            },
+            bottomRow: {
+                tasks: {
+                    total: taskSummary[0],
+                    pending: taskSummary[1],
+                    inProgress: taskSummary[2],
+                    completed: taskSummary[3],
+                    recent: taskSummary[4].map(t => ({
+                        title: t.title,
+                        priority: t.priority,
+                        createdAt: t.createdAt
+                    }))
                 },
-                status: sos.status,
-                description: sos.description || 'No description provided',
-                photo: sos.photo,
-                responders: sos.responders?.map(r => ({
-                    name: r.user?.name || 'Unknown',
-                    phone: r.user?.phone,
-                    role: r.role,
-                    status: r.status,
-                    respondedAt: r.respondedAt
-                })) || [],
-                createdAt: sos.createdAt,
-                timeSinceAlert: Math.floor((Date.now() - new Date(sos.createdAt)) / 60000) // minutes
-            })),
-            liveTrips,
-            recentActivities: recentActivities.map(b => ({
-                id: b.bookingId,
-                serviceName: b.service.name,
-                customer: b.consumer?.name,
-                driver: b.provider?.name,
-                status: b.status,
-                amount: b.pricing.totalAmount,
-                createdAt: b.createdAt
-            })),
-            alerts,
-            charts
+                coupons: couponsAds[0].map(c => ({
+                    code: c.code,
+                    discount: c.val,
+                    expiry: c.expiry,
+                    usage: c.usage,
+                    status: c.status
+                })),
+                advertisements: couponsAds[1].map(a => ({
+                    title: a.title,
+                    image: a.image,
+                    status: a.status,
+                    impressions: a.usage // Using usage as impression proxy for now
+                }))
+            },
+            footer: {
+                sosLive: sosLive.map(s => ({
+                    id: s._id,
+                    user: s.consumer?.name,
+                    location: s.location?.address,
+                    time: s.createdAt,
+                    status: s.status
+                })),
+                refundRequests: refundRequests.map(r => ({
+                    id: r.bookingId,
+                    customer: r.consumer?.name,
+                    amount: r.pricing?.totalAmount,
+                    reason: 'Driver cancelled', // Mock reason as it's not in schema yet
+                    status: r.status
+                })),
+                socialCampaigns: [
+                    { platform: 'Instagram', clicks: 12456, engagement: '8.2%', status: 'Active' },
+                    { platform: 'Facebook', clicks: 8932, engagement: '6.1%', status: 'Active' }
+                ] // Mocking social as no model exists yet
+            }
         }
     });
 });

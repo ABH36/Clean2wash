@@ -1,199 +1,79 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { adminAPI } from '../../../utils/adminApi';
 import { socketService } from '../../../utils/socket';
 import {
     Activity, Clock, Users, Wallet, ShieldAlert,
     TrendingUp, Truck, MapPin, AlertCircle, Calendar, BarChart3, Car,
     Zap, Target, Award, TrendingDown, Timer, DollarSign, Percent,
-    Phone, Navigation, AlertTriangle
+    Phone, Navigation, AlertTriangle, ChevronRight, MessageSquare, 
+    Gift, Megaphone, Share2, RefreshCcw, CheckCircle2, MoreHorizontal,
+    ChevronDown, X, MessageCircle, LayoutDashboard
 } from 'lucide-react';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    BarChart, Bar, Legend
+    BarChart, Bar, Legend, PieChart, Pie, Cell, LineChart, Line
 } from 'recharts';
+import PageShell, { SectionCard, PageLoader } from '../components/PageShell';
 
 /**
- * ─── UPGRADED OPERATIONAL COCKPIT ──────────────────────────────────
- * Enhanced real-time dashboard with advanced analytics and monitoring.
+ * ─── INDUSTRIAL PRO DASHBOARD ──────────────────────────────────────
+ * Modernized with PageShell architecture.
+ * Operational cockpit for the Clean-2-Wash ecosystem.
  */
 
-// ─── SOS ALERT COMPONENT ─────────────────────────────────────────────────────
-const SOSAlertCard = ({ alert }) => (
-    <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="admin-card-compact border-[var(--error)] bg-[var(--error-light)] relative overflow-hidden"
+// ── COMPONENTS ─────────────────────────────────────────────────────────────
+
+const StatCard = ({ title, value, subValue, icon, color, trend, onClick }) => (
+    <motion.div 
+        whileHover={{ y: -4 }}
+        onClick={onClick}
+        className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-start justify-between group transition-all hover:shadow-xl hover:border-amber-100 cursor-pointer"
     >
-        {/* Pulsing animation for urgency */}
-        <div className="absolute -top-1 -right-1 w-3 h-3 bg-[var(--error)] rounded-full animate-pulse" />
-        
-        <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-[var(--error-light)] text-[var(--error)] rounded-lg flex items-center justify-center shrink-0 border border-[var(--error)]/20">
-                <ShieldAlert size={18} />
-            </div>
-            
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-sm font-semibold text-[var(--text-primary)]">
-                        {alert.consumer?.name || 'Unknown Consumer'}
-                    </h4>
-                    <span className="badge badge-error text-xs">
-                        {alert.timeSinceAlert}m ago
-                    </span>
+        <div className="space-y-1">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{title}</p>
+            <h3 className="text-2xl font-black text-slate-800 tracking-tight">{value}</h3>
+            {subValue && (
+                <div className="flex items-center gap-1.5 pt-1">
+                    <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg text-[9px] font-black ${trend === 'up' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                        {trend === 'up' ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                        {subValue}
+                    </div>
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">vs last 7 days</span>
                 </div>
-                
-                <p className="text-xs text-[var(--text-secondary)] mb-2 line-clamp-2">
-                    {alert.description || 'Emergency assistance required'}
-                </p>
-                
-                <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] mb-3">
-                    <MapPin size={14} />
-                    <span className="truncate font-medium">{alert.location?.address || 'Location unavailable'}</span>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                    <a href={`tel:${alert.consumer?.phone}`} className="btn-danger text-[10px] px-3 py-1.5 flex items-center group/call">
-                        <Phone size={14} className="mr-1.5 group-hover:rotate-12 transition-transform" />
-                        Call
-                    </a>
-                    <button 
-                        onClick={() => window.dispatchEvent(new CustomEvent('open-sos-tactical', { detail: alert }))}
-                        className="btn-secondary text-[10px] px-3 py-1.5 flex items-center group/map"
-                    >
-                        <Navigation size={14} className="mr-1.5 group-hover:scale-110 transition-transform" />
-                        Tactical Map
-                    </button>
-                    <span className="text-xs text-[var(--text-muted)] ml-auto">
-                        {alert.responders?.length || 0} responders
-                    </span>
-                </div>
-            </div>
+            )}
+        </div>
+        <div className={`w-12 h-12 rounded-2xl ${color} text-white flex items-center justify-center shadow-lg shadow-current/20 group-hover:scale-110 transition-transform`}>
+            {React.cloneElement(icon, { size: 22 })}
         </div>
     </motion.div>
 );
 
-// ─── BOOKING SPLIT COMPONENT ─────────────────────────────────────────────────
-const BookingSplitCard = ({ instant, scheduled }) => {
-    const total = instant + scheduled;
-    const instantPercent = total > 0 ? ((instant / total) * 100).toFixed(1) : 0;
-    const scheduledPercent = total > 0 ? ((scheduled / total) * 100).toFixed(1) : 0;
-    
-    return (
-        <div className="admin-card-compact">
-            <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 bg-[var(--primary-light)] text-[var(--primary)] rounded-lg flex items-center justify-center">
-                    <BarChart3 size={18} />
-                </div>
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Booking Split</h3>
-            </div>
-            
-            <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <Zap size={16} className="text-[var(--success)]" />
-                        <span className="text-sm font-medium text-[var(--text-secondary)]">Instant</span>
-                    </div>
-                    <div className="text-right">
-                        <div className="text-lg font-semibold text-[var(--text-primary)]">{instant}</div>
-                        <div className="text-xs text-[var(--text-muted)]">{instantPercent}%</div>
-                    </div>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <Calendar size={16} className="text-[var(--warning)]" />
-                        <span className="text-sm font-medium text-[var(--text-secondary)]">Scheduled</span>
-                    </div>
-                    <div className="text-right">
-                        <div className="text-lg font-semibold text-[var(--text-primary)]">{scheduled}</div>
-                        <div className="text-xs text-[var(--text-muted)]">{scheduledPercent}%</div>
-                    </div>
-                </div>
-                
-                {/* Progress bar */}
-                <div className="w-full bg-[var(--border)] rounded-full h-1.5 mt-2">
-                    <div 
-                        className="bg-[var(--success)] h-1.5 rounded-full transition-all duration-300"
-                        style={{ width: `${instantPercent}%` }}
-                    />
-                </div>
-            </div>
-        </div>
-    );
-};
-// ─── ENHANCED KPI CARD COMPONENT ──────────────────────────────────────────────────
-const KPICard = ({ title, value, icon, trend, trendValue, highlightClass }) => (
-    <motion.div
-        initial={{ opacity: 0, y: 10 }} 
-        animate={{ opacity: 1, y: 0 }}
-        whileHover={{ y: -2 }}
-        className="admin-card-compact cursor-pointer transition-smooth"
-    >
-        <div className="flex justify-between items-start">
-            <div className="flex-1">
-                <p className="text-caption text-[var(--text-muted)] uppercase mb-2">{title}</p>
-                <div className="flex items-baseline gap-2 mb-2">
-                    <h3 className="text-xl font-semibold text-[var(--text-primary)] tabular-nums">{value}</h3>
-                </div>
-                {trendValue && (
-                    <div className="flex items-center gap-1.5">
-                        {trend === 'up' ? (
-                            <TrendingUp size={14} className="text-[var(--success)]" />
-                        ) : (
-                            <TrendingDown size={14} className="text-[var(--error)]" />
-                        )}
-                        <span className={`text-xs font-medium ${trend === 'up' ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
-                            {trendValue}
-                        </span>
-                        <span className="text-xs text-[var(--text-muted)]">vs yesterday</span>
-                    </div>
-                )}
-            </div>
-            <div className={`p-2 rounded-lg ${highlightClass.replace('text-', 'bg-').replace('600', '-light')} ${highlightClass} shrink-0`}>
-                {React.cloneElement(icon, { size: 20, className: 'group-hover:scale-110 transition-transform' })}
-            </div>
-        </div>
-    </motion.div>
-);
-
-// ─── SKELETON LOADER ─────────────────────────────────────────────────────
-const SkeletonCard = () => (
-    <div className="admin-card-compact animate-pulse">
-        <div className="flex justify-between items-start">
-            <div className="space-y-2 w-full">
-                <div className="h-3 w-20 bg-[var(--border)] rounded-full" />
-                <div className="h-6 w-32 bg-[var(--border)] rounded-lg" />
-            </div>
-            <div className="w-8 h-8 rounded-lg bg-[var(--border)] shrink-0" />
-        </div>
+const WidgetHeader = ({ title, actionLabel, onAction }) => (
+    <div className="flex items-center justify-between mb-6">
+        <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-500" /> {title}
+        </h3>
+        {actionLabel && (
+            <button onClick={onAction} className="text-[10px] font-black text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-all hover:gap-2 uppercase tracking-tighter">
+                {actionLabel} <ChevronRight size={14} strokeWidth={3} />
+            </button>
+        )}
     </div>
 );
 
-const AdminDashboardUpgraded = () => {
-    const [stats, setStats] = useState({
-        kpis: {
-            totalDrivers: 0, activeDrivers: 0, totalUsers: 0,
-            totalBookings: 0, todayBookings: 0, todayRevenue: 0, activeTrips: 0,
-            completionRate: 0, avgRating: 0,
-            // New KPIs
-            utilizationRate: 0, cancellationRate: 0, fulfillmentRate: 0,
-            revenuePerHour: 0, activeDutyHours: 0, activeSOSCount: 0
-        },
-        bookingSplit: { instant: 0, scheduled: 0 },
-        sosAlerts: [],
-        liveTrips: [],
-        alerts: [],
-        charts: { 
-            bookings: [], revenue: [], 
-            instantVsScheduled: [], utilization: [], cancellation: [] 
-        },
-        statusDistribution: []
-    });
-    const [loading, setLoading] = useState(true);
-    const [chartMetric, setChartMetric] = useState('revenue'); // 'revenue' | 'bookings' | 'instantVsScheduled' | 'utilization' | 'cancellation'
+// ── MAIN DASHBOARD ──────────────────────────────────────────────────────────
 
-    const fetchDashboard = async () => {
+const AdminDashboardUpgraded = () => {
+    const navigate = useNavigate();
+    const [stats, setStats] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+
+    const fetchDashboard = async (silent = false) => {
+        if (!silent) setLoading(true);
+        else setRefreshing(true);
         try {
             const res = await adminAPI.getDashboard();
             if (res.status === 'success') {
@@ -201,107 +81,9 @@ const AdminDashboardUpgraded = () => {
             }
         } catch (err) {
             console.error("Dashboard Sync Failed", err);
-            // Set dummy data for demo
-            setStats({
-                kpis: {
-                    totalDrivers: 156,
-                    activeDrivers: 89,
-                    totalUsers: 2847,
-                    totalBookings: 1523,
-                    todayBookings: 47,
-                    todayRevenue: 28450,
-                    activeTrips: 12,
-                    completionRate: 94.5,
-                    avgRating: 4.7,
-                    // New KPIs
-                    utilizationRate: 57.1,
-                    cancellationRate: 8.5,
-                    fulfillmentRate: 94.5,
-                    revenuePerHour: 3556,
-                    activeDutyHours: 8.0,
-                    activeSOSCount: 2
-                },
-                bookingSplit: { instant: 35, scheduled: 12 },
-                sosAlerts: [
-                    {
-                        id: 'sos123',
-                        consumer: { name: 'John Doe', phone: '+91XXXXXXXXXX' },
-                        location: { address: '123 Main St, Bangalore' },
-                        description: 'Vehicle breakdown, need immediate assistance',
-                        timeSinceAlert: 15,
-                        responders: []
-                    },
-                    {
-                        id: 'sos124',
-                        consumer: { name: 'Priya Sharma', phone: '+91XXXXXXXXXX' },
-                        location: { address: '456 Park Road, Mumbai' },
-                        description: 'Emergency medical assistance required',
-                        timeSinceAlert: 8,
-                        responders: [{ name: 'Driver 1' }]
-                    }
-                ],
-                liveTrips: [
-                    { bookingId: 'BK12345', consumer: { name: 'Priya Sharma' }, provider: { name: 'Rajesh Kumar' }, status: 'IN_PROGRESS' },
-                    { bookingId: 'BK12346', consumer: { name: 'Amit Verma' }, provider: { name: 'Vikram Singh' }, status: 'EN_ROUTE' },
-                    { bookingId: 'BK12347', consumer: { name: 'Sneha Patel' }, provider: { name: 'Arjun Reddy' }, status: 'WASHING' }
-                ],
-                alerts: [],
-                charts: {
-                    revenue: [
-                        { date: '2024-04-09', amount: 18500 },
-                        { date: '2024-04-10', amount: 22300 },
-                        { date: '2024-04-11', amount: 19800 },
-                        { date: '2024-04-12', amount: 25600 },
-                        { date: '2024-04-13', amount: 23400 },
-                        { date: '2024-04-14', amount: 27100 },
-                        { date: '2024-04-15', amount: 28450 }
-                    ],
-                    bookings: [
-                        { date: '2024-04-09', count: 38 },
-                        { date: '2024-04-10', count: 45 },
-                        { date: '2024-04-11', count: 41 },
-                        { date: '2024-04-12', count: 52 },
-                        { date: '2024-04-13', count: 48 },
-                        { date: '2024-04-14', count: 55 },
-                        { date: '2024-04-15', count: 47 }
-                    ],
-                    instantVsScheduled: [
-                        { date: '2024-04-09', instant: 25, scheduled: 13 },
-                        { date: '2024-04-10', instant: 30, scheduled: 15 },
-                        { date: '2024-04-11', instant: 28, scheduled: 13 },
-                        { date: '2024-04-12', instant: 35, scheduled: 17 },
-                        { date: '2024-04-13', instant: 32, scheduled: 16 },
-                        { date: '2024-04-14', instant: 38, scheduled: 17 },
-                        { date: '2024-04-15', instant: 35, scheduled: 12 }
-                    ],
-                    utilization: [
-                        { date: '2024-04-09', rate: 55.2 },
-                        { date: '2024-04-10', rate: 57.1 },
-                        { date: '2024-04-11', rate: 54.8 },
-                        { date: '2024-04-12', rate: 59.3 },
-                        { date: '2024-04-13', rate: 56.7 },
-                        { date: '2024-04-14', rate: 58.9 },
-                        { date: '2024-04-15', rate: 57.1 }
-                    ],
-                    cancellation: [
-                        { date: '2024-04-09', rate: 7.8 },
-                        { date: '2024-04-10', rate: 8.5 },
-                        { date: '2024-04-11', rate: 7.2 },
-                        { date: '2024-04-12', rate: 9.1 },
-                        { date: '2024-04-13', rate: 8.0 },
-                        { date: '2024-04-14', rate: 8.7 },
-                        { date: '2024-04-15', rate: 8.5 }
-                    ]
-                },
-                statusDistribution: [
-                    { name: 'Completed', value: 1245, color: '#10b981' },
-                    { name: 'In Progress', value: 12, color: '#3b82f6' },
-                    { name: 'Pending', value: 156, color: '#f59e0b' },
-                    { name: 'Cancelled', value: 110, color: '#ef4444' }
-                ]
-            });
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
     };
 
@@ -309,537 +91,464 @@ const AdminDashboardUpgraded = () => {
         fetchDashboard();
         socketService.joinAdminRoom();
         
-        // Lightweight background sync for general updates
-        const bgSync = () => fetchDashboard();
+        const syncHandler = () => fetchDashboard(true);
         
-        // Smart Cache Update (No Over-Fetching)
-        const handleNewBooking = (data) => {
-            setStats(prev => {
-                const updatedTrips = [data, ...(prev.liveTrips || [])].slice(0, 10);
-                return {
-                    ...prev,
-                    liveTrips: updatedTrips,
-                    kpis: {
-                        ...prev.kpis,
-                        todayBookings: (prev.kpis.todayBookings || 0) + 1,
-                        activeTrips: (prev.kpis.activeTrips || 0) + 1
-                    }
-                };
-            });
-        };
-
-        socketService.on('new_booking', handleNewBooking);
-        socketService.on('booking_status_updated', bgSync);
-        socketService.on('driver_status_changed', bgSync);
-
+        socketService.on('new_booking', syncHandler);
+        socketService.on('sos_alert', syncHandler);
+        socketService.on('booking_status_updated', syncHandler);
+        
         return () => {
-            socketService.off('new_booking', handleNewBooking);
-            socketService.off('booking_status_updated', bgSync);
-            socketService.off('driver_status_changed', bgSync);
+            socketService.off('new_booking', syncHandler);
+            socketService.off('sos_alert', syncHandler);
+            socketService.off('booking_status_updated', syncHandler);
         };
     }, []);
 
-    // ─── CHART CONFIGURATION ──────────────────────────────────────────────
-    const formattedChartData = useMemo(() => {
-        const data = stats.charts?.[chartMetric] || [];
-        
-        if (chartMetric === 'instantVsScheduled') {
-            return data.map(item => ({
-                day: new Date(item.date).toLocaleDateString('en-US', { weekday: 'short' }),
-                instant: item.instant,
-                scheduled: item.scheduled
-            }));
-        }
-        
-        return data.map(item => ({
-            day: new Date(item.date).toLocaleDateString('en-US', { weekday: 'short' }),
-            val: chartMetric === 'revenue' ? item.amount : 
-                 chartMetric === 'bookings' ? item.count :
-                 chartMetric === 'utilization' ? item.rate :
-                 chartMetric === 'cancellation' ? item.rate : 0
-        }));
-    }, [stats.charts, chartMetric]);
+    if (loading || !stats) return <PageLoader />;
 
-    const getChartColor = () => {
-        // Get computed CSS variable values
-        const root = document.documentElement;
-        const computedStyle = getComputedStyle(root);
-        
-        switch (chartMetric) {
-            case 'revenue': return computedStyle.getPropertyValue('--success').trim() || '#16a34a';
-            case 'bookings': return computedStyle.getPropertyValue('--primary').trim() || '#d4af37';
-            case 'utilization': return computedStyle.getPropertyValue('--primary').trim() || '#d4af37';
-            case 'cancellation': return computedStyle.getPropertyValue('--error').trim() || '#dc2626';
-            default: return computedStyle.getPropertyValue('--primary').trim() || '#d4af37';
-        }
-    };
-
-    const chartColor = getChartColor();
-
-    if (loading) return (
-        <div className="admin-section space-y-6">
-            <div className="h-24 admin-card animate-pulse" />
-            <div className="admin-grid admin-grid-4 gap-4">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map(i => <SkeletonCard key={i} />)}
-            </div>
-            <div className="admin-grid admin-grid-3 gap-6">
-                <div className="lg:col-span-2 h-[300px] admin-card animate-pulse" />
-                <div className="h-[300px] admin-card animate-pulse" />
-            </div>
-        </div>
-    );
+    const { kpis, charts, alertsOverview, operations, bottomRow, footer } = stats;
 
     return (
-        <div className="admin-section space-y-4">
-            {/* ── HEADER ── */}
-            <header className="admin-card flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-                <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-[var(--primary)] text-white rounded-lg flex items-center justify-center shrink-0">
-                        <Zap size={20} />
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                            <div className="w-2 h-2 rounded-full bg-[var(--success)] animate-pulse" />
-                            <span className="text-[10px] font-bold text-[var(--success)] uppercase tracking-tight">System Online</span>
-                        </div>
-                        <h1 className="text-xl font-bold text-[var(--text-primary)]">Operations Command Center</h1>
-                        <p className="text-[11px] font-medium text-[var(--text-secondary)]">Structured Operations Control Panel</p>
+        <PageShell
+            title="Operational Cockpit"
+            subtitle="Centralized Intelligence & Network Overview"
+            icon={LayoutDashboard}
+            accent="amber"
+            badge="Phase 4 Core"
+            actions={
+                <div className="flex items-center gap-3">
+                    <div className="bg-white border border-slate-100 rounded-xl px-4 py-2 flex items-center gap-3 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors">
+                        <Calendar size={16} className="text-slate-500" />
+                        <span className="text-[11px] font-black text-slate-600 uppercase tracking-widest">Real-time Feed</span>
+                        <div className={`w-2 h-2 rounded-full ${refreshing ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
                     </div>
                 </div>
-                <div className="flex items-center gap-4 bg-[var(--bg-secondary)] px-3 py-2 rounded-lg border border-[var(--border)] shadow-inner">
-                    <div>
-                        <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-tight">Active Dispatch</p>
-                        <p className="text-base font-bold text-[var(--text-primary)] tabular-nums">{stats.kpis.activeTrips}</p>
-                    </div>
-                    <div className="w-px h-5 bg-[var(--border)]" />
-                    <div>
-                        <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-tight">Fleet Online</p>
-                        <p className="text-base font-bold text-[var(--text-primary)] tabular-nums">{stats.kpis.activeDrivers}</p>
-                    </div>
-                    <div className="w-px h-5 bg-[var(--border)]" />
-                    <div>
-                        <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-tight">Completion</p>
-                        <p className="text-base font-bold text-[var(--success)] tabular-nums">{stats.kpis.completionRate}%</p>
-                    </div>
-                    {stats.kpis.activeSOSCount > 0 && (
-                        <>
-                            <div className="w-px h-5 bg-[var(--border)]" />
-                            <div>
-                                <p className="text-[9px] font-bold text-[var(--error)] uppercase tracking-tight">SOS Alerts</p>
-                                <p className="text-base font-bold text-[var(--error)] tabular-nums animate-pulse">{stats.kpis.activeSOSCount}</p>
-                            </div>
-                        </>
-                    )}
-                </div>
-            </header>
-
-            {/* ── SECTION 1: PERFORMANCE METRICS ── */}
-            <section className="space-y-3">
-                <div className="flex items-center gap-2 mb-1">
-                    <div className="w-8 h-8 bg-[var(--primary-light)] text-[var(--primary)] rounded-lg flex items-center justify-center shadow-sm">
-                        <Target size={18} />
-                    </div>
-                    <div>
-                        <h2 className="text-base font-bold text-[var(--text-primary)]">Performance Metrics</h2>
-                        <p className="text-[11px] font-medium text-[var(--text-secondary)] opacity-70">Core operational efficiency indicators</p>
-                    </div>
-                </div>
+            }
+        >
+            <div className="space-y-6">
                 
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <KPICard 
-                        title="Active Duty Hours" 
-                        value={`${stats.kpis.activeDutyHours || 0}h`} 
-                        icon={<Timer size={20} />} 
-                        highlightClass="text-cyan-600"
-                        trend="up"
-                        trendValue="+2.3%"
+                {/* ── ROW 1: KPIs ── */}
+                <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4">
+                    <StatCard 
+                        title="Total Bookings" 
+                        value={kpis.totalBookings.toLocaleString()} 
+                        subValue="12.5%" trend="up"
+                        icon={<Car size={20} />} color="bg-blue-600" 
+                        onClick={() => navigate('/admin/bookings')}
                     />
-                    <KPICard 
-                        title="Revenue Per Hour" 
-                        value={`₹${(stats.kpis.revenuePerHour || 0).toLocaleString()}`} 
-                        icon={<DollarSign size={20} />} 
-                        highlightClass="text-green-600"
-                        trend="up"
-                        trendValue="+15.2%"
+                    <StatCard 
+                        title="Total Revenue" 
+                        value={`₹${kpis.totalRevenue.toLocaleString()}`} 
+                        subValue="15.8%" trend="up"
+                        icon={<Wallet size={20} />} color="bg-emerald-600" 
+                        onClick={() => navigate('/admin/finance/transactions')}
                     />
-                    <KPICard 
-                        title="Utilization Rate" 
-                        value={`${stats.kpis.utilizationRate || 0}%`} 
-                        icon={<Target size={20} />} 
-                        highlightClass="text-purple-600"
-                        trend="up"
-                        trendValue="+4.1%"
+                    <StatCard 
+                        title="Active Fleet" 
+                        value={kpis.activeDrivers} 
+                        subValue="8.2%" trend="up"
+                        icon={<Users size={20} />} color="bg-indigo-600" 
+                        onClick={() => navigate('/admin/drivers-operations')}
                     />
-                    <KPICard 
-                        title="Fulfillment Rate" 
-                        value={`${stats.kpis.fulfillmentRate || 0}%`} 
-                        icon={<Zap size={20} />} 
-                        highlightClass="text-green-600"
-                        trend="up"
-                        trendValue="+1.8%"
+                    <StatCard 
+                        title="Ongoing Trips" 
+                        value={kpis.ongoingTrips} 
+                        subValue="5.6%" trend="up"
+                        icon={<Truck size={20} />} color="bg-amber-600" 
+                        onClick={() => navigate('/admin/live-tracking')}
                     />
-                </div>
-            </section>
-
-            {/* ── SECTION 2: ALERTS & SAFETY (CRITICAL) ── */}
-            <section className="space-y-4">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-[var(--error-light)] text-[var(--error)] rounded-lg flex items-center justify-center animate-pulse">
-                        <ShieldAlert size={18} />
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Alerts & Safety</h2>
-                        <p className="text-sm text-[var(--text-secondary)]">Critical safety monitoring and incident alerts</p>
-                    </div>
-                </div>
-
-                {/* SOS ALERTS (PROMINENT) */}
-                {stats.sosAlerts?.length > 0 ? (
-                    <motion.div 
-                        initial={{ opacity: 0, y: -10 }} 
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-[var(--error-light)] border-white/5 border-[var(--error)] rounded-xl p-4"
-                    >
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-8 h-8 bg-[var(--error)] text-white rounded-lg flex items-center justify-center animate-pulse">
-                                <AlertTriangle size={18} />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-semibold text-[var(--error-text)]">🚨 Emergency SOS Alerts</h3>
-                                <p className="text-sm text-[var(--error-text)]">Immediate response required</p>
-                            </div>
-                            <span className="badge badge-error ml-auto">
-                                {stats.sosAlerts.length} Active
-                            </span>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {stats.sosAlerts.map((alert, idx) => (
-                                <SOSAlertCard key={alert.id || idx} alert={alert} />
-                            ))}
-                        </div>
-                    </motion.div>
-                ) : (
-                    <div className="admin-card-compact bg-[var(--success-light)] border border-[var(--success)]">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-[var(--success)] text-white rounded-lg flex items-center justify-center">
-                                <ShieldAlert size={18} />
-                            </div>
-                            <div>
-                                <h3 className="text-sm font-semibold text-[var(--success-text)]">All Clear - No Active SOS Alerts</h3>
-                                <p className="text-xs text-[var(--success-text)]">Safety systems operational</p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* INCIDENT ALERTS & WARNINGS */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="admin-card-compact border-l-4 border-l-[var(--warning)]">
-                        <div className="flex items-center gap-3">
-                            <AlertCircle size={18} className="text-[var(--warning)]" />
-                            <div>
-                                <p className="text-sm font-semibold text-[var(--text-primary)]">Incident Alerts</p>
-                                <p className="text-lg font-bold text-[var(--warning)] tabular-nums">0 Active</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div className="admin-card-compact border-l-4 border-l-[var(--error)]">
-                        <div className="flex items-center gap-3">
-                            <Percent size={18} className="text-[var(--error)]" />
-                            <div>
-                                <p className="text-sm font-semibold text-[var(--text-primary)]">Cancellation Rate</p>
-                                <p className="text-lg font-bold text-[var(--error)] tabular-nums">{stats.kpis.cancellationRate || 0}%</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="admin-card-compact border-l-4 border-l-[var(--primary)]">
-                        <div className="flex items-center gap-3">
-                            <Activity size={18} className="text-[var(--primary)]" />
-                            <div>
-                                <p className="text-sm font-semibold text-[var(--text-primary)]">System Health</p>
-                                <p className="text-lg font-bold text-[var(--success)] tabular-nums">Optimal</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* GENERAL ALERTS */}
-                <AnimatePresence>
-                    {stats.alerts?.length > 0 && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-3">
-                            {stats.alerts.map((alert, idx) => (
-                                <div key={idx} className={`admin-card-compact flex items-center gap-4 ${alert.type === 'CRITICAL' ? 'border-[var(--error)] bg-[var(--error-light)]' : 'border-[var(--warning)] bg-[var(--warning-light)]'}`}>
-                                    <div className="shrink-0">
-                                        {alert.type === 'CRITICAL' ? <ShieldAlert size={18} className="text-[var(--error)]" /> : <AlertCircle size={18} className="text-[var(--warning)]" />}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h4 className="text-sm font-semibold text-[var(--text-primary)]">{alert.message}</h4>
-                                        {alert.suggestion && <p className="text-xs text-[var(--text-secondary)] mt-1">{alert.suggestion}</p>}
-                                    </div>
-                                </div>
-                            ))}
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </section>
-
-            {/* ── SECTION 3: BOOKINGS & REVENUE INSIGHTS ── */}
-            <section className="space-y-4">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-[var(--success-light)] text-[var(--success)] rounded-lg flex items-center justify-center">
-                        <BarChart3 size={18} />
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Bookings & Revenue Insights</h2>
-                        <p className="text-sm text-[var(--text-secondary)]">Business performance and revenue analytics</p>
-                    </div>
-                </div>
-
-                {/* REVENUE & BOOKING METRICS */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <KPICard 
-                        title="Today's Revenue" 
-                        value={`₹${(stats.kpis.todayRevenue || 0).toLocaleString()}`} 
-                        icon={<Wallet size={20} />} 
-                        highlightClass="text-green-600"
-                        trend="up"
-                        trendValue="+12.5%"
+                    <StatCard 
+                        title="Cancelled" 
+                        value={kpis.cancelledBookings} 
+                        subValue="3.1%" trend="down"
+                        icon={<X size={20} />} color="bg-rose-600" 
+                        onClick={() => navigate('/admin/bookings')}
                     />
-                    <KPICard 
-                        title="Today's Bookings" 
-                        value={(stats.kpis.todayBookings || 0).toLocaleString()} 
-                        icon={<Calendar size={20} />} 
-                        highlightClass="text-blue-600"
-                        trend="up"
-                        trendValue="+8.3%"
-                    />
-                    <KPICard 
-                        title="Completion Rate" 
-                        value={`${stats.kpis.completionRate || 0}%`} 
-                        icon={<Target size={20} />} 
-                        highlightClass="text-green-600"
-                        trend="up"
-                        trendValue="+2.1%"
-                    />
-                    <KPICard 
-                        title="Avg Rating" 
-                        value={`${stats.kpis.avgRating || 0}/5.0`} 
-                        icon={<Award size={20} />} 
-                        highlightClass="text-yellow-600"
+                    <StatCard 
+                        title="SOS Alerts" 
+                        value={kpis.sosAlerts} 
+                        subValue="14.3%" trend="down"
+                        icon={<ShieldAlert size={20} />} color="bg-red-600" 
+                        onClick={() => navigate('/admin/support/sos')}
                     />
                 </div>
 
-                {/* BOOKING SPLIT & TRENDS CHART */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* BOOKING SPLIT */}
-                    <div className="space-y-4">
-                        <BookingSplitCard 
-                            instant={stats.bookingSplit?.instant || 0} 
-                            scheduled={stats.bookingSplit?.scheduled || 0} 
-                        />
-                    </div>
-
-                    {/* TRENDS CHART */}
-                    <div className="lg:col-span-2 admin-card flex flex-col">
-                        <div className="flex items-center justify-between mb-6">
-                            <div>
-                                <h3 className="text-lg font-semibold text-[var(--text-primary)] flex items-center gap-2">
-                                    <TrendingUp size={18} className="text-[var(--primary)]" /> Revenue Trends
-                                </h3>
-                                <p className="text-sm text-[var(--text-secondary)] mt-1">7-Day Performance Overview</p>
-                            </div>
-                            <div className="flex bg-[var(--bg-secondary)] p-1 rounded-lg border border-[var(--border)]">
-                                <button 
-                                    onClick={() => setChartMetric('revenue')} 
-                                    className={`px-3 py-1.5 rounded-md text-xs font-medium uppercase tracking-wide transition-all ${chartMetric === 'revenue' ? 'bg-[var(--card)] text-[var(--success)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
-                                >
-                                    Revenue
-                                </button>
-                                <button 
-                                    onClick={() => setChartMetric('bookings')} 
-                                    className={`px-3 py-1.5 rounded-md text-xs font-medium uppercase tracking-wide transition-all ${chartMetric === 'bookings' ? 'bg-[var(--card)] text-[var(--primary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
-                                >
-                                    Bookings
-                                </button>
-                                <button 
-                                    onClick={() => setChartMetric('instantVsScheduled')} 
-                                    className={`px-3 py-1.5 rounded-md text-xs font-medium uppercase tracking-wide transition-all ${chartMetric === 'instantVsScheduled' ? 'bg-[var(--card)] text-[var(--primary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
-                                >
-                                    I vs S
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div className="flex-1 min-h-[200px] w-full">
-                            {formattedChartData.length > 0 ? (
+                {/* ── ROW 2: TRENDS & ALERTS ── */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    {/* Booking Trend */}
+                    <div className="lg:col-span-4">
+                        <SectionCard title="Booking Volume Trend" actions={<button onClick={() => navigate('/admin/bookings')} className="text-[10px] font-black text-blue-600 uppercase">Analysis</button>}>
+                            <div className="h-64 w-full">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    {chartMetric === 'instantVsScheduled' ? (
-                                        <BarChart data={formattedChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                            <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="var(--border)" />
-                                            <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600, fill: 'var(--text-secondary)' }} dy={10} />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600, fill: 'var(--text-secondary)' }} />
-                                            <Tooltip
-                                                contentStyle={{ 
-                                                    borderRadius: '8px', 
-                                                    border: '1px solid var(--border)', 
-                                                    background: 'var(--card)', 
-                                                    fontWeight: '600', 
-                                                    fontSize: '12px',
-                                                    color: 'var(--text-primary)'
-                                                }}
-                                            />
-                                            <Legend />
-                                            <Bar dataKey="instant" fill={getComputedStyle(document.documentElement).getPropertyValue('--success').trim() || '#16a34a'} name="Instant" radius={[2, 2, 0, 0]} />
-                                            <Bar dataKey="scheduled" fill={getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#d4af37'} name="Scheduled" radius={[2, 2, 0, 0]} />
-                                        </BarChart>
-                                    ) : (
-                                        <AreaChart data={formattedChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                            <defs>
-                                                <linearGradient id="gradientMetrics" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor={chartColor} stopOpacity={0.2} />
-                                                    <stop offset="95%" stopColor={chartColor} stopOpacity={0} />
-                                                </linearGradient>
-                                            </defs>
-                                            <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="var(--border)" />
-                                            <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600, fill: 'var(--text-secondary)' }} dy={10} />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600, fill: 'var(--text-secondary)' }} />
-                                            <Tooltip
-                                                cursor={{ stroke: chartColor, strokeWidth: 1, strokeDasharray: '4 4' }}
-                                                contentStyle={{ 
-                                                    borderRadius: '8px', 
-                                                    border: '1px solid var(--border)', 
-                                                    background: 'var(--card)', 
-                                                    fontWeight: '600', 
-                                                    fontSize: '12px',
-                                                    color: 'var(--text-primary)'
-                                                }}
-                                            />
-                                            <Area type="monotone" dataKey="val" stroke={chartColor} strokeWidth={3} fill="url(#gradientMetrics)" />
-                                        </AreaChart>
-                                    )}
+                                    <AreaChart data={charts.bookingTrend}>
+                                        <defs>
+                                            <linearGradient id="colorBookings" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
+                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                        <XAxis dataKey="day" hide />
+                                        <YAxis hide />
+                                        <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                                        <Area type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorBookings)" />
+                                    </AreaChart>
                                 </ResponsiveContainer>
-                            ) : (
-                                <div className="h-full flex flex-col items-center justify-center p-6 text-center text-[var(--text-muted)]">
-                                    <BarChart3 size={32} className="opacity-20 mb-3" />
-                                    <p className="text-sm font-medium opacity-60">No Analytics Available</p>
-                                    <p className="text-xs mt-1 opacity-50">Not enough data to map trends.</p>
+                            </div>
+                        </SectionCard>
+                    </div>
+
+                    {/* Revenue Overview */}
+                    <div className="lg:col-span-3">
+                        <SectionCard title="Revenue Stream" actions={<button onClick={() => navigate('/admin/finance/transactions')} className="text-[10px] font-black text-emerald-600 uppercase">Ledger</button>}>
+                            <div className="h-64 w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={charts.revenueTrend}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                        <XAxis dataKey="day" hide />
+                                        <YAxis hide />
+                                        <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                                        <Line type="monotone" dataKey="amount" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981' }} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </SectionCard>
+                    </div>
+
+                    {/* Bookings by Status (Donut) */}
+                    <div className="lg:col-span-2">
+                        <SectionCard title="Status Matrix">
+                            <div className="h-[210px] relative">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={charts.bookingByStatus}
+                                            innerRadius={55}
+                                            outerRadius={75}
+                                            paddingAngle={8}
+                                            dataKey="count"
+                                        >
+                                            {charts.bookingByStatus.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={['#10b981', '#3b82f6', '#ef4444', '#f59e0b'][index % 4]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                    <span className="text-xl font-black text-slate-800">{kpis.totalBookings.toLocaleString()}</span>
+                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total</span>
                                 </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* ── SECTION 4: LIVE OPERATIONS ── */}
-            <section className="space-y-4">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-[var(--primary-light)] text-[var(--primary)] rounded-lg flex items-center justify-center">
-                        <Activity size={18} />
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Live Operations</h2>
-                        <p className="text-sm text-[var(--text-secondary)]">Real-time operational status and active fleet monitoring</p>
-                    </div>
-                </div>
-
-                {/* LIVE METRICS */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <KPICard 
-                        title="Active Drivers" 
-                        value={(stats.kpis.activeDrivers || 0).toLocaleString()} 
-                        icon={<Activity size={20} />} 
-                        highlightClass="text-purple-600"
-                        trend="up"
-                        trendValue="+5.7%"
-                    />
-                    <KPICard 
-                        title="Active Trips" 
-                        value={(stats.kpis.activeTrips || 0).toLocaleString()} 
-                        icon={<Truck size={20} />} 
-                        highlightClass="text-blue-600"
-                        trend="down"
-                        trendValue="-3.2%"
-                    />
-                    <KPICard 
-                        title="Total Users" 
-                        value={(stats.kpis.totalUsers || 0).toLocaleString()} 
-                        icon={<Users size={20} />} 
-                        highlightClass="text-indigo-600"
-                    />
-                    <KPICard 
-                        title="Total Drivers" 
-                        value={(stats.kpis.totalDrivers || 0).toLocaleString()} 
-                        icon={<Car size={20} />} 
-                        highlightClass="text-violet-600"
-                    />
-                </div>
-
-                {/* LIVE TRIPS PANEL */}
-                <div className="admin-card flex flex-col overflow-hidden shadow-premium-color">
-                    <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--bg-secondary)] flex items-center justify-between">
-                        <div>
-                            <h3 className="text-sm font-bold text-[var(--text-primary)]">Live Trips Panel</h3>
-                            <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mt-0.5">Active Dispatch Monitor</p>
-                        </div>
-                        <div className="flex items-center gap-2 bg-[var(--success-light)] px-2 py-1 rounded-full">
-                            <div className="w-1.5 h-1.5 rounded-full bg-[var(--success)] animate-pulse" />
-                            <span className="text-[10px] font-bold text-[var(--success-text)] uppercase tracking-tighter">Live Monitor</span>
-                        </div>
-                    </div>
-                    
-                    <div className="flex-1 overflow-y-auto p-4 max-h-[300px]">
-                        {stats.liveTrips?.length > 0 ? (
-                            <div className="space-y-3">
-                                {stats.liveTrips.map((trip, idx) => (
-                                    <motion.div 
-                                        key={idx}
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: idx * 0.1 }}
-                                        className="p-4 bg-[var(--bg-secondary)] hover:bg-[var(--card-hover)] rounded-lg transition-colors cursor-pointer group border border-transparent hover:border-[var(--border)]"
-                                    >
-                                        <div className="flex justify-between items-start mb-3">
-                                            <span className="text-xs font-medium uppercase text-[var(--primary)] tracking-wide">ID-{trip.bookingId?.slice(-6)}</span>
-                                            <span className="text-xs font-medium px-2 py-1 bg-[var(--card)] rounded border border-[var(--border)] text-[var(--text-secondary)] uppercase tracking-wide">{trip.status.replace(/_/g, ' ')}</span>
-                                        </div>
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-lg bg-[var(--border)] flex items-center justify-center shrink-0">
-                                                <Users size={16} className="text-[var(--text-muted)]" />
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <p className="text-sm font-medium text-[var(--text-primary)] truncate">{trip.consumer?.name || 'Customer'}</p>
-                                                <p className="text-xs text-[var(--text-secondary)] truncate flex items-center gap-1 mt-1">
-                                                    <Truck size={10} /> {trip.provider?.name || 'Unassigned'}
-                                                </p>
-                                            </div>
-                                            <div className="w-8 h-8 rounded-lg bg-[var(--primary-light)] text-[var(--primary)] flex items-center justify-center">
-                                                <MapPin size={14} />
-                                            </div>
-                                        </div>
-                                    </motion.div>
+                            </div>
+                            <div className="mt-4 grid grid-cols-2 gap-2">
+                                {charts.bookingByStatus.slice(0, 4).map((s, i) => (
+                                    <div key={i} className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ['#10b981', '#3b82f6', '#ef4444', '#f59e0b'][i] }} />
+                                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter truncate">{s.status || s.name}</span>
+                                    </div>
                                 ))}
                             </div>
-                        ) : (
-                            <div className="h-full flex flex-col items-center justify-center p-8 text-center">
-                                <div className="w-16 h-16 rounded-lg bg-[var(--bg-secondary)] flex items-center justify-center text-[var(--text-muted)] mb-4">
-                                    <MapPin size={24} />
-                                </div>
-                                <p className="text-sm font-medium text-[var(--text-primary)]">No Active Trips</p>
-                                <p className="text-xs text-[var(--text-secondary)] mt-1">All dispatches are currently clear.</p>
+                        </SectionCard>
+                    </div>
+
+                    {/* Alerts Overview */}
+                    <div className="lg:col-span-3">
+                        <SectionCard title="Security Pulse" actions={<button onClick={() => navigate('/admin/support/sos')} className="text-[10px] font-black text-rose-600 uppercase">Monitor</button>}>
+                            <div className="space-y-2">
+                                <AlertItem icon={<ShieldAlert className="text-red-500" />} label="SOS Alerts" count={alertsOverview.sosAlerts} color="red" onClick={() => navigate('/admin/support/sos')} />
+                                <AlertItem icon={<RefreshCcw className="text-amber-500" />} label="Refunds" count={alertsOverview.pendingRefunds} color="amber" onClick={() => navigate('/admin/finance/refunds')} />
+                                <AlertItem icon={<MessageSquare className="text-blue-500" />} label="Tickets" count={alertsOverview.openTickets} color="blue" onClick={() => navigate('/admin/support/tickets')} />
+                                <AlertItem icon={<MessageCircle className="text-purple-500" />} label="Unread" count={alertsOverview.unreadChats} color="purple" onClick={() => navigate('/admin/support/chat')} />
+                                <AlertItem icon={<Award className="text-orange-500" />} label="KYC Review" count={alertsOverview.kycPending} color="orange" onClick={() => navigate('/admin/drivers/kyc')} />
                             </div>
-                        )}
+                        </SectionCard>
                     </div>
                 </div>
-            </section>
-            
-            <div className="text-center pt-8 pb-4 opacity-30 pointer-events-none">
-                 <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">STRUCTURED OPERATIONS CONTROL PANEL • v4.0 ENTERPRISE</p>
+
+                {/* ── ROW 3: OPERATIONS ── */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    {/* Recent Bookings */}
+                    <div className="lg:col-span-4">
+                        <SectionCard title="Recent Network Activity" noPad actions={<button onClick={() => navigate('/admin/bookings')} className="text-[10px] font-black text-slate-400 uppercase">Log</button>}>
+                            <div className="adm-table-container">
+                                <table className="adm-table">
+                                    <tbody>
+                                        {operations.recentBookings.map((b, i) => (
+                                            <tr key={i} onClick={() => navigate('/admin/bookings')} className="group cursor-pointer hover:bg-slate-50 transition-colors">
+                                                <td className="py-4">
+                                                    <p className="text-[11px] font-black text-slate-800">#{b.id}</p>
+                                                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{new Date(b.time).toLocaleDateString()}</p>
+                                                </td>
+                                                <td>
+                                                    <p className="text-[10px] font-black text-slate-600 uppercase">{b.city}</p>
+                                                </td>
+                                                <td className="text-right">
+                                                    <p className="text-[11px] font-black text-slate-800">₹{b.amount}</p>
+                                                    <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${b.status === 'completed' ? 'text-emerald-600 bg-emerald-50' : 'text-blue-600 bg-blue-50'}`}>{b.status}</span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </SectionCard>
+                    </div>
+
+                    {/* Live Trips */}
+                    <div className="lg:col-span-3">
+                        <SectionCard title="Live Specialists" actions={<button onClick={() => navigate('/admin/live-tracking')} className="text-[10px] font-black text-emerald-600 uppercase">Live</button>}>
+                            <div className="space-y-4 max-h-[320px] overflow-y-auto pr-2 custom-scrollbar">
+                                {operations.liveTrips.map((t, i) => (
+                                    <div key={i} onClick={() => navigate('/admin/live-tracking')} className="flex items-center gap-3 cursor-pointer group hover:translate-x-1 transition-all">
+                                        <div className="w-10 h-10 rounded-xl bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
+                                            <img src={`https://ui-avatars.com/api/?name=${t.driver}&background=random`} alt="driver" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between">
+                                                <h4 className="text-[11px] font-black text-slate-800 truncate group-hover:text-blue-600 transition-colors uppercase tracking-tight">{t.driver}</h4>
+                                                <div className="flex items-center gap-0.5 text-amber-500"><Award size={10} fill="currentColor" /> <span className="text-[10px] font-black">4.8</span></div>
+                                            </div>
+                                            <p className="text-[9px] text-slate-400 font-bold truncate uppercase tracking-widest">{t.location}</p>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <span className="text-[8px] font-black text-emerald-500 uppercase flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Active</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </SectionCard>
+                    </div>
+
+                    {/* Driver Status Overview */}
+                    <div className="lg:col-span-2">
+                        <SectionCard title="Fleet Status">
+                            <div className="h-[160px] relative">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={[
+                                                { name: 'Online', value: operations.driverStatus.online },
+                                                { name: 'On Trip', value: operations.driverStatus.onTrip },
+                                                { name: 'Offline', value: operations.driverStatus.offline }
+                                            ]}
+                                            innerRadius={45}
+                                            outerRadius={60}
+                                            dataKey="value"
+                                        >
+                                            <Cell fill="#10b981" />
+                                            <Cell fill="#3b82f6" />
+                                            <Cell fill="#94a3b8" />
+                                        </Pie>
+                                        <Tooltip />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                    <span className="text-xl font-black text-slate-800">{(operations.driverStatus.online + operations.driverStatus.onTrip + operations.driverStatus.offline).toLocaleString()}</span>
+                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total</span>
+                                </div>
+                            </div>
+                            <div className="mt-4 space-y-2">
+                                <StatusLegend dot="bg-emerald-500" label="Online" count={operations.driverStatus.online} />
+                                <StatusLegend dot="bg-blue-500" label="On Trip" count={operations.driverStatus.onTrip} />
+                                <StatusLegend dot="bg-slate-400" label="Offline" count={operations.driverStatus.offline} />
+                            </div>
+                        </SectionCard>
+                    </div>
+
+                    {/* Earnings Overview */}
+                    <div className="lg:col-span-3">
+                        <SectionCard title="Financial Performance" actions={<button onClick={() => navigate('/admin/finance/transactions')} className="text-[10px] font-black text-amber-600 uppercase">Ledger</button>}>
+                            <div className="space-y-4">
+                                <div onClick={() => navigate('/admin/finance/transactions')} className="cursor-pointer hover:translate-x-1 transition-transform"><EarningsItem label="Total Revenue" value={`₹${operations.earnings.totalRevenue.toLocaleString()}`} trend="up" /></div>
+                                <div onClick={() => navigate('/admin/finance/payouts')} className="cursor-pointer hover:translate-x-1 transition-transform"><EarningsItem label="Driver Payouts" value={`₹${operations.earnings.driverPayouts.toLocaleString()}`} trend="down" /></div>
+                                <div onClick={() => navigate('/admin/finance/transactions')} className="cursor-pointer hover:translate-x-1 transition-transform"><EarningsItem label="Platform Com." value={`₹${operations.earnings.platformCommission.toLocaleString()}`} trend="up" /></div>
+                                <div onClick={() => navigate('/admin/finance/transactions')} className="cursor-pointer hover:translate-x-1 transition-transform"><EarningsItem label="Other Earnings" value={`₹${operations.earnings.otherEarnings.toLocaleString()}`} trend="up" /></div>
+                            </div>
+                        </SectionCard>
+                    </div>
+                </div>
+
+                {/* ── ROW 4: MANAGEMENT ── */}
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    {/* Task Summary */}
+                    <SectionCard title="Internal Tasks" actions={<button onClick={() => navigate('/admin/tasks')} className="text-[10px] font-black text-blue-600 uppercase">Board</button>}>
+                        <div className="grid grid-cols-4 gap-2 mb-6">
+                            <TaskMiniStat label="Total" count={bottomRow.tasks.total} />
+                            <TaskMiniStat label="Pending" count={bottomRow.tasks.pending} />
+                            <TaskMiniStat label="Active" count={bottomRow.tasks.inProgress} />
+                            <TaskMiniStat label="Done" count={bottomRow.tasks.completed} />
+                        </div>
+                        <div className="space-y-3">
+                            {bottomRow.tasks.recent.map((t, i) => (
+                                <div key={i} onClick={() => navigate('/admin/tasks')} className="flex items-center justify-between group cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors">
+                                    <div className="flex items-center gap-2">
+                                        <CheckCircle2 size={14} className="text-emerald-500" />
+                                        <span className="text-[11px] font-bold text-slate-700 truncate max-w-[120px]">{t.title}</span>
+                                    </div>
+                                    <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${t.priority === 'high' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}`}>{t.priority}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </SectionCard>
+
+                    {/* Chat Support */}
+                    <SectionCard title="Support Intel" actions={<button onClick={() => navigate('/admin/support/chat')} className="text-[10px] font-black text-indigo-600 uppercase">Helpdesk</button>}>
+                        <div className="space-y-4 mb-4">
+                            {[1, 2, 3].map(i => (
+                                <div key={i} onClick={() => navigate('/admin/support/chat')} className="flex items-center gap-3 cursor-pointer group">
+                                    <div className="w-9 h-9 rounded-xl bg-slate-100 shrink-0 border border-slate-100 group-hover:border-blue-200 transition-colors" />
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="text-[11px] font-black text-slate-800 uppercase tracking-tight">Case #{i}20</h4>
+                                            <span className="text-[9px] text-slate-400 font-bold uppercase">{i*3}m ago</span>
+                                        </div>
+                                        <p className="text-[10px] text-slate-500 truncate font-medium">Logistical assistance required...</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <button onClick={() => navigate('/admin/support/chat')} className="w-full bg-slate-900 text-white py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-black transition-all shadow-lg shadow-slate-200">Launch Helpdesk</button>
+                    </SectionCard>
+
+                    {/* Coupons / Offers */}
+                    <SectionCard title="Growth Engine" actions={<button onClick={() => navigate('/admin/promotions')} className="text-[10px] font-black text-emerald-600 uppercase">Offers</button>}>
+                        <div className="adm-table-container">
+                            <table className="w-full">
+                                <tbody className="divide-y divide-slate-50">
+                                    {bottomRow.coupons.map((c, i) => (
+                                        <tr key={i} onClick={() => navigate('/admin/promotions')} className="cursor-pointer hover:bg-slate-50 transition-colors">
+                                            <td className="py-2.5"><span className="text-[10px] font-black text-slate-800 uppercase tracking-tight">{c.code}</span></td>
+                                            <td className="py-2.5"><span className="text-[10px] font-black text-emerald-600">₹{c.discount} OFF</span></td>
+                                            <td className="py-2.5 text-right"><span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600">Active</span></td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <button onClick={() => navigate('/admin/promotions')} className="w-full mt-4 bg-white border border-slate-900 text-slate-900 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-slate-50 transition-all">New Campaign</button>
+                    </SectionCard>
+
+                    {/* Advertisements */}
+                    <SectionCard title="Display Network" actions={<button onClick={() => navigate('/admin/promotions/ads')} className="text-[10px] font-black text-amber-600 uppercase">Ads</button>}>
+                        <div className="space-y-4 mb-4">
+                            {bottomRow.advertisements.map((a, i) => (
+                                <div key={i} onClick={() => navigate('/admin/promotions/ads')} className="flex items-center gap-3 cursor-pointer group">
+                                    <div className="w-12 h-8 bg-slate-100 rounded-lg overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
+                                        <img src={a.image || 'https://via.placeholder.com/60x40'} className="w-full h-full object-cover" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="text-[10px] font-black text-slate-800 truncate uppercase tracking-tight">{a.title}</h4>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                            <span className="text-[8px] font-black text-emerald-500 uppercase">{a.status}</span>
+                                            <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest">{a.impressions?.toLocaleString()} Impressions</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <button onClick={() => navigate('/admin/promotions/ads')} className="w-full bg-white border border-slate-900 text-slate-900 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-slate-50 transition-all">Create Asset</button>
+                    </SectionCard>
+                </div>
+
+                {/* ── ROW 5: FOOTER FEEDS ── */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* SOS Alerts (Live) */}
+                    <SectionCard title="Live Emergency Feed" accent="rose">
+                        <div className="space-y-4">
+                            {footer.sosLive.map((s, i) => (
+                                <div key={i} onClick={() => navigate('/admin/support/sos')} className="flex items-center justify-between cursor-pointer group p-3 bg-rose-50/30 rounded-2xl border border-rose-100/50 hover:bg-rose-50 transition-all">
+                                    <div className="min-w-0">
+                                        <h4 className="text-[11px] font-black text-slate-800 group-hover:text-red-600 transition-colors uppercase tracking-tight">SOS-{s.id.slice(-4)}</h4>
+                                        <p className="text-[10px] text-slate-500 font-bold truncate uppercase tracking-widest">{s.user} • {s.location?.city}</p>
+                                    </div>
+                                    <span className="text-[8px] font-black uppercase text-red-500 bg-red-100 px-2 py-1 rounded-lg animate-pulse">Critical</span>
+                                </div>
+                            ))}
+                        </div>
+                    </SectionCard>
+
+                    {/* Refund Requests */}
+                    <SectionCard title="Refund Verification" accent="amber">
+                        <div className="space-y-4">
+                            {footer.refundRequests.map((r, i) => (
+                                <div key={i} onClick={() => navigate('/admin/finance/refunds')} className="flex items-center justify-between cursor-pointer group p-3 bg-amber-50/30 rounded-2xl border border-amber-100/50 hover:bg-amber-50 transition-all">
+                                    <div className="min-w-0">
+                                        <h4 className="text-[11px] font-black text-slate-800 group-hover:text-amber-600 transition-colors uppercase tracking-tight">REF-{r.id.slice(-4)}</h4>
+                                        <p className="text-[10px] text-slate-500 font-bold truncate uppercase tracking-widest">{r.customer} • ₹{r.amount}</p>
+                                    </div>
+                                    <span className="text-[8px] font-black uppercase text-amber-600 bg-amber-100 px-2 py-1 rounded-lg">Pending</span>
+                                </div>
+                            ))}
+                        </div>
+                    </SectionCard>
+
+                    {/* Social Media Campaigns */}
+                    <SectionCard title="Engagement Metrics" accent="blue">
+                        <div className="space-y-4">
+                            {footer.socialCampaigns.map((c, i) => (
+                                <div key={i} onClick={() => navigate('/admin/social/campaigns')} className="flex items-center justify-between cursor-pointer group p-3 bg-blue-50/30 rounded-2xl border border-blue-100/50 hover:bg-blue-50 transition-all">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600"><Share2 size={14} /></div>
+                                        <span className="text-[11px] font-black text-slate-800 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{c.platform}</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[10px] font-black text-slate-800">{c.clicks.toLocaleString()} Clicks</p>
+                                        <p className="text-[9px] text-emerald-500 font-black uppercase tracking-widest">{c.engagement} engagement</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </SectionCard>
+                </div>
             </div>
-        </div>
+        </PageShell>
     );
 };
 
+// ── SUB-COMPONENTS ──
+
+const AlertItem = ({ icon, label, count, color, onClick }) => (
+    <div 
+        onClick={onClick}
+        className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-all cursor-pointer group border border-transparent hover:border-slate-100"
+    >
+        <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-xl bg-${color}-50 text-${color}-600 group-hover:bg-white transition-colors shadow-sm`}>{icon}</div>
+            <span className="text-[11px] font-black text-slate-700 uppercase tracking-tight">{label}</span>
+        </div>
+        <span className="text-xs font-black text-slate-800 bg-slate-100 px-2 py-1 rounded-lg">{count}</span>
+    </div>
+);
+
+const StatusLegend = ({ dot, label, count }) => (
+    <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
+        <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${dot}`} />
+            <span className="text-slate-400">{label}</span>
+        </div>
+        <span className="text-slate-800">{count}</span>
+    </div>
+);
+
+const EarningsItem = ({ label, value, trend }) => (
+    <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/50 border border-slate-100/50 hover:bg-white hover:shadow-md transition-all">
+        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{label}</span>
+        <div className="text-right">
+            <p className="text-[13px] font-black text-slate-800 leading-tight tracking-tight">{value}</p>
+            {trend && <div className="flex items-center justify-end gap-1 mt-0.5">
+                {trend === 'up' ? <TrendingUp size={10} className="text-emerald-500" /> : <TrendingDown size={10} className="text-rose-500" />}
+                <span className={`text-[8px] font-black ${trend === 'up' ? 'text-emerald-500' : 'text-rose-500'}`}>15.8%</span>
+            </div>}
+        </div>
+    </div>
+);
+
+const TaskMiniStat = ({ label, count }) => (
+    <div className="bg-slate-50 p-3 rounded-2xl text-center border border-slate-100 shadow-sm">
+        <p className="text-[12px] font-black text-slate-800 leading-none">{count}</p>
+        <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter mt-1">{label}</p>
+    </div>
+);
+
 export default AdminDashboardUpgraded;
+

@@ -534,206 +534,154 @@ const AdminApartmentWash = () => {
         }
     };
 
-    if (loading) {
-        return (
-            <div className="min-h-[60vh] flex items-center justify-center">
-                <div className="flex items-center gap-3 rounded-3xl border border-slate-200/60 dark:border-white/5 bg-surface px-6 py-4 shadow-soft">
-                    <Loader2 size={18} className="animate-spin text-brand" />
-                    <span className="text-xs font-black uppercase tracking-[0.2em] text-content-subtle">Loading apartment ops</span>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <>
-            <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="space-y-4 pb-16 pt-6">
-                    <div className={activeSection === 'overview' ? "grid grid-cols-1 xl:grid-cols-[300px_minmax(0,1fr)] gap-6 items-start" : "space-y-6"}>
-                    {/* Persistent Navigation Sidebar - Visible ONLY on Overview for Desktop */}
-                    {activeSection === 'overview' && (
-                        <div className="space-y-5 xl:sticky xl:top-24 hidden xl:block">
-                        <section className="rounded-[2.2rem] border border-slate-200/60 dark:border-white/5 bg-surface p-6 shadow-soft">
-                            <div className="flex items-center justify-between gap-3 mb-6">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-2xl bg-black text-brand flex items-center justify-center shadow-lg">
-                                        <Building2 size={20} />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="text-[9px] font-black text-content-subtle uppercase tracking-[0.2em] opacity-50">Operational</p>
-                                        <h2 className="text-[13px] font-black text-content uppercase tracking-tight">Admin menu</h2>
-                                    </div>
-                                </div>
-                            </div>
+        <PageShell
+            title="Apartment Cockpit"
+            subtitle="System health, revenue telemetry and society infrastructure control"
+            icon={Building2}
+            accent="navy"
+            badge="Ops-v2"
+            actions={
+                <div className="flex items-center gap-4">
+                    <div className="h-11 px-5 bg-slate-100 rounded-xl border border-slate-200 flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)] animate-pulse" />
+                        <span className="text-[10px] font-black uppercase text-slate-800 tracking-widest">{stats.liveBookings || 0} active nodes</span>
+                    </div>
+                    <button 
+                        onClick={() => fetchConsole({ silent: true })} 
+                        disabled={refreshing} 
+                        className="adm-btn adm-btn-primary w-11 h-11 p-0 flex items-center justify-center shadow-lg"
+                    >
+                        <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
+                    </button>
+                </div>
+            }
+        >
+            <FilterBar>
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                    {SECTION_TABS.map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => handleSectionChange(tab.id)}
+                            className={`flex-shrink-0 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                                activeSection === tab.id 
+                                    ? 'bg-slate-900 text-amber-500 shadow-lg' 
+                                    : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                            }`}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+            </FilterBar>
 
-                            <nav className="space-y-1.5">
-                                {SECTION_TABS.map((tab) => {
-                                    const meta = SECTION_META[tab.id];
-                                    const Icon = meta.icon;
-                                    const isActive = activeSection === tab.id;
-                                    return (
-                                        <button
-                                            key={tab.id}
-                                            onClick={() => handleSectionChange(tab.id)}
-                                            className={`w-full rounded-2xl border px-4 py-3 text-left transition-all group ${
-                                                isActive
-                                                    ? 'border-brand/30 bg-brand/5 shadow-inner'
-                                                    : 'border-transparent hover:bg-slate-50 dark:hover:bg-white/5'
-                                            }`}
+            {activeSection === 'overview' && (
+                <div className="space-y-12">
+                    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                        {[
+                            { label: 'Active societies', value: stats.societies, icon: Building2, status: 'Online', color: 'emerald' },
+                            { label: 'Verified personnel', value: stats.verifiedCaptains, icon: Users, status: 'Standard', color: 'amber' },
+                            { label: 'Yield projection', value: formatCurrency(stats.totalRevenue), icon: CalendarClock, status: 'Monthly', color: 'emerald' },
+                            { label: 'Peak capacity', value: `${stats.capacityUsage || 0}%`, icon: Activity, status: 'Normal', color: 'navy' }
+                        ].map((stat, i) => (
+                            <SectionCard key={i} className="group hover:border-amber-400 transition-all">
+                                <div className="flex items-center justify-between mb-6">
+                                    <div className="w-12 h-12 bg-slate-100 text-slate-900 rounded-2xl flex items-center justify-center shadow-inner group-hover:bg-slate-900 group-hover:text-white transition-all">
+                                        <stat.icon size={22} />
+                                    </div>
+                                    <span className={`adm-badge ${stat.color === 'emerald' ? 'adm-badge-success' : stat.color === 'amber' ? 'adm-badge-warning' : 'adm-badge-info'}`}>
+                                        {stat.status}
+                                    </span>
+                                </div>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{stat.label}</p>
+                                <p className="text-3xl font-black tracking-tight text-slate-900 tabular-nums">{stat.value || 0}</p>
+                            </SectionCard>
+                        ))}
+                    </div>
+
+                    <div className="grid gap-10 lg:grid-cols-3 items-start">
+                        <div className="lg:col-span-2 space-y-8">
+                            <div className="space-y-6">
+                                <div className="flex items-center gap-4 px-2">
+                                    <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
+                                    <h4 className="text-[11px] font-black text-slate-800 uppercase tracking-[0.2em]">CONTROL HUBS</h4>
+                                    <div className="h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent" />
+                                </div>
+                                
+                                <div className="grid gap-4">
+                                    {[
+                                        { id: 'apartments', icon: Building2, label: 'Society infrastructure', sub: `${hubs.length} Active Society Nodes` },
+                                        { id: 'subscriptions', icon: Crown, label: 'Revenue yield management', sub: `${subscriptions.length} Recurring Contracts Managed` },
+                                        { id: 'liveops', icon: Activity, label: 'Live operations control', sub: `${stats.liveBookings || 0} Assets In Pipeline` }
+                                    ].map((card) => (
+                                        <button 
+                                            key={card.id} 
+                                            onClick={() => handleSectionChange(card.id)} 
+                                            className="flex items-center justify-between p-6 bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:border-amber-400 hover:shadow-xl transition-all group"
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all ${isActive ? 'bg-brand text-white shadow-lg shadow-brand/20' : 'bg-slate-100 dark:bg-white/5 text-content-subtle group-hover:bg-brand/10 group-hover:text-brand'}`}>
-                                                    <Icon size={16} />
+                                            <div className="flex items-center gap-6">
+                                                <div className="w-14 h-14 rounded-2xl bg-slate-50 text-slate-600 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-white transition-all shadow-inner">
+                                                    <card.icon size={24} />
                                                 </div>
-                                                <div className="min-w-0">
-                                                    <p className={`text-[10px] font-black uppercase tracking-widest ${isActive ? 'text-content' : 'text-content-subtle opacity-70'}`}>{meta.title}</p>
-                                                    <p className={`mt-0.5 text-[9px] font-bold leading-none truncate ${isActive ? 'text-content/60' : 'text-content-subtle/40'}`}>{meta.description.slice(0, 30)}...</p>
+                                                <div className="text-left">
+                                                    <p className="text-base font-black text-slate-900 uppercase tracking-tight leading-none">{card.label}</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-[0.15em] leading-none">{card.sub}</p>
                                                 </div>
+                                            </div>
+                                            <div className="w-10 h-10 rounded-full flex items-center justify-center text-slate-300 group-hover:text-amber-500 group-hover:bg-amber-50 transition-all">
+                                                <ChevronRight size={24} />
                                             </div>
                                         </button>
-                                    );
-                                })}
-                            </nav>
-                        </section>
-
-                        <div className="p-6 bg-brand/5 rounded-[2.2rem] border border-brand/20 shadow-inner">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-8 h-8 rounded-xl bg-black text-brand flex items-center justify-center shadow-lg">
-                                    <Activity size={14} />
-                                </div>
-                                <span className="text-[10px] font-black uppercase tracking-widest text-content">Logistic heartbeat</span>
-                            </div>
-                            <p className="text-[11px] font-black text-content/60 uppercase tracking-tight leading-relaxed">
-                                Infrastructure synchronized. {stats.societies || 0} Logistic Nodes active. System reporting <span className="text-emerald-500 font-black">Optimal Throughput</span> across all mapped territories.
-                            </p>
-                        </div>
-                    </div>
-                )}
-
-                    <div className="space-y-6">
-                        {/* Navigation Hub - Professional Top Tab Bar */}
-                        <div className="flex items-center gap-2 overflow-x-auto pb-4 no-scrollbar border-b border-slate-100 dark:border-white/5 mb-2">
-                            {SECTION_TABS.map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => handleSectionChange(tab.id)}
-                                    className={`whitespace-nowrap px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSection === tab.id ? 'bg-black text-brand shadow-lg' : 'bg-surface border border-slate-100 dark:border-white/5 text-content-subtle hover:bg-slate-50 dark:hover:bg-white/5'}`}
-                                >
-                                    {tab.label}
-                                </button>
-                            ))}
-                        </div>
-
-                {activeSection === 'overview' && (
-                    <div className="space-y-5">
-                        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
-                            <div className="flex items-center gap-5">
-                                <div className="w-1.5 h-10 bg-brand rounded-full shadow-[0_0_15px_rgba(242,159,5,0.4)]" />
-                                <div>
-                                    <h1 className="text-3xl font-black tracking-tighter text-content capitalize">Apartment <span className="text-brand">cockpit</span></h1>
-                                    <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.25em] mt-1 opacity-60">System health & revenue telemetry</p>
+                                    ))}
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <div className="h-10 px-4 bg-surface rounded-xl border border-slate-200/60 dark:border-white/5 flex items-center gap-3 ">
-                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                    <span className="text-[9px] font-black uppercase text-content tracking-widest leading-none">{stats.liveBookings || 0} active nodes</span>
-                                </div>
-                                <button onClick={() => fetchConsole({ silent: true })} disabled={refreshing} className="w-10 h-10 bg-black text-brand rounded-xl flex items-center justify-center hover:brightness-125 transition-all shadow-lg active:scale-95 disabled:opacity-50">
-                                    <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-                                </button>
-                            </div>
-                        </header>
 
-                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                            {[
-                                { label: 'Active societies', value: stats.societies, icon: Building2, status: 'Online', color: 'emerald' },
-                                { label: 'Verified personnel', value: stats.verifiedCaptains, icon: Users, status: 'Standard', color: 'brand' },
-                                { label: 'Yield projection', value: formatCurrency(stats.totalRevenue), icon: CalendarClock, status: 'Monthly', color: 'emerald' },
-                                { label: 'Peak capacity', value: `${stats.capacityUsage || 0}%`, icon: Activity, status: 'Normal', color: 'blue' }
-                            ].map((stat, i) => (
-                                <article key={i} className="bg-surface p-4 rounded-3xl border border-slate-200/60 dark:border-white/5  hover:border-brand/40 transition-all">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <div className={`w-9 h-9 bg-slate-100 dark:bg-white/5 text-content rounded-xl flex items-center justify-center`}><stat.icon size={18} /></div>
-                                        <span className={`text-[8px] font-black text-${stat.color}-500 bg-${stat.color}-500/10 px-2 py-0.5 rounded-md uppercase tracking-widest`}>{stat.status}</span>
+                            <SectionCard className="border-emerald-100 bg-emerald-50/20">
+                                <div className="flex items-center justify-between mb-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                                        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-800">REVENUE PERFORMANCE</h3>
                                     </div>
-                                    <p className="text-[9px] font-black text-content-subtle uppercase tracking-widest opacity-50">{stat.label}</p>
-                                    <p className="text-2xl font-black tracking-tighter text-content tabular-nums mt-1">{stat.value || 0}</p>
-                                </article>
-                            ))}
+                                    <TrendingUp size={18} className="text-emerald-500" />
+                                </div>
+                                <div className="flex items-baseline gap-4">
+                                    <span className="text-4xl font-black tracking-tighter text-slate-900 tabular-nums">{formatCurrency(stats.totalRevenue)}</span>
+                                    <span className="text-xs font-black text-emerald-600 bg-emerald-100 px-2 py-1 rounded-lg">+{stats.revenueGrowth || 0}%</span>
+                                </div>
+                            </SectionCard>
                         </div>
 
-                        <div className="grid gap-5 lg:grid-cols-3 items-start">
-                            <div className="lg:col-span-2 space-y-5">
-                                <section className="bg-surface rounded-3xl border border-slate-200/60 dark:border-white/5 p-6  relative overflow-hidden">
-                                     <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none transform translate-x-1/4 -translate-y-1/4"><Shield size={160} /></div>
-                                    <div className="flex items-center gap-3 mb-6 relative z-10">
-                                        <div className="w-1 h-5 bg-brand rounded-full" />
-                                        <h2 className="text-sm font-black text-content tracking-tight uppercase">Control hubs</h2>
-                                    </div>
-                                    <div className="grid gap-3 relative z-10">
-                                        {[
-                                            { id: 'apartments', icon: Building2, label: 'Society infrastructure', sub: `${hubs.length} Active Society Nodes` },
-                                            { id: 'subscriptions', icon: Crown, label: 'Revenue yield management', sub: `${subscriptions.length} Recurring Contracts Managed` },
-                                            { id: 'liveops', icon: Activity, label: 'Live operations control', sub: `${stats.liveBookings || 0} Assets In Pipeline` }
-                                        ].map((card) => (
-                                            <button key={card.id} onClick={() => handleSectionChange(card.id)} className="flex items-center justify-between p-4 bg-slate-50/50 dark:bg-white/[0.01] rounded-[2rem] border border-slate-200/40 dark:border-white/5 hover:border-brand/40 transition-all group">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/10 flex items-center justify-center text-content group-hover:bg-brand group-hover:text-white transition-all "><card.icon size={20} /></div>
-                                                    <div className="text-left">
-                                                        <p className="text-[13px] font-black text-content uppercase tracking-tight leading-none">{card.label}</p>
-                                                        <p className="text-[9px] font-bold text-content-subtle mt-2 opacity-60 uppercase tracking-widest leading-none">{card.sub}</p>
-                                                    </div>
-                                                </div>
-                                                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-content-subtle opacity-30 group-hover:opacity-100 transition-all group-hover:translate-x-1">
-                                                    <ChevronRight size={18} />
-                                                </div>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </section>
-
-                                <article className="bg-surface rounded-3xl border border-slate-200/60 dark:border-white/5 p-6 ">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-1 h-4 bg-emerald-500 rounded-full" />
-                                            <h3 className="text-[10px] font-black uppercase tracking-widest text-content">Revenue performance</h3>
-                                        </div>
-                                        <TrendingUp size={14} className="text-emerald-500" />
-                                    </div>
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-3xl font-black tracking-tighter text-content tabular-nums">{formatCurrency(stats.totalRevenue)}</span>
-                                        <span className="text-[10px] font-bold text-emerald-500">+{stats.revenueGrowth || 0}%</span>
-                                    </div>
-                                </article>
-                            </div>
-
-                            <aside className="space-y-5">
-                                <div className="bg-black rounded-[2rem] p-6 text-white shadow-2xl shadow-black/50 relative overflow-hidden group">
-                                    <div className="absolute -right-4 -top-4 w-32 h-32 bg-brand/10 blur-3xl group-hover:bg-brand/20 transition-all" />
-                                    <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-brand mb-6 flex items-center gap-2">
-                                        <Activity size={12} /> Resource pulse
-                                    </h3>
-                                    <div className="space-y-5">
-                                        {hubs.slice(0, 3).map((hub) => (
-                                            <div key={hub._id} className="space-y-2.5">
-                                                <div className="flex justify-between text-[11px] font-black uppercase tracking-tight">
-                                                    <span className="truncate pr-4 opacity-70">{hub.name}</span>
-                                                    <span className={(hub.mappedCaptainCount || 0) > 0 ? 'text-emerald-500' : 'text-brand'}>
-                                                        {(hub.mappedCaptainCount || 0) > 0 ? 'NOMINAL' : 'VACANT'}
-                                                    </span>
-                                                </div>
-                                                <div className="h-1 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden">
-                                                    <div className="h-full bg-brand rounded-full transition-all duration-1000" style={{ width: (hub.mappedCaptainCount || 0) > 0 ? '100%' : '10%' }} />
-                                                </div>
+                        <div className="space-y-8">
+                            <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white shadow-2xl relative overflow-hidden group">
+                                <div className="absolute -right-8 -top-8 w-40 h-40 bg-amber-500/10 blur-[80px] group-hover:bg-amber-500/20 transition-all" />
+                                <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-500 mb-10 flex items-center gap-3">
+                                    <Activity size={16} /> RESOURCE PULSE
+                                </h3>
+                                <div className="space-y-8">
+                                    {hubs.slice(0, 4).map((hub) => (
+                                        <div key={hub._id} className="space-y-3">
+                                            <div className="flex justify-between text-[11px] font-black uppercase tracking-widest">
+                                                <span className="truncate pr-4 text-slate-300">{hub.name}</span>
+                                                <span className={(hub.mappedCaptainCount || 0) > 0 ? 'text-emerald-400' : 'text-amber-500'}>
+                                                    {(hub.mappedCaptainCount || 0) > 0 ? 'NOMINAL' : 'VACANT'}
+                                                </span>
                                             </div>
-                                        ))}
-                                    </div>
+                                            <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                                <div 
+                                                    className={`h-full rounded-full transition-all duration-1000 ${ (hub.mappedCaptainCount || 0) > 0 ? 'bg-emerald-500' : 'bg-amber-500'}`} 
+                                                    style={{ width: (hub.mappedCaptainCount || 0) > 0 ? '100%' : '10%' }} 
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                            </aside>
+                                <Terminal className="absolute -bottom-10 -right-10 w-40 h-40 text-white/5 pointer-events-none" />
+                            </div>
                         </div>
                     </div>
-                )}
+                </div>
+            )}
+
 
                 {activeSection === 'apartments' && (
                     <div className="space-y-6">
@@ -769,92 +717,78 @@ const AdminApartmentWash = () => {
 
                         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                             {filteredHubs.map((hub) => (
-                                <article key={hub._id} className="group bg-surface rounded-[2.75rem] border border-slate-200/60 dark:border-white/5 p-6  hover:shadow-2xl shadow-black/50 hover:border-brand/40 transition-all relative overflow-hidden flex flex-col min-h-[380px]">
-                                    {/* Action Deck */}
-                                    <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all flex gap-2 z-10 pointer-events-none group-hover:pointer-events-auto">
-                                        <button onClick={() => openEditHub(hub)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-black text-brand shadow-2xl border border-black hover:scale-110 active:scale-90 transition-all">
+                                <SectionCard key={hub._id} className="group relative overflow-hidden flex flex-col min-h-[440px] hover:border-amber-400 transition-all">
+                                    <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all flex gap-2 z-20">
+                                        <button onClick={() => openEditHub(hub)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-900 text-amber-500 shadow-xl hover:bg-amber-500 hover:text-white transition-all">
                                             <Edit2 size={16} />
                                         </button>
-                                        <button onClick={() => handleDeleteHub(hub)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-red-500 text-white shadow-2xl border border-red-600 hover:scale-110 active:scale-90 transition-all">
+                                        <button onClick={() => handleDeleteHub(hub)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-rose-500 text-white shadow-xl hover:bg-rose-600 transition-all">
                                             <Trash2 size={16} />
                                         </button>
                                     </div>
 
-                                    <div className="flex gap-5 items-start relative">
-                                        <div className="relative">
-                                            <div className="w-16 h-16 rounded-[1.75rem] bg-slate-100 dark:bg-white/5 flex items-center justify-center text-brand border-slate-200 dark:border-white/10 group-hover:bg-black group-hover:border-black transition-all duration-700  overflow-hidden">
-                                                <div className="absolute inset-0 bg-brand/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                <Building2 size={32} className="relative z-10 group-hover:scale-110 transition-transform duration-500" />
-                                            </div>
-                                            <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-lg bg-emerald-500 border-4 border-surface flex items-center justify-center">
+                                    <div className="flex gap-6 items-start relative mb-8">
+                                        <div className="w-16 h-16 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all shadow-inner relative shrink-0">
+                                            <Building2 size={32} />
+                                            <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-lg bg-emerald-500 border-4 border-white flex items-center justify-center">
                                                 <Shield size={10} className="text-white" />
                                             </div>
                                         </div>
-                                        <div className="min-w-0 pr-10 pt-1">
-                                            <h3 className="text-lg font-black text-content uppercase tracking-tighter leading-tight truncate overflow-ellipsis">{hub.name}</h3>
+                                        <div className="min-w-0 pt-1">
+                                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tighter leading-tight truncate">{hub.name}</h3>
                                             <div className="flex items-center gap-2 mt-2">
-                                                <span className="text-[10px] font-black text-content-subtle uppercase tracking-widest opacity-40">{hub.city}</span>
-                                                <div className="h-1 w-1 rounded-full bg-slate-300" />
-                                                <span className="text-[10px] font-black text-brand uppercase tracking-[0.15em]">{hub.manager || 'NO ASSIGNED LEAD'}</span>
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{hub.city}</span>
+                                                <div className="h-1 w-1 rounded-full bg-slate-200" />
+                                                <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest">{hub.manager || 'PENDING LEAD'}</span>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="mt-8 grid grid-cols-3 gap-3">
+                                    <div className="grid grid-cols-3 gap-3 mb-8">
                                         {[
-                                            { label: 'Personnel', value: hub.mappedCaptainCount || 0, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-                                            { label: 'Members', value: hub.liveSubscriptionsCount || 0, color: 'text-brand', bg: 'bg-brand/10' },
-                                            { label: 'Active Ops', value: hub.liveBookingsCount || 0, color: 'text-[var(--primary)]', bg: 'bg-[var(--primary-light)]' }
-                                        ].map((stat, i) => (
-                                            <div key={i} className="p-4 bg-slate-50 dark:bg-white/[0.02] rounded-3xl border border-slate-100 dark:border-white/10 flex flex-col items-center justify-center text-center group-hover:bg-surface group-hover:shadow-soft transition-all duration-500">
-                                                <p className="text-[9px] font-black text-content-subtle uppercase tracking-widest mb-2 opacity-50">{stat.label}</p>
-                                                <p className={`text-xl font-black ${stat.color} tabular-nums leading-none tracking-tighter`}>{stat.value}</p>
+                                            { label: 'Personnel', value: hub.mappedCaptainCount || 0, icon: <Users size={12} /> },
+                                            { label: 'Live Jobs', value: hub.liveJobCount || 0, icon: <Activity size={12} /> },
+                                            { label: 'Health', value: hub.load, icon: <Zap size={12} /> }
+                                        ].map((m, k) => (
+                                            <div key={k} className="bg-slate-50 p-3 rounded-2xl border border-slate-100 group-hover:bg-slate-900 group-hover:border-slate-800 transition-all">
+                                                <div className="flex items-center gap-1.5 text-slate-400 group-hover:text-amber-500 mb-1 transition-colors">
+                                                    {m.icon}
+                                                    <span className="text-[8px] font-black uppercase tracking-widest">{m.label}</span>
+                                                </div>
+                                                <p className="text-[11px] font-black text-slate-900 group-hover:text-white transition-colors">{m.value}</p>
                                             </div>
                                         ))}
                                     </div>
 
-                                    {/* Territorial Telemetry */}
-                                    <div className="mt-6 p-5 bg-background dark:bg-white/[0.01] rounded-[2rem] border border-slate-100 dark:border-white/5 space-y-4">
+                                    <div className="p-5 bg-slate-50 rounded-[2rem] border border-slate-100 group-hover:bg-slate-900/5 group-hover:border-slate-900 transition-all space-y-4">
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-pulse" />
-                                                <span className="text-[10px] font-black text-content-subtle uppercase tracking-widest opacity-40">Operating zones</span>
-                                            </div>
-                                            <span className="text-[11px] font-black text-content uppercase tracking-tight">{(hub.metadata?.blocks || []).join(', ') || 'GLOBAL NODE'}</span>
+                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Zones</span>
+                                            <span className="text-[10px] font-black text-slate-900 uppercase tracking-tight">{(hub.metadata?.blocks || []).join(', ') || 'GLOBAL'}</span>
                                         </div>
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-1.5 h-1.5 opacity-40">
-                                                    <Terminal size={10} className="text-brand" />
-                                                </div>
-                                                <span className="text-[10px] font-black text-content-subtle uppercase tracking-widest opacity-40">Pillar matrix</span>
-                                            </div>
-                                            <div className="px-3 py-1 bg-black rounded-lg text-brand text-[11px] font-black tracking-tight tabular-nums">
-                                                {hub.metadata?.pillarRange?.min || 1} <span className="mx-1 opacity-20">/</span> {hub.metadata?.pillarRange?.max || 100}
+                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Pillar Range</span>
+                                            <div className="px-2 py-0.5 bg-slate-900 rounded text-amber-500 text-[10px] font-black tracking-tight">
+                                                {hub.metadata?.pillarRange?.min || 1} - {hub.metadata?.pillarRange?.max || 100}
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="mt-auto pt-6 flex items-center justify-between border-t border-slate-50 dark:border-white/[0.03]">
-                                        {hub.metadata?.pendingApproval ? (
-                                            <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--warning-light)] rounded-xl border border-[var(--warning)]">
-                                                <Zap size={10} className="text-[var(--warning)] animate-pulse" />
-                                                <span className="text-[9px] font-black uppercase text-[var(--warning-text)] tracking-[0.2em]">Deployment queue</span>
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center gap-2 px-3 py-1.5 bg-brand/10 rounded-xl border border-brand/20">
-                                                <Crown size={10} className="text-brand" />
-                                                <span className="text-[9px] font-black uppercase text-brand tracking-[0.2em]">Premium node</span>
-                                            </div>
-                                        )}
+                                    <div className="mt-auto pt-6 flex items-center justify-between border-t border-slate-100 group-hover:border-slate-800 transition-all">
+                                        <div className="flex items-center gap-2">
+                                            <Crown size={14} className={hub.metadata?.pendingApproval ? 'text-slate-300' : 'text-amber-500'} />
+                                            <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">
+                                                {hub.metadata?.pendingApproval ? 'Deployment Queue' : 'Premium Node'}
+                                            </span>
+                                        </div>
                                         <button 
                                             onClick={() => openEditHub(hub)} 
-                                            className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em] group-hover:text-brand transition-colors flex items-center gap-2"
+                                            className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] group-hover:text-amber-600 transition-colors flex items-center gap-2"
                                         >
-                                            Control node <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                                            Control Node <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
                                         </button>
                                     </div>
-                                </article>
+                                </SectionCard>
+
                             ))}
                             {filteredHubs.length === 0 && (
                                 <div className="py-32 text-center bg-surface border-white/5 border-dashed border-slate-100 dark:border-white/5 rounded-[3.5rem] lg:col-span-3">
@@ -1481,9 +1415,10 @@ const AdminApartmentWash = () => {
                     </form>
                 </ModalShell>
             )}
-        </>
+        </PageShell>
     );
 };
+
 
 const SectionToolbar = ({ title, description, searchValue, onSearchChange, searchPlaceholder, actionLabel, onAction }) => (
     <section className="bg-surface rounded-3xl border border-slate-200/60 dark:border-white/5 p-5 ">

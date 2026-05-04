@@ -1385,3 +1385,124 @@ exports.clearAllNotifications = async (req, res) => {
         res.status(500).json({ status: 'error', message: 'Failed to clear notifications' });
     }
 };
+
+// ── REFUND MANAGEMENT ──────────────────────────────────────────
+
+/**
+ * Get all bookings with pending refund status
+ */
+exports.getRefundRequests = async (req, res) => {
+    try {
+        const { search, limit = 50, page = 1 } = req.query;
+        const query = {
+            'payment.status': 'refund_pending',
+            isActive: true
+        };
+
+        if (search) {
+            query.$or = [
+                { bookingId: { $regex: search, $options: 'i' } },
+                { 'consumer.name': { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const bookings = await Booking.find(query)
+            .populate('consumer', 'name phone email profile')
+            .sort({ updatedAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit));
+
+        const total = await Booking.countDocuments(query);
+
+        res.status(200).json({
+            status: 'success',
+            results: bookings.length,
+            total,
+            data: { bookings }
+        });
+    } catch (error) {
+        console.error('Error fetching refund requests:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to synchronize refund queue' });
+    }
+};
+
+/**
+ * Process a refund request (Approve/Reject)
+ */
+exports.processRefund = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { action, adminNote } = req.body; // action: 'approve' | 'reject'
+
+        const booking = await Booking.findById(id);
+        if (!booking) {
+            return res.status(404).json({ status: 'fail', message: 'Booking not found' });
+        }
+
+        if (booking.payment.status !== 'refund_pending') {
+            return res.status(400).json({ status: 'fail', message: 'This booking does not have a pending refund request' });
+        }
+
+        if (action === 'approve') {
+            const oldPaymentStatus = booking.payment.status;
+            booking.payment.status = 'refunded';
+            booking.status = 'refunded';
+            booking.payment.refundedAt = new Date();
+            if (adminNote) booking.notes.internal = `${booking.notes.internal || ''}\n[REFUND APPROVED] ${adminNote}`.trim();
+
+            // If paid via wallet, initiate reversal
+            if (booking.payment.method === 'wallet' || booking.payment.method === 'online') {
+                const refundAmount = booking.pricing.finalAmount || booking.pricing.totalAmount;
+                
+                await walletHelper.executeWalletTransaction(
+                    booking.consumer,
+                    refundAmount,
+                    'credit',
+                    {
+                        category: 'REFUND',
+                        description: `Refund for booking #${booking.bookingId || booking._id}. ${adminNote || 'Approved by admin'}`,
+                        referenceId: booking._id.toString(),
+                        referenceType: 'booking_refund'
+                    }
+                ).catch(e => console.error('[Refund] Wallet reversal failed:', e.message));
+            }
+
+            // Create Audit Log
+            await AuditLog.create({
+                userId: req.user._id,
+                action: 'APPROVE_REFUND',
+                resource: 'Booking',
+                resourceId: booking._id,
+                oldValue: oldPaymentStatus,
+                newValue: 'refunded',
+                metadata: { adminNote, amount: booking.pricing.totalAmount }
+            });
+
+        } else if (action === 'reject') {
+            booking.payment.status = 'paid'; // Revert to paid
+            if (adminNote) booking.notes.internal = `${booking.notes.internal || ''}\n[REFUND REJECTED] ${adminNote}`.trim();
+
+            await AuditLog.create({
+                userId: req.user._id,
+                action: 'REJECT_REFUND',
+                resource: 'Booking',
+                resourceId: booking._id,
+                oldValue: 'refund_pending',
+                newValue: 'paid',
+                metadata: { adminNote }
+            });
+        }
+
+        await booking.save();
+
+        res.status(200).json({
+            status: 'success',
+            message: `Refund request ${action}ed successfully`,
+            data: { booking }
+        });
+    } catch (error) {
+        console.error('Error processing refund:', error);
+        res.status(500).json({ status: 'error', message: error.message || 'Failed to process refund protocol' });
+    }
+};

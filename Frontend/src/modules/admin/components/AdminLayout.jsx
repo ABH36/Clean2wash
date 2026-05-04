@@ -14,11 +14,12 @@ import {
     X,
     Bell,
     Search,
-    Car,
     Moon,
     Sun,
     ChevronDown,
-    Package
+    Calendar,
+    Settings,
+    Car
 } from 'lucide-react';
 
 import EmergencyResponse from '../components/EmergencyResponse';
@@ -33,18 +34,10 @@ const AdminLayout = ({ title: propTitle }) => {
     const [unreadCount, setUnreadCount] = useState(0);
     const [activeSOS, setActiveSOS] = useState(null);
     const [expandedGroups, setExpandedGroups] = useState([
-        'Dashboard & Analytics', 
+        'Bookings', 
         'Operations', 
-        'Driver Management', 
-        'User Management',
-        'Services',
-        'Products',
-        'Vehicle Management',
-        'Finance',
-        'Infrastructure',
-        'Growth & Marketing',
-        'Super Admin Control',
-        'System'
+        'Support Desk', 
+        'Finance'
     ]);
     const [isLoadingConfig, setIsLoadingConfig] = useState(true);
 
@@ -71,21 +64,19 @@ const AdminLayout = ({ title: propTitle }) => {
     const getPageTitle = () => {
         if (propTitle) return propTitle;
         const path = location.pathname;
-        if (path === '/admin') return 'Spare Driver Ops';
-        if (path === '/admin/notifications') return 'Notifications';
-        if (path === '/admin/bookings') return 'Bookings';
-        if (path === '/admin/users') {
-            const params = new URLSearchParams(location.search);
-            const type = params.get('type');
-            if (type === 'vendors') return 'Vendors';
-            if (type === 'captains') return 'Captains';
-            if (type === 'staff') return 'Staff';
-            if (type === 'sparedriver') return 'Spare Drivers';
-            return 'Consumers';
-        }
-        if (path.startsWith('/admin/spare-drivers')) return 'Spare Drivers';
-        if (path.startsWith('/admin/promotions')) return 'Campaigns';
-        return 'Admin Panel';
+        if (path === '/admin') return 'Dashboard';
+        
+        // Find label from config
+        let label = 'Admin Panel';
+        ADMIN_ROUTES_CONFIG.forEach(item => {
+            if (item.path === path) label = item.label;
+            if (item.routes) {
+                item.routes.forEach(route => {
+                    if (route.path === path) label = route.label;
+                });
+            }
+        });
+        return label;
     };
 
     useEffect(() => {
@@ -108,89 +99,26 @@ const AdminLayout = ({ title: propTitle }) => {
         }
     };
 
-    const handleResolveSOS = async () => {
-        if (!activeSOS?.sosId) return;
-        try {
-            const res = await adminAPI.resolveSOS(activeSOS.sosId);
-            if (res.status === 'success') {
-                setActiveSOS(null);
-            }
-        } catch (error) {
-            console.error('Failed to resolve SOS:', error);
-        }
-    };
-
     useEffect(() => {
         fetchUnreadCount();
         socketService.joinAdminRoom();
         
-        const handleNewNotification = () => {
-            fetchUnreadCount();
-        };
-        
+        const handleNewNotification = () => fetchUnreadCount();
         const handleSOSAlert = (data) => {
-            console.log('🚨 EMERGENCY SOS RECEIVED:', data);
             setActiveSOS(data);
             fetchUnreadCount();
         };
 
-        const handleManualTactical = (e) => {
-            setActiveSOS(e.detail);
-        };
-
-        const handleGlobalStatusUpdate = (data) => {
-            console.log('📊 Global status update:', data);
-            fetchUnreadCount();
-        };
-
-        const handleDriverAssigned = (data) => {
-            console.log('🚗 Driver assigned:', data);
-        };
-
-        // Register all socket listeners
         socketService.on('new_admin_notification', handleNewNotification);
         socketService.on('sos_alert', handleSOSAlert);
-        socketService.on('new_booking', handleNewNotification);
-        socketService.on('global_status_update', handleGlobalStatusUpdate);
-        socketService.on('driver_assigned', handleDriverAssigned);
-        socketService.on('sos_resolved', handleNewNotification);
         
-        // Register window event listener
-        window.addEventListener('open-sos-tactical', handleManualTactical);
-
-        // Cleanup function - CRITICAL: Remove all listeners
         return () => {
             socketService.off('new_admin_notification', handleNewNotification);
             socketService.off('sos_alert', handleSOSAlert);
-            socketService.off('new_booking', handleNewNotification);
-            socketService.off('global_status_update', handleGlobalStatusUpdate);
-            socketService.off('driver_assigned', handleDriverAssigned);
-            socketService.off('sos_resolved', handleNewNotification);
-            window.removeEventListener('open-sos-tactical', handleManualTactical);
-            
-            // Leave admin room on unmount
-            socketService.leaveAdminRoom?.();
         };
     }, []);
 
     useEffect(() => { setIsMobileNavOpen(false); }, [location.pathname]);
-
-    const NAV_ITEMS = ADMIN_ROUTES_CONFIG.map(category => ({
-        label: category.category,
-        icon: category.icon,
-        flag: category.flag,
-        children: category.routes.map(route => ({
-            label: route.label,
-            path: route.path,
-            icon: route.icon,
-            flag: route.flag,
-            hidden: route.hidden
-        }))
-    })).filter(item => !item.flag || isFeatureEnabled(item.flag))
-    .map(item => ({
-        ...item,
-        children: item.children?.filter(child => (!child.flag || isFeatureEnabled(child.flag)) && !child.hidden)
-    }));
 
     const toggleGroup = (label) => {
         setExpandedGroups(prev => 
@@ -199,16 +127,16 @@ const AdminLayout = ({ title: propTitle }) => {
     };
 
     return (
-        <div className="admin-panel flex flex-col lg:flex-row font-sans selection:bg-[var(--primary)] selection:text-white">
+        <div className="admin-module-root flex flex-col lg:flex-row min-h-screen">
             
-            {/* Desktop Sidebar - Clean Professional */}
+            {/* Desktop Sidebar */}
             <motion.aside
-                animate={{ width: isSidebarOpen ? 280 : 85 }}
-                className="hidden lg:flex admin-sidebar flex-col sticky top-0 h-screen overflow-hidden z-40 transition-all duration-300 shrink-0"
+                animate={{ width: isSidebarOpen ? 264 : 72 }}
+                className="hidden lg:flex flex-col sticky top-0 h-screen overflow-hidden z-40 shrink-0 adm-sidebar"
             >
                 <SidebarContent
                     isSidebarOpen={isSidebarOpen}
-                    NAV_ITEMS={NAV_ITEMS}
+                    NAV_ITEMS={ADMIN_ROUTES_CONFIG}
                     location={location}
                     navigate={navigate}
                     expandedGroups={expandedGroups}
@@ -226,20 +154,18 @@ const AdminLayout = ({ title: propTitle }) => {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setIsMobileNavOpen(false)}
-                            className="fixed inset-0 bg-black/50 z-[60] lg:hidden"
+                            className="fixed inset-0 bg-black/60 z-[60] lg:hidden backdrop-blur-sm"
                         />
                         <motion.aside
                             initial={{ x: -280 }}
                             animate={{ x: 0 }}
                             exit={{ x: -280 }}
-                            className="fixed top-0 left-0 bottom-0 w-[280px] admin-sidebar flex flex-col z-[70] lg:hidden shadow-2xl shadow-black/50"
+                            className="fixed top-0 left-0 bottom-0 w-[280px] flex flex-col z-[70] lg:hidden shadow-2xl"
+                            style={{ backgroundColor: 'var(--sidebar-bg)' }}
                         >
-                            <div className="absolute top-6 right-6 text-[var(--text-muted)] hover:text-[var(--text-primary)] z-10 p-2 hover:bg-[var(--card-hover)] rounded-lg transition-colors cursor-pointer" onClick={() => setIsMobileNavOpen(false)}>
-                                <X size={20} />
-                            </div>
                             <SidebarContent
                                 isSidebarOpen={true}
-                                NAV_ITEMS={NAV_ITEMS}
+                                NAV_ITEMS={ADMIN_ROUTES_CONFIG}
                                 location={location}
                                 navigate={navigate}
                                 expandedGroups={expandedGroups}
@@ -252,129 +178,94 @@ const AdminLayout = ({ title: propTitle }) => {
             </AnimatePresence>
 
             {/* Main Content Area */}
-            <main className="flex-1 flex flex-col min-h-screen min-w-0 relative overflow-x-hidden pb-16 lg:pb-0">
-                {/* Clean Professional Topbar */}
-                <header className="bg-[var(--card)] px-4 py-3 border-b border-[var(--border)] flex items-center justify-between sticky top-0 z-40 transition-colors duration-200 shrink-0">
-                    <div className="flex items-center gap-4">
+            <main className="flex-1 flex flex-col min-h-screen min-w-0 relative overflow-x-hidden bg-mesh">
+                {/* ── PREMIUM TOP BAR ── */}
+                <header className="adm-header shrink-0">
+                    {/* Left: Menu + Page Title */}
+                    <div className="flex items-center gap-3">
                         <button
                             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                            className="hidden lg:flex p-2 bg-[var(--bg-secondary)] rounded-lg text-[var(--text-secondary)] hover:bg-[var(--card-hover)] hover:text-[var(--text-primary)] transition-colors"
-                        >
-                            {isSidebarOpen ? <X size={18} /> : <Menu size={18} />}
-                        </button>
-                        <button
-                            onClick={() => setIsMobileNavOpen(true)}
-                            className="lg:hidden p-2 bg-[var(--bg-secondary)] rounded-lg text-[var(--text-secondary)]"
+                            className="hidden lg:flex p-2 hover:bg-slate-100 rounded-xl text-slate-500 transition-colors"
                         >
                             <Menu size={18} />
                         </button>
-                        <div className="h-6 w-px bg-[var(--border)] mx-2 hidden lg:block" />
-                        <h2 className="text-xl font-semibold text-[var(--text-primary)] capitalize truncate max-w-[120px] lg:max-w-none">
-                            {getPageTitle()}
-                        </h2>
+                        <button
+                            onClick={() => setIsMobileNavOpen(true)}
+                            className="lg:hidden p-2 hover:bg-slate-100 rounded-xl text-slate-500"
+                        >
+                            <Menu size={18} />
+                        </button>
+                        <div className="hidden sm:flex flex-col">
+                            <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest leading-none">
+                                {getPageTitle()}
+                            </h2>
+                            <p className="text-[10px] font-medium text-slate-400 mt-0.5">Clean2Wash Admin</p>
+                        </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        {/* Search Bar - Clean */}
-                        <div className="hidden lg:flex items-center gap-2.5 bg-[var(--bg-secondary)] px-3 py-1.5 rounded-xl border border-[var(--border)] focus-within:border-[var(--primary)] focus-within:shadow-sm transition-all">
-                            <Search size={15} className="text-[var(--text-muted)]" />
-                            <input
-                                type="text"
-                                placeholder="Search commands..."
-                                className="bg-transparent outline-none text-xs font-medium text-[var(--text-primary)] w-40 placeholder:text-[var(--text-muted)]"
-                            />
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                            {/* Theme Toggle - Clean */}
-                            <button
-                                onClick={toggleTheme}
-                                title="Toggle Theme"
-                                className="w-10 h-10 bg-[var(--bg-secondary)] rounded-lg flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--card-hover)] hover:text-[var(--text-primary)] transition-colors"
-                            >
-                                {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-                            </button>
+                    {/* Center: Search */}
+                    <div className="adm-search-bar hidden md:block">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Search anything..."
+                            className="adm-search-input"
+                        />
+                    </div>
 
-                            {/* Notifications - Clean */}
-                            <button
-                                onClick={() => navigate('/admin/notifications')}
-                                className="w-10 h-10 bg-[var(--bg-secondary)] rounded-lg flex items-center justify-center text-[var(--text-secondary)] relative hover:bg-[var(--card-hover)] hover:text-[var(--text-primary)] transition-colors"
-                            >
-                                <Bell size={18} />
-                                {unreadCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-[var(--error)] text-white text-[10px] font-semibold flex items-center justify-center rounded-full">
-                                        {unreadCount > 99 ? '99+' : unreadCount}
-                                    </span>
-                                )}
-                            </button>
-                            
-                            <div className="h-6 w-px bg-[var(--border)] mx-2" />
-                            
-                            {/* Profile - Clean */}
-                            <div className="flex items-center gap-2 bg-[var(--bg-secondary)] pr-3 pl-1.5 py-1.5 rounded-xl hover:bg-[var(--card-hover)] border border-transparent hover:border-[var(--border)] transition-all cursor-pointer">
-                                <div className="w-7 h-7 rounded-lg bg-[var(--primary)] flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-sm shadow-[var(--primary)]/20">
-                                    AD
+                    {/* Right: Actions + Profile */}
+                    <div className="flex items-center gap-2">
+                        {/* Date Range */}
+                        <div className="hidden lg:flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl cursor-pointer hover:bg-white hover:border-amber-300 transition-all">
+                            <Calendar size={13} className="text-slate-500" />
+                            <span className="text-[11px] font-bold text-slate-600">20 May – 26 May, 2025</span>
+                            <ChevronDown size={11} className="text-slate-400" />
+                        </div>
+
+                        {/* Notification Bell */}
+                        <button className="relative p-2 hover:bg-slate-100 rounded-xl text-slate-500 transition-colors">
+                            <Bell size={18} />
+                            {unreadCount > 0 && (
+                                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-black flex items-center justify-center rounded-full border-2 border-white shadow-sm">
+                                    {unreadCount > 9 ? '9+' : unreadCount}
+                                </span>
+                            )}
+                        </button>
+
+                        {/* Divider */}
+                        <div className="h-7 w-px bg-slate-200 mx-1" />
+
+                        {/* Profile */}
+                        <div className="flex items-center gap-2.5 pl-1 cursor-pointer group">
+                            <div className="text-right hidden sm:block">
+                                <p className="text-[11px] font-black text-slate-800 leading-none group-hover:text-amber-600 transition-colors uppercase tracking-wide">Super Admin</p>
+                                <p className="text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">Administrator</p>
+                            </div>
+                            <div className="relative">
+                                <div className="w-9 h-9 rounded-xl bg-slate-800 overflow-hidden border-2 border-slate-100 shadow-md">
+                                    <img src="https://ui-avatars.com/api/?name=Super+Admin&background=0f172a&color=f59e0b" alt="Admin" className="w-full h-full object-cover" />
                                 </div>
-                                <div className="hidden sm:block text-left overflow-hidden">
-                                    <p className="text-[11px] font-bold text-[var(--text-primary)] leading-none truncate w-16">Admin</p>
-                                    <p className="text-[9px] font-medium text-[var(--text-muted)] uppercase tracking-tight mt-0.5">Admin</p>
-                                </div>
+                                {/* Live status dot */}
+                                <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white adm-live-dot" />
                             </div>
                         </div>
                     </div>
                 </header>
 
-                {/* Main Content - Clean */}
-                <div className="p-3 lg:p-4 flex-1 relative w-full max-w-full overflow-x-hidden">
-                    <AnimatePresence mode="wait">
-                        {isLoadingConfig ? (
-                            <motion.div 
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                className="absolute inset-0 flex items-center justify-center bg-[var(--bg)] z-50"
-                            >
-                                <div className="flex flex-col items-center gap-4">
-                                    <div className="w-12 h-12 border-4 border-[var(--border)] border-t-[var(--primary)] rounded-full animate-spin" />
-                                    <p className="text-sm font-semibold text-[var(--text-secondary)]">Loading Dashboard...</p>
-                                </div>
-                            </motion.div>
-                        ) : (
-                            <motion.div
-                                key={location.pathname + location.search}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                transition={{ duration: 0.2, ease: "easeOut" }}
-                                className="fade-in w-full max-w-full"
-                            >
-                                <Suspense fallback={
-                                    <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-                                        <div className="w-10 h-10 border-4 border-[var(--border)] border-t-[var(--primary)] rounded-full animate-spin" />
-                                        <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-widest">Waking modules...</p>
-                                    </div>
-                                }>
-                                    <Outlet />
-                                </Suspense>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                {/* Content Container */}
+                <div className="p-6 flex-1 relative w-full overflow-x-hidden bg-mesh">
+                    <Suspense fallback={<div className="h-full flex items-center justify-center"><div className="w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" /></div>}>
+                        <Outlet />
+                    </Suspense>
                 </div>
-
-                <BottomNav
-                    NAV_ITEMS={NAV_ITEMS}
-                    location={location}
-                    navigate={navigate}
-                    setIsMobileNavOpen={setIsMobileNavOpen}
-                />
             </main>
 
-            {/* HIGH-PRIORITY EMERGENCY COMMAND CENTER */}
+            {/* Emergency Alerts */}
             <AnimatePresence>
                 {activeSOS && (
                     <EmergencyResponse 
                         alert={activeSOS} 
-                        onResolve={handleResolveSOS}
+                        onResolve={() => setActiveSOS(null)}
                         onClose={() => setActiveSOS(null)}
                     />
                 )}
@@ -384,174 +275,131 @@ const AdminLayout = ({ title: propTitle }) => {
 };
 
 const SidebarContent = ({ isSidebarOpen, NAV_ITEMS, location, navigate, onLogout, expandedGroups, toggleGroup }) => (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full text-[var(--sidebar-text)]">
         {/* Logo Section */}
-        <div className={`px-3 py-4 flex items-center border-b border-[var(--border)] ${!isSidebarOpen ? 'justify-center' : 'justify-start'}`}>
-            {isSidebarOpen ? (
-                <motion.div
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="w-full flex items-center justify-center"
-                    style={{
-                        background: 'linear-gradient(135deg, #1a1a1a 0%, #111 100%)',
-                        borderRadius: '12px',
-                        padding: '10px 12px',
-                    }}
-                >
-                    <img
-                        src="/spareDriverLogo.png"
-                        alt="Spare Driver"
-                        className="w-full object-contain"
-                        style={{ height: '52px', maxWidth: '220px' }}
-                    />
-                </motion.div>
-            ) : (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="w-11 h-11 rounded-xl overflow-hidden flex items-center justify-center shrink-0"
-                    style={{
-                        background: 'linear-gradient(135deg, #1a1a1a 0%, #111 100%)',
-                        padding: '4px',
-                    }}
-                >
-                    <img
-                        src="/spareDriverLogo.png"
-                        alt="SD"
-                        className="w-full h-full object-contain"
-                        style={{ objectPosition: 'left center' }}
-                    />
-                </motion.div>
-            )}
+        <div className="px-6 py-8 flex items-center mb-4">
+            <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/20 shrink-0">
+                    <Car className="text-slate-900" size={24} />
+                </div>
+                {isSidebarOpen && (
+                    <motion.h1 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="text-xl font-black text-white tracking-tight"
+                    >
+                        SpareDriver
+                    </motion.h1>
+                )}
+            </div>
         </div>
 
         {/* Navigation */}
-        <nav
-            className="flex-1 px-3 space-y-1 overflow-y-auto scrollbar-hide py-4"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-            <LayoutGroup id="sidebar-nav">
-                {NAV_ITEMS.map((item, i) => {
-                    const fullPath = location.pathname + location.search;
-                    const isGroup = !!item.children;
-                    const isExpanded = expandedGroups.includes(item.label);
-                    
-                    const isPathActive = (path) => {
-                        if (!path) return false;
-                        if (path.includes('?')) return fullPath === path;
-                        return fullPath === path || (path !== '/admin' && !fullPath.includes('?') && fullPath.startsWith(path));
-                    };
-
-                    const isAnyChildActive = item.children?.some(child => isPathActive(child.path));
-                    const isActive = isGroup ? isAnyChildActive : isPathActive(item.path);
-
-                    return (
-                        <div key={item.label} className="space-y-1">
-                            <motion.button
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: i * 0.02 }}
-                                onClick={() => isGroup ? toggleGroup(item.label) : navigate(item.path)}
-                                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group relative ${
-                                    isActive && !isGroup
-                                        ? 'bg-[var(--primary)] text-white'
-                                        : (isActive && isGroup 
-                                            ? 'text-[var(--primary)] bg-[var(--primary-light)]' 
-                                            : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover)]')
+        <nav className="flex-1 px-4 space-y-2 overflow-y-auto scrollbar-hide">
+            {NAV_ITEMS.map((item, i) => {
+                const isGroup = !!item.routes;
+                const isExpanded = expandedGroups.includes(item.category);
+                const isActive = item.path ? location.pathname === item.path : item.routes?.some(r => location.pathname === r.path);
+                
+                return (
+                    <div key={item.label || item.category} className="mb-2">
+                        {isGroup ? (
+                            <div className="space-y-1">
+                                <button
+                                    onClick={() => toggleGroup(item.category)}
+                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all group ${
+                                        isActive ? 'text-white' : 'hover:bg-slate-800/50'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <span className={`${isActive ? 'text-amber-500' : 'text-slate-500'} group-hover:text-amber-400 transition-colors`}>
+                                            {item.icon}
+                                        </span>
+                                        {isSidebarOpen && (
+                                            <span className="text-[13px] font-black tracking-wide uppercase opacity-80 group-hover:opacity-100">
+                                                {item.category}
+                                            </span>
+                                        )}
+                                    </div>
+                                    {isSidebarOpen && (
+                                        <ChevronDown size={12} strokeWidth={3} className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                                    )}
+                                </button>
+                                
+                                <AnimatePresence>
+                                    {isExpanded && isSidebarOpen && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            className="overflow-hidden ml-12 space-y-1 mt-1 border-l-2 border-slate-800/50"
+                                        >
+                                            {item.routes.map((route) => (
+                                                <button
+                                                    key={route.label}
+                                                    onClick={() => navigate(route.path)}
+                                                    className={`w-full text-left px-5 py-2 rounded-r-xl text-[12px] font-bold transition-all relative ${
+                                                        location.pathname === route.path 
+                                                            ? 'text-amber-500 bg-amber-500/10' 
+                                                            : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                                    }`}
+                                                >
+                                                    {route.label}
+                                                    {route.badge && (
+                                                        <span className="ml-2 px-1.5 py-0.5 bg-purple-600 text-[8px] text-white rounded font-black uppercase tracking-widest">
+                                                            {route.badge}
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            ))}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => navigate(item.path)}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
+                                    location.pathname === item.path
+                                        ? 'bg-amber-500 text-slate-900 shadow-xl shadow-amber-500/20 scale-[1.02]'
+                                        : 'hover:bg-slate-800/50 hover:text-white'
                                 }`}
                             >
-                                <div className="shrink-0">
+                                <span className={`${location.pathname === item.path ? 'text-slate-900' : 'text-slate-500 group-hover:text-amber-400'}`}>
                                     {item.icon}
-                                </div>
+                                </span>
                                 {isSidebarOpen && (
                                     <div className="flex-1 flex items-center justify-between">
-                                        <span className="text-sm font-medium">
+                                        <span className="text-[13px] font-black tracking-wide uppercase">
                                             {item.label}
                                         </span>
-                                        {isGroup && (
-                                            <ChevronDown size={14} className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                                        {item.badge && (
+                                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${
+                                                location.pathname === item.path ? 'bg-slate-900 text-white' : 'bg-purple-600 text-white'
+                                            }`}>
+                                                {item.badge}
+                                            </span>
                                         )}
                                     </div>
                                 )}
-                            </motion.button>
-
-                            <AnimatePresence>
-                                {isGroup && isExpanded && isSidebarOpen && (
-                                    <motion.div
-                                        initial={{ height: 0, opacity: 0 }}
-                                        animate={{ height: 'auto', opacity: 1 }}
-                                        exit={{ height: 0, opacity: 0 }}
-                                        className="overflow-hidden pl-10 space-y-1"
-                                    >
-                                        {item.children.map((child) => {
-                                            const isChildActive = isPathActive(child.path);
-                                            return (
-                                                <button
-                                                    key={child.label}
-                                                    onClick={() => navigate(child.path)}
-                                                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                                        isChildActive 
-                                                            ? 'text-[var(--primary)] bg-[var(--primary-light)]' 
-                                                            : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--card-hover)]'
-                                                    }`}
-                                                >
-                                                    {child.label}
-                                                </button>
-                                            );
-                                        })}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    );
-                })}
-            </LayoutGroup>
+                            </button>
+                        )}
+                    </div>
+                );
+            })}
         </nav>
 
-        <div className="p-3 mt-auto border-t border-[var(--border)]">
+        {/* Bottom Section */}
+        <div className="p-4 mt-auto border-t border-slate-800/50">
             <button
                 onClick={onLogout}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[var(--error-light)] hover:text-[var(--error)] text-[var(--text-secondary)] transition-colors group"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-red-500/10 hover:text-red-500 transition-all group"
             >
                 <LogOut size={18} />
-                {isSidebarOpen && <span className="text-sm font-medium">Logout</span>}
+                {isSidebarOpen && <span className="text-sm font-bold">Logout</span>}
             </button>
         </div>
     </div>
 );
-
-const BottomNav = ({ NAV_ITEMS, location, navigate, setIsMobileNavOpen }) => {
-    const BOTTOM_ITEMS = NAV_ITEMS.slice(0, 4).map(group => group.children?.[0]).filter(Boolean);
-
-    return (
-        <nav className="fixed bottom-0 left-0 right-0 h-16 bg-[var(--card)] border-t border-[var(--border)] px-6 flex items-center justify-between lg:hidden z-40 safe-area-bottom transition-colors duration-200">
-            {BOTTOM_ITEMS.map((item) => {
-                const isActive = location.pathname === item.path;
-                return (
-                    <button
-                        key={item.label}
-                        onClick={() => navigate(item.path)}
-                        className={`flex flex-col items-center gap-1 transition-colors ${
-                            isActive ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'
-                        }`}
-                    >
-                        <div className={`p-1.5 rounded-lg ${isActive ? 'bg-[var(--primary-light)]' : ''}`}>
-                            {item.icon ? React.cloneElement(item.icon, { size: 20 }) : <Package size={20} />}
-                        </div>
-                    </button>
-                );
-            })}
-            <button
-                onClick={() => setIsMobileNavOpen(true)}
-                className="flex flex-col items-center gap-1 text-[var(--text-muted)]"
-            >
-                <div className="p-1.5 rounded-lg">
-                    <Menu size={20} />
-                </div>
-            </button>
-        </nav>
-    );
-};
 
 export default AdminLayout;

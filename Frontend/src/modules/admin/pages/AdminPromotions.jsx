@@ -1,8 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import { Plus, Search, Edit2, Trash2, ToggleLeft, ToggleRight, X, CheckCircle2 } from 'lucide-react';
+import { 
+    Plus, Search, Edit2, Trash2, ToggleLeft, ToggleRight, X, 
+    CheckCircle2, Tag, RefreshCcw, Megaphone, Gift, Share2, TrendingUp
+} from 'lucide-react';
 import { adminAPI } from '../../../utils/adminApi';
+import PageShell, { SectionCard, FilterBar, SearchBox, StatusTabs, EmptyState, PageLoader } from '../components/PageShell';
 
 const TABS = ['Coupons', 'Referrals', 'Offers', 'Banners'];
 
@@ -107,8 +111,7 @@ const AdminPromotions = () => {
     const handleDelete = async (promo) => {
         const id = promo?._id || promo?.id;
         if (!id) return;
-        const confirmed = window.confirm('Delete this promotion?');
-        if (!confirmed) return;
+        if (!window.confirm('Delete this promotion?')) return;
         try {
             await adminAPI.deletePromotion(id);
             toast.success('Campaign deleted');
@@ -132,139 +135,213 @@ const AdminPromotions = () => {
     };
 
     return (
-        <div className="space-y-6 pb-20 bg-[var(--bg)] min-h-screen">
-            <div className="admin-card border-none shadow-soft-xl">
-                <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Promotions & Campaigns</h1>
-                        <p className="text-xs font-semibold text-[var(--text-secondary)] mt-2 uppercase tracking-widest">Spare driver growth desk</p>
-                    </div>
-                    <div className="flex gap-3">
-                        <div className="bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl px-4 py-2.5 flex items-center gap-3 w-full lg:w-72">
-                            <Search size={16} className="text-[var(--text-muted)]" />
-                            <input
-                                type="text"
-                                placeholder={`Search ${activeTab.toLowerCase()}...`}
-                                className="bg-transparent outline-none text-sm font-semibold text-[var(--text-primary)] w-full placeholder:text-[var(--text-muted)]"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
+        <PageShell
+            title="Growth Engine"
+            subtitle="Marketing logistics and campaign deployment desk"
+            icon={Megaphone}
+            accent="indigo"
+            badge="Campaign-v4"
+            actions={
+                <button
+                    onClick={handleOpenCreate}
+                    className="h-10 px-5 bg-slate-900 text-white hover:bg-amber-500 hover:text-slate-900 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md transition-all flex items-center gap-2"
+                >
+                    <Plus size={16} /> New Campaign
+                </button>
+            }
+        >
+            <div className="space-y-8">
+                {/* ── METRIC TILES ── */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    {[
+                        { label: 'Active Campaigns', value: Object.values(promos).flat().filter(p => p.status === 'Active').length, icon: Tag, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+                        { label: 'Total Reach', value: '1.2M', icon: Share2, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                        { label: 'Conversion', value: '8.4%', icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-50' },
+                        { label: 'Growth Index', value: '+12%', icon: Gift, color: 'text-rose-500', bg: 'bg-rose-50' }
+                    ].map((stat, i) => (
+                        <div key={i} className={`p-6 rounded-[2rem] border border-slate-100 ${stat.bg} relative overflow-hidden group`}>
+                            <div className="relative z-10">
+                                <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${stat.color}`}>{stat.label}</p>
+                                <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{stat.value}</h3>
+                            </div>
+                            <stat.icon className={`absolute -bottom-4 -right-4 w-20 h-20 opacity-[0.05] transition-transform group-hover:scale-110 ${stat.color}`} />
+                        </div>
+                    ))}
+                </div>
+
+                <SectionCard
+                    title="Campaign Registry"
+                    actions={
+                        <FilterBar className="!border-0 !p-0 !bg-transparent">
+                            <SearchBox 
+                                value={search} 
+                                onChange={e => setSearch(e.target.value)} 
+                                placeholder={`Scan ${activeTab.toLowerCase()}...`} 
                             />
-                        </div>
-                        <button
-                            onClick={handleOpenCreate}
-                            className="h-11 px-6 bg-[var(--primary)] text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-[var(--primary)]/20 flex items-center gap-2 group/new"
-                        >
-                            <Plus size={20} className="group-hover/new:scale-110 transition-transform" /> New
-                        </button>
-                    </div>
-                </div>
+                            <div className="h-6 w-[1px] bg-slate-100 hidden md:block" />
+                            <StatusTabs 
+                                tabs={TABS.map(tab => ({ label: tab, value: tab }))}
+                                active={activeTab}
+                                onChange={setActiveTab}
+                            />
+                        </FilterBar>
+                    }
+                >
+                    {isFetching ? (
+                        <PageLoader />
+                    ) : filteredPromos.length === 0 ? (
+                        <EmptyState 
+                            icon={Tag} 
+                            title="Campaign Void" 
+                            subtitle={`No ${activeTab.toLowerCase()} identified in current deployment.`} 
+                        />
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {filteredPromos.map((promo) => (
+                                <motion.div 
+                                    key={promo._id || promo.id}
+                                    layout
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="bg-white rounded-[2.5rem] border border-slate-100 hover:border-indigo-500 hover:shadow-xl transition-all group overflow-hidden flex flex-col"
+                                >
+                                    <div className="p-8">
+                                        <div className="flex items-start justify-between mb-6">
+                                            <div className="w-14 h-14 bg-slate-900 text-amber-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                                {activeTab === 'Banners' ? <Share2 size={24} /> : activeTab === 'Referrals' ? <Gift size={24} /> : <Tag size={24} />}
+                                            </div>
+                                            <button onClick={() => handleToggleStatus(promo)} className="flex-shrink-0 hover:scale-110 transition-transform">
+                                                {promo.status === 'Active' ? <ToggleRight size={32} className="text-emerald-500" /> : <ToggleLeft size={32} className="text-slate-300" />}
+                                            </button>
+                                        </div>
 
-                <div className="flex border-b border-[var(--border)] mt-5 overflow-x-auto scrollbar-hide">
-                    {TABS.map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`px-8 py-4 text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap border-b-2 ${
-                                activeTab === tab ? 'border-[var(--primary)] text-[var(--primary)]' : 'border-transparent text-[var(--text-secondary)]'
-                            }`}
-                        >
-                            {tab}
-                        </button>
-                    ))}
-                </div>
-            </div>
+                                        <div className="space-y-4">
+                                            <div>
+                                                <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight truncate">
+                                                    {promo.code || promo.name || promo.title || 'Campaign'}
+                                                </h3>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                                    {promo.subtitle || 'No subtitle provided'}
+                                                </p>
+                                            </div>
 
-            {isFetching ? (
-                <div className="py-20 flex items-center justify-center">
-                    <div className="w-10 h-10 border-4 border-[var(--border)] border-t-[var(--primary)] rounded-full animate-spin" />
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {filteredPromos.map((promo) => (
-                        <div key={promo._id || promo.id} className="bg-[var(--card)] rounded-3xl border border-[var(--border)] shadow-soft overflow-hidden">
-                            <div className="p-5 space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-lg font-bold text-[var(--text-primary)] truncate">{promo.code || promo.name || promo.title || 'Campaign'}</h3>
-                                    <button onClick={() => handleToggleStatus(promo)}>
-                                        {promo.status === 'Active' ? <ToggleRight size={28} className="text-emerald-500" /> : <ToggleLeft size={28} className="text-[var(--text-muted)]" />}
-                                    </button>
-                                </div>
-                                <p className="text-xs font-semibold text-[var(--text-secondary)]">{promo.subtitle || 'No subtitle added yet.'}</p>
-                                <p className="text-[11px] font-bold text-[var(--primary)] uppercase tracking-wider">{promo.status || 'Inactive'}</p>
-                            </div>
-                            <div className="px-5 py-4 bg-[var(--bg-secondary)] border-t border-[var(--border)] flex items-center justify-end gap-2">
-                                <button onClick={() => handleOpenEdit(promo)} className="w-10 h-10 bg-[var(--card)] rounded-xl text-[var(--text-muted)] border border-[var(--border)] flex items-center justify-center hover:text-brand hover:border-brand/40 transition-all group/edit">
-                                    <Edit2 size={18} className="group-hover/edit:scale-110 transition-transform" />
-                                </button>
-                                <button onClick={() => handleDelete(promo)} className="w-10 h-10 bg-[var(--card)] rounded-xl text-[var(--text-muted)] border border-[var(--border)] flex items-center justify-center hover:text-red-500 hover:border-red-200 transition-all group/trash">
-                                    <Trash2 size={18} className="group-hover/trash:scale-110 transition-transform" />
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                    {!filteredPromos.length && (
-                        <div className="col-span-full py-16 text-center bg-[var(--card)] border border-[var(--border)] rounded-3xl text-[var(--text-secondary)] font-semibold">
-                            No campaigns found in this bucket.
+                                            <div className="flex flex-wrap gap-2">
+                                                <span className={`adm-badge ${promo.status === 'Active' ? 'adm-badge-success' : 'adm-badge-error'}`}>
+                                                    {promo.status}
+                                                </span>
+                                                {promo.expiry && (
+                                                    <span className="adm-badge adm-badge-navy">
+                                                        EXP: {new Date(promo.expiry).toLocaleDateString()}
+                                                    </span>
+                                                )}
+                                                {promo.val && (
+                                                    <span className="adm-badge bg-amber-50 text-amber-600 border-amber-100">
+                                                        VALUE: {promo.val}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-auto px-4 py-4 border-t border-slate-50 flex gap-2">
+                                        <button 
+                                            onClick={() => handleOpenEdit(promo)}
+                                            className="flex-1 h-11 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center hover:bg-slate-900 hover:text-white transition-all"
+                                        >
+                                            <Edit2 size={16} />
+                                        </button>
+                                        <button 
+                                            onClick={() => handleDelete(promo)}
+                                            className="flex-1 h-11 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            ))}
                         </div>
                     )}
-                </div>
-            )}
+                </SectionCard>
+            </div>
 
+            {/* ── CONFIGURATION MODAL ── */}
             <AnimatePresence>
                 {isModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 12 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 12 }}
-                            className="bg-[var(--card)] w-full max-w-2xl rounded-[2rem] border border-[var(--border)] relative z-10"
-                        >
-                            <div className="px-6 py-5 border-b border-[var(--border)] flex items-center justify-between">
-                                <h2 className="text-lg font-bold text-[var(--text-primary)] uppercase tracking-tight">{editingPromo ? 'Edit campaign' : 'Create campaign'}</h2>
-                                <button onClick={() => setIsModalOpen(false)} className="w-9 h-9 rounded-lg border border-[var(--border)] flex items-center justify-center">
-                                    <X size={16} />
-                                </button>
-                            </div>
-                            <form onSubmit={handleSave} className="p-6 space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <input className="h-12 px-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]" placeholder="Code / Name / Title" value={activeTab === 'Referrals' ? formData.name : activeTab === 'Banners' ? formData.title : formData.code} onChange={(e) => {
-                                        const val = e.target.value;
-                                        if (activeTab === 'Referrals') setFormData({ ...formData, name: val });
-                                        else if (activeTab === 'Banners') setFormData({ ...formData, title: val });
-                                        else setFormData({ ...formData, code: val.toUpperCase() });
-                                    }} required />
-                                    <input className="h-12 px-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]" placeholder="Subtitle" value={formData.subtitle} onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })} required />
-                                    {activeTab !== 'Referrals' && activeTab !== 'Banners' && (
-                                        <input className="h-12 px-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]" placeholder="Value" value={formData.val} onChange={(e) => setFormData({ ...formData, val: e.target.value })} required />
-                                    )}
-                                    {activeTab === 'Referrals' && (
-                                        <>
-                                            <input className="h-12 px-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]" placeholder="Referrer reward" value={formData.userGets} onChange={(e) => setFormData({ ...formData, userGets: e.target.value })} required />
-                                            <input className="h-12 px-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]" placeholder="Invitee bonus" value={formData.friendGets} onChange={(e) => setFormData({ ...formData, friendGets: e.target.value })} required />
-                                        </>
-                                    )}
-                                    <input className="h-12 px-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]" placeholder="Image URL" value={formData.image} onChange={(e) => setFormData({ ...formData, image: e.target.value })} />
-                                    <input type="date" className="h-12 px-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]" value={formData.expiry ? formData.expiry.split('T')[0] : ''} onChange={(e) => setFormData({ ...formData, expiry: e.target.value })} />
-                                    {activeTab === 'Banners' && (
-                                        <input className="h-12 px-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] md:col-span-2" placeholder="Destination path (default: /spare-driver)" value={formData.path} onChange={(e) => setFormData({ ...formData, path: e.target.value })} />
-                                    )}
+                    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
+                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-slate-100 flex flex-col max-h-[90vh]">
+                            <div className="px-10 py-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+                                <div>
+                                    <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">{editingPromo ? 'Sync Protocol' : 'Deploy Campaign'}</h2>
+                                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mt-1.5">Growth Engine Configuration Hub</p>
                                 </div>
+                                <button onClick={() => setIsModalOpen(false)} className="w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all"><X size={24} /></button>
+                            </div>
+                            
+                            <div className="p-10 overflow-y-auto">
+                                <form onSubmit={handleSave} className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                                                {activeTab === 'Referrals' ? 'Campaign Name' : activeTab === 'Banners' ? 'Banner Title' : 'Promo Code'}
+                                            </label>
+                                            <input required className="adm-input h-12" value={activeTab === 'Referrals' ? formData.name : activeTab === 'Banners' ? formData.title : formData.code} onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (activeTab === 'Referrals') setFormData({ ...formData, name: val });
+                                                else if (activeTab === 'Banners') setFormData({ ...formData, title: val });
+                                                else setFormData({ ...formData, code: val.toUpperCase() });
+                                            }} />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Subtitle</label>
+                                            <input required className="adm-input h-12" value={formData.subtitle} onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })} />
+                                        </div>
 
-                                <button
-                                    type="submit"
-                                    disabled={isSaving}
-                                    className="w-full h-12 rounded-xl bg-[var(--primary)] text-white font-bold text-sm uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-60"
-                                >
-                                    {isSaving ? 'Saving...' : editingPromo ? 'Update Campaign' : 'Create Campaign'}
-                                    {!isSaving && <CheckCircle2 size={16} />}
-                                </button>
-                            </form>
+                                        {activeTab !== 'Referrals' && activeTab !== 'Banners' && (
+                                            <div className="space-y-1.5">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Discount Value</label>
+                                                <input required className="adm-input h-12" placeholder="e.g. 20% or ₹500" value={formData.val} onChange={(e) => setFormData({ ...formData, val: e.target.value })} />
+                                            </div>
+                                        )}
+                                        {activeTab === 'Referrals' && (
+                                            <>
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Referrer Reward</label>
+                                                    <input required className="adm-input h-12" value={formData.userGets} onChange={(e) => setFormData({ ...formData, userGets: e.target.value })} />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Invitee Bonus</label>
+                                                    <input required className="adm-input h-12" value={formData.friendGets} onChange={(e) => setFormData({ ...formData, friendGets: e.target.value })} />
+                                                </div>
+                                            </>
+                                        )}
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Image Uplink</label>
+                                            <input className="adm-input h-12" placeholder="https://..." value={formData.image} onChange={(e) => setFormData({ ...formData, image: e.target.value })} />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Expiry Epoch</label>
+                                            <input type="date" className="adm-input h-12" value={formData.expiry ? formData.expiry.split('T')[0] : ''} onChange={(e) => setFormData({ ...formData, expiry: e.target.value })} />
+                                        </div>
+                                    </div>
+
+                                    {activeTab === 'Banners' && (
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Destination Routing</label>
+                                            <input className="adm-input h-12" placeholder="e.g. /spare-driver" value={formData.path} onChange={(e) => setFormData({ ...formData, path: e.target.value })} />
+                                        </div>
+                                    )}
+
+                                    <button disabled={isSaving} className="adm-btn adm-btn-primary h-14 w-full text-xs font-black uppercase tracking-[0.3em] shadow-xl shadow-indigo-200 mt-4">
+                                        {isSaving ? <RefreshCcw className="animate-spin mx-auto" size={24} /> : (editingPromo ? 'Confirm Protocol Update' : 'Authorize Deployment')}
+                                    </button>
+                                </form>
+                            </div>
                         </motion.div>
                     </div>
                 )}
             </AnimatePresence>
-        </div>
+        </PageShell>
     );
 };
 

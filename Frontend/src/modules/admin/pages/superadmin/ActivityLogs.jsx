@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Activity, Search, Filter, Calendar, Download,
     User, Shield, Edit, Trash2, Eye, Plus,
     Clock, MapPin, Smartphone, AlertTriangle,
-    CheckCircle, XCircle, Info, Zap
+    CheckCircle, XCircle, Info, Zap, RefreshCw,
+    Terminal, UserCheck, ShieldCheck, Globe
 } from 'lucide-react';
+import PageShell, { 
+    SectionCard, FilterBar, SearchBox, StatusTabs, EmptyState, PageLoader 
+} from '../../components/PageShell';
 
 const ActivityLogs = () => {
     const [logs, setLogs] = useState([]);
@@ -85,12 +89,17 @@ const ActivityLogs = () => {
         }
     ];
 
-    useEffect(() => {
+    const fetchLogs = () => {
+        setLoading(true);
         // Simulate API call
         setTimeout(() => {
             setLogs(mockLogs);
             setLoading(false);
-        }, 1000);
+        }, 800);
+    };
+
+    useEffect(() => {
+        fetchLogs();
     }, []);
 
     const filteredLogs = logs.filter(log => {
@@ -100,7 +109,6 @@ const ActivityLogs = () => {
         const matchesAction = filterAction === 'all' || log.action.toLowerCase().includes(filterAction.toLowerCase());
         const matchesAdmin = filterAdmin === 'all' || log.admin.email === filterAdmin;
         
-        // Date filtering
         const logDate = new Date(log.timestamp);
         const now = new Date();
         let matchesDate = true;
@@ -120,46 +128,36 @@ const ActivityLogs = () => {
 
     const getActionIcon = (action) => {
         switch (action) {
-            case 'CREATE_ADMIN': return <Plus size={18} className="text-green-600" />;
-            case 'UPDATE_DRIVER': return <Edit size={18} className="text-blue-600" />;
-            case 'DELETE_BOOKING': return <Trash2 size={18} className="text-red-600" />;
-            case 'VIEW_USER_DETAILS': return <Eye size={18} className="text-purple-600" />;
-            case 'LOGIN': return <Shield size={18} className="text-green-600" />;
-            default: return <Activity size={18} className="text-white/60" />;
+            case 'CREATE_ADMIN': return <Plus size={16} className="text-emerald-500" />;
+            case 'UPDATE_DRIVER': return <Edit size={16} className="text-blue-500" />;
+            case 'DELETE_BOOKING': return <Trash2 size={16} className="text-rose-500" />;
+            case 'VIEW_USER_DETAILS': return <Eye size={16} className="text-indigo-500" />;
+            case 'LOGIN': return <Shield size={16} className="text-emerald-500" />;
+            default: return <Activity size={16} className="text-slate-400" />;
         }
     };
 
-    const getStatusColor = (status) => {
+    const getStatusBadge = (status) => {
         switch (status) {
-            case 'success': return 'bg-green-50 text-green-600 border-green-200';
-            case 'failed': return 'bg-red-50 text-red-600 border-red-200';
-            case 'warning': return 'bg-yellow-50 text-yellow-600 border-yellow-200';
-            default: return 'bg-white/[0.02] text-white/60 border-white/10';
-        }
-    };
-
-    const getStatusIcon = (status) => {
-        switch (status) {
-            case 'success': return <CheckCircle size={18} />;
-            case 'failed': return <XCircle size={18} />;
-            case 'warning': return <AlertTriangle size={18} />;
-            default: return <Info size={18} />;
+            case 'success': return 'adm-badge-success';
+            case 'failed': return 'adm-badge-error';
+            case 'warning': return 'adm-badge-warning';
+            default: return 'bg-slate-100 text-slate-400';
         }
     };
 
     const formatTimestamp = (timestamp) => {
         const date = new Date(timestamp);
-        const now = new Date();
-        const diffInMinutes = Math.floor((now - date) / (1000 * 60));
-        
-        if (diffInMinutes < 1) return 'Just now';
-        if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-        if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
-        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return date.toLocaleDateString('en-IN', { 
+            day: '2-digit', 
+            month: 'short', 
+            year: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
     };
 
     const exportLogs = () => {
-        // Implement export functionality
         const csvContent = [
             ['Timestamp', 'Admin', 'Action', 'Resource', 'Description', 'Status', 'IP Address'].join(','),
             ...filteredLogs.map(log => [
@@ -180,246 +178,144 @@ const ActivityLogs = () => {
         a.download = `activity-logs-${new Date().toISOString().split('T')[0]}.csv`;
         a.click();
         window.URL.revokeObjectURL(url);
+        toast.success('Log Export Triggered');
     };
 
-    if (loading) {
-        return (
-            <div className="p-6">
-                <div className="animate-pulse space-y-4">
-                    <div className="h-8 bg-[var(--bg-secondary)] rounded w-1/4"></div>
-                    <div className="h-12 bg-[var(--bg-secondary)] rounded"></div>
-                    <div className="space-y-3">
-                        {[1, 2, 3, 4, 5].map(i => (
-                            <div key={i} className="h-20 bg-[var(--bg-secondary)] rounded"></div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className="space-y-4">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex flex-col gap-0.5">
-                    <h1 className="text-xl font-bold text-[var(--text-primary)] tracking-tight">Activity Logs</h1>
-                    <p className="text-xs font-medium text-[var(--text-secondary)] opacity-70">Monitor all admin activities and system events</p>
+        <PageShell
+            title="Activity Audit"
+            subtitle="Security timeline and administrative action intelligence"
+            icon={Terminal}
+            accent="slate"
+            badge="Security-V1"
+            actions={
+                <div className="flex items-center gap-3">
+                    <button onClick={fetchLogs} className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all shadow-sm">
+                        <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                    </button>
+                    <button onClick={exportLogs} className="adm-btn adm-btn-primary h-10 px-4 text-[10px] uppercase font-black tracking-widest flex items-center gap-2">
+                        <Download size={16} /> Export Dataset
+                    </button>
                 </div>
-                <button
-                    onClick={exportLogs}
-                    className="btn-primary flex items-center gap-2 group/export"
+            }
+        >
+            <div className="space-y-8">
+                {/* ── METRIC TILES ── */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {[
+                        { label: 'Total Events', value: logs.length, icon: Activity, color: 'text-slate-600', bg: 'bg-slate-50' },
+                        { label: 'Success Rate', value: `${Math.round((logs.filter(l => l.status === 'success').length / logs.length) * 100)}%`, icon: ShieldCheck, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                        { label: 'Security Failures', value: logs.filter(l => l.status === 'failed').length, icon: AlertTriangle, color: 'text-rose-600', bg: 'bg-rose-50' },
+                        { label: 'Active Admins', value: new Set(logs.map(l => l.admin.email)).size, icon: UserCheck, color: 'text-indigo-600', bg: 'bg-indigo-50' }
+                    ].map((stat, i) => (
+                        <div key={i} className={`p-6 rounded-[2rem] border border-slate-100 ${stat.bg} relative overflow-hidden group`}>
+                            <div className="relative z-10">
+                                <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${stat.color}`}>{stat.label}</p>
+                                <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{stat.value}</h3>
+                            </div>
+                            <stat.icon className={`absolute -bottom-4 -right-4 w-20 h-20 opacity-[0.05] transition-transform group-hover:scale-110 ${stat.color}`} />
+                        </div>
+                    ))}
+                </div>
+
+                {/* ── LOGS TABLE ── */}
+                <SectionCard
+                    title="Audit Timeline"
+                    icon={Clock}
+                    actions={
+                        <FilterBar className="!border-0 !p-0 !bg-transparent">
+                            <SearchBox 
+                                value={searchQuery} 
+                                onChange={e => setSearchQuery(e.target.value)} 
+                                placeholder="Identify event..." 
+                            />
+                            <div className="h-6 w-[1px] bg-slate-100 hidden md:block" />
+                            <StatusTabs 
+                                tabs={[
+                                    { label: 'Today', value: 'today' },
+                                    { label: 'Week', value: 'week' },
+                                    { label: 'Month', value: 'month' },
+                                    { label: 'All', value: 'all' }
+                                ]}
+                                active={dateRange}
+                                onChange={setDateRange}
+                            />
+                        </FilterBar>
+                    }
+                    noPad
                 >
-                    <Download size={18} className="group-hover/export:translate-y-0.5 transition-transform" />
-                    Export Logs
-                </button>
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="admin-card-compact shadow-sm">
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
-                            <Activity size={16} className="text-blue-600" />
-                        </div>
-                        <div>
-                            <div className="text-lg font-bold text-[var(--text-primary)]">{logs.length}</div>
-                            <div className="text-sm text-[var(--text-secondary)]">Total Activities</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div className="admin-card-compact shadow-sm">
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center shrink-0">
-                            <CheckCircle size={16} className="text-green-600" />
-                        </div>
-                        <div>
-                            <div className="text-lg font-bold text-[var(--text-primary)]">{logs.filter(l => l.status === 'success').length}</div>
-                            <div className="text-sm text-[var(--text-secondary)]">Successful</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div className="admin-card-compact">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                            <XCircle size={20} className="text-red-600" />
-                        </div>
-                        <div>
-                            <div className="text-lg font-bold text-[var(--text-primary)]">{logs.filter(l => l.status === 'failed').length}</div>
-                            <div className="text-sm text-[var(--text-secondary)]">Failed</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div className="admin-card-compact">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                            <User size={20} className="text-purple-600" />
-                        </div>
-                        <div>
-                            <div className="text-lg font-bold text-[var(--text-primary)]">{new Set(logs.map(l => l.admin.email)).size}</div>
-                            <div className="text-sm text-[var(--text-secondary)]">Active Admins</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Filters */}
-            <div className="admin-card">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="relative group">
-                        <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--text-secondary)] group-focus-within:text-[var(--primary)] transition-colors" />
-                        <input
-                            type="text"
-                            placeholder="Search activities..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="admin-input pl-12"
-                        />
-                    </div>
-                    
-                    <select
-                        value={filterAction}
-                        onChange={(e) => setFilterAction(e.target.value)}
-                        className="admin-select"
-                    >
-                        <option value="all">All Actions</option>
-                        <option value="create">Create Actions</option>
-                        <option value="update">Update Actions</option>
-                        <option value="delete">Delete Actions</option>
-                        <option value="view">View Actions</option>
-                        <option value="login">Login Actions</option>
-                    </select>
-                    
-                    <select
-                        value={filterAdmin}
-                        onChange={(e) => setFilterAdmin(e.target.value)}
-                        className="admin-select"
-                    >
-                        <option value="all">All Admins</option>
-                        {Array.from(new Set(logs.map(l => l.admin.email))).map(email => (
-                            <option key={email} value={email}>
-                                {logs.find(l => l.admin.email === email)?.admin.name}
-                            </option>
-                        ))}
-                    </select>
-                    
-                    <select
-                        value={dateRange}
-                        onChange={(e) => setDateRange(e.target.value)}
-                        className="admin-select"
-                    >
-                        <option value="today">Today</option>
-                        <option value="week">Last 7 Days</option>
-                        <option value="month">Last 30 Days</option>
-                        <option value="all">All Time</option>
-                    </select>
-                </div>
-            </div>
-
-            {/* Activity Timeline */}
-            <div className="admin-card">
-                <div className="space-y-4">
-                    {filteredLogs.length === 0 ? (
-                        <div className="text-center py-12">
-                            <Activity size={48} className="text-[var(--text-secondary)] mx-auto mb-4 opacity-50" />
-                            <h3 className="text-lg font-medium text-[var(--text-primary)] mb-2">No activities found</h3>
-                            <p className="text-[var(--text-secondary)]">Try adjusting your filters to see more results.</p>
-                        </div>
-                    ) : (
-                        filteredLogs.map((log, index) => (
-                            <motion.div
-                                key={log.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.05 }}
-                                className="flex gap-4 p-4 border border-[var(--border)] rounded-lg hover:bg-[var(--bg-secondary)] transition-colors"
-                            >
-                                {/* Timeline dot */}
-                                <div className="flex-shrink-0 mt-1">
-                                    <div className="w-8 h-8 bg-[var(--bg-secondary)] rounded-full flex items-center justify-center border border-[var(--border)]">
-                                        {getActionIcon(log.action)}
-                                    </div>
-                                </div>
-                                
-                                {/* Content */}
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-start justify-between mb-2">
-                                        <div className="flex items-center gap-3">
-                                            <h4 className="font-medium text-[var(--text-primary)]">{log.description}</h4>
-                                            <span className={`px-2 py-1 rounded-md text-xs font-medium border flex items-center gap-1 ${getStatusColor(log.status)}`}>
-                                                {getStatusIcon(log.status)}
-                                                {log.status}
-                                            </span>
-                                        </div>
-                                        <span className="text-sm text-[var(--text-secondary)] flex-shrink-0">
-                                            {formatTimestamp(log.timestamp)}
-                                        </span>
-                                    </div>
-                                    
-                                    <div className="flex items-center gap-4 text-sm text-[var(--text-secondary)] mb-3">
-                                        <div className="flex items-center gap-1.5">
-                                            <User size={18} className="text-[var(--primary)]" />
-                                            <span>{log.admin.name} ({log.admin.role})</span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5">
-                                            <Shield size={18} className="text-[var(--primary)]" />
-                                            <span>{log.resource}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5">
-                                            <MapPin size={18} className="text-[var(--primary)]" />
-                                            <span>{log.location}</span>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Details */}
-                                    {log.details && (
-                                        <div className="bg-[var(--bg-secondary)] rounded-lg p-3 mb-3">
-                                            <h5 className="text-xs font-medium text-[var(--text-secondary)] mb-2">Details:</h5>
-                                            <div className="text-sm text-[var(--text-primary)] space-y-1">
-                                                {Object.entries(log.details).map(([key, value]) => (
-                                                    <div key={key} className="flex gap-2">
-                                                        <span className="font-medium capitalize">{key.replace(/([A-Z])/g, ' $1').toLowerCase()}:</span>
-                                                        <span>{typeof value === 'object' ? JSON.stringify(value) : value}</span>
+                    <div className="adm-table-container">
+                        <table className="adm-table">
+                            <thead>
+                                <tr>
+                                    <th>Event Specification</th>
+                                    <th>Administrative Actor</th>
+                                    <th className="text-center">Protocol Node</th>
+                                    <th className="text-center">Status</th>
+                                    <th className="text-right">Epoch</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loading ? (
+                                    <tr><td colSpan={5}><PageLoader /></td></tr>
+                                ) : filteredLogs.length === 0 ? (
+                                    <tr><td colSpan={5}><EmptyState icon={Terminal} title="No event logs identified" subtitle="Refine your audit parameters" /></td></tr>
+                                ) : (
+                                    filteredLogs.map((log) => (
+                                        <tr key={log.id} className="group hover:bg-slate-50 transition-colors">
+                                            <td>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center shadow-sm group-hover:bg-slate-900 group-hover:text-white transition-all">
+                                                        {getActionIcon(log.action)}
                                                     </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                    
-                                    {/* Error message */}
-                                    {log.error && (
-                                        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
-                                            <div className="flex items-center gap-2 text-red-600">
-                                                <AlertTriangle size={18} />
-                                                <span className="text-sm font-medium">Error:</span>
-                                            </div>
-                                            <p className="text-sm text-red-700 mt-1">{log.error}</p>
-                                        </div>
-                                    )}
-                                    
-                                    {/* Technical details */}
-                                    <div className="flex items-center gap-4 text-xs text-[var(--text-secondary)]">
-                                        <span>IP: {log.ipAddress}</span>
-                                        <span className="flex items-center gap-1.5">
-                                            <Smartphone size={18} />
-                                            {log.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'}
-                                        </span>
-                                        <span className="flex items-center gap-1.5">
-                                            <Clock size={18} />
-                                            {new Date(log.timestamp).toLocaleString()}
-                                        </span>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))
-                    )}
-                </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-[13px] font-black text-slate-800 uppercase tracking-tight leading-none mb-1.5 truncate">{log.description}</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <Globe size={10} className="text-slate-400" />
+                                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{log.location} • {log.ipAddress}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-600">
+                                                        {log.admin.name[0]}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[11px] font-black text-slate-700 uppercase leading-none mb-1">{log.admin.name}</p>
+                                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{log.admin.role}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="text-center">
+                                                <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-50 border border-slate-100 rounded-lg">
+                                                    <Shield size={10} className="text-slate-400" />
+                                                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{log.resource}</span>
+                                                </div>
+                                            </td>
+                                            <td className="text-center">
+                                                <div className={`adm-badge ${getStatusBadge(log.status)}`}>
+                                                    {log.status === 'success' ? <CheckCircle size={10} className="mr-1" /> : <AlertTriangle size={10} className="mr-1" />}
+                                                    {log.status}
+                                                </div>
+                                            </td>
+                                            <td className="text-right">
+                                                <div className="flex flex-col items-end">
+                                                    <span className="text-[12px] font-black text-slate-800 tabular-nums">{formatTimestamp(log.timestamp).split(',')[0]}</span>
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{formatTimestamp(log.timestamp).split(',')[1]}</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </SectionCard>
             </div>
-        </div>
+        </PageShell>
     );
 };
 
-export default ActivityLogs;
+export default ActivityLogs;

@@ -16,6 +16,7 @@ const adminProductController = require('../controllers/adminProductController');
 const adminApartmentController = require('../controllers/adminApartmentController');
 const adminConfigController = require('../controllers/adminConfigController');
 const adminDashboardController = require('../controllers/adminDashboardController');
+const adminCampaignController = require('../controllers/adminCampaignController');
 const adminDriverController = require('../controllers/adminDriverController');
 const adminVehicleManagementController = require('../controllers/adminVehicleManagementController');
 const authMiddleware = require('../../../middleware/authMiddleware');
@@ -48,6 +49,8 @@ const penaltyRoutes = require('./penaltyRoutes');
 const walletRoutes = require('./walletRoutes');
 const dispatchRoutes = require('./dispatchRoutes');
 const reportRoutes = require('./reportRoutes');
+const chatRoutes = require('./chatRoutes');
+const taskRoutes = require('./taskRoutes');
 
 const withRbac = (module, action) => (req, res, next) => {
     if (process.env.ENABLE_ADMIN_RBAC !== 'true') {
@@ -94,6 +97,10 @@ router.get('/bookings/chauffeur', validatePagination, withRbac('bookings', 'view
 // SOS & Emergency
 router.get('/sos/active', adminController.getActiveSOS);
 router.patch('/sos/:id/resolve', adminController.resolveSOS);
+
+// Refund Management
+router.get('/refunds', adminController.getRefundRequests);
+router.post('/refunds/:id/process', adminController.processRefund);
 
 // ── Drivers Management (Spare Driver Lifecycle) ────────────────
 router.get('/drivers', withRbac('drivers', 'view'), adminDriverController.getAllDrivers);
@@ -163,6 +170,7 @@ router.use('/spare-driver/pricing', pricingRoutes);
 router.use('/spare-driver/surge-pricing', surgePricingRoutes);
 router.use('/spare-driver/payouts', payoutRoutes);
 router.use('/dispatch', dispatchRoutes);
+router.use('/chat', chatRoutes);
 
 // ── FINANCE MANAGEMENT ─────────────────────────────────────────
 router.use('/finance/penalties', penaltyRoutes);
@@ -223,6 +231,13 @@ router.post('/verify-product', featureGuard.guard('PRODUCT_ECOSYSTEM'), adminCon
 // Product Order Management (Phase 28)
 router.get('/product-orders', featureGuard.guard('PRODUCT_ECOSYSTEM'), adminController.getAllProductOrders);
 router.patch('/product-orders/:id/status', featureGuard.guard('PRODUCT_ECOSYSTEM'), adminController.updateGlobalProductOrderStatus);
+
+// ── Social Media Campaigns ─────────────────────────────────────
+router.get('/campaigns', adminCampaignController.getAllCampaigns);
+router.get('/campaigns/stats', adminCampaignController.getCampaignStats);
+router.post('/campaigns', adminCampaignController.createCampaign);
+router.patch('/campaigns/:id', adminCampaignController.updateCampaign);
+router.delete('/campaigns/:id', adminCampaignController.deleteCampaign);
 
 // --- Settings Routes (with validation) ---
 router.get('/settings', readLimiter, adminController.getSettings);

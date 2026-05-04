@@ -1,21 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Search,
-    LayoutGrid,
-    List,
-    Plus,
-    MapPin,
-    Edit2,
-    Trash2,
-    Globe,
-    Navigation,
-    Users,
-    X,
-    CheckCircle2
+    Search, LayoutGrid, List, Plus, MapPin, Edit2, Trash2,
+    Globe, Navigation, Users, X, CheckCircle2, RefreshCw,
+    Activity, Shield, Zap, Target
 } from 'lucide-react';
 import { adminAPI } from '../../../utils/adminApi';
 import { toast } from 'react-hot-toast';
+import PageShell, { SectionCard, FilterBar, SearchBox, StatusTabs, EmptyState, PageLoader } from '../components/PageShell';
 
 const AdminHubs = () => {
     const [view, setView] = useState('grid');
@@ -70,7 +62,7 @@ const AdminHubs = () => {
     };
 
     const filteredHubs = hubs.filter(h => {
-        const matchesSearch = h.name.toLowerCase().includes(search.toLowerCase()) || h.city.toLowerCase().includes(search.toLowerCase());
+        const matchesSearch = h.name?.toLowerCase().includes(search.toLowerCase()) || h.city?.toLowerCase().includes(search.toLowerCase());
         const matchesFilter = filter === 'All' || h.status === filter;
         return matchesSearch && matchesFilter;
     });
@@ -147,196 +139,199 @@ const AdminHubs = () => {
         }
     };
 
+    const stats = [
+        { label: 'Global Nodes', value: hubs.length, icon: MapPin, color: 'text-amber-500', bg: 'bg-amber-50' },
+        { label: 'Operational', value: hubs.filter(h => h.status === 'Online').length, icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+        { label: 'Maintenance', value: hubs.filter(h => h.status === 'Offline').length, icon: Shield, color: 'text-rose-500', bg: 'bg-rose-50' },
+        { label: 'Cluster Load', value: 'Moderate', icon: Zap, color: 'text-blue-500', bg: 'bg-blue-50' }
+    ];
+
     return (
-        <>
-            <div className="space-y-6">
-                <div className="rounded-[2rem] border border-brand/15 bg-brand/5 px-6 py-5">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                        <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-brand/70">Apartment Wash Ops</p>
-                            <p className="mt-2 text-sm font-bold leading-6 text-content-subtle">
-                                Apartment wash registry aur live apartment operations ab dedicated ops desk me manage honge.
-                            </p>
-                        </div>
-                        <button
-                            onClick={() => window.location.assign('/admin/apartment-wash')}
-                            className="rounded-2xl bg-black px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-brand"
-                        >
-                            Open Apartment Desk
-                        </button>
-                    </div>
+        <PageShell
+            title="Infrastructure Matrix"
+            subtitle="Network node management and deployment protocols"
+            icon={MapPin}
+            accent="amber"
+            badge="Mesh-v2"
+            actions={
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={fetchHubs}
+                        className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all shadow-sm"
+                    >
+                        <RefreshCw size={18} className={pageLoading ? 'animate-spin text-slate-900' : ''} />
+                    </button>
+                    <button
+                        onClick={handleOpenAdd}
+                        className="adm-btn adm-btn-primary h-10 px-5 text-[10px] font-black uppercase tracking-widest flex items-center gap-2"
+                    >
+                        <Plus size={18} /> Deploy Node
+                    </button>
                 </div>
-                {/* Infrastructure Control Header */}
-                <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
-                    <div className="flex bg-white/[0.05] p-1 rounded-2xl w-full lg:w-auto overflow-x-auto scrollbar-hide">
-                        {['All', 'Online', 'Offline'].map(tab => (
-                            <button
-                                key={tab}
-                                onClick={() => setFilter(tab)}
-                                className={`flex-1 lg:px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${filter === tab ? 'bg-white/5 text-brand ' : 'text-content-subtle hover:text-content'}`}
-                            >
-                                {tab}
-                            </button>
-                        ))}
-                    </div>
+            }
+        >
+            <div className="space-y-8">
+                {/* ── STATS GRID ── */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    {stats.map((stat, i) => (
+                        <div key={i} className={`p-6 rounded-[2rem] border border-slate-100 ${stat.bg} relative overflow-hidden group`}>
+                            <div className="relative z-10">
+                                <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${stat.color}`}>{stat.label}</p>
+                                <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{stat.value}</h3>
+                            </div>
+                            <stat.icon className={`absolute -bottom-4 -right-4 w-20 h-20 opacity-[0.05] transition-transform group-hover:scale-110 ${stat.color}`} />
+                        </div>
+                    ))}
+                </div>
 
-                    <div className="flex items-center gap-3 w-full lg:w-auto">
-                        <div className="relative flex-1 lg:w-72 group">
-                            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-content-subtle group-focus-within:text-brand transition-colors" />
-                            <input
-                                type="text"
-                                placeholder="Locate node..."
-                                className="w-full h-11 bg-background/50 border border-border rounded-xl pl-12 pr-4 text-xs font-bold text-content outline-none focus:border-brand transition-all shadow-inner"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
+                <SectionCard
+                    title="Cluster Telemetry"
+                    actions={
+                        <FilterBar className="!border-0 !p-0 !bg-transparent">
+                            <SearchBox 
+                                value={search} 
+                                onChange={e => setSearch(e.target.value)} 
+                                placeholder="Identify node..." 
                             />
-                        </div>
-                        <div className="flex bg-white/[0.05] p-1 rounded-2xl">
-                            <button onClick={() => setView('grid')} className={`p-2 rounded-xl transition-all ${view === 'grid' ? 'bg-white/5 text-brand ' : 'text-content-subtle'}`}><LayoutGrid size={18} /></button>
-                            <button onClick={() => setView('list')} className={`p-2 rounded-xl transition-all ${view === 'list' ? 'bg-white/5 text-brand ' : 'text-content-subtle'}`}><List size={18} /></button>
-                        </div>
-                        <button
-                            onClick={handleOpenAdd}
-                            className="h-11 px-6 bg-brand text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand/20 flex items-center gap-2 shrink-0 hover:scale-105 active:scale-95 transition-all"
-                        >
-                            <Plus size={18} /> New Node
-                        </button>
-                    </div>
-                </div>
-
-                {/* Hub Grid/List */}
-                {pageLoading ? (
-                    <div className="flex flex-col items-center justify-center py-20 bg-white/5 rounded-[2.5rem] border border-white/5 shadow-soft">
-                        <div className="w-12 h-12 border-4 border-brand border-t-transparent rounded-full animate-spin mb-4" />
-                        <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em]">Scanning Node Grid...</p>
-                    </div>
-                ) : filteredHubs.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 bg-white/5 rounded-[2.5rem] border border-white/5 shadow-soft">
-                        <MapPin size={40} className="text-gray-100 mb-4" />
-                        <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em]">No operational nodes detected</p>
-                    </div>
-                ) : view === 'grid' ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {filteredHubs.map((hub, i) => (
-                            <motion.div
-                                key={hub.id}
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: i * 0.05 }}
-                                className="bg-white/5 rounded-[2.5rem] border border-white/5 shadow-soft overflow-hidden group hover:border-brand transition-all flex flex-col"
-                            >
-                                <div className="p-8 pb-4">
-                                    <div className="flex justify-between items-start mb-6">
-                                        <div className="w-14 h-14 bg-white/[0.02] rounded-2xl flex items-center justify-center text-brand border border-white/5 group-hover:bg-brand group-hover:text-white transition-all ">
-                                            <MapPin size={28} />
-                                        </div>
-                                        <div className="flex flex-col items-end gap-1.5">
-                                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-lg ${hub.status === 'Online' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                            <div className="h-6 w-[1px] bg-slate-100 hidden md:block" />
+                            <StatusTabs 
+                                tabs={[
+                                    { label: 'Omni', value: 'All' },
+                                    { label: 'Online', value: 'Online' },
+                                    { label: 'Offline', value: 'Offline' }
+                                ]}
+                                active={filter}
+                                onChange={setFilter}
+                            />
+                            <div className="flex bg-slate-50 p-1 rounded-xl border border-slate-100">
+                                <button onClick={() => setView('grid')} className={`p-2 rounded-lg transition-all ${view === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><LayoutGrid size={16} /></button>
+                                <button onClick={() => setView('list')} className={`p-2 rounded-lg transition-all ${view === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><List size={16} /></button>
+                            </div>
+                        </FilterBar>
+                    }
+                    noPad
+                >
+                    {pageLoading ? (
+                        <PageLoader />
+                    ) : filteredHubs.length === 0 ? (
+                        <EmptyState 
+                            icon={MapPin} 
+                            title="Registry Void" 
+                            subtitle="No infrastructure nodes identified in this sector." 
+                        />
+                    ) : view === 'grid' ? (
+                        <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {filteredHubs.map((hub, i) => (
+                                <motion.div
+                                    key={hub.id}
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ delay: i * 0.05 }}
+                                    className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm hover:border-amber-500 hover:shadow-xl transition-all flex flex-col group overflow-hidden"
+                                >
+                                    <div className="p-8">
+                                        <div className="flex justify-between items-start mb-6">
+                                            <div className="w-14 h-14 bg-slate-900 text-amber-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                                <MapPin size={28} />
+                                            </div>
+                                            <div className={`adm-badge ${hub.status === 'Online' ? 'adm-badge-success' : 'adm-badge-error'} px-3 py-1.5`}>
                                                 {hub.status}
-                                            </span>
-                                            <div className="flex gap-1.5">
-                                                <button onClick={() => handleOpenEdit(hub)} className="w-9 h-9 bg-white/[0.02] rounded-xl flex items-center justify-center text-content hover:bg-brand hover:text-white border border-white/5 transition-all"><Edit2 size={16} /></button>
-                                                <button onClick={() => setDeleteConfirm({ isOpen: true, id: hub.id })} className="w-9 h-9 bg-white/[0.02] rounded-xl flex items-center justify-center text-content hover:bg-red-500 hover:text-white border border-white/5 transition-all"><Trash2 size={16} /></button>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    <div>
-                                        <h4 className="text-xl font-black text-content uppercase tracking-tight truncate group-hover:text-brand transition-colors">{hub.name}</h4>
-                                        <div className="flex flex-col gap-1 mt-1">
-                                            <div className="flex items-center gap-2">
-                                                <Globe size={10} className="text-content-subtle" />
-                                                <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest">{hub.city}</p>
-                                            </div>
-                                            {hub.vendor && (
+                                        <div>
+                                            <h4 className="text-xl font-black text-slate-800 uppercase tracking-tight truncate group-hover:text-amber-600 transition-colors">{hub.name}</h4>
+                                            <div className="flex flex-col gap-1.5 mt-2">
                                                 <div className="flex items-center gap-2">
-                                                    <Users size={10} className="text-brand" />
-                                                    <p className="text-[10px] font-black text-brand uppercase tracking-widest">{hub.vendor.profile?.studioName || hub.vendor.name}</p>
+                                                    <Globe size={12} className="text-slate-400" />
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{hub.city} • {hub.type}</p>
                                                 </div>
-                                            )}
+                                                {hub.vendor && (
+                                                    <div className="flex items-center gap-2">
+                                                        <Users size={12} className="text-amber-500" />
+                                                        <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{hub.vendor.profile?.studioName || hub.vendor.name}</p>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div className="px-8 py-6 grid grid-cols-3 gap-4 border-t border-gray-50 mt-auto">
-                                    <div>
-                                        <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-1">Captains</p>
-                                        <h5 className="text-sm font-black text-content">{hub.captains}</h5>
+                                    <div className="px-8 py-6 grid grid-cols-3 gap-4 border-t border-slate-50 mt-auto bg-slate-50/50">
+                                        <div>
+                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5">Captains</p>
+                                            <h5 className="text-sm font-black text-slate-800">{hub.captains || 0}</h5>
+                                        </div>
+                                        <div>
+                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5">Load</p>
+                                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-lg ${hub.load === 'Peak' ? 'bg-red-100 text-red-600' : hub.load === 'High' ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                                                {hub.load || 'MOD'}
+                                            </span>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5">Signal</p>
+                                            <h5 className="text-sm font-black text-emerald-500">{hub.efficiency || '98%'}</h5>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-1">Efficiency</p>
-                                        <h5 className="text-sm font-black text-brand">{hub.efficiency}</h5>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-[8px] font-black text-content-subtle uppercase tracking-widest mb-1">Load</p>
-                                        <span className={`text-[10px] font-black uppercase px-1.5 py-0.5 rounded-md ${hub.load === 'Peak' ? 'bg-red-100 text-red-600' : hub.load === 'High' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
-                                            {hub.load}
-                                        </span>
-                                    </div>
-                                </div>
 
-                                <div className="px-4 pb-4">
-                                    <button className="w-full h-12 bg-white/[0.02] rounded-2xl flex items-center justify-center gap-2 group-hover:bg-content group-hover:text-white transition-all overflow-hidden relative">
-                                        <span className="text-[10px] font-black uppercase tracking-widest z-10">Configure Node</span>
-                                        <Navigation size={14} className="group-hover:translate-x-3 transition-all duration-300" />
-                                    </button>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="bg-white/5 rounded-[2.5rem] border border-white/5 shadow-soft overflow-hidden">
-                        <div className="admin-table-container">
-                            <table className="w-full text-left">
-                                <thead className="bg-white/[0.02]/50">
+                                    <div className="p-4 border-t border-slate-50 flex gap-2">
+                                        <button onClick={() => handleOpenEdit(hub)} className="flex-1 h-11 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center hover:bg-slate-900 hover:text-white transition-all"><Edit2 size={16} /></button>
+                                        <button onClick={() => setDeleteConfirm({ isOpen: true, id: hub.id })} className="flex-1 h-11 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all"><Trash2 size={16} /></button>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="adm-table-container">
+                            <table className="adm-table">
+                                <thead>
                                     <tr>
-                                        <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest">Node / Location</th>
-                                        <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest">Management</th>
-                                        <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest text-center">Resources</th>
-                                        <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest text-right">Metrics</th>
-                                        <th className="px-8 py-5 text-[9px] font-black text-content-subtle uppercase tracking-widest text-right">Status</th>
+                                        <th>Node / Sector</th>
+                                        <th>Command</th>
+                                        <th className="text-center">Resources</th>
+                                        <th className="text-center">Metrics</th>
+                                        <th className="text-right">Signal Status</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-50">
+                                <tbody>
                                     {filteredHubs.map(hub => (
-                                        <tr key={hub.id} className="group hover:bg-white/[0.02]/30 transition-all">
-                                            <td className="px-8 py-6">
+                                        <tr key={hub.id} className="group transition-all">
+                                            <td>
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 rounded-2xl bg-white/[0.02] flex items-center justify-center text-brand border border-white/5 group-hover:bg-brand group-hover:text-white transition-all">
-                                                        <MapPin size={18} />
+                                                    <div className="w-11 h-11 rounded-xl bg-slate-900 text-amber-500 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+                                                        <MapPin size={20} />
                                                     </div>
                                                     <div>
-                                                        <p className="text-xs font-black text-content leading-none mb-1.5 uppercase truncate max-w-[200px]">{hub.name}</p>
-                                                        <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest">{hub.city} • {hub.type}</p>
+                                                        <p className="text-[13px] font-black text-slate-800 uppercase tracking-tight leading-none mb-1.5">{hub.name}</p>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{hub.city} • {hub.type}</p>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-8 py-6">
-                                                <div className="flex flex-col">
-                                                    <p className="text-[10px] font-black text-content leading-none">{hub.vendor?.name || hub.manager || 'No Manager'}</p>
-                                                    <p className="text-[8px] font-bold text-content-subtle uppercase tracking-widest mt-1">{hub.vendor?.profile?.studioName || 'Lead Manager'}</p>
+                                            <td>
+                                                <div className="flex flex-col gap-1">
+                                                    <p className="text-[12px] font-black text-slate-700 leading-none">{hub.vendor?.name || hub.manager || 'No Manager'}</p>
+                                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{hub.vendor?.profile?.studioName || 'Lead Manager'}</p>
                                                 </div>
                                             </td>
-                                            <td className="px-8 py-6 text-center">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <Users size={12} className="text-brand" />
-                                                    <span className="text-[10px] font-bold text-content-muted uppercase">{hub.captains} Active</span>
+                                            <td className="text-center">
+                                                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-xl">
+                                                    <Users size={12} className="text-amber-500" />
+                                                    <span className="text-[11px] font-black text-slate-600 uppercase">{hub.captains || 0} Active</span>
                                                 </div>
                                             </td>
-                                            <td className="px-8 py-6 text-right">
-                                                <div className="flex flex-col items-end">
-                                                    <p className="text-sm font-black text-content leading-none">{hub.efficiency}</p>
-                                                    <p className="text-[8px] font-bold text-content-subtle uppercase tracking-widest mt-1">Avg Efficiency</p>
+                                            <td className="text-center">
+                                                <div className="flex flex-col items-center">
+                                                    <p className="text-[13px] font-black text-slate-800 leading-none">{hub.efficiency || '98%'}</p>
+                                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">Flow</p>
                                                 </div>
                                             </td>
-                                            <td className="px-8 py-6 text-right">
+                                            <td className="text-right">
                                                 <div className="flex items-center justify-end gap-4">
-                                                    <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg ${hub.status === 'Online' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                                                    <div className={`adm-badge ${hub.status === 'Online' ? 'adm-badge-success' : 'adm-badge-error'} px-3 py-1.5`}>
                                                         {hub.status}
-                                                    </span>
+                                                    </div>
                                                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                                        <button onClick={() => handleOpenEdit(hub)} className="p-2 bg-white/[0.02] hover:bg-brand hover:text-white rounded-xl text-content-subtle transition-all"><Edit2 size={13} /></button>
-                                                        <button onClick={() => setDeleteConfirm({ isOpen: true, id: hub.id })} className="p-2 bg-white/[0.02] hover:bg-red-500 hover:text-white rounded-xl text-content-subtle transition-all"><Trash2 size={13} /></button>
+                                                        <button onClick={() => handleOpenEdit(hub)} className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center text-slate-400 hover:bg-slate-900 hover:text-white transition-all"><Edit2 size={16} /></button>
+                                                        <button onClick={() => setDeleteConfirm({ isOpen: true, id: hub.id })} className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center text-slate-400 hover:bg-rose-600 hover:text-white transition-all"><Trash2 size={16} /></button>
                                                     </div>
                                                 </div>
                                             </td>
@@ -345,228 +340,106 @@ const AdminHubs = () => {
                                 </tbody>
                             </table>
                         </div>
-                    </div>
-                )}
+                    )}
+                </SectionCard>
             </div>
 
-            {/* Infrastructure Configuration Terminal */}
-            < AnimatePresence >
+            {/* ── MODALS ── */}
+            <AnimatePresence>
                 {isModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setIsModalOpen(false)}
-                            className="absolute inset-0 bg-content/60 backdrop-blur-sm"
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="bg-white/5 w-[95%] md:w-full max-w-3xl rounded-[2rem] md:rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-white/5 max-h-[90vh] overflow-y-auto"
-                        >
-                            <div className="px-6 md:px-10 py-6 md:py-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]/50">
+                    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
+                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-slate-100 flex flex-col max-h-[90vh]">
+                            <div className="px-10 py-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
                                 <div>
-                                    <h2 className="text-xl font-black text-content leading-none uppercase">{editingHub ? 'Update Node Configuration' : 'Deploy New Node'}</h2>
-                                    <p className="text-[10px] font-black text-brand uppercase tracking-widest mt-2 px-1">Infrastructure Control Terminal</p>
+                                    <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">{editingHub ? 'Sync Protocol' : 'Deploy Node'}</h2>
+                                    <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest mt-1.5">Infrastructure Hub Configuration</p>
                                 </div>
-                                <button onClick={() => setIsModalOpen(false)} className="p-3 bg-white/5 hover:bg-white/[0.02] rounded-2xl border border-white/5 text-content-subtle transition-all">
-                                    <X size={20} />
-                                </button>
+                                <button onClick={() => setIsModalOpen(false)} className="w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all"><X size={24} /></button>
                             </div>
-                            <div className="p-6 md:p-10">
-                                <form onSubmit={handleSave} className="space-y-4 md:space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                            
+                            <div className="p-10 overflow-y-auto">
+                                <form onSubmit={handleSave} className="space-y-8">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Node Identity</label>
-                                            <input
-                                                required
-                                                placeholder="e.g. Cyber Node Alpha"
-                                                className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white/5 transition-all "
-                                                value={formData.name}
-                                                onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                            />
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Node Identity</label>
+                                            <input required placeholder="Registry Name" className="adm-input h-12" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
                                         </div>
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Deployment City</label>
-                                            <input
-                                                required
-                                                placeholder="e.g. Gurugram"
-                                                className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white/5 transition-all "
-                                                value={formData.city}
-                                                onChange={e => setFormData({ ...formData, city: e.target.value })}
-                                            />
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Deployment Sector</label>
+                                            <input required placeholder="City/Region" className="adm-input h-12" value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} />
                                         </div>
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Station Type</label>
-                                            <select
-                                                className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white/5 transition-all  appearance-none"
-                                                value={formData.type}
-                                                onChange={e => setFormData({ ...formData, type: e.target.value })}
-                                            >
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Infrastructure Class</label>
+                                            <select className="adm-input h-12 appearance-none uppercase text-xs font-bold" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
                                                 <option value="Studio">Elite Studio</option>
                                                 <option value="Node">Operational Node</option>
                                                 <option value="Hub">Logistics Hub</option>
                                             </select>
                                         </div>
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Ops Status</label>
-                                            <select
-                                                className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white/5 transition-all  appearance-none"
-                                                value={formData.status}
-                                                onChange={e => setFormData({ ...formData, status: e.target.value })}
-                                            >
-                                                <option value="Online">Operational (Online)</option>
-                                                <option value="Offline">Maintenance (Offline)</option>
-                                            </select>
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Active Captains</label>
-                                            <input
-                                                required
-                                                type="number"
-                                                placeholder="e.g. 24"
-                                                className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white/5 transition-all "
-                                                value={formData.captains}
-                                                onChange={e => setFormData({ ...formData, captains: e.target.value })}
-                                            />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Managed By (Vendor)</label>
-                                            <select
-                                                className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white/5 transition-all  appearance-none"
-                                                value={formData.vendor}
-                                                onChange={e => {
-                                                    const selectedVendor = vendors.find(v => v._id === e.target.value);
-                                                    setFormData({
-                                                        ...formData,
-                                                        vendor: e.target.value,
-                                                        manager: selectedVendor ? selectedVendor.name : formData.manager
-                                                    });
-                                                }}
-                                            >
-                                                <option value="">Select Vendor Partner</option>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Command Personnel</label>
+                                            <select className="adm-input h-12 appearance-none uppercase text-xs font-bold" value={formData.vendor} onChange={e => setFormData({ ...formData, vendor: e.target.value })}>
+                                                <option value="">Select Vendor</option>
                                                 {vendors.map(v => (
-                                                    <option key={v._id} value={v._id}>{v.profile?.studioName || v.name} ({v.name})</option>
+                                                    <option key={v._id} value={v._id}>{v.profile?.studioName || v.name}</option>
                                                 ))}
                                             </select>
                                         </div>
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Backup Manager Name</label>
-                                            <input
-                                                required
-                                                placeholder="e.g. John Doe"
-                                                className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand focus:bg-white/5 transition-all "
-                                                value={formData.manager}
-                                                onChange={e => setFormData({ ...formData, manager: e.target.value })}
-                                            />
-                                        </div>
-
-                                        <div className="col-span-full pt-4 border-t border-white/5 space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <h4 className="text-[10px] font-black text-content uppercase tracking-widest leading-none">Society Configuration</h4>
-                                                    <p className="text-[8px] font-bold text-content-subtle uppercase tracking-widest mt-1">Enable cluster mode for apartment complexes</p>
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setFormData({ ...formData, metadata: { ...formData.metadata, isSociety: !formData.metadata.isSociety } })}
-                                                    className={`w-12 h-6 rounded-full transition-all relative ${formData.metadata?.isSociety ? 'bg-brand' : 'bg-gray-200'}`}
-                                                >
-                                                    <div className={`absolute top-1 w-4 h-4 bg-white/5 rounded-full transition-all ${formData.metadata?.isSociety ? 'left-7' : 'left-1'}`} />
-                                                </button>
-                                            </div>
-
-                                            {formData.metadata?.isSociety && (
-                                                <motion.div
-                                                    initial={{ opacity: 0, height: 0 }}
-                                                    animate={{ opacity: 1, height: 'auto' }}
-                                                    className="grid grid-cols-1 md:grid-cols-2 gap-4"
-                                                >
-                                                    <div className="space-y-1.5">
-                                                        <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Tower / Blocks (Comma separated)</label>
-                                                        <input
-                                                            placeholder="Block A, Block B, Tower 1"
-                                                            className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand"
-                                                            value={formData.metadata.blocks}
-                                                            onChange={e => setFormData({ ...formData, metadata: { ...formData.metadata, blocks: e.target.value } })}
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-1.5">
-                                                        <label className="text-[10px] font-black text-content-subtle uppercase tracking-widest ml-1">Parking Levels (Comma separated)</label>
-                                                        <input
-                                                            placeholder="B1, B2, Ground"
-                                                            className="w-full bg-white/[0.02] border border-white/5 px-6 py-4 rounded-2xl text-xs font-bold text-content outline-none focus:border-brand"
-                                                            value={formData.metadata.parkingLevels}
-                                                            onChange={e => setFormData({ ...formData, metadata: { ...formData.metadata, parkingLevels: e.target.value } })}
-                                                        />
-                                                    </div>
-                                                </motion.div>
-                                            )}
-                                        </div>
                                     </div>
-                                    <div className="pt-2 md:pt-4">
-                                        <button
-                                            disabled={loading}
-                                            className="w-full bg-content text-white py-4 md:py-5 rounded-[1.5rem] md:rounded-[2rem] font-black text-[10px] uppercase tracking-[0.25em] shadow-2xl shadow-content/20 flex items-center justify-center gap-3 hover:bg-brand transition-all disabled:opacity-50"
-                                        >
-                                            {loading ? 'Initializing Node...' : (
-                                                <>{editingHub ? 'Commit Configuration' : 'Confirm Deployment'} <CheckCircle2 size={18} /></>
-                                            )}
+
+                                    <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 flex items-center justify-between">
+                                        <div>
+                                            <h4 className="text-xs font-black text-slate-800 uppercase tracking-tight">Gated Complex Protocol</h4>
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Enable specialized society management</p>
+                                        </div>
+                                        <button type="button" onClick={() => setFormData({ ...formData, metadata: { ...formData.metadata, isSociety: !formData.metadata.isSociety } })} className={`w-12 h-7 rounded-full transition-all relative ${formData.metadata.isSociety ? 'bg-amber-500' : 'bg-slate-200'}`}>
+                                            <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all ${formData.metadata.isSociety ? 'left-6' : 'left-1'}`} />
                                         </button>
                                     </div>
+
+                                    {formData.metadata.isSociety && (
+                                        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            <div className="space-y-1.5">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tower Registry</label>
+                                                <input placeholder="A1, B2, C3" className="adm-input h-12" value={formData.metadata.blocks} onChange={e => setFormData({ ...formData, metadata: { ...formData.metadata, blocks: e.target.value } })} />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Level Matrix</label>
+                                                <input placeholder="B1, B2, B3" className="adm-input h-12" value={formData.metadata.parkingLevels} onChange={e => setFormData({ ...formData, metadata: { ...formData.metadata, parkingLevels: e.target.value } })} />
+                                            </div>
+                                        </motion.div>
+                                    )}
+
+                                    <button disabled={loading} className="adm-btn adm-btn-primary h-14 w-full text-xs font-black uppercase tracking-[0.3em] shadow-xl shadow-amber-200 mt-4">
+                                        {loading ? <RefreshCw className="animate-spin mx-auto" size={24} /> : (editingHub ? 'Confirm Configuration' : 'Deploy Infrastructure')}
+                                    </button>
                                 </form>
                             </div>
                         </motion.div>
                     </div>
                 )}
-            </AnimatePresence >
+            </AnimatePresence>
 
-            {/* Delete Confirmation Modal */}
-            < AnimatePresence >
-                {
-                    deleteConfirm.isOpen && (
-                        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                onClick={() => setDeleteConfirm({ isOpen: false, id: null })}
-                                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                            />
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                                className="bg-white/5 w-full max-w-sm rounded-[2.5rem] p-8 relative z-10 border border-white/5 shadow-2xl text-center"
-                            >
-                                <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                                    <Trash2 size={32} />
-                                </div>
-                                <h3 className="text-xl font-black text-content leading-none uppercase tracking-tighter mb-2">Decommission Node?</h3>
-                                <p className="text-[10px] font-bold text-content-subtle uppercase tracking-widest mb-8 px-4">This action will permanently terminate this infrastructure node protocol.</p>
-
-                                <div className="flex gap-3">
-                                    <button
-                                        onClick={() => setDeleteConfirm({ isOpen: false, id: null })}
-                                        className="flex-1 bg-white/[0.05] text-content-subtle py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleDelete}
-                                        className="flex-1 bg-red-500 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all"
-                                    >
-                                        Terminate
-                                    </button>
-                                </div>
-                            </motion.div>
-                        </div>
-                    )
-                }
-            </AnimatePresence >
-        </>
+            <AnimatePresence>
+                {deleteConfirm.isOpen && (
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setDeleteConfirm({ isOpen: false, id: null })} className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" />
+                        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="bg-white w-full max-w-sm rounded-[3rem] p-10 relative z-10 border border-slate-100 shadow-2xl text-center">
+                            <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[2rem] flex items-center justify-center mx-auto mb-8">
+                                <Trash2 size={40} />
+                            </div>
+                            <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter mb-2">Decommission?</h3>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-10 leading-relaxed px-4">Permanently terminate this infrastructure node from the global network.</p>
+                            <div className="flex flex-col gap-3">
+                                <button onClick={handleDelete} className="adm-btn adm-btn-error h-14 text-[10px] font-black uppercase tracking-widest shadow-xl shadow-rose-200">Confirm Termination</button>
+                                <button onClick={() => setDeleteConfirm({ isOpen: false, id: null })} className="h-14 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900">Abort Command</button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+        </PageShell>
     );
 };
 

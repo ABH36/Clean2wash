@@ -2,26 +2,21 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import {
-    Calendar,
-    Car,
-    CheckCircle2,
-    ChevronRight,
-    ClipboardList,
-    Loader2,
-    MapPin,
-    Navigation,
-    RefreshCw,
-    ShieldCheck,
-    User,
-    Wrench
+    Calendar, Car, CheckCircle2, ChevronRight, ClipboardList, Loader2,
+    MapPin, Navigation, RefreshCw, ShieldCheck, User, Wrench, Activity,
+    Target, Package, UserCheck, MoreVertical, Search, Globe
 } from 'lucide-react';
 import { adminAPI } from '../../../utils/adminApi';
 import { socketService } from '../../../utils/socket';
 import GoogleMapBox from '../../../components/common/GoogleMapBox';
+import PageShell, { SectionCard, FilterBar, StatusTabs, PageLoader } from '../components/PageShell';
 
-const STUDIO_SECTIONS = ['overview', 'bookings', 'mapping', 'services'];
-
-const getSection = (value) => STUDIO_SECTIONS.includes(value) ? value : 'overview';
+const STUDIO_SECTIONS = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'bookings', label: 'Live Queue' },
+    { id: 'mapping', label: 'Dispatch Center' },
+    { id: 'services', label: 'Catalog' }
+];
 
 const ACTIVE_STATUSES = new Set([
     'pending', 'confirmed', 'accepted', 'assigned', 'pickup-assigned',
@@ -32,18 +27,9 @@ const ACTIVE_STATUSES = new Set([
 
 const nextStudioStatus = (status = '') => {
     const order = [
-        'confirmed',
-        'pickup-assigned',
-        'en_route',
-        'arrived',
-        'picked-up',
-        'at-studio',
-        'in_progress',
-        'quality-check',
-        'ready-for-delivery',
-        'delivery-assigned',
-        'out_for_delivery',
-        'completed'
+        'confirmed', 'pickup-assigned', 'en_route', 'arrived', 'picked-up',
+        'at-studio', 'in_progress', 'quality-check', 'ready-for-delivery',
+        'delivery-assigned', 'out_for_delivery', 'completed'
     ];
     const currentIndex = order.indexOf(status);
     if (currentIndex === -1) return 'confirmed';
@@ -52,21 +38,21 @@ const nextStudioStatus = (status = '') => {
 
 const badgeClass = (status = '') => {
     const map = {
-        pending: 'bg-amber-50 text-amber-700',
-        confirmed: 'bg-blue-50 text-blue-700',
-        'pickup-assigned': 'bg-indigo-50 text-indigo-700',
-        en_route: 'bg-cyan-50 text-cyan-700',
-        arrived: 'bg-purple-50 text-purple-700',
-        'at-studio': 'bg-violet-50 text-violet-700',
-        'in_progress': 'bg-fuchsia-50 text-fuchsia-700',
-        'quality-check': 'bg-orange-50 text-orange-700',
-        'ready-for-delivery': 'bg-emerald-50 text-emerald-700',
-        'delivery-assigned': 'bg-teal-50 text-teal-700',
-        'out_for_delivery': 'bg-sky-50 text-sky-700',
-        completed: 'bg-green-50 text-green-700',
-        cancelled: 'bg-red-50 text-red-700'
+        pending: 'adm-badge-warning',
+        confirmed: 'adm-badge-info',
+        'pickup-assigned': 'adm-badge-navy',
+        en_route: 'adm-badge-info',
+        arrived: 'adm-badge-success',
+        'at-studio': 'adm-badge-navy',
+        'in_progress': 'adm-badge-warning',
+        'quality-check': 'adm-badge-warning',
+        'ready-for-delivery': 'adm-badge-success',
+        'delivery-assigned': 'adm-badge-navy',
+        'out_for_delivery': 'adm-badge-info',
+        completed: 'adm-badge-success',
+        cancelled: 'adm-badge-error'
     };
-    return map[status] || 'bg-white/[0.02] text-white/80';
+    return map[status] || 'bg-slate-100 text-slate-500';
 };
 
 const toLatLng = (booking = {}) => {
@@ -93,7 +79,7 @@ const buildMarkerIcon = (fill) => ({
 const AdminStudioWash = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    const section = getSection(searchParams.get('section'));
+    const sectionId = searchParams.get('section') || 'overview';
 
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -120,16 +106,13 @@ const AdminStudioWash = () => {
         } catch (error) {
             toast.error(error.message || 'Failed to load studio wash console');
         } finally {
-            if (silent) setRefreshing(false);
-            else setLoading(false);
+            setRefreshing(false);
+            setLoading(false);
         }
     };
 
     useEffect(() => {
         loadConsole();
-    }, []);
-
-    useEffect(() => {
         socketService.joinAdminRoom();
         const sync = () => loadConsole(true);
         socketService.on('booking_status_updated', sync);
@@ -171,25 +154,7 @@ const AdminStudioWash = () => {
 
     const mapCenter = useMemo(() => {
         const pickup = toLatLng(selectedBooking);
-        return pickup || { lat: 22.7196, lng: 75.8577 };
-    }, [selectedBooking]);
-
-    const mapPolyline = useMemo(() => {
-        if (!selectedBooking) return [];
-        const start = toLatLng(selectedBooking);
-        const end = toDestinationLatLng(selectedBooking);
-        if (start && end) {
-            return [{
-                path: [start, end],
-                options: {
-                    strokeColor: '#0F172A',
-                    strokeOpacity: 0.92,
-                    strokeWeight: 4,
-                    geodesic: true
-                }
-            }];
-        }
-        return [];
+        return pickup || { lat: 28.6139, lng: 77.2090 };
     }, [selectedBooking]);
 
     const mapMarkers = useMemo(() => {
@@ -201,45 +166,33 @@ const AdminStudioWash = () => {
             markers.push({
                 position: pickup,
                 icon: buildMarkerIcon('#0F172A'),
-                infoContent: (
-                    <div className="text-[11px] font-black uppercase">
-                        Pickup
-                    </div>
-                )
+                infoContent: <div className="text-[11px] font-black uppercase p-1">Pickup Point</div>
             });
         }
         if (destination) {
             markers.push({
                 position: destination,
                 icon: buildMarkerIcon('#F97316'),
-                infoContent: (
-                    <div className="text-[11px] font-black uppercase">
-                        Destination / Studio
-                    </div>
-                )
+                infoContent: <div className="text-[11px] font-black uppercase p-1">Studio / Destination</div>
             });
         }
         return markers;
     }, [selectedBooking]);
 
-    const handleSectionChange = (nextSection) => {
-        setSearchParams({ section: nextSection });
-    };
-
     const handleAssignStaff = async (type) => {
         if (!selectedBooking?._id) return;
         const staffId = type === 'pickup' ? pickupStaffId : deliveryStaffId;
         if (!staffId) {
-            toast.error(`Select ${type} staff first`);
+            toast.error(`Select ${type} personnel first`);
             return;
         }
         setAssigning(true);
         try {
             await adminAPI.assignStaff(selectedBooking._id, staffId, type);
-            toast.success(`${type === 'pickup' ? 'Pickup' : 'Delivery'} staff assigned`);
+            toast.success(`Personnel assigned to ${type} protocol`);
             await loadConsole(true);
         } catch (error) {
-            toast.error(error.message || 'Could not assign staff');
+            toast.error(error.message || 'Mission assignment failed');
         } finally {
             setAssigning(false);
         }
@@ -251,201 +204,277 @@ const AdminStudioWash = () => {
         setUpdatingStatus(true);
         try {
             await adminAPI.updateBookingStatus(selectedBooking._id, nextStatus);
-            toast.success(`Status updated to ${nextStatus}`);
+            toast.success(`Protocol advanced to ${nextStatus.toUpperCase()}`);
             await loadConsole(true);
         } catch (error) {
-            toast.error(error.message || 'Status update failed');
+            toast.error(error.message || 'Status transition failed');
         } finally {
             setUpdatingStatus(false);
         }
     };
 
-    if (loading) {
-        return (
-            <div className="min-h-[60vh] flex items-center justify-center">
-                <Loader2 size={28} className="animate-spin text-brand" />
-            </div>
-        );
-    }
-
     const m = consoleData.metrics || {};
     const staffList = consoleData.staff || [];
 
     return (
-        <div className="space-y-4">
-            <div className="bg-white/5 border border-white/5 rounded-[1.2rem] p-5 shadow-[0_14px_28px_rgba(15,23,42,0.06)] flex items-center justify-between gap-4 flex-wrap">
-                <div>
-                    <p className="text-[9px] font-black text-black/35 uppercase tracking-[0.22em]">Studio Wash Ops</p>
-                    <h2 className="text-[24px] font-black text-white uppercase leading-tight mt-2">Manage Full Wash Workflow</h2>
-                    <p className="text-[10px] font-bold text-black/45 mt-2">Bookings, staff assignment, studio services, and operational map are centralized here.</p>
-                </div>
-                <button onClick={() => loadConsole(true)} className={`h-10 px-4 rounded-xl border border-white/10 text-[10px] font-black uppercase ${refreshing ? 'text-brand' : 'text-black/55'}`}>
-                    <RefreshCw size={14} className={`inline-block mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-                    Refresh
+        <PageShell
+            title="Studio Command"
+            subtitle="Elite studio logistics and wash lifecycle management"
+            icon={Wrench}
+            accent="amber"
+            badge="Studio-v4"
+            actions={
+                <button 
+                    onClick={() => loadConsole(true)} 
+                    className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all shadow-sm"
+                >
+                    <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
                 </button>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-                {[
-                    { label: 'Total Bookings', value: m.totalStudioBookings || 0, icon: ClipboardList },
-                    { label: 'Live Bookings', value: m.liveStudioBookings || 0, icon: Navigation },
-                    { label: 'Studio Services', value: m.totalStudioServices || 0, icon: Wrench },
-                    { label: 'Vendors', value: m.activeVendors || 0, icon: ShieldCheck },
-                    { label: 'Staff', value: m.activeStaff || 0, icon: User },
-                    { label: 'Pickup Gaps', value: m.unassignedPickup || 0, icon: Calendar }
-                ].map((item) => (
-                    <div key={item.label} className="bg-white/5 border border-white/5 rounded-[1rem] p-3.5 shadow-[0_10px_20px_rgba(15,23,42,0.04)]">
-                        <item.icon size={14} className="text-brand" />
-                        <p className="text-[9px] font-black text-black/30 uppercase tracking-widest mt-2">{item.label}</p>
-                        <p className="text-[22px] font-black text-white mt-1">{item.value}</p>
-                    </div>
-                ))}
-            </div>
-
-            <div className="flex gap-2 p-1 bg-white/5 border border-white/10 rounded-xl w-fit">
-                {STUDIO_SECTIONS.map((item) => (
-                    <button
-                        key={item}
-                        onClick={() => handleSectionChange(item)}
-                        className={`px-4 h-9 rounded-lg text-[10px] font-black uppercase tracking-wider ${section === item ? 'bg-black text-white' : 'text-black/50'}`}
-                    >
-                        {item}
-                    </button>
-                ))}
-            </div>
-
-            {section === 'overview' && (
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                    <div className="bg-white/5 border border-white/5 rounded-[1rem] p-4">
-                        <h3 className="text-[14px] font-black text-white uppercase">Active Studio Trips</h3>
-                        <p className="text-[10px] font-bold text-white/40 mt-1">Map with route polyline between pickup and destination/studio.</p>
-                        <div className="h-[420px] rounded-xl overflow-hidden border border-white/5 mt-4">
-                            <GoogleMapBox
-                                center={mapCenter}
-                                zoom={13}
-                                darkMode={false}
-                                polylines={mapPolyline}
-                                markers={mapMarkers}
-                            />
+            }
+        >
+            <div className="space-y-8">
+                {/* ── METRIC TILES ── */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    {[
+                        { label: 'Total Logs', value: m.totalStudioBookings || 0, icon: ClipboardList, color: 'text-slate-900', bg: 'bg-slate-50' },
+                        { label: 'Live Trips', value: m.liveStudioBookings || 0, icon: Navigation, color: 'text-amber-500', bg: 'bg-amber-50' },
+                        { label: 'Catalog', value: m.totalStudioServices || 0, icon: Wrench, color: 'text-blue-500', bg: 'bg-blue-50' },
+                        { label: 'Vendors', value: m.activeVendors || 0, icon: ShieldCheck, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                        { label: 'Staff Node', value: m.activeStaff || 0, icon: User, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+                        { label: 'Gaps', value: m.unassignedPickup || 0, icon: Calendar, color: 'text-rose-500', bg: 'bg-rose-50' }
+                    ].map((item, i) => (
+                        <div key={i} className={`p-5 rounded-[1.5rem] border border-slate-100 ${item.bg} relative overflow-hidden group`}>
+                            <item.icon className={`w-5 h-5 mb-3 ${item.color}`} />
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">{item.label}</p>
+                            <p className="text-2xl font-black text-slate-900 mt-2 tracking-tighter">{item.value}</p>
                         </div>
-                    </div>
-                    <div className="bg-white/5 border border-white/5 rounded-[1rem] p-4 space-y-3">
-                        <h3 className="text-[14px] font-black text-white uppercase">Operational Shortcuts</h3>
-                        <button onClick={() => navigate('/admin/users?type=vendors')} className="w-full h-11 rounded-xl border border-white/10 px-4 flex items-center justify-between text-[10px] font-black uppercase text-black/70">
-                            Open Vendor Registry <ChevronRight size={14} />
-                        </button>
-                        <button onClick={() => navigate('/admin/users?type=staff')} className="w-full h-11 rounded-xl border border-white/10 px-4 flex items-center justify-between text-[10px] font-black uppercase text-black/70">
-                            Open Staff Registry <ChevronRight size={14} />
-                        </button>
-                        <button onClick={() => navigate('/admin/services')} className="w-full h-11 rounded-xl border border-white/10 px-4 flex items-center justify-between text-[10px] font-black uppercase text-black/70">
-                            Open Service Inventory <ChevronRight size={14} />
-                        </button>
-                        <div className="border border-white/5 rounded-xl p-4 mt-2">
-                            <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">Selected Booking</p>
-                            <p className="text-[14px] font-black text-white uppercase mt-1">{selectedBooking?.bookingId || 'No booking selected'}</p>
-                            <p className="text-[10px] font-bold text-black/50 mt-1">{selectedBooking?.serviceName || '-'}</p>
-                            <span className={`inline-flex mt-2 px-2 py-1 rounded-md text-[9px] font-black uppercase ${badgeClass(selectedBooking?.status)}`}>
-                                {selectedBooking?.status || 'idle'}
-                            </span>
-                        </div>
-                    </div>
+                    ))}
                 </div>
-            )}
 
-            {section === 'bookings' && (
-                <div className="bg-white/5 border border-white/5 rounded-[1rem] p-4 space-y-3">
-                    <div className="flex items-center justify-between gap-3 flex-wrap">
-                        <h3 className="text-[14px] font-black text-white uppercase">Studio Booking Queue</h3>
-                        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by booking ID, customer, phone..." className="h-10 w-[360px] max-w-full border border-white/10 rounded-lg px-3 text-[11px] font-bold outline-none" />
-                    </div>
-                    <div className="space-y-2">
-                        {bookings.map((booking) => (
-                            <button key={booking._id} onClick={() => setSelectedBookingId(booking._id)} className={`w-full border rounded-xl px-4 py-3 text-left ${selectedBookingId === booking._id ? 'border-black bg-black/[0.02]' : 'border-white/5'}`}>
-                                <div className="flex items-center justify-between gap-3">
-                                    <div>
-                                        <p className="text-[12px] font-black text-white uppercase">{booking.bookingId || booking._id}</p>
-                                        <p className="text-[10px] font-bold text-black/55">{booking.consumer?.name || 'Consumer'} • {booking.serviceName || booking.service?.name}</p>
+                <FilterBar>
+                    <StatusTabs 
+                        tabs={STUDIO_SECTIONS}
+                        active={sectionId}
+                        onChange={(id) => setSearchParams({ section: id })}
+                    />
+                </FilterBar>
+
+                {loading ? (
+                    <PageLoader />
+                ) : sectionId === 'overview' ? (
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                        <div className="lg:col-span-8">
+                            <SectionCard title="Geospatial Telemetry" subtitle="Real-time route visibility for selected mission" icon={Globe} noPad>
+                                <div className="h-[500px] w-full bg-slate-50 relative">
+                                    <GoogleMapBox
+                                        center={mapCenter}
+                                        zoom={13}
+                                        darkMode={false}
+                                        markers={mapMarkers}
+                                    />
+                                    <div className="absolute top-6 left-6 bg-white/90 backdrop-blur p-4 rounded-2xl border border-slate-200 shadow-xl pointer-events-none">
+                                        <p className="text-[9px] font-black uppercase text-slate-400 mb-1">Active Mission</p>
+                                        <p className="text-xs font-black text-slate-900 uppercase">{selectedBooking?.bookingId || 'No active lock'}</p>
                                     </div>
-                                    <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase ${badgeClass(booking.status)}`}>{booking.status}</span>
                                 </div>
-                            </button>
-                        ))}
-                        {!bookings.length && <p className="text-[10px] font-black text-black/35 uppercase tracking-widest">No studio bookings found.</p>}
-                    </div>
-                </div>
-            )}
-
-            {section === 'mapping' && (
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                    <div className="bg-white/5 border border-white/5 rounded-[1rem] p-4 space-y-3">
-                        <h3 className="text-[14px] font-black text-white uppercase">Staff Assignment</h3>
-                        <p className="text-[10px] font-bold text-black/45">Assign pickup and delivery staff for selected studio booking.</p>
-                        <div className="border border-white/5 rounded-xl p-3">
-                            <p className="text-[9px] font-black text-black/35 uppercase tracking-widest">Booking</p>
-                            <p className="text-[13px] font-black text-white uppercase mt-1">{selectedBooking?.bookingId || '-'}</p>
-                            <p className="text-[10px] font-bold text-black/45 mt-1">{selectedBooking?.consumer?.name || '-'} • {selectedBooking?.price || '-'}</p>
+                            </SectionCard>
                         </div>
-                        <div>
-                            <label className="block text-[9px] font-black text-black/30 uppercase tracking-widest mb-1.5">Pickup Staff</label>
-                            <select value={pickupStaffId} onChange={(event) => setPickupStaffId(event.target.value)} className="w-full h-10 border border-white/10 rounded-lg px-3 text-[11px] font-black">
-                                <option value="">Select pickup staff</option>
-                                {staffList.map((staff) => <option key={staff._id} value={staff._id}>{staff.name} • {staff.phone}</option>)}
-                            </select>
-                            <button onClick={() => handleAssignStaff('pickup')} disabled={assigning || !selectedBooking} className="mt-2 h-10 px-4 rounded-lg bg-black text-white text-[10px] font-black uppercase">
-                                {assigning ? 'Assigning...' : 'Assign Pickup'}
-                            </button>
-                        </div>
-                        <div>
-                            <label className="block text-[9px] font-black text-black/30 uppercase tracking-widest mb-1.5">Delivery Staff</label>
-                            <select value={deliveryStaffId} onChange={(event) => setDeliveryStaffId(event.target.value)} className="w-full h-10 border border-white/10 rounded-lg px-3 text-[11px] font-black">
-                                <option value="">Select delivery staff</option>
-                                {staffList.map((staff) => <option key={staff._id} value={staff._id}>{staff.name} • {staff.phone}</option>)}
-                            </select>
-                            <button onClick={() => handleAssignStaff('delivery')} disabled={assigning || !selectedBooking} className="mt-2 h-10 px-4 rounded-lg bg-black text-white text-[10px] font-black uppercase">
-                                {assigning ? 'Assigning...' : 'Assign Delivery'}
-                            </button>
+                        <div className="lg:col-span-4 space-y-6">
+                            <SectionCard title="Operations Control" noPad>
+                                <div className="p-6 space-y-4">
+                                    <button onClick={() => navigate('/admin/users?type=vendors')} className="w-full p-4 rounded-2xl border border-slate-100 hover:border-amber-500 hover:bg-amber-50 transition-all flex items-center justify-between group">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all"><ShieldCheck size={18} /></div>
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-700">Vendor Registry</span>
+                                        </div>
+                                        <ChevronRight size={16} className="text-slate-300" />
+                                    </button>
+                                    <button onClick={() => navigate('/admin/users?type=staff')} className="w-full p-4 rounded-2xl border border-slate-100 hover:border-amber-500 hover:bg-amber-50 transition-all flex items-center justify-between group">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all"><UserCheck size={18} /></div>
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-700">Staff Registry</span>
+                                        </div>
+                                        <ChevronRight size={16} className="text-slate-300" />
+                                    </button>
+                                    <div className="p-6 bg-slate-900 rounded-[2rem] text-white shadow-xl relative overflow-hidden group">
+                                        <Target className="absolute -bottom-4 -right-4 w-24 h-24 opacity-10 group-hover:rotate-12 transition-transform duration-700" />
+                                        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-500 mb-6">Mission Focus</p>
+                                        <div className="space-y-4 relative z-10">
+                                            <div>
+                                                <h4 className="text-lg font-black uppercase tracking-tight">{selectedBooking?.bookingId || 'NONE'}</h4>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">{selectedBooking?.serviceName || 'No service data'}</p>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${badgeClass(selectedBooking?.status)}`}>
+                                                    {selectedBooking?.status || 'IDLE'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </SectionCard>
                         </div>
                     </div>
-                    <div className="bg-white/5 border border-white/5 rounded-[1rem] p-4 space-y-3">
-                        <h3 className="text-[14px] font-black text-white uppercase">Status Control</h3>
-                        <p className="text-[10px] font-bold text-black/45">Advance selected booking through full wash lifecycle.</p>
-                        <div className="border border-white/5 rounded-xl p-3">
-                            <p className="text-[9px] font-black text-black/35 uppercase tracking-widest">Current</p>
-                            <span className={`inline-flex mt-2 px-2 py-1 rounded-md text-[9px] font-black uppercase ${badgeClass(selectedBooking?.status)}`}>{selectedBooking?.status || '-'}</span>
-                            <p className="text-[10px] font-bold text-black/45 mt-2">Next: {nextStudioStatus(selectedBooking?.status)}</p>
-                        </div>
-                        <button onClick={handleAdvanceStatus} disabled={!selectedBooking || updatingStatus} className="h-11 px-5 rounded-xl bg-brand text-white text-[10px] font-black uppercase flex items-center gap-2">
-                            {updatingStatus ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                            Advance Status
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {section === 'services' && (
-                <div className="bg-white/5 border border-white/5 rounded-[1rem] p-4 space-y-3">
-                    <div className="flex items-center justify-between gap-3 flex-wrap">
-                        <h3 className="text-[14px] font-black text-white uppercase">Studio Service Catalog</h3>
-                        <button onClick={() => navigate('/admin/services')} className="h-10 px-4 rounded-xl border border-white/10 text-[10px] font-black uppercase text-white/60">
-                            Open Global Service Desk
-                        </button>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                        {(consoleData.studioServices || []).map((service) => (
-                            <div key={service._id} className="border border-white/5 rounded-xl p-3">
-                                <p className="text-[12px] font-black text-white uppercase">{service.name}</p>
-                                <p className="text-[10px] font-bold text-black/45 mt-1">{service.category} • {service.time}</p>
-                                <p className="text-[18px] font-black text-white mt-2">₹{service.price || 0}</p>
-                                <span className="inline-flex mt-2 px-2 py-1 rounded-md bg-white/[0.05] text-[9px] font-black uppercase text-white/60">{service.status || 'Live'}</span>
+                ) : sectionId === 'bookings' ? (
+                    <SectionCard 
+                        title="Mission Queue" 
+                        actions={
+                            <div className="relative w-72 group">
+                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-amber-500 transition-colors" />
+                                <input 
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl pl-9 pr-4 py-2 text-[10px] font-black uppercase tracking-widest focus:bg-white focus:border-amber-500 transition-all" 
+                                    placeholder="Identify log..."
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                />
                             </div>
-                        ))}
-                        {!(consoleData.studioServices || []).length && (
-                            <p className="text-[10px] font-black text-black/35 uppercase tracking-widest">No studio services configured.</p>
-                        )}
+                        }
+                        noPad
+                    >
+                        <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {bookings.map((booking) => (
+                                <motion.button
+                                    key={booking._id}
+                                    layout
+                                    onClick={() => setSelectedBookingId(booking._id)}
+                                    className={`p-6 rounded-[2rem] border transition-all text-left group flex flex-col ${
+                                        selectedBookingId === booking._id 
+                                            ? 'bg-slate-900 border-slate-900 shadow-xl shadow-slate-200' 
+                                            : 'bg-white border-slate-100 hover:border-amber-500'
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between mb-6">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${
+                                            selectedBookingId === booking._id ? 'bg-amber-500 text-slate-900' : 'bg-slate-50 text-slate-400'
+                                        }`}>
+                                            {(booking.consumer?.name || 'G')[0]}
+                                        </div>
+                                        <span className={`px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${badgeClass(booking.status)}`}>
+                                            {booking.status}
+                                        </span>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h4 className={`text-sm font-black uppercase tracking-tight ${selectedBookingId === booking._id ? 'text-white' : 'text-slate-800'}`}>
+                                            #{booking.bookingId || booking._id?.slice(-8).toUpperCase()}
+                                        </h4>
+                                        <p className={`text-[9px] font-bold uppercase tracking-widest ${selectedBookingId === booking._id ? 'text-slate-400' : 'text-slate-500'}`}>
+                                            {booking.consumer?.name || 'Guest'} • {booking.serviceName}
+                                        </p>
+                                    </div>
+                                </motion.button>
+                            ))}
+                        </div>
+                    </SectionCard>
+                ) : sectionId === 'mapping' ? (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <SectionCard title="Deployment Protocol" subtitle="Assign personnel to operational pipeline" icon={UserCheck}>
+                            <div className="space-y-8 p-4">
+                                <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 flex items-center gap-6">
+                                    <div className="w-14 h-14 bg-slate-900 text-amber-500 rounded-2xl flex items-center justify-center font-black text-xl shadow-lg">
+                                        {(selectedBooking?.consumer?.name || 'X')[0]}
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Target Mission</p>
+                                        <h4 className="text-lg font-black text-slate-900 uppercase tracking-tight leading-none mb-2">#{selectedBooking?.bookingId || 'NONE'}</h4>
+                                        <p className="text-xs font-bold text-slate-600 uppercase">{selectedBooking?.consumer?.name} • ₹{selectedBooking?.price}</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Pickup Personnel</label>
+                                        <div className="flex gap-3">
+                                            <select 
+                                                value={pickupStaffId} 
+                                                onChange={(e) => setPickupStaffId(e.target.value)} 
+                                                className="flex-1 bg-slate-50 border border-slate-100 rounded-xl px-4 h-12 text-xs font-black uppercase focus:bg-white focus:border-amber-500 outline-none transition-all"
+                                            >
+                                                <option value="">Select Pickup Agent</option>
+                                                {staffList.map(s => <option key={s._id} value={s._id}>{s.name} • {s.phone}</option>)}
+                                            </select>
+                                            <button onClick={() => handleAssignStaff('pickup')} disabled={assigning || !selectedBooking} className="h-12 px-6 bg-slate-900 text-amber-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-slate-900 transition-all">
+                                                Assign
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Delivery Personnel</label>
+                                        <div className="flex gap-3">
+                                            <select 
+                                                value={deliveryStaffId} 
+                                                onChange={(e) => setDeliveryStaffId(e.target.value)} 
+                                                className="flex-1 bg-slate-50 border border-slate-100 rounded-xl px-4 h-12 text-xs font-black uppercase focus:bg-white focus:border-amber-500 outline-none transition-all"
+                                            >
+                                                <option value="">Select Delivery Agent</option>
+                                                {staffList.map(s => <option key={s._id} value={s._id}>{s.name} • {s.phone}</option>)}
+                                            </select>
+                                            <button onClick={() => handleAssignStaff('delivery')} disabled={assigning || !selectedBooking} className="h-12 px-6 bg-slate-900 text-amber-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-slate-900 transition-all">
+                                                Assign
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </SectionCard>
+                        <SectionCard title="Lifecycle Transition" subtitle="Advance operational status through workflow" icon={Activity}>
+                            <div className="space-y-8 p-4">
+                                <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 flex flex-col items-center text-center">
+                                    <div className="w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center mb-6">
+                                        <RefreshCw className={`text-amber-500 ${updatingStatus ? 'animate-spin' : ''}`} size={32} />
+                                    </div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Current Phase</p>
+                                    <span className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest mb-6 ${badgeClass(selectedBooking?.status)}`}>
+                                        {selectedBooking?.status || 'IDLE'}
+                                    </span>
+                                    <div className="w-full h-px bg-slate-200 mb-6" />
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Advance To</p>
+                                    <h4 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-8">
+                                        {nextStudioStatus(selectedBooking?.status).replace(/[-_]/g, ' ')}
+                                    </h4>
+                                    <button 
+                                        onClick={handleAdvanceStatus} 
+                                        disabled={!selectedBooking || updatingStatus} 
+                                        className="w-full h-14 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] shadow-xl shadow-slate-200 hover:bg-amber-500 hover:text-slate-900 transition-all flex items-center justify-center gap-3"
+                                    >
+                                        {updatingStatus ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
+                                        Authorize Transition
+                                    </button>
+                                </div>
+                            </div>
+                        </SectionCard>
                     </div>
-                </div>
-            )}
-        </div>
+                ) : (
+                    <SectionCard 
+                        title="Service Catalog" 
+                        subtitle="Studio service protocol inventory"
+                        icon={Package}
+                        actions={
+                            <button onClick={() => navigate('/admin/services')} className="h-10 px-5 bg-slate-50 border border-slate-100 text-slate-400 hover:bg-slate-900 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
+                                Global Service Desk
+                            </button>
+                        }
+                        noPad
+                    >
+                        <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {(consoleData.studioServices || []).map((service) => (
+                                <div key={service._id} className="p-6 bg-white border border-slate-100 rounded-[2rem] hover:border-amber-500 transition-all group shadow-sm">
+                                    <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center mb-4 group-hover:bg-slate-900 group-hover:text-white transition-all">
+                                        <Wrench size={20} />
+                                    </div>
+                                    <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight truncate">{service.name}</h4>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase mt-1 mb-4">{service.category} • {service.time}</p>
+                                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
+                                        <span className="text-lg font-black text-slate-900">₹{service.price}</span>
+                                        <span className="adm-badge adm-badge-success">{service.status || 'LIVE'}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </SectionCard>
+                )}
+            </div>
+        </PageShell>
     );
 };
 

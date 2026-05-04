@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Socket Test</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f4f7f6; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        #status { padding: 10px; border-radius: 4px; margin-bottom: 20px; }
+        .connected { background: #d4edda; color: #155724; }
+        .disconnected { background: #f8d7da; color: #721c24; }
+        #messages { border: 1px solid #ddd; height: 300px; overflow-y: scroll; padding: 10px; margin-bottom: 20px; background: #fafafa; }
+        .message { margin-bottom: 10px; padding: 5px; border-bottom: 1px solid #eee; }
+        .controls { display: flex; flex-direction: column; gap: 10px; }
+        input, button { padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #007bff; color: white; cursor: pointer; border: none; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Chat Socket Test</h1>
+        <div id="status" class="disconnected">🔴 Disconnected</div>
+        
+        <div id="setup">
+            <input type="text" id="token" placeholder="Admin JWT Token" style="width: 100%; margin-bottom: 10px;">
+            <input type="text" id="roomId" placeholder="Room ID" style="width: 100%; margin-bottom: 10px;">
+            <button onclick="connect()">Connect & Join</button>
+        </div>
+
+        <div id="chat" style="display: none;">
+            <div id="messages"></div>
+            <div class="controls">
+                <input type="text" id="msgInput" placeholder="Type a message...">
+                <button onclick="sendMessage()">Send Message</button>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="sendTyping(true)" style="background: #6c757d;">Typing Start</button>
+                    <button onclick="sendTyping(false)" style="background: #6c757d;">Typing Stop</button>
+                </div>
+            </div>
+            <div id="typingIndicator" style="font-size: 12px; color: #666; margin-top: 5px; height: 15px;"></div>
+        </div>
+    </div>
+
+    <script>
+        let socket;
+        let currentRoomId;
+
+        function connect() {
+            const token = document.getElementById('token').value;
+            currentRoomId = document.getElementById('roomId').value;
+
+            if (!token || !currentRoomId) {
+                alert('Please provide Token and Room ID');
+                return;
+            }
+
+            socket = io('http://localhost:5000', {
+                auth: { token }
+            });
+
+            socket.on('connect', () => {
+                document.getElementById('status').innerHTML = '✅ Connected';
+                document.getElementById('status').className = 'connected';
+                document.getElementById('setup').style.display = 'none';
+                document.getElementById('chat').style.display = 'block';
+                
+                socket.emit('join_chat_room', { roomId: currentRoomId });
+            });
+
+            socket.on('disconnect', () => {
+                document.getElementById('status').innerHTML = '🔴 Disconnected';
+                document.getElementById('status').className = 'disconnected';
+            });
+
+            socket.on('room_joined', (data) => {
+                console.log('Joined room:', data);
+                addMessage('System', `Joined room: ${data.roomId}`);
+            });
+
+            socket.on('new_message', (data) => {
+                console.log('New message:', data);
+                addMessage(data.message.sender.name, data.message.content.text);
+            });
+
+            socket.on('user_typing', (data) => {
+                console.log('User typing:', data);
+                document.getElementById('typingIndicator').innerHTML = `${data.userName} is typing...`;
+            });
+
+            socket.on('user_stopped_typing', (data) => {
+                console.log('User stopped typing:', data);
+                document.getElementById('typingIndicator').innerHTML = '';
+            });
+
+            socket.on('chat_error', (error) => {
+                console.error('Chat error:', error);
+                alert('Error: ' + error.message);
+            });
+        }
+
+        function sendMessage() {
+            const text = document.getElementById('msgInput').value;
+            if (!text) return;
+
+            socket.emit('send_message', {
+                roomId: currentRoomId,
+                content: { type: 'text', text }
+            });
+            document.getElementById('msgInput').value = '';
+        }
+
+        function sendTyping(isTyping) {
+            socket.emit(isTyping ? 'typing_start' : 'typing_stop', { roomId: currentRoomId });
+        }
+
+        function addMessage(sender, text) {
+            const div = document.createElement('div');
+            div.className = 'message';
+            div.innerHTML = `<strong>${sender}:</strong> ${text}`;
+            const msgBox = document.getElementById('messages');
+            msgBox.appendChild(div);
+            msgBox.scrollTop = msgBox.scrollHeight;
+        }
+    </script>
+</body>
+</html>
